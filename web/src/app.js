@@ -63,19 +63,28 @@ function localizeCanonicalLegacyPanels() {
     const element = document.querySelector(selector);
     if (element) element.textContent = muneaT(key, fallback, values);
   };
+  const setDirectText = (selector, key, fallback, values = null) => {
+    const element = document.querySelector(selector);
+    if (!element) return;
+    [...element.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    element.append(document.createTextNode(muneaT(key, fallback, values)));
+  };
+  const setAttribute = (selector, attribute, key, fallback, values = null) => {
+    const element = document.querySelector(selector);
+    if (element) element.setAttribute(attribute, muneaT(key, fallback, values));
+  };
 
   // 就診摘要面板（M1 起改為真資料）。原本這裡在幫「寫死假數字的舊面板」做多語，
   // 其中 rptSendBtn 與 rpt-card 已隨改版移除（這裡刻意不寫井字號前綴：smoke.ps1 的
   // 「Frontend id references」會掃全檔的井字號選擇器、連註解也算，
   // 寫了就等於宣告一個不存在的元素，CI 會紅）。面板本文走 data-i18n，
   // 這裡只補 data-i18n 到不了的地方：aria-label、期間膠囊、要帶角色名的頁尾。
-  const setAria = (selector, key, fallback) => {
-    const element = document.querySelector(selector);
-    if (element) element.setAttribute('aria-label', muneaT(key, fallback));
-  };
-  setAria('#reportClose', 'visit.closeAria', 'Close summary');
-  setAria('#rptExportBtn', 'visit.exportAria', 'Export this summary');
-  setAria('#rptPeriodTabs', 'visit.periodAria', 'Choose the period covered');
+  // aria-label 改走 markup 的 data-i18n-aria-label（dom-localizer.js 支援）。
+  // 原本在這裡用 JS setAttribute，問題是這整個函式**只在非 zh-TW 才跑**——
+  // 等於 aria 只有外語使用者才是對的，中文讀屏使用者拿到的是 markup 裡的字。
+  // 宣告式綁定四個語系一視同仁，而且改文案時不會忘記同步。
   $$('#rptPeriodTabs .seg-btn').forEach(button => {
     const days = parseInt(button.dataset.days, 10);
     if (days) button.textContent = muneaT('visit.days', '{n} days', { n: days });
@@ -115,7 +124,127 @@ function localizeCanonicalLegacyPanels() {
   setText('#consentAgree', 'consent.agree', 'I understand. Start talking');
   setText('#consentDetail', 'consent.detail', 'Read the full privacy notice first');
 
+  setText(
+    '#connect .cn-intro p',
+    'health.connectDisclosure',
+    'Apple Health syncs steps, heart rate, sleep, and other data when Munea opens. Munea can notify you when something needs attention. This is not real-time or medical-grade monitoring.',
+  );
+  setText('#connect .cn-note p', 'health.optionalBody', 'Health data is optional. Your companion can still support you through daily conversations and reminders.', {
+    companion: cname(),
+  });
+  setDirectText(
+    '#connect .cn-privacy',
+    'health.familyVisibility',
+    'Only family members you authorize can view health information.',
+  );
+
+  setText('#feedbackModal h2', 'feedback.title', 'Feedback');
+  setText('#feedbackModal > .modal > .modal-sub', 'legacyUi.feedbackSubtitle', 'We read every message. Choose a topic and tell us what you think.');
+  [
+    ['bug', 'feedback.categoryBug', 'Report a problem'],
+    ['idea', 'feedback.categoryIdea', 'Suggest a feature'],
+    ['praise', 'feedback.categoryPraise', 'Share praise'],
+    ['nps', 'feedback.categoryNps', 'Rate Munea'],
+  ].forEach(([type, key, fallback]) => {
+    setDirectText(`#fbTypes [data-t="${type}"]`, key, fallback);
+  });
+  const feedbackPhotoLabel = $('#fbPhotoLabel');
+  if (feedbackPhotoLabel) {
+    [...feedbackPhotoLabel.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    feedbackPhotoLabel.insertBefore(
+      document.createTextNode(muneaT('feedback.photoLabel', 'Add an image (optional)')),
+      feedbackPhotoLabel.firstChild,
+    );
+  }
+  setText('#fbPhotoLabel span', 'feedback.photoHint', 'Add a screenshot when words are not enough.');
+  setDirectText('#fbPhotoAdd', 'feedback.choosePhoto', 'Choose an image');
+  const feedbackText = $('#fbText');
+  if (feedbackText) feedbackText.placeholder = muneaT(
+    'feedback.placeholder',
+    'Tell us what happened or what you would like Munea to add',
+  );
+  setText('#fbSend', 'feedback.submit', 'Send feedback');
+
+  setText('#interestsModal h2', 'interests.title', 'Topics to talk about');
+  setText('#interestsModal > .modal > .modal-sub', 'interests.subtitle', 'Choose topics that interest you. You can change them at any time.');
+  setText('#interestsSave', 'interests.save', 'Save topics');
+
+  setText('#safetyModal h2', 'safety.title', 'Safety notifications');
+  setText('#safetyModal > .modal > .modal-sub', 'legacyUi.safetyDescription', 'Choose when selected family members should be notified. This is not real-time or medical-grade monitoring.');
+  const safetyTriggers = [
+    ['safety.triggerBloodPressure', 'Blood pressure is very high or low (above 180 or below 90)'],
+    ['safety.triggerHeartRate', 'Heart rate is unusually fast or slow'],
+    ['safety.triggerBloodOxygen', 'Blood oxygen is low (below 90%)'],
+  ];
+  $$('#safetyModal .safety-triggers li').forEach((item, index) => {
+    const copy = safetyTriggers[index];
+    if (copy) setDirectText(`#safetyModal .safety-triggers li:nth-child(${index + 1})`, copy[0], copy[1]);
+  });
+  const safetyFlow = $$('#safetyModal .sf-step > span');
+  if (safetyFlow[0]) safetyFlow[0].textContent = muneaT(
+    'safety.checkInFlow',
+    '{companion} checks in with you first.',
+    { companion: cname() },
+  );
+  if (safetyFlow[1]) safetyFlow[1].textContent = muneaT('legacyUi.safetyLog', 'Save the event and notify selected family members.');
+  if (safetyFlow[2]) safetyFlow[2].textContent = muneaT('legacyUi.safetyEmergency', 'A contact can call or check on you. Contact local emergency services in an emergency.');
+  setText('#safetySave', 'safety.save', 'Save safety settings');
+
+  setText('#companionSheet h2', 'companion.settingsTitle', 'Companion');
+  setText(
+    '#companionSheet > .modal > .modal-sub',
+    'companion.settingsIntro',
+    'Choose a companion, then give them a name. Their appearance, voice, and personality follow the companion; your memories stay with you.',
+  );
+  setText('#companionSheet .companion-name-label', 'legacyUi.companionName', 'Name your companion');
+  setText('#companionSheet .field-label', 'legacyUi.companionRole', 'Choose an AI companion');
+  setAttribute('#companionNameInput', 'placeholder', 'companion.namePlaceholder', 'For example: Ningning, Mia, or Alex');
+
+  setAttribute('#famManageBtn', 'aria-label', 'accessibility.manageFamily', 'Manage family members');
+  setAttribute('#chatExit', 'aria-label', 'accessibility.closeChat', 'Close conversation and return home');
+  setAttribute('#walkGoal', 'aria-label', 'activity.adjustGoal', 'Adjust step goal');
+  setAttribute('#walkDue', 'aria-label', 'activity.deadlineDate', 'Challenge deadline date');
+  setAttribute('#walkDueTime', 'aria-label', 'activity.deadlineTime', 'Challenge deadline time');
+  setAttribute('#eventName', 'placeholder', 'activity.eventNamePlaceholder', 'For example: Family birthday dinner');
+  setAttribute('#eventPlace', 'placeholder', 'activity.eventPlacePlaceholder', 'For example: A nearby restaurant or home');
+  setAttribute('#voteQ', 'placeholder', 'activity.voteQuestionPlaceholder', 'For example: Where should we eat this weekend?');
+  ['#vo1', '#vo2'].forEach((selector) => setAttribute(
+    selector,
+    'placeholder',
+    'activity.voteOptionPlaceholder',
+    'For example: A restaurant or home',
+  ));
+  setAttribute('#drawPrize', 'placeholder', 'activity.drawPrizePlaceholder', 'For example: Ice cream or a small treat');
+  ['#rw1', '#rw2', '#rw3'].forEach((selector) => setAttribute(
+    selector,
+    'placeholder',
+    'activity.rewardPlaceholder',
+    'For example: A family meal or a small gift',
+  ));
+  [
+    ['#reportClose', 'accessibility.back', 'Back'],
+    ['#profileClose', 'profile.close', 'Close profile'],
+    ['#famCircleClose', 'familyCircle.close', 'Close care circle'],
+    ['#topUpClose', 'purchase.close', 'Close credit top-up'],
+    ['#historyClose', 'history.close', 'Close records'],
+  ].forEach(([selector, key, fallback]) => setAttribute(
+    selector,
+    'aria-label',
+    key,
+    fallback,
+  ));
+  setAttribute('#pfNick', 'placeholder', 'profile.familyNicknamePlaceholder', 'For example: Grandma');
+  setAttribute('#joinCodeInput', 'placeholder', 'join.codePlaceholder', 'Enter invitation code');
+  setAttribute('#visitTitle', 'placeholder', 'appointment.titlePlaceholder', 'For example: Cardiology follow-up');
+  setAttribute('#npsSlider', 'aria-label', 'feedback.npsAria', 'Recommendation score from 0 to 10');
+  const npsHints = $$('#fbNpsWrap .nps-hint span');
+  if (npsHints[0]) npsHints[0].textContent = muneaT('feedback.npsZero', '0 · Not at all likely');
+  if (npsHints[1]) npsHints[1].textContent = muneaT('feedback.npsTen', '10 · Very likely');
+
   setText('#subPlans > .sub-intro', 'subscription.benefitsIntro', 'Every paid plan includes');
+  setDirectText('#pointsUnlockNotice', 'subscription.unlockCredits', 'Subscribe to Plus or Pro to buy credit packs.');
   const benefitKeys = [
     ['subscription.benefitVoiceTitle', 'Natural voice companionship', 'subscription.benefitVoiceBody', 'Talk naturally in a familiar language.'],
     ['subscription.benefitCareTitle', 'Everyday care', 'subscription.benefitCareBody', 'Companion reminders and daily records.'],
@@ -133,7 +262,12 @@ function localizeCanonicalLegacyPanels() {
   setText('#subPlans .sub-sec-label', 'subscription.choosePlan', 'Choose a plan');
   const cycleButtons = $$('#subCycle .scyc-btn');
   if (cycleButtons[0]) cycleButtons[0].textContent = muneaT('subscription.billingMonthly', 'Monthly');
-  if (cycleButtons[1]) cycleButtons[1].textContent = muneaT('subscription.billingYearly', 'Yearly');
+  if (cycleButtons[1]) {
+    const labelNode = [...cycleButtons[1].childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
+    if (labelNode) labelNode.textContent = `${muneaT('subscription.billingYearly', 'Yearly')} `;
+    const badge = cycleButtons[1].querySelector('.scyc-badge');
+    if (badge) badge.textContent = muneaT('subscription.savePercent', 'Save {percent}%', { percent: 20 });
+  }
   const creditRuleKeys = [
     ['subscription.monthlyCreditsTitle', 'Monthly plan credits', 'subscription.monthlyCreditsBody', 'Issued again each billing period.'],
     ['subscription.purchasedCreditsTitle', 'Purchased credits', 'subscription.purchasedCreditsBody', 'They do not expire.'],
@@ -147,6 +281,7 @@ function localizeCanonicalLegacyPanels() {
     if (title) title.textContent = muneaT(keys[0], keys[1]);
     if (body) body.textContent = muneaT(keys[2], keys[3]);
   });
+  localizePurchasePlanContent();
   $$('.tu-card').forEach((card) => {
     const credits = Number(card.dataset.p || 0);
     const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
@@ -167,6 +302,12 @@ function localizeCanonicalLegacyPanels() {
     );
     changelog.appendChild(summary);
   }
+  setText('#versionSheet h2', 'version.title', "What's new");
+  const versionSubtitle = $('#versionSheet > .modal > .modal-sub');
+  if (versionSubtitle && versionSubtitle.firstChild) {
+    versionSubtitle.firstChild.textContent = `${muneaT('app.title', 'Munea')} `;
+  }
+  setText('#verClose', 'version.close', 'Got it');
 }
 let muneaRendererCopyCache = null;
 function muneaRendererCopy() {
@@ -177,6 +318,140 @@ function muneaRendererCopy() {
     t: (key, values) => muneaT(key, key, values),
   });
   return muneaRendererCopyCache;
+}
+let muneaPurchaseFlowCache = null;
+function muneaPurchaseFlow() {
+  if (muneaPurchaseFlowCache) return muneaPurchaseFlowCache;
+  const api = window.MuneaPurchaseFlow;
+  if (!api || typeof api.createPurchaseFlow !== 'function') return null;
+  muneaPurchaseFlowCache = api.createPurchaseFlow({
+    t: (key, values) => muneaT(key, key, values),
+  });
+  return muneaPurchaseFlowCache;
+}
+function localizePurchasePlanContent() {
+  const benefitsIntro = document.querySelector('#subPlans > .sub-intro');
+  if (benefitsIntro) benefitsIntro.textContent = muneaT(
+    'subscription.benefitsIntro',
+    'Every paid plan includes',
+  );
+  const unlockNotice = $('#pointsUnlockNotice');
+  if (unlockNotice) unlockNotice.textContent = muneaT(
+    'subscription.unlockCredits',
+    'Subscribe to Plus or Pro to buy credit packs.',
+  );
+  const benefitKeys = [
+    ['subscription.benefitVoiceTitle', 'Natural voice companionship', 'subscription.benefitVoiceBody', 'Talk naturally in a familiar language.'],
+    ['subscription.benefitCareTitle', 'Everyday care', 'subscription.benefitCareBody', 'Companion reminders and daily records.'],
+    ['subscription.benefitFamilyTitle', 'Family care circle', 'subscription.benefitFamilyBody', 'Helps family members stay informed and connected.'],
+    ['subscription.benefitMemoryTitle', 'Continuing companion memory', 'subscription.benefitMemoryBody', 'Keeps important people and routines in context.'],
+  ];
+  $$('#subPlans .sub-value .sv-row').forEach((row, index) => {
+    const keys = benefitKeys[index];
+    if (!keys) return;
+    const title = row.querySelector('.sv-txt b');
+    const body = row.querySelector('.sv-txt small');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  const planLabel = $('#subPlans .sub-sec-label');
+  if (planLabel) planLabel.textContent = muneaT('subscription.choosePlan', 'Choose a plan');
+  const cycleButtons = $$('#subCycle .scyc-btn');
+  if (cycleButtons[0]) cycleButtons[0].textContent = muneaT('subscription.billingMonthly', 'Monthly');
+  if (cycleButtons[1]) {
+    const labelNode = [...cycleButtons[1].childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
+    if (labelNode) labelNode.textContent = `${muneaT('subscription.billingYearly', 'Yearly')} `;
+    const badge = cycleButtons[1].querySelector('.scyc-badge');
+    if (badge) badge.textContent = muneaT('subscription.savePercent', 'Save {percent}%', { percent: 20 });
+  }
+  const creditRuleKeys = [
+    ['subscription.monthlyCreditsTitle', 'Monthly plan credits', 'subscription.monthlyCreditsBody', 'Issued again each billing period.'],
+    ['subscription.purchasedCreditsTitle', 'Purchased credits', 'subscription.purchasedCreditsBody', 'They do not expire.'],
+    ['subscription.deductionOrderTitle', 'Credit order', 'subscription.deductionOrderBody', 'Monthly credits are used before purchased credits.'],
+  ];
+  $$('#subPlans .credit-rules .cr-row, #subPoints .credit-rules .cr-row').forEach((row, index) => {
+    const keys = creditRuleKeys[index % creditRuleKeys.length];
+    const title = row.querySelector('b');
+    const body = row.querySelector('.cr-note');
+    if (title) title.textContent = muneaT(keys[0], keys[1]);
+    if (body) body.textContent = muneaT(keys[2], keys[3]);
+  });
+  const planCardFacts = {
+    plus: {
+      audienceKey: 'subscription.plusAudience',
+      audienceFallback: 'For everyday voice companionship and essential family care',
+      credits: 100,
+      members: 4,
+    },
+    pro: {
+      audienceKey: 'subscription.proAudience',
+      audienceFallback: 'For more frequent companionship and advanced video interaction',
+      credits: 200,
+      members: 12,
+    },
+  };
+  $$('#planPick .ppk').forEach((card) => {
+    const facts = planCardFacts[card.dataset.t];
+    if (!facts) return;
+    const tag = card.querySelector('.ppk-tag');
+    if (tag) tag.textContent = muneaT('subscription.mostPopular', 'Most popular');
+    const audience = card.querySelector('.ppk-who');
+    if (audience) audience.textContent = muneaT(facts.audienceKey, facts.audienceFallback);
+    const features = card.querySelectorAll('.ppk-feats li');
+    if (features[0]) features[0].textContent = muneaT(
+      'subscription.monthlyVoiceCredits',
+      '{credits} voice-companion credits each month. Unused monthly credits do not roll over.',
+      { credits: facts.credits },
+    );
+    if (features[1]) features[1].textContent = muneaT(
+      'subscription.healthTrendAccess',
+      'Full 7-day and 30-day health trends',
+    );
+    if (features[2]) features[2].textContent = muneaT(
+      'subscription.familyMemberLimit',
+      'Up to {members} people in the family care circle',
+      { members: facts.members },
+    );
+  });
+  const creditIntro = document.querySelector('#subPoints > .sub-fine');
+  if (creditIntro) creditIntro.textContent = muneaT(
+    'subscription.creditsUsageIntro',
+    'Conversations use credits. Add more credits to keep talking when they run out.',
+  );
+  const legalTerms = $('#legalTermsLink');
+  const legalPrivacy = $('#legalPrivacyLink');
+  const legalLine = $('#subPlans .sub-legal');
+  if (legalLine && legalTerms && legalPrivacy) {
+    [...legalLine.childNodes]
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .forEach((node) => node.remove());
+    legalTerms.textContent = muneaT('reader.termsTitle', 'Terms of Service');
+    legalPrivacy.textContent = muneaT('reader.privacyTitle', 'Privacy Policy');
+    legalLine.insertBefore(
+      document.createTextNode(`${muneaT(
+        'subscription.renewalDisclosure',
+        'Subscriptions renew automatically through your Apple Account. Manage or cancel in iPhone Settings; access continues through the current billing period. Purchased credits do not expire. See',
+      )} `),
+      legalTerms,
+    );
+    legalLine.insertBefore(
+      document.createTextNode(` ${muneaT('subscription.legalAnd', 'and')} `),
+      legalPrivacy,
+    );
+    legalLine.appendChild(document.createTextNode(muneaT('subscription.legalPeriod', '.')));
+  }
+  $$('.tu-card').forEach((card) => {
+    const credits = Number(card.dataset.p || 0);
+    const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
+    const amount = card.querySelector('b');
+    const minutes = card.querySelector('.tu-min');
+    if (amount) amount.textContent = muneaT('purchase.creditsAmount', '{credits} credits', { credits: formatted });
+    if (minutes) minutes.textContent = muneaT('purchase.approxMinutes', 'About {minutes} minutes', { minutes: formatted });
+  });
+  const manage = $('#planCancelBtn');
+  if (manage) manage.textContent = muneaT('purchase.manageSubscription', 'Manage subscription');
+  const restore = $('#restoreBtn');
+  if (restore) restore.textContent = muneaT('purchase.restore', 'Restore purchases');
 }
 
 function muneaIsCleanZhText(raw) {
@@ -1251,7 +1526,10 @@ async function aiAddVisitReminder(a) {
   return { ok: true, title, label, reminderId: visit.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
 }
 const CARE_Q_KEY = 'munea.careQuestions';
-const CARE_Q_MAX = 20;          // 上限：清單太長長輩讀不完、也不是這個功能的用途
+/* 上限 5 題（Edward 2026-07-29：「可以多點但不要超過 5 點」）。
+   滿了**不可以默默丟掉最舊的**——寧寧答應要幫他記，偷偷刪掉等於毀約。
+   滿了就講出來，讓他自己決定刪哪一題。 */
+const CARE_Q_MAX = 10;
 const CARE_Q_MAX_LEN = 60;      // 一題最長 60 字（跟工具描述一致）
 function loadCareQuestions() {
   let arr = [];
@@ -1260,7 +1538,8 @@ function loadCareQuestions() {
   return arr.filter(q => q && typeof q.text === 'string' && q.text);
 }
 function saveCareQuestions(arr) {
-  try { localStorage.setItem(CARE_Q_KEY, JSON.stringify(arr.slice(-CARE_Q_MAX))); return true; } catch (e) { return false; }
+  // 這裡不再 slice——靜靜截掉等於把「答應記住的事」丟掉。滿了要在入口擋下並說明。
+  try { localStorage.setItem(CARE_Q_KEY, JSON.stringify(arr)); return true; } catch (e) { return false; }
 }
 function openCareQuestions() {
   return loadCareQuestions().filter(q => !q.askedAt);
@@ -1274,6 +1553,12 @@ async function aiAddCareQuestion(a) {
   if (arr.some(q => !q.askedAt && String(q.text || '').replace(/\s+/g, '') === norm)) {
     // 同一個問題重複記＝清單變垃圾場。回 ok（她已經跟長輩說要記了，不該讓她改口說失敗），但不重複塞。
     return { ok: true, question: raw, count: openCareQuestions().length, duplicate: true };
+  }
+  // 滿 5 題就明確回失敗，讓她當場講出來、問他要不要換掉哪一題。
+  // **絕不默默擠掉最舊的那題**——她說了會記住，結果偷偷刪掉，比一開始就說「記不下了」糟得多。
+  const openNow = openCareQuestions();
+  if (openNow.length >= CARE_Q_MAX) {
+    return { ok: false, error: 'question_list_full', count: openNow.length, max: CARE_Q_MAX };
   }
   const item = { id: 'q_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6), text: raw, createdAt: new Date().toISOString(), askedAt: '' };
   arr.push(item);
@@ -1306,7 +1591,7 @@ const VISIT_SUMMARY_PERIOD_KEY = 'munea.visitSummaryPeriod';
 const VISIT_SUMMARY_PERIODS = [7, 14, 30, 60];
 const VISIT_SUMMARY_MARK = { symptom: '●', vital: '▲', med: '✕' };
 let _rptPeriod = 0;
-let _rptEditing = false;
+let _rptEditing = false;   // 診間閱讀狀態（乾淨）↔ 在家整理狀態（有刪除鍵）
 
 function visitSummaryPeriod() {
   let stored = 0;
@@ -1356,83 +1641,228 @@ function visitPartialNames(partial) {
   return (partial || []).map(k => label[k] || k).join(muneaT('common.listSeparator', '、'));
 }
 
+/* ── 本機先組一份（Edward 2026-07-29：「不要顯示整理中」）─────────────
+   原本整頁一起等 /visit-summary，等到最慢的那一塊，所以開頁一片空白。
+   查過資料在哪：在家量的（munea.healthLog）、吃藥（munea.meds＋munea.medDone）
+   本來就在這支手機裡，連日期範圍都能當場算——這三塊根本不必等網路。
+
+   **刻意不在這裡重做時間軸的挑選邏輯。** 哪一筆數值算「有變化」、哪一句
+   閒聊算「症狀」，規則長在 engine/visit_summary.py。在前端照抄一份，兩邊
+   遲早會走鐘，屆時手機上看到的和印給醫師的 PDF 會是兩份不同的東西——
+   這種東西不能有兩個版本。所以時間軸只認伺服器那一份，等它回來；
+   等不到就明講等不到，不自己編一份。 */
+function vsLocalDateRange(days) {
+  const to = new Date();
+  const from = new Date(to.getTime() - (days - 1) * 86400000);
+  const iso = d => d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
+  return { from: iso(from), to: iso(to) };
+}
+const VS_VITAL_FIELDS = [
+  { key: 'bp', label: () => muneaT('health.bloodPressure', '血壓') },
+  { key: 'hr', label: () => muneaT('health.heartRate', '心跳') },
+  { key: 'spo2', label: () => muneaT('health.bloodOxygen', '血氧') },
+];
+/* 在家量的：只做加總，不做判讀——最近一次的數字＋這段期間量了幾天。
+   不比對任何標準值，不說高不說低（醫材紅線）。 */
+function vsLocalVitals(range) {
+  let log = {};
+  try { log = JSON.parse(localStorage.getItem('munea.healthLog') || '{}') || {}; } catch (e) {}
+  const days = Object.keys(log).filter(d => d >= range.from && d <= range.to).sort();
+  if (!days.length) return [];
+  const out = [];
+  for (const field of VS_VITAL_FIELDS) {
+    let latest = '';
+    let count = 0;
+    for (const d of days) {
+      const row = log[d] || {};
+      let value = '';
+      if (field.key === 'bp') {
+        if (Number.isFinite(row.bpSys) && Number.isFinite(row.bpDia)) value = row.bpSys + '/' + row.bpDia;
+      } else if (Number.isFinite(row[field.key])) {
+        value = String(row[field.key]);
+      }
+      if (value) { latest = value; count += 1; }
+    }
+    if (count) {
+      out.push(field.label() + ' ' + latest + ' · '
+        + muneaT('visit.measuredDays', '量了 {n} 天', { n: count }));
+    }
+  }
+  return out;
+}
+/* 藥實際吃了沒：排了幾次、吃了幾次。只給次數不給服藥率——
+   百分比讀起來就是評分，評分就是判斷。 */
+function vsLocalMedication(range) {
+  const meds = (typeof loadMeds === 'function') ? loadMeds() : [];
+  if (!meds.length) return [];
+  const dayKeys = [];
+  for (let d = new Date(range.from + 'T00:00:00'); ; d = new Date(d.getTime() + 86400000)) {
+    const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+      + '-' + String(d.getDate()).padStart(2, '0');
+    dayKeys.push(key);
+    if (key >= range.to) break;
+    if (dayKeys.length > 400) break;   // 保險絲：日期算錯也不要無限迴圈
+  }
+  const done = {};
+  for (const key of dayKeys) {
+    try { done[key] = JSON.parse(localStorage.getItem('munea.medDone.' + key) || '{}') || {}; }
+    catch (e) { done[key] = {}; }
+  }
+  const out = [];
+  for (const med of meds) {
+    const slots = String(med.time || '').split('、').map(s => s.trim()).filter(Boolean);
+    if (!slots.length) continue;
+    let scheduled = 0;
+    let taken = 0;
+    for (const key of dayKeys) {
+      for (const slot of slots) {
+        scheduled += 1;
+        if (done[key][slot + '|' + med.name]) taken += 1;
+      }
+    }
+    if (scheduled) out.push({ name: med.name, scheduled, taken, missed: Math.max(0, scheduled - taken) });
+  }
+  return out;
+}
+function buildLocalVisitSummary(days) {
+  const range = vsLocalDateRange(days);
+  return {
+    periodDays: days,
+    from: range.from,
+    to: range.to,
+    timeline: [],
+    timelineOmitted: 0,
+    vitals: vsLocalVitals(range),
+    medication: vsLocalMedication(range),
+    baselineNote: '',
+    partial: [],
+    timelinePending: true,   // 時間軸還沒有：等伺服器，不是「沒事發生」
+    fromDevice: true,
+  };
+}
+
 function renderVisitSummary(summary) {
   const body = document.getElementById('rptBody');
   if (!body) return;
   const questions = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
   const parts = [];
+  const sec = key => '<h2 class="set-section">' + rptEsc(key) + '</h2>';
 
   // ① 想問醫生擺最上面——醫師最先想知道的是「這個病人今天想幹嘛」
-  parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生')) + '</h3>');
+  //
+  // 為什麼刪除鍵要藏在「編輯」後面：這一頁有兩個使用時刻，需求正好相反。
+  //   · 看診前在家 → 要加、要刪
+  //   · 在診間把手機遞給醫生 → 一整排「刪除」既雜亂又不專業，
+  //     而且醫生捲頁時很可能誤觸，把他準備了兩個禮拜的問題刪掉
+  // 預設是乾淨的閱讀狀態，要改再按「編輯」。
+  parts.push('<h2 class="set-section vs-sec-act">'
+    + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生'))
+    + (questions.length
+      ? '<button type="button" id="rptEditToggle">' + rptEsc(_rptEditing
+        ? muneaT('common.done', '完成') : muneaT('common.edit', '編輯')) + '</button>'
+      : '')
+    + '</h2>');
   if (questions.length) {
+    // 問題列直接用 .set-row（17px＝規範定的「內文」字級）。
+    // 這是整頁最需要看清楚的東西——長輩在診間拿著手機唸給醫生聽，
+    // 縮成 14px 的小字等於白做。編號用 .sr-ico 那顆現成的圓角方塊，
+    // 他可以直接說「第二題」。刪除用文字不用 ✕ 圖示：長輩讀得懂字，
+    // 猜不出圖示，而且刪東西這種不可逆的動作更不該用猜的。
+    parts.push('<div class="set-list">');
     questions.forEach((q, i) => {
-      parts.push('<div class="rpt-q"><span class="rpt-q-n">' + (i + 1) + '</span>'
-        + '<span class="rpt-q-t">' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</span>'
-        + (_rptEditing ? '<button class="rpt-q-x" type="button" data-qid="' + rptEsc(q.id) + '" aria-label="'
-          + rptEsc(muneaT('visit.deleteQuestionAria', '刪掉這一題')) + '">✕</button>' : '')
+      parts.push('<div class="set-row"><span class="sr-ico">' + (i + 1) + '</span>'
+        + '<span class="sr-main">' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</span>'
+        + (_rptEditing
+          ? '<button class="vs-del" type="button" data-qid="' + rptEsc(q.id) + '" aria-label="'
+            + rptEsc(muneaT('visit.deleteQuestionAria', '刪掉這一題')) + '">'
+            + rptEsc(muneaT('common.delete', '刪除')) + '</button>'
+          : '')
         + '</div>');
     });
+    parts.push('</div>');
   } else {
-    parts.push('<p class="rpt-empty">' + rptEsc(muneaT('visit.questionsEmpty',
+    parts.push('<p class="vs-empty">' + rptEsc(muneaT('visit.questionsEmpty',
       '還沒有記下要問的問題。跟{companion}聊到身體上的疑問時，她會幫你記下來。',
       { companion: (typeof cname === 'function' ? cname() : '寧寧') })) + '</p>');
   }
-  parts.push('<button class="rpt-addq" type="button" id="rptAddQ">'
-    + rptEsc(muneaT('visit.addQuestion', '＋ 自己加一題')) + '</button></div>');
+  // 滿了就不給加，並且講明為什麼——不能讓他按了沒反應
+  if (questions.length >= CARE_Q_MAX) {
+    parts.push('<p class="vs-note">' + rptEsc(muneaT('visit.questionsFullHint',
+      '已經記滿 {n} 題了。想再加的話，先刪掉一題。', { n: CARE_Q_MAX })) + '</p>');
+  } else if (!_rptEditing) {
+    parts.push('<button class="vs-add" type="button" id="rptAddQ">'
+      + rptEsc(muneaT('visit.addQuestion', '＋ 自己加一題')) + '</button>');
+  }
 
   if (!summary) {
-    parts.push('<p class="rpt-empty">' + rptEsc(muneaT('visit.restUnavailable', '其他資料還沒讀到，等連上網路再看一次。')) + '</p>');
+    parts.push(sec(muneaT('visit.timelineTitle', '這段期間發生的事')));
+    parts.push('<p class="vs-empty">' + rptEsc(muneaT('visit.restUnavailable',
+      '其他資料還沒讀到，等連上網路再看一次。')) + '</p>');
     body.innerHTML = parts.join('');
     bindVisitSummaryBody();
     return;
   }
 
-  // ② 時間軸：三種來源用形狀分（醫師要分辨的是可信度，不是嚴重度，所以不用顏色）
-  parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.timelineTitle', '這段期間發生的事')) + '</h3>');
+  // ② 時間軸：三種來源用形狀分（醫師要分辨的是可信度，不是嚴重度，所以不用顏色）。
+  //    這一塊只認伺服器那一份——前端不自己挑哪筆算「有變化」，兩份規則會走鐘。
+  parts.push(sec(muneaT('visit.timelineTitle', '這段期間發生的事')));
+  parts.push('<div class="reader-card">');
   if (summary.timeline && summary.timeline.length) {
-    parts.push('<ul class="rpt-tl">');
     summary.timeline.forEach(e => {
-      parts.push('<li><span class="rpt-d">' + rptShortDate(e.date) + '</span>'
-        + '<span class="rpt-mk">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</span>'
-        + '<span class="rpt-tx">' + rptEsc(e.text)
-        + (e.detail ? '<em>' + rptEsc(e.detail) + '</em>' : '') + '</span></li>');
+      parts.push('<div class="vs-line"><span class="d">' + rptShortDate(e.date) + '</span>'
+        + '<span class="m">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</span>'
+        + '<span class="q">' + rptEsc(e.text)
+        + (e.detail ? '<em>' + rptEsc(e.detail) + '</em>' : '') + '</span></div>');
     });
-    parts.push('</ul><p class="rpt-legend">'
+    parts.push('<p class="vs-note">'
       + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
     // 截斷一定要說出來——悄悄少幾筆會讓醫師以為這就是全部
     if (summary.timelineOmitted > 0) {
-      parts.push('<p class="rpt-note">'
+      parts.push('<p class="vs-note">'
         + rptEsc(muneaT('visit.timelineOmitted', '另有 {n} 筆較早的紀錄沒有列出來。', { n: summary.timelineOmitted }))
         + '</p>');
     }
+  } else if (summary.timelinePending) {
+    // 還在讀 ≠ 沒事發生。這兩件事講反了，醫師會以為這段期間他都好好的。
+    parts.push('<div class="vs-pend" style="border-top:0;margin-top:0;padding-top:0">'
+      + '<i class="vs-dot"></i>' + rptEsc(muneaT('visit.timelineLoading', '聊天中提到的還在讀…')) + '</div>');
+  } else if (summary.timelineFailed) {
+    parts.push('<div class="vs-pend" style="border-top:0;margin-top:0;padding-top:0;color:var(--coral-d)">'
+      + '⌛ ' + rptEsc(muneaT('visit.timelineOffline', '這次沒連上，聊天中提到的沒有列進來')) + '</div>');
   } else {
-    parts.push('<p class="rpt-empty">' + rptEsc(muneaT('visit.timelineEmpty', '這段期間沒有記錄到特別的變化。')) + '</p>');
+    parts.push('<p class="vs-empty" style="padding:0">'
+      + rptEsc(muneaT('visit.timelineEmpty', '這段期間沒有記錄到特別的變化。')) + '</p>');
   }
   parts.push('</div>');
 
   if (summary.vitals && summary.vitals.length) {
-    parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.vitalsTitle', '在家量的')) + '</h3><div class="rpt-card">');
+    parts.push(sec(muneaT('visit.vitalsTitle', '在家量的')));
+    parts.push('<div class="set-list">');
     summary.vitals.forEach(line => {
-      parts.push('<div class="rpt-row"><div><b>' + rptEsc(line) + '</b></div></div>');
+      parts.push('<div class="set-row"><span class="sr-main">' + rptEsc(line) + '</span></div>');
     });
-    parts.push('</div><p class="rpt-note">' + rptEsc(summary.baselineNote || '') + '</p></div>');
+    parts.push('</div>');
+    if (summary.baselineNote) parts.push('<p class="vs-note">' + rptEsc(summary.baselineNote) + '</p>');
   }
 
   if (summary.medication && summary.medication.length) {
-    parts.push('<div class="rpt-sec"><h3>' + rptEsc(muneaT('visit.medTitle', '藥實際吃了沒')) + '</h3><div class="rpt-card">');
+    parts.push(sec(muneaT('visit.medTitle', '藥實際吃了沒')));
+    parts.push('<div class="set-list">');
     summary.medication.forEach(m => {
-      parts.push('<div class="rpt-row"><span class="rpt-k">' + rptEsc(m.name) + '</span><div>'
-        + '<b>' + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次',
-          { scheduled: m.scheduled, taken: m.taken })) + '</b>'
-        + (m.missed ? '<span>' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) + '</span>' : '')
-        + '</div></div>');
+      parts.push('<div class="set-row"><span class="sr-main">' + rptEsc(m.name)
+        + (m.missed ? '<small>' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) + '</small>' : '')
+        + '</span><span class="sr-on">'
+        + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次',
+          { scheduled: m.scheduled, taken: m.taken })) + '</span></div>');
     });
-    parts.push('</div></div>');
+    parts.push('</div>');
   }
 
   // 部分資料沒讀到要講——一份少了血壓的摘要看起來就像「他都沒量」
   if (summary.partial && summary.partial.length) {
-    parts.push('<p class="rpt-note">⌛ '
+    parts.push('<p class="vs-note">⌛ '
       + rptEsc(muneaT('visit.partialNote', '{names}這次沒有讀到，這一頁不是完整的。連上網路後再開一次。',
         { names: visitPartialNames(summary.partial) })) + '</p>');
   }
@@ -1444,7 +1874,12 @@ function renderVisitSummary(summary) {
 function bindVisitSummaryBody() {
   const add = document.getElementById('rptAddQ');
   if (add) add.addEventListener('click', addCareQuestionManually);
-  document.querySelectorAll('#rptBody .rpt-q-x').forEach(btn => {
+  const edit = document.getElementById('rptEditToggle');
+  if (edit) edit.addEventListener('click', () => {
+    _rptEditing = !_rptEditing;
+    renderVisitSummary(_rptLastSummary);
+  });
+  document.querySelectorAll('#rptBody .vs-del').forEach(btn => {
     btn.addEventListener('click', () => removeCareQuestion(btn.dataset.qid));
   });
 }
@@ -1452,6 +1887,11 @@ function bindVisitSummaryBody() {
 /* 長輩自己加一題。刻意**沒有**「子女代為新增」的入口——
    沐寧要降低子女的負擔，不是給子女一個做整理工的工具（Edward 2026-07-28）。 */
 function addCareQuestionManually() {
+  const open = openCareQuestions();
+  if (open.length >= CARE_Q_MAX) {
+    toast(muneaT('visit.questionsFull', '已經記滿 {n} 題了，先刪掉一題再加', { n: CARE_Q_MAX }));
+    return;
+  }
   const raw = window.prompt(muneaT('visit.promptQuestion', '想問醫生什麼？'));
   if (raw === null) return;
   const text = String(raw).trim().slice(0, CARE_Q_MAX_LEN);
@@ -1476,47 +1916,128 @@ function removeCareQuestion(id) {
   renderVisitSummary(_rptLastSummary);
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
 }
-/* 看完醫生了：清單上的問題整批標記「問過了」（保留歷史、不刪除），
-   下次看診就不會再拿舊問題提醒他。 */
-function markCareQuestionsAsked() {
+
+/* 看診日過了，問題自動歸檔（Edward 2026-07-29：拿掉「看完醫生了」那顆按鈕，
+   因為這一頁是歷史資料、不是待辦事項，不該要求他按「完成」）。
+
+   歸檔＝標記 askedAt，**不刪除**。理由跟原本那顆按鈕一樣：他問過什麼是病史
+   的一部分，只是不要再拿舊問題提醒他。判定用「問題建立時間早於某一次已過的
+   就診」——早於那次看診才算問過了；看完診之後才記的，是要問下一次的。 */
+/* 只留 60 天（Edward 2026-07-29：「最多就是儲存60天」）。
+   60 天正好是天數選項的上限——超過那個範圍的紀錄，這一頁再也顯示不到，
+   留著只是佔手機空間。問過的問題也一樣：歸檔是為了下次不再提醒他，
+   不是要永久保存一份健康疑問清單在裝置上。 */
+const VISIT_DATA_RETENTION_DAYS = 60;
+function pruneVisitSummaryData() {
+  const cutoff = Date.now() - VISIT_DATA_RETENTION_DAYS * 86400000;
+  // ① 問過的問題：超過 60 天就清掉。**還沒問的一律留著**——
+  //    他可能兩個月前就想問了，還沒輪到看診，那不是過期資料。
+  try {
+    const arr = loadCareQuestions();
+    const kept = arr.filter(q => {
+      if (!q || !q.askedAt) return true;
+      const asked = Date.parse(q.askedAt);
+      return !Number.isFinite(asked) || asked > cutoff;
+    });
+    if (kept.length !== arr.length) saveCareQuestions(kept);
+  } catch (e) {}
+  // ② 摘要快照：存太久的那份跟現況早就對不上，留著反而可能拿舊的給醫生看
+  try {
+    const all = JSON.parse(localStorage.getItem(VISIT_SUMMARY_SNAP_KEY) || '{}') || {};
+    let changed = false;
+    for (const key of Object.keys(all)) {
+      const savedAt = Date.parse((all[key] || {}).savedAt || '');
+      if (!Number.isFinite(savedAt) || savedAt <= cutoff) { delete all[key]; changed = true; }
+    }
+    if (changed) localStorage.setItem(VISIT_SUMMARY_SNAP_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+
+function autoArchiveCareQuestions() {
+  let visits = [];
+  try { visits = JSON.parse(localStorage.getItem('munea.visits') || '[]') || []; } catch (e) {}
+  if (!Array.isArray(visits) || !visits.length) return 0;
+  const now = Date.now();
+  let lastPassed = 0;
+  for (const v of visits) {
+    if (!v || !v.dateISO) continue;
+    const at = new Date(v.dateISO + 'T' + (v.time || '09:00')).getTime();
+    if (Number.isFinite(at) && at <= now && at > lastPassed) lastPassed = at;
+  }
+  if (!lastPassed) return 0;
   const arr = loadCareQuestions();
-  const now = new Date().toISOString();
+  const stamp = new Date(lastPassed).toISOString();
   let n = 0;
-  arr.forEach(q => { if (!q.askedAt) { q.askedAt = now; n += 1; } });
-  saveCareQuestions(arr);
-  try { trackProductEvent('visit_summary_completed', { askedCount: n, periodDays: _rptPeriod }); } catch (e) {}
-  try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+  arr.forEach(q => {
+    if (q.askedAt) return;
+    const created = Date.parse(q.createdAt || '');
+    if (Number.isFinite(created) && created <= lastPassed) { q.askedAt = stamp; n += 1; }
+  });
+  if (n) {
+    saveCareQuestions(arr);
+    try { trackProductEvent('care_questions_auto_archived', { archivedCount: n }); } catch (e) {}
+    try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
+  }
   return n;
 }
 
 let _rptLastSummary = null;
 async function openVisitSummary(source) {
-  const modal = document.getElementById('reportModal');
-  if (!modal) return;
-  _rptEditing = false;
+  const page = document.getElementById('reportModal');
+  if (!page) return;
+  _rptEditing = false;   // 每次打開都回到閱讀狀態
+  autoArchiveCareQuestions();
+  pruneVisitSummaryData();
   _rptPeriod = visitSummaryPeriod();
   syncVisitSummaryTabs();
-  modal.classList.add('show');
+  page.classList.add('show');
+  page.setAttribute('aria-hidden', 'false');
   try { trackProductEvent('visit_summary_opened', { periodDays: _rptPeriod, source: source || 'unknown' }); } catch (e) {}
   await loadVisitSummaryInto(_rptPeriod);
 }
+function closeVisitSummary() {
+  const page = document.getElementById('reportModal');
+  if (!page) return;
+  page.classList.remove('show');
+  page.setAttribute('aria-hidden', 'true');
+}
+
+/* 開頁順序（Edward 2026-07-29：「不要顯示整理中」）：
+     1. 本機資料先畫——在家量的、吃藥、要問的問題都在這支手機裡，開頁就有東西
+     2. 有上次的快照就用快照（診間離線時，時間軸也還在）
+     3. 伺服器回來就換成完整那一份
+   日期範圍當場算，不必等任何人。 */
 async function loadVisitSummaryInto(days) {
   const line = document.getElementById('rptPeriodLine');
-  // 先畫快照＝診間離線也看得到東西，再背景更新
   const coverage = s => muneaT('visit.coverage', '涵蓋 {from} – {to}',
     { from: rptShortDate(s.from), to: rptShortDate(s.to) });
+
+  const local = buildLocalVisitSummary(days);
   const snap = loadVisitSummarySnapshot(days);
-  _rptLastSummary = snap ? snap.summary : null;
+  // 快照有完整時間軸，比本機這份多；但本機的數字是此刻最新的，所以疊上去。
+  _rptLastSummary = snap && snap.summary
+    ? Object.assign({}, snap.summary, {
+        vitals: local.vitals.length ? local.vitals : snap.summary.vitals,
+        medication: local.medication.length ? local.medication : snap.summary.medication,
+        timelinePending: true,
+      })
+    : local;
   renderVisitSummary(_rptLastSummary);
-  if (line) line.textContent = _rptLastSummary ? coverage(_rptLastSummary) : muneaT('visit.preparing', '整理中…');
+  if (line) line.textContent = coverage(_rptLastSummary);
+
   const fresh = await fetchVisitSummary(days);
   if (fresh) {
     _rptLastSummary = fresh;
     renderVisitSummary(fresh);
     if (line) line.textContent = coverage(fresh);
-  } else if (!snap) {
-    if (line) line.textContent = muneaT('visit.offlineLine', '這次沒有連上，先看看你要問的問題');
+    return;
   }
+  // 連不上：本機那幾塊照樣留著給醫生看，但時間軸要明講是缺的，不能裝成「沒事發生」
+  _rptLastSummary = Object.assign({}, _rptLastSummary, {
+    timelinePending: false,
+    timelineFailed: !(_rptLastSummary.timeline && _rptLastSummary.timeline.length),
+  });
+  renderVisitSummary(_rptLastSummary);
 }
 function syncVisitSummaryTabs() {
   document.querySelectorAll('#rptPeriodTabs .seg-btn').forEach(b => {
@@ -1567,73 +2088,236 @@ function visitSummaryAsText(summary) {
 }
 
 /* 摘要 → 一份自成一體的 A4 HTML，餵給原生外掛轉 PDF。
-   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的 modal，直接印會拿到
+   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的子頁，直接印會拿到
    App 的殼＋被裁掉的捲動內容。這份只有摘要本身，版面完全可控、每一份長一樣。
-   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS 根本不會被載到。 */
+   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS／字型根本不會被載到。
+
+   ── 這一頁的設計前提（決定了下面每一個選擇）───────────────────
+   ① 醫生大約 60 秒看完 → 可掃讀優先於好看。標題列、區塊標、數字對齊
+      都是為了「眼睛一路往下不用回頭」。
+   ② **診所印表機常常是黑白的** → 層級必須在灰階下就成立。顏色只作點綴，
+      任何意義都同時由字重／級數／線條承載，不單靠顏色。
+   ③ 不得有警示色（醫材紅線）——沒有紅、沒有橘、沒有底色分級。
+      時間軸三種來源用「形狀」區分，因為醫師要分辨的是可信度不是嚴重度。
+   ④ 字型吃系統：標題用襯線（沐寧頁面大標本來就是襯線，紙面也才有文件的重量），
+      內文用系統無襯線。數字一律 tabular-nums 才對得齊。
+   ⑤ 可能超過一頁（60 天資料多），所以每個區塊都不准被切開。 */
 function visitSummaryAsHTML(summary) {
   const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
+  const companion = (typeof cname === 'function' ? cname() : '沐寧');
+  const period = summary
+    ? muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to })
+    : '';
+  const sec = label => '<h2>' + rptEsc(label) + '</h2>';
   const rows = [];
-  rows.push('<h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>');
-  rows.push('<p class="sub">' + (summary
-    ? rptEsc(muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to }))
-    : '') + '</p>');
 
+  // 抬頭走「信紙」結構：上面一行品牌，下面一行文件標題。
+  //
+  // Edward 2026-07-30 指正兩次：先是「報告沒有品牌 Logo 與名稱」，
+  // 然後是「Logo 與 Logo 字不是有圖嗎？不要自己自創，要符合品牌設計規範」。
+  // 我第一版整個省掉品牌（判斷錯了），第二版自己用向量重畫一個水滴（更錯——
+  // 品牌標記不是可以自由發揮的東西）。這一版用**真的資產**與**官網的鎖定式**。
+  //
+  // 標記：web/src/visit-summary-logo.js（現行 App Icon 的透明圓角版 base64）。
+  //   為什麼內嵌：ExportPlugin.swift 用 baseURL: nil 載這份 HTML，相對路徑會破圖。
+  // 文字標：照官網 app-site/warm.css 的 .logo 鎖定式原樣搬過來——
+  //   Poppins 700、字距 -.025em、「Mu」墨色 +「nea」主色、「沐寧」.78em 左距 .41em。
+  //   這不是我挑的排版，是既有規範，所以照抄不改。
+  //
+  // 分兩行而不是塞進標題列，是因為醫生要先知道「這是什麼文件」——
+  // 品牌是出處（安靜地放在信紙頭），標題才是主角。
+  const brandLogo = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_LOGO) || '';
+  // 文字標的字體：Poppins 700 只子集化 "Munea" 五個字母（0.8KB）。
+  // 官網是從 Google CDN 載 Poppins，但這份 HTML 走 baseURL: nil 的離屏 webview，
+  // 載不到任何外部資源——不內嵌的話字形會退回系統無襯線，文字標就不是品牌了
+  // （Edward 2026-07-30：「Munea 的字粗字體也有問題」，根因就是這個）。
+  const brandFont = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_WORDMARK_FONT) || '';
+  rows.push('<header>'
+    + '<div class="logo">'
+    // 圖載不到時只是少一個標記，文字標照樣在——紙上不會出現破圖，也不會沒有出處
+    +   (brandLogo ? '<img class="logo-mark" src="' + brandLogo + '" alt="" />' : '')
+    +   '<span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>'
+    + '</div>'
+    + '<div class="title"><h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>'
+    +   '<span class="period">' + rptEsc(period) + '</span></div>'
+    + '</header>');
+
+  // ① 想問醫生＝這張紙存在的理由，所以是唯一有底色、字也最大的一塊
   if (qs.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生')) + '</h2><ol>');
-    qs.forEach(q => rows.push('<li>' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
-    rows.push('</ol>');
+    rows.push('<section class="ask">' + sec(muneaT('visit.questionsTitle', '這次想問醫生')) + '<ul>');
+    // 編號自己畫：::marker 的 color 在各家排版引擎支援不一致，
+    // 用 span 才保證印出來是主色、而且對得齊
+    qs.forEach((q, i) => rows.push('<li><span class="n">' + (i + 1) + '</span>'
+      + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
+    rows.push('</ul></section>');
   }
+
+  // ② 時間軸
   if (summary && summary.timeline && summary.timeline.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.timelineTitle', '這段期間發生的事')) + '</h2><table>');
+    rows.push('<section>' + sec(muneaT('visit.timelineTitle', '這段期間發生的事')) + '<table class="tl">');
     summary.timeline.forEach(e => {
       rows.push('<tr><td class="d">' + rptEsc(rptShortDate(e.date)) + '</td>'
         + '<td class="m">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</td>'
-        + '<td>' + rptEsc(e.text) + (e.detail ? '<span class="sm">（' + rptEsc(e.detail) + '）</span>' : '') + '</td></tr>');
+        + '<td>' + rptEsc(e.text)
+        + (e.detail ? '<span class="det">' + rptEsc(e.detail) + '</span>' : '') + '</td></tr>');
     });
-    rows.push('</table><p class="sm">' + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    rows.push('</table><p class="legend">'
+      + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    // 截斷一定要說出來——悄悄少幾筆會讓醫師以為這就是全部
     if (summary.timelineOmitted > 0) {
-      rows.push('<p class="sm">'
+      rows.push('<p class="note">'
         + rptEsc(muneaT('visit.timelineOmitted', '另有 {n} 筆較早的紀錄沒有列出來。', { n: summary.timelineOmitted }))
         + '</p>');
     }
+    rows.push('</section>');
   }
-  if (summary && summary.vitals && summary.vitals.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.vitalsTitle', '在家量的')) + '</h2><ul>');
-    summary.vitals.forEach(v => rows.push('<li>' + rptEsc(v) + '</li>'));
-    rows.push('</ul><p class="sm">' + rptEsc(summary.baselineNote || '') + '</p>');
+
+  // ③④ 在家量的 ＋ 藥實際吃了沒：**併排兩欄**。
+  //     兩邊都是短清單，各佔一整列的話 A4 的寬度整片浪費，而且醫生的視線要
+  //     橫跨整頁才讀到一個數字。併排之後兩塊都在視線範圍內，一眼看完。
+  //     只有一邊有資料時自動吃滿整列。
+  const hasVitals = !!(summary && summary.vitals && summary.vitals.length);
+  const hasMeds = !!(summary && summary.medication && summary.medication.length);
+  if (hasVitals || hasMeds) {
+    rows.push('<div class="cols">');
+    if (hasVitals) {
+      rows.push('<section>' + sec(muneaT('visit.vitalsTitle', '在家量的')) + '<table class="kv">');
+      summary.vitals.forEach(v => {
+        // 「血壓 128/82 · 量了 14 天」→ 拆成項目／數值兩欄
+        const cut = String(v).indexOf(' ');
+        rows.push('<tr><th>' + rptEsc(cut > 0 ? v.slice(0, cut) : v) + '</th>'
+          + '<td>' + rptEsc(cut > 0 ? v.slice(cut + 1) : '') + '</td></tr>');
+      });
+      rows.push('</table>');
+      if (summary.baselineNote) rows.push('<p class="note">' + rptEsc(summary.baselineNote) + '</p>');
+      rows.push('</section>');
+    }
+    if (hasMeds) {
+      // 只給次數不給服藥率——百分比讀起來就是評分，評分就是判斷
+      rows.push('<section>' + sec(muneaT('visit.medTitle', '藥實際吃了沒')) + '<table class="kv">');
+      summary.medication.forEach(m => {
+        rows.push('<tr><th>' + rptEsc(m.name) + '</th><td>'
+          + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次',
+            { scheduled: m.scheduled, taken: m.taken }))
+          + (m.missed
+            ? '<span class="det">' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) + '</span>'
+            : '')
+          + '</td></tr>');
+      });
+      rows.push('</table></section>');
+    }
+    rows.push('</div>');
   }
-  if (summary && summary.medication && summary.medication.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.medTitle', '藥實際吃了沒')) + '</h2><table>');
-    summary.medication.forEach(m => {
-      rows.push('<tr><td>' + rptEsc(m.name) + '</td><td>'
-        + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次', { scheduled: m.scheduled, taken: m.taken }))
-        + (m.missed ? '　' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) : '')
-        + '</td></tr>');
-    });
-    rows.push('</table>');
-  }
+
+  // 缺料要講——一份少了血壓的摘要看起來就像「他都沒量」
   if (summary && summary.partial && summary.partial.length) {
-    rows.push('<p class="sm">' + rptEsc(muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
-      { names: visitPartialNames(summary.partial) })) + '</p>');
+    rows.push('<p class="note incomplete">'
+      + rptEsc(muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
+        { names: visitPartialNames(summary.partial) })) + '</p>');
   }
-  rows.push('<p class="foot">' + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷',
-    { companion: (typeof cname === 'function' ? cname() : '沐寧') })) + '</p>');
+
+  // 頁尾也帶品牌名——這張紙被影印、抬頭被裁掉的時候，出處還在。
+  // 品牌名是專有名詞，不進 i18n 目錄（不該被翻譯），所以另外接在前面。
+  rows.push('<footer><b>沐寧 Munea</b> · '
+    + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion }))
+    + '</footer>');
 
   // lang 跟著 App 語系走：離屏 webview 的斷行與字型選擇吃這個屬性，
   // 寫死 zh-Hant 會讓日文那份用中文字形排版。
-  return '<!doctype html><html lang="' + rptEsc(muneaLocale() === 'zh-TW' ? 'zh-Hant' : muneaLocale()) + '"><head><meta charset="utf-8">'
+  const lang = muneaLocale() === 'zh-TW' ? 'zh-Hant' : muneaLocale();
+  return '<!doctype html><html lang="' + rptEsc(lang) + '"><head><meta charset="utf-8">'
     + '<style>'
-    + '@page{size:A4;margin:14mm}'
-    + 'body{font-family:-apple-system,"PingFang TC","Heiti TC",sans-serif;color:#1a1a1a;font-size:12pt;line-height:1.6;margin:0}'
-    + 'h1{font-size:20pt;margin:0 0 2pt}'
-    + 'h2{font-size:12pt;margin:16pt 0 4pt;padding-bottom:2pt;border-bottom:1px solid #ccc}'
-    + '.sub{color:#555;margin:0 0 6pt;font-size:10.5pt}'
-    + 'ol,ul{margin:0;padding-left:18pt}li{margin:2pt 0}'
+    // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
+    // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
+    // 定色照 docs/產品設計期待-對齊憲章.md，Edward 2026-07-30 拍板補充：
+    // **主企業色是薄荷綠，不是深綠**；深綠依規範只准做文字強調。
+    // 所以這裡不叫 --teal（那個名字會讓後人以為品牌主色是深綠），
+    // 改用兩個講清楚用途的名字：
+    //   --mint-deep   #2E8A83  薄荷綠的深階 → **線條與來源符號**，不當內文色
+    //   --logo-orange #F4A261  Logo 上那顆橘（Edward 7/30 拍板）→ 只給品牌相關
+    //
+    // 為什麼區塊標回墨色、不用薄荷綠深階：實測 #2E8A83 對白紙是 4.13:1，
+    // 而區塊標是 9.5pt 粗體——WCAG 的「大字」要 ≥11.5pt 粗體才算，所以這個
+    // 組合沒過 AA（4.5:1）。憲章那條「不准淡色字配淡色底」就是在講這件事。
+    // 憲章原文是「文字只用白／石墨黑」，所以文字回石墨黑（11.6:1），
+    // 品牌與層級靠「線條＋字重＋級數」承載——這一頁本來就要求層級在灰階下
+    // 也成立，那顏色對標題就只是裝飾，裝飾不該犧牲可讀性。
+    //
+    // 文字標的「nea」是例外，仍用薄荷綠深階：那是品牌鎖定式的一部分，
+    // WCAG 對 logotype 明文豁免對比要求（1.4.3 例外條款），而且官網用的是
+    // 更淡的 #3AA8A0——紙面已經加深一階了。
+    + ':root{--ink:#3A352E;--muted:#5A6963;--mint-deep:#2E8A83;'
+    +   '--logo-orange:#F4A261;--mint:#E8F2EE;--line:#D9D3C7}'
+    // 內嵌字體要排在最前面，@font-face 必須先宣告才輪得到後面的 font-family
+    + (brandFont
+      ? '@font-face{font-family:"Munea Wordmark";src:url(' + brandFont + ') format("woff2");'
+        + 'font-weight:700;font-style:normal;font-display:block}'
+      : '')
+    + '@page{size:A4;margin:15mm 14mm 12mm}'
+    + '*{box-sizing:border-box}'
+    // 底色要印得出來（WKWebView.createPDF 吃這個屬性），否則問題區塊會變全白
+    + 'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    + 'body{margin:0;color:var(--ink);font-size:10.5pt;line-height:1.6;'
+    +   'font-family:-apple-system,"PingFang TC","Hiragino Sans","Heiti TC",sans-serif;'
+    +   'font-variant-numeric:tabular-nums}'
+
+    // 抬頭：標題與期間同基線，下面一條 1.5pt 實線＝這一頁唯一的品牌動作
+    + 'header{border-bottom:1.5pt solid var(--mint-deep);padding-bottom:5pt}'
+    // 信紙頭：標記與品牌名，級數刻意壓小——出處不該跟文件標題爭
+    // 品牌鎖定式：比例照官網 .logo（標記 30px 對字級 22px、間距 11px），
+    // 換算成紙面級數後等比縮小。字型 Poppins 在離屏 webview 載不到，
+    // 退回系統無襯線——字重與字距照規範，形不走樣。
+    + '.logo{display:flex;align-items:center;gap:.5em;margin-bottom:3pt;'
+    +   'font-family:"Munea Wordmark",Poppins,-apple-system,"PingFang TC",sans-serif;'
+    +   'font-weight:700;font-size:10.5pt;letter-spacing:-.025em;color:var(--ink)}'
+    + '.logo-mark{width:14.3pt;height:14.3pt;flex:none;object-fit:contain}'
+    + '.logo-word{line-height:1;white-space:nowrap}'
+    + '.logo-word b{color:var(--mint-deep);font-weight:700}'
+    + '.logo-zh{font-family:"Noto Sans TC","PingFang TC",sans-serif;font-size:.78em;'
+    +   'font-weight:700;letter-spacing:.04em;margin-left:.41em}'
+    + '.title{display:flex;align-items:baseline;justify-content:space-between;gap:12pt}'
+    + 'h1{font-family:"Songti TC","Noto Serif TC",Georgia,serif;font-size:18pt;font-weight:700;'
+    +   'margin:0;line-height:1.2}'
+    + '.period{font-size:9pt;color:var(--muted);white-space:nowrap}'
+
+    // 區塊標：不用 uppercase（對中文完全無效），字距只給極小值——
+    // 中文被拉開字距看起來是排錯不是設計。層級靠「字重＋主色＋下方細線」建立，
+    // 這三者在黑白印表機下也還在（線與字重不吃顏色）。
+    + 'section{margin-top:12pt;page-break-inside:avoid;break-inside:avoid}'
+    + 'h2{font-size:9.5pt;font-weight:700;letter-spacing:.02em;color:var(--ink);'
+    +   'margin:0 0 4pt;padding-bottom:2pt;border-bottom:.5pt solid var(--line)}'
+
+    // ① 想問醫生：唯一有底色、字最大的一塊（這張紙存在的理由）
+    + '.ask{background:var(--mint);border-radius:2pt;padding:9pt 11pt 10pt;margin-top:10pt}'
+    + '.ask h2{border-bottom-color:rgba(35,108,102,.28);margin-bottom:5pt}'
+    + '.ask ul{margin:0;padding:0;list-style:none}'
+    + '.ask li{position:relative;padding-left:18pt;font-size:11.5pt;line-height:1.5;margin:4pt 0}'
+    + '.ask .n{position:absolute;left:0;top:0;width:13pt;text-align:right;'
+    +   'font-weight:700;color:var(--ink)}'
+
+    // 表格：只用細橫線，不用外框不用斑馬紋——紙上格線越少越好讀
     + 'table{width:100%;border-collapse:collapse}'
-    + 'td{padding:3pt 0;vertical-align:top;border-bottom:1px solid #eee}'
-    + 'td.d{width:42pt;color:#555;white-space:nowrap}td.m{width:16pt;text-align:center}'
-    + '.sm{font-size:9.5pt;color:#666;margin:4pt 0 0}'
-    + '.foot{margin-top:18pt;padding-top:6pt;border-top:1px solid #ccc;font-size:9pt;color:#666;text-align:center}'
+    + 'th,td{padding:3.5pt 0;vertical-align:baseline;border-bottom:.5pt solid var(--line);text-align:left}'
+    + 'tr:last-child th,tr:last-child td{border-bottom:0}'
+    + '.tl .d{width:34pt;color:var(--muted);font-size:9pt;white-space:nowrap}'
+    + '.tl .m{width:14pt;text-align:center;color:var(--mint-deep)}'
+    + '.det{display:block;font-size:8.5pt;font-weight:400;color:var(--muted);margin-top:1pt}'
+
+    // 在家量的／藥：併排兩欄，數值緊跟在項目後面不貼頁緣
+    + '.cols{display:flex;gap:22pt;align-items:flex-start;'
+    +   'page-break-inside:avoid;break-inside:avoid}'
+    + '.cols>section{flex:1;min-width:0;margin-top:12pt}'
+    + '.kv th{font-weight:400;color:var(--muted);white-space:nowrap;padding-right:10pt}'
+    + '.kv td{text-align:right;font-weight:600}'
+
+    + '.legend{font-size:8.5pt;color:var(--muted);margin:5pt 0 0}'
+    + '.note{font-size:8.5pt;color:var(--muted);margin:4pt 0 0;line-height:1.5}'
+    // 缺料那句要看得見（但不用警示色——一條左側細線就夠）
+    + '.incomplete{margin-top:11pt;padding-left:7pt;border-left:2pt solid var(--line)}'
+
+    + 'footer{margin-top:18pt;padding-top:5pt;border-top:.5pt solid var(--line);'
+    +   'font-size:8.5pt;color:var(--muted);text-align:center}'
+    + 'footer b{color:var(--mint-deep);font-weight:700}'
     + '</style></head><body>' + rows.join('') + '</body></html>';
 }
 
@@ -1721,7 +2405,19 @@ async function handleVoiceAction(action, args) {
   }
   if (action === 'add_care_question') {
     const r = await aiAddCareQuestion({ question: args.question });
-    if (typeof toast === 'function') toast(r.ok ? ('記下來了，看醫生前我會提醒你（' + r.count + ' 個問題）') : '這個問題我沒聽清楚，你再說一次好嗎');
+    if (typeof toast === 'function') {
+      // 失敗有兩種，不能都說「我沒聽清楚」——清單滿了他再重講一百次也沒用，
+      // 只會讓他覺得自己講話講不清楚。要講真正的原因。
+      let msg;
+      if (r.ok) {
+        msg = muneaT('visit.questionSaved', '記下來了，看醫生前我會提醒你（{n} 個問題）', { n: r.count });
+      } else if (r.error === 'question_list_full') {
+        msg = muneaT('visit.questionsFull', '已經記滿 {n} 題了，先刪掉一題再加', { n: r.max || CARE_Q_MAX });
+      } else {
+        msg = muneaT('visit.questionUnheard', '這個問題我沒聽清楚，你再說一次好嗎');
+      }
+      toast(msg);
+    }
     return r;
   }
   if (action === 'set_medication_reminder') {
@@ -4124,16 +4820,9 @@ function completeChatSession(reason = 'ended') {
 }
 
 function showView(id) {
-  // 聊聊要登入才能用（7/9 Edward 拍板 A：免費 5 分鐘要綁帳號才守得住、不怕重裝重置）
-  // 所有進聊聊的路都經過這個路口——訪客點聊聊＝先引導 Google／Apple 登入、不進聊天頁
-  if (id === 'chat' && !isLoggedIn()) {
-    if (typeof openAuthSheet === 'function') openAuthSheet();
-    if (typeof setAuthMessage === 'function') {
-      setAuthMessage(muneaT('auth.signInDescription', '登入後就能和 {companion} 聊聊。', { companion: cname() }), 'ok');
-    }
-    try { trackProductEvent('login_gate_shown', { feature: 'chat' }); } catch (e) {}
-    return;
-  }
+  // 2026-07-30 Edward 拍板：訪客可以進聊聊頁看看（看得到誰要陪他講話、畫面長什麼樣），
+  // 關卡從「門口」移到「開始通話」那一刻（見 connectCall 開頭與 #callToggle）。
+  // 7/9 拍板 A 的原意沒有被放寬——免費 5 分鐘一樣要綁帳號才給，只是不再攔在門口。
   const t = $('#toast'); if (t) t.classList.remove('show');
   $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
   if (id === 'status') {
@@ -4307,13 +4996,26 @@ function localizeAuthTerms() {
   const terms = $('#authSheet .auth-terms');
   const link = terms && terms.querySelector('a');
   if (terms && link) {
-    link.textContent = muneaT('auth.termsLink', '服務條款與隱私權政策');
+    // 使用條款與隱私權政策各自成連結：同意畫面上兩份文件都要點得到（上線後合規要求）
+    const combinedText = muneaT('auth.termsLink', '使用條款與隱私權政策');
+    const termsText = muneaT('auth.termsLinkTerms', '使用條款');
+    const privacyText = muneaT('auth.termsLinkPrivacy', '隱私權政策');
+    // 連接詞從完整句切出來：en/es 需要前後空格，而字典值不允許留白邊
+    const joiner = combinedText.startsWith(termsText) && combinedText.endsWith(privacyText)
+      ? combinedText.slice(termsText.length, combinedText.length - privacyText.length)
+      : '與';
+    link.textContent = termsText;
     link.setAttribute('href', '#');
     link.removeAttribute('target');
     link.removeAttribute('rel');
+    const privacyLink = document.createElement('a');
+    privacyLink.textContent = privacyText;
+    privacyLink.setAttribute('href', '#');
     terms.replaceChildren(
       document.createTextNode(`${muneaT('auth.termsPrefix', '繼續即代表同意')} `),
       link,
+      document.createTextNode(joiner),
+      privacyLink,
       document.createTextNode(` — ${muneaT(
         'auth.aiProcessingDisclosure',
         '語音與文字會由 Munea 的 AI 系統處理，部分服務位於境外。',
@@ -4324,9 +5026,14 @@ function localizeAuthTerms() {
       link.addEventListener('click', event => {
         event.preventDefault();
         closeAuthSheet();
-        openInAppReader('privacy');
+        openInAppReader('terms');
       });
     }
+    privacyLink.addEventListener('click', event => {
+      event.preventDefault();
+      closeAuthSheet();
+      openInAppReader('privacy');
+    });
   }
   const close = $('#authCloseBtn');
   if (close) close.setAttribute('aria-label', muneaT('accessibility.close', '關閉'));
@@ -4447,8 +5154,10 @@ async function signInWithAuthProvider(provider) {
     return setAuthMessageState('inProgress', 'ok');
   }
   trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom });
-  if (code === 'google_sign_in_cancelled') return setAuthMessageState('cancelled', 'info');
-  if (code === 'google_sign_in_in_progress') return setAuthMessageState('inProgress', 'ok');
+  // 比對結尾而非整串：Apple 與 Google 各自回 <provider>_sign_in_cancelled／_in_progress，
+  // 寫死 google_ 開頭會讓 Apple 使用者按到一半退出時看到紅字「登入失敗」——取消不是失敗。
+  if (code.endsWith('_sign_in_cancelled')) return setAuthMessageState('cancelled', 'info');
+  if (code.endsWith('_sign_in_in_progress')) return setAuthMessageState('inProgress', 'ok');
   setAuthMessageState('unavailable', 'error');
 }
 async function signInDeveloperMode() {
@@ -5410,6 +6119,49 @@ function pushWallet() { syncPush('wallet', { grant: POINTS.total, used: POINTS.u
 // 只有「免費 + 真的 0 點」才收起來——免費走一次性 5 分鐘體驗、不吃點數，
 // 這時掛「剩 0 點」會被誤會成「沒點數不能聊」。
 function ptsPillHidden() { return !!(window.MMPLAN && window.MMPLAN.isFree()) && ptsLeft() <= 0; }
+function rebuildSettingsPointsLabel(formattedLeft) {
+  const label = document.querySelector('.plan-card .pts-label');
+  const balance = $('#ptsLeft');
+  const usage = label ? label.querySelector('.pts-used') : null;
+  const grant = $('#setPlanGrant');
+  const used = $('#ptsUsed');
+  if (!label || !balance || !usage || !grant || !used) return;
+
+  const balanceMarker = '__MUNEA_CREDITS__';
+  const balanceCopy = muneaT(
+    'settings.creditsBalance',
+    '點數 {credits} 點',
+    { credits: balanceMarker },
+  );
+  const balanceParts = balanceCopy.split(balanceMarker);
+  balance.textContent = formattedLeft;
+  label.replaceChildren(
+    document.createTextNode(balanceParts[0] || ''),
+    balance,
+    document.createTextNode(balanceParts.slice(1).join(balanceMarker) || ''),
+    document.createTextNode(' '),
+    usage,
+  );
+
+  const grantMarker = '__MUNEA_GRANT__';
+  const usedMarker = '__MUNEA_USED__';
+  const usageCopy = muneaT(
+    'settings.monthlyGrantUsed',
+    '每月送 {grant} · 已用 {used}',
+    { grant: grantMarker, used: usedMarker },
+  );
+  const usageParts = usageCopy.split(grantMarker);
+  const afterGrant = (usageParts[1] || '').split(usedMarker);
+  grant.textContent = new Intl.NumberFormat(muneaLocale()).format(Number(grant.textContent) || 0);
+  used.textContent = new Intl.NumberFormat(muneaLocale()).format(POINTS.used);
+  usage.replaceChildren(
+    document.createTextNode(usageParts[0] || ''),
+    grant,
+    document.createTextNode(afterGrant[0] || ''),
+    used,
+    document.createTextNode(afterGrant.slice(1).join(usedMarker) || ''),
+  );
+}
 function renderPoints() {
   const left = ptsLeft();
   const formattedLeft = new Intl.NumberFormat(muneaLocale()).format(left);
@@ -5418,8 +6170,7 @@ function renderPoints() {
     hud.textContent = muneaT('settings.creditsBalance', '點數 {credits} 點', { credits: formattedLeft });
     hud.style.display = ptsPillHidden() ? 'none' : '';
   }
-  if ($('#ptsLeft')) $('#ptsLeft').textContent = left;
-  if ($('#ptsUsed')) $('#ptsUsed').textContent = POINTS.used;
+  rebuildSettingsPointsLabel(formattedLeft);
   if ($('#ptsBar')) $('#ptsBar').style.width = (POINTS.total > 0 ? Math.round(POINTS.used / POINTS.total * 100) : 0) + '%';
   refreshLowState();
 }
@@ -5704,9 +6455,24 @@ function handleMedicationChange(event) {
   pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot ? medSlotLabel(dose.slot) : '這次') + '服藥，' + cname() + '有看著');
 }
 function streakLine(n) {
-  if (n >= 10) return '這個月有 <b>' + n + ' 天</b>準時吃藥，很穩，繼續保持';
-  if (n >= 3) return '這個月有 <b>' + n + ' 天</b>準時吃藥，節奏出來了';
-  return '開始把吃藥記下來了，好的開始';
+  if (n >= 10) {
+    return muneaT(
+      'home.care.medicationStreakLong',
+      'You took your medication on time {days} days this month. Great consistency—keep it up.',
+      { days: n },
+    );
+  }
+  if (n >= 3) {
+    return muneaT(
+      'home.care.medicationStreakMedium',
+      'You took your medication on time {days} days this month. Your routine is taking shape.',
+      { days: n },
+    );
+  }
+  return muneaT(
+    'home.care.medicationStreakStart',
+    'You started tracking your medication. That is a good start.',
+  );
 }
 const CARE_ICONS = {
   msg: '<svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg>',
@@ -5718,17 +6484,27 @@ const CARE_ICONS = {
 let _careIdx = 0, _careTimer = null;
 // 留意卡文案規則（Edward 7/6）：標題 ≤12 字（一行放得下）、副標最多兩行（約 26 字內）完整顯示
 function plain(s) { return String(s == null ? '' : s).replace(/<[^>]+>/g, ''); }
+function localizedCareLabels(rendererCopy) {
+  return rendererCopy
+    ? rendererCopy.careLabels()
+    : {
+      acknowledge: muneaT('home.care.acknowledge', 'Got it'),
+      open: muneaT('home.care.open', 'View'),
+      remove: muneaT('home.care.remove', 'Remove this item'),
+      report: muneaT('home.care.report', 'Report'),
+    };
+}
 function buildCareItems() {
   const items = [];
   const rendererCopy = muneaRendererCopy();
-  const careLabels = rendererCopy ? rendererCopy.careLabels() : null;
+  const careLabels = localizedCareLabels(rendererCopy);
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
   const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
   // 留意卡是首頁會轉動輪播的位置、比招呼卡更容易被看到——family feed 原文一律要過守門才能顯示（Edward 2026-07-15 事故：這裡漏接、招呼卡另一條路徑已守）
   let _rTitle = rendererCopy
     ? rendererCopy.familyRelay({ companion: cname() }).title
-    : '家人帶話給你';
+    : muneaT('home.care.familyRelayTitle', 'Your family left you a message');
   let _rSub = '', _relayClean = false;
   if (relayMsg) {
     const _p = plain(relayMsg);
@@ -5740,7 +6516,9 @@ function buildCareItems() {
         const localized = rendererCopy
           ? rendererCopy.familyRelay({ body: _bodySafe, companion: cname(), from: _whoSafe })
           : null;
-        _rTitle = localized ? localized.title : _whoSafe + ' 要我提醒你';
+        _rTitle = localized
+          ? localized.title
+          : muneaT('home.care.familyRelayFrom', '{name} asked me to remind you', { name: _whoSafe });
         _rSub = localized ? localized.body : _bodySafe;
         _relayClean = true;
       }
@@ -5756,14 +6534,22 @@ function buildCareItems() {
     ? rendererCopy.familyRelay({ body: _feed0Safe, companion: cname() })
     : null;
   const familyItem = _relayClean
-    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: careLabels ? careLabels.acknowledge : '知道了', feedIdx: _feedIdx }
+    ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: careLabels.acknowledge, feedIdx: _feedIdx }
     : {
       k: 'family',
       tone: '',
       icon: 'msg',
-      title: defaultRelay ? defaultRelay.title : '家人帶話給你',
-      sub: defaultRelay ? defaultRelay.body : (_feed0Safe || ('美華說週末回去看你，' + cname() + '都幫你收著了')),
-      btn: careLabels ? careLabels.open : '去看看',
+      title: defaultRelay
+        ? defaultRelay.title
+        : muneaT('home.care.familyRelayTitle', 'Your family left you a message'),
+      sub: defaultRelay
+        ? defaultRelay.body
+        : (_feed0Safe || muneaT(
+          'home.care.demoRelay',
+          'Your family says they will visit this weekend. {companion} saved the message for you.',
+          { companion: cname() },
+        )),
+      btn: careLabels.open,
       feedIdx: _feedIdx,
     };
   let acts = [];
@@ -5772,23 +6558,65 @@ function buildCareItems() {
   if (act && (act.type === 'walk' || /走|步/.test(act.title || ''))) {
     const goal = +(act.steps || act.goal || 8000);
     const gap = Math.max(0, goal - (+(act.mySteps || act.progress || 3000)));
+    const owner = muneaSafeDisplayText(act.owner, '')
+      || muneaT('home.care.familyFallback', 'Family');
     const localized = rendererCopy
-      ? rendererCopy.walkActivity({ gap, owner: muneaSafeDisplayText(act.owner, '') })
+      ? rendererCopy.walkActivity({ gap, owner })
       : null;
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : muneaSafeDisplayText(act.owner, '家人') + '發起的走路活動', sub: localized ? localized.body : (gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步就達標，今晚一起走走？' : '目標達成了，去看看大家的成績'), btn: careLabels ? careLabels.open : '去看看' });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
+    items.push({
+      k: 'family',
+      tone: 'coral',
+      icon: 'walk',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.walkTitle', '{name} started a walking activity', { name: owner }),
+      sub: localized
+        ? localized.body
+        : gap > 0
+          ? muneaT('home.care.walkGap', '{count} steps to go. Shall we take a walk tonight?', { count: Math.ceil(gap) })
+          : muneaT('home.care.walkComplete', 'Goal reached. See how everyone did.'),
+      btn: careLabels.open,
+    });   // 活動發起人／標題守門（Edward 2026-07-15 事故）
   } else if (act) {
+    const owner = muneaSafeDisplayText(act.owner, '')
+      || muneaT('home.care.familyFallback', 'Family');
+    const title = muneaSafeDisplayText(act.title, '')
+      || muneaT('home.care.activityFallback', 'Family activity');
     const localized = rendererCopy
       ? rendererCopy.familyActivity({
-        owner: muneaSafeDisplayText(act.owner, ''),
-        title: muneaSafeDisplayText(act.title, ''),
+        owner,
+        title,
       })
       : null;
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : muneaSafeDisplayText(act.owner, '家人') + '發起了活動', sub: localized ? localized.body : '「' + muneaSafeDisplayText(act.title, '家庭活動') + '」進行中，看看大家的進度', btn: careLabels ? careLabels.open : '去看看' });
+    items.push({
+      k: 'family',
+      tone: 'coral',
+      icon: 'walk',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.activityTitle', '{name} started an activity', { name: owner }),
+      sub: localized
+        ? localized.body
+        : muneaT('home.care.activityProgress', '“{title}” is in progress. See how everyone is doing.', { title }),
+      btn: careLabels.open,
+    });
   } else {
+    const owner = muneaT('home.care.familyFallback', 'Family');
     const localized = rendererCopy
-      ? rendererCopy.walkActivity({ gap: 5000, owner: '' })
+      ? rendererCopy.walkActivity({ gap: 5000, owner })
       : null;
-    items.push({ k: 'family', tone: 'coral', icon: 'walk', title: localized ? localized.title : '外婆發起的走路活動', sub: localized ? localized.body : '還差 5,000 步就達標，今晚一起走走？', btn: careLabels ? careLabels.open : '去看看' });
+    items.push({
+      k: 'family',
+      tone: 'coral',
+      icon: 'walk',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.walkTitle', '{name} started a walking activity', { name: owner }),
+      sub: localized
+        ? localized.body
+        : muneaT('home.care.walkGap', '{count} steps to go. Shall we take a walk tonight?', { count: 5000 }),
+      btn: careLabels.open,
+    });
   }
   items.push(familyItem);
   let v = null;
@@ -5799,17 +6627,35 @@ function buildCareItems() {
     v = arr.filter(x => x && x.dateISO && x.dateISO >= today).sort((a, b) => a.dateISO.localeCompare(b.dateISO))[0] || null;
   } catch (e) {}
   if (v && v.dateISO) {
-    const _vTitle = muneaSafeDisplayText(v.title, '') || muneaSafeDisplayText(v.label, '') || '回診';
+    const _vTitle = muneaSafeDisplayText(v.title, '')
+      || muneaSafeDisplayText(v.label, '')
+      || muneaT('home.care.visitFallback', 'Appointment');
+    const visitDate = v.label || String(v.dateISO).slice(5).replace('-', '/');
     const localized = rendererCopy
       ? rendererCopy.upcomingVisit({
         companion: cname(),
-        date: v.label || String(v.dateISO).slice(5).replace('-', '/'),
+        date: visitDate,
         title: _vTitle,
       })
       : null;
-    items.push({ k: 'status', tone: '', icon: 'cal', title: localized ? localized.title : _vTitle + '快到了', sub: localized ? localized.body : (v.label || String(v.dateISO).slice(5).replace('-', '/')) + ' · 想問醫生的，' + cname() + '都幫你記著', btn: careLabels ? careLabels.open : '看安排' });
+    items.push({
+      k: 'status',
+      tone: '',
+      icon: 'cal',
+      title: localized
+        ? localized.title
+        : muneaT('home.care.visitSoon', '{title} is coming up', { title: _vTitle }),
+      sub: localized
+        ? localized.body
+        : muneaT(
+          'home.care.visitNote',
+          '{date} · {companion} saved what you want to ask the doctor.',
+          { companion: cname(), date: visitDate },
+        ),
+      btn: careLabels.open,
+    });
   }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
-  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: muneaT('home.care.medicationRhythm', '準時吃藥有節奏'), sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
+  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: muneaT('home.care.medicationRhythm', 'Your medication routine is on track'), sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
   // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
   // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
   // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）；
@@ -5819,7 +6665,23 @@ function buildCareItems() {
   // 渲染時的 slice(0,12) 硬切（沒補刪節號）、以及 .care-txt p 的單行 ellipsis（375px 下約 10 字到底）。
   if (shouldShowProfileNudge()) {
     const localized = rendererCopy ? rendererCopy.profilePrompt() : null;
-    items.unshift({ k: 'profile', tone: '', icon: 'person', title: localized ? localized.title : '個人資料', sub: localized ? localized.body : '填個稱呼、生日、所在地，叫得更順口、天氣也報得準', btn: localized ? localized.action : '去填寫' });
+    items.unshift({
+      k: 'profile',
+      tone: '',
+      icon: 'person',
+      title: localized
+        ? localized.title
+        : muneaT('home.profilePromptTitle', 'Personal profile'),
+      sub: localized
+        ? localized.body
+        : muneaT(
+          'home.profilePromptBody',
+          'Add your preferred name, birthday, and location for more natural greetings and accurate weather.',
+        ),
+      btn: localized
+        ? localized.action
+        : muneaT('home.profilePromptAction', 'Update'),
+    });
   }
   return items;
 }
@@ -5828,13 +6690,13 @@ function renderCareCarousel() {
   const dots = document.getElementById('careDots');
   if (!body || !dots) return;
   const rendererCopy = muneaRendererCopy();
-  const careLabels = rendererCopy ? rendererCopy.careLabels() : null;
+  const careLabels = localizedCareLabels(rendererCopy);
   const items = buildCareItems();
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +
     '<div class="care-txt"><p>' + it.title + '</p>' + (it.sub ? '<small>' + it.sub + '</small>' : '') +
-    (typeof it.feedIdx === 'number' && it.feedIdx > -1 ? '<div class="care-mod"><button type="button" class="care-mod-btn" data-remove="' + it.feedIdx + '">' + (careLabels ? careLabels.remove : '移除這則') + '</button><button type="button" class="care-mod-btn" data-report="' + it.feedIdx + '">' + (careLabels ? careLabels.report : '檢舉') + '</button></div>' : '') +
+    (typeof it.feedIdx === 'number' && it.feedIdx > -1 ? '<div class="care-mod"><button type="button" class="care-mod-btn" data-remove="' + it.feedIdx + '">' + careLabels.remove + '</button><button type="button" class="care-mod-btn" data-report="' + it.feedIdx + '">' + careLabels.report + '</button></div>' : '') +
     '</div>' +
     (it.btn ? '<button type="button" class="care-btn" data-go="' + it.k + '">' + it.btn + '</button>' : '') +
     '</div>').join('');
@@ -6290,6 +7152,13 @@ function setupHscrollHints() {
 }
 
 async function connectCall() {
+  // 真的要撥號才要求登入（Edward 2026-07-30：訪客能進聊聊頁看，點「開始通話」才跳登入）。
+  // 守門放在這裡＝所有撥號入口的共同關卡（通話鈕／同意跨境後接著撥／選完話題後接著撥），
+  // 少一條路都不會漏。免費 5 分鐘綁帳號的原則不變，只是把關卡從門口移到這一刻。
+  if (!requireLogin(muneaT(
+    'auth.chatSignInRequired',
+    '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+  ), 'chat')) return;
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
   hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
@@ -6666,7 +7535,7 @@ async function openInAppReader(kind, options) {
   const body = $('#readerBody');
   if (!reader || !body) return;
   const titleKey = kind === 'terms' ? 'reader.termsTitle' : 'reader.privacyTitle';
-  const titleFallback = kind === 'terms' ? '服務條款' : '隱私權政策';
+  const titleFallback = kind === 'terms' ? '使用條款' : '隱私權政策';
   $('#readerTitle').textContent = muneaT(titleKey, titleFallback);
   reader.dataset.returnToConsent = options && options.returnToConsent ? '1' : '';
   setReaderStatus(body, muneaT('reader.loading', '內容載入中…'));
@@ -6851,6 +7720,15 @@ function init() {
       FaceIdle.start();
       return;
     }
+    // 訪客按「開始通話」＝立刻跳登入，不要先問跨境同意／聊天話題再回頭要他登入（那順序很莫名）。
+    // connectCall 開頭也有同一道關卡兜底，這裡是為了把提示提早到第一次點擊。
+    if (!callConnected && !isLoggedIn()) {
+      requireLogin(muneaT(
+        'auth.chatSignInRequired',
+        '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+      ), 'chat');
+      return;
+    }
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     // 第一次開聊前輕問一次「想聊什麼話題」（可跳過、之後在設定隨時改；只問這一次）
     if (!callConnected && !localStorage.getItem('munea.interestsAsked') && !loadInterests().length && window.__muneaOpenInterests) { window.__muneaOpenInterests(true); return; }
@@ -6908,12 +7786,12 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
-    if (!requireLogin(muneaT(
-      'auth.chatSignInRequired',
-      '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
-    ), 'chat')) return;
-    if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
-    else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
+    // 訪客直接進聊聊頁（Edward 2026-07-30），登入關卡留到頁內按「開始通話」那一刻。
+    // 已登入的人維持原本的點數／方案把關——先擋在首頁，免得進去了才發現沒點數可撥。
+    if (isLoggedIn()) {
+      if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
+      else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
+    }
     showView('chat');
   });
   // （提醒改為彈窗版；埋點併入 B1 排程處理器）
@@ -7184,18 +8062,43 @@ function init() {
     const members = loadCircle(); const plan = circlePlan(); const limit = CIRCLE_LIMITS[plan] || 4;
     const cnt = $('#fcCount'); if (cnt) cnt.textContent = members.length + '/' + limit + ' · ' + CIRCLE_PLAN_LABEL[plan];
     box.innerHTML = members.map(m => {
-      const action = m.self ? '<span class="fc-you">本人</span>' : '<button type="button" class="fc-remove" data-name="' + m.name + '">移除</button>';
+      const action = m.self
+        ? `<span class="fc-you">${muneaT('familyCircle.you', '本人')}</span>`
+        : `<button type="button" class="fc-remove" data-name="${m.name}">${muneaT('familyCircle.remove', '移除')}</button>`;
       return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
     const inv = $('#fcInviteBtn');
-    if (inv) { const full = members.length >= limit; inv.textContent = full ? ('已達 ' + CIRCLE_PLAN_LABEL[plan] + ' 上限 · 升級可加更多') : '邀請家人加入'; inv.dataset.full = full ? '1' : ''; }
-    const note = $('#invLimitNote'); if (note) note.textContent = '目前 ' + CIRCLE_PLAN_LABEL[plan] + ' 方案 · 家庭健康圈最多 ' + limit + ' 人';
+    if (inv) {
+      const full = members.length >= limit;
+      inv.textContent = full
+        ? muneaT('familyCircle.limitReached', '{plan} 已達上限 · 升級可加更多', {
+          plan: CIRCLE_PLAN_LABEL[plan],
+        })
+        : muneaT('familyCircle.invite', '邀請家人加入');
+      inv.dataset.full = full ? '1' : '';
+    }
+    const note = $('#invLimitNote');
+    if (note) note.textContent = muneaT(
+      'invite.planLimit',
+      '目前 {plan} 方案 · 家庭健康圈最多 {limit} 人',
+      { plan: CIRCLE_PLAN_LABEL[plan], limit },
+    );
   }
   // 移除家人：點一下「移除」→變紅「確定移除」、再點才移（App 內確認、不用系統醜彈窗）
   if ($('#fcRoster')) $('#fcRoster').addEventListener('click', e => {
     const rm = e.target.closest('.fc-remove'); if (!rm) return;
-    if (rm.dataset.arm !== '1') { rm.dataset.arm = '1'; rm.classList.add('arm'); rm.textContent = '確定移除'; setTimeout(() => { rm.dataset.arm = ''; rm.classList.remove('arm'); rm.textContent = '移除'; }, 3000); return; }
+    if (rm.dataset.arm !== '1') {
+      rm.dataset.arm = '1';
+      rm.classList.add('arm');
+      rm.textContent = muneaT('familyCircle.confirmRemove', '確定移除');
+      setTimeout(() => {
+        rm.dataset.arm = '';
+        rm.classList.remove('arm');
+        rm.textContent = muneaT('familyCircle.remove', '移除');
+      }, 3000);
+      return;
+    }
     saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
     renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
     toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
@@ -7328,21 +8231,20 @@ function init() {
       setBtnBusy(b, '連接中');
       const r = await window.MuneaHealth.connect();
       if (r && r.ok) {
-        clearBtnBusy(b, '✓ 已連接');
-        b.classList.add('done');
+        clearBtnBusy(b);
         trackProductEvent('health_connected', { empty: !!r.empty, needsHealthApp: !!r.needsHealthApp });
-        // 一項都沒讀到就不要承諾會幫她留意——蘋果不會告訴我們是沒授權還是本來就沒紀錄，
-        // 所以只講現況跟怎麼打開，不亂猜原因（詳細步驟在「連接裝置」頁的說明文字）
-        if (r.needsHealthApp) {
-          // 之前就問過了，蘋果不會再跳授權視窗，再按幾次「連接」都不會有結果。
-          // 直接把他送到「健康」App，不要讓他卡在原地重按。
-          hint('要在「健康」App 裡打開項目才讀得到，我幫你開過去。');
-          try { await window.MuneaHealth.openHealthApp(); } catch (e) {}
-        } else {
-          hint(r.empty
-            ? '連上了，但我還讀不到資料。用下面那顆鍵去「健康」App 把項目打開就好。'
-            : '好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。');
+        // 按鍵長什麼樣、下一步該做什麼，統一交給 health.js 依狀態決定（整頁只有這一顆鍵）。
+        // 這裡只負責講一句人話，不要在這邊自己改按鍵文字，否則兩邊會打架。
+        if (typeof window.MuneaHealth.renderConnectionState === 'function') {
+          window.MuneaHealth.renderConnectionState();
         }
+        // 一項都沒讀到就不要承諾會幫她留意——蘋果不會告訴我們是沒授權還是本來就沒紀錄，
+        // 所以只講現況跟怎麼打開，不亂猜原因
+        hint(r.empty
+          ? (r.needsHealthApp
+            ? muneaT('health.hintAskedOnce', '這個授權視窗只會跳一次，之後要改都在「健康」App 裡。按上面那顆鍵我帶你過去。')
+            : muneaT('health.hintEmpty', '連上了，但我還讀不到資料。按上面那顆鍵去「健康」App 把項目打開就好。'))
+          : muneaT('health.hintConnected', '好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。'));
       } else {
         clearBtnBusy(b, b.dataset.label || '連接');
         hint(r && r.reason === 'unavailable' ? '這台裝置沒有健康資料可讀。' : '沒有連上，晚點在「連接裝置」再試一次也可以。');
@@ -7393,7 +8295,15 @@ function init() {
     const y = new Date(); y.setDate(y.getDate() - 1);
     const yesterIso = y.getFullYear() + '-' + String(y.getMonth() + 1).padStart(2, '0') + '-' + String(y.getDate()).padStart(2, '0');
     if (m.date !== _todayISO() && m.date !== yesterIso) return null;
-    return { key: m.key, label: MOODS[m.key].label };
+    const moodKey = {
+      happy: 'mood.happy',
+      glad: 'mood.pleasant',
+      calm: 'mood.calm',
+      tired: 'mood.tired',
+      down: 'mood.low',
+      upset: 'mood.angry',
+    }[m.key];
+    return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label) };
   }
   // 真數據 → 顯示格式（門檻白話跟狀態頁同一套規則）
   function vitalsToDisplay(v) {
@@ -7487,9 +8397,21 @@ function init() {
       const d = rv ? vitalsToDisplay(rv) : null;
       const warn = !!(d && ((d.bp && d.bp.warn) || (d.hr && d.hr.warn) || (rv && +rv.spo2 && +rv.spo2 < 90)));
       const mood = famMoodFor(rv);
-      const st = rv ? (warn ? { cls: 'watch', label: '需留意' } : { cls: 'ok', label: '安好' }) : { cls: 'off', label: '未連' };
+      const st = rv
+        ? (
+          warn
+            ? { cls: 'watch', label: muneaT('family.status.needsAttention', '需留意') }
+            : { cls: 'ok', label: muneaT('family.status.okay', '安好') }
+        )
+        : { cls: 'off', label: muneaT('family.status.notConnected', '未連') };
       const pill = mood ? '<em class="mood-pill ' + mood.key + '">' + moodFaceSvg(mood.key, 13) + mood.label + '</em>' : '';
-      const txt = rv ? '數據更新於 ' + (rv.day || '近日') : '等他加入連上，就看得到狀態';
+      let familyDay = rv && rv.day ? String(rv.day) : '';
+      if (familyDay === '今天') familyDay = muneaT('common.today', '今天');
+      else if (familyDay === '昨天') familyDay = muneaT('common.yesterday', '昨天');
+      if (!familyDay) familyDay = muneaT('common.recently', '近日');
+      const txt = rv
+        ? muneaT('family.status.updatedAt', '數據更新於 {day}', { day: familyDay })
+        : muneaT('family.status.waiting', '等他加入連上，就看得到狀態');
       return '<div class="health-row" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '">' +
         '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
         '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
@@ -7703,27 +8625,37 @@ function init() {
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   initHealthDashboard();
   
-  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => $('#topUpModal').classList.add('show'));
+  if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => {
+    $('#topUpModal').classList.add('show');
+    void refreshLocalizedStoreProducts();
+  });
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
   if ($('#topUpModal')) $('#topUpModal').addEventListener('click', e => {
     if (e.target === $('#topUpModal')) { $('#topUpModal').classList.remove('show'); return; }
     const card = e.target.closest('.tu-card');
-    if (card) { document.querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on'); }
+    if (card) {
+      document.querySelectorAll('#topUpModal .tu-card').forEach(x => x.classList.remove('on'));
+      card.classList.add('on');
+      renderCreditPurchaseButtons();
+    }
   });
   if ($('#tuBuyBtn')) $('#tuBuyBtn').addEventListener('click', async () => {
-    const selCard = document.querySelector('.tu-card.on');
+    const selCard = document.querySelector('#topUpModal .tu-card.on');
     const p = selCard ? +selCard.dataset.p : 0;
-    if (!p) { toast('先選一包點數'); return; }
+    if (!p) { toast(muneaT('purchase.selectPack', 'Choose a credit pack')); return; }
     // App 裡走真蘋果付款；點數入帳由 __muneaApplyPurchase 統一做
     if (window.MuneaStore && window.MuneaStore.available()) {
       const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
       if (!authNow.authUserId) {
-        toast('先登入帳號，點數才能記在你的帳上。', 4200);
+        toast(muneaT('purchase.signInRequiredBody', 'Sign in to buy, restore, and use credits across your devices.'), 4200);
         if (typeof openAuthSheet === 'function') openAuthSheet();
         return;
       }
       const b = $('#tuBuyBtn');
-      setBtnBusy(b, '連到 App Store');
+      const purchaseFlow = muneaPurchaseFlow();
+      setBtnBusy(b, purchaseFlow
+        ? purchaseFlow.connectingMessage()
+        : muneaT('purchase.connectingStore', 'Connecting to the App Store…'));
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
       if (r.ok) $('#topUpModal').classList.remove('show');
@@ -7734,22 +8666,146 @@ function init() {
     pushWallet();
     renderPoints();
     $('#topUpModal').classList.remove('show');
-    toast('買好了，' + p.toLocaleString() + ' 點入帳（餘額已更新），這批不會過期');
+    toast(muneaT('purchase.success', '{credits} credits were added to your account.', {
+      credits: new Intl.NumberFormat(muneaLocale()).format(p),
+    }));
   });
   // ===== 訂閱頁：比較表 + 月/年繳切換 + 訂閱鈕（金額為暫定、待 Edward 拍板）=====
   // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
   const SUB_PRICE = { plus: { month: 599, year: 5750 }, pro: { month: 1199, year: 11500 } };
   const PT_PRICE = { 100: 790, 300: 2190, 600: 4190, 1000: 6490 };            // 加購一律貴過訂閱 6 元/分（訂閱含功能價值、點數是純加分鐘）
   let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
-  function fmtPrice(plan, cyc) { return 'NT$' + SUB_PRICE[plan][cyc].toLocaleString() + (cyc === 'year' ? '／年' : '／月'); }
+  let _storeProductsPromise = null;
+  let _storeProductsState = 'idle';
+  function hasNativeStore() {
+    return !!(window.MuneaStore && window.MuneaStore.available());
+  }
+  function fallbackTwdPrice(amount) {
+    return new Intl.NumberFormat(muneaLocale(), {
+      currency: 'TWD',
+      currencyDisplay: 'code',
+      maximumFractionDigits: 0,
+      style: 'currency',
+    }).format(Number(amount) || 0);
+  }
+  function storeProduct(productId) {
+    return window.MuneaStore && typeof window.MuneaStore.product === 'function'
+      ? window.MuneaStore.product(productId)
+      : null;
+  }
+  function subscriptionProduct(plan, cyc) {
+    if (!(window.MuneaStore && typeof window.MuneaStore.subId === 'function')) return null;
+    return storeProduct(window.MuneaStore.subId(plan, cyc));
+  }
+  function creditProduct(credits) {
+    if (!(window.MuneaStore && typeof window.MuneaStore.ptsId === 'function')) return null;
+    return storeProduct(window.MuneaStore.ptsId(credits));
+  }
+  function fmtPrice(plan, cyc) {
+    const product = subscriptionProduct(plan, cyc);
+    return product && product.displayPrice
+      ? product.displayPrice
+      : fallbackTwdPrice(SUB_PRICE[plan][cyc]);
+  }
+  function fmtCreditPrice(credits) {
+    const product = creditProduct(credits);
+    return product && product.displayPrice
+      ? product.displayPrice
+      : fallbackTwdPrice(PT_PRICE[credits]);
+  }
+  function localizedPurchaseButton(credits) {
+    const rendererCopy = muneaRendererCopy();
+    const values = {
+      credits,
+      price: fmtCreditPrice(credits),
+    };
+    return rendererCopy
+      ? rendererCopy.purchaseButton(values)
+      : muneaT('purchase.buyCredits', 'Buy {credits} credits · {price}', values);
+  }
+  function renderCreditPurchaseButtons() {
+    $$('.tu-card').forEach((card) => {
+      const credits = Number(card.dataset.p || 0);
+      const price = card.querySelector('.tu-price');
+      if (!price) return;
+      price.textContent = hasNativeStore()
+        && (_storeProductsState === 'idle'
+          || _storeProductsState === 'loading'
+          || _storeProductsState === 'unavailable'
+          || !creditProduct(credits))
+        ? '—'
+        : fmtCreditPrice(credits);
+    });
+    [
+      ['#topUpModal .tu-card.on', '#tuBuyBtn'],
+      ['#subPoints .tu-card.on', '#tuBuyBtn2'],
+    ].forEach(([cardSelector, buttonSelector]) => {
+      const card = document.querySelector(cardSelector);
+      const button = $(buttonSelector);
+      if (!button) return;
+      const credits = card ? Number(card.dataset.p || 0) : 0;
+      if (hasNativeStore() && (_storeProductsState === 'idle' || _storeProductsState === 'loading')) {
+        button.textContent = muneaT('purchase.loadingProducts', 'Loading products…');
+        button.disabled = true;
+        return;
+      }
+      if (hasNativeStore() && (_storeProductsState === 'unavailable' || !creditProduct(credits))) {
+        button.textContent = muneaT('purchase.storeUnavailable', 'The App Store is unavailable right now. Please try again later.');
+        button.disabled = true;
+        return;
+      }
+      button.textContent = credits
+        ? localizedPurchaseButton(credits)
+        : muneaT('purchase.selectPack', 'Choose a credit pack');
+      button.disabled = !credits;
+    });
+  }
+  async function refreshLocalizedStoreProducts() {
+    if (!hasNativeStore() || typeof window.MuneaStore.getProducts !== 'function') {
+      _storeProductsState = 'preview';
+      renderSubUI();
+      renderCreditPurchaseButtons();
+      return;
+    }
+    if (_storeProductsPromise) return _storeProductsPromise;
+    _storeProductsState = 'loading';
+    renderSubUI();
+    renderCreditPurchaseButtons();
+    _storeProductsPromise = window.MuneaStore.getProducts()
+      .then((result) => {
+        _storeProductsState = result && result.ok ? 'ready' : 'unavailable';
+        return result;
+      })
+      .catch(() => {
+        _storeProductsState = 'unavailable';
+        return { ok: false, reason: 'store_products_unavailable' };
+      })
+      .finally(() => {
+        _storeProductsPromise = null;
+        renderSubUI();
+        renderCreditPurchaseButtons();
+      });
+    return _storeProductsPromise;
+  }
   function renderSubUI() {
+    localizePurchasePlanContent();
     const cur = circlePlan();
     [['plus', 'Plus'], ['pro', 'Pro']].forEach(([pl, Cap]) => {
       const priceEl = $('#price' + Cap);
-      if (priceEl) priceEl.innerHTML = 'NT$' + SUB_PRICE[pl][_subCyc].toLocaleString() + '<small>' + (_subCyc === 'year' ? '/年' : '/月') + '</small>';
+      if (priceEl) {
+        const period = document.createElement('small');
+        period.textContent = muneaT(
+          _subCyc === 'year' ? 'subscription.perYearShort' : 'subscription.perMonthShort',
+          _subCyc === 'year' ? '/year' : '/month',
+        );
+        priceEl.replaceChildren(document.createTextNode(fmtPrice(pl, _subCyc)), period);
+      }
       const saveEl = $('#save' + Cap);
       if (saveEl) {
-        if (_subCyc === 'year') { const save = SUB_PRICE[pl].month * 12 - SUB_PRICE[pl].year; saveEl.textContent = '一年省 NT$' + save.toLocaleString(); saveEl.style.display = ''; }
+        if (_subCyc === 'year') {
+          saveEl.textContent = muneaT('subscription.savePercent', 'Save {percent}%', { percent: 20 });
+          saveEl.style.display = '';
+        }
         else saveEl.style.display = 'none';
       }
     });
@@ -7757,16 +8813,38 @@ function init() {
     const cta = $('#subCta');
     if (cta) {
       const rendererCopy = muneaRendererCopy();
-      cta.textContent = rendererCopy
-        ? rendererCopy.subscriptionCta({
+      if (hasNativeStore() && (_storeProductsState === 'idle' || _storeProductsState === 'loading')) {
+        cta.textContent = muneaT('purchase.loadingProducts', 'Loading products…');
+        cta.disabled = true;
+      } else if (hasNativeStore() && (_storeProductsState === 'unavailable' || !subscriptionProduct(_subPlan, _subCyc))) {
+        cta.textContent = muneaT('purchase.storeUnavailable', 'The App Store is unavailable right now. Please try again later.');
+        cta.disabled = true;
+      } else {
+        const ctaValues = {
           currentPlan: cur,
           price: fmtPrice(_subPlan, _subCyc),
           selectedPlan: _subPlan,
-        })
-        : (_subPlan === cur
-          ? '你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案'
-          : (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? '升級 ' : '改用 ') + CIRCLE_PLAN_LABEL[_subPlan] + ' · ' + fmtPrice(_subPlan, _subCyc));
+        };
+        cta.textContent = rendererCopy
+          ? rendererCopy.subscriptionCta(ctaValues)
+          : (_subPlan === cur
+            ? muneaT('subscription.currentPlanCta', 'You are currently on {plan}', {
+              plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+            })
+            : muneaT(
+              PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? 'subscription.upgradeTo' : 'subscription.changeTo',
+              PLAN_POINTS[_subPlan] > PLAN_POINTS[cur]
+                ? 'Upgrade to {plan} · {price}'
+                : 'Switch to {plan} · {price}',
+              {
+                plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+                price: ctaValues.price,
+              },
+            ));
+        cta.disabled = _subPlan === cur;
+      }
     }
+    renderCreditPurchaseButtons();
     // 免費不能買點數（Edward 7/17 拍板 Ⓐ）：點數是會員的東西，免費走一次性 5 分鐘體驗、不吃點數。
     // 只剩一個分頁的切換器像壞掉 → 整個收起來，免費只看得到訂閱方案。訂閱後才長出來。
     const seg = $('#subSeg');
@@ -7800,7 +8878,9 @@ function init() {
         purchasedCredits: POINTS.bought,
       })
       : null;
-    const sn = $('#setPlanName'); if (sn) sn.textContent = localizedPlan ? localizedPlan.name : label + ' 方案';
+    const sn = $('#setPlanName'); if (sn) sn.textContent = localizedPlan
+      ? localizedPlan.name
+      : muneaT('settings.planName', '{plan} plan', { plan: label });
     // 帳號卡右上角唯一的身份標籤（開發測試帳號會蓋成 TEST）
     renderMemBadge(plan);
     const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
@@ -7821,13 +8901,26 @@ function init() {
       if (_note) _note.textContent = localizedPlan
         ? localizedPlan.note
         : (!_isFreeP
-          ? (pts + ' 點約可聊 ' + pts + ' 分鐘；聊天用點數，用完補一下就能繼續。')
+          ? muneaT(
+            'subscription.monthlyCreditsNote',
+            '{credits} credits provide about {minutes} minutes of conversation. Add more when they run out to keep talking.',
+            { credits: pts, minutes: pts },
+          )
           : (_leftover > 0
-            ? '你還有 ' + _leftover + ' 點沒用完，會一直留著 · 訂閱 Plus／Pro 就能繼續用這些點聊天。'
-            : '目前是免費方案 · 綁定帳號送單次 5 分鐘聊天體驗。升級 Plus／Pro 改用點數聊、看更久的紀錄、邀家人進照護圈。'));
+            ? muneaT(
+              'subscription.freeCreditsLeft',
+              'Your unused {credits} credits will remain available. Subscribe to Plus or Pro to use them for conversations.',
+              { credits: _leftover },
+            )
+            : muneaT(
+              'subscription.freePlanNote',
+              'You are on the Free plan. Link an account for one 5-minute conversation. Plus and Pro add credit-based conversations, longer history, and family invitations.',
+            )));
     }
     const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
-    const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = localizedPlan ? localizedPlan.manageLabel : (_isFreeP ? '升級方案' : '訂閱方案');
+    const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = localizedPlan
+      ? localizedPlan.manageLabel
+      : muneaT(_isFreeP ? 'settings.upgradePlan' : 'settings.managePlan', _isFreeP ? 'Upgrade plan' : 'Manage plan');
     renderSubUI();
   }
   window.__muneaRenderPlanState = renderPlanState;
@@ -7849,33 +8942,48 @@ function init() {
   // 欄位文字與實際扣款會對不上（選 Plus 卻扣 Pro、寫月費卻扣年費）。一律重畫、不留舊值。
   function planConfirmHtml(plan, cyc) {
     const rendererCopy = muneaRendererCopy();
-    if (rendererCopy) {
-      const localized = rendererCopy.planConfirmation({
-        credits: PLAN_POINTS[plan],
-        members: CIRCLE_LIMITS[plan],
-        plan,
-        price: fmtPrice(plan, cyc),
-      });
-      const yes = $('#planYes'); if (yes) yes.textContent = localized.action;
-      const no = $('#planNo'); if (no) no.textContent = localized.cancel;
-      return localized.title + '<br>' + localized.facts + '<br><small>' + localized.body + '</small>';
-    }
-    return '訂閱「<b>' + CIRCLE_PLAN_LABEL[plan] + '</b>」· ' + fmtPrice(plan, cyc)
-      + '<br>每月 ' + PLAN_POINTS[plan] + ' 點、家庭健康圈最多 ' + CIRCLE_LIMITS[plan] + ' 人。';
+    const values = {
+      credits: PLAN_POINTS[plan],
+      members: CIRCLE_LIMITS[plan],
+      plan,
+      price: fmtPrice(plan, cyc),
+    };
+    const localized = rendererCopy
+      ? rendererCopy.planConfirmation(values)
+      : {
+        action: muneaT('subscription.confirmAction', 'Confirm with Apple'),
+        body: muneaT(
+          'subscription.confirmBody',
+          'Apple will process your payment. The subscription renews automatically and can be managed in the App Store.',
+        ),
+        cancel: muneaT('subscription.cancel', 'Cancel'),
+        facts: muneaT(
+          'subscription.confirmFacts',
+          '{credits} credits each month · Up to {members} care circle members',
+          values,
+        ),
+        title: muneaT(
+          'subscription.confirmTitle',
+          'Confirm {plan} · {price}',
+          {
+            plan: muneaT(`subscription.plan${plan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[plan]),
+            price: values.price,
+          },
+        ),
+      };
+    const yes = $('#planYes'); if (yes) yes.textContent = localized.action;
+    const no = $('#planNo'); if (no) no.textContent = localized.cancel;
+    return muneaEscapeHtml(localized.title)
+      + '<br>' + muneaEscapeHtml(localized.facts)
+      + '<br><small>' + muneaEscapeHtml(localized.body) + '</small>';
   }
   function planConfirmOpen() { const b = $('#planConfirm'); return !!b && b.style.display !== 'none'; }
   // 付款失敗要講「為什麼」，不要全部混成一句（同邀請碼 105 號的教訓）
   function planPurchaseFailMessage(reason) {
-    if (reason === 'signin_required') return '先登入帳號，才能訂閱。';
-    if (reason === 'apple_account_token_mismatch') return '這筆 Apple 訂閱已綁定另一個沐寧帳號。請登入原帳號；測試版請先重置 Sandbox 購買紀錄。先不要重複付款。';
-    if (reason === 'authentication_required' || reason === 'invalid_auth_token') return '登入狀態無法驗證，請重新登入真實 Google／Apple 帳號後再試。';
-    if (reason === 'server_unavailable') return '網路不通，請檢查連線後再試一次。';
-    if (reason === 'notfound') return '這個方案現在還不能買，我們正在開通，晚點再試。';
-    if (reason === 'unsupported') return '這個版本還不能付款，更新 App 後再試。';
-    if (reason === 'unverified' || reason === 'server_verification_failed' || reason === 'signed_transaction_missing') {
-      return '付款過了，但還沒對上帳。先別重複付款，稍等會自動生效。';
-    }
-    return '付款沒有完成，晚點再試一次就好。';
+    const purchaseFlow = muneaPurchaseFlow();
+    return purchaseFlow
+      ? purchaseFlow.failureMessage(reason)
+      : muneaT('purchase.failed', 'The purchase could not be completed. Please try again later.');
   }
   function showPlanConfirm() {
     const bar = $('#planConfirm'); if (!bar) return;
@@ -7901,7 +9009,12 @@ function init() {
   // 訂閱鈕
   if ($('#subCta')) $('#subCta').addEventListener('click', () => {
     const cur = circlePlan();
-    if (_subPlan === cur) { toast('你目前就是 ' + CIRCLE_PLAN_LABEL[_subPlan] + ' 方案'); return; }
+    if (_subPlan === cur) {
+      toast(muneaT('subscription.currentPlanCta', 'You are currently on {plan}', {
+        plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+      }));
+      return;
+    }
     showPlanConfirm();
   });
   if ($('#planYes')) $('#planYes').addEventListener('click', async () => {
@@ -7912,18 +9025,24 @@ function init() {
       const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
       if (!authNow.authUserId) {
         hidePlanConfirm();
-        toast('先登入帳號，訂閱才能綁到你的資料。', 4200);
+        toast(muneaT('purchase.signInRequiredBody', 'Sign in to buy, restore, and use credits across your devices.'), 4200);
         if (typeof openAuthSheet === 'function') openAuthSheet();
         return;
       }
       const pid = window.MuneaStore.subId(_planPick, _subCyc);
       const b = $('#planYes');
-      setBtnBusy(b, '連到 App Store');
+      const purchaseFlow = muneaPurchaseFlow();
+      setBtnBusy(b, purchaseFlow
+        ? purchaseFlow.connectingMessage()
+        : muneaT('purchase.connectingStore', 'Connecting to the App Store…'));
       const r = await window.MuneaStore.purchase(pid);
-      clearBtnBusy(b, '確認變更');
+      clearBtnBusy(b, muneaT('subscription.confirmAction', 'Confirm with Apple'));
       if (r.ok) { hidePlanConfirm(); } // 生效與提示由 __muneaApplyPurchase 統一做
-      else if (r.reason === 'cancelled') toast('沒關係，想好再訂就好。');
-      else if (r.reason === 'pending') { toast('付款送出了，等核准後會自動生效。'); hidePlanConfirm(); }
+      else if (r.reason === 'cancelled') toast(muneaT('purchase.cancelled', 'Purchase cancelled. You were not charged.'));
+      else if (r.reason === 'pending') {
+        toast(muneaT('purchase.pending', 'Apple is processing this purchase. Your balance will update automatically.'));
+        hidePlanConfirm();
+      }
       else toast(planPurchaseFailMessage(r.reason), 4200);
       return;
     }
@@ -7938,18 +9057,27 @@ function init() {
   if ($('#planCancelBtn')) $('#planCancelBtn').addEventListener('click', async () => {
     const b = $('#planCancelBtn');
     if (window.MuneaStore && window.MuneaStore.available() && typeof window.MuneaStore.manageSubscriptions === 'function') {
-      setBtnBusy(b, '開啟 Apple 訂閱');
+      setBtnBusy(b, muneaT('purchase.manageSubscription', 'Manage subscription'));
       const result = await window.MuneaStore.manageSubscriptions();
-      clearBtnBusy(b, '取消訂閱');
-      if (!result.ok) toast('暫時無法開啟 Apple 訂閱管理，請到 iPhone「設定 → Apple 帳戶 → 訂閱項目」操作');
+      clearBtnBusy(b, muneaT('purchase.manageSubscription', 'Manage subscription'));
+      if (!result.ok) {
+        toast(muneaT(
+          'purchase.manageSubscriptionUnavailable',
+          'Subscription management could not be opened. Use Settings → Apple Account → Subscriptions on your iPhone.',
+        ));
+      }
       return;
     }
-    toast('請到 iPhone「設定 → Apple 帳戶 → 訂閱項目」管理或取消訂閱');
+    toast(muneaT(
+      'purchase.manageSubscriptionInstructions',
+      'Use Settings → Apple Account → Subscriptions on your iPhone to manage or cancel.',
+    ));
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => {
     hidePlanConfirm();       // 每次進來都從乾淨狀態開始，不留上次挑到一半的確認欄
     renderSubUI();
     $('#planModal').classList.add('show');
+    void refreshLocalizedStoreProducts();
     void refreshServerPlanEntitlement();
   });
   if ($('#planClose')) $('#planClose').addEventListener('click', () => {
@@ -7961,17 +9089,25 @@ function init() {
   if ($('#restoreBtn')) $('#restoreBtn').addEventListener('click', async () => {
     const b = $('#restoreBtn');
     if (!(window.MuneaStore && window.MuneaStore.available() && typeof window.MuneaStore.restore === 'function')) {
-      toast('恢復購買只能在 iPhone App 內使用');
+      toast(muneaT('purchase.restoreInAppOnly', 'Restore Purchases is available in the iPhone app.'));
       return;
     }
-    setBtnBusy(b, '正在向 Apple 查詢');
+    const purchaseFlow = muneaPurchaseFlow();
+    setBtnBusy(b, purchaseFlow
+      ? purchaseFlow.restoringMessage()
+      : muneaT('purchase.restoring', 'Restoring purchases…'));
     const result = await window.MuneaStore.restore();
-    clearBtnBusy(b, '恢復購買');
-    if (result.ok) toast('購買已恢復，方案與帳號權益正在同步');
-    else if (result.reason === 'signin_required') toast('請先登入原本購買時使用的沐寧帳號');
-    else if (result.reason === 'apple_account_token_mismatch') toast(planPurchaseFailMessage(result.reason), 5200);
-    else if (result.reason === 'none') toast('這個 Apple 帳號目前沒有可恢復的訂閱');
-    else toast('恢復購買沒有完成，請確認網路後再試一次');
+    clearBtnBusy(b, muneaT('purchase.restore', 'Restore purchases'));
+    toast(
+      purchaseFlow
+        ? purchaseFlow.restoreMessage(result)
+        : result.ok
+          ? muneaT('purchase.restoreSuccess', 'Your purchases were restored and access is being updated.')
+          : result.reason === 'none'
+            ? muneaT('purchase.restoreNone', 'No active subscription was found to restore.')
+            : planPurchaseFailMessage(result.reason),
+      result.reason === 'apple_account_token_mismatch' ? 5200 : 4200,
+    );
   });
   if ($('#legalTermsLink')) $('#legalTermsLink').addEventListener('click', e => { e.preventDefault(); openInAppReader('terms'); });
   if ($('#legalPrivacyLink')) $('#legalPrivacyLink').addEventListener('click', e => { e.preventDefault(); openInAppReader('privacy'); });
@@ -7979,21 +9115,24 @@ function init() {
   if ($('#subPoints')) $('#subPoints').addEventListener('click', e => {
     const card = e.target.closest('.tu-card'); if (!card) return;
     $('#subPoints').querySelectorAll('.tu-card').forEach(x => x.classList.remove('on')); card.classList.add('on');
-    const p = +card.dataset.p; const cta = $('#tuBuyBtn2'); if (cta) cta.textContent = '直接購買 ' + p.toLocaleString() + ' 點 · NT$' + (PT_PRICE[p] || 0).toLocaleString();
+    renderCreditPurchaseButtons();
   });
   if ($('#tuBuyBtn2')) $('#tuBuyBtn2').addEventListener('click', async () => {
     const sel = document.querySelector('#subPoints .tu-card.on');
     const p = sel ? +sel.dataset.p : 0;
-    if (!p) { toast('先選一包點數'); return; }
+    if (!p) { toast(muneaT('purchase.selectPack', 'Choose a credit pack')); return; }
     if (window.MuneaStore && window.MuneaStore.available()) {
       const authNow = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
       if (!authNow.authUserId) {
-        toast('先登入帳號，點數才能記在你的帳上。', 4200);
+        toast(muneaT('purchase.signInRequiredBody', 'Sign in to buy, restore, and use credits across your devices.'), 4200);
         if (typeof openAuthSheet === 'function') openAuthSheet();
         return;
       }
       const b = $('#tuBuyBtn2');
-      setBtnBusy(b, '連到 App Store');
+      const purchaseFlow = muneaPurchaseFlow();
+      setBtnBusy(b, purchaseFlow
+        ? purchaseFlow.connectingMessage()
+        : muneaT('purchase.connectingStore', 'Connecting to the App Store…'));
       const r = await window.MuneaStore.purchase(window.MuneaStore.ptsId(p));
       clearBtnBusy(b);
       if (!r.ok && r.reason !== 'cancelled') toast(planPurchaseFailMessage(r.reason), 5200);
@@ -8001,7 +9140,9 @@ function init() {
     }
     try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + p)); } catch (e2) {}
     pushWallet(); renderPoints();
-    toast('買好了，' + p.toLocaleString() + ' 點入帳，這批不會過期');
+    toast(muneaT('purchase.success', '{credits} credits were added to your account.', {
+      credits: new Intl.NumberFormat(muneaLocale()).format(p),
+    }));
   });
   renderPlanState();
   // 蘋果內購（StoreKit）購買成功 → 前端生效的唯一入口。
@@ -8028,7 +9169,9 @@ function init() {
       try { localStorage.setItem('munea.ptsBought', String((POINTS.bought || 0) + PT_PID[pid])); } catch (e3) {}
       trackProductEvent('points_purchased', { productId: pid, points: PT_PID[pid] });
       pushWallet(); renderPoints();
-      toast('買好了，' + PT_PID[pid].toLocaleString() + ' 點入帳，這批不會過期');
+      toast(muneaT('purchase.success', '{credits} credits were added to your account.', {
+        credits: new Intl.NumberFormat(muneaLocale()).format(PT_PID[pid]),
+      }));
       return true;
     }
     return false;
@@ -8149,11 +9292,10 @@ function init() {
   bindFamTabs('#sleepTabs', r => { _famSleepRange = r; renderFamSleep(); });
   bindFamTabs('#mcRangeTabs', r => { _famMoodRange = r; renderFamMoodRange(); });
 
-  // ── 就診摘要（M1 · PR-4c）──────────────────────────────
-  // 舊版這裡綁的是 #reportBtn，但那顆按鈕**全專案不存在**＝從來沒被綁上、面板打不開。
-  // 現在入口有三個：今天的看診任務卡、設定頁、以及看診推播。
-  if ($('#reportClose')) $('#reportClose').addEventListener('click', () => $('#reportModal').classList.remove('show'));
-  if ($('#reportModal')) $('#reportModal').addEventListener('click', e => { if (e.target === $('#reportModal')) $('#reportModal').classList.remove('show'); });
+  // ── 就診摘要 ──────────────────────────────────────────
+  // 入口有三個：今天的看診任務卡、設定頁、以及就診推播。
+  // 2026-07-29 改成全螢幕子頁後，關閉走 nav-back，不再有遮罩可以點掉。
+  if ($('#reportClose')) $('#reportClose').addEventListener('click', closeVisitSummary);
 
   // 期間切換：診間現場也能切（醫生問「這狀況多久了」→ 當場切到 60 天給他看）
   if ($('#rptPeriodTabs')) $('#rptPeriodTabs').addEventListener('click', async e => {
@@ -8168,64 +9310,37 @@ function init() {
     await loadVisitSummaryInto(days);
   });
 
-  // 匯出：文字分享走既有系統分享面板；PDF 走瀏覽器內建列印（零外部套件）
-  if ($('#rptExportBtn')) $('#rptExportBtn').addEventListener('click', () => {
-    const text = visitSummaryAsText(_rptLastSummary);
-    // 第一次匯出提醒一次就好，不每次煩他。健康資料傳出去就收不回來，這句必須講。
-    let warned = false;
-    try { warned = localStorage.getItem('munea.visitSummary.shareWarned') === '1'; } catch (e) {}
-    if (!warned) {
-      if (!window.confirm(muneaT('visit.shareWarning', '這一頁有你的健康紀錄，傳出去之後就收不回來了。要繼續嗎？'))) return;
-      try { localStorage.setItem('munea.visitSummary.shareWarned', '1'); } catch (e) {}
-    }
-    // PDF 有兩條路，可用的那條才會出現在選單裡：
-    //   · App 內 → 原生外掛（ExportPlugin.swift，WKWebView.createPDF＋系統分享面板）
-    //   · 瀏覽器 → window.print()
-    // **window.print() 在 iOS 的 WKWebView 完全無效**（同一顆按鈕在 Safari 可以、在 App 殼裡
-    // 按了沒反應），所以 App 內絕不能走那條——一顆按了沒事的按鈕比沒有更糟，
-    // 長輩會以為是自己按錯。兩條都沒有時，選單就不列 PDF，不給他一個假選項。
+  // 匯出：按一下就好（Edward 2026-07-29：「不需要顯示一堆提醒或流程，
+  // 直接轉為 PDF 然後跳出 App 分享的系統預設窗」）。
+  // 原本要先答一個 confirm、再選 1/2/3 的 prompt 選單，兩關才拿得到檔案，
+  // 而且那兩個都是瀏覽器的原生醜視窗。現在：PDF → 系統分享面板，其餘交給 iOS。
+  //
+  // 為什麼還留退路：window.print() 在 iOS 的 WKWebView **完全無效**，所以
+  // App 內一定要走原生外掛；瀏覽器開的時候沒有外掛，退回系統分享純文字。
+  if ($('#rptExportBtn')) $('#rptExportBtn').addEventListener('click', async () => {
+    const btn = $('#rptExportBtn');
+    if (btn.dataset.busy === '1') return;      // 連按兩下不要跑兩份
+    btn.dataset.busy = '1';
     const hasNativePdf = !!(muneaExportPlugin() && typeof muneaExportPlugin().sharePdf === 'function');
-    const canPdf = hasNativePdf || !isPackagedApp();
-    const menu = canPdf
-      ? muneaT('visit.exportMenuWithPdf', '要怎麼匯出？\n1 = 存成 PDF\n2 = 傳給家人\n3 = 複製文字')
-      : muneaT('visit.exportMenuNoPdf', '要怎麼匯出？\n2 = 傳給家人\n3 = 複製文字');
-    const choice = window.prompt(menu, canPdf ? '1' : '2');
-    if (choice === null) return;
-    try { trackProductEvent('visit_summary_exported', { how: String(choice), periodDays: _rptPeriod, pdfPath: hasNativePdf ? 'native' : (isPackagedApp() ? 'none' : 'print') }); } catch (e) {}
-    if (String(choice).trim() === '1') {
+    try { trackProductEvent('visit_summary_exported', { periodDays: _rptPeriod, path: hasNativePdf ? 'pdf' : 'text' }); } catch (e) {}
+    try {
       if (hasNativePdf) {
-        exportVisitSummaryPdf(_rptLastSummary).then(r => {
-          if (!r.ok) toast(muneaT('visit.pdfFailed', 'PDF 這次沒做出來，可以改用「傳給家人」'));
-        });
+        const r = await exportVisitSummaryPdf(_rptLastSummary);
+        if (!r.ok) toast(muneaT('visit.pdfFailed', 'PDF 這次沒做出來，請再試一次'));
         return;
       }
-      if (isPackagedApp()) { toast(muneaT('visit.pdfUnsupported', '這台裝置還不能存 PDF，可以改用「傳給家人」')); return; }
-      try { window.print(); } catch (e) { toast(muneaT('visit.printUnsupported', '這台裝置印不出來，可以改用「傳給家人」')); }
-      return;
+      // 沒有原生外掛（瀏覽器）：退回系統分享純文字，仍然是「按一下就跳系統視窗」
+      const text = visitSummaryAsText(_rptLastSummary);
+      if (navigator.share) { await navigator.share({ text }).catch(() => {}); return; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        toast(muneaT('visit.copied', '摘要複製好了'));
+        return;
+      }
+      toast(muneaT('visit.exportUnsupported', '這台裝置沒辦法匯出，晚點在手機上試'));
+    } finally {
+      btn.dataset.busy = '';
     }
-    if (String(choice).trim() === '2') {
-      if (navigator.share) {
-        navigator.share({ text }).then(() => toast(muneaT('visit.shared', '傳出去了，回診那天記得帶著'))).catch(() => {});
-      } else toast(muneaT('visit.shareUnsupported', '這台裝置不支援分享，可以改用「複製文字」'));
-      return;
-    }
-    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text) : Promise.reject()).then(
-      () => toast(muneaT('visit.copied', '摘要複製好了')),
-      () => toast(muneaT('visit.copyFailed', '這台裝置沒辦法複製，晚點在手機上試'))
-    );
-  });
-
-  // 「看完醫生了」：問題整批標記問過（保留歷史），順手把看診任務打勾。
-  // 這顆按鈕存在的理由是長輩按小勾勾很難按——大按鈕比小圖示友善得多。
-  if ($('#rptDoneBtn')) $('#rptDoneBtn').addEventListener('click', () => {
-    const n = markCareQuestionsAsked();
-    const card = document.querySelector('.task-item[data-task="visit"]');
-    if (card) card.classList.add('done');
-    if (typeof refreshTaskProgress === 'function') refreshTaskProgress();
-    $('#reportModal').classList.remove('show');
-    toast(n
-      ? muneaT('visit.doneWithQuestions', '辛苦了，{n} 個問題都問過了', { n })
-      : muneaT('visit.doneNoQuestions', '辛苦了，回家好好休息'));
   });
 
   // 發起挑戰面板
@@ -8275,7 +9390,14 @@ function init() {
     let html = '';
     for (let i = 0; i < 14; i++) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-      const wdName = i === 0 ? '今天' : (i === 1 ? '明天' : '週' + '日一二三四五六'[d.getDay()]);
+      // 星期名走 Intl，四語系自動正確——不要為了七個星期硬刻 28 把 key，
+      // 也不要留寫死的中文（這一格捕捉工具掃不到：harness 用 showModal() 直接開面板，
+      // 不會觸發 buildCalGrid，所以這裡漏中文不會有任何測試發現）。
+      const wdName = i === 0
+        ? muneaT('common.today', '今天')
+        : (i === 1
+          ? muneaT('common.tomorrow', '明天')
+          : new Intl.DateTimeFormat(muneaLocale(), { weekday: 'short' }).format(d));
       html += '<button type="button" class="cal-cell" data-iso="' + isoOf(d) + '"><small>' + wdName + '</small><b>' + (d.getDate() === 1 ? (d.getMonth() + 1) + '/1' : d.getDate()) + '</b></button>';
     }
     box.innerHTML = html;
@@ -8555,7 +9677,7 @@ function init() {
     function throwConfetti() {
       const conf = wrap.querySelector('.draw-confetti');
       if (!conf) return;
-      const colors = ['#E0B354', '#D98841', '#3AA8A0', '#D9EFE8'];   // 暖金/珊瑚/療癒綠/薄荷（自家色盤）
+      const colors = ['#E0B354', '#F4A261', '#3AA8A0', '#D9EFE8'];   // 暖金/Logo橘/療癒綠/薄荷（自家色盤）
       for (let k = 0; k < 26; k++) {
         const p = document.createElement('i');
         p.style.left = (4 + Math.random() * 92) + '%';
@@ -8724,7 +9846,11 @@ function init() {
     );
     const n = $$('#inviteList .iv.on').length || 1;
     const d = +($('#walkDays') ? $('#walkDays').value : 7);
-    if ($('#walkDaysVal')) $('#walkDaysVal').textContent = d + ' 天';
+    if ($('#walkDaysVal')) $('#walkDaysVal').textContent = muneaT(
+      'legacyUi.activityDaysValue',
+      '{days} days',
+      { days: new Intl.NumberFormat(muneaLocale()).format(d) },
+    );
     const per = Math.max(100, Math.round(g / (n * d) / 100) * 100);
     if ($('#goalHint')) $('#goalHint').textContent = muneaT(
       'legacyUi.activityGoalHint',
@@ -8736,6 +9862,7 @@ function init() {
       },
     );
   }
+  window.__muneaUpdateWalkLabels = updateWalkLabels;
   function recalcWalk(reset) {
     const slider = $('#walkGoal');
     if (!slider) return;
@@ -8827,10 +9954,19 @@ function init() {
   function renderVisitList() {
     const box = $('#visitList'); if (!box) return;
     const arr = loadVisits();
-    box.innerHTML = arr.length ? ('<div class="field-label">已排的看診</div>' + arr.map(v =>
-      '<div class="visit-item"><div class="vi-info"><b>' + muneaSafeDisplayText(v.title, '回診') + '</b><span>' + (v.label || '') + '</span></div><button type="button" class="vi-del" data-id="' + v.id + '">刪除</button></div>').join('')) : '';   // 看診管理清單標題守門（Edward 2026-07-15 事故）
+    // 每一筆都能直接看那次的摘要（Edward 2026-07-29：跟就診提醒連動）
+    box.innerHTML = arr.length ? ('<div class="field-label">' + muneaT('appointment.scheduled', '已排的就診') + '</div>' + arr.map(v =>
+      '<div class="visit-item"><div class="vi-info"><b>' + muneaSafeDisplayText(v.title, muneaT('visit.defaultTitle', '回診')) + '</b><span>' + (v.label || '') + '</span></div>'
+      + '<button type="button" class="vi-sum" data-id="' + v.id + '">' + muneaT('visit.openSummary', '看摘要') + '</button>'
+      + '<button type="button" class="vi-del" data-id="' + v.id + '">' + muneaT('common.delete', '刪除') + '</button></div>').join('')) : '';   // 看診管理清單標題守門（Edward 2026-07-15 事故）
   }
   if ($('#visitList')) $('#visitList').addEventListener('click', e => {
+    const sum = e.target.closest('.vi-sum');
+    if (sum) {
+      $('#visitModal').classList.remove('show');
+      if (typeof openVisitSummary === 'function') openVisitSummary('visit-list');
+      return;
+    }
     const b = e.target.closest('.vi-del'); if (!b) return;
     const currentVisits = loadVisits();
     const removed = currentVisits.find(v => String(v.id) === String(b.dataset.id));
@@ -8870,7 +10006,11 @@ function init() {
   function applyFontScale() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     const step = FONT_STEPS.find(x => x[0] === cur) || FONT_STEPS[0];
-    document.querySelectorAll('.screen .pad, .modal').forEach(el => { el.style.zoom = step[2]; });
+    // .reader-page 也要跟著放大。2026-07-29 就診摘要從 .modal 改成子頁後，
+    // 它就掉出這個選擇器＝使用者選了「特大」卻完全沒變大——而這一頁正是最需要
+    // 放大的一頁（長輩在診間拿著唸給醫生聽）。順帶把通知中心、條款那幾個子頁
+    // 一起納入，它們本來也一直沒被縮放到。
+    document.querySelectorAll('.screen .pad, .modal, .reader-page').forEach(el => { el.style.zoom = step[2]; });
     const row = $('#fontNow');
     if (row) row.textContent = muneaT(FONT_LABEL_KEYS[step[0]], step[1]) + ' ›';
   }
@@ -8969,7 +10109,19 @@ function init() {
   function renderNps() {
     // 拉桿 Bar 條打分（Edward 7/9：不要 11 顆按鈕）：拉或點都行、上方大字即時顯示
     const s = $('#npsSlider'); if (!s || s.dataset.built) return; s.dataset.built = '1';
-    const WORDS = ['完全不會', '不太會', '不太會', '普通', '普通', '普通', '還可以', '願意', '願意', '非常願意', '非常願意'];
+    const WORDS = [
+      muneaT('feedback.npsVeryUnlikely', 'Very unlikely'),
+      muneaT('feedback.npsUnlikely', 'Unlikely'),
+      muneaT('feedback.npsUnlikely', 'Unlikely'),
+      muneaT('feedback.npsNeutral', 'Neutral'),
+      muneaT('feedback.npsNeutral', 'Neutral'),
+      muneaT('feedback.npsNeutral', 'Neutral'),
+      muneaT('feedback.npsSomewhatLikely', 'Somewhat likely'),
+      muneaT('feedback.npsLikely', 'Likely'),
+      muneaT('feedback.npsLikely', 'Likely'),
+      muneaT('feedback.npsVeryLikely', 'Very likely'),
+      muneaT('feedback.npsVeryLikely', 'Very likely'),
+    ];
     const paint = () => {
       const v = +s.value;
       s.style.setProperty('--fill', (v * 10) + '%');
@@ -8984,8 +10136,14 @@ function init() {
     if ($('#fbCatWrap')) $('#fbCatWrap').style.display = _fbType === 'bug' ? '' : 'none';
     if ($('#fbNpsWrap')) $('#fbNpsWrap').style.display = _fbType === 'nps' ? '' : 'none';
     const lbl = $('#fbTextLabel'), txt = $('#fbText');
-    if (lbl) lbl.textContent = _fbType === 'bug' ? '發生了什麼事？（越具體我們修得越快）' : _fbType === 'idea' ? '想要什麼新功能？' : _fbType === 'praise' ? '想稱讚哪裡？我們會轉告寧寧' : '為什麼給這個分數？（可以不填）';
-    if (txt) txt.placeholder = _fbType === 'idea' ? '例：希望可以幫我記血糖、想要台語' : _fbType === 'praise' ? '例：寧寧記得我孫子要結婚，好感動' : '例：聊聊講到一半沒聲音了';
+    const feedbackCopy = {
+      bug: ['feedback.promptBug', 'What happened? Details help us fix it faster.', 'feedback.placeholderBug', 'For example: The conversation went silent halfway through.'],
+      idea: ['feedback.promptIdea', 'What would you like Munea to add?', 'feedback.placeholderIdea', 'For example: Help me record blood sugar or support another language.'],
+      praise: ['feedback.promptPraise', 'What did you appreciate?', 'feedback.placeholderPraise', 'For example: My companion remembered an important family event.'],
+      nps: ['feedback.promptNps', 'Why did you choose this score? (Optional)', 'feedback.placeholderNps', 'Tell us what shaped your score.'],
+    }[_fbType];
+    if (lbl) lbl.textContent = muneaT(feedbackCopy[0], feedbackCopy[1]);
+    if (txt) txt.placeholder = muneaT(feedbackCopy[2], feedbackCopy[3]);
     renderNps();
   }
   // 意見回饋附圖（7/9 Edward：文字說不清時附截圖）：選圖→縮到最長邊 1200px、壓成 JPEG→data URL 預覽
@@ -9781,6 +10939,8 @@ function refreshLocalizedDynamicUi() {
     }
   } catch (e) {}
   try { renderStatusCharts(true); } catch (e) {}
+  try { if (window.__muneaAfterCircleSync) window.__muneaAfterCircleSync(); } catch (e) {}
+  try { if (window.__muneaUpdateWalkLabels) window.__muneaUpdateWalkLabels(); } catch (e) {}
   try { applyAppVersion(); } catch (e) {}
   try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
   try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}

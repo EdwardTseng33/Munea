@@ -1,3 +1,9 @@
+// 2026-07-29：官網整站搬到正門 munea.net（法律頁 privacy/terms/support 仍留在
+// app.munea.net，那是蘋果登記的網址、不動）。這支原本寫死舊網域、整站搬完後
+// 就一直紅——出貨閘門紅著沒人發現，比這條斷鏈本身更嚴重。
+// 2026-07-29：官網整站搬到正門 munea.net（法律頁 privacy/terms/support 仍留在
+// app.munea.net，那是蘋果登記的網址、不動）。canonical 由 site-src/config.json
+// 提供單一真相來源，下面的明確斷言會在正門漂移時讓出貨閘門失敗。
 'use strict';
 
 const assert = require('node:assert/strict');
@@ -13,6 +19,8 @@ const config = JSON.parse(
 const manifest = JSON.parse(
   fs.readFileSync(path.join(SITE_SOURCE, 'localization-manifest.json'), 'utf8'),
 );
+const siteUrl = String(config.siteUrl || '').replace(/\/+$/, '');
+assert.equal(siteUrl, 'https://munea.net', 'Marketing canonical authority drifted');
 
 const locales = [
   {
@@ -20,28 +28,28 @@ const locales = [
     catalog: 'zh',
     output: 'index.html',
     htmlLang: 'zh-Hant-TW',
-    canonical: 'https://app.munea.net/',
+    canonical: `${siteUrl}/`,
   },
   {
     locale: 'en',
     catalog: 'en',
     output: 'en/index.html',
     htmlLang: 'en',
-    canonical: 'https://app.munea.net/en',
+    canonical: `${siteUrl}/en`,
   },
   {
     locale: 'ja',
     catalog: 'ja',
     output: 'ja/index.html',
     htmlLang: 'ja',
-    canonical: 'https://app.munea.net/ja',
+    canonical: `${siteUrl}/ja`,
   },
   {
     locale: 'es',
     catalog: 'es',
     output: 'es/index.html',
     htmlLang: 'es',
-    canonical: 'https://app.munea.net/es',
+    canonical: `${siteUrl}/es`,
   },
 ];
 

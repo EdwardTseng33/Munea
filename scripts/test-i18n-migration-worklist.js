@@ -38,6 +38,11 @@ assert.equal(
 assert(worklist.summary.resolutionKinds['reuse-existing-key'] > 0);
 assert(worklist.summary.resolutionKinds['review-existing-keys'] > 0);
 assert(worklist.summary.resolutionKinds['create-key'] > 0);
+assert.equal(
+  worklist.summary.bindingKinds.attribute || 0,
+  0,
+  'Every App/WebView localizable HTML attribute must stay catalog-bound',
+);
 assert(
   worklist.summary.uniqueSourceStrings > 500,
   'The worklist must expose the real unbound App copy debt',
@@ -47,6 +52,66 @@ assert.equal(
   worklist.summary.occurrences,
 );
 assert.equal(new Set(worklist.entries.map((entry) => entry.suggestedKey)).size, worklist.entries.length);
+const migratedAttributeKeys = [
+  'accessibility.manageFamily',
+  'accessibility.removeImage',
+  'accessibility.removePhoto',
+  'accessibility.toggleCall',
+  'accessibility.toggleCaptions',
+  'accessibility.toggleMicrophone',
+  'activity.adjustGoal',
+  'activity.deadlineDate',
+  'activity.deadlineTime',
+  'activity.voteQuestionPlaceholder',
+  'activity.quizQuestionCountAria',
+  'activity.quizDeadlineDate',
+  'activity.quizDeadlineTime',
+  'activity.eventDate',
+  'activity.eventTime',
+  'activity.voteDeadlineDate',
+  'activity.voteDeadlineTime',
+  'activity.drawDate',
+  'activity.drawTime',
+  'appointment.close',
+  'appointment.time',
+  'familyCircle.close',
+  'feedback.photoPreviewAlt',
+  'feedback.npsAria',
+  'history.close',
+  'history.nextMonth',
+  'history.previousMonth',
+  'profile.close',
+  'purchase.close',
+  'subscription.creditRulesTitle',
+  'subscription.topUpCreditRulesTitle',
+  'textChat.inputAria',
+];
+for (const key of migratedAttributeKeys) {
+  const lingeringAttributeOccurrence = worklist.entries
+    .filter((entry) => entry.suggestedKey === key)
+    .flatMap((entry) => entry.occurrences)
+    .find((occurrence) => occurrence.kind.startsWith('attribute:'));
+  assert(
+    !lingeringAttributeOccurrence,
+    `${key} must stay catalog-bound after the attribute migration batches`,
+  );
+}
+const appSourceLines = fs.readFileSync('web/src/app.js', 'utf8').split(/\r?\n/);
+const careCopyStart = appSourceLines.findIndex((line) => line.includes('function localizedCareLabels(')) + 1;
+const careCopyEnd = appSourceLines.findIndex((line) => line.includes('function careAdvance(')) + 1;
+assert(careCopyStart > 0 && careCopyEnd >= careCopyStart, 'Care copy region must stay discoverable');
+const lingeringCareCopy = worklist.entries.flatMap((entry) => entry.occurrences.map((occurrence) => ({
+  source: entry.source,
+  ...occurrence,
+}))).find((occurrence) => (
+  occurrence.file === 'web/src/app.js'
+  && occurrence.line >= careCopyStart
+  && occurrence.line <= careCopyEnd
+));
+assert(
+  !lingeringCareCopy,
+  `Care carousel copy must stay catalog-bound: ${JSON.stringify(lingeringCareCopy)}`,
+);
 for (const entry of worklist.entries) {
   assert.equal(entry.reviewStatus, 'pending', 'No catalog match may auto-approve source migration');
   if (entry.resolutionKind === 'reuse-existing-key') {

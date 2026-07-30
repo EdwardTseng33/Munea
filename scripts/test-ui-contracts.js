@@ -12,6 +12,12 @@ const storePlugin = fs.readFileSync('ios/App/App/StorePlugin.swift', 'utf8');
 const rendererCopySource = fs.readFileSync('web/src/i18n/app-renderer-copy.js', 'utf8');
 const legalRoutingSource = fs.readFileSync('web/src/i18n/legal-routing.js', 'utf8');
 const zhCatalog = JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'));
+const companionCatalogs = Object.fromEntries(
+  ['zh-TW', 'en', 'ja', 'es'].map(locale => [
+    locale,
+    JSON.parse(fs.readFileSync(`web/src/i18n/${locale}.json`, 'utf8')),
+  ]),
+);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -27,9 +33,14 @@ function contrastRatio(hexA, hexB) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-assert(contrastRatio('#2A7E78', '#FFFFFF') >= 4.5, 'Primary button green must keep WCAG AA contrast with white text');
+// 品牌定色守門（2026-07-30 Edward 拍板）：主企業色＝薄荷綠不是深綠、橘＝Logo 上的那個橘。
+// 7/24 曾為了白字 AA 4.5 把主按鈕加深成 #2A7E78，被 Edward 抓「主色變深綠」退回——
+// 品牌優先是拍板取捨：主按鈕薄荷綠白字 3.16:1 守 AA 大字級 3:1 底線，不得再往深綠推。
+assert(contrastRatio('#37A099', '#FFFFFF') >= 3, 'Primary button mint must keep at least AA large-text contrast with white');
 assert(contrastRatio('#B0392D', '#FFFFFF') >= 4.5, 'Danger action red must keep WCAG AA contrast on white');
-assert(css.includes('--btn-green: #2A7E78;') && css.includes('--danger-d: #B0392D;'), 'Accessible primary and danger color tokens must stay pinned');
+assert(css.includes('--teal: #3AA8A0;') && css.includes('--btn-green: #37A099;') && css.includes('--coral: #F4A261;'),
+  'Brand tokens must stay pinned to the 2026-07-30 ruling: mint primary, mint button, logo orange');
+assert(css.includes('--danger-d: #B0392D;'), 'Accessible danger color token must stay pinned');
 assert(/class="modal-btn danger" id="dataDeleteBtn"/.test(html), 'Data deletion must use the danger style instead of the primary action style');
 assert(/\.modal-btn\.danger\[data-arm="1"\]\s*\{[^}]*background:\s*var\(--danger-d\);[^}]*color:\s*#fff;/s.test(css), 'Armed deletion must render as a solid danger action');
 assert(/b\.dataset\.arm = '1'/.test(app), 'Data deletion must retain the two-step armed confirmation behavior');
@@ -287,7 +298,7 @@ assert(/\.auth-ava \.auth-ava-placeholder\s*\{[^}]*width:\s*26px;[^}]*height:\s*
 assert(/\.auth-ava-img\[hidden\]\s*\{\s*display:\s*none(?:\s*!important)?;\s*\}/s.test(css), 'Hidden account image must not displace the centered guest icon');
 assert((html.match(/id="memBadge"/g) || []).length === 1 && !html.includes('authDevBadge'), 'Account card must render exactly one plan or TEST badge');
 assert(app.includes('function authDisplayName(state)') && /name:\s*userMetadata\.name/.test(auth), 'Signed-in account card must receive and display the Google or Apple name');
-assert(/\.auth-title\s*\{[^}]*white-space:\s*nowrap;[^}]*text-overflow:\s*ellipsis;/s.test(css), 'Long account names must stay on one truncated line');
+assert(/\.auth-title\s*\{[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s.test(css), 'Long account names and translated guest labels must wrap instead of truncating');
 assert(/\.auth-secondary\s*\{[^}]*height:\s*40px;[^}]*background:\s*var\(--mint\);[^}]*border:\s*1px solid var\(--teal-d\);/s.test(css), 'Sign-out must keep the latest secondary-button design');
 assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:\s*var\(--coral-d\);/s.test(css), 'Development account must use the single TEST badge design');
 
@@ -297,22 +308,25 @@ assert(!/authEmailInput|authEmailBtn|電子信箱登入|寄登入信/.test(authS
 const openAuthSheet = app.match(/function openAuthSheet\(\) \{[\s\S]*?\n\}/)?.[0] || '';
 assert(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'Opening auth sheet must not focus an input or open the keyboard');
 
-// AI 陪伴角色的說明：設定頁那一行（存在文案表）跟選角色頁的卡片（寫死在版面裡）
-// 是兩份各自獨立的文字，改一邊另一邊不會跟——測試員就抓到設定頁那句比卡片少了尾巴。
-// 這裡強制兩邊講同一句：設定頁 = 「<類型>，<說明>」，說明字要跟卡片一字不差。
-const companionCards = [...html.matchAll(/data-ava="([^"]+)"[\s\S]{0,400}?<b>([^<]+)<\/b><small>([^<]+)<\/small>/g)];
+// AI 陪伴角色的說明：設定頁與選角卡片必須在四語系都講同一句，
+// 且卡片一定使用明確 key，不能再依賴中文原句剛好與翻譯表相同。
+const companionCards = [...html.matchAll(/data-ava="([^"]+)"[\s\S]{0,400}?<b data-i18n="([^"]+)">([^<]+)<\/b><small data-i18n="([^"]+)">([^<]+)<\/small>/g)];
 assert(companionCards.length >= 2, 'Companion picker must keep its selectable persona cards');
 const companionLabelKey = { 'nening-real-female': 'companion.nening.label', 'companion-real-male': 'companion.ahong.label' };
-companionCards.forEach(([, ava, type, trait]) => {
-  const key = companionLabelKey[ava];
-  if (!key) return;
-  const label = zhCatalog[key];
-  assert(label, `Companion label catalog key missing for: ${key}`);
-  assert(
-    label === `${type}，${trait}`,
-    `設定頁的角色說明必須跟選角色卡片講同一句：「${label}」 vs 卡片「${type}，${trait}」`,
-  );
-  assert(!label.includes(' · '), '角色說明要用一句話敘述，不要用「·」串標籤');
+const companionJoiner = { 'zh-TW': '，', en: ', ', ja: '。', es: ', ' };
+companionCards.forEach(([, ava, typeKey, typeFallback, traitKey, traitFallback]) => {
+  const labelKey = companionLabelKey[ava];
+  if (!labelKey) return;
+  assert(zhCatalog[typeKey] === typeFallback, `Companion type fallback must match ${typeKey}`);
+  assert(zhCatalog[traitKey] === traitFallback, `Companion trait fallback must match ${traitKey}`);
+  Object.entries(companionCatalogs).forEach(([locale, catalog]) => {
+    const cardLabel = `${catalog[typeKey]}${companionJoiner[locale]}${catalog[traitKey]}`;
+    assert(
+      catalog[labelKey] === cardLabel,
+      `${locale} 設定頁角色說明必須跟選角卡片講同一句：「${catalog[labelKey]}」 vs「${cardLabel}」`,
+    );
+    assert(!catalog[labelKey].includes(' · '), `${locale} 角色說明不得使用「·」串標籤`);
+  });
 });
 assert(
   html.includes('<small id="settingsTemplateLabel">' + zhCatalog['companion.nening.label'] + '</small>'),

@@ -1,8 +1,8 @@
 {
   "schema": "munea.i18n-app-binding-manifest.v1",
-  "integrationStatus": "in-progress-main-screen-integration",
+  "integrationStatus": "integrated",
   "staticBindingRuntimeStatus": "integrated",
-  "stateOwnedRendererStatus": "in-progress-main-screen-integration",
+  "stateOwnedRendererStatus": "integrated",
   "dynamicContentObserver": "integrated",
   "rendererCopyProvider": "MuneaAppRendererCopy",
   "staticBindings": [
@@ -182,6 +182,8 @@
       "keys": [
         "auth.termsPrefix",
         "auth.termsLink",
+        "auth.termsLinkTerms",
+        "auth.termsLinkPrivacy",
         "auth.aiProcessingDisclosure",
         "accessibility.close"
       ]

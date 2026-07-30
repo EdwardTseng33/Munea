@@ -38,9 +38,111 @@ expect(app.includes("item.dataset.task === 'visit'") && app.includes("openVisitS
 expect(app.includes("if ($('#visitSummaryRow'))"), '① 設定頁入口沒接');
 expect(html.includes('id="visitSummaryRow"'), '① 設定頁那一列不存在');
 // 每一個被綁的 id 都必須真的在 HTML 裡——這正是上一版沒人抓到的洞
-['rptExportBtn', 'rptPeriodTabs', 'rptDoneBtn', 'rptBody', 'rptPeriodLine', 'reportClose']
+['rptExportBtn', 'rptPeriodTabs', 'rptBody', 'rptPeriodLine', 'reportClose']
   .forEach(id => expect(html.includes('id="' + id + '"'), `① app.js 綁了 #${id}，但 HTML 裡沒有這個元素`));
 ok('① 入口與所綁元素全部存在（含上一版死因的回歸測試）');
+
+/* ①b 版型必須吃既有子頁規範（Edward 2026-07-29：「不要自己創一個新的」）*/
+const reportBlock = html.slice(html.indexOf('id="reportModal"') - 200, html.indexOf('id="fontModal"'));
+expect(/class="reader-page sub-page"[^>]*id="reportModal"/.test(html),
+  '①b 就診摘要不是 reader-page 子頁——又變回底部彈窗了');
+expect(!/modal-mask[^>]*id="reportModal"/.test(html), '①b 還掛著 modal-mask（彈窗遺留）');
+['nav-head', 'nav-back', 'nav-title', 'reader-scroll', 'seg']
+  .forEach(cls => expect(reportBlock.includes(cls), `①b 子頁少了既有規範元件 .${cls}`));
+// 渲染出來的內容也要用既有 class，不可以又長出一套自訂版型
+['set-section', 'set-list', 'set-row', 'reader-card']
+  .forEach(cls => expect(app.includes(`"${cls}` ) || app.includes(`'${cls}`) || app.includes(`class="${cls}`),
+    `①b 渲染沒有用既有 class .${cls}`));
+expect(!app.includes('rpt-sec') && !app.includes('rpt-q-n') && !app.includes('rpt-tl'),
+  '①b app.js 還在用改版前那套自訂 .rpt-* 版型');
+expect(!css.includes('.rpt-sec') && !css.includes('.rpt-addq'),
+  '①b styles.css 還留著改版前那套自訂 .rpt-* 樣式');
+ok('①b 版型吃既有子頁規範（nav-head／set-section／set-list／seg／reader-card）');
+
+/* ①c 「看完醫生了」整顆拿掉——這一頁是歷史資料，不是待辦事項 */
+expect(!html.includes('rptDoneBtn'), '①c「看完醫生了」還在版型裡');
+expect(!app.includes('rptDoneBtn'), '①c app.js 還綁著「看完醫生了」');
+expect(app.includes('autoArchiveCareQuestions'), '①c 拿掉按鈕後沒有接自動歸檔，問題會永遠提醒同一題');
+ok('①c 拿掉「看完醫生了」，改為看診日過了自動歸檔');
+
+/* ①d 開頁不得再出現「整理中」——資料在本機就先畫（Edward 2026-07-29）*/
+expect(app.includes('buildLocalVisitSummary'), '①d 沒有本機先組一份，開頁又會空白');
+expect(!app.includes("visit.preparing"), '①d 還留著「整理中…」那條路');
+expect(app.includes('timelinePending'), '①d 時間軸沒有「還在讀」狀態');
+expect(app.includes('timelineFailed'), '①d 時間軸沒有「讀不到」狀態');
+// 「還在讀」跟「沒事發生」必須是兩個不同狀態，講反了醫師會以為他這段期間都好好的
+expect(app.indexOf('visit.timelineLoading') > 0 && app.indexOf('visit.timelineEmpty') > 0,
+  '①d 讀取中與真的沒事共用同一句文案');
+ok('①d 開頁用本機資料先畫，不再有「整理中」');
+
+/* ①e 診間安全：把手機遞給醫生時，畫面不該有一排「刪除」等著被誤觸。
+   刪除鍵藏在「編輯」後面，而且每次重開都回到閱讀狀態。 */
+expect(app.includes('_rptEditing'), '①e 沒有閱讀／編輯兩種狀態，刪除鍵會一直露在外面');
+expect(/_rptEditing\s*\?[\s\S]{0,200}vs-del/.test(app),
+  '①e 刪除鍵沒有被 _rptEditing 包住＝診間也看得到，醫生捲頁可能誤刪');
+expect(/_rptEditing = false;[\s\S]{0,200}autoArchiveCareQuestions/.test(app),
+  '①e 重開摘要時沒有回到閱讀狀態，上次整理完的編輯模式會殘留到診間');
+expect(css.includes('.vs-del') && /\.vs-del[^}]*min-height: 44px/.test(css),
+  '①e 刪除鍵點擊區小於 44px，長輩按不準');
+// 用「刪除」兩個字而不是 ✕ 圖示：長輩讀得懂字、猜不出圖示，刪除又不可逆
+expect(app.includes("muneaT('common.delete'"), '①e 刪除鍵用圖示而非文字');
+ok('①e 診間是乾淨的閱讀狀態，刪除鍵收在「編輯」後面且點擊區夠大');
+
+/* ①f 字級要照規範——這一頁是給長輩在診間唸給醫生聽的，縮小字等於白做。
+   規範（styles.css :root）寫明「內文 17」，.set-row 就是 17px。 */
+expect(/questions\.forEach[\s\S]{0,400}class="set-row"/.test(app),
+  '①f 問題列沒有用 .set-row（17px 內文字級），自己縮成小字了');
+expect(/questions\.forEach[\s\S]{0,400}sr-main/.test(app), '①f 問題文字沒有走 .sr-main');
+ok('①f 問題列吃規範的內文字級（.set-row 17px），不自己縮小');
+
+/* ①g 只留 60 天——跟天數選項的上限一致，超過就再也顯示不到 */
+expect(app.includes('VISIT_DATA_RETENTION_DAYS'), '①g 沒有保存期限，資料會無限累積在手機上');
+expect(/VISIT_DATA_RETENTION_DAYS = 60/.test(app), '①g 保存期限不是 60 天');
+expect(app.includes('pruneVisitSummaryData'), '①g 有定義期限但沒有真的清');
+// 還沒問的一律留著——他可能兩個月前就想問，只是還沒輪到看診，那不是過期資料
+expect(/if \(!q \|\| !q\.askedAt\) return true;/.test(app),
+  '①g 清理時把「還沒問的」也清掉了');
+ok('①g 只留 60 天，但還沒問的問題不會被清掉');
+
+/* ①h 字級設定要套得到這一頁——**這條不在這裡驗**。
+   main 的 scripts/test-i18n-font-scale-surface-gate.js（#349）驗的是同一條
+   不變式，而且做得更嚴：它會正確解析 applyFontScale 的選擇器清單，還帶
+   新舊 markup 的自我檢查。同一條不變式擺兩份，只會讓未來改動要同時滿足
+   兩組訊息不同的斷言，不會多守到任何東西，所以這裡只留指標。
+
+   （背景：2026-07-29 把 #reportModal 從 .modal 改成 .reader-page 後就掉出
+   applyFontScale 的選擇器，使用者選「特大」完全沒變大。註記量測陷阱：
+   CSS zoom **不會**改變 computed font-size，量 font-size 會誤判成沒生效；
+   實際算繪尺寸由 scripts/probe-visit-summary-font-scale.js 量。） */
+
+/* ①i aria-label 必須走宣告式綁定（data-i18n-aria-label）。
+   兩個教訓寫在這裡：
+   ① 我一度以為 aria-label 不支援 i18n（grep 錯檔案：機制在 i18n/dom-localizer.js
+      不在 i18n.js），於是改用 JS setAttribute——但那段只在非 zh-TW 才跑，
+      等於 aria 只有外語使用者是對的，**中文讀屏使用者拿到的是 markup 裡的舊字**。
+   ② 改名時只動 markup 沒動 catalog（或反過來），讀屏文字就會停在舊文案。
+   宣告式綁定讓四語系一視同仁，也讓改文案不可能忘記同步。 */
+const ARIA_BOUND = [
+  ['visitClose', 'appointment.close'],
+  ['reportClose', 'accessibility.back'],
+  ['rptExportBtn', 'visit.exportAria'],
+  ['rptPeriodTabs', 'visit.periodAria'],
+];
+for (const [id, key] of ARIA_BOUND) {
+  const tag = (html.match(new RegExp(`<[^>]*id="${id}"[^>]*>`)) || [''])[0];
+  expect(tag.length > 0, `①i 找不到 #${id}，這條測試已失效需重寫`);
+  expect(tag.includes(`data-i18n-aria-label="${key}"`),
+    `①i #${id} 的 aria-label 沒有綁 ${key}＝讀屏文字不會跟著語系走`);
+  for (const locale of ['zh-TW', 'en', 'ja', 'es']) {
+    const catalog = JSON.parse(fs.readFileSync(path.join(root, 'web', 'src', 'i18n', `${locale}.json`), 'utf8'));
+    expect(typeof catalog[key] === 'string' && catalog[key].trim(),
+      `①i ${locale} 缺 ${key}，#${id} 的讀屏文字會是空的`);
+  }
+}
+// 綁定之後就不該再有那段只跑外語的 JS setAttribute
+expect(!/setAria\('#reportClose'/.test(app),
+  '①i 又回到只在非 zh-TW 才跑的 JS setAria——中文讀屏使用者會拿到舊字');
+ok(`①i ${ARIA_BOUND.length} 個 aria-label 走宣告式綁定，四語系都有值`);
 
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
@@ -67,9 +169,21 @@ function stripHtmlComments(markup) {
   return markup.replace(/<!--[\s\S]*?-->/g, '');
 }
 
-// 只掃摘要相關的程式與樣板字串，避免掃到全 App 無關文案
-const summaryCode = stripDisclaimers(stripComments(
-  app.slice(app.indexOf('const VISIT_SUMMARY_SNAP_KEY'), app.indexOf('function visitSummaryAsText') + 2600)));
+// 只掃摘要相關的程式與樣板字串，避免掃到全 App 無關文案。
+//
+// 切片邊界要用**真實的程式標記**，不可以用 `indexOf(...) + 2600` 這種魔術數字：
+// 那個數字一旦程式碼長度改變就會切在半個註解中間，剝註解的正則因為
+// `/*` 找不到成對的 `*/` 而失效，於是註解裡解釋「為什麼不能寫某個字」的字
+// 反而被當成違規（2026-07-30 真的發生過）。下面 assert 就是在擋這件事。
+const summaryStart = app.indexOf('const VISIT_SUMMARY_SNAP_KEY');
+const summaryEnd = app.indexOf('function muneaExportPlugin');
+expect(summaryStart >= 0 && summaryEnd > summaryStart,
+  '② 找不到摘要程式區塊的邊界，這條測試已失效需重寫');
+const summaryRaw = app.slice(summaryStart, summaryEnd);
+// 區塊註解必須成對，否則剝不乾淨、掃出來的結果不可信
+expect((summaryRaw.match(/\/\*/g) || []).length === (summaryRaw.match(/\*\//g) || []).length,
+  '② 切片裡的區塊註解不成對＝剝註解會失效，掃描結果不可信');
+const summaryCode = stripDisclaimers(stripComments(summaryRaw));
 FORBIDDEN.forEach(word => expect(!summaryCode.includes(word), `② 摘要畫面出現判定字眼「${word}」＝越過醫材紅線`));
 const modalHtml = stripDisclaimers(stripHtmlComments(html.slice(html.indexOf('id="reportModal"'), html.indexOf('id="fontModal"'))));
 FORBIDDEN.forEach(word => expect(!modalHtml.includes(word), `② 摘要版型出現判定字眼「${word}」`));
@@ -124,10 +238,23 @@ for (const [locale, rule] of Object.entries(LOCALE_FORBIDDEN)) {
 }
 ok(`②-i18n 四語系目錄共 ${scannedCopy} 句文案都沒有判定字眼，且都帶免責聲明`);
 
-/* ②b 視覺也不得像醫療警報 */
-const rptCss = css.slice(css.indexOf('/* ── 就診摘要'), css.indexOf('@media print'));
-expect(!/red|#f00|#e0|crimson|--danger|--alert/i.test(rptCss),
-  '②b 摘要樣式用了紅色／警示色——看起來像醫療警報就等於在判讀');
+/* ②b 視覺也不得像醫療警報。
+   切片的結束點原本釘在 @media print，那條隨「一鍵匯出」改版拿掉了——
+   改釘下一個區塊的註解，並且**驗證切得到**，免得切片悄悄變成整份 CSS
+   （那樣這條會因為別的地方有紅色而亂紅，或反過來永遠通過）。 */
+const rptCssStart = css.indexOf('/* ── 就診摘要');
+const rptCssEnd = css.indexOf('/* 用藥時段清單 */', rptCssStart);
+expect(rptCssStart >= 0 && rptCssEnd > rptCssStart,
+  '②b 找不到就診摘要的樣式區塊，這條測試已失效需重寫');
+const rptCss = css.slice(rptCssStart, rptCssEnd);
+expect(rptCss.length < 4000, `②b 切片過大（${rptCss.length} 字元），應該只涵蓋就診摘要那一段`);
+// 用字界，否則 prefers-redUCED-motion 裡的 "reduced" 會被當成紅色（假警報）
+const alertColour = /\bred\b|\bcrimson\b|#f00\b|#e0[0-4]|--danger|--alert/i;
+expect(!alertColour.test(rptCss),
+  `②b 摘要樣式用了紅色／警示色——看起來像醫療警報就等於在判讀：${(rptCss.match(alertColour) || [''])[0]}`);
+// 反向自我檢查：這條規則本身要真的抓得到紅色，不然它只是裝飾
+expect(alertColour.test('color: var(--danger)') && alertColour.test('background: red;'),
+  '②b 警示色偵測失效，改壞了');
 ok('②b 摘要樣式沒有紅色或警示色');
 
 /* ③ 來源圖例（醫師要分辨可信度） */
@@ -163,12 +290,20 @@ expect(app.indexOf('renderVisitSummary(_rptLastSummary);') < app.indexOf('const 
   '⑦ 應先畫快照再背景更新，否則沒網路時畫面是空的');
 ok('⑦ 先畫快照、再背景更新（診間離線可用）');
 
-/* ⑧ 匯出：分享前警告 + PDF 走零套件的列印 */
-expect(app.includes('傳出去之後就收不回來'), '⑧ 匯出前沒有提醒健康資料不可回收');
-expect(app.includes('window.print()'), '⑧ PDF 沒有走瀏覽器內建列印');
-expect(css.includes('@media print'), '⑧ 缺列印樣式，印出來會夾雜 App 的殼');
+/* ⑧ 匯出＝按一下就跳系統分享（Edward 2026-07-29：「不需要顯示一堆提醒或流程」）。
+   原本那句「傳出去就收不回來」的 confirm 與 1/2/3 的 prompt 選單都由他判定拿掉——
+   系統分享面板本身就是那個確認動作，再多問一次只是擋路。 */
+const exportBlock = app.slice(app.indexOf("$('#rptExportBtn')"), app.indexOf("// 發起挑戰面板"));
+expect(exportBlock.length > 200, '⑧ 找不到匯出的綁定區塊，這條測試已失效需重寫');
+expect(!/window\.confirm/.test(exportBlock), '⑧ 匯出又出現 confirm 問答——他要的是按一下就好');
+expect(!/window\.prompt/.test(exportBlock), '⑧ 匯出又出現 prompt 選單——他要的是按一下就好');
+expect(exportBlock.includes('exportVisitSummaryPdf'), '⑧ 匯出沒有直接產 PDF');
+expect(exportBlock.includes("dataset.busy"), '⑧ 連按兩下會跑兩份，沒有防連點');
+expect(app.includes('sharePdf'), '⑧ 沒有走原生外掛的 PDF＋系統分享面板');
 expect(!/jspdf|html2canvas|pdfmake/i.test(app), '⑧ 引入了外部 PDF 套件——違反零支出與零新依賴');
-ok('⑧ 匯出有隱私提醒、PDF 零套件、列印樣式齊備');
+// window.print() 在 iOS WKWebView 完全無效，App 內絕不能走那條
+expect(!exportBlock.includes('window.print()'), '⑧ App 內又走了 window.print()——在 WKWebView 按了沒反應');
+ok('⑧ 匯出一鍵到系統分享、零套件、無多餘問答');
 
 /* ⑨ 後端契約對得上 */
 expect(app.includes("brainPost('/visit-summary'"), '⑨ 前端沒有呼叫 /visit-summary');

@@ -225,8 +225,11 @@ public class NotifyPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func scheduleTestNotification(_ call: CAPPluginCall) {
         let content = UNMutableNotificationContent()
-        content.title = "沐寧測試通知"
-        content.body = "通知已設定完成，之後的提醒會出現在這裡。"
+        content.title = muneaNativeText("native.notification.testTitle", "沐寧測試通知")
+        content.body = muneaNativeText(
+            "native.notification.testBody",
+            "通知已設定完成，之後的提醒會出現在這裡。"
+        )
         content.sound = .default
         content.userInfo = ["source": "local", "eventType": "test", "deepLink": "munea://notifications"]
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
@@ -241,10 +244,14 @@ public class NotifyPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func content(for item: [String: Any], showSensitive: Bool) -> UNMutableNotificationContent? {
-        let detailTitle = item["title"] as? String ?? "沐寧提醒"
-        let detailBody = item["body"] as? String ?? "你有一則新提醒。"
-        let publicTitle = item["publicTitle"] as? String ?? "沐寧提醒"
-        let publicBody = item["publicBody"] as? String ?? "你的健康提醒到了，解鎖後查看。"
+        let detailTitle = item["title"] as? String
+            ?? muneaNativeText("native.notification.defaultTitle", "沐寧提醒")
+        let detailBody = item["body"] as? String
+            ?? muneaNativeText("native.notification.defaultBody", "你有一則新提醒。")
+        let publicTitle = item["publicTitle"] as? String
+            ?? muneaNativeText("native.notification.publicTitle", "沐寧提醒")
+        let publicBody = item["publicBody"] as? String
+            ?? muneaNativeText("native.notification.publicBody", "你的健康提醒到了，解鎖後查看。")
         let content = UNMutableNotificationContent()
         content.title = showSensitive ? detailTitle : publicTitle
         content.body = showSensitive ? detailBody : publicBody
@@ -285,7 +292,7 @@ public class NotifyPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func sync(_ call: CAPPluginCall) {
         guard let raw = call.getArray("items") else {
-            call.reject("缺 items")
+            call.reject(muneaNativeText("native.notification.itemsMissing", "缺少通知項目"))
             return
         }
         let showSensitive = call.getBool("showSensitiveContent") ?? false

@@ -314,7 +314,9 @@ window.MuneaNotify = (function () {
     if (Array.isArray(visits)) visits.forEach(function (visit) {
       if (!visit || !visit.dateISO) return;
       var visitAt = new Date(visit.dateISO + 'T' + (visit.time || '09:00'));
-      var remindAt = new Date(visitAt.getTime() - 60 * 60 * 1000);
+      // 就診前 2 小時（Edward 2026-07-29：原本 1 小時，那是該出門的時間了，
+      // 來不及看摘要也來不及準備；提前到 2 小時讓他先看過要問的問題再出門）。
+      var remindAt = new Date(visitAt.getTime() - 2 * 60 * 60 * 1000);
       if (isNaN(remindAt) || remindAt <= new Date()) return;
       // 口袋問題：有記下要問醫生的問題，就在看診提醒裡帶一句「有 N 個問題要問」。
       // 只帶**數量**、不帶問題內文——健康疑問屬敏感內容，不放進推播文字（鎖定畫面另有 publicBody 遮罩）。
@@ -646,8 +648,14 @@ window.MuneaNotify = (function () {
     var value = String(url);
     if (value.indexOf('munea://medications') === 0) clickView('status');
     else if (value.indexOf('munea://visits') === 0) {
-      clickView('settings');
-      setTimeout(function () { var entry = document.getElementById('visitEntry'); if (entry) entry.click(); }, 120);
+      // 就診推播點開＝直接看摘要（Edward 2026-07-29：跟就診提醒連動）。
+      // 他今天要出門看診，需要的是「這次要問什麼」，不是一張提醒設定清單。
+      if (typeof window.__muneaOpenVisitSummary === 'function') {
+        window.__muneaOpenVisitSummary('notification');
+      } else {
+        clickView('settings');
+        setTimeout(function () { var entry = document.getElementById('visitEntry'); if (entry) entry.click(); }, 120);
+      }
     } else if (value.indexOf('munea://relay') === 0) clickView('chat');
     else if (value.indexOf('munea://family') === 0 || value.indexOf('munea://health') === 0) clickView('family');
     else return false;

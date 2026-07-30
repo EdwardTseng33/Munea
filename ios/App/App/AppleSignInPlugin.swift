@@ -21,11 +21,17 @@ public class AppleSignInPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationCont
     @objc func signIn(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             guard self.pendingCall == nil else {
-                call.reject("Apple 登入正在進行中", "apple_sign_in_in_progress")
+                call.reject(
+                    muneaNativeText("native.auth.apple.inProgress", "Apple 登入正在進行中"),
+                    "apple_sign_in_in_progress"
+                )
                 return
             }
             guard let window = self.activeWindow() else {
-                call.reject("找不到目前的 App 視窗", "apple_sign_in_window_unavailable")
+                call.reject(
+                    muneaNativeText("native.common.windowUnavailable", "找不到目前的 App 視窗"),
+                    "apple_sign_in_window_unavailable"
+                )
                 return
             }
 
@@ -59,7 +65,10 @@ public class AppleSignInPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationCont
               let tokenData = credential.identityToken,
               let identityToken = String(data: tokenData, encoding: .utf8),
               !identityToken.isEmpty else {
-            call.reject("Apple 沒有回傳可驗證的身分憑證", "apple_identity_token_missing")
+            call.reject(
+                muneaNativeText("native.auth.apple.identityTokenMissing", "Apple 沒有回傳可驗證的身分憑證"),
+                "apple_identity_token_missing"
+            )
             clearPendingRequest()
             return
         }

@@ -3,6 +3,13 @@ import Capacitor
 import GoogleSignIn
 import UserNotifications
 
+/// Native bridge copy lives in the already-packaged InfoPlist.strings table so
+/// permission prompts, plugin errors, local notifications, and export filenames
+/// follow the user's iOS App Language without adding a separate Xcode resource.
+func muneaNativeText(_ key: String, _ fallback: String) -> String {
+    Bundle.main.localizedString(forKey: key, value: fallback, table: "InfoPlist")
+}
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 

@@ -14,6 +14,7 @@ const CATALOG_DIR = path.join(ROOT, 'web', 'src', 'i18n');
 const CATALOG_MANIFEST_PATH = path.join(CATALOG_DIR, 'catalog-manifest.json');
 const HAN_RE = /[\u3400-\u9fff\uf900-\ufaff]/u;
 const HTML_ATTRIBUTE_MARKERS = Object.freeze({
+  alt: 'data-i18n-alt',
   'aria-label': 'data-i18n-aria-label',
   placeholder: 'data-i18n-placeholder',
   title: 'data-i18n-title',

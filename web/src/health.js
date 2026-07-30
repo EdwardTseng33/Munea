@@ -12,6 +12,12 @@ window.MuneaHealth = (function () {
   let lastSummary = null;
   // 讀到資料了沒：true=至少一項有值、false=一項都沒有、null=還沒讀過（不亂猜）
   let hasData = null;
+  // 這次開 App 之後真的讀過了沒。沒讀過之前不准說「讀不到」——
+  // 只憑上次存下來的舊結果就先下結論，會在剛打開項目回來時冤枉使用者。
+  let readDone = false;
+  let lastReadFields = [];   // 這次讀到哪幾項
+  let lastReadError = '';    // 讀取失敗的原因（空字串＝沒失敗）
+  let lastReadAt = 0;
 
   function t(key, fallback, values) {
     return window.MuneaI18n
@@ -90,6 +96,19 @@ window.MuneaHealth = (function () {
     try { localStorage.setItem('munea.health.askedAt', String(Date.now())); } catch (e) {}
   }
 
+  // 這一頁現在該長什麼樣。整頁只有一顆按鍵，按鍵做什麼由這裡決定：
+  //   'off'      還沒連過      → 按鍵「連接」→ 跳系統授權視窗
+  //   'checking' 連過、還在讀   → 不下結論，先說檢查中
+  //   'ok'       讀得到         → 按鍵「解除連接」（沐寧停止讀取；iPhone 授權要去健康 App 收）
+  //   'empty'    讀完了、沒東西 → 按鍵「去健康 App 打開項目」
+  //   'error'    讀取出錯       → 按鍵「再試一次」，並把原因講出來
+  function uiState() {
+    if (!connected()) return 'off';
+    if (lastReadError) return 'error';
+    if (!readDone && hasData !== true) return 'checking';
+    return hasData === false ? 'empty' : 'ok';
+  }
+
   // 把使用者送到「健康」App 自己開項目（App 不能代替他開，蘋果不給）
   async function openHealthApp() {
     const p = plugin();
@@ -97,59 +116,101 @@ window.MuneaHealth = (function () {
     try { return await p.openHealthApp(); } catch (e) { return { opened: false }; }
   }
 
+  const FIELD_LABEL = {
+    steps: () => t('health.steps', '步數'),
+    hr: () => t('health.heartRate', '心率'),
+    spo2: () => t('health.bloodOxygen', '血氧'),
+    bpSys: () => t('health.bloodPressure', '血壓'),
+    bpDia: () => t('health.bloodPressure', '血壓'),
+    sleepHours: () => t('health.sleep', '睡眠'),
+  };
+
+  // 把 {time} 這種佔位符換成真的值。翻譯載入時是翻譯層在換，
+  // 但沒載到翻譯（走預設字）時沒人換，會把「{time} 讀到：{items}」原封不動給使用者看。
+  function fill(text, values) {
+    return String(text == null ? '' : text)
+      .replace(/\{(\w+)\}/g, (whole, key) => (values && values[key] != null ? String(values[key]) : whole));
+  }
+
+  // 讀取實況：讓人能確定「到底讀到了沒」，而不是只看到一片空白自己猜。
+  function readEvidence() {
+    if (!connected() || !lastReadAt) return '';
+    const at = new Date(lastReadAt);
+    const clock = String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0');
+    if (lastReadError) return fill(t('health.readFailedAt', '{time} 讀取失敗：{reason}', { time: clock, reason: lastReadError }), { time: clock, reason: lastReadError });
+    const names = [];
+    lastReadFields.forEach(k => {
+      const label = FIELD_LABEL[k] && FIELD_LABEL[k]();
+      if (label && names.indexOf(label) < 0) names.push(label);
+    });
+    return names.length
+      ? fill(t('health.readOkAt', '{time} 讀到：{items}', { time: clock, items: names.join('、') }), { time: clock, items: names.join('、') })
+      : fill(t('health.readNothingAt', '{time} 讀過了，一項都沒有', { time: clock }), { time: clock });
+  }
+
   function renderConnectionState() {
-    const on = connected();
-    const blank = on && hasData === false;   // 說已連接、卻一項都讀不到
+    const view = uiState();
+    const on = view !== 'off';
     const btn = document.getElementById('cnHealthBtn');
     if (btn) {
-      btn.classList.toggle('done', on);
-      btn.classList.toggle('disconnect', on);
+      btn.classList.toggle('done', view === 'ok');
+      // 只有真的讀得到、按下去才是「解除」；其他狀態都不是解除，別套解除的紅色樣式
+      btn.classList.toggle('disconnect', view === 'ok');
       btn.classList.remove('arm');
       delete btn.dataset.disconnectArmed;
-      btn.textContent = on
-        ? t('health.disconnect', '解除連接')
-        : t('health.connect', btn.dataset.label || '連接');
+      btn.dataset.action = view === 'off' ? 'connect'
+        : view === 'ok' ? 'disconnect'
+        : view === 'error' ? 'retry'
+        : view === 'checking' ? 'none'
+        : 'openHealth';
+      btn.textContent =
+        view === 'off' ? t('health.connect', btn.dataset.label || '連接')
+        : view === 'ok' ? t('health.disconnect', '解除連接')
+        : view === 'error' ? t('health.retry', '再試一次')
+        : view === 'checking' ? t('health.checking', '檢查中…')
+        : t('health.openHealthApp', '去健康 App');
+      btn.disabled = view === 'checking';
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
     const state = document.getElementById('healthSettingsState');
     if (state) state.classList.toggle('off', !on);
     const stateLabel = document.getElementById('healthSettingsStateLabel');
-    if (stateLabel) stateLabel.textContent = !on
-      ? t('health.notConnected', '未連接')
-      : blank
-        ? t('health.noReadableData', '讀不到資料')
-        : t('health.connected', '已連接');
+    if (stateLabel) stateLabel.textContent =
+      view === 'off' ? t('health.notConnected', '未連接')
+      : view === 'checking' ? t('health.checking', '檢查中…')
+      : view === 'error' ? t('health.readFailed', '讀取失敗')
+      : view === 'empty' ? t('health.noReadableData', '讀不到資料')
+      : t('health.connected', '已連接');
     const detail = document.getElementById('cnHealthDetail');
-    if (detail) detail.textContent = !on
-      ? t(
-        'health.availableDetail',
-        '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧',
-      )
-      : blank
-        ? t('health.noReadableDataDetail', '已連接，但目前一項資料都讀不到')
-        : t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧');
+    if (detail) detail.textContent =
+      view === 'off' ? t('health.availableDetail', '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧')
+      : view === 'checking' ? t('health.checkingDetail', '正在確認讀不讀得到')
+      : view === 'error' ? t('health.readFailedDetail', '這次沒讀成功')
+      : view === 'empty' ? t('health.noReadableDataDetail', '目前讀不到資料')
+      : t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧');
     const help = document.getElementById('cnHealthHelp');
-    if (help) help.textContent = !on
+    if (help) help.textContent =
       // 還沒連：先提醒授權視窗裡的項目預設是關的。
       // 這是「連了卻沒資料」最大的來源——很多人直接按允許，等於一項都沒開。
-      ? t(
+      view === 'off' ? t(
         'health.notConnectedHelp',
         '按下「連接」後手機會跳出一個畫面，請把要給沐寧看的項目一項一項打開再按允許——那些項目預設是關著的。',
       )
-      : blank
-        ? t(
-          'health.noReadableDataHelp',
-          '沐寧還讀不到任何一項。可能是授權時項目沒有打開，也可能是這支手機還沒有這些紀錄。用下面的按鍵去「健康」App 打開項目就好。',
-        )
-        : t(
+      : view === 'checking' ? t('health.checkingHelp', '正在跟「健康」App 要今天的資料，稍等一下。')
+      : view === 'error' ? t('health.readFailedHelp', '這次沒有讀成功。按「再試一次」；還是不行的話，到「健康」App 看看沐寧的項目是不是被關掉了。')
+      : view === 'empty' ? t(
+        'health.noReadableDataHelp',
+        '沐寧還讀不到任何一項。可能是授權時項目沒有打開，也可能是這支手機還沒有這些紀錄。按上面的按鍵去「健康」App 把項目打開就好。',
+      )
+      : t(
         'health.disconnectHelp',
-        '解除連接會停止沐寧後續同步，既有紀錄仍會保留。要撤銷 Apple 健康的系統授權，請到「健康 App」的個人頭像／隱私權設定中管理沐寧。',
+        '「解除連接」是叫沐寧不要再讀，iPhone 給的授權還是開著的——要完全收回，請到「健康」App →個人照片→「App 與服務」→沐寧 關掉項目。',
       );
-    // 「打開健康 App」只在讀不到資料時出現，而且只有真機才有用（網頁預覽沒有這個能力）
-    const openBtn = document.getElementById('cnHealthOpenBtn');
-    if (openBtn) {
-      openBtn.hidden = !(blank && available());
-      openBtn.textContent = t('health.openHealthApp', '打開「健康」App 開啟項目');
+    const evidence = document.getElementById('cnHealthReadState');
+    if (evidence) {
+      const line = readEvidence();
+      evidence.textContent = line;
+      evidence.hidden = !line;
     }
   }
 
@@ -190,14 +251,35 @@ window.MuneaHealth = (function () {
     if (!p) return null;
     if (refreshPromise) return refreshPromise;
     const force = !!(options && options.force);
-    if (!force && lastRefreshAt && Date.now() - lastRefreshAt < REFRESH_COOLDOWN_MS) return lastSummary;
+    if (!force && lastRefreshAt && Date.now() - lastRefreshAt < REFRESH_COOLDOWN_MS) {
+      // 冷卻期內不重讀，但這代表剛剛才讀過——別讓畫面卡在「檢查中」出不來
+      readDone = true;
+      setTimeout(renderConnectionState, 0);
+      return lastSummary;
+    }
 
     lastRefreshAt = Date.now();
     refreshPromise = (async function () {
       let s = null;
-      try { s = await p.getSummary(); } catch (e) { return null; }
+      // 讀失敗要留下原因。原本這裡是 catch 完就安靜回 null，
+      // 使用者看到的跟「真的沒有資料」一模一樣，誰都查不出是哪一種。
+      try { s = await p.getSummary(); }
+      catch (e) {
+        lastReadError = String((e && (e.message || e.errorMessage)) || e || 'unknown');
+        lastReadAt = Date.now();
+        readDone = true;
+        setTimeout(renderConnectionState, 0);
+        return null;
+      }
       if (!connected()) return null;
       if (!s || s.available === false) return null;
+      // 原生端回報這次讀到哪幾項、哪幾項出錯（新版才有；舊版沒有就用值反推）
+      lastReadFields = Array.isArray(s.fields)
+        ? s.fields
+        : ['steps', 'hr', 'spo2', 'bpSys', 'bpDia', 'sleepHours'].filter(k => typeof s[k] === 'number' && s[k] > 0);
+      lastReadError = Array.isArray(s.errors) && s.errors.length ? s.errors.join('；') : '';
+      lastReadAt = Date.now();
+      readDone = true;
       // 記住這次到底有沒有值——沒有的話畫面要照實講，不能繼續寫「正在同步」
       setHasData(hasAnyValue(s));
       setTimeout(renderConnectionState, 0);
@@ -232,35 +314,39 @@ window.MuneaHealth = (function () {
       localStorage.setItem('munea.health.disconnectedAt', String(Date.now()));
     } catch (e) {}
     setHasData(null);
+    readDone = false; lastReadFields = []; lastReadError = ''; lastReadAt = 0;
     emitConnectionState();
     return { ok: true, authorizationRetained: true };
   }
 
+  // 去「健康」App，回來自動重讀一次，剛打開的項目直接長出來、不用再按一次
+  async function goHealthAppAndReread() {
+    const onBack = () => {
+      if (document.visibilityState === 'visible') {
+        document.removeEventListener('visibilitychange', onBack);
+        refresh({ force: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onBack);
+    await openHealthApp();
+  }
+
+  // 整頁只有一顆按鍵。它做什麼由狀態決定（uiState），不再有第二顆做類似事情的鍵。
   function bindConnectionUi() {
-    const openBtn = document.getElementById('cnHealthOpenBtn');
-    if (openBtn && !openBtn.dataset.bound) {
-      openBtn.dataset.bound = '1';
-      openBtn.addEventListener('click', async function () {
-        await openHealthApp();
-        // 從「健康」App 回來時再讀一次，剛打開的項目就會直接長出來，不用他自己再按一次連接
-        const onBack = () => {
-          if (document.visibilityState === 'visible') {
-            document.removeEventListener('visibilitychange', onBack);
-            refresh({ force: true });
-          }
-        };
-        document.addEventListener('visibilitychange', onBack);
-      });
-    }
     const btn = document.getElementById('cnHealthBtn');
     if (!btn) return;
     btn.addEventListener('click', function (event) {
-      if (!connected()) {
-        setTimeout(renderConnectionState, 0);
+      const action = btn.dataset.action || (connected() ? 'disconnect' : 'connect');
+      if (action === 'connect') {
+        setTimeout(renderConnectionState, 0);   // 真正的授權由 app.js 那邊呼叫 connect()
         return;
       }
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (action === 'none') return;
+      if (action === 'openHealth') { goHealthAppAndReread(); return; }
+      if (action === 'retry') { lastReadError = ''; renderConnectionState(); refresh({ force: true }); return; }
+      // 解除連接：兩段式確認，避免長輩誤觸
       if (btn.dataset.disconnectArmed !== '1') {
         btn.dataset.disconnectArmed = '1';
         btn.classList.add('arm');
@@ -278,7 +364,11 @@ window.MuneaHealth = (function () {
   // App 啟動：之前連過就靜默刷新一次（含把步數帶回走路任務）
   function boot() {
     loadHasData();
+    // 每次開 App 都要重新確認一次。上次存的「讀不到」只是上次的事——
+    // 使用者可能剛剛才去健康 App 把項目打開，這時候先說讀不到就是冤枉他。
+    readDone = false; lastReadError = ''; lastReadFields = []; lastReadAt = 0;
     renderConnectionState();
+    // 不加 force：重開 App 本來就沒有冷卻期，正常讀一次即可（冷卻期是為了省電，別破壞）
     if (available() && connected()) { refresh(); }
   }
 
@@ -286,5 +376,5 @@ window.MuneaHealth = (function () {
   bindConnectionUi();
   window.addEventListener('munea:locale-ready', renderConnectionState);
 
-  return { GOAL: GOAL, REFRESH_COOLDOWN_MS: REFRESH_COOLDOWN_MS, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative, metricStates: metricStates, hasAnyValue: hasAnyValue, openHealthApp: openHealthApp, askedBefore: askedBefore };
+  return { GOAL: GOAL, REFRESH_COOLDOWN_MS: REFRESH_COOLDOWN_MS, available: available, connected: connected, connect: connect, disconnect: disconnect, refresh: refresh, renderConnectionState: renderConnectionState, boot: boot, isNative: isNative, metricStates: metricStates, hasAnyValue: hasAnyValue, openHealthApp: openHealthApp, askedBefore: askedBefore, uiState: uiState, readEvidence: readEvidence };
 })();
