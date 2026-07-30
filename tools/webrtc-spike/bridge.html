@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>WebRTC × 聊聊的腦 · 試作台</title>
+<style>
+  body { background:#0E1A17; color:#FAF7F2; font-family:system-ui,"Noto Sans TC",sans-serif;
+         display:flex; flex-direction:column; align-items:center; padding:24px; }
+  h1 { font-size:18px; }
+  #stats { background:rgba(0,0,0,.4); border-radius:12px; padding:14px 18px; font-size:14px;
+           line-height:1.9; min-width:340px; font-variant-numeric:tabular-nums; }
+  b { color:#3AA8A0; }
+  button { background:#3AA8A0; border:0; color:#06211C; font-weight:700; font-size:15px;
+           padding:12px 20px; border-radius:12px; cursor:pointer; margin:14px 6px; }
+  button.alt { background:#24453E; color:#FAF7F2; }
+</style>
+</head>
+<body>
+<h1>WebRTC × 聊聊的腦 · 試作台</h1>
+<div>
+  <button id="btnSample">🎧 播真人錄音當嘴巴（假人考）</button>
+  <button id="btnMic" class="alt">🎙 用麥克風真的聊</button>
+</div>
+<div id="stats">
+  水管 <b id="rtc">未連</b> · 引擎 <b id="eng">–</b><br>
+  你的聲音送出 <b id="you">0</b> · 她的聲音回來 <b id="her">0</b><br>
+  她多快接話 <b id="lat">–</b> ms<br>
+  她說：<b id="cap">–</b>
+</div>
+<audio id="her-voice" autoplay></audio>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  window.__bridgeStats = {};
+  async function connect(useSample) {
+    const pc = new RTCPeerConnection();
+    pc.ontrack = e => { $('her-voice').srcObject = e.streams[0] || new MediaStream([e.track]); };
+    let stream;
+    if (useSample) {
+      const ac = new AudioContext();
+      const buf = await ac.decodeAudioData(await (await fetch('/sample.wav')).arrayBuffer());
+      const dst = ac.createMediaStreamDestination();
+      const s = ac.createBufferSource(); s.buffer = buf; s.connect(dst); s.start();
+      // 恆常無聲底軌：錄音播完後麥克風軌不能斷格——引擎要「聽到安靜」才會判定講完
+      // （正式線的手機也是持續送真安靜聲，這裡跟它對齊）
+      const osc = ac.createOscillator(); const g = ac.createGain(); g.gain.value = 0.00001;
+      osc.connect(g); g.connect(dst); osc.start();
+      stream = dst.stream;
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true } });
+    }
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+    const o = await pc.createOffer(); await pc.setLocalDescription(o);
+    await new Promise(res => { if (pc.iceGatheringState==='complete') res();
+      else { const f=()=>{ if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);res();} };
+             pc.addEventListener('icegatheringstatechange',f); setTimeout(res,1500); } });
+    const r = await fetch('/offer', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }) });
+    await pc.setRemoteDescription(await r.json());
+    setInterval(async () => {
+      const st = await (await fetch('/status')).json();
+      window.__bridgeStats = st;
+      $('rtc').textContent = st.rtc || '–';
+      $('eng').textContent = st.engine || '–';
+      $('you').textContent = st.you_bytes || 0;
+      $('her').textContent = st.her_bytes || 0;
+      $('lat').textContent = st.first_reply_ms || '–';
+      $('cap').textContent = st.caption || '–';
+    }, 800);
+  }
+  $('btnSample').onclick = () => connect(true);
+  $('btnMic').onclick = () => connect(false);
+})();
+</script>
+</body>
+</html>

@@ -250,7 +250,22 @@
     "1 點約 1 分鐘": "1 crédito ≈ 1 minuto",
     "這裡是": "Estás en",
     "測試機": "el servidor de pruebas",
-    "本機預覽": "una vista local"
+    "本機預覽": "una vista local",
+    "擬真女孩 01": "Chica realista 01",
+    "擬真男孩 01": "Chico realista 01",
+    "動畫女孩 01": "Chica animada 01",
+    "動畫男孩 01": "Chico animado 01",
+    "動畫貓 01": "Gato animado 01",
+    "動畫狗 01": "Perro animado 01",
+    "企業席次": "Plaza empresarial",
+    "緩衝期": "Periodo de gracia",
+    "等待接手": "Pendiente de traspaso",
+    "在 App 內購買": "Comprado en la app",
+    "生效中": "Activa",
+    "（未填公司名）": "(sin nombre de empresa)",
+    "合約已到期 · 緩衝期中": "Contrato finalizado · en periodo de gracia",
+    "等待個人訂閱到期": "Esperando que caduque el plan personal",
+    "聊聊分鐘": "Minutos de charla"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Últimos {0} días" },
@@ -276,6 +291,9 @@
     { "source": "閒置滿 {0} 天", "target": "Inactivo {0} días" },
     { "source": "{0} 天沒動作", "target": "{0} días sin actividad" },
     { "source": "{0} 天前有動作", "target": "Última actividad hace {0} días" },
-    { "source": "目前只有測試帳號（已隱藏 {0} 個）——有真實用戶註冊後，這裡就會列出來。", "target": "Ahora solo hay cuentas de prueba ({0} ocultas): los usuarios reales aparecerán aquí al registrarse." }
+    { "source": "目前只有測試帳號（已隱藏 {0} 個）——有真實用戶註冊後，這裡就會列出來。", "target": "Ahora solo hay cuentas de prueba ({0} ocultas): los usuarios reales aparecerán aquí al registrarse." },
+    { "source": "{0} 自動轉回免費", "target": "Vuelve a Gratis el {0}" },
+    { "source": "{0} 由企業接手", "target": "La empresa asume el {0}" },
+    { "source": "合約到 {0}", "target": "Contrato hasta el {0}" }
   ]
 }

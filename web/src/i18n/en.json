@@ -325,7 +325,7 @@
   "settings.upgradePlan": "Upgrade plan",
   "settings.topUpCredits": "Buy credits",
   "settings.profileSubtitle": "Name, birthday, and location",
-  "settings.careCircleSubtitle": "See how everyone in the family is doing",
+  "settings.careCircleSubtitle": "See who's in it and invite family",
   "settings.interests": "Topics to talk about",
   "settings.interestsSubtitle": "Choose topics you enjoy and {companion} will look out for related stories.",
   "settings.appleHealth": "Apple Health",
@@ -887,5 +887,6 @@
   "visit.openSummary": "Summary",
   "visit.questionSaved": "Saved. I will remind you before the visit ({n} questions).",
   "visit.questionUnheard": "I did not catch that question. Could you say it again?",
-  "common.tomorrow": "Tomorrow"
+  "common.tomorrow": "Tomorrow",
+  "health.reconnectHelp": "Munea can’t read any data right now. The permission screen only appears once, so tapping Connect takes you to the Health app — turn Munea’s items on there."
 }

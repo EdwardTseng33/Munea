@@ -18,7 +18,10 @@ from typing import Any
 
 
 BASE = "https://rest.runpod.io/v1"
-POD_NAME = os.environ.get("MUNEA_RUNPOD_DEMO_NAME", "munea-flashhead-demo-768-r6000ada")
+# 2026-07-30 Edward 親抓「名稱寫 6000 Ada、實開 4090」：開卡清單本來就是
+# 「6000 Ada 沒貨就開 4090」的候補制（見下 gpuTypeIds），名字卻寫死第一志願＝會說謊。
+# 改成不含型號的中性名——實際開到哪張卡，以雲端主控台顯示的硬體為準。
+POD_NAME = os.environ.get("MUNEA_RUNPOD_DEMO_NAME", "munea-flashhead-demo-768")
 VOLUME_ID = os.environ.get("MUNEA_RUNPOD_DEMO_VOLUME_ID", "7d3vqi99dm")
 IMAGE = os.environ.get(
     "MUNEA_RUNPOD_DEMO_IMAGE",

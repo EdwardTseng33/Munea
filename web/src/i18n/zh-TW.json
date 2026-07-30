@@ -325,7 +325,7 @@
   "settings.upgradePlan": "升級方案",
   "settings.topUpCredits": "加購點數",
   "settings.profileSubtitle": "名稱、生日、所在地",
-  "settings.careCircleSubtitle": "家人互相看著彼此的狀態",
+  "settings.careCircleSubtitle": "有誰在裡面、邀請家人加入",
   "settings.interests": "想聊的話題",
   "settings.interestsSubtitle": "挑幾個興趣，{companion}會多留意",
   "settings.appleHealth": "Apple 健康",
@@ -887,5 +887,6 @@
   "visit.openSummary": "看摘要",
   "visit.questionSaved": "記下來了，看醫生前我會提醒你（{n} 個問題）",
   "visit.questionUnheard": "這個問題我沒聽清楚，你再說一次好嗎",
-  "common.tomorrow": "明天"
+  "common.tomorrow": "明天",
+  "health.reconnectHelp": "沐寧目前讀不到資料。授權畫面只會跳一次，所以按「連接」我會帶你到「健康」App，在那裡把沐寧的項目打開就好。"
 }

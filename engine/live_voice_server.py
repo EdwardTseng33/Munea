@@ -33,7 +33,7 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
-from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
+from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame, hot_threshold,
                               note_playout, in_playout_window, guard_enabled, guard_rms_threshold)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
@@ -51,7 +51,16 @@ import websockets
 from websockets.http11 import Response
 from websockets.datastructures import Headers
 
-MODEL = "gemini-3.1-flash-live-preview"
+# 引擎選擇（2026-07-30 Edward 拍板「開始測試 2.5 正式版」）：預設 31＝現行、零改變。
+# vertex25＝Google 雲正式版 2.5 原生語音（gemini-live-2.5-flash-native-audio @ us-central1）。
+# 7/30 三關實測：吃 cmn-TW+Leda ✅、附和/主動接話開關存在 ✅、第一聲 750ms（僅比 3.1 慢 0.1 秒）。
+# 7/25 否決三理由全數失效——但正式採用前仍要過 19 題考卷＋Edward 人耳。
+VOICE_ENGINE = os.environ.get("MUNEA_VOICE_ENGINE", "31").strip().lower()
+if VOICE_ENGINE in ("vertex25", "25", "native25"):
+    MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-live-2.5-flash-native-audio"
+else:
+    VOICE_ENGINE = "31"
+    MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
 # 通話延長（2026-07-25 · 治「講超過 10 分鐘被硬切斷」）：Gemini Live 對每個底層連線有
@@ -102,7 +111,24 @@ KEYS = [k.strip() for k in _raw_keys.split(",") if k.strip()]
 if not KEYS:
     sys.exit("需要 GEMINI_API_KEY（或多把 GEMINI_API_KEYS，逗號分隔）")
 
-_clients = [genai.Client(api_key=k) for k in KEYS]   # 每把鑰匙一個 client
+
+def _make_client(key):
+    """依引擎開一個連線客戶端。31＝原樣（開發者鑰匙）。vertex25＝Google 雲正式版：
+    雲端機器（Cloud Run）內建身分、genai.Client(vertexai=True) 直接可用；
+    本機測試沒有內建身分，退而用 gcloud 現領的短期通行證（MUNEA_VERTEX_ACCESS_TOKEN）。"""
+    if VOICE_ENGINE != "vertex25":
+        return genai.Client(api_key=key)
+    project = os.environ.get("MUNEA_GCP_PROJECT", "gen-lang-client-0229303523")
+    location = os.environ.get("MUNEA_VERTEX_LOCATION", "us-central1")
+    tok = os.environ.get("MUNEA_VERTEX_ACCESS_TOKEN", "").strip()
+    if tok:
+        from google.oauth2.credentials import Credentials
+        return genai.Client(vertexai=True, project=project, location=location,
+                            credentials=Credentials(tok))
+    return genai.Client(vertexai=True, project=project, location=location)
+
+
+_clients = [_make_client(k) for k in KEYS]   # 每把鑰匙一個 client（vertex25 時鑰匙只當佔位、實際走雲端身分）
 _key_active = [0] * len(KEYS)                          # 每把鑰匙「現在幾通在用」
 _key_lock = threading.Lock()
 
@@ -1279,6 +1305,15 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_EVENT_TOOLS)
     if allow_care_questions and not demo_mode:
         tools.append(_CARE_QUESTION_TOOLS)
+    # vertex25 專屬配備（2026-07-30）：附和（affective）與主動接話判斷（proactive）。
+    # 預設關＝先考「同條件品質」；開了之後她會自己決定該不該接話、語氣跟情緒走。
+    # 只在 vertex25 引擎下送這兩個欄位（3.1 沒有、送了會被拒連）。
+    extra_cfg = {}
+    if VOICE_ENGINE == "vertex25":
+        if os.environ.get("MUNEA_VOICE_PROACTIVE", "0").strip() == "1":
+            extra_cfg["proactivity"] = types.ProactivityConfig(proactive_audio=True)
+        if os.environ.get("MUNEA_VOICE_AFFECTIVE", "0").strip() == "1":
+            extra_cfg["enable_affective_dialog"] = True
     resolved_thinking = _voice_thinking_level(thinking_level)
     thinking_config = (
         types.ThinkingConfig(thinking_level=resolved_thinking)
@@ -1294,6 +1329,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         adaptation_phrases=phrases,
     )
     return types.LiveConnectConfig(
+        **extra_cfg,
         response_modalities=["AUDIO"],
         # locale_profile 與 allow_care_questions 一律用具名傳。
         # system_instruction 的參數順序是 ..., demo_mode, allow_care_questions, locale_profile，
@@ -1603,7 +1639,7 @@ def _new_call_state():
     """一通電話的可變狀態（st）。2026-07-25 抽成獨立函式：①讓 handle() 讀起來清楚
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
-    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "await_first": True, "first_mic": False,
+    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -2173,7 +2209,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # v2：窗以「手機大概播到哪」為準（in_playout_window）；送出時間窗當後備。
                 _eg_window = (in_playout_window(_eg_now, st.get("playout_head"))
                               or in_output_window(_eg_now, st.get("last_out")))
-                if _eg_window and guard_enabled() and frame_rms(message) < guard_rms_threshold():
+                # 2026-07-30 熱門檻：她講話中（水位在前方）要求更大聲才算真插話——
+                # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
+                _eg_rms = frame_rms(message)
+                _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
+                if _eg_window and _eg_rms >= _eg_hot:
+                    st["last_hot_voice_at"] = _eg_now   # 窗內聽到真的夠大聲＝可信的人聲（插話裁判的依據）
+                if _eg_window and guard_enabled() and _eg_rms < _eg_hot:
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
                         _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
@@ -2231,6 +2273,21 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 elif t == "audio_end":
                     await session.send_realtime_input(audio_stream_end=True)
                 elif t == "barge_in":
+                    # 2026-07-30 插話裁判（治「喇叭開大→她自己的聲音觸發手機端插話→自己閉嘴」）：
+                    # 手機端的插話偵測分不出「你在說話」跟「她自己的大聲回音」（退回手機播音
+                    # 模式時系統回音消除顧不到那條路、7/16 已點名）。伺服器聽得到上行音訊，
+                    # 當裁判：她講話中收到插話通知、但最近 0.6 秒沒聽過衝過熱門檻的人聲＝回音
+                    # → 駁回（回 ack 讓 App 解除靜音、她接著講），不打斷她。
+                    _bi_now = time.monotonic()
+                    if (in_playout_window(_bi_now, st.get("playout_head"))
+                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6):
+                        st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
+                        _diag(cid, "node.barge_in_rejected_echo", count=st["barge_in_rejected"])
+                        try:
+                            await ws.send(json.dumps({"type": "barge_in_ack"}))   # App 收 ack 會解除本地靜音
+                        except Exception:
+                            pass
+                        continue
                     st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1

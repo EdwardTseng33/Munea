@@ -1,0 +1,128 @@
+{
+  "summary": {
+    "firstAudioLatency": {
+      "turns": 2,
+      "medianMs": 2000,
+      "meanMs": 1367,
+      "slowestMs": 2000,
+      "fastestMs": 734
+    },
+    "runAt": "2026-07-30T07:39:10.806880+00:00",
+    "itemsRun": 1,
+    "passCount": 1,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 5.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 5.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "貼身度",
+        5.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ],
+      [
+        "資訊節奏",
+        5.0
+      ]
+    ],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S03",
+      "label": "問天氣",
+      "categories": [
+        "current_events"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "今仔日會落雨沒？我想要去菜市仔。",
+          "note": "",
+          "reply": "我查了一下，台南現在是多雲的天氣，降雨機率大概是百分之三十而已，應該還好。不過外面還是很熱，阿姨記得帶把傘、多補充水分喔。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 2000
+        },
+        {
+          "turn": 2,
+          "user": "……我這雙鞋子沒防水呢。",
+          "note": "停頓1.5秒",
+          "reply": "那穿這雙鞋子出門還是比較保險。萬一遇到下雨，鞋子濕掉不舒服，也容易滑倒。 你是要去哪一個菜市場呢？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 734
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧針對使用者出門買菜的意圖，提供台南當地天氣資訊，並關心「外面還是很熱，阿姨記得帶把傘、多補充水分喔」，且接續追問「你是要去哪一個菜市場呢？」，完全貼合當下情境。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "回覆語氣自然流暢，沒有生硬的衛教或條列式建議，例如「我查了一下，台南現在是多雲的天氣，降雨機率大概是百分之三十而已，應該還好」符合日常對話習慣。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "每次回覆都提供適量資訊與建議，例如第一輪給出天氣資訊與兩項提醒，第二輪則針對鞋子問題給出解釋並提問，沒有一次性給出過多內容。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "在使用者第二輪停頓1.5秒後才接話，沒有打斷或搶話的行為，展現了良好的傾聽與尊重。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "語氣關懷備至，透過提醒「記得帶把傘、多補充水分」和解釋「鞋子濕掉不舒服，也容易滑倒」展現對長輩的體貼。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "提供的天氣資訊是可查詢的客觀事實，且符合背景中使用者居住地，沒有編造任何個人經歷或不存在的內容。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "所有的建議都以溫和提醒的方式呈現，例如「記得帶把傘」或「比較保險」，並未強迫或命令，將最終決定權留給使用者。"
+          }
+        ],
+        "average": 5.0,
+        "minScore": 5,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 5.0、單維最低 5、鐵律全過"
+    }
+  ]
+}

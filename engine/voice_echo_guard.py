@@ -45,6 +45,30 @@ def guard_tail_ms():
     return _env_int("MUNEA_VOICE_ECHO_GUARD_TAIL_MS", 2500)
 
 
+def guard_hot_multiplier():
+    """她「正在講話中」的門檻倍率（2026-07-30 · Edward 抓到「她講太大聲會打斷自己」）。
+
+    回音有兩張臉：小聲的（低於門檻→上一輪已用播放水位窗治好）跟大聲的——
+    喇叭開大時她自己的聲音衝破門檻、被當成使用者插話→她講到一半自己閉嘴。
+    telemetry 實錘：退回手機播音模式後 9 秒內連 3 發假插話（音量 2-4 倍於門檻）。
+
+    治法＝分兩段門檻：她「講話中」（播放水位還在前方）要求更大聲才算插話、
+    「殘響尾」維持原門檻。代價講明白：她講話時真人插話也要講大聲一點——
+    對長輩產品，「她自斷」比「插話要大聲」傷害大得多。可調可關（設 1.0＝關）。"""
+    try:
+        return float(os.environ.get("MUNEA_VOICE_ECHO_GUARD_HOT_MULT", "2.5"))
+    except (TypeError, ValueError):
+        return 2.5
+
+
+def hot_threshold(now, playout_head, base_threshold=None):
+    """回傳此刻適用的門檻：她講話中＝base×倍率；殘響尾或沒在講＝base。"""
+    base = guard_rms_threshold() if base_threshold is None else base_threshold
+    if playout_head and now < playout_head:   # 水位還在前方＝句子還在播
+        return base * guard_hot_multiplier()
+    return base
+
+
 def frame_rms(frame):
     """16-bit PCM 音量。壞資料回 0（寧可放行、不誤丟真人聲）。"""
     if not frame:

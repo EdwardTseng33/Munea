@@ -419,6 +419,21 @@
   // 三個都沒有就老實寫「未填姓名」，讓人靠旁邊的信箱認人，不要拿角色名冒充。
   // 帳號名是註冊時系統自己填的預設值，不是人取的名字——不能拿來當人名顯示。
   const GENERIC_ACCOUNT_NAMES=new Set(["Munea account","Munea demo account","Munea Care Circle"]);
+  // 陪伴角色欄顯示「我們自己的角色編號」，不顯示用戶給的暱稱（2026-07-30 Edward 拍板）。
+  // 用戶會把同一個角色叫成寧寧／蹦吧利利，後台要看的是「他選了哪一款」而不是他怎麼叫它。
+  const COMPANION_ZH={
+    "nening-real-female":"擬真女孩 01",
+    "companion-real-male":"擬真男孩 01",
+    "munea-2d-xiaoyun":"動畫女孩 01",
+    "munea-2d-ayuan":"動畫男孩 01",
+    "munea-2d-mimi":"動畫貓 01",
+    "munea-2d-wangcai":"動畫狗 01",
+  };
+  function companionLabel(c){
+    const id=String((c||{}).templateId||"").trim();
+    if(!id) return "–";
+    return COMPANION_ZH[id]||id; // 沒對照到就顯示原始代號，讓新角色一眼看得出來還沒命名
+  }
   function acctPersonName(a, fallback){ a=a||{}; const p=a.primaryPerson||{},o=a.owner||{};
     const named=(p.profileName||p.nickname||o.signInName||"").trim();
     if(named) return named;
@@ -442,6 +457,49 @@
     if(!parts.length) parts.push(`<span>查無登入身分</span>`);
     return parts.join('<span aria-hidden="true"> · </span>'); }
   function planPill(p){ const m={ pro:["pill pro","Pro"], plus:["pill ok","Plus"], free:["pill mute","免費"] }; const x=m[p]||m.free; return `<span class="${x[0]}">${x[1]}</span>`; }
+  // 方案是自己買的還是企業給的（2026-07-30 Edward）。光看 Pro／Plus 分不出來，
+  // 但收費對帳跟客服都要知道——尤其企業席次不是從 App 下單，是我們後台直接開的。
+  // 席次進緩衝期＝合約已到期、緩衝期跑完就會自動轉回免費，這種要特別標出來。
+  const SEAT_STATE_ZH={ grace:"緩衝期", waiting:"等待接手" };
+  function enterpriseNoteHTML(a){
+    const e=(a||{}).enterprise; if(!e||!e.seatId) return "";
+    const name=String(e.clientName||"").trim();
+    const state=SEAT_STATE_ZH[e.seatStatus]||"";
+    const bits=[`<span>企業席次</span>`];
+    if(name) bits.push(`<span data-i18n-skip>${esc(name)}</span>`);
+    if(state) bits.push(`<span>${state}</span>`);
+    return `<div class="plan-src${e.seatStatus==="grace"?" is-ending":""}">${bits.join('<span aria-hidden="true"> · </span>')}</div>`;
+  }
+  // 明細卡的「方案」那格底下那行小字：是自己在 App 買的、還是我們後台開的企業席次。
+  // ⚠ 中文標籤與公司名要拆成兩個獨立區塊。串成一個字串的話整段變成一個文字節點，
+  // 三語翻譯是逐節點比對的、比不到就整段留中文（2026-07-30 英文版實測抓到）。
+  function planSourceTxt(a){
+    const e=(a||{}).enterprise, o=(a||{}).owner||{};
+    if(e&&e.seatId){
+      const name=String(e.clientName||"").trim();
+      return name
+        ? `<span>企業席次</span><span aria-hidden="true"> · </span><span data-i18n-skip>${esc(name)}</span>`
+        : `<span>企業席次</span>`;
+    }
+    if((a||{}).plan==="pro"||(a||{}).plan==="plus") return `<span>在 App 內購買</span>`;
+    return `<span data-i18n-skip>${esc(fmtTime(o.signedUpAt||(a||{}).createdAt))}</span><span> 加入</span>`;
+  }
+  // 明細卡的企業席次那一列。緩衝期要明講「哪天會自動轉回免費」——
+  // 只寫「緩衝期」看不出還有多久，客服接到電話沒法回答。
+  function enterpriseRow(a){
+    const e=(a||{}).enterprise; if(!e||!e.seatId) return null;
+    const name=String(e.clientName||"").trim()||"（未填公司名）";
+    if(e.seatStatus==="grace"){
+      const until=e.graceUntil?fmtTime(e.graceUntil):"";
+      return ["企業席次", name, until?`${until} 自動轉回免費`:"合約已到期 · 緩衝期中"];
+    }
+    if(e.seatStatus==="waiting"){
+      const until=e.waitingUntil?fmtTime(e.waitingUntil):"";
+      return ["企業席次", name, until?`${until} 由企業接手`:"等待個人訂閱到期"];
+    }
+    const end=e.contractEnd?fmtTime(e.contractEnd):"";
+    return ["企業席次", name, end?`合約到 ${end}`:"生效中"];
+  }
   // 後台不追「誰在線上誰離線」（Edward 2026-07-29 拍板）——要追的是「有沒有登入活動」，
   // 因為免費帳號 60 天沒上線就會自動清除資料（supabase/sql/024）。
   // 這一欄回答的就是那件事：離自動清除還有幾天。看的是 accounts.lastSeenAt（App 開機蓋的章），
@@ -519,9 +577,9 @@
       return [
         `<div class="u-cell"><span class="u-av" style="background:${tint[0]};color:${tint[1]}">${esc(initial)}</span><div class="u-meta"><div class="u-nm">${esc(nm)}${a.isTestAccount?' <span class="pill mute">測試</span>':""}</div><div class="u-sub"><span>${esc(sub)}</span><span aria-hidden="true"> · </span>${who}</div></div></div>`,
         accountMarketCell(a),
-        planPill(a.plan||"free"),
+        planPill(a.plan||"free")+enterpriseNoteHTML(a),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
-        esc(c.displayName||c.templateId||"–"),
+        esc(companionLabel(c)),
         usageCell(u),
         `<span class="muted small">${esc(a.lastSeenAt?fmtTime(a.lastSeenAt):"—")}</span>`,
         `<button type="button" class="row-act" data-acct="${idx}" aria-label="查看 ${esc(nm)} 的用戶明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
@@ -893,11 +951,12 @@
                life==null?"<span class='acct-dim'>沒有紀錄</span>":`本月 ${n(Math.round(month||0))} 分`,
                (life==null||Math.round(life)===0)?"is-zero":"")}
         ${stat("持有點數", n(a.points||0), "點", "1 點約 1 分鐘")}
-        ${stat("方案", planTxt, "", `${esc(fmtTime(o.signedUpAt||a.createdAt))} 加入`, a.plan==="pro"||a.plan==="plus"?"is-paid":"")}
+        ${stat("方案", planTxt, "", planSourceTxt(a), a.plan==="pro"||a.plan==="plus"?"is-paid":"")}
       </div>
       ${rows("使用狀況", [
         ["家庭圈", f.name||"–", `${n(m.count||0)} 人`],
-        ["陪伴角色", c.displayName||c.templateId||"–"],
+        ["陪伴角色", companionLabel(c)],
+        enterpriseRow(a),
         // 「最後開 App」只講開機那一刻；「今天有動作」是四路訊號（開機／登入／使用／註冊）
         // 算出來的最近活動，掛在倒數旁邊才對——掛在開機時間旁邊會讀成「7/29 卻說今天」的矛盾。
         ["最後開 App", a.lastSeenAt?fmtTime(a.lastSeenAt):"還沒開過"],
@@ -1916,11 +1975,21 @@
   function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/plan_not_eligible_for_extension/.test(m))return "免費帳號沒有到期日，請先改方案"; if(/invalid_days/.test(m))return "天數格式不正確"; if(/days_out_of_range/.test(m))return "單次最多延長 365 天，請分批操作"; if(/days_required/.test(m))return "請輸入延長天數"; if(/account_deletion_requires_test_flag/.test(m))return "只有標記為測試的帳號才能從後台刪除"; if(/account_deletion_not_configured/.test(m))return "這台伺服器沒接上資料庫，不能刪帳號"; if(/account_deletion_failed/.test(m))return "刪除沒有成功，請看系統操作紀錄"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
 
   // 抓所有真資料（登入成功、貼通行碼、開頁自動連線 三處共用）
+  // 整批重讀時，每支接口該帶什麼參數。名冊要看當下「顯示測試帳號」開著沒有。
+  function endpointParams(key){
+    const base=EP_LIST[key][1]||{};
+    if(key!=="accounts") return base;
+    return Object.assign({},base,{includeTest:!!(state.tabs||{}).showTestAccounts});
+  }
+
   async function loadAll(base, token){
     const safeBase=normalizeAdminBaseUrl(base),keys=Object.keys(EP_LIST);
     state.base=safeBase; state.token=token; setBusy(true);
     try{
-      const rs=await Promise.allSettled(keys.map((k)=>postAdmin(safeBase,token,EP_LIST[k][0],EP_LIST[k][1])));
+      // 「顯示測試帳號」的開關要跟著整批重讀走。少帶這個參數，任何一次 refreshData()
+      // 都會把名冊換成隱藏測試帳號的版本——正在看的那戶會從清單裡消失，
+      // 於是改完方案／發完點數之後找不到它、彈窗停在舊數字上（2026-07-30 Edward 抓到）。
+      const rs=await Promise.allSettled(keys.map((k)=>postAdmin(safeBase,token,EP_LIST[k][0],endpointParams(k))));
       const data={},errors={};
       rs.forEach((r,i)=>{
         if(r.status==="fulfilled"){

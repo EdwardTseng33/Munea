@@ -325,7 +325,7 @@
   "settings.upgradePlan": "プランをアップグレード",
   "settings.topUpCredits": "ポイントを追加",
   "settings.profileSubtitle": "名前、誕生日、地域",
-  "settings.careCircleSubtitle": "家族みんなの様子をお互いに見守る",
+  "settings.careCircleSubtitle": "メンバーの確認と家族の招待",
   "settings.interests": "話したい話題",
   "settings.interestsSubtitle": "興味のある話題を選ぶと、{companion}が関連する情報を見つけやすくなります。",
   "settings.appleHealth": "Appleヘルスケア",
@@ -887,5 +887,6 @@
   "visit.openSummary": "サマリー",
   "visit.questionSaved": "記録しました。受診前にお知らせします（{n} 件）。",
   "visit.questionUnheard": "その質問がうまく聞き取れませんでした。もう一度お願いできますか",
-  "common.tomorrow": "明日"
+  "common.tomorrow": "明日",
+  "health.reconnectHelp": "いまデータを読み取れません。許可画面は一度しか出ないため、「連携」を押すとヘルスケアへご案内します。そこで Munea の項目をオンにしてください。"
 }

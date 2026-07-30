@@ -3985,7 +3985,15 @@ const LiveVoice = {
         if (this._slStallStreak === 2) {   // 連續兩拍（約 1 秒）沒聲進來、而她應該在講＝一次斷續
           this._slStalls += 1;
           try { trackProductEvent('sameline_audio_stall', { count: this._slStalls, turn: this._playbackTurn || 0 }); } catch (e) {}
-          if (this._slStalls >= 2) this._sameLineFallBackNow('midcall_stutter');
+          // 2026-07-30 深夜降級為「只記錄、不動手」：這偵測器在真機上每通誤觸發——
+          // 她每輪開口前臉機要 1-2 秒處理，那段「該講卻沒聲」被誤算成斷流（turn 2/3/7
+          // 的 telemetry 全是這型）。自動切換帶來的雪崩（忽大忽小/臉不同步/回音自斷）
+          // 比它要治的斷續傷害大得多（Edward 7/30 親測退步）。保留計數與事件、
+          // 拿真數據把「輪首處理延遲」跟「真斷流」分開之後，才考慮放回自動切換。
+          if (this._slStalls >= 2 && !this._slWouldFallbackSent) {
+            this._slWouldFallbackSent = true;
+            try { trackProductEvent('sameline_would_fallback', { turn: this._playbackTurn || 0 }); } catch (e) {}
+          }
         }
       } else {
         this._slStallStreak = 0;
@@ -8072,6 +8080,15 @@ function init() {
   }
   function applyUserAvatar() {
     let av = ''; try { av = (JSON.parse(localStorage.getItem('munea.personProfile') || '{}')).avatar || ''; } catch (e) {}
+    // 還沒上傳照片就用帳號的頭像（Google／Apple 登入時就帶回來了 · Edward 2026-07-30）——
+    // 剛登入的人不必先去填個人資料才有臉。自己上傳過的永遠優先。
+    if (!av) {
+      try {
+        const st = authState();
+        const meta = (st && st.user && st.user.user_metadata) || {};
+        if (st && st.status === 'signed-in') av = st.avatarUrl || meta.avatar_url || meta.picture || meta.photo_url || '';
+      } catch (e) {}
+    }
     document.querySelectorAll('.init-ava.p-ama').forEach(el => {
       if (av) { el.style.backgroundImage = 'url(' + av + ')'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.style.color = 'transparent'; }
       else { el.style.backgroundImage = ''; el.style.color = ''; }
@@ -8090,12 +8107,36 @@ function init() {
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
   // 7/9 正式化：不再預設示範四人家庭——圈子從「只有本人」開始，家人用邀請碼真的加進來
+  // 剛登入、還沒填個人資料的人也要有像樣的身分（Edward 2026-07-30）：
+  // 取名順序＝個人資料的名稱／稱呼 → 帳號帶回來的真名（Google／Apple 登入時就給了）→ 「我」。
+  // 刻意不用 email 前綴當名字（authDisplayName 會退到那步）——「edwardt0303」不是人願意被叫的稱呼，
+  // 印在家庭名單上更怪。填了個人資料就永遠以個人資料為準。
+  function selfAccountName() {
+    try {
+      const st = authState();
+      if (st && st.status === 'signed-in' && st.name) return String(st.name).trim();
+    } catch (e) {}
+    return '';
+  }
   function circleSelfMember() {
-    let nm = '', ini = '我';
-    try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); nm = (p.name || p.nick || '').trim(); ini = ((p.nick || nm || '我')[0]) || '我'; } catch (e) {}
+    let nm = '';
+    try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); nm = (p.name || p.nick || '').trim(); } catch (e) {}
+    if (!nm) nm = selfAccountName();
+    const ini = (nm || '我')[0] || '我';
     return { name: nm || '我', init: ini, tint: 'p-ama', self: true };
   }
-  function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : [circleSelfMember()]; } catch (e) { return [circleSelfMember()]; } }
+  // 本人那筆的稱呼與頭像一律以「個人資料」為準（Edward 2026-07-30 在名單上看到英文「Primary user」）。
+  // 為什麼要覆寫：雲端同步回來的家庭圈成員，後端對本人的預設名是英文 "Primary user"
+  //（engine/server.py 與 supabase_adapter.py 的 displayName 兜底值），會蓋掉使用者自己填的稱呼，
+  // 連頭像首字母都跟著變成「P」。本人是誰只有他自己說得準，不該讓後端的兜底值改寫。
+  // tint 也一起釘回 p-ama——照片是靠 applyUserAvatar() 找 .init-ava.p-ama 套上去的，換了色就套不到。
+  function loadCircle() {
+    let arr = [];
+    try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); if (Array.isArray(v)) arr = v; } catch (e) {}
+    if (!arr.length) return [circleSelfMember()];
+    const me = circleSelfMember();
+    return arr.map(m => (m && m.self) ? Object.assign({}, m, { name: me.name, init: me.init, tint: me.tint }) : m);
+  }
   function saveCircle(a2) {
     try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {}
     syncPush('circle', a2.map(m => ({ name: m.name, personId: m.personId, relationship: m.relationship, init: m.init, tint: m.tint })));   // 本人標記不上雲；personId 保留給指定收件人的傳話
@@ -8112,6 +8153,11 @@ function init() {
       return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
+    // 「退出這個健康圈」只在圈裡真的還有別人時才給（Edward 2026-07-30）：
+    // 圈裡只剩自己一個人的時候，沒有圈可以退——按下去只會把自己從自己的名單移除，
+    // 對使用者來說就是「按了沒事發生」。這種按鍵擺在那裡只會讓人以為壞掉。
+    const leave = $('#fcLeaveBtn');
+    if (leave) leave.hidden = members.filter(m => !m.self).length === 0;
     const inv = $('#fcInviteBtn');
     if (inv) {
       const full = members.length >= limit;

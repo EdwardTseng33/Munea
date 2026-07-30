@@ -325,7 +325,7 @@
   "settings.upgradePlan": "Mejorar plan",
   "settings.topUpCredits": "Comprar créditos",
   "settings.profileSubtitle": "Nombre, cumpleaños y ubicación",
-  "settings.careCircleSubtitle": "Cómo está cada miembro de la familia",
+  "settings.careCircleSubtitle": "Ver quién está y invitar a la familia",
   "settings.interests": "Temas de conversación",
   "settings.interestsSubtitle": "Elige temas que te interesen y {companion} buscará novedades relacionadas.",
   "settings.appleHealth": "Salud de Apple",
@@ -887,5 +887,6 @@
   "visit.openSummary": "Resumen",
   "visit.questionSaved": "Guardado. Te lo recordaré antes de la visita ({n} preguntas).",
   "visit.questionUnheard": "No entendí esa pregunta. ¿Puedes repetirla?",
-  "common.tomorrow": "Mañana"
+  "common.tomorrow": "Mañana",
+  "health.reconnectHelp": "Munea no puede leer datos ahora mismo. La pantalla de permisos solo aparece una vez, así que Conectar te lleva a la app Salud: activa allí los datos de Munea."
 }
