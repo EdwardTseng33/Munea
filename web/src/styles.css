@@ -7,15 +7,16 @@
   --fs-page: 24px; --fs-section: 18px; --fs-card: 16px; --fs-body: 16px; --fs-sub: 14px; --fs-note: 12.5px;
   --fs-action-primary: 16px;
   --fw-title: 700; --fw-em: 600; --fw-body: 400; --fw-action-primary: 800;
-  /* Edward 2026-07-03 定色（munea.net 唯一標準）：薄荷綠 / 暮色橘 / 白 / 石墨黑 */
+  /* Edward 2026-07-30 定色重申（違者退回）：主企業色＝薄荷綠不是深綠；橘＝Logo 上的那個橘。
+     深綠 #236C66 僅限文字強調，不得當主色／按鈕底。後台 admin.css 同值，兩邊要一起改。 */
   --teal: #3AA8A0;          /* 薄荷綠（主） */
   --teal-d: #2E8A83;        /* 薄荷綠·深（按下/文字級） */
   --teal-dd: #236C66;       /* 深綠·僅文字強調用 */
-  --btn-green: #2A7E78;     /* 主按鈕深薄荷綠（白字 4.82:1 · WCAG AA；舊 #37A099 只有 3.16:1） */
+  --btn-green: #37A099;     /* 主按鈕薄荷綠（Edward 7/30 拍板品牌優先；白字 3.16:1 只到 AA 大字級，7/24 的深綠 #2A7E78 退場） */
   --mint: #E8F2EE; --mint-2: #D9EFE8;
   --cream: #F4F0E8; --cream-2: #FFFFFF; --surface: #FFFFFF;
   --ink: #3A352E; --ink-2: #4A5651; --muted: #5A6963;   /* 石墨黑（官網同款） */
-  --coral: #D98841; --coral-d: #A8611E; --coral-soft: #F8E9D8;   /* 暮色橘 */
+  --coral: #F4A261; --coral-d: #A8611E; --coral-soft: #F8E9D8;   /* Logo 橘（文字一律用 -d 深字級，主色只做底/圖形） */
   --gold: #E0B354; --gold-soft: #F6EAD0;
   --line: #EAE3D6;          /* 官網線色 */
   --deep: #36423E; --deep-2: #3F4C47; --deep-card: #485751;      /* 石墨綠模板色（官網深色塊 · 7/4 提亮一階） */
@@ -96,7 +97,7 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .home-sep { color: var(--muted); opacity: .55; }
 
 .greeting-wrap { position: relative; margin: 4px 0 16px; }
-.greeting-kicker { font-family: var(--sans); font-size: 12.5px; font-weight: 700; letter-spacing: .12em; color: var(--coral); text-transform: uppercase; margin-bottom: 2px; }
+.greeting-kicker { font-family: var(--sans); font-size: 12.5px; font-weight: 700; letter-spacing: .12em; color: var(--coral-d); text-transform: uppercase; margin-bottom: 2px; }
 .greeting-big { font-family: var(--serif); max-width: 310px; font-size: 27px; font-weight: 900; color: var(--ink); letter-spacing: 0; line-height: 1.16; }
 
 /* 安心存摺 條（升級：獎章圓 + 進度感） */
@@ -140,15 +141,15 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .task-item + .task-item { border-top: 1px solid var(--line); }
 .task-ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
 .task-ico .ic { width: 21px; height: 21px; }
-.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.mood { background: #236C66; color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
+.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.mood { background: var(--teal-d); color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
 .task-body { flex: 1; }
 .task-title { font-size: 15px; font-weight: 700; color: var(--ink); }
 .task-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
 .task-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; color: transparent; transition: .2s; }
 .task-item.done .task-check { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.05); }
 .task-item.done .task-title { color: var(--muted); text-decoration: line-through; }
-.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
-.task-time.coral { color: var(--coral); }
+.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral-d); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
+.task-time.coral { color: var(--coral-d); }
 html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 
 .fam-peek { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); margin-top: 14px; }
@@ -229,7 +230,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .stat-tile.t-med { cursor: pointer; font: inherit; }
 .stat-tile.t-med .st-ico { background: var(--coral); color: #FFF; }
 .stat-tile.t-med .st-val { color: var(--coral-d); }
-.stat-tile.t-act .st-ico { background: var(--teal-dd); color: #FFF; }
+.stat-tile.t-act .st-ico { background: var(--teal-d); color: #FFF; }
 .stat-tile.t-act .st-val { color: var(--teal-dd); }
 .stat-tile .pill-dots { position: absolute; right: 12px; top: 12px; margin: 0; }
 .stat-tile .pill-dots i { width: 11px; height: 6px; }
@@ -574,7 +575,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .health-row .hr-state { font-size: 14px; color: var(--muted); margin-top: 1px; }
 .health-row .hr-lights { display: flex; gap: 6px; }
 .health-row .hr-lights .lt { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--mint); color: var(--teal-d); }
-.health-row .hr-lights .lt.warn { background: var(--coral-soft); color: var(--coral); }
+.health-row .hr-lights .lt.warn { background: var(--coral-soft); color: var(--coral-d); }
 .health-row .hr-lights .lt .ic { width: 14px; height: 14px; }
 
 /* 個人健康（點某人後） */
@@ -1719,7 +1720,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .care-dots { margin-left: auto; display: inline-flex; gap: 5px; }
 .care-dots i { width: 6px; height: 6px; border-radius: 4px; background: rgba(35,108,102,.22); transition: all .3s; }
 .care-dots i.on { width: 14px; }
-.care-dots i.on { background: var(--teal-dd); }
+.care-dots i.on { background: var(--teal-d); }
 .care-body { display: grid; min-height: 62px; margin-top: 10px; min-width: 0; }
 .care-item { grid-area: 1 / 1; min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 12px; opacity: 0; visibility: hidden; transition: opacity .35s ease; pointer-events: none; }
 .care-item.on { opacity: 1; visibility: visible; pointer-events: auto; }
@@ -1739,7 +1740,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .tier b { font-size: 16px; }
 .tier i { font-size: 16px; }
 .tier span { font-size: 13px; }
-.tier-tag.now { background: var(--teal-dd); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; }
+.tier-tag.now { background: var(--teal-d); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; }
 .tier-tag.next { background: var(--coral-d); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; margin-left: 6px; }
 .tier.trial { opacity: .62; }
 .tier.trial b::after { content: "體驗用"; font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 6px; }
@@ -1933,7 +1934,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 活動迷你三日條（右上角、前兩天 vs 今天） */
 .act-spark { position: absolute; right: 14px; top: 16px; display: inline-flex; align-items: flex-end; gap: 3px; }
 .act-spark i { width: 7px; border-radius: 3px; background: rgba(35,108,102,.28); }
-.act-spark i.hi { background: var(--teal-dd); }
+.act-spark i.hi { background: var(--teal-d); }
 
 /* 獎勵行：獎牌一欄、文字一欄（兩行左緣自然對齊） */
 .qc-prize { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
@@ -2157,7 +2158,7 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .safety-triggers .st-ic .ic { width: 19px; height: 19px; color: #fff; stroke: #fff; fill: none; }
 .safety-triggers .st-ic.bp { background: var(--teal); }
 .safety-triggers .st-ic.hr { background: var(--coral-d); }
-.safety-triggers .st-ic.ox { background: var(--teal-dd); }
+.safety-triggers .st-ic.ox { background: var(--teal-d); }
 .safety-triggers .st-ic.fall { background: #C79A3B; }
 
 .safety-flow { margin-top: 18px; background: var(--mint); border-radius: 16px; padding: 15px 16px; display: flex; flex-direction: column; gap: 11px; }

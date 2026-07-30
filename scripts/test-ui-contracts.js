@@ -33,9 +33,14 @@ function contrastRatio(hexA, hexB) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-assert(contrastRatio('#2A7E78', '#FFFFFF') >= 4.5, 'Primary button green must keep WCAG AA contrast with white text');
+// 品牌定色守門（2026-07-30 Edward 拍板）：主企業色＝薄荷綠不是深綠、橘＝Logo 上的那個橘。
+// 7/24 曾為了白字 AA 4.5 把主按鈕加深成 #2A7E78，被 Edward 抓「主色變深綠」退回——
+// 品牌優先是拍板取捨：主按鈕薄荷綠白字 3.16:1 守 AA 大字級 3:1 底線，不得再往深綠推。
+assert(contrastRatio('#37A099', '#FFFFFF') >= 3, 'Primary button mint must keep at least AA large-text contrast with white');
 assert(contrastRatio('#B0392D', '#FFFFFF') >= 4.5, 'Danger action red must keep WCAG AA contrast on white');
-assert(css.includes('--btn-green: #2A7E78;') && css.includes('--danger-d: #B0392D;'), 'Accessible primary and danger color tokens must stay pinned');
+assert(css.includes('--teal: #3AA8A0;') && css.includes('--btn-green: #37A099;') && css.includes('--coral: #F4A261;'),
+  'Brand tokens must stay pinned to the 2026-07-30 ruling: mint primary, mint button, logo orange');
+assert(css.includes('--danger-d: #B0392D;'), 'Accessible danger color token must stay pinned');
 assert(/class="modal-btn danger" id="dataDeleteBtn"/.test(html), 'Data deletion must use the danger style instead of the primary action style');
 assert(/\.modal-btn\.danger\[data-arm="1"\]\s*\{[^}]*background:\s*var\(--danger-d\);[^}]*color:\s*#fff;/s.test(css), 'Armed deletion must render as a solid danger action');
 assert(/b\.dataset\.arm = '1'/.test(app), 'Data deletion must retain the two-step armed confirmation behavior');
