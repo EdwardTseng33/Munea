@@ -13,6 +13,8 @@
     "smoke:status": "powershell -ExecutionPolicy Bypass -File scripts/smoke-status.ps1",
     "service:slo:cloud": "node scripts/cloud-monitoring-slo-report.mjs",
     "test:seo": "npm run site:build && node scripts/test-app-site-seo.js",
+    "b2b:build": "node b2b-src/build.mjs",
+    "test:b2b-i18n": "node scripts/test-b2b-i18n.js && node munea-b2b/test-static.mjs",
     "test:hosting": "npm run test:seo && npx firebase-tools@15.23.0 emulators:exec --only hosting \"node scripts/test-firebase-hosting-live.js\"",
     "hosting:serve": "npx firebase-tools@15.23.0 emulators:start --only hosting",
     "hosting:deploy": "npm run test:hosting && npx firebase-tools@15.23.0 deploy --only hosting:public --project gen-lang-client-0229303523",
