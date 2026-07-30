@@ -407,7 +407,7 @@ const pagedClient = createReadOnlyClient({
   assert.equal(normalized.US.source, 'app-store-connect-api-customer-price');
 
   console.log(
-    'PASS: App Store Connect capture uses GET-only pagination and normalizes '
+    'PASS: fixture App Store Connect client uses GET-only pagination and normalizes '
     + '4 locales, territories, screenshots, 8 products, copy, review assets, and prices',
   );
 })().catch((error) => {
