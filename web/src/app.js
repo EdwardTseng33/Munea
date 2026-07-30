@@ -1849,7 +1849,7 @@ function renderVisitSummary(summary) {
     parts.push('<div class="vs-pend" style="border-top:0;margin-top:0;padding-top:0">'
       + '<i class="vs-dot"></i>' + rptEsc(muneaT('visit.timelineLoading', '聊天中提到的還在讀…')) + '</div>');
   } else if (summary.timelineFailed) {
-    parts.push('<div class="vs-pend" style="border-top:0;margin-top:0;padding-top:0;color:var(--coral-d)">'
+    parts.push('<div class="vs-pend" style="border-top:0;margin-top:0;padding-top:0">'
       + '⌛ ' + rptEsc(muneaT('visit.timelineOffline', '這次沒連上，聊天中提到的沒有列進來')) + '</div>');
   } else {
     parts.push('<p class="vs-empty" style="padding:0">'
@@ -5800,7 +5800,7 @@ window.__muneaSetHealth = function (s) {
     el.textContent = txt;
     el.style.display = '';   // 真數據到了就把標籤點亮（沒接裝置時是藏起來的）
     el.style.background = warn ? 'var(--coral-soft)' : 'var(--mint)';
-    el.style.color = warn ? 'var(--coral-d)' : 'var(--teal-dd)';
+    el.style.color = warn ? 'var(--ink)' : 'var(--teal-dd)';
   };
   const sys = num(s.bpSys), dia = num(s.bpDia), hr = num(s.hr), spo2 = num(s.spo2),
         sleep = num(s.sleepHours), steps = num(s.steps);
@@ -8424,7 +8424,7 @@ function init() {
     if (!d.sleep) d.sleep = '—';
     if (!d.steps) d.steps = '—';
     // 標籤配色照狀態頁規範：警示=珊瑚、血壓正常=薄荷綠、心率正常=淡珊瑚（7/9 Edward 對齊設計規範）
-    const chip = (t, warn, tone) => { const coral = warn || tone === 'coral'; return '<span class="chip" style="flex-shrink:0;background:' + (coral ? 'var(--coral-soft)' : 'var(--mint)') + ';color:' + (coral ? 'var(--coral-d)' : 'var(--teal-dd)') + '">' + t + '</span>'; };
+    const chip = (t, warn, tone) => { const coral = warn || tone === 'coral'; return '<span class="chip" style="flex-shrink:0;background:' + (coral ? 'var(--coral-soft)' : 'var(--mint)') + ';color:' + (coral ? 'var(--ink)' : 'var(--teal-dd)') + '">' + t + '</span>'; };
     const medCard = d.med
       ? '<div class="card" style="padding:14px 15px;margin-bottom:11px"><div class="row" style="justify-content:space-between;gap:10px">' +
         '<div class="row" style="gap:11px;min-width:0"><span style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:' + (d.med.warn ? 'var(--coral)' : 'var(--teal)') + ';display:grid;place-items:center;color:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>' +
@@ -8440,7 +8440,7 @@ function init() {
         '<div class="card" style="padding:15px;flex:1">' +
           '<div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span>' + chip(d.hr.chip, d.hr.warn, 'coral') + '</div>' +
           '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">心率</div>' +
-          '<div><span class="mnum" style="font-size:26px;color:var(--coral-d)">' + d.hr.n + '</span><span style="font-size:14px;color:var(--muted)"> bpm</span></div>' +
+          '<div><span class="mnum" style="font-size:26px;color:var(--ink)">' + d.hr.n + '</span><span style="font-size:14px;color:var(--muted)"> bpm</span></div>' +
           '<div style="font-size:14px;color:var(--muted);margin-top:6px">' + d.hr.sub + '</div></div>' +
       '</div>' +
       '<div class="card" style="display:flex;align-items:stretch;padding:0;overflow:hidden;margin-bottom:16px">' +
@@ -9296,7 +9296,7 @@ function init() {
       const isHi = i === hiIdx;
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;position:relative;z-index:1">' +
         '<div style="width:100%;max-width:24px;height:' + h + '%;border-radius:7px 7px 3px 3px;background:' + colorFn(v) + '"></div>' +
-        '<div style="font-size:14px;color:' + (isHi ? 'var(--coral-d)' : 'var(--muted)') + ';font-weight:' + (isHi ? '900' : '700') + '">' + labels[i] + '</div></div>';
+        '<div style="font-size:14px;color:' + (isHi ? 'var(--teal-dd)' : 'var(--muted)') + ';font-weight:' + (isHi ? '900' : '700') + '">' + labels[i] + '</div></div>';
     }).join('');
     return '<div style="position:relative;display:flex;align-items:flex-end;gap:8px;height:96px">' +
       '<div style="position:absolute;left:0;right:0;bottom:' + goalPct + '%;border-top:1.5px dashed rgba(90,105,99,.4)"></div>' + bars + '</div>';
