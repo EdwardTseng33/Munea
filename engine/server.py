@@ -3165,10 +3165,13 @@ def reply_context_instruction(context):
     relationship_memory = relationship_state.get("relationshipMemory") or {}
     tone_overrides = relationship_state.get("toneOverrides") or {}
     relationship_line = (
-        f"[Relationship state] rapport={relationship_state.get('rapportLevel') or 'new'}; "
-        f"preferredAddress={relationship_state.get('preferredAddress') or ''}; "
-        f"toneOverrides={json.dumps(tone_overrides, ensure_ascii=False)}; "
-        f"relationshipMemory={json.dumps(relationship_memory, ensure_ascii=False)}."
+        # 2026-07-30 瘦身：空欄位不再傾倒英文欄名＋空括號（新用戶時整行幾乎全空、
+        # 卻佔幾百字；她的說明書每輪重新計費，格式肥肉直接割）。有值才寫、用短中文。
+        "（關係狀態：熟稔 " + str(relationship_state.get('rapportLevel') or 'new')
+        + (("；稱呼偏好 " + str(relationship_state.get('preferredAddress'))) if relationship_state.get('preferredAddress') else "")
+        + (("；語氣調整 " + json.dumps(tone_overrides, ensure_ascii=False)) if tone_overrides else "")
+        + (("；關係記憶 " + json.dumps(relationship_memory, ensure_ascii=False)) if relationship_memory else "")
+        + "）"
     )
     now_ctx = context.get("now") or {}
     time_line = ""

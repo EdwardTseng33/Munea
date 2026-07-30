@@ -113,7 +113,11 @@ class BothLinesInheritTheBaseTests(unittest.TestCase):
         self.assertIn("eng.CORE + c[\"persona\"] + eng.RED", _read("server.py"))
 
     def test_voice_line_composes_core_and_red(self):
-        self.assertIn("eng.CORE + c.get(\"persona\", \"\") + eng.RED", _read("live_voice_server.py"))
+        # 2026-07-30 瘦身下半場：共同底盤改依查詢模式組裝（core_instruction），
+        # 契約從「字面 eng.CORE」改成「組裝函式＋persona＋RED 三件都在同一行」——守的行為不變。
+        _srv = _read("live_voice_server.py")
+        self.assertIn('eng.core_instruction(', _srv)
+        self.assertIn('_core + c.get("persona", "") + eng.RED', _srv)
 
 
 if __name__ == "__main__":
