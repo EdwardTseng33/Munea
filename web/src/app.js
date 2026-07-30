@@ -9733,7 +9733,7 @@ function init() {
       : act.kind === 'draw' ? (act.when + '開獎')
       : act.kind === 'event' ? (act.dateLabel || '進行中')
       : act.kind === 'vote' ? (act.dueLabel || '進行中') : '進行中';
-    const kindName = act.kind === 'walk' ? '一起運動' : act.kind === 'quiz' ? '機智問答' : act.kind === 'vote' ? '投票' : act.kind === 'draw' ? '抽獎' : '揪一攤';
+    const kindName = act.kind === 'walk' ? muneaT('activity.exercise', '一起運動') : act.kind === 'quiz' ? muneaT('activity.quiz', '機智問答') : act.kind === 'vote' ? muneaT('activity.vote', '投票') : act.kind === 'draw' ? muneaT('activity.draw', '抽獎') : muneaT('activity.event', '揪一攤');
     const title = act.kind === 'draw' ? act.prize : (act.title || kindName);
     body.innerHTML =
       '<div class="ad-kind">' + kindName + '</div>' +
@@ -10432,8 +10432,8 @@ function init() {
     const signedIn = authState().status === 'signed-in';
     if (b.dataset.arm !== '1') {
       b.dataset.arm = '1';
-      b.textContent = signedIn ? '再按一次：永久刪除帳號與資料' : '再按一次：清除這台裝置的資料';
-      setTimeout(() => { b.dataset.arm = ''; b.textContent = '刪除我的資料'; }, 6000);
+      b.textContent = signedIn ? muneaT('data.confirmDeleteAccount', '再按一次：永久刪除帳號與資料') : muneaT('data.confirmDeleteLocal', '再按一次：清除這台裝置的資料');
+      setTimeout(() => { b.dataset.arm = ''; b.textContent = muneaT('data.delete', '刪除我的資料'); }, 6000);
       return;
     }
     b.dataset.arm = ''; b.textContent = '刪除我的資料';
