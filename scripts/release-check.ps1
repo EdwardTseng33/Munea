@@ -40,7 +40,7 @@ try {
   }
   Pass "Source metadata and iOS baseline are internally consistent"
 
-  Step "App Store Connect multilingual read-only capture contract"
+  Step "App Store Connect multilingual read-only capture contract tests"
   & node scripts/test-app-store-connect-readonly-capture.js
   if ($LASTEXITCODE -ne 0) {
     throw "App Store Connect read-only capture contract failed with exit code $LASTEXITCODE"
@@ -53,7 +53,14 @@ try {
   if ($LASTEXITCODE -ne 0) {
     throw "App Store and IAP localized metadata limits failed with exit code $LASTEXITCODE"
   }
-  Pass "App Store metadata, screenshots, territories, IAP copy, review assets, and prices normalize without writes"
+  Pass "Fixture-backed capture/evidence contracts and repository metadata limits pass; no live App Store Connect snapshot was asserted"
+
+  Step "Internationalization release readiness (informational, non-promoting)"
+  & node scripts/i18n-release-readiness.js
+  if ($LASTEXITCODE -ne 0) {
+    throw "Internationalization readiness report failed with exit code $LASTEXITCODE"
+  }
+  Pass "Readiness report generated; only its READY result can satisfy the multilingual release gate"
 
   Step "LocaleContext production redacted export contract"
   & python -m unittest scripts.test_locale_context_redacted_export scripts.test_locale_context_data_audit
