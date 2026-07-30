@@ -4246,7 +4246,14 @@ def north_star_summary(data=None):
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
-    all_events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=1000)
+    # 跨全部帳號讀（不是只讀 demo 那一戶——2026-07-30 這張看板全 0 的根因，見
+    # load_all_accounts_product_events 的說明）。測試帳號仍然照舊在下一行濾掉。
+    event_limit = 20000
+    all_events = load_all_accounts_product_events(
+        limit=event_limit,
+        since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        fallback_on_error=True,
+    )
     events = [event for event in all_events if not is_analytics_excluded_event(event)]
     excluded_events = len(all_events) - len(events)
     meaningful_days = set()
@@ -4289,6 +4296,8 @@ def north_star_summary(data=None):
         "familyInteractions": family_interactions,
         "eventCount": len(events),
         "excludedEventCount": excluded_events,
+        # 撞到上限就明講，別讓看板把「只算到一部分」講成「這就是全部」
+        "truncated": len(all_events) >= event_limit,
         "backend": data_backend_status(),
     }
 
@@ -6026,16 +6035,21 @@ def admin_bond_depth(data=None):
     }
 
 
-def load_admin_growth_product_events(limit=20000):
-    """後台『成長與黏著』：跟其他 admin_* 只抓近 N 天不同——黏著度／留存／啟用漏斗都要
-    抓到『比某個時間窗更早』的資料，才能定出每個人自己的『第 0 天』、也才能誠實回報
-    資料到底留了多深，所以這裡刻意不帶 since_iso、直接抓全部（量體目前還小，全撈划算；
-    之後量體大了要再依時間分頁）。"""
+def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_error=False):
+    """後台看板共用：跨『全部帳號』讀 product_events。
+
+    ⚠ 別改回 load_product_events()：那支帶 account_id 過濾，而後台路徑本來就不綁登入身分
+    （auth_gate.required=False），帳號會退回環境變數裡的 demo 帳號。2026-07-30 查出北極星
+    看板長年顯示全 0 就是這個原因——它只讀得到 demo 那一戶的一百多筆，然後那些又因為是
+    測試帳號被濾掉，結果永遠是 0，而真正的八百多筆真實紀錄從頭到尾沒進視野。
+
+    帶 since_iso＝只看那段時間窗（北極星）；不帶＝從最早一筆全撈（成長與黏著要算第 0 天）。
+    """
     limit = max(1, min(50000, int(limit or 20000)))
     backend = data_backend()
     fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_events = backend.load_admin_product_events(limit=limit)
+        remote_events = backend.load_admin_product_events(limit=limit, since_iso=since_iso)
         if remote_events is not None:
             normalized_remote = [normalize_product_event(e) for e in remote_events]
             record_admin_data_source(
@@ -6046,13 +6060,20 @@ def load_admin_growth_product_events(limit=20000):
             )
             return normalized_remote
     except Exception as e:
-        if backend.enabled() and not is_missing_table_error(e):
+        # 兩種性格，由呼叫端選：
+        # - 成長與黏著（預設）＝連不上就報錯，寧可整頁講「現在讀不到」，不要端半套數字。
+        # - 北極星＝老實降級成本機檔案，並在回應標成 degraded（這是它原本就有的行為，別弄丟）。
+        if not fallback_on_error and backend.enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("load admin product events for growth metrics", e)
+        log_fallback_exception("load product events across all accounts", e)
     raw_store = read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store())
     raw_events = raw_store.get("events", []) if isinstance(raw_store, dict) else []
     store = normalize_product_events_store(raw_store)
-    events = store["events"][:limit]
+    events = store["events"]
+    if since_iso:
+        # 退回本機檔案時也要守同一個時間窗，否則北極星在降級狀態下會偷偷把更早的資料算進來
+        events = [e for e in events if str(e.get("eventTime") or "") >= str(since_iso)]
+    events = events[:limit]
     record_admin_data_source(
         "product_events",
         "json",
@@ -6063,6 +6084,11 @@ def load_admin_growth_product_events(limit=20000):
         degradation_reason=fallback_reason,
     )
     return events
+
+
+def load_admin_growth_product_events(limit=20000):
+    """『成長與黏著』專用：不帶時間窗，要從最早一筆算起才定得出每個人自己的第 0 天。"""
+    return load_all_accounts_product_events(limit=limit)
 
 
 def load_admin_growth_subscription_rows(limit=20000):

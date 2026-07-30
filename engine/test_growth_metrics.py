@@ -241,6 +241,57 @@ class SupabaseAdminGrowthMetricsCrossAccountTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["accountId"], "other-account-not-in-identity")
 
+    def test_admin_product_events_windowed_read_takes_newest_first(self):
+        """帶時間窗時要由新到舊：萬一撞到上限，該被截掉的是最舊那端、不是剛發生的事。"""
+        adapter = self._adapter()
+        captured = {}
+
+        def fake_select(table, query):
+            captured["query"] = dict(query)
+            return []
+
+        with patch.object(adapter, "_select", side_effect=fake_select):
+            adapter.load_admin_product_events(limit=100, since_iso="2026-07-01T00:00:00Z")
+
+        self.assertNotIn("account_id", captured["query"])
+        self.assertEqual(captured["query"]["order"], "event_time.desc")
+        self.assertEqual(captured["query"]["event_time"], "gte.2026-07-01T00:00:00Z")
+
+    def test_north_star_counts_every_account_not_just_the_default_one(self):
+        """北極星必須跨全部帳號取數。
+
+        2026-07-30 這張看板長年顯示全 0：後台路徑不綁登入身分，帶 account_id 過濾的那支
+        查詢會退回環境變數裡的 demo 帳號，於是只讀得到那一戶、而那一戶又整批被當測試帳號
+        濾掉。守的是「有沒有跨帳號取數 ＋ 測試帳號仍然要排除」，不綁定用哪個函式名。
+        """
+        real_event = {
+            "eventName": "voice_session_completed",
+            "eventTime": "2026-07-29T02:00:00Z",
+            "accountId": "real-account",
+            "personId": "real-person",
+            "properties": {},
+        }
+        test_account_event = dict(
+            real_event,
+            accountId="seeded-test-account",
+            personId="test-person",
+            properties={"isTestAccount": True},
+        )
+
+        with patch.object(
+            server, "load_all_accounts_product_events", return_value=[real_event, test_account_event]
+        ) as loader, patch.object(
+            server, "is_analytics_excluded_event", side_effect=lambda e: e["accountId"] == "seeded-test-account"
+        ), patch.object(server, "data_backend_status", return_value={"provider": "test", "enabled": True}):
+            summary = server.north_star_summary({"days": 7})
+
+        self.assertTrue(loader.called, "北極星必須走跨帳號取數，不能只讀預設那一戶")
+        self.assertIsNotNone(loader.call_args.kwargs.get("since_iso"), "北極星是看近 N 天，取數要帶時間窗")
+        self.assertEqual(summary["eventCount"], 1)
+        self.assertEqual(summary["excludedEventCount"], 1, "測試帳號仍然要被排除")
+        self.assertEqual(summary["voiceSessionsCompleted"], 1)
+        self.assertFalse(summary["truncated"])
+
     def test_load_admin_subscription_ledger_has_no_account_scope_filter(self):
         adapter = self._adapter()
         captured = {}

@@ -291,7 +291,66 @@ tbody tr:hover { background: var(--cream); }
 /* 用戶明細彈窗 */
 .modal-overlay { position: fixed; inset: 0; z-index: 95; background: rgba(31,43,39,.42); display: grid; place-items: center; padding: 20px; } /* 95 > .slideover-overlay(85)：確認彈窗（如「超過席次上限，確定要照樣匯入嗎」）必須疊在滑出面板之上，不然點擊會被面板自己的遮罩吃掉（2026-07-22 實測抓到） */
 .modal-overlay[hidden] { display: none; }
-.modal-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: min(520px, 100%); padding: 22px; }
+.modal-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: min(560px, 100%); padding: 22px; }
+/* 用戶明細（2026-07-30 重排）：19 個一模一樣的色塊平鋪 → 三層。
+   ① 標頭「這是誰」② 三個大數字「用得多不多、剩多少」③ 其餘收成分組條列。
+   重點才給底色，次要用細線分隔——留白比填色更能分出主次。 */
+.acct-modal { width: min(600px, 100%); padding: 0; overflow: hidden auto; max-height: min(88vh, 900px);
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.acct-modal::-webkit-scrollbar { width: 8px; }
+.acct-modal::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+.acct-head { display: flex; align-items: center; gap: 14px; padding: 22px 24px 18px; border-bottom: 1px solid var(--line-soft); }
+.acct-avatar { flex: none; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 700; font-size: 1.15rem; box-shadow: inset 0 0 0 1px rgba(51,64,61,.06); }
+.acct-who { flex: 1; min-width: 0; }
+.acct-who .modal-title { font-size: 1.3rem; line-height: 1.25; }
+.acct-who-sub { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px; margin-top: 3px; color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
+.acct-dot { color: var(--line); }
+
+.acct-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+.astat { background: var(--surface); padding: 16px 20px 15px; }
+.astat.is-paid { background: var(--mint); }
+.astat-label { color: var(--muted); font-size: 0.85rem; letter-spacing: .02em; }
+.astat-value { font-family: var(--num); font-size: 1.65rem; font-weight: 700; line-height: 1.15; margin-top: 4px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.astat.is-zero .astat-value, .astat.is-zero .astat-unit { color: var(--muted); font-weight: 600; }
+.astat-unit { font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-left: 3px; }
+.astat-note { color: var(--muted); font-size: 0.85rem; margin-top: 3px; min-height: 1.2em; }
+
+.acct-block { padding: 16px 24px 4px; }
+.acct-block + .acct-block { border-top: 1px solid var(--line-soft); }
+.acct-block-title { margin: 0 0 8px; color: var(--muted); font-size: 0.8rem; font-weight: 700; letter-spacing: .08em; }
+.acct-rows { margin: 0; }
+.acct-row { display: flex; align-items: baseline; gap: 14px; padding: 7px 0; }
+.acct-row + .acct-row { border-top: 1px dashed var(--line-soft); }
+.acct-row dt { flex: 0 0 40%; color: var(--muted); font-size: 0.9rem; }
+.acct-row dd { margin: 0; flex: 1; min-width: 0; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.acct-dim { margin-left: 7px; color: var(--muted); font-weight: 400; font-size: 0.875rem; }
+.acct-privacy { margin: 14px 24px 0; color: var(--muted); font-size: 0.85rem; line-height: 1.55; }
+.acct-modal .modal-actions { margin: 16px 0 0; padding: 16px 24px 20px; border-top: 1px solid var(--line-soft); background: var(--bg); }
+/* 操作面板：原本接在按鈕列「下方」，卡片有高度上限就被切掉，輸入框整個看不到
+   （2026-07-30 截圖抓到）。改成面板出現時「取代」按鈕列的位置——同一塊區域，不必捲。 */
+/* 操作中：按鈕列讓位，下半部的分組細節也收起來——只留「這是誰 ＋ 現況數字 ＋ 表單」。
+   一來面板一定完整看得見（不必捲），二來動手時不需要看時區、資料區域那些設定。 */
+.acct-modal.is-acting .modal-actions,
+.acct-modal.is-acting .acct-block,
+.acct-modal.is-acting .acct-privacy { display: none; }
+.acct-modal.is-acting .acct-stats { border-bottom: 0; }
+.acct-modal .modal-subpanel { margin: 0; padding: 0; border: 0; }
+.acct-modal #acctActionPanel:not(:empty) { padding: 18px 24px 22px; border-top: 1px solid var(--line-soft); background: var(--bg); }
+.acct-modal .modal-subtitle { margin: 0 0 12px; font-size: 1rem; font-weight: 700; color: var(--ink); }
+.acct-modal .modal-subpanel .kpi-sub { margin-bottom: 14px; line-height: 1.6; }
+.acct-modal .modal-subpanel .field { margin-bottom: 12px; }
+.acct-modal .modal-subpanel .field span { font-size: 0.875rem; }
+.acct-modal .modal-subpanel input,
+.acct-modal .modal-subpanel select { background: var(--surface); }
+.acct-modal .modal-subactions { justify-content: flex-end; margin-top: 14px; }
+.acct-modal .modal-subhint { margin-top: 10px; font-size: 0.875rem; }
+
+@media (max-width: 560px) {
+  .acct-stats { grid-template-columns: 1fr; }
+  .acct-row { display: grid; grid-template-columns: 1fr; gap: 2px; }
+  .acct-row dt { flex: none; }
+}
 .modal-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
 .modal-title { font-size: 1.2rem; font-weight: 800; }
 .modal-x { background: var(--cream); color: var(--muted); min-height: 32px; width: 32px; padding: 0; border-radius: 50%; }
@@ -325,8 +384,10 @@ tbody tr:hover { background: var(--cream); }
 /* 不可逆動作（永久刪除測試帳號）：紅字紅框，跟旁邊「發點數／改方案」這些可回復的動作看得出差別 */
 .btn-ghost.danger { color: var(--danger); border-color: rgba(217,83,74,.32); }
 .btn-ghost.danger:hover { border-color: var(--danger); background: var(--danger-soft); }
-button.btn-sm.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
-button.btn-sm.danger:hover { filter: brightness(.94); }
+/* 紅底實心只給刪除面板裡那顆「確認送出」——明細列上的「永久刪除」是次要動作，
+   實心會搶掉整張卡的視線（2026-07-30 截圖看到）。 */
+#deleteSubmitBtn { background: var(--danger); border-color: var(--danger); color: #fff; }
+#deleteSubmitBtn:hover { filter: brightness(.94); }
 .row-item.done { opacity: .58; }
 
 /* 角色卡 */
