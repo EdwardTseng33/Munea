@@ -14,6 +14,9 @@ async function main() {
     const response = await request(pathname);
     assert.equal(response.status, 200, `${pathname} must return 200`);
     assert.match(response.headers.get("content-type") || "", /text\/html/i);
+    // ⚠ 別在這裡驗 Cache-Control 或安全標頭：模擬器完全不套用 firebase.json 的
+    // headers 設定（實測連 Strict-Transport-Security 都不送），驗了必紅。
+    // 設定層的檢查在 test-app-site-seo.js，真值只能上線後量線上。
   }
 
   // 帶尾斜線的寫法會被轉到不帶的那個 —— 確認轉址是對的、不是壞掉
