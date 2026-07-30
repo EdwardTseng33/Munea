@@ -683,32 +683,41 @@ function setLocalizedCallHint(state, busy = false) {
     : muneaT(fallbackKeys[state] || fallbackKeys.unavailable, '');
   setCallHint(text, busy);
 }
-const VOICE_RUNTIME_COPY = Object.freeze({
-  playbackBlocked: ['voice.runtime.playbackBlocked', '聲音暫時被擋住了，點一下畫面就好'],
-  audioOnlyFallback: ['voice.runtime.audioOnlyFallback', '畫面先休息一下，我們繼續用聲音聊'],
-  microphoneTapToResume: ['voice.runtime.microphoneTapToResume', '收音還沒啟動，請點一下畫面'],
-  listening: ['voice.runtime.listening', '我在聽，你說吧'],
-  reconnecting: ['voice.runtime.reconnecting', '線路沒接好，正在重新連線…'],
-  microphonePermission: ['voice.runtime.microphonePermission', '請到設定允許使用麥克風'],
-  heard: ['voice.runtime.heard', '我聽見了'],
-  thinking: ['voice.runtime.thinking', '我想一下'],
-  didNotHear: ['voice.runtime.didNotHear', '沒有聽清楚，請再說一次'],
-  recordingTapWhenDone: ['voice.runtime.recordingTapWhenDone', '我在聽，說完再按一次'],
-  microphoneMuted: ['voice.runtime.microphoneMuted', '麥克風已關閉'],
-  microphoneMutedHint: ['voice.runtime.microphoneMutedHint', '麥克風已關閉，想說話時再點一下'],
-  recoveredTitle: ['voice.runtime.recoveredTitle', '已經接回來了，剛才說的我都記得'],
-  recoveredBody: ['voice.runtime.recoveredBody', '我們繼續'],
-  degradedTitle: ['voice.runtime.degradedTitle', '訊號不太穩，我先用簡單模式陪你'],
-  degradedBody: ['voice.runtime.degradedBody', '連線會自動恢復，剛才聊的內容都還在'],
+const VOICE_RUNTIME_KEYS = Object.freeze({
+  audioOnlyFallback: 'voice.runtime.audioOnlyFallback',
+  degradedBody: 'voice.runtime.degradedBody',
+  degradedTitle: 'voice.runtime.degradedTitle',
+  didNotHear: 'voice.runtime.didNotHear',
+  heard: 'voice.runtime.heard',
+  listening: 'voice.runtime.listening',
+  microphoneMuted: 'voice.runtime.microphoneMuted',
+  microphoneMutedHint: 'voice.runtime.microphoneMutedHint',
+  microphonePermission: 'voice.runtime.microphonePermission',
+  microphoneTapToResume: 'voice.runtime.microphoneTapToResume',
+  playbackBlocked: 'voice.runtime.playbackBlocked',
+  recordingTapWhenDone: 'voice.runtime.recordingTapWhenDone',
+  reconnecting: 'voice.runtime.reconnecting',
+  recoveredBody: 'voice.runtime.recoveredBody',
+  recoveredTitle: 'voice.runtime.recoveredTitle',
+  thinking: 'voice.runtime.thinking',
 });
 function voiceRuntimeCopy(state) {
-  const entry = VOICE_RUNTIME_COPY[state] || VOICE_RUNTIME_COPY.reconnecting;
-  return muneaT(entry[0], entry[1]);
+  const rendererCopy = muneaRendererCopy();
+  if (rendererCopy && typeof rendererCopy.voiceRuntimeText === 'function') {
+    return rendererCopy.voiceRuntimeText(state);
+  }
+  return muneaT(VOICE_RUNTIME_KEYS[state] || VOICE_RUNTIME_KEYS.reconnecting, '');
 }
 function setLocalizedRuntimeHint(state, busy = false) {
   setCallHint(voiceRuntimeCopy(state), busy);
 }
 function setLocalizedRuntimeCaption(state) {
+  const rendererCopy = muneaRendererCopy();
+  if (rendererCopy && typeof rendererCopy.voiceRuntimeCaption === 'function') {
+    const caption = rendererCopy.voiceRuntimeCaption(state);
+    setCaption(caption.title, caption.body);
+    return;
+  }
   if (state === 'recovered') {
     setCaption(voiceRuntimeCopy('recoveredTitle'), voiceRuntimeCopy('recoveredBody'));
     return;
