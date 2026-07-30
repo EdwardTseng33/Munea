@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260730-brandtext1" />
+  <link rel="stylesheet" href="src/styles.css?v=20260730b-v1045" />
 </head>
 <body>
 <div class="app-shell">
@@ -848,7 +848,7 @@
   <div class="modal-mask" id="famCircleModal">
     <div class="modal">
       <div class="modal-grab"></div>
-      <button class="auth-close" id="famCircleClose" type="button" aria-label="關閉照護圈" data-i18n-aria-label="familyCircle.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <button class="auth-close" id="famCircleClose" type="button" aria-label="關閉全家健康圈" data-i18n-aria-label="familyCircle.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>全家健康圈</h2>
       <div class="fc-top">
         <span class="fc-recip-av init-ava" style="background:var(--teal);color:#fff"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>
@@ -868,13 +868,13 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="inviteCloseX" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>邀請家人</h2>
-      <p class="modal-sub">家人加入後，互相看得到狀態、關懷摘要與家人動態；聊天內容永遠不會公開。把你的專屬邀請碼傳給家人，他在沐寧的「家人 → 加入照護圈」輸入，你們就連上了。</p>
+      <p class="modal-sub">家人加入後，互相看得到狀態、關懷摘要與家人動態；聊天內容永遠不會公開。把你的專屬邀請碼傳給家人，他在沐寧的「家人 → 加入全家健康圈」輸入，你們就連上了。</p>
       <div class="inv-code" id="invCode">MUNEA-····</div>
       <p class="inv-temp-note" id="invTempNote" style="display:none"></p><!-- 建立不了時，這裡照雲端回的理由顯示人話（見 app.js INVITE_FAIL_TEXT） -->
       <button class="modal-btn" id="invShareBtn">用訊息傳邀請</button>
       <button class="inv-copy" id="invCopyBtn" type="button">複製邀請碼</button>
-      <p class="inv-note" id="invLimitNote">目前 Plus 方案 · 照護圈最多 4 人</p>
-      <p class="inv-note">邀請碼 72 小時內有效；誰加入了，你會在照護圈名單裡看到。</p>
+      <p class="inv-note" id="invLimitNote">目前 Plus 方案 · 全家健康圈最多 4 人</p>
+      <p class="inv-note">邀請碼 72 小時內有效；誰加入了，你會在全家健康圈名單裡看到。</p>
     </div>
   </div>
 
@@ -882,10 +882,10 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close" id="joinCircleClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>加入照護圈</h2>
+      <h2>加入全家健康圈</h2>
       <p class="modal-sub">把家人給你的邀請碼打在這裡，對上就直接進圈——之後你們的動態、關懷摘要都會互相看得到。</p>
       <input class="chal-input jc-code" id="joinCodeInput" placeholder="例：MUNEA-2847" data-i18n-placeholder="join.codePlaceholder" maxlength="16" autocomplete="off" />
-      <button class="modal-btn" id="joinCircleBtn" style="margin-top:14px">加入照護圈</button>
+      <button class="modal-btn" id="joinCircleBtn" style="margin-top:14px">加入全家健康圈</button>
     </div>
   </div>
 
@@ -1154,7 +1154,7 @@
       <div class="auth-modal-head">
         <div>
           <h2 id="authSheetTitle">登入 Munea</h2>
-          <p class="modal-sub" data-i18n="auth.sheetSubtitle">同步陪伴角色、家人照護圈與訂閱權益</p>
+          <p class="modal-sub" data-i18n="auth.sheetSubtitle">同步陪伴角色、全家健康圈與訂閱權益</p>
         </div>
         <button class="auth-close" id="authCloseBtn" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
@@ -1180,18 +1180,18 @@
   </nav>
 
 </div>
-  <script src="src/version.js?v=20260729b-v1044"></script>
+  <script src="src/version.js?v=20260730-v1045"></script>
   <script src="src/i18n.js?v=20260729-four-locale2"></script>
   <script src="src/i18n/app-renderer-copy.js?v=20260729-four-locale2"></script>
   <script src="src/i18n/purchase-flow.js?v=20260730-four-locale1"></script>
   <script src="src/tw-districts.js?v=20260709-twdist"></script>
-  <script src="src/companion-profile.js?v=20260629-profile"></script>
+  <script src="src/companion-profile.js?v=20260730-profile2"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
-  <script src="src/auth.js?v=20260729b-v1044"></script>
-  <script src="src/health.js?v=20260715-health3"></script>
-  <script src="src/store.js?v=20260708-store"></script>
+  <script src="src/auth.js?v=20260730-v1045"></script>
+  <script src="src/health.js?v=20260730-health4"></script>
+  <script src="src/store.js?v=20260730-store2"></script>
   <script src="src/notify.js?v=20260729b-visit2h"></script>
-  <script src="src/medication.js?v=20260715-med1"></script>
+  <script src="src/medication.js?v=20260730-med2"></script>
   <script>
   window.muneaUiT = function(key, fallback, values) {
     return window.MuneaI18n
@@ -1224,10 +1224,10 @@
     function chatTick(){ try{ localStorage.setItem(ck(), String(chatUsedToday()+1)); }catch(e){} }
     function chatRemainSec(){ return Math.max(0, CHAT_FREE_SEC - chatUsedToday()); }
     var MSG={
-      'family-invite':{t:'邀請家人，升級就解鎖',m:'免費方案可以一起看家人的狀態；想邀請家人進照護圈、大家互相照應，升級 Plus 就可以囉。'},
+      'family-invite':{t:'邀請家人，升級就解鎖',m:'免費方案可以一起看家人的狀態；想邀請家人進全家健康圈、大家互相照應，升級 Plus 就可以囉。'},
       'status-history':{t:'看更久的變化，升級解鎖',m:'免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。'},
       'chat-daily':{t:'免費的 5 點體驗用完了',m:'免費帳號會收到一次性 5 點，約可聊 5 分鐘；不會每天重置。想繼續聊，升級 Plus／Pro 每月會固定送點。'},
-      'join-circle':{t:'加入家人的照護圈，升級解鎖',m:'免費方案可以自己用沐寧、記自己的提醒；想加入家人的照護圈、大家一起看著長輩，升級 Plus 就可以囉。'}
+      'join-circle':{t:'加入家人的健康圈，升級解鎖',m:'免費方案可以自己用沐寧、記自己的提醒；想加入家人的健康圈、大家一起看著長輩，升級 Plus 就可以囉。'}
     };
     function upsell(feature){
       try{ if(typeof trackProductEvent==='function') trackProductEvent('paywall_shown',{feature:feature||''}); }catch(e){}
@@ -1253,7 +1253,7 @@
   <script src="src/voice-turn-policy.js?v=20260716-v1024"></script>
   <script src="src/voice-call-diagnostics.js?v=20260715-v1"></script>
   <script src="src/visit-summary-logo.js?v=20260730-brand"></script><!-- 就診摘要 PDF 的品牌標記（base64；離屏 webview 的 baseURL 是 nil，載不到外部檔） -->
-  <script type="module" src="src/app.js?v=20260729b-v1044"></script>
+  <script type="module" src="src/app.js?v=20260730b-v1045"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
