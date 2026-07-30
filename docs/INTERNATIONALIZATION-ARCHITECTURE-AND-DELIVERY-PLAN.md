@@ -235,6 +235,7 @@ Phase 2e（2026-07-28）建立 App Store 多語 metadata 與可用地區閘門�
 - 西班牙文先保留中性翻譯草稿，但 App Store locale 與可用地區維持空值，必須先選定 `es-ES` 或 `es-MX` 再做母語、法規、客服與截圖審核。
 - `appAvailability` 與 IAP availability 只以 App Store Connect 為權威，目前 repo 一律記為 `unverified`、`changeAuthorized=false`；本批不操作 App Store Connect。
 - Apple 目前將西班牙（`es-ES`）與墨西哥（`es-MX`）列為不同 App Store localization；兩個候選值明列於 manifest，但產品／法規市場決策前不代選、不開地區。
+- **2026-07-30 市場決策（Edward 拍板）**：西班牙文首發市場選 `es-ES`（西班牙）。兩份 manifest 的 `selectedVariant(s)` 已記錄此決策；`es-MX` 草稿保留備援、未選、不開。後續 es 的母語審稿、法規、截圖與實機證據一律以 `es-ES` 為對象（`docs/qa/i18n/es-ES/`）。開地區與送審仍屬 App Store Connect 授權操作、不由本 repo 推定。
 - Apple 現行欄位與在地化規則參考：<https://developer.apple.com/help/app-store-connect/reference/app-information/app-information>、<https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information>、<https://developer.apple.com/help/app-store-connect/manage-app-information/localize-app-information>；可用地區參考：<https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store>。
 
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。

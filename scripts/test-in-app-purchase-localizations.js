@@ -188,8 +188,13 @@ for (const localeKey of localeKeys) {
 }
 
 const spanish = manifest.locales.es;
-assert.equal(spanish.appStoreLocale, null, 'Spanish IAP locale must wait for the market decision');
-assert.equal(spanish.selectedVariant, null);
+assert.equal(spanish.appStoreLocale, null, 'Spanish IAP stays variant-based; the storefront locale lives in marketVariants');
+assert.equal(spanish.selectedVariant, 'es-ES', '2026-07-30 decision: first Spanish market is Spain (es-ES)');
+assert.deepEqual(
+  spanish.selectedVariants,
+  ['es-ES'],
+  'Only es-ES is selected; es-MX must stay prepared but unselected until its own market decision',
+);
 assert.deepEqual(
   spanish.candidateAppStoreLocales,
   ['es-ES', 'es-MX'],
