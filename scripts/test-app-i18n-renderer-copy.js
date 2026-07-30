@@ -16,6 +16,25 @@ const LOCALIZED_PRICES = {
   es: '19,99 €',
 };
 
+const VOICE_RUNTIME_KEYS = Object.freeze({
+  audioOnlyFallback: 'voice.runtime.audioOnlyFallback',
+  degradedBody: 'voice.runtime.degradedBody',
+  degradedTitle: 'voice.runtime.degradedTitle',
+  didNotHear: 'voice.runtime.didNotHear',
+  heard: 'voice.runtime.heard',
+  listening: 'voice.runtime.listening',
+  microphoneMuted: 'voice.runtime.microphoneMuted',
+  microphoneMutedHint: 'voice.runtime.microphoneMutedHint',
+  microphonePermission: 'voice.runtime.microphonePermission',
+  microphoneTapToResume: 'voice.runtime.microphoneTapToResume',
+  playbackBlocked: 'voice.runtime.playbackBlocked',
+  recordingTapWhenDone: 'voice.runtime.recordingTapWhenDone',
+  reconnecting: 'voice.runtime.reconnecting',
+  recoveredBody: 'voice.runtime.recoveredBody',
+  recoveredTitle: 'voice.runtime.recoveredTitle',
+  thinking: 'voice.runtime.thinking',
+});
+
 function translator(locale) {
   const catalog = JSON.parse(fs.readFileSync(
     path.join(ROOT, 'web', 'src', 'i18n', `${locale}.json`),
@@ -35,7 +54,8 @@ function translator(locale) {
 }
 
 for (const locale of LOCALES) {
-  const copy = createAppRendererCopy({ t: translator(locale) });
+  const translate = translator(locale);
+  const copy = createAppRendererCopy({ t: translate });
   const price = LOCALIZED_PRICES[locale];
 
   const preparing = copy.queueCard({
@@ -69,6 +89,28 @@ for (const locale of LOCALES) {
   assert.ok(copy.callHint('ready'));
   assert.ok(copy.callHint('speaking'));
   assert.ok(copy.callHint('not-a-state'));
+  const runtimeTexts = Object.fromEntries(
+    Object.entries(VOICE_RUNTIME_KEYS).map(([state, key]) => {
+      const text = copy.voiceRuntimeText(state);
+      assert.equal(text, translate(key), `${locale}:${state} runtime text mismatch`);
+      return [state, text];
+    }),
+  );
+  assert.equal(
+    copy.voiceRuntimeText('not-a-state'),
+    translate(VOICE_RUNTIME_KEYS.reconnecting),
+  );
+  const recoveredCaption = copy.voiceRuntimeCaption('recovered');
+  assert.deepEqual(recoveredCaption, {
+    body: translate(VOICE_RUNTIME_KEYS.recoveredBody),
+    title: translate(VOICE_RUNTIME_KEYS.recoveredTitle),
+  });
+  const degradedCaption = copy.voiceRuntimeCaption('degraded');
+  assert.deepEqual(degradedCaption, {
+    body: translate(VOICE_RUNTIME_KEYS.degradedBody),
+    title: translate(VOICE_RUNTIME_KEYS.degradedTitle),
+  });
+  assert.deepEqual(copy.voiceRuntimeCaption('not-a-state'), degradedCaption);
   const callStatuses = [
     'accountPreparing',
     'activationPending',
@@ -157,6 +199,8 @@ for (const locale of LOCALES) {
     paidSummary,
     preparing,
     queued,
+    recoveredCaption,
+    runtimeTexts,
   });
   assert.ok(!/\{[A-Za-z][A-Za-z0-9_]*\}/.test(rendered), `${locale} leaked placeholders`);
 }
@@ -174,4 +218,4 @@ assert.ok(
   'Renderer copy must not mutate region or data policy',
 );
 
-console.log('App renderer copy PASS: 9 dynamic renderer families x 4 locales');
+console.log('App renderer copy PASS: 11 dynamic renderer families x 4 locales');

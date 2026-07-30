@@ -201,6 +201,15 @@ runtimeVoiceKeys.forEach(key => assert(zhCatalog[key], `Voice runtime catalog ke
 assert(app.includes('function setLocalizedRuntimeHint(state, busy = false)')
   && app.includes('function setLocalizedRuntimeCaption(state)'),
   'Voice runtime hints and recovery captions must use named localized renderers');
+const voiceRuntimeCopyBlock = app.slice(
+  app.indexOf('const VOICE_RUNTIME_KEYS'),
+  app.indexOf('function setLocalizedRuntimeHint(state, busy = false)'),
+);
+assert(voiceRuntimeCopyBlock && !/\p{Script=Han}/u.test(voiceRuntimeCopyBlock),
+  'Voice runtime state mapping must contain catalog keys only, without inline Han fallback copy');
+assert(rendererCopySource.includes('function voiceRuntimeText(state)')
+  && rendererCopySource.includes('function voiceRuntimeCaption(state)'),
+  'Voice runtime text and recovery captions must be owned by the shared renderer-copy module');
 assert(!/setCallHint\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),
   'Call runtime hints must not bypass the locale catalog with inline Han copy');
 assert(!/setCaption\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),

@@ -25,6 +25,34 @@
     speaking: 'voice.call.speaking',
     unavailable: 'voice.call.unavailable',
   });
+  const VOICE_RUNTIME_KEYS = Object.freeze({
+    audioOnlyFallback: 'voice.runtime.audioOnlyFallback',
+    degradedBody: 'voice.runtime.degradedBody',
+    degradedTitle: 'voice.runtime.degradedTitle',
+    didNotHear: 'voice.runtime.didNotHear',
+    heard: 'voice.runtime.heard',
+    listening: 'voice.runtime.listening',
+    microphoneMuted: 'voice.runtime.microphoneMuted',
+    microphoneMutedHint: 'voice.runtime.microphoneMutedHint',
+    microphonePermission: 'voice.runtime.microphonePermission',
+    microphoneTapToResume: 'voice.runtime.microphoneTapToResume',
+    playbackBlocked: 'voice.runtime.playbackBlocked',
+    recordingTapWhenDone: 'voice.runtime.recordingTapWhenDone',
+    reconnecting: 'voice.runtime.reconnecting',
+    recoveredBody: 'voice.runtime.recoveredBody',
+    recoveredTitle: 'voice.runtime.recoveredTitle',
+    thinking: 'voice.runtime.thinking',
+  });
+  const VOICE_RUNTIME_CAPTION_KEYS = Object.freeze({
+    degraded: Object.freeze({
+      body: VOICE_RUNTIME_KEYS.degradedBody,
+      title: VOICE_RUNTIME_KEYS.degradedTitle,
+    }),
+    recovered: Object.freeze({
+      body: VOICE_RUNTIME_KEYS.recoveredBody,
+      title: VOICE_RUNTIME_KEYS.recoveredTitle,
+    }),
+  });
   const CALL_STATUS_KEYS = Object.freeze({
     accountPreparing: Object.freeze({
       title: 'voice.call.accountPreparingTitle',
@@ -153,6 +181,18 @@
 
     function callHint(state) {
       return t(CALL_HINT_KEYS[state] || CALL_HINT_KEYS.unavailable);
+    }
+
+    function voiceRuntimeText(state) {
+      return t(VOICE_RUNTIME_KEYS[state] || VOICE_RUNTIME_KEYS.reconnecting);
+    }
+
+    function voiceRuntimeCaption(state) {
+      const keys = VOICE_RUNTIME_CAPTION_KEYS[state] || VOICE_RUNTIME_CAPTION_KEYS.degraded;
+      return Object.freeze({
+        body: t(keys.body),
+        title: t(keys.title),
+      });
     }
 
     function callStatus(state) {
@@ -327,6 +367,8 @@
       queueCard,
       subscriptionCta,
       upcomingVisit,
+      voiceRuntimeCaption,
+      voiceRuntimeText,
       walkActivity,
     });
   }
