@@ -96,6 +96,22 @@ for (const key of migratedAttributeKeys) {
     `${key} must stay catalog-bound after the attribute migration batches`,
   );
 }
+const appSourceLines = fs.readFileSync('web/src/app.js', 'utf8').split(/\r?\n/);
+const careCopyStart = appSourceLines.findIndex((line) => line.includes('function localizedCareLabels(')) + 1;
+const careCopyEnd = appSourceLines.findIndex((line) => line.includes('function careAdvance(')) + 1;
+assert(careCopyStart > 0 && careCopyEnd >= careCopyStart, 'Care copy region must stay discoverable');
+const lingeringCareCopy = worklist.entries.flatMap((entry) => entry.occurrences.map((occurrence) => ({
+  source: entry.source,
+  ...occurrence,
+}))).find((occurrence) => (
+  occurrence.file === 'web/src/app.js'
+  && occurrence.line >= careCopyStart
+  && occurrence.line <= careCopyEnd
+));
+assert(
+  !lingeringCareCopy,
+  `Care carousel copy must stay catalog-bound: ${JSON.stringify(lingeringCareCopy)}`,
+);
 for (const entry of worklist.entries) {
   assert.equal(entry.reviewStatus, 'pending', 'No catalog match may auto-approve source migration');
   if (entry.resolutionKind === 'reuse-existing-key') {
