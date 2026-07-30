@@ -605,6 +605,7 @@ require('./test-i18n-pseudo-catalog.js');
 require('./test-companion-profile-localization.js');
 require('./test-medication-schedule-i18n.js');
 require('./test-i18n-surface-inventory.js');
+require('./test-debug-diagnostics-gated.js');
 require('./test-purchase-flow-localizations.js');
 require('./test-purchase-flow-view-model.js');
 require('./test-app-screen-localizations.js');

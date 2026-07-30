@@ -132,6 +132,7 @@ Phase 1c（2026-07-28）建立完整交付面與回歸基準：
 
 - `docs/I18N-SURFACE-INVENTORY.json` 把 App WebView、法律／支援頁、營運後台、官網、LocaleContext、Gateway／Voice、iOS binary 與 App Store 全部納入同一份完成矩陣。
 - `scripts/i18n-surface-inventory.js` 掃描正式介面中的繁中文字串候選；遷移期間不得高於基準，正式開放前必須降為零或逐筆審核為非使用者文案。
+- 非使用者文案的審核代號（2026-07-31 擴充）：`backend-template-identity`／`legacy-brand-migration-sentinel`／`legacy-storage-identity`／`debug-panel-diagnostic`（`_diag`／`_diagNote` 無 force 的診斷字，僅 `munea.debug=1` 顯示）／`developer-fixture`（`seedFixtures=true` 才寫入的開發示範資料）。後兩類以 `scripts/test-debug-diagnostics-gated.js` 為證據：門被拆測試即紅、條目失效。`_diagNote` 帶 force 的字故障時會顯示給使用者，不得入冊。
 - 完成不再以「有四個 JSON」判定，而是每個 surface 都要通過 catalog、動態內容、視覺截圖、區域安全、App Store 與實機語音 gate。
 
 Phase 1d（2026-07-28）補齊可共用的語言品質底盤：
