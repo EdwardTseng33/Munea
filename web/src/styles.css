@@ -141,7 +141,7 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .task-item + .task-item { border-top: 1px solid var(--line); }
 .task-ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
 .task-ico .ic { width: 21px; height: 21px; }
-.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.mood { background: #236C66; color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
+.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.mood { background: var(--teal-d); color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
 .task-body { flex: 1; }
 .task-title { font-size: 15px; font-weight: 700; color: var(--ink); }
 .task-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
@@ -230,7 +230,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .stat-tile.t-med { cursor: pointer; font: inherit; }
 .stat-tile.t-med .st-ico { background: var(--coral); color: #FFF; }
 .stat-tile.t-med .st-val { color: var(--coral-d); }
-.stat-tile.t-act .st-ico { background: var(--teal-dd); color: #FFF; }
+.stat-tile.t-act .st-ico { background: var(--teal-d); color: #FFF; }
 .stat-tile.t-act .st-val { color: var(--teal-dd); }
 .stat-tile .pill-dots { position: absolute; right: 12px; top: 12px; margin: 0; }
 .stat-tile .pill-dots i { width: 11px; height: 6px; }
@@ -1720,7 +1720,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .care-dots { margin-left: auto; display: inline-flex; gap: 5px; }
 .care-dots i { width: 6px; height: 6px; border-radius: 4px; background: rgba(35,108,102,.22); transition: all .3s; }
 .care-dots i.on { width: 14px; }
-.care-dots i.on { background: var(--teal-dd); }
+.care-dots i.on { background: var(--teal-d); }
 .care-body { display: grid; min-height: 62px; margin-top: 10px; min-width: 0; }
 .care-item { grid-area: 1 / 1; min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 12px; opacity: 0; visibility: hidden; transition: opacity .35s ease; pointer-events: none; }
 .care-item.on { opacity: 1; visibility: visible; pointer-events: auto; }
@@ -1740,7 +1740,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .tier b { font-size: 16px; }
 .tier i { font-size: 16px; }
 .tier span { font-size: 13px; }
-.tier-tag.now { background: var(--teal-dd); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; }
+.tier-tag.now { background: var(--teal-d); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; }
 .tier-tag.next { background: var(--coral-d); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; margin-left: 6px; }
 .tier.trial { opacity: .62; }
 .tier.trial b::after { content: "體驗用"; font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 6px; }
@@ -1934,7 +1934,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 活動迷你三日條（右上角、前兩天 vs 今天） */
 .act-spark { position: absolute; right: 14px; top: 16px; display: inline-flex; align-items: flex-end; gap: 3px; }
 .act-spark i { width: 7px; border-radius: 3px; background: rgba(35,108,102,.28); }
-.act-spark i.hi { background: var(--teal-dd); }
+.act-spark i.hi { background: var(--teal-d); }
 
 /* 獎勵行：獎牌一欄、文字一欄（兩行左緣自然對齊） */
 .qc-prize { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
@@ -2158,7 +2158,7 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .safety-triggers .st-ic .ic { width: 19px; height: 19px; color: #fff; stroke: #fff; fill: none; }
 .safety-triggers .st-ic.bp { background: var(--teal); }
 .safety-triggers .st-ic.hr { background: var(--coral-d); }
-.safety-triggers .st-ic.ox { background: var(--teal-dd); }
+.safety-triggers .st-ic.ox { background: var(--teal-d); }
 .safety-triggers .st-ic.fall { background: #C79A3B; }
 
 .safety-flow { margin-top: 18px; background: var(--mint); border-radius: 16px; padding: 15px 16px; display: flex; flex-direction: column; gap: 11px; }
