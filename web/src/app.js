@@ -1630,6 +1630,26 @@ function rptShortDate(iso) {
   const m = String(iso || '').match(/^\d{4}-(\d{2})-(\d{2})$/);
   return m ? (parseInt(m[1], 10) + '/' + parseInt(m[2], 10)) : '';
 }
+/* 紙面要印的姓名（Edward 2026-07-30 拍板「要有」）。
+   一張要遞給醫生的紙沒有名字，在診間很可能被拿錯、或跟別人的資料混在一起。
+
+   刻意只取 name（個人資料的「名稱」）：
+   · **不退回 nick**——「阿嬤」在診間對比病歷毫無用處，印一個看似有身分卻
+     不能比對的名字，比留空更誤導
+   · **不退回角色名**——那是 AI 的名字，不是病人的
+   · 沒填就整個不印（不留「姓名：」的空欄位，空欄位在文件上看起來像漏填）
+
+   刻意**不印生日、身分證號、地址**。Edward 拍板的是「要有姓名」，不是一整組
+   身分資料。這張紙會被影印、被放在診間桌上——多一個識別欄位就多一分外洩代價。
+   （若之後要處理同名比對，生日是標準做法，但那是另一個隱私決定。） */
+function visitSummaryPatientName() {
+  try {
+    const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}') || {};
+    const name = String(p.name || '').trim();
+    return muneaSafeDisplayText(name, '');
+  } catch (e) { return ''; }
+}
+
 /* 沒讀到的來源翻成人話。畫面、純文字、PDF 三處共用同一份對照，
    免得同一份摘要在三個地方講出不一樣的缺料清單。 */
 function visitPartialNames(partial) {
@@ -2051,7 +2071,9 @@ window.__muneaOpenVisitSummary = openVisitSummary;
 function visitSummaryAsText(summary) {
   const companion = (typeof cname === 'function' ? cname() : '沐寧');
   const footer = muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion });
-  const lines = [muneaT('visit.summaryTitle', '就診摘要')];
+  const patientName = visitSummaryPatientName();
+  // 純文字版跟 PDF 是同一份摘要，姓名要一致——不然兩份給出去的東西身分不同
+  const lines = [muneaT('visit.summaryTitle', '就診摘要') + (patientName ? ' · ' + patientName : '')];
   if (summary) lines.push(muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to }));
   const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
   if (qs.length) {
@@ -2132,6 +2154,7 @@ function visitSummaryAsHTML(summary) {
   // 載不到任何外部資源——不內嵌的話字形會退回系統無襯線，文字標就不是品牌了
   // （Edward 2026-07-30：「Munea 的字粗字體也有問題」，根因就是這個）。
   const brandFont = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_WORDMARK_FONT) || '';
+  const patientName = visitSummaryPatientName();
   rows.push('<header>'
     + '<div class="logo">'
     // 圖載不到時只是少一個標記，文字標照樣在——紙上不會出現破圖，也不會沒有出處
@@ -2139,6 +2162,11 @@ function visitSummaryAsHTML(summary) {
     +   '<span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>'
     + '</div>'
     + '<div class="title"><h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>'
+    // 姓名跟標題同一條基線：醫生拿起這張紙，先確認「這是誰的」再讀內容。
+    // 沒填就整個不印——不留空欄位（文件上的空欄位看起來像漏填）。
+    +   (patientName
+      ? '<span class="patient">' + rptEsc(patientName) + '</span>'
+      : '')
     +   '<span class="period">' + rptEsc(period) + '</span></div>'
     + '</header>');
 
@@ -2278,6 +2306,10 @@ function visitSummaryAsHTML(summary) {
     + '.title{display:flex;align-items:baseline;justify-content:space-between;gap:12pt}'
     + 'h1{font-family:"Songti TC","Noto Serif TC",Georgia,serif;font-size:18pt;font-weight:700;'
     +   'margin:0;line-height:1.2}'
+    // 姓名比期間顯眼（它是身分不是註記），但比標題小——標題仍是文件主角。
+    // margin-right:auto 把期間推到最右，姓名留在標題旁邊。
+    + '.patient{font-size:11pt;font-weight:700;color:var(--ink);white-space:nowrap;'
+    +   'margin-right:auto;padding-bottom:1pt}'
     + '.period{font-size:9pt;color:var(--muted);white-space:nowrap}'
 
     // 區塊標：不用 uppercase（對中文完全無效），字距只給極小值——
