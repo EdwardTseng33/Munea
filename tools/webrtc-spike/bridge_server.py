@@ -48,6 +48,7 @@ class GeminiVoiceTrack(AudioStreamTrack):
         self._resampler = AudioResampler(format="s16", layout="mono", rate=48000)
         self._buf = np.zeros(0, dtype=np.int16)   # 48k 待播樣本
         self._pts = 0
+        self._wall0 = None   # 起播牆鐘（配速基準）
 
     def feed(self, pcm24k: bytes):
         self.queue.put_nowait(pcm24k)
@@ -80,7 +81,14 @@ class GeminiVoiceTrack(AudioStreamTrack):
         frame.pts = self._pts
         frame.time_base = fractions.Fraction(1, 48000)
         self._pts += need
-        await asyncio.sleep(0.02)   # 準點節拍
+        # 牆鐘校準配速（跟 fake_caller 同病同修）：固定睡 0.02 在 Windows 實際睡 31ms
+        # →只有 0.64 倍速。對「起播牆鐘＋已播樣本數」校準、睡過頭下一格自動補回。
+        if self._wall0 is None:
+            self._wall0 = time.monotonic()
+        target = self._wall0 + self._pts / 48000.0
+        wait = target - time.monotonic()
+        if wait > 0:
+            await asyncio.sleep(wait)
         return frame
 
 

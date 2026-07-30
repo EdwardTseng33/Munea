@@ -58,6 +58,7 @@ class WavMouthTrack(AudioStreamTrack):
         self.speech_end_frame = int(loud[-1]) if loud.size else len(frames) - 1
         self.total_speech_s = (self.speech_end_frame * 960) / 48000
         self.timeline = []   # (牆鐘, 假人此格有沒有出聲)
+        self._wall0 = None   # 開播牆鐘（配速基準）
 
     def speak_again(self, pcm48k):
         """插話考：她講話講到一半，假人再開口。牆鐘記在真正播出的那格。"""
@@ -91,7 +92,15 @@ class WavMouthTrack(AudioStreamTrack):
         frame.pts = self._pts
         frame.time_base = fractions.Fraction(1, 48000)
         self._pts += need
-        await asyncio.sleep(0.02)
+        # 牆鐘校準配速（2026-07-30 深夜真兇）：每格固定睡 0.02 在 Windows 上實際睡 31ms
+        # （鬧鐘最小刻度 15.6ms）→ 嘴巴只有 0.64 倍速、考場所有時間數字灌水 1.5 倍。
+        # 改成對「開播牆鐘＋已播樣本數」校準：睡過頭，下一格自動少睡補回來。
+        if self._wall0 is None:
+            self._wall0 = time.monotonic()
+        target = self._wall0 + self._pts / 48000.0
+        wait = target - time.monotonic()
+        if wait > 0:
+            await asyncio.sleep(wait)
         return frame
 
 
