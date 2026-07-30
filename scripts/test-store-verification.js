@@ -26,6 +26,7 @@ let nativePurchases = 0;
 let productLoads = 0;
 let loadedProductIds = [];
 let serverAllows = true;
+let serverFailureCode = 'apple_signature_verification_failed';
 let restoreTransactions = [];
 let appliedPurchase = null;
 let currentTransaction = {
@@ -78,7 +79,7 @@ const context = {
                 ? { subscription: { status: 'active', expiresAt: '2026-08-14T00:00:00Z' } }
                 : null
             }
-          : { ok: false, verified: false, error: { code: 'apple_signature_verification_failed' } };
+          : { ok: false, verified: false, error: { code: serverFailureCode } };
       }
     };
   },
@@ -187,6 +188,60 @@ vm.runInContext(fs.readFileSync('web/src/store.js', 'utf8'), context);
       nativePurchases !== nativeBeforeSimulation || applied !== 4) {
     throw new Error('developer purchase must simulate locally without Apple charge or server verification');
   }
+
+  // ── 驗不過的交易不准無限重送（2026-07-30）────────────────────────────────────
+  // 正式庫累積 168 筆 apple_transaction_rejected、全同一個帳號、最新一筆就發生在查詢當下：
+  // 舊寫法驗不過就直接 return，交易沒結案 → 蘋果每次啟動都重送同一筆 → 永遠空轉。
+  // 上面驗開發模擬時把身分換成 developerMode，這裡要換回真的使用者，否則購買不會走伺服器驗證
+  context.window.MUNEA_DEV_CONFIG = { enabled: false };
+  context.window.MuneaAuth.state = () => ({ authUserId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+  serverAllows = false;
+
+  // ① 「現在不行、之後可能行」（帳號記號對不上＝這筆是用另一個帳號買的）：
+  //    絕不能結案（結案＝用戶付的錢永遠拿不到東西），但要有次數上限、不要一直打伺服器
+  serverFailureCode = 'apple_account_token_mismatch';
+  currentTransaction = {
+    ...currentTransaction,
+    productId: 'net.munea.app.points.200',
+    transactionId: '100000000000010'
+  };
+  const finishedBeforeRecoverable = finished;
+  const callsBeforeRecoverable = serverCalls;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await context.window.MuneaStore.purchase(currentTransaction.productId);
+  }
+  if (finished !== finishedBeforeRecoverable) {
+    throw new Error('a recoverable failure must never finish the transaction');
+  }
+  if (serverCalls !== callsBeforeRecoverable + 3) {
+    throw new Error('the first three attempts must still reach the server; actual=' + (serverCalls - callsBeforeRecoverable));
+  }
+  const exhausted = await context.window.MuneaStore.purchase(currentTransaction.productId);
+  if (exhausted.ok || exhausted.reason !== 'verify_retry_exhausted' ||
+      serverCalls !== callsBeforeRecoverable + 3 || finished !== finishedBeforeRecoverable) {
+    throw new Error('a transaction that already failed three times must stop hammering the server');
+  }
+
+  // ② 永遠不會過的（不是我們賣的商品）：結案，讓蘋果別再送
+  serverFailureCode = 'apple_product_not_allowed';
+  currentTransaction = { ...currentTransaction, transactionId: '100000000000011' };
+  const finishedBeforePermanent = finished;
+  const permanent = await context.window.MuneaStore.purchase(currentTransaction.productId);
+  if (permanent.ok || finished !== finishedBeforePermanent + 1) {
+    throw new Error('a permanently invalid transaction must be finished so StoreKit stops resending it');
+  }
+
+  // ③ 簽章驗不過可能只是伺服器一時抓不到蘋果的憑證 → 不准結案
+  serverFailureCode = 'apple_signature_verification_failed';
+  currentTransaction = { ...currentTransaction, transactionId: '100000000000012' };
+  const finishedBeforeSignature = finished;
+  await context.window.MuneaStore.purchase(currentTransaction.productId);
+  if (finished !== finishedBeforeSignature) {
+    throw new Error('a signature failure may be temporary and must not be finished');
+  }
+
+  serverAllows = true;
+  serverFailureCode = 'apple_signature_verification_failed';
 
   console.log('Store server verification PASS', {
     serverCalls,
