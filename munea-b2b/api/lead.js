@@ -19,6 +19,9 @@ export default async function handler(req, res) {
   const msg = String(b.msg || '').trim().slice(0, 1000);
   const plans = Array.isArray(b.plans) ? b.plans.map(p => String(p).slice(0, 20)).slice(0, 8) : [];
   const mode = b.mode === 'trial' ? '申請試辦' : '預約展示';
+  // 訪客看的是哪個語系的頁面——回信要用哪種語言，看這欄
+  const LANGS = { zh: '中文', en: 'English', ja: '日本語', es: 'Español' };
+  const lang = LANGS[String(b.lang || '').slice(0, 4)] || '未知';
 
   const key = process.env.RESEND_API_KEY;
   const to = process.env.LEAD_TO || 'edwardt0303@gmail.com';
@@ -30,7 +33,7 @@ export default async function handler(req, res) {
     `姓名：${name}`, `單位名稱：${org}`, `身分：${role || '未填'}`,
     `電話：${phone || '未填'}`, `Email：${email}`,
     `想了解的方案：${plans.length ? plans.join('、') : '未勾選'}`,
-    `留言：${msg || '無'}`, '', `（由 Munea B2B 合作頁「${mode}」表單直送）`
+    `留言：${msg || '無'}`, `訪客語系：${lang}`, '', `（由 Munea B2B 合作頁「${mode}」表單直送）`
   ];
   const html = lines.map(l => l ? `<p style="margin:2px 0">${l.replace(/</g, '&lt;')}</p>` : '<br>').join('');
 

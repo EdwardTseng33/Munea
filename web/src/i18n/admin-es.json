@@ -240,7 +240,17 @@
     "沒開過": "nunca abierta",
     "還沒開過 App": "Nunca abrió la app",
     "今天有動作": "Actividad hoy",
-    "還沒有真實用戶——有人註冊後，這裡會列出每一家。": "Aún no hay usuarios reales: cada hogar aparecerá aquí cuando alguien se registre."
+    "還沒有真實用戶——有人註冊後，這裡會列出每一家。": "Aún no hay usuarios reales: cada hogar aparecerá aquí cuando alguien se registre.",
+    "使用狀況": "Uso",
+    "登入紀錄": "Historial de acceso",
+    "最後開 App": "Última apertura",
+    "近 30 天通話": "Llamadas, últimos 30 días",
+    "還沒開過": "Nunca abierta",
+    "沒有紀錄": "Sin registro",
+    "1 點約 1 分鐘": "1 crédito ≈ 1 minuto",
+    "這裡是": "Estás en",
+    "測試機": "el servidor de pruebas",
+    "本機預覽": "una vista local"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Últimos {0} días" },

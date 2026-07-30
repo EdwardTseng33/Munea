@@ -5186,8 +5186,10 @@ async function signInWithAuthProvider(provider) {
     return setAuthMessageState('inProgress', 'ok');
   }
   trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom });
-  if (code === 'google_sign_in_cancelled') return setAuthMessageState('cancelled', 'info');
-  if (code === 'google_sign_in_in_progress') return setAuthMessageState('inProgress', 'ok');
+  // 比對結尾而非整串：Apple 與 Google 各自回 <provider>_sign_in_cancelled／_in_progress，
+  // 寫死 google_ 開頭會讓 Apple 使用者按到一半退出時看到紅字「登入失敗」——取消不是失敗。
+  if (code.endsWith('_sign_in_cancelled')) return setAuthMessageState('cancelled', 'info');
+  if (code.endsWith('_sign_in_in_progress')) return setAuthMessageState('inProgress', 'ok');
   setAuthMessageState('unavailable', 'error');
 }
 async function signInDeveloperMode() {
@@ -6384,6 +6386,7 @@ let _syncPullPromise = null;
 let _syncPullCompletedAt = 0;
 let _familySyncTimer = null;
 let _familyVisibilityBound = false;
+let _lastPlanRecheckAt = 0;   // 回前景重新確認會員身分的節流時間戳
 function syncPush(key, value) {
   if (isDeveloperBypassAllowed()) return;
   try {
@@ -7683,7 +7686,18 @@ function init() {
   if (!_familyVisibilityBound) {
     _familyVisibilityBound = true;
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') syncPullAll({ minIntervalMs: 30000 });
+      if (document.visibilityState !== 'visible') return;
+      syncPullAll({ minIntervalMs: 30000 });
+      // 回到前景時也重新確認會員身分與點數（2026-07-30 Edward 抓到）。
+      // 原本只有「完全關掉 App 再開」「換帳號」「點進管理方案」這三種時機才問伺服器，
+      // 所以後台改了方案、手機切回來卻還是舊身分——顯示的是本機記著的值，它根本沒問過。
+      // 30 秒節流，避免切來切去一直打。
+      const now = Date.now();
+      if (now - _lastPlanRecheckAt >= 30000) {
+        _lastPlanRecheckAt = now;
+        try { void refreshServerPlanEntitlement(); } catch (e) {}
+        try { void refreshServerCredits(); } catch (e) {}
+      }
     });
   }
   applyTaskAccessibilityLabels();
