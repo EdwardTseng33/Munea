@@ -2370,19 +2370,28 @@ class SupabaseAdapter:
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows]
 
-    def load_admin_product_events(self, limit=20000):
-        """後台『成長與黏著』：不篩 account_id，service-role 全表查詢 product_events 全部歷史。
-        黏著度／留存／啟用漏斗都要抓到『比某個時間窗更早』的資料才能定出每個人的『第 0 天』，
-        所以這裡刻意不帶 since_iso、直接抓能抓到的全部——量體目前還小（表剛開不久），全撈划算；
-        之後量體大了要再依時間分頁，這裡先誠實留一個上限，別無限撈。"""
+    def load_admin_product_events(self, limit=20000, since_iso=None):
+        """後台看板共用：不篩 account_id，service-role 全表查詢 product_events。
+
+        兩種取法，差別在有沒有時間窗：
+        - 『成長與黏著』不帶 since_iso：黏著度／留存／啟用漏斗都要抓到『比某個時間窗更早』的
+          資料才能定出每個人的『第 0 天』，所以要由舊到新抓能抓到的全部。
+        - 『北極星』帶 since_iso：只看最近 N 天，因此改成由新到舊——萬一撞到上限，要截在
+          最舊那端，不能把剛發生的事截掉。
+
+        量體目前還小（表剛開不久），全撈划算；之後量體大了要再依時間分頁，
+        這裡先誠實留一個上限，別無限撈。"""
         if not self.enabled():
             return None
         limit = max(1, min(50000, int(limit or 20000)))
-        rows = self._select("product_events", {
+        query = {
             "select": "*",
-            "order": "event_time.asc",
+            "order": "event_time.desc" if since_iso else "event_time.asc",
             "limit": str(limit),
-        })
+        }
+        if since_iso:
+            query["event_time"] = f"gte.{since_iso}"
+        rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows or []]
 
     def load_memory_items(self, query=None, limit=200):
