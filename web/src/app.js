@@ -9123,7 +9123,7 @@ function init() {
     function throwConfetti() {
       const conf = wrap.querySelector('.draw-confetti');
       if (!conf) return;
-      const colors = ['#E0B354', '#D98841', '#3AA8A0', '#D9EFE8'];   // 暖金/珊瑚/療癒綠/薄荷（自家色盤）
+      const colors = ['#E0B354', '#F4A261', '#3AA8A0', '#D9EFE8'];   // 暖金/Logo橘/療癒綠/薄荷（自家色盤）
       for (let k = 0; k < 26; k++) {
         const p = document.createElement('i');
         p.style.left = (4 + Math.random() * 92) + '%';
