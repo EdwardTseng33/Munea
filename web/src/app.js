@@ -5023,21 +5023,16 @@ function setAuthMessage(text = '', type = '') {
 }
 function setAuthMessageState(state, type = '') {
   const rendererCopy = muneaRendererCopy();
-  const keys = {
-    cancelled: 'auth.cancelled',
-    inProgress: 'auth.inProgress',
-    unavailable: 'auth.unavailable',
+  const localized = {
+    cancelled: () => muneaT('auth.cancelled', '已取消登入'),
+    inProgress: () => muneaT('auth.inProgress', '正在前往登入…'),
+    unavailable: () => muneaT('auth.unavailable', '目前無法登入，請稍後再試。'),
   };
-  const fallback = {
-    cancelled: '已取消登入',
-    inProgress: '正在前往登入…',
-    unavailable: '目前無法登入，請稍後再試。',
-  };
-  const resolvedState = keys[state] ? state : 'unavailable';
+  const resolvedState = localized[state] ? state : 'unavailable';
   setAuthMessage(
     rendererCopy
       ? rendererCopy.authMessage(resolvedState)
-      : muneaT(keys[resolvedState], fallback[resolvedState]),
+      : localized[resolvedState](),
     type,
   );
 }
@@ -5453,12 +5448,11 @@ function renderHomeGreeting() {
     }).format(now);
   }
   const kick = $('#greetKicker'), big = $('#greetBig');
-  let key = 'home.greetingHello', fallback = '你好';
-  if (h >= 5 && h < 11) { key = 'home.greetingMorning'; fallback = '早安'; }
-  else if (h >= 11 && h < 18) { key = 'home.greetingAfternoon'; fallback = '午安'; }
-  else if (h >= 18 && h < 22) { key = 'home.greetingEvening'; fallback = '晚上好'; }
-  else { key = 'home.greetingLate'; fallback = '夜深了'; }
-  const k = muneaT(key, fallback);
+  let k = muneaT('home.greetingHello', '你好');
+  if (h >= 5 && h < 11) k = muneaT('home.greetingMorning', '早安');
+  else if (h >= 11 && h < 18) k = muneaT('home.greetingAfternoon', '午安');
+  else if (h >= 18 && h < 22) k = muneaT('home.greetingEvening', '晚上好');
+  else k = muneaT('home.greetingLate', '夜深了');
   if (kick) kick.textContent = k;
   if (big) big.textContent = k;
 }
@@ -9547,7 +9541,7 @@ function init() {
   // 同步與「活動前 30 分提醒」都沿用現成水管（saveActs 內建）；看診/用藥帳本完全不碰
   window.__muneaAddPersonalEvent = async function (a) {
     const rawTitle = String((a && a.title) || '').trim();
-    const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : '和家人的約';
+    const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : muneaT('event.familyTitle', '和家人的約');
     const dateISO = String((a && a.dateISO) || '').trim();
     const time = String((a && a.time) || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
@@ -9906,7 +9900,7 @@ function init() {
       act.dateISO = isoOf(ed0);
       act.time = etv;   // 原始時間：給「活動前 30 分提醒」＋「時間過了鎖 RSVP」用
       act.dateLabel = fmtDay(ed0) + ' ' + _clock12(etv);
-      act.title = (($('#eventName') && $('#eventName').value.trim()) || '家庭聚會');
+      act.title = (($('#eventName') && $('#eventName').value.trim()) || muneaT('notification.familyDefaultTitle', '家庭聚會'));
       act.place = (($('#eventPlace') && $('#eventPlace').value.trim()) || '');
     }
     const rw = ['#rw1', '#rw2', '#rw3'].map(x => ($(x) && $(x).value.trim()) || '');
