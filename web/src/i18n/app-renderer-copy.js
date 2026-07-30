@@ -222,15 +222,20 @@
     function planSummary(input) {
       const value = input || {};
       const plan = planId(value.plan);
-      const purchasedCredits = Math.max(0, Number(value.purchasedCredits) || 0);
+      // 免費方案的說明句要講「手上還剩多少點」（伺服器錢包），不是「歷史買過多少點」。
+      // 舊參數 purchasedCredits 讀的是本機累計購買數，只增不減：餘額 193 卻寫「還有 500 點沒用完」。
+      // 舊名留著相容，但新呼叫端一律傳 remainingCredits。
+      const remainingCredits = Math.max(0, Number(
+        value.remainingCredits === undefined ? value.purchasedCredits : value.remainingCredits,
+      ) || 0);
       let noteKey = 'subscription.monthlyCreditsNote';
       let noteValues = {
         credits: positiveInteger(value.monthlyCredits),
         minutes: positiveInteger(value.minutes || value.monthlyCredits),
       };
-      if (plan === 'free' && purchasedCredits > 0) {
+      if (plan === 'free' && remainingCredits > 0) {
         noteKey = 'subscription.freeCreditsLeft';
-        noteValues = { credits: purchasedCredits };
+        noteValues = { credits: remainingCredits };
       } else if (plan === 'free') {
         noteKey = 'subscription.freePlanNote';
         noteValues = {};

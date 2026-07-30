@@ -484,15 +484,35 @@ assert(renderSubUiBody.includes("if (cur === 'free') showSubPane('plans')"), 'Fr
 assert(/dataset\.pane === 'points' && circlePlan\(\) === 'free'\) return;/.test(app), 'Clicking the points tab must be blocked for free members as a second guard');
 assert(app.includes('function showSubPane'), 'Pane switching must go through one function so the free guard cannot be bypassed');
 assert(renderPlanStateBody.includes("_tBtn.style.display = _isFreeP ? 'none' : ''"), 'The top-up button must stay hidden for free members');
-// 只要有點數就一定看得到餘額（Edward 親訓）
-assert(renderPlanStateBody.includes('const _leftover = _isFreeP ? POINTS.bought : 0'), 'Leftover purchased points must be computed for free members');
-assert(renderPlanStateBody.includes("_lbl.style.display = (!_isFreeP || _leftover > 0) ? '' : 'none'"), 'Any member holding points must still see the balance');
-// 2026-07-30 改寫：這句也搬進文案表（subscription.freeCreditsLeft），app.js 只剩 key 與剩餘點數。
+// 只要有點數就一定看得到餘額（Edward 親訓）。
+// 2026-07-30 晚改寫：餘額與說明句從 renderPlanState 搬進 renderCreditRow，且改讀伺服器錢包。
+// 原因是同一張卡上兩個數字來自兩個來源——餘額讀伺服器、說明句讀本機「歷史累計買過」
+// （localStorage munea.ptsBought，只增不減、後台發的點也永遠不會寫進來）：
+//   ① 餘額 193 卻寫「你還有 500 點沒用完」
+//   ② 後台發點給免費會員，本機沒有那筆 → 整列餘額被藏起來，違反這條拍板本身
+const renderCreditRowBody = app.match(/function renderCreditRow\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(renderCreditRowBody, 'renderCreditRow must remain a readable single function');
+assert(/function creditsInHand\(\) \{[^}]*ptsLeft\(\)/.test(app), '手上還剩多少點必須讀 ptsLeft（伺服器餘額優先）');
+assert(/const inHand = isFree \? creditsInHand\(\) : 0;/.test(renderCreditRowBody), 'Leftover points must come from the server wallet, not a local counter');
+assert(/lbl\.style\.display = \(!isFree \|\| inHand > 0\) \? '' : 'none'/.test(renderCreditRowBody), 'Any member holding points must still see the balance');
+// 反向守門：餘額／說明句一旦回頭讀本機累計，上面兩個症狀就會同時復發
+assert(!/POINTS\.bought/.test(renderCreditRowBody), '點數列不准讀本機累計購買數（只增不減、看不到後台發的點）');
+assert(!/POINTS\.bought/.test(renderPlanStateBody), '方案卡不准用本機累計購買數決定要不要顯示餘額');
+// 伺服器餘額（/credits/balance）回來時只會走 renderPoints，它必須回頭重算這一列，
+// 否則開機兩支並行、餘額後到就沒人重畫（畫面停在「手上沒有點數」）
 assert(
-  renderPlanStateBody.includes("'subscription.freeCreditsLeft'") && renderPlanStateBody.includes('{ credits: _leftover }'),
+  (app.match(/function renderPoints\(\) \{[\s\S]*?\n\}/)?.[0] || '').includes('__muneaRenderCreditRow'),
+  'A late server balance must still repaint the settings credit row',
+);
+assert(
+  renderCreditRowBody.includes("'subscription.freeCreditsLeft'") && renderCreditRowBody.includes('{ credits: inHand }'),
   'Free members with leftover points must be told the points are kept and how to use them',
 );
 assertCatalogSays('subscription.freeCreditsLeft', { 'zh-TW': [/留著|保留/, /訂閱/], en: [/remain/i, /subscribe/i] }, '免費會員手上剩的加購點數必須說明會留著、以及怎麼用');
+assert(/remainingCredits/.test(rendererCopySource), '文案層的免費說明句必須吃「手上還剩多少點」');
+// 換方案時不准憑空生出「已用」——舊寫法填 Math.round(pts * 0.3)，畫面會寫「每月送 100 · 已用 30」，
+// 那 30 點誰都沒用過。本機只負責不要顯示超過額度的數，真相在伺服器。
+assert(!/POINTS\.used = Math\.round\(pts \* 0\.3\)/.test(app), '換方案不准捏造「已用」點數');
 const ptsPillHiddenBody = app.match(/function ptsPillHidden\(\) \{[^}]*\}/)?.[0] || '';
 assert(/isFree\(\)\) && ptsLeft\(\) <= 0/.test(ptsPillHiddenBody), 'The chat points chip may only hide when a free member truly has zero points');
 // 「點數快用完、去加值」只對付費成立（免費 0 點時 0 < 30 會誤觸發、且加值鈕根本是藏的）

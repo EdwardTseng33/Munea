@@ -6211,6 +6211,9 @@ function renderPoints() {
     hud.style.display = ptsPillHidden() ? 'none' : '';
   }
   rebuildSettingsPointsLabel(formattedLeft);
+  // 餘額變了 → 設定頁那列點數（要不要露出來、說明句寫什麼）跟著重算。
+  // 伺服器餘額（/credits/balance）回來時只會走到這裡，不會經過 renderPlanState。
+  try { if (window.__muneaRenderCreditRow) window.__muneaRenderCreditRow(); } catch (e) {}
   if ($('#ptsBar')) $('#ptsBar').style.width = (POINTS.total > 0 ? Math.round(POINTS.used / POINTS.total * 100) : 0) + '%';
   refreshLowState();
 }
@@ -8955,6 +8958,63 @@ function init() {
     if ($('#subPlans')) $('#subPlans').style.display = pane === 'plans' ? '' : 'none';
     if ($('#subPoints')) $('#subPoints').style.display = pane === 'points' ? '' : 'none';
   }
+  // 手上真的還剩多少點＝伺服器錢包（ptsLeft 優先用 /credits/balance 回來的餘額）。
+  // 不可以用 localStorage 的「歷史累計買過」（POINTS.bought）：那個數字只增不減，
+  // 而且後台發的點從來不會寫進本機。
+  function creditsInHand() { return Math.max(0, Math.round(ptsLeft())); }
+  // 點數列（餘額＋說明句）：餘額一變就要重畫。
+  // 兩個入口都走這裡——換方案（renderPlanState）與伺服器餘額回來（renderPoints）。
+  // 舊寫法只在 renderPlanState 算一次，而 /credits/balance 回來只呼叫 renderPoints：
+  // 開機時那兩支並行，餘額後到就沒人重算顯示，畫面會停在「手上沒有點數」的樣子。
+  function renderCreditRow() {
+    const card = document.querySelector('.plan-card');
+    if (!card) return;
+    const plan = circlePlan();
+    const isFree = plan === 'free';
+    const monthly = Object.prototype.hasOwnProperty.call(PLAN_POINTS, plan) ? PLAN_POINTS[plan] : PLAN_POINTS.plus;
+    // 免費方案不吃點數（走一次性 5 分鐘體驗）＝一律不能買點數。
+    // 但「訂閱過→買過點→退訂掉回免費」的人、以及後台手動發過點的人，手上真的還有點：
+    // 那些點看得到、留著、訂閱回來就能用（Edward 7/17 拍板「手上還有點數的話一定看得到餘額」）。
+    const inHand = isFree ? creditsInHand() : 0;
+    const lbl = card.querySelector('.pts-label');
+    const used = card.querySelector('.pts-used');
+    const bar = card.querySelector('.pts-bar');
+    const note = card.querySelector('.pts-note');
+    // 免費沒有月贈點 → 餘額只在「手上真的還有點」時露出來，且不顯示「每月送／已用」與進度條
+    if (lbl) lbl.style.display = (!isFree || inHand > 0) ? '' : 'none';
+    if (used) used.style.display = isFree ? 'none' : '';
+    if (bar) bar.style.display = isFree ? 'none' : '';
+    if (!note) return;
+    const rendererCopy = muneaRendererCopy();
+    const localized = rendererCopy
+      ? rendererCopy.planSummary({
+        minutes: monthly,
+        monthlyCredits: monthly,
+        plan,
+        remainingCredits: inHand,
+      })
+      : null;
+    note.textContent = localized
+      ? localized.note
+      : (!isFree
+        ? muneaT(
+          'subscription.monthlyCreditsNote',
+          '{credits} credits provide about {minutes} minutes of conversation. Add more when they run out to keep talking.',
+          { credits: monthly, minutes: monthly },
+        )
+        : (inHand > 0
+          ? muneaT(
+            'subscription.freeCreditsLeft',
+            'Your unused {credits} credits will remain available. Subscribe to Plus or Pro to use them for conversations.',
+            { credits: inHand },
+          )
+          : muneaT(
+            'subscription.freePlanNote',
+            'You are on the Free plan. Link an account for one 5-minute conversation. Plus and Pro add credit-based conversations, longer history, and family invitations.',
+          )));
+  }
+  // renderPoints 在頂層 scope、方案額度表（PLAN_POINTS）在這層，所以掛出去給它呼叫
+  window.__muneaRenderCreditRow = renderCreditRow;
   function renderPlanState() {
     const plan = circlePlan();
     const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
@@ -8965,7 +9025,7 @@ function init() {
         minutes: pts,
         monthlyCredits: pts,
         plan,
-        purchasedCredits: POINTS.bought,
+        remainingCredits: creditsInHand(),
       })
       : null;
     const sn = $('#setPlanName'); if (sn) sn.textContent = localizedPlan
@@ -8974,39 +9034,13 @@ function init() {
     // 帳號卡右上角唯一的身份標籤（開發測試帳號會蓋成 TEST）
     renderMemBadge(plan);
     const sg = $('#setPlanGrant'); if (sg) sg.textContent = pts;
-    if (POINTS.total !== pts) { POINTS.total = pts; if (POINTS.used > pts) POINTS.used = Math.round(pts * 0.3); }
+    // 換方案後本機記著的「已用」可能比新方案的月額度還大 → 夾到額度上限。
+    // 舊寫法在這裡填 Math.round(pts * 0.3)，那是憑空生出來的假數字（畫面會寫「每月送 100 · 已用 30」，
+    // 誰都沒用過那 30 點）。真相在伺服器，本機只負責不要顯示超過額度的數。
+    if (POINTS.total !== pts) { POINTS.total = pts; if (POINTS.used > pts) POINTS.used = pts; }
     if (typeof renderPoints === 'function') renderPoints();
     const _isFreeP = plan === 'free';
-    // 免費方案不吃點數（走一次性 5 分鐘體驗）＝一律不能買點數。
-    // 但「訂閱過→買過點→退訂掉回免費」的人手上真的還有點：那些點看得到、留著、訂閱回來就能用。
-    const _leftover = _isFreeP ? POINTS.bought : 0;
-    const _card = document.querySelector('.plan-card');
-    if (_card) {
-      const _lbl = _card.querySelector('.pts-label'), _bar = _card.querySelector('.pts-bar'), _note = _card.querySelector('.pts-note');
-      const _used = _card.querySelector('.pts-used');
-      // 免費沒有月贈點 → 餘額只在「還有買過的點沒用完」時露出來，且不顯示「每月送／已用」與進度條
-      if (_lbl) _lbl.style.display = (!_isFreeP || _leftover > 0) ? '' : 'none';
-      if (_used) _used.style.display = _isFreeP ? 'none' : '';
-      if (_bar) _bar.style.display = _isFreeP ? 'none' : '';
-      if (_note) _note.textContent = localizedPlan
-        ? localizedPlan.note
-        : (!_isFreeP
-          ? muneaT(
-            'subscription.monthlyCreditsNote',
-            '{credits} credits provide about {minutes} minutes of conversation. Add more when they run out to keep talking.',
-            { credits: pts, minutes: pts },
-          )
-          : (_leftover > 0
-            ? muneaT(
-              'subscription.freeCreditsLeft',
-              'Your unused {credits} credits will remain available. Subscribe to Plus or Pro to use them for conversations.',
-              { credits: _leftover },
-            )
-            : muneaT(
-              'subscription.freePlanNote',
-              'You are on the Free plan. Link an account for one 5-minute conversation. Plus and Pro add credit-based conversations, longer history, and family invitations.',
-            )));
-    }
+    renderCreditRow();   // 餘額與說明句統一在這支算（renderPoints 也會呼叫它）
     const _tBtn = $('#topUpBtn'); if (_tBtn) _tBtn.style.display = _isFreeP ? 'none' : '';
     const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = localizedPlan
       ? localizedPlan.manageLabel
