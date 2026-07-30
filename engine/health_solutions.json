@@ -4381,6 +4381,290 @@
           "say": "吃了任何保健品之後，如果皮膚眼白變黃、起疹子、心悸、肌肉痠痛沒力——**立刻停用、儘快就醫**，帶著那罐東西去。還有一條最重要：**不要為了吃保健品把醫師開的藥停掉**，那個風險完全不對等。"
         }
       ]
+    },
+    "TW-EDU-32": {
+      "title": "食物寒熱與藥食同源",
+      "solutions": [
+        {
+          "id": "food-banana",
+          "label": "香蕉很寒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "香蕉"
+          ],
+          "say": "傳統上香蕉算「寒」，怕冷、容易拉肚子的人少吃點是老智慧。從實證看，香蕉真正要注意的其實是**鉀很高**——**腎功能不好、在洗腎的人才是真的要節制的人**（高血鉀會影響心臟）；一般人吃香蕉沒什麼好怕，它還是抽筋跟便祕的好朋友。怕「寒」的話，不要空腹吃、不要冰的，就很夠了。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-mango",
+          "label": "芒果很毒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "芒果"
+          ],
+          "say": "老人家說芒果「有毒」「很濕熱」，皮膚不好不能吃。實話是：芒果**皮**含有跟漆樹同類的致敏成分，**削皮吃、別啃皮，過敏的多半就沒事**；真的對芒果過敏的人（嘴邊紅癢）才需要整個避開。糖分偏高，血糖高的人吃半顆就好。不是毒，是要挑吃法。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-watermelon",
+          "label": "西瓜很寒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "西瓜"
+          ],
+          "say": "西瓜「寒」的老說法，翻成白話其實有幾分道理：水分多、糖也不少。真正要注意的兩種人：**血糖高的**（西瓜升糖快、一次一兩片就好）跟**夜尿多的**（睡前吃等於睡前灌水）。腸胃弱的人不要吃冰的、不要飯後馬上吃——這樣就把「寒」避掉了。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-lychee",
+          "label": "荔枝一次別吃太多",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "荔枝",
+            "龍眼"
+          ],
+          "say": "荔枝「很燥」的說法先放著，有一條**真的要小心**：**空腹一次吃很多荔枝，可能引發低血糖**（頭暈、冒冷汗）——這在醫學上是真的有記載的，小孩跟長輩特別要注意。吃飽飯後當點心、一次十顆以內，就安全得多。糖分高，血糖高的人更要節制。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-bamboo",
+          "label": "竹筍很「毒」？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "竹筍"
+          ],
+          "say": "竹筍常被說「毒」「冷」，實證的翻譯是：**纖維粗、不好消化**——胃不好、剛開完刀、牙口差的人確實該少吃或切細煮軟；它也含普林，**痛風發作期先避開**。一般人吃當季竹筍是好事，纖維對腸子很好。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-radish-ginseng",
+          "label": "白蘿蔔跟人蔘相沖？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "白蘿蔔",
+            "菜頭"
+          ],
+          "say": "「吃人蔘不能配白蘿蔔」是流傳很廣的說法（傳統認為一補一破）。實證上**沒有明確的科學依據**，不小心一起吃到了不用緊張。不過如果你是中醫師開的補藥，**照他的醫囑吃最好**——不是因為蘿蔔真的會「解藥」，是尊重開方的人對你的整體安排。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-sticky-rice",
+          "label": "糯米很難消化？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "糯米",
+            "油飯",
+            "粽子"
+          ],
+          "say": "這條老智慧是真的：糯米的澱粉結構讓它**排空慢、脹氣機會高**——胃食道逆流、消化不良、剛動過腸胃手術的人，粽子油飯確實要節制。要吃就：小顆的、趁溫熱吃（冷糯米更難消化）、配茶不配湯灌。節日吃一顆開心就好。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-crab",
+          "label": "螃蟹很寒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "螃蟹"
+          ],
+          "say": "螃蟹「寒」的提醒，實證上對應到三件真的事：**普林高（痛風要忌）**、**膽固醇集中在蟹黃**（血脂高的少吃蟹黃）、**不新鮮容易吃壞肚子**（傳統說的「寒瀉」很多其實是這個）。挑新鮮的、蒸熟透、痛風跟血脂高的人節制——這樣吃就不用怕。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-herbal-tea",
+          "label": "青草茶、苦茶退火？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "青草茶",
+            "苦茶",
+            "退火",
+            "降火"
+          ],
+          "say": "覺得「上火」想喝青草茶退火——偶爾喝無妨，但三個提醒：**成分不明的路邊青草茶，腎不好的人最好避開**（有些草藥傷腎）；**體質怕冷、容易拉肚子的人少喝**（傳統跟實證在這點上難得一致）；「火氣大」如果是嘴破不斷、睡不好，先把睡眠顧好比狂灌涼茶有用。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-goji-reddate",
+          "label": "枸杞紅棗怎麼吃才對",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "枸杞",
+            "紅棗"
+          ],
+          "say": "枸杞、紅棗是官方認可「可以當食品用的中藥材」，泡水煮湯都安全。兩個小提醒：**都有糖分**，血糖高的人枸杞一天一小把、紅棗三五顆就好；枸杞傳統上「感冒發燒時不吃」，跟著這個習慣走沒壞處。當日常茶飲很好，別期待它治什麼病。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-tremella",
+          "label": "白木耳、蓮子、百合這類燉品",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "白木耳",
+            "蓮子",
+            "百合",
+            "山藥",
+            "薏仁"
+          ],
+          "say": "白木耳、蓮子、百合、山藥、薏仁這些都是官方認可的藥食同源食材，燉湯當甜品很好——纖維跟膠質對腸子友善，也符合「覺得燥就吃潤的」老智慧。提醒兩個：市售甜湯**糖常常加很兇**，自己燉少糖最好；**薏仁傳統上孕婦忌吃**，實證雖不強，懷孕的人避開它心安也無妨。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-chrysanthemum",
+          "label": "菊花茶、決明子茶",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "菊花茶",
+            "決明子"
+          ],
+          "say": "菊花、決明子泡茶是常見的「降火」茶飲，也都在官方可用清單上。提醒：**決明子有輕瀉效果**——本來就容易拉肚子的人少喝、反而便祕的人有時剛好；**血壓藥吃了會頭暈的人**，這類茶飲別一次喝太濃太多（有輕微降壓效果、疊起來可能更暈）。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-nature-frame",
+          "label": "「寒熱」怎麼聽才對",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "長輩講的「寒」「燥」「毒」，很多時候是幾百年觀察的濃縮——翻成現在的話常常對應到真的事（高鉀、難消化、普林高、過敏原）。所以我不會笑這些說法，但我會幫你翻譯：**哪些人真的要注意、注意的是什麼**。想知道哪樣食物，直接問我就好。"
+        },
+        {
+          "id": "food-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吃了之後嘴唇腫或喉嚨緊",
+            "全身起疹子",
+            "上吐下瀉到虛脫",
+            "吃荔枝後頭暈冒冷汗且意識變差"
+          ],
+          "say": "吃任何東西之後如果嘴唇腫、喉嚨緊、全身起疹子——那是過敏反應，**嚴重的會影響呼吸，立刻就醫或打 119**。上吐下瀉到站不穩、或吃了荔枝後頭暈冒冷汗又變得恍惚（低血糖），也都要儘快就醫，不是「排毒」。"
+        }
+      ]
     }
   }
 }
