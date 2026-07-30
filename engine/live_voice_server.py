@@ -51,7 +51,16 @@ import websockets
 from websockets.http11 import Response
 from websockets.datastructures import Headers
 
-MODEL = "gemini-3.1-flash-live-preview"
+# 引擎選擇（2026-07-30 Edward 拍板「開始測試 2.5 正式版」）：預設 31＝現行、零改變。
+# vertex25＝Google 雲正式版 2.5 原生語音（gemini-live-2.5-flash-native-audio @ us-central1）。
+# 7/30 三關實測：吃 cmn-TW+Leda ✅、附和/主動接話開關存在 ✅、第一聲 750ms（僅比 3.1 慢 0.1 秒）。
+# 7/25 否決三理由全數失效——但正式採用前仍要過 19 題考卷＋Edward 人耳。
+VOICE_ENGINE = os.environ.get("MUNEA_VOICE_ENGINE", "31").strip().lower()
+if VOICE_ENGINE in ("vertex25", "25", "native25"):
+    MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-live-2.5-flash-native-audio"
+else:
+    VOICE_ENGINE = "31"
+    MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
 # 通話延長（2026-07-25 · 治「講超過 10 分鐘被硬切斷」）：Gemini Live 對每個底層連線有
@@ -102,7 +111,24 @@ KEYS = [k.strip() for k in _raw_keys.split(",") if k.strip()]
 if not KEYS:
     sys.exit("需要 GEMINI_API_KEY（或多把 GEMINI_API_KEYS，逗號分隔）")
 
-_clients = [genai.Client(api_key=k) for k in KEYS]   # 每把鑰匙一個 client
+
+def _make_client(key):
+    """依引擎開一個連線客戶端。31＝原樣（開發者鑰匙）。vertex25＝Google 雲正式版：
+    雲端機器（Cloud Run）內建身分、genai.Client(vertexai=True) 直接可用；
+    本機測試沒有內建身分，退而用 gcloud 現領的短期通行證（MUNEA_VERTEX_ACCESS_TOKEN）。"""
+    if VOICE_ENGINE != "vertex25":
+        return genai.Client(api_key=key)
+    project = os.environ.get("MUNEA_GCP_PROJECT", "gen-lang-client-0229303523")
+    location = os.environ.get("MUNEA_VERTEX_LOCATION", "us-central1")
+    tok = os.environ.get("MUNEA_VERTEX_ACCESS_TOKEN", "").strip()
+    if tok:
+        from google.oauth2.credentials import Credentials
+        return genai.Client(vertexai=True, project=project, location=location,
+                            credentials=Credentials(tok))
+    return genai.Client(vertexai=True, project=project, location=location)
+
+
+_clients = [_make_client(k) for k in KEYS]   # 每把鑰匙一個 client（vertex25 時鑰匙只當佔位、實際走雲端身分）
 _key_active = [0] * len(KEYS)                          # 每把鑰匙「現在幾通在用」
 _key_lock = threading.Lock()
 
@@ -1279,6 +1305,15 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_EVENT_TOOLS)
     if allow_care_questions and not demo_mode:
         tools.append(_CARE_QUESTION_TOOLS)
+    # vertex25 專屬配備（2026-07-30）：附和（affective）與主動接話判斷（proactive）。
+    # 預設關＝先考「同條件品質」；開了之後她會自己決定該不該接話、語氣跟情緒走。
+    # 只在 vertex25 引擎下送這兩個欄位（3.1 沒有、送了會被拒連）。
+    extra_cfg = {}
+    if VOICE_ENGINE == "vertex25":
+        if os.environ.get("MUNEA_VOICE_PROACTIVE", "0").strip() == "1":
+            extra_cfg["proactivity"] = types.ProactivityConfig(proactive_audio=True)
+        if os.environ.get("MUNEA_VOICE_AFFECTIVE", "0").strip() == "1":
+            extra_cfg["enable_affective_dialog"] = True
     resolved_thinking = _voice_thinking_level(thinking_level)
     thinking_config = (
         types.ThinkingConfig(thinking_level=resolved_thinking)
@@ -1294,6 +1329,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         adaptation_phrases=phrases,
     )
     return types.LiveConnectConfig(
+        **extra_cfg,
         response_modalities=["AUDIO"],
         # locale_profile 與 allow_care_questions 一律用具名傳。
         # system_instruction 的參數順序是 ..., demo_mode, allow_care_questions, locale_profile，

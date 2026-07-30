@@ -74,7 +74,9 @@ async def run_call(case, person_id, replies):
     cfg = lv.live_config(char=char, name=char)
     thinking = cfg.thinking_config.thinking_level if cfg.thinking_config else None
 
-    client = genai.Client(api_key=api_key)
+    # 2026-07-30 引擎開關：跟正式線同一套 _make_client——vertex25 走 Google 雲正式版、
+    # 31 照舊走開發者鑰匙。考卷考的必須是「同一顆引擎」，不能自己另開一條。
+    client = lv._make_client(api_key)
     async with client.aio.live.connect(model=lv.MODEL, config=cfg) as session:
         for line in case["turns"]:
             sent_at = time.monotonic()
