@@ -419,6 +419,21 @@
   // 三個都沒有就老實寫「未填姓名」，讓人靠旁邊的信箱認人，不要拿角色名冒充。
   // 帳號名是註冊時系統自己填的預設值，不是人取的名字——不能拿來當人名顯示。
   const GENERIC_ACCOUNT_NAMES=new Set(["Munea account","Munea demo account","Munea Care Circle"]);
+  // 陪伴角色欄顯示「我們自己的角色編號」，不顯示用戶給的暱稱（2026-07-30 Edward 拍板）。
+  // 用戶會把同一個角色叫成寧寧／蹦吧利利，後台要看的是「他選了哪一款」而不是他怎麼叫它。
+  const COMPANION_ZH={
+    "nening-real-female":"擬真女孩 01",
+    "companion-real-male":"擬真男孩 01",
+    "munea-2d-xiaoyun":"動畫女孩 01",
+    "munea-2d-ayuan":"動畫男孩 01",
+    "munea-2d-mimi":"動畫貓 01",
+    "munea-2d-wangcai":"動畫狗 01",
+  };
+  function companionLabel(c){
+    const id=String((c||{}).templateId||"").trim();
+    if(!id) return "–";
+    return COMPANION_ZH[id]||id; // 沒對照到就顯示原始代號，讓新角色一眼看得出來還沒命名
+  }
   function acctPersonName(a, fallback){ a=a||{}; const p=a.primaryPerson||{},o=a.owner||{};
     const named=(p.profileName||p.nickname||o.signInName||"").trim();
     if(named) return named;
@@ -521,7 +536,7 @@
         accountMarketCell(a),
         planPill(a.plan||"free"),
         `<span class="pts-cell"><b class="num">${n(a.points||0)}</b><span class="muted small">點</span></span>`,
-        esc(c.displayName||c.templateId||"–"),
+        esc(companionLabel(c)),
         usageCell(u),
         `<span class="muted small">${esc(a.lastSeenAt?fmtTime(a.lastSeenAt):"—")}</span>`,
         `<button type="button" class="row-act" data-acct="${idx}" aria-label="查看 ${esc(nm)} 的用戶明細">查看<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>`,
@@ -897,7 +912,7 @@
       </div>
       ${rows("使用狀況", [
         ["家庭圈", f.name||"–", `${n(m.count||0)} 人`],
-        ["陪伴角色", c.displayName||c.templateId||"–"],
+        ["陪伴角色", companionLabel(c)],
         // 「最後開 App」只講開機那一刻；「今天有動作」是四路訊號（開機／登入／使用／註冊）
         // 算出來的最近活動，掛在倒數旁邊才對——掛在開機時間旁邊會讀成「7/29 卻說今天」的矛盾。
         ["最後開 App", a.lastSeenAt?fmtTime(a.lastSeenAt):"還沒開過"],
@@ -1916,11 +1931,21 @@
   function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/plan_not_eligible_for_extension/.test(m))return "免費帳號沒有到期日，請先改方案"; if(/invalid_days/.test(m))return "天數格式不正確"; if(/days_out_of_range/.test(m))return "單次最多延長 365 天，請分批操作"; if(/days_required/.test(m))return "請輸入延長天數"; if(/account_deletion_requires_test_flag/.test(m))return "只有標記為測試的帳號才能從後台刪除"; if(/account_deletion_not_configured/.test(m))return "這台伺服器沒接上資料庫，不能刪帳號"; if(/account_deletion_failed/.test(m))return "刪除沒有成功，請看系統操作紀錄"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
 
   // 抓所有真資料（登入成功、貼通行碼、開頁自動連線 三處共用）
+  // 整批重讀時，每支接口該帶什麼參數。名冊要看當下「顯示測試帳號」開著沒有。
+  function endpointParams(key){
+    const base=EP_LIST[key][1]||{};
+    if(key!=="accounts") return base;
+    return Object.assign({},base,{includeTest:!!(state.tabs||{}).showTestAccounts});
+  }
+
   async function loadAll(base, token){
     const safeBase=normalizeAdminBaseUrl(base),keys=Object.keys(EP_LIST);
     state.base=safeBase; state.token=token; setBusy(true);
     try{
-      const rs=await Promise.allSettled(keys.map((k)=>postAdmin(safeBase,token,EP_LIST[k][0],EP_LIST[k][1])));
+      // 「顯示測試帳號」的開關要跟著整批重讀走。少帶這個參數，任何一次 refreshData()
+      // 都會把名冊換成隱藏測試帳號的版本——正在看的那戶會從清單裡消失，
+      // 於是改完方案／發完點數之後找不到它、彈窗停在舊數字上（2026-07-30 Edward 抓到）。
+      const rs=await Promise.allSettled(keys.map((k)=>postAdmin(safeBase,token,EP_LIST[k][0],endpointParams(k))));
       const data={},errors={};
       rs.forEach((r,i)=>{
         if(r.status==="fulfilled"){

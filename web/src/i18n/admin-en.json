@@ -250,7 +250,13 @@
     "1 點約 1 分鐘": "1 credit ≈ 1 minute",
     "這裡是": "You are on",
     "測試機": "the test server",
-    "本機預覽": "a local preview"
+    "本機預覽": "a local preview",
+    "擬真女孩 01": "Realistic Female 01",
+    "擬真男孩 01": "Realistic Male 01",
+    "動畫女孩 01": "Animated Female 01",
+    "動畫男孩 01": "Animated Male 01",
+    "動畫貓 01": "Animated Cat 01",
+    "動畫狗 01": "Animated Dog 01"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },

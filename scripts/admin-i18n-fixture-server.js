@@ -23,7 +23,16 @@ function meta(source) {
   };
 }
 
+const COMPANION_TEMPLATES = [
+  "nening-real-female",
+  "companion-real-male",
+  "munea-2d-xiaoyun",
+  "munea-2d-mimi",
+];
+let companionCursor = 0;
+
 function account(id, name, localeContext, plan, points, status) {
+  const companionTemplateId = COMPANION_TEMPLATES[companionCursor++ % COMPANION_TEMPLATES.length];
   return {
     accountId: id,
     accountName: `${name} household`,
@@ -41,7 +50,9 @@ function account(id, name, localeContext, plan, points, status) {
       timezone: localeContext.timeZone,
       regionCode: localeContext.countryCode,
     },
-    companion: { templateId: "nening-real-female", displayName: "Munea" },
+    // 每戶給不同的角色款式，並刻意帶「用戶自己取的暱稱」——後台那欄要顯示我們的角色編號、
+    // 不是這個暱稱（2026-07-30 Edward 拍板）。四款不同才驗得出對照表真的在用。
+    companion: { templateId: companionTemplateId, displayName: "用戶取的暱稱" },
     familyMembers: { count: 3, byRole: { elder: 1, child: 2 } },
     plan,
     points,
