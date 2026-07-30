@@ -1972,31 +1972,25 @@ function visitSummaryAsHTML(summary) {
 
   // 抬頭走「信紙」結構：上面一行品牌，下面一行文件標題。
   //
-  // Edward 2026-07-30 指正要有品牌 logo 與名稱——我原本判斷「醫療文件多一個
-  // 裝飾就少一分可信」而整個省掉，那是把重點擺錯了：醫生手上這張紙如果連
-  // 是哪個 App 產的都看不出來，追溯來源、家屬事後對照都沒有依據。
+  // Edward 2026-07-30 指正兩次：先是「報告沒有品牌 Logo 與名稱」，
+  // 然後是「Logo 與 Logo 字不是有圖嗎？不要自己自創，要符合品牌設計規範」。
+  // 我第一版整個省掉品牌（判斷錯了），第二版自己用向量重畫一個水滴（更錯——
+  // 品牌標記不是可以自由發揮的東西）。這一版用**真的資產**與**官網的鎖定式**。
+  //
+  // 標記：web/src/visit-summary-logo.js（現行 App Icon 的透明圓角版 base64）。
+  //   為什麼內嵌：ExportPlugin.swift 用 baseURL: nil 載這份 HTML，相對路徑會破圖。
+  // 文字標：照官網 app-site/warm.css 的 .logo 鎖定式原樣搬過來——
+  //   Poppins 700、字距 -.025em、「Mu」墨色 +「nea」主色、「沐寧」.78em 左距 .41em。
+  //   這不是我挑的排版，是既有規範，所以照抄不改。
+  //
   // 分兩行而不是塞進標題列，是因為醫生要先知道「這是什麼文件」——
   // 品牌是出處（安靜地放在信紙頭），標題才是主角。
-  //
-  // 標記是向量重畫的（水滴＋漣漪，對應 App Icon）。為什麼不內嵌 PNG：
-  // 離屏 webview 的 baseURL 是 nil 載不到外部檔案，而 AppIcon 有 421KB，
-  // 轉 base64 塞進這個字串會把 app.js 撐爆；向量在紙上任何尺寸都是實邊。
-  //
-  // **水滴實心、漣漪只有線條**——這不是偏好而是必要：品牌的橘 (#D98841) 與
-  // 青 (#3AA8A0) 相對亮度是 0.327 對 0.314，差 0.013，黑白印表機下會糊成
-  // 同一團灰。用「實心 vs 線條」讓形狀承載差異，灰階下才分得出來。
+  const brandLogo = (typeof window !== 'undefined' && window.MUNEA_VISIT_SUMMARY_LOGO) || '';
   rows.push('<header>'
-    + '<div class="brand">'
-    +   '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true">'
-    // 水滴在水面**之上**、和漣漪之間留出空隙。實心／線條的分法只在有間隔時
-    // 才有效——貼在一起的話灰階下會黏成一團（第一版就是這樣）。比例照 App Icon。
-    +     '<path d="M20 6c0 0-6.2 8.8-6.2 12.9a6.2 6.2 0 0 0 12.4 0C26.2 14.8 20 6 20 6z" fill="#D98841"/>'
-    +     '<g fill="none" stroke="#3AA8A0" stroke-linecap="round">'
-    +       '<ellipse cx="20" cy="30" rx="15" ry="4.2" stroke-width="2.2"/>'
-    +       '<ellipse cx="20" cy="30" rx="9.2" ry="2.5" stroke-width="2"/>'
-    +     '</g>'
-    +   '</svg>'
-    +   '<span class="name">沐寧 Munea</span>'
+    + '<div class="logo">'
+    // 圖載不到時只是少一個標記，文字標照樣在——紙上不會出現破圖，也不會沒有出處
+    +   (brandLogo ? '<img class="logo-mark" src="' + brandLogo + '" alt="" />' : '')
+    +   '<span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>'
     + '</div>'
     + '<div class="title"><h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>'
     +   '<span class="period">' + rptEsc(period) + '</span></div>'
@@ -2101,9 +2095,17 @@ function visitSummaryAsHTML(summary) {
     // 抬頭：標題與期間同基線，下面一條 1.5pt 實線＝這一頁唯一的品牌動作
     + 'header{border-bottom:1.5pt solid var(--teal);padding-bottom:5pt}'
     // 信紙頭：標記與品牌名，級數刻意壓小——出處不該跟文件標題爭
-    + '.brand{display:flex;align-items:center;gap:5pt;margin-bottom:3pt}'
-    + '.mark{width:15.5pt;height:15.5pt;flex:none}'
-    + '.name{font-size:9pt;font-weight:700;letter-spacing:.03em;color:var(--teal)}'
+    // 品牌鎖定式：比例照官網 .logo（標記 30px 對字級 22px、間距 11px），
+    // 換算成紙面級數後等比縮小。字型 Poppins 在離屏 webview 載不到，
+    // 退回系統無襯線——字重與字距照規範，形不走樣。
+    + '.logo{display:flex;align-items:center;gap:.5em;margin-bottom:3pt;'
+    +   'font-family:Poppins,-apple-system,"PingFang TC",sans-serif;'
+    +   'font-weight:700;font-size:10.5pt;letter-spacing:-.025em;color:var(--ink)}'
+    + '.logo-mark{width:14.3pt;height:14.3pt;flex:none;object-fit:contain}'
+    + '.logo-word{line-height:1;white-space:nowrap}'
+    + '.logo-word b{color:var(--teal);font-weight:700}'
+    + '.logo-zh{font-family:"Noto Sans TC","PingFang TC",sans-serif;font-size:.78em;'
+    +   'font-weight:700;letter-spacing:.04em;margin-left:.41em}'
     + '.title{display:flex;align-items:baseline;justify-content:space-between;gap:12pt}'
     + 'h1{font-family:"Songti TC","Noto Serif TC",Georgia,serif;font-size:18pt;font-weight:700;'
     +   'margin:0;line-height:1.2}'
