@@ -5154,8 +5154,10 @@ async function signInWithAuthProvider(provider) {
     return setAuthMessageState('inProgress', 'ok');
   }
   trackProductEvent('auth_sign_in_failed', { provider, code, fallbackFrom });
-  if (code === 'google_sign_in_cancelled') return setAuthMessageState('cancelled', 'info');
-  if (code === 'google_sign_in_in_progress') return setAuthMessageState('inProgress', 'ok');
+  // 比對結尾而非整串：Apple 與 Google 各自回 <provider>_sign_in_cancelled／_in_progress，
+  // 寫死 google_ 開頭會讓 Apple 使用者按到一半退出時看到紅字「登入失敗」——取消不是失敗。
+  if (code.endsWith('_sign_in_cancelled')) return setAuthMessageState('cancelled', 'info');
+  if (code.endsWith('_sign_in_in_progress')) return setAuthMessageState('inProgress', 'ok');
   setAuthMessageState('unavailable', 'error');
 }
 async function signInDeveloperMode() {
