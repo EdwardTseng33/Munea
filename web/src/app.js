@@ -4699,13 +4699,26 @@ function localizeAuthTerms() {
   const terms = $('#authSheet .auth-terms');
   const link = terms && terms.querySelector('a');
   if (terms && link) {
-    link.textContent = muneaT('auth.termsLink', '服務條款與隱私權政策');
+    // 使用條款與隱私權政策各自成連結：同意畫面上兩份文件都要點得到（上線後合規要求）
+    const combinedText = muneaT('auth.termsLink', '使用條款與隱私權政策');
+    const termsText = muneaT('auth.termsLinkTerms', '使用條款');
+    const privacyText = muneaT('auth.termsLinkPrivacy', '隱私權政策');
+    // 連接詞從完整句切出來：en/es 需要前後空格，而字典值不允許留白邊
+    const joiner = combinedText.startsWith(termsText) && combinedText.endsWith(privacyText)
+      ? combinedText.slice(termsText.length, combinedText.length - privacyText.length)
+      : '與';
+    link.textContent = termsText;
     link.setAttribute('href', '#');
     link.removeAttribute('target');
     link.removeAttribute('rel');
+    const privacyLink = document.createElement('a');
+    privacyLink.textContent = privacyText;
+    privacyLink.setAttribute('href', '#');
     terms.replaceChildren(
       document.createTextNode(`${muneaT('auth.termsPrefix', '繼續即代表同意')} `),
       link,
+      document.createTextNode(joiner),
+      privacyLink,
       document.createTextNode(` — ${muneaT(
         'auth.aiProcessingDisclosure',
         '語音與文字會由 Munea 的 AI 系統處理，部分服務位於境外。',
@@ -4716,9 +4729,14 @@ function localizeAuthTerms() {
       link.addEventListener('click', event => {
         event.preventDefault();
         closeAuthSheet();
-        openInAppReader('privacy');
+        openInAppReader('terms');
       });
     }
+    privacyLink.addEventListener('click', event => {
+      event.preventDefault();
+      closeAuthSheet();
+      openInAppReader('privacy');
+    });
   }
   const close = $('#authCloseBtn');
   if (close) close.setAttribute('aria-label', muneaT('accessibility.close', '關閉'));
@@ -7211,7 +7229,7 @@ async function openInAppReader(kind, options) {
   const body = $('#readerBody');
   if (!reader || !body) return;
   const titleKey = kind === 'terms' ? 'reader.termsTitle' : 'reader.privacyTitle';
-  const titleFallback = kind === 'terms' ? '服務條款' : '隱私權政策';
+  const titleFallback = kind === 'terms' ? '使用條款' : '隱私權政策';
   $('#readerTitle').textContent = muneaT(titleKey, titleFallback);
   reader.dataset.returnToConsent = options && options.returnToConsent ? '1' : '';
   setReaderStatus(body, muneaT('reader.loading', '內容載入中…'));

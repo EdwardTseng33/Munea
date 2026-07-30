@@ -83,6 +83,8 @@
   "auth.google": "Continuar con Google",
   "auth.termsPrefix": "Al continuar, aceptas los",
   "auth.termsLink": "Términos del servicio y la Política de privacidad",
+  "auth.termsLinkTerms": "Términos del servicio",
+  "auth.termsLinkPrivacy": "la Política de privacidad",
   "auth.aiProcessingDisclosure": "Tu voz y tus textos son procesados por los sistemas de IA de Munea; algunos servicios funcionan fuera de tu país.",
   "auth.developerMode": "Usar el modo de desarrollo",
   "auth.testAccount": "Iniciar sesión con una cuenta de prueba",

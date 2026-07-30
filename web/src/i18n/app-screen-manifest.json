@@ -16,6 +16,8 @@
       "auth.google",
       "auth.termsPrefix",
       "auth.termsLink",
+      "auth.termsLinkTerms",
+      "auth.termsLinkPrivacy",
       "auth.aiProcessingDisclosure",
       "auth.chatSignInRequired",
       "auth.cancelled",
