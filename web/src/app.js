@@ -7009,7 +7009,7 @@ function toggleTask(item) {
       if (_uncheckArm === item) {
         _uncheckArm = null;
         window.MuneaMedication.undoLast(loadMeds(), 'home-undo');
-        toast('好，已取消最後一筆服藥紀錄。');
+        toast(muneaT('medication.undoLastDose', '好，已取消最後一筆服藥紀錄。'));
       } else {
         _uncheckArm = item;
         toast('今天的藥已完成，再按一次才會取消最後一筆。');
@@ -7041,7 +7041,7 @@ function toggleTask(item) {
       _uncheckArm = null;
       item.classList.remove('done');
       refreshTaskProgress();
-      toast('好，先取消這筆，等等再完成也可以。');
+      toast(muneaT('medication.cancelDoseToast', '好，先取消這筆，等等再完成也可以。'));
     } else {
       _uncheckArm = item;
       toast('這件已經完成了，再按一次才會取消。');
@@ -7051,7 +7051,7 @@ function toggleTask(item) {
   }
   item.classList.add('done');
   refreshTaskProgress();
-  hint(CHEERS[item.dataset.task] || '做得很好。');
+  hint(CHEERS[item.dataset.task] || muneaT('home.taskCheerDefault', '做得很好。'));
 }
 
 // 心情圖譜 v2（六類）；之後接 /wellbeing/trend 真資料
@@ -8202,7 +8202,7 @@ function init() {
     }
     saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
     renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
-    toast('已把 ' + rm.dataset.name + ' 移出全家健康圈。');
+    toast(muneaT('familyCircle.removedToast', '已把 {name} 移出全家健康圈。', { name: rm.dataset.name }));
   });
   if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (!requireLoginForFamily('要加入家人的健康圈，先登入一下（換手機也找得回來）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
@@ -8234,10 +8234,10 @@ function init() {
       } else if (j && j.error === 'circle_full') {
         toast('這個全家健康圈人數已滿，請家人升級方案後再邀請你。');
       } else {
-        toast('找不到這組邀請碼，跟家人核對一下數字。');
+        toast(muneaT('familyCircle.inviteCodeNotFound', '找不到這組邀請碼，跟家人核對一下數字。'));
       }
     } catch (e) {
-      toast('現在連不上雲端，等網路好一點再試一次。');
+      toast(muneaT('common.cloudRetryToast', '現在連不上雲端，等網路好一點再試一次。'));
     }
     if (typeof clearBtnBusy === 'function') clearBtnBusy(btn); else if (btn) btn.textContent = '加入全家健康圈';
   });
@@ -8246,14 +8246,14 @@ function init() {
     if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.add('arm'); b.textContent = '再按一次確認退出'; setTimeout(() => { b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈'; }, 4000); return; }
     b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈';
     $('#famCircleModal').classList.remove('show');
-    toast('已退出這個健康圈。想再回來，請家人重新邀請你。');
+    toast(muneaT('familyCircle.leftToast', '已退出這個健康圈。想再回來，請家人重新邀請你。'));
   });
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   // 移除家人／封鎖入口也放在家人頁顯眼處（不用鑽進設定才找得到，Edward 7/9 UGC 審核要求）——開的是同一個管理視窗
   if ($('#famManageBtn')) $('#famManageBtn').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily('要邀請家人連上你，先登入一下（這樣家人才連得到你）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('全家健康圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily(muneaT('familyCircle.loginToInvite', '要邀請家人連上你，先登入一下（這樣家人才連得到你）'))) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('全家健康圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
   // 邀請碼：跟雲端拿真的（6 位數、72 小時內有效、綁自己的家庭編號）；連不上雲端就先給本機碼並提示
   async function ensureCloudInvite() {
     // 已有 48 小時內拿到的雲端碼就沿用（雲端碼 72 小時有效，留 24 小時緩衝）
@@ -8311,14 +8311,14 @@ function init() {
     return /^MUNEA-\d{6}$/.test(code) ? code : '';
   }
   if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
-    if (!shownInvCode()) { toast('邀請碼還沒建立好，先看畫面上寫的原因處理一下。'); return; }
+    if (!shownInvCode()) { toast(muneaT('familyCircle.inviteCodeNotReady', '邀請碼還沒建立好，先看畫面上寫的原因處理一下。')); return; }
     const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + shownInvCode() + '，在沐寧的「家人 → 加入全家健康圈」輸入，我們就連上了！';
     if (navigator.share) { navigator.share({ text }).catch(() => {}); }
     else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
   });
   if ($('#invCopyBtn')) $('#invCopyBtn').addEventListener('click', () => {
     const code = shownInvCode();
-    if (!code) { toast('邀請碼還沒建立好，先看畫面上寫的原因處理一下。'); return; }
+    if (!code) { toast(muneaT('familyCircle.inviteCodeNotReady', '邀請碼還沒建立好，先看畫面上寫的原因處理一下。')); return; }
     (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : Promise.reject()).then(
       () => toast('邀請碼複製好了，貼給家人'),
       () => toast('你的邀請碼：' + code)
@@ -9601,7 +9601,7 @@ function init() {
       act.rsvp = act.rsvp || {}; act.rsvp['你'] = b.dataset.r;
       const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.rsvp = act.rsvp; saveActs(acts);
       renderEventBody(act, box);
-      toast(b.dataset.r === 'go' ? '好，記下你要去了' : '好，記下你這次沒空');
+      toast(b.dataset.r === 'go' ? muneaT('activity.rsvpGoToast', '好，記下你要去了') : muneaT('activity.rsvpSkipToast', '好，記下你這次沒空'));
     });
   }
   // 一起運動：進度條 ＋ 每人步數（你的自動吃 Apple 健康、其他人吃帶回的數據）
@@ -10124,7 +10124,7 @@ function init() {
   if ($('#visitModal')) $('#visitModal').addEventListener('click', e => { if (e.target === $('#visitModal')) $('#visitModal').classList.remove('show'); });
   if ($('#visitSaveBtn')) $('#visitSaveBtn').addEventListener('click', () => {
     const on = document.querySelector('#visitDatePick .cal-cell.on');
-    if (!on) { toast('先選一天'); return; }
+    if (!on) { toast(muneaT('visit.pickDayFirst', '先選一天')); return; }
     const title = ((($('#visitTitle') && $('#visitTitle').value) || '').trim()) || '回診';
     const tv = ($('#visitTime') && $('#visitTime').value) || '09:00';
     const d = new Date(on.dataset.iso + 'T00:00');
@@ -10203,7 +10203,7 @@ function init() {
     const b = e.target.closest('.safety-pick'); if (!b) return;
     let sel = loadSafety(); const name = b.dataset.name;
     if (sel.includes(name)) sel = sel.filter(n => n !== name);
-    else { if (sel.length >= 3) { toast('最多選 3 位緊急聯絡人'); return; } sel.push(name); }
+    else { if (sel.length >= 3) { toast(muneaT('safety.maxContactsToast', '最多選 3 位緊急聯絡人')); return; } sel.push(name); }
     try { localStorage.setItem('munea.safetyContacts', JSON.stringify(sel)); } catch (e2) {}
     b.classList.toggle('on', sel.includes(name));
     updateSafetyCount();
@@ -10313,7 +10313,7 @@ function init() {
         const pv = $('#fbPhotoPreview'); if (pv) pv.style.display = '';
         const add = $('#fbPhotoAdd'); if (add) add.style.display = 'none';
       };
-      img.onerror = () => toast('這張圖讀不了，換一張試試');
+      img.onerror = () => toast(muneaT('feedback.photoUnreadable', '這張圖讀不了，換一張試試'));
       img.src = rd.result;
     };
     rd.readAsDataURL(file);
@@ -10332,7 +10332,7 @@ function init() {
   if ($('#fbSend')) $('#fbSend').addEventListener('click', async () => {
     const text = ($('#fbText') && $('#fbText').value.trim()) || '';
     if (_fbType === 'nps' && _fbNps === null) { toast('先拉一下分數條，選個 0～10 的分數'); return; }
-    if (_fbType !== 'nps' && !text) { toast('說一句就好，我們想聽'); return; }
+    if (_fbType !== 'nps' && !text) { toast(muneaT('feedback.needText', '說一句就好，我們想聽')); return; }
     const cat = _fbType === 'bug' ? ((document.querySelector('#fbCats .topic-chip.on') || { dataset: {} }).dataset.c || '其他') : '';
     const body = { type: _fbType, category: cat, text: text, score: _fbNps, appVersion: (window.MuneaVersion && window.MuneaVersion.current) || '', plan: (window.MMPLAN && window.MMPLAN.get()) || '' };
     if (_fbImage) body.image = _fbImage;   // 選填附圖（已壓縮）
@@ -10340,7 +10340,7 @@ function init() {
     trackProductEvent('feedback_submitted', { type: _fbType, category: cat, score: _fbNps, hasImage: !!_fbImage });
     $('#feedbackModal').classList.remove('show');
     if ($('#fbText')) $('#fbText').value = ''; _fbNps = null; fbClearPhoto(); const r = $('#npsRow'); if (r) r.querySelectorAll('.nps-btn').forEach(x => x.classList.remove('on'));
-    toast(_fbType === 'praise' ? '收到了，寧寧會很開心！' : '收到了，謝謝你——我們會認真看');
+    toast(_fbType === 'praise' ? muneaT('feedback.thanksPraise', '收到了，{companion}會很開心！', { companion: cname() }) : muneaT('feedback.thanksGeneric', '收到了，謝謝你——我們會認真看'));
   });
 
   // ===== App Store 評分彈窗：只在開心時刻、每版最多一次、負面情境絕不跳 =====
@@ -10371,7 +10371,7 @@ function init() {
     saveInterests(_intSel);
     trackProductEvent('interests_saved', { count: _intSel.length });
     renderInterestPicks();
-    toast(_intSel.length ? '記下了，這些話題我會多幫你留意新鮮事' : '好，不挑也行，想聊什麼直接說');
+    toast(_intSel.length ? muneaT('interests.savedToast', '記下了，這些話題我會多幫你留意新鮮事') : muneaT('interests.skippedToast', '好，不挑也行，想聊什麼直接說'));
     closeInterests(true);
   });
   if ($('#interestsSkip')) $('#interestsSkip').addEventListener('click', () => closeInterests(true));
@@ -10422,7 +10422,7 @@ function init() {
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 30000);
       }
-      toast('資料副本已建立，只包含你本人與你的帳務資料');
+      toast(muneaT('profile.exportReadyToast', '資料副本已建立，只包含你本人與你的帳務資料'));
     } catch (e) {
       if (e && e.name !== 'AbortError') toast('資料已建立，但分享視窗沒有完成；可以再按一次');
     }
@@ -10529,7 +10529,7 @@ function init() {
   });
   if ($('#rcPrev')) $('#rcPrev').addEventListener('click', () => {
     const min = new Date(); min.setFullYear(min.getFullYear() - 1);
-    if (new Date(rcYear, rcMonth - 1, 28) < min) { toast('紀錄保存一年，再往前就沒有了'); return; }
+    if (new Date(rcYear, rcMonth - 1, 28) < min) { toast(muneaT('report.retentionLimitToast', '紀錄保存一年，再往前就沒有了')); return; }
     rcMonth--; if (rcMonth < 0) { rcMonth = 11; rcYear--; }
     renderRangeCal();
   });
