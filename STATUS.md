@@ -1,5 +1,12 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
+> 📦 **2026-07-30 20:21 最新包版：`1.0.48 (Build 1)` 已上傳 App Store Connect＋已裝 Edward iPhone（Mac 蘇菲 · Edward「更新內容與線上環境、推新版到手機與 App Store 1.0.47」→ 追加「再包一版」）**：來源 `origin/main@0a397fdf`（through #369）、精確包版存檔點 `fde89295`；收 #363~#369，含 **Edward 7/30 晚親自實測抓到的「大聲講話被自己切斷」回音三路修**、切回前景重新確認方案與點數、就診摘要印病人姓名。IPA 60,333,303 bytes、SHA-256 `e3c6364dac8d773f3aace9ff15534b6196f0d3226afb34a16be6a39a105fab63`；Apple 20:21:34 回 `Upload succeeded`。手機回讀 `1.0.48 (1)`、啟動存活。**未選版、未送審**。
+> - 同輪先出的 `1.0.47 (Build 1)` 19:53 亦已上傳（IPA 59,118,573 bytes、SHA-256 `34a31e5b34ab337cef8dfce953b7c3014dd2ad9efba8ac2822f411533890cd62`、來源 `fc5748d7`／存檔點 `6d6197d6`），已被 1.0.48 取代、不必選用。
+> - **測試狀態**：74 支上線前檢查中 73 支綠、Archive／IPA 七道防漏全 PASS。**唯一跳過＝四語言 456 張畫面證據新鮮度**（Edward 20:0X 拍板 B 案跳過：多語言尚未對外、App 只上架台灣；重拍需 `playwright`，本機未安裝）。
+> - **順手修主線紅燈**：`test-release-settings.js` 訂閱價守門原本 grep `index.html` 中文金額，i18n 化後在乾淨 main 上長期紅燈（#364 只修了隔壁 `test-ui-contracts.js`）；已改為守 `SUB_PRICE` 數字＋`{price}` 接線。
+> - ⚠️ **未上傳 GitHub**：1.0.47／1.0.48 兩筆版號改動只在本機工作區 `/private/tmp/munea-1047-release-20260730`（分支 detached at `fde89295`）——GitHub 通行碼隨 7/22 鑰匙圈事件失效、兩份程式庫副本皆無法 push。Edward 補發後需推上並開審查單。
+> - **線上環境查核**（20:1X）：正式大腦 `1.0.44@ce407f9a`／`munea-brain-00070-qac`、正式聊聊 `1.0.44@8347bc22`／`munea-voice-00042-suy`。大腦程式與主線一致、不需重部署；聊聊落後 1 筆且該筆為後台看板修正（#363）。官網／後台網頁有小幅差異待部署（後台北極星看板全 0 修正、名冊排序與方案顯示修正）＝**Edward 未拍板前不動**。
+>
 > 🍎 **2026-07-30 15:5X 送審中（Edward 親口）**：`1.0.46 (Build 3)` **已在 App Store Connect 送審**（Edward 15:5X 告知；Build 3 由另一 session 12:15 上傳、14:53 裝機，紀錄在本機分支 `codex/app-store-1.0.46-build3-latest-20260730`＝遠端尚無此分支）。⚠️ 兩個未結項目在送審後仍成立、需追蹤：① **App E2E（真人通話）從未對 Build 3 跑過**——0 點帳號不得顯示撥號中、有點數帳號真麥克風→AI 聲畫→掛斷釋位，兩條都待驗；審核員會實測聊聊，此處若壞＝退件風險（前次 #228 即 2.1(b) 內購體驗退件）② **蘋果後台點數包價格／商品元資料**在紀錄上仍為 `unknown`（121 號④ 前置條件未見結案證據）。③ 送審後不得再改動已上傳成品；要改只能新 Build 重送。
 >
 > ⚠️ **2026-07-30 15:2X 事故（Mac 蘇菲自報）**：Edward 說「包最新版到手機」時，我沒先查另一 session 進度就拿 `origin/main` 打了臨時包裝機，**覆蓋掉 14:53 才裝好的 `1.0.46 (Build 3)`**（該版當日 12:15 已上傳 Apple）。Edward 兩次糾正後查明真相，15:3X 以另一 session 原始成品 `/private/tmp/munea-derived-device-1046-b3-20260730/.../App.app`（14:52 產出、未重打包）還原，手機回讀 `1.0.46 (3)`、啟動 30 秒穩定。根因＝**主線版號 ≠ 最新包版版號**（正式包版在未合併分支上）；已寫入 Mac 端記憶 `mac-packaging-check-first`：包版／裝機前必查 STATUS＋全分支 `git log --all`＋`/private/tmp/munea-app-store-*` 三處。
