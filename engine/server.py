@@ -424,6 +424,7 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/invoice/mark-sent",
     "/admin/enterprise/invoice/mark-paid",
     "/admin/enterprise/monthly-close",
+    "/admin/enterprise/seats/sweep",
     "/admin/enterprise/billing-settings",
     "/admin/enterprise/billing-settings/save",
 }
@@ -4367,6 +4368,26 @@ def admin_usage_summary(data=None):
     }
 
 
+def _normalize_account_enterprise(enterprise=None):
+    """名冊的「這一戶是哪一家企業的席次」。不是企業席次就回 None——
+    前端拿到 None 就完全不顯示企業字樣，不要印一個空白的公司名讓人以為抓不到資料。"""
+    if not isinstance(enterprise, dict) or not enterprise:
+        return None
+    seat_id = str(enterprise.get("seatId") or enterprise.get("seat_id") or "")
+    if not seat_id:
+        return None
+    return {
+        "seatId": seat_id,
+        "seatStatus": str(enterprise.get("seatStatus") or enterprise.get("seat_status") or ""),
+        "clientId": str(enterprise.get("clientId") or enterprise.get("client_id") or ""),
+        "clientName": str(enterprise.get("clientName") or enterprise.get("client_name") or ""),
+        "planTier": str(enterprise.get("planTier") or enterprise.get("plan_tier") or ""),
+        "contractEnd": enterprise.get("contractEnd") or enterprise.get("contract_end"),
+        "graceUntil": enterprise.get("graceUntil") or enterprise.get("grace_until"),
+        "waitingUntil": enterprise.get("waitingUntil") or enterprise.get("waiting_until"),
+    }
+
+
 def _normalize_account_owner(owner=None):
     """名冊的「這一戶是誰登入的」：登入方式／信箱／註冊與最後登入時間。
 
@@ -4433,6 +4454,9 @@ def normalize_admin_account_summary(item=None):
             "byRole": dict(sorted(roles.items())),
         },
         "isTestAccount": bool(item.get("isTestAccount") or item.get("is_test_account") or False),
+        # 企業席次資訊（沒有就是 None）。這一層逐欄重建、漏列就等於沒有——
+        # 2026-07-29 的 owner 跟 profileName 都是漏在這裡才發現（部署後打接口才看得到）。
+        "enterprise": _normalize_account_enterprise(item.get("enterprise")),
     }
 
 
@@ -4620,6 +4644,21 @@ def _account_plan_map(accounts):
     return {}
 
 
+def _account_enterprise_map(accounts):
+    """每一戶「是不是某家企業的席次、是哪一家」。查不到（含企業表還沒建）回空 dict——
+    名冊照舊顯示，不因為這個附加資訊查不到就整頁壞掉。"""
+    account_ids = [a.get("accountId") for a in accounts if a.get("accountId")]
+    if not account_ids:
+        return {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            return backend.load_account_enterprise_seats(account_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load per-account enterprise seats", e)
+    return {}
+
+
 def _account_usage_minutes_map(accounts):
     """每一戶的聊聊分鐘（總計＋本月）。查不到就回空 dict，前端顯示「—」而不是編一個 0。
 
@@ -4644,6 +4683,7 @@ def _enrich_accounts_with_activity(accounts, days=30):
     points_map = _account_points_map(accounts)
     minutes_map = _account_usage_minutes_map(accounts)
     plan_map = _account_plan_map(accounts)
+    enterprise_map = _account_enterprise_map(accounts)
     single = len(accounts) == 1
     for acct in accounts:
         aid = acct.get("accountId") or ""
@@ -4679,6 +4719,9 @@ def _enrich_accounts_with_activity(accounts, days=30):
         }
         acct["status"] = _derive_account_status(agg["lastActiveAt"], agg["eventCount"])
         acct["points"] = int(points_map.get(acct.get("accountId") or "", 0) or 0)
+        # 方案是自己買的還是企業給的——名冊光看 free/plus/pro 分不出來（2026-07-30 Edward）。
+        # 沒有企業席次就是 None，前端不顯示任何企業字樣。
+        acct["enterprise"] = enterprise_map.get(aid) or None
     return accounts
 
 
@@ -6851,6 +6894,26 @@ def enterprise_seats_grant_response(data=None):
 # ── 請款單／月結四條接口（需求單 3.6 最後一批）──
 # 薄薄一層：路由與參數驗證在這裡，計費／請款單產出／月報產出全部呼叫
 # engine/enterprise_billing.py 既有的公開函式，不重寫一份計費邏輯。
+
+def enterprise_seats_sweep_response(data=None):
+    """/admin/enterprise/seats/sweep：席次到期自動處理（2026-07-30 Edward
+    「到期自動會轉會員身分」）。三件事一起巡：合約到期的進 30 天緩衝期、緩衝期跑完的
+    釋出並收回會員資格、等待中的席次到了個人訂閱到期日換企業接手。
+
+    預設乾跑，跟 60 天閒置清除同一個規矩——沒明講 dryRun=false 就只出報告不動資料。
+    也可以用環境變數 MUNEA_ENTERPRISE_SWEEP_DRY_RUN=0 讓定時任務不必每次帶參數。
+    """
+    data = data or {}
+    if data.get("dryRun") is not None or data.get("dry_run") is not None:
+        raw = data.get("dryRun") if data.get("dryRun") is not None else data.get("dry_run")
+        dry_run = truthy(raw)
+    else:
+        env = str(os.environ.get("MUNEA_ENTERPRISE_SWEEP_DRY_RUN") or "").strip().lower()
+        dry_run = env not in {"0", "false", "no", "off"}
+    result = enterprise_seats.sweep_seat_lifecycle(
+        dry_run=dry_run, actor=str(data.get("actor") or "admin"), now=data.get("now"))
+    return {"ok": True, **result}
+
 
 def enterprise_invoices_response(data=None):
     """3.6 /admin/enterprise/invoices：請款單列表，含狀態、逾期天數、累計欠款。"""
@@ -9940,6 +10003,20 @@ class H(BaseHTTPRequestHandler):
                             "eventType": "enterprise_monthly_close_run",
                             "targetTable": "enterprise_invoices",
                             "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {}), "period": response.get("period")},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/seats/sweep":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_seats_sweep_response(data)
+                    # 真的動了資料才記稽核（乾跑只是出報告、不必留痕）。
+                    if response.get("ok") and not response.get("dryRun"):
+                        append_audit_event({
+                            "eventType": "enterprise_seat_lifecycle_sweep",
+                            "targetTable": "enterprise_seats",
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
                         })
                     self._json(response)
             elif self.path == "/admin/enterprise/billing-settings":
