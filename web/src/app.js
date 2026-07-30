@@ -8080,6 +8080,15 @@ function init() {
   }
   function applyUserAvatar() {
     let av = ''; try { av = (JSON.parse(localStorage.getItem('munea.personProfile') || '{}')).avatar || ''; } catch (e) {}
+    // 還沒上傳照片就用帳號的頭像（Google／Apple 登入時就帶回來了 · Edward 2026-07-30）——
+    // 剛登入的人不必先去填個人資料才有臉。自己上傳過的永遠優先。
+    if (!av) {
+      try {
+        const st = authState();
+        const meta = (st && st.user && st.user.user_metadata) || {};
+        if (st && st.status === 'signed-in') av = st.avatarUrl || meta.avatar_url || meta.picture || meta.photo_url || '';
+      } catch (e) {}
+    }
     document.querySelectorAll('.init-ava.p-ama').forEach(el => {
       if (av) { el.style.backgroundImage = 'url(' + av + ')'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.style.color = 'transparent'; }
       else { el.style.backgroundImage = ''; el.style.color = ''; }
@@ -8098,9 +8107,22 @@ function init() {
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
   // 7/9 正式化：不再預設示範四人家庭——圈子從「只有本人」開始，家人用邀請碼真的加進來
+  // 剛登入、還沒填個人資料的人也要有像樣的身分（Edward 2026-07-30）：
+  // 取名順序＝個人資料的名稱／稱呼 → 帳號帶回來的真名（Google／Apple 登入時就給了）→ 「我」。
+  // 刻意不用 email 前綴當名字（authDisplayName 會退到那步）——「edwardt0303」不是人願意被叫的稱呼，
+  // 印在家庭名單上更怪。填了個人資料就永遠以個人資料為準。
+  function selfAccountName() {
+    try {
+      const st = authState();
+      if (st && st.status === 'signed-in' && st.name) return String(st.name).trim();
+    } catch (e) {}
+    return '';
+  }
   function circleSelfMember() {
-    let nm = '', ini = '我';
-    try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); nm = (p.name || p.nick || '').trim(); ini = ((p.nick || nm || '我')[0]) || '我'; } catch (e) {}
+    let nm = '';
+    try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); nm = (p.name || p.nick || '').trim(); } catch (e) {}
+    if (!nm) nm = selfAccountName();
+    const ini = (nm || '我')[0] || '我';
     return { name: nm || '我', init: ini, tint: 'p-ama', self: true };
   }
   // 本人那筆的稱呼與頭像一律以「個人資料」為準（Edward 2026-07-30 在名單上看到英文「Primary user」）。
