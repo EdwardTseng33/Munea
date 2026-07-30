@@ -295,5 +295,6 @@
   "js.demoSub": "留下資料，我們一個工作天內回覆；會談包含現況盤點、即時體驗與下一步試辦建議。",
   "js.formErr": "請填妥「姓名、單位名稱、Email」再送出。",
   "js.sending": "送出中…",
-  "js.copied": "已複製 {mail}！"
+  "js.copied": "已複製 {mail}！",
+  "foot.siteLink": "沐寧 Munea App 官網 — 看看家庭端長什麼樣 →"
 }

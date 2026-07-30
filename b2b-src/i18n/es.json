@@ -295,5 +295,6 @@
   "js.demoSub": "Déjenos sus datos y le respondemos en un día laborable. La reunión incluye la situación actual, una demostración en directo y la propuesta de piloto siguiente.",
   "js.formErr": "Complete nombre, organización y email antes de enviar.",
   "js.sending": "Enviando…",
-  "js.copied": "¡{mail} copiado!"
+  "js.copied": "¡{mail} copiado!",
+  "foot.siteLink": "Sitio oficial de Munea App — mira qué reciben las familias →"
 }
