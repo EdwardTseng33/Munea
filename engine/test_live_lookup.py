@@ -26,6 +26,52 @@ class LiveLookupTest(unittest.TestCase):
         self.assertIn("不要用條列符號", request)
         self.assertIn("不要用書面體", request)
 
+    def test_request_material_follows_each_response_locale(self):
+        cases = {
+            "zh-TW": ("繁體中文材料", "問題："),
+            "en": ("clear English material", "Question:"),
+            "ja": ("日本語の材料", "質問："),
+            "es": ("información clara en español", "Pregunta:"),
+        }
+        for locale, expected in cases.items():
+            with self.subTest(locale=locale):
+                request = live_lookup.build_request(
+                    "mixed language query", "Taipei", locale,
+                )
+                for text in expected:
+                    self.assertIn(text, request)
+
+    def test_cue_wait_and_failure_copy_follow_each_response_locale(self):
+        markers = {
+            "zh-TW": ("天氣", "還在", "查詢服務"),
+            "en": ("weather", "still looking", "lookup service"),
+            "ja": ("天気", "まだ調べています", "検索サービス"),
+            "es": ("tiempo", "Todavía estoy buscando", "servicio de búsqueda"),
+        }
+        for locale, expected in markers.items():
+            with self.subTest(locale=locale):
+                cue = live_lookup.cue_phrase(
+                    live_lookup.CUE_CATEGORY_WEATHER, locale=locale,
+                )
+                wait = live_lookup.wait_phrase(locale=locale)
+                failure = live_lookup.failure_instruction("unavailable", locale)
+                self.assertIn(expected[0], cue)
+                self.assertIn(expected[1], wait)
+                self.assertIn(expected[2], failure)
+
+    def test_topic_classifier_handles_code_switching(self):
+        cases = (
+            ("Could you check the weather 明天？", "zh-TW", live_lookup.CUE_CATEGORY_WEATHER),
+            ("最新のニュース please", "en", live_lookup.CUE_CATEGORY_NEWS),
+            ("¿Está abierto este restaurante?", "ja", live_lookup.CUE_CATEGORY_STORE),
+        )
+        for query, locale, expected in cases:
+            with self.subTest(query=query, locale=locale):
+                self.assertEqual(
+                    live_lookup.classify_query_topic(query, locale),
+                    expected,
+                )
+
     def test_result_removes_urls_and_citations_and_counts_sources(self):
         grounding = types.SimpleNamespace(grounding_chunks=[object(), object()])
         candidate = types.SimpleNamespace(grounding_metadata=grounding)

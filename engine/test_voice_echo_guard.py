@@ -98,7 +98,8 @@ def main():
     check("連兩敗進冷卻", 'st["lookup_fail_streak"] >= 2' in srv and "lookup_block_until" in srv)
     check("冷卻期內不查不念", "node.lookup_suppressed" in srv)
     check("過場句30秒不重播", "node.lookup_cue_skipped" in srv)
-    check("失敗時明令說查不到", srv.count("不要再呼叫查詢工具") >= 3)
+    check("失敗時依當輪語系明令說查不到",
+          srv.count("live_lookup.failure_instruction(") >= 3)
     check("成功歸零斷路器", 'st["lookup_fail_streak"] = 0' in srv)
 
     # 契約：過場句同聲線（Phase 3 · 7/17 凌晨）
@@ -106,6 +107,10 @@ def main():
     check("配音失敗自動退回舊路", srv.count("server.tts_b64") >= 3)
     check("工具說明教她先講一句再查", "說完立刻呼叫本工具" in srv)
     check("聲線跟角色走", "_char_voice_name" in srv)
+    check("過場音語言跟當輪回覆語系走",
+          "localization.speech_language_code(locale)" in srv)
+    check("過場音快取有語系隔離",
+          "cache_key = (str(char or \"\"), normalized_locale, text)" in srv)
 
     print()
     if FAILS:

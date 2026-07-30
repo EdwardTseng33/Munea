@@ -1398,7 +1398,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
 
 
-async def search_current_information(search_client, query, location=None):
+async def search_current_information(search_client, query, location=None, locale="zh-TW"):
     """Run one bounded, grounded lookup outside the Live session.
 
     2026-07-16 事故夜實測：gemini-2.5-flash 晚間尖峰整批回 503（客滿）＝「我幫你查一下」
@@ -1436,7 +1436,7 @@ async def search_current_information(search_client, query, location=None):
             response = await asyncio.wait_for(
                 search_client.aio.models.generate_content(
                     model=model,
-                    contents=live_lookup.build_request(clean_query, location),
+                    contents=live_lookup.build_request(clean_query, location, locale),
                     config=types.GenerateContentConfig(
                         temperature=0.2,
                         tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -1529,10 +1529,11 @@ LOOKUP_WAIT_TEXT = live_lookup.WAIT_PHRASES[0]  # 舊常數保留相容：預設
 _LOOKUP_WAIT_PCM = {}
 
 
-def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT):
+def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT, locale="zh-TW"):
     """查詢超過幾秒還沒回來時的安撫短句（2026-07-25 去罐頭化：句庫輪替，
-    快取鍵改成 (char, text)——同一句只要生成過一次，之後都是命中快取。"""
-    cache_key = (str(char or ""), text)
+    2026-07-30 快取鍵加入 locale，避免同字串跨語系誤用音訊。"""
+    normalized_locale = localization.normalize_locale(locale)
+    cache_key = (str(char or ""), normalized_locale, text)
     cached = _LOOKUP_WAIT_PCM.get(cache_key)
     if cached is not None:
         return cached
@@ -1540,11 +1541,11 @@ def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT):
         cached = _LOOKUP_WAIT_PCM.get(cache_key)
         if cached is not None:
             return cached
-        same_voice = _gemini_tts_pcm(text, char)
+        same_voice = _gemini_tts_pcm(text, char, normalized_locale)
         if same_voice:
             _LOOKUP_WAIT_PCM[cache_key] = same_voice
             return same_voice
-        encoded = server.tts_b64(text, char, "zh-TW")
+        encoded = server.tts_b64(text, char, normalized_locale)
         if not encoded:
             _LOOKUP_WAIT_PCM[cache_key] = b""
             return b""
@@ -1564,12 +1565,12 @@ def _char_voice_name(char):
         return "Leda"
 
 
-def _gemini_tts_pcm(text, char):
+def _gemini_tts_pcm(text, char, locale="zh-TW"):
     """用她本人的聲線唸一句話（同 voice_name 的官方配音通道 · 7/16 實測 24kHz 原生同規格）。
     失敗回空 bytes、呼叫端自動退回舊配音——聲線一致是體驗、不是可用性前提。
-    2026-07-25：補上 language_code（比照 server.tts_b64 與主線 Live config 的 cmn-TW）——
-    這裡原本沒設，退回通用華語腔（其他註解提過的「馬來腔」／自己念成jì-jǐ），跟她在
-    電話裡本人的台灣腔對不上，長輩聽得出來過場句換了一個腔調。"""
+    2026-07-25：補上 language_code，避免繁中退回通用華語腔。
+    2026-07-30：language_code 跟當輪 responseLocale 走，讓英文、日文、西文過場音
+    不會拿 cmn-TW 合成。"""
     try:
         _, cli = _pick_client()
         r = cli.models.generate_content(
@@ -1578,7 +1579,7 @@ def _gemini_tts_pcm(text, char):
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
-                    language_code=localization.speech_language_code("zh-TW"),
+                    language_code=localization.speech_language_code(locale),
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=_char_voice_name(char)))),
             ),
@@ -1596,11 +1597,12 @@ def _gemini_tts_pcm(text, char):
         return b""
 
 
-def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
-    """Generate once per (companion, phrase) so a lookup can acknowledge before
+def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT, locale="zh-TW"):
+    """Generate once per (companion, locale, phrase) so a lookup can acknowledge before
     network I/O. 2026-07-25：句庫去罐頭化後同一個角色會有好幾句過場，快取鍵改成
-    (char, text)——只有第一次講某一句才付真的 TTS 成本，之後同一句都是快取命中。"""
-    cache_key = (str(char or ""), text)
+    (char, locale, text)——只有第一次講某語系的某一句才付真的 TTS 成本。"""
+    normalized_locale = localization.normalize_locale(locale)
+    cache_key = (str(char or ""), normalized_locale, text)
     cached = _LOOKUP_CUE_PCM.get(cache_key)
     if cached is not None:
         return cached
@@ -1608,11 +1610,11 @@ def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
         cached = _LOOKUP_CUE_PCM.get(cache_key)
         if cached is not None:
             return cached
-        same_voice = _gemini_tts_pcm(text, char)
+        same_voice = _gemini_tts_pcm(text, char, normalized_locale)
         if same_voice:
             _LOOKUP_CUE_PCM[cache_key] = same_voice
             return same_voice
-        encoded = server.tts_b64(text, char, "zh-TW")
+        encoded = server.tts_b64(text, char, normalized_locale)
         if not encoded:
             _LOOKUP_CUE_PCM[cache_key] = b""
             return b""
@@ -1624,15 +1626,16 @@ def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
         return pcm
 
 
-def _warm_lookup_cue_pool(char):
+def _warm_lookup_cue_pool(char, locale="zh-TW"):
     """在 Live handshake 空檔把這個角色所有過場／安撫句都先快取好，之後不管抽到哪一句
     都不用臨時付 TTS 成本；同一個角色第二通之後這裡全是快取命中，幾乎零成本
     （沿用原本「handshake 空檔先把固定成本付掉」的設計，只是從一句擴成整個句庫）。"""
-    for pool in live_lookup.CUE_PHRASES.values():
+    normalized_locale = localization.normalize_locale(locale)
+    for pool in live_lookup.CUE_PHRASES_BY_LOCALE[normalized_locale].values():
         for phrase in pool:
-            _lookup_cue_pcm(char, phrase)
-    for phrase in live_lookup.WAIT_PHRASES:
-        _lookup_wait_pcm(char, phrase)
+            _lookup_cue_pcm(char, phrase, normalized_locale)
+    for phrase in live_lookup.WAIT_PHRASES_BY_LOCALE[normalized_locale]:
+        _lookup_wait_pcm(char, phrase, normalized_locale)
 
 
 def _new_call_state():
@@ -1939,11 +1942,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         except Exception:
             pass
 
-    async def _send_lookup_cue(category):
+    async def _send_lookup_cue(category, locale):
         cue_started = time.monotonic()
         # 貼題輪替（2026-07-25 去罐頭化）：用這通已經查過幾次當index，
         # 同一類問題問第二次就換下一句，不會整通電話都聽到同一句。
-        phrase = live_lookup.cue_phrase(category, st["lookup_count"])
+        phrase = live_lookup.cue_phrase(
+            category, st["lookup_count"], locale=locale,
+        )
         await ws.send(json.dumps({
             "type": "caption", "who": "nening", "text": phrase,
         }, ensure_ascii=False))
@@ -1956,7 +1961,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # _lookup_cue_pcm 自己有鎖＋快取，暖機已經做完就秒回，還沒做完就它自己單獨
             # 補一句（跟原本沒有暖機時的成本一樣，不會比修改前更差）。
             pcm = await asyncio.get_running_loop().run_in_executor(
-                _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char, phrase)
+                _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char, phrase, locale)
         except Exception as exc:
             pcm = b""
             _diag(cid, "node.lookup_cue_failed", err=f"{type(exc).__name__}:{str(exc)[:60]}")
@@ -1974,7 +1979,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             await _forward_audio(LOOKUP_CUE_TAIL_PCM)
         _diag(
             cid, "node.lookup_cue_sent", audio=bool(pcm), out_bytes=len(pcm),
-            phrase=phrase, category=category,
+            phrase=phrase, category=category, locale=locale,
             latency_ms=round((time.monotonic() - cue_started) * 1000),
         )
         return bool(pcm)
@@ -1982,13 +1987,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     async def _run_live_lookup(fargs, cue_already_spoken=False):
         query = live_lookup.normalize_query((fargs or {}).get("query"))
         lookup_location = str((fargs or {}).get("location") or location or "").strip()[:80]
-        category = live_lookup.classify_query_topic(query)  # 貼題過場話用：天氣/新聞/店家景點/其他
+        active_profile = voice_locale_session.current_profile()
+        response_locale = active_profile["responseLocale"]
+        category = live_lookup.classify_query_topic(
+            query, locale=response_locale,
+        )  # 貼題過場話用：天氣/新聞/店家景點/其他
         st["lookup_count"] += 1
         st["lookup_requested_at"] = time.monotonic()
         asr_started = st.get("user_turn_started_at")
         _diag(
             cid, "node.lookup_requested", query_chars=len(query),
-            has_location=bool(lookup_location),
+            has_location=bool(lookup_location), locale=response_locale,
             asr_to_lookup_ms=(round((st["lookup_requested_at"] - asr_started) * 1000)
                               if asr_started else 0),
         )
@@ -2007,8 +2016,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             _diag(cid, "node.lookup_suppressed", cooldown_s=round(st["lookup_block_until"] - _lk_now))
             return {
                 "status": "error", "error": "lookup_unavailable",
-                "instruction": "查詢服務暫時沒有回應。請直接用一句話跟用戶說現在查不到、"
-                               "建議晚點再問，然後繼續原本的聊天。不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "unavailable", response_locale,
+                ),
             }
 
         if cue_already_spoken:
@@ -2020,7 +2030,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             _diag(cid, "node.lookup_cue_skipped", reason="recently_played")
         else:
             st["lookup_cue_at"] = _lk_now
-            cue_audio = await _send_lookup_cue(category)
+            cue_audio = await _send_lookup_cue(category, response_locale)
         network_started = time.monotonic()
         _diag(cid, "node.lookup_started", cue_audio=cue_audio, category=category)
 
@@ -2028,10 +2038,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # 查太久（備胎鏈換手時）不讓長輩對著沉默等：5.5 秒還沒回來就先安撫一句
             # （2026-07-25 去罐頭化：句庫輪替，不再固定唸同一句）
             await asyncio.sleep(5.5)
-            wait_text = live_lookup.wait_phrase(st["lookup_count"])
+            wait_text = live_lookup.wait_phrase(
+                st["lookup_count"], locale=response_locale,
+            )
             try:
                 pcm = await asyncio.get_running_loop().run_in_executor(
-                    _VOICE_CUE_EXECUTOR, _lookup_wait_pcm, char, wait_text)
+                    _VOICE_CUE_EXECUTOR, _lookup_wait_pcm, char, wait_text,
+                    response_locale)
             except Exception:
                 pcm = b""
             if not pcm:
@@ -2052,7 +2065,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         st["bg_tasks"].append(wait_cue_task)
         try:
             result = await asyncio.wait_for(
-                search_current_information(cli, query, lookup_location),
+                search_current_information(
+                    cli, query, lookup_location, locale=response_locale,
+                ),
                 timeout=float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "13")),
             )
         except asyncio.TimeoutError:
@@ -2068,8 +2083,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 st["lookup_block_until"] = time.monotonic() + 120
             return {
                 "status": "error", "error": "lookup_timeout",
-                "instruction": "查詢沒有回應。請用一句話跟用戶說現在查不到、之後再幫忙看，"
-                               "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "timeout", response_locale,
+                ),
             }
         except Exception as exc:
             st["lookup_failures"] += 1
@@ -2084,8 +2100,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 st["lookup_block_until"] = time.monotonic() + 120
             return {
                 "status": "error", "error": "lookup_failed",
-                "instruction": "查詢出了點狀況。請用一句話跟用戶說現在查不到、之後再幫忙看，"
-                               "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "failed", response_locale,
+                ),
             }
         finally:
             # 查詢一有結果（成功或失敗）就取消「還在找」安撫句——別讓它插在答案中間
@@ -2800,7 +2817,8 @@ async def handle(ws):
         # 就把 15 句配音塞進只有 2 個工人的小隊列，一顆 CPU 上跟送聲音的主線搶，一搶就是好幾分鐘。
         if live_lookup_enabled():
             lookup_cue_future = asyncio.get_running_loop().run_in_executor(
-                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char)
+                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char,
+                st["voice_locale_profile"]["sessionLocale"])
             st["lookup_cue_task"] = lookup_cue_future
         asr_context_terms = [char, name, user, location, *(topics or [])]
         # 通話延長（2026-07-25）：這通電話對 App／使用者永遠是「同一通」，但底層可能換過

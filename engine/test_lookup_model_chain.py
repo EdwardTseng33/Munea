@@ -16,6 +16,7 @@ gemini-2.5-flash 預設的「思考」耗時，不是選錯模型——關掉 th
 import os
 import types as pytypes
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("GEMINI_API_KEY", "test")
 
@@ -31,7 +32,7 @@ class _FakeModels:
         self.calls = []
 
     async def generate_content(self, model, contents, config):
-        self.calls.append({"model": model, "config": config})
+        self.calls.append({"model": model, "contents": contents, "config": config})
         outcome = self.script[model]
         if isinstance(outcome, Exception):
             raise outcome
@@ -120,6 +121,15 @@ class LookupModelChainBehaviorTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(cfg.thinking_config)
         self.assertEqual(cfg.thinking_config.thinking_budget, 0)
 
+    async def test_lookup_material_uses_requested_response_locale(self):
+        client = _FakeClient({"model-a": _fake_grounded_response()})
+        await voice.search_current_information(
+            client, "¿Qué tiempo hará mañana?", "Madrid", locale="es",
+        )
+        contents = client.aio.models.calls[0]["contents"]
+        self.assertIn("información clara en español", contents)
+        self.assertIn("Contexto de ubicación del usuario: Madrid", contents)
+
     async def test_all_models_failing_raises_last_exception(self):
         client = _FakeClient({
             "model-a": TimeoutError("model-a timed out"),
@@ -128,6 +138,68 @@ class LookupModelChainBehaviorTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await voice.search_current_information(client, "隨便問問", None)
         self.assertEqual(len(client.aio.models.calls), 2)
+
+
+class LookupLocaleAudioTests(unittest.TestCase):
+    def test_lookup_tts_uses_each_response_locale_language_code(self):
+        expected = {
+            "zh-TW": "cmn-TW",
+            "en": "en-US",
+            "ja": "ja-JP",
+            "es": "es-ES",
+        }
+
+        class FakeModels:
+            def __init__(self):
+                self.configs = []
+
+            def generate_content(self, model, contents, config):
+                self.configs.append(config)
+                inline_data = pytypes.SimpleNamespace(
+                    data=b"pcm", mime_type="audio/pcm;rate=24000",
+                )
+                part = pytypes.SimpleNamespace(inline_data=inline_data)
+                content = pytypes.SimpleNamespace(parts=[part])
+                return pytypes.SimpleNamespace(
+                    candidates=[pytypes.SimpleNamespace(content=content)],
+                )
+
+        models = FakeModels()
+        client = pytypes.SimpleNamespace(models=models)
+        with patch.object(voice, "_pick_client", return_value=(0, client)):
+            for locale, speech_code in expected.items():
+                with self.subTest(locale=locale):
+                    self.assertEqual(
+                        voice._gemini_tts_pcm("locale cue", "寧寧", locale),
+                        b"pcm",
+                    )
+                    self.assertEqual(
+                        models.configs[-1].speech_config.language_code,
+                        speech_code,
+                    )
+
+    def test_lookup_audio_cache_is_isolated_by_locale(self):
+        with (
+            patch.dict(voice._LOOKUP_CUE_PCM, {}, clear=True),
+            patch.object(
+                voice,
+                "_gemini_tts_pcm",
+                side_effect=(b"english", b"japanese"),
+            ) as synth,
+        ):
+            self.assertEqual(
+                voice._lookup_cue_pcm("寧寧", "same text", "en"),
+                b"english",
+            )
+            self.assertEqual(
+                voice._lookup_cue_pcm("寧寧", "same text", "ja"),
+                b"japanese",
+            )
+            self.assertEqual(
+                voice._lookup_cue_pcm("寧寧", "same text", "en"),
+                b"english",
+            )
+        self.assertEqual(synth.call_count, 2)
 
 
 if __name__ == "__main__":
