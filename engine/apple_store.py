@@ -24,7 +24,17 @@ PRODUCTS = {
 
 
 class AppleStoreVerificationError(RuntimeError):
-    pass
+    """驗不過的原因，外加一小包可寫進稽核的線索。
+
+    2026-07-30：正式庫累積 168 筆 `apple_account_token_mismatch`，但稽核只記了原因四個字，
+    無從判斷是「同一筆交易被重送 168 次」還是「168 次不同的購買都失敗」——診斷卡在這裡。
+    所以例外要帶上交易編號與商品代號（不帶完整帳號記號，只留前 8 碼夠對照就好）。
+    """
+
+    def __init__(self, code, detail=None):
+        super().__init__(code)
+        self.code = str(code)
+        self.detail = dict(detail or {})
 
 
 @dataclass(frozen=True)
@@ -236,7 +246,14 @@ def verify_transaction(signed_transaction, expected_auth_user_id, verifiers=None
 
     app_account_token = str(getattr(decoded, "appAccountToken", "") or "").lower()
     if app_account_token != expected_auth_user_id:
-        raise AppleStoreVerificationError("apple_account_token_mismatch")
+        raise AppleStoreVerificationError("apple_account_token_mismatch", {
+            "transactionId": str(getattr(decoded, "transactionId", "") or ""),
+            "originalTransactionId": str(getattr(decoded, "originalTransactionId", "") or ""),
+            "productId": product_id,
+            # 只留前 8 碼：足以看出「是不是同一個人」，又不會把完整帳號記號寫進稽核
+            "tokenPrefix": app_account_token[:8] or "(空的)",
+            "expectedPrefix": expected_auth_user_id[:8],
+        })
     transaction_id = str(getattr(decoded, "transactionId", "") or "")
     original_transaction_id = str(getattr(decoded, "originalTransactionId", "") or transaction_id)
     if not transaction_id.isdigit() or not original_transaction_id.isdigit():

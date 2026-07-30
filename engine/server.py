@@ -8434,7 +8434,13 @@ def apple_transaction_response(data, auth_gate=None):
         append_audit_event({
             "eventType": "apple_transaction_rejected",
             "targetTable": "credit_transactions",
-            "details": {"reason": str(exc), "actorType": "authenticated_user"},
+            # 帶上交易編號與商品代號才分得出「同一筆一直重送」與「每次購買都失敗」——
+            # 這兩件事的嚴重程度差很多，只記原因四個字看不出來（2026-07-30 查 168 筆時卡在這）
+            "details": {
+                "reason": str(exc),
+                "actorType": "authenticated_user",
+                **(getattr(exc, "detail", None) or {}),
+            },
         })
         return {"ok": False, "verified": False, "error": {"code": str(exc)}}
 
