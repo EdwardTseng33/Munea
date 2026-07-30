@@ -128,4 +128,6 @@ assert.throws(
   /unavailable in required territory ES/,
 );
 
-console.log('PASS: App Store Connect read-only snapshot is exact, complete, and fresh');
+console.log(
+  'PASS: fixture snapshot validator accepts complete current evidence and rejects stale or incomplete evidence',
+);
