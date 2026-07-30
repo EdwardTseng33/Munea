@@ -87,14 +87,24 @@ async def run_gemini(session_holder, out_track, status):
             voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Leda"))),
         output_audio_transcription=types.AudioTranscriptionConfig(),
+        # 收音節奏抄正式線（假人考場要同規格才公平——2026-07-30 第一輪考出 99 段「搶話」，
+        # 其實是引擎預設 VAD 太急、錄音每個自然停頓她都跳進來；正式線是低靈敏+800ms 靜音窗）
+        realtime_input_config=types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(
+                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_LOW,
+                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_LOW,
+                prefix_padding_ms=300,
+                silence_duration_ms=int(os.environ.get("SPIKE_SILENCE_MS", "800")),
+            ),
+            activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
+            turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
+        ),
     )
     async with client.aio.live.connect(model=MODEL, config=cfg) as session:
         session_holder["s"] = session
         status["engine"] = "connected"
-        # 開場先讓她講一句：立刻驗「她的聲音→水管→瀏覽器」這半條路通不通
-        await session.send_client_content(
-            turns=types.Content(role="user", parts=[types.Part(text="請跟我打個招呼")]),
-            turn_complete=True)
+        # （開場招呼探針已拆——假人考場要量「純聽與答」，開場招呼會跟假人錄音重疊、
+        #   把整段開頭都算成搶話。要單獨驗下行時再臨時加回。）
         while True:   # receive() 每輪結束會收尾，要外圈重進（跟正式線同款）
           got = False
           async for msg in session.receive():
@@ -160,7 +170,10 @@ async def status_endpoint(request):
 
 async def offer(request):
     params = await request.json()
-    app_status = request.app["status"]
+    # 每通獨立的量測簿（2026-07-30 假人考場轉正）：之前掛全域、上一通的
+    # 時間戳污染下一通（first_reply_ms 曾量出 10 萬毫秒的笑話）。
+    app_status = {"rtc": "idle", "engine": "connecting"}
+    request.app["status"] = app_status   # /status 永遠回「最近一通」
     pc = RTCPeerConnection()
     pcs.add(pc)
     session_holder = {}
