@@ -7055,12 +7055,12 @@ function toggleTask(item) {
 
 // 心情圖譜 v2（六類）；之後接 /wellbeing/trend 真資料
 const MOODS = {
-  happy:  { label: '開心', bg: '#FBE7D2', fg: '#C25716', face: 'M9 10h.01M15 10h.01M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5' },
-  glad:   { label: '愉快', bg: '#F6ECD4', fg: '#9A6E14', face: 'M9 10h.01M15 10h.01M8.5 14.5s1.2 1.8 3.5 1.8 3.5-1.8 3.5-1.8' },
-  calm:   { label: '平穩', bg: '#E8F2EE', fg: '#1E7169', face: 'M9 10h.01M15 10h.01M9 15h6' },
-  tired:  { label: '疲累', bg: '#EEEFEA', fg: '#5F6A61', face: 'M9 10h.01M15 10h.01M9.5 15.5h5' },
-  down:   { label: '低落', bg: '#E4EBF3', fg: '#3F5F80', face: 'M9 10h.01M15 10h.01M8.5 15.5s1.2-1.8 3.5-1.8 3.5 1.8 3.5 1.8' },
-  upset:  { label: '煩躁', bg: '#ECE1F0', fg: '#6E4488', face: 'M8.5 9.5l2 1M15.5 9.5l-2 1M8.5 15.5s1.2-1.5 3.5-1.5 3.5 1.5 3.5 1.5' },
+  happy:  { label: () => muneaT('mood.happy', '開心'), bg: '#FBE7D2', fg: '#C25716', face: 'M9 10h.01M15 10h.01M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5' },
+  glad:   { label: () => muneaT('mood.glad', '愉快'), bg: '#F6ECD4', fg: '#9A6E14', face: 'M9 10h.01M15 10h.01M8.5 14.5s1.2 1.8 3.5 1.8 3.5-1.8 3.5-1.8' },
+  calm:   { label: () => muneaT('mood.steady', '平穩'), bg: '#E8F2EE', fg: '#1E7169', face: 'M9 10h.01M15 10h.01M9 15h6' },
+  tired:  { label: () => muneaT('mood.tired', '疲累'), bg: '#EEEFEA', fg: '#5F6A61', face: 'M9 10h.01M15 10h.01M9.5 15.5h5' },
+  down:   { label: () => muneaT('mood.low', '低落'), bg: '#E4EBF3', fg: '#3F5F80', face: 'M9 10h.01M15 10h.01M8.5 15.5s1.2-1.8 3.5-1.8 3.5 1.8 3.5 1.8' },
+  upset:  { label: () => muneaT('mood.upset', '煩躁'), bg: '#ECE1F0', fg: '#6E4488', face: 'M8.5 9.5l2 1M15.5 9.5l-2 1M8.5 15.5s1.2-1.5 3.5-1.5 3.5 1.5 3.5 1.5' },
 };
 const MOOD_WEEK_DEMO = [
   { d: '五', mood: 'happy', chats: [{ m: 'happy', t: '聊到孫子回來，笑聲不斷' }] },
@@ -7174,7 +7174,7 @@ function renderMoodMonth() {
     wrap.querySelectorAll('.mm-cell').forEach(x => x.classList.remove('on'));
     c.classList.add('on');
     const box = $('#moodDayDetail');
-    if (box) box.innerHTML = '<div class="dd-date">' + (now.getMonth() + 1) + '/' + c.dataset.d + ' · ' + MOODS[c.dataset.k].label + '</div>' +
+    if (box) box.innerHTML = '<div class="dd-date">' + (now.getMonth() + 1) + '/' + c.dataset.d + ' · ' + MOODS[c.dataset.k].label() + '</div>' +
       '<div class="dd-row">' + moodFaceSvg(c.dataset.k, 19) + '<span>' + (MOOD_DAY_LINES[c.dataset.k] || '') + '</span></div>';
     $('#moodDayDetail').style.display = '';
   });
@@ -8399,7 +8399,7 @@ function init() {
       down: 'mood.low',
       upset: 'mood.angry',
     }[m.key];
-    return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label) };
+    return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label()) };
   }
   // 真數據 → 顯示格式（門檻白話跟狀態頁同一套規則）
   function vitalsToDisplay(v) {
@@ -8594,7 +8594,7 @@ function init() {
     renderMoodWeek();
     const lg = $('#moodLegend');
     if (lg && !lg.childElementCount) lg.innerHTML = Object.keys(MOODS).map(k =>
-      '<span><i style="background:' + MOODS[k].bg + '">' + moodFaceSvg(k, 14) + '</i>' + MOODS[k].label + '</span>').join('');
+      '<span><i style="background:' + MOODS[k].bg + '">' + moodFaceSvg(k, 14) + '</i>' + MOODS[k].label() + '</span>').join('');
   });
   if ($('#moodBack')) $('#moodBack').addEventListener('click', () => {
     $('#viewMood').classList.remove('active');
@@ -9387,7 +9387,14 @@ function init() {
   }
   // 心情週/月：色點跟狀態頁情緒球同一套顏色
   const FAM_MOOD_COLS = ['#F4B63A', '#2FB7A8', '#236C66', '#6D7F91', '#D98A32', '#E95B4F'];
-  const FAM_MOOD_NAME = ['開心', '愉悅', '平靜', '低落', '焦慮', '生氣'];
+  const FAM_MOOD_NAME = [
+    () => muneaT('mood.happy', '開心'),
+    () => muneaT('mood.pleasant', '愉悅'),
+    () => muneaT('mood.calm', '平靜'),
+    () => muneaT('mood.low', '低落'),
+    () => muneaT('mood.anxious', '焦慮'),
+    () => muneaT('mood.angry', '生氣'),
+  ];
   function renderFamMoodRange() {
     const box = $('#mcRangeBody'), note = $('#mcRangeNote');
     const seq = null;   // 7/9 正式化：心情軌跡只認真資料；跨裝置心情水管還沒接、一律誠實空狀態
@@ -9396,7 +9403,7 @@ function init() {
       if (box) box.innerHTML = '<div class="mood-mini">' + seq.map((mi, i) =>
         '<div class="mm-day"><div class="mm-dot" style="background:' + FAM_MOOD_COLS[mi] + '"></div><div class="mm-lab">' + FAM_WD[i] + '</div></div>').join('') + '</div>';
       const cnt = {}; seq.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
-      const main = FAM_MOOD_NAME[+Object.keys(cnt).sort((a, b) => cnt[a] - cnt[b]).pop()];
+      const main = (FAM_MOOD_NAME[+Object.keys(cnt).sort((a, b) => cnt[a] - cnt[b]).pop()] || (() => ''))();
       if (note) note.innerHTML = '過去 7 天多在<b>' + main + '</b>；顏色跟狀態頁的情緒球同一套。';
     } else {
       const cells = Array.from({ length: 30 }, (_, i) => seq[i % seq.length]);
@@ -10128,8 +10135,11 @@ function init() {
   });
   renderVisitRow();
   refreshRoutineRemindersFromBackend();
-  const FONT_STEPS = [['std', '標準', ''], ['lg', '大', '1.07'], ['xl', '特大', '1.14']];
-  const FONT_LABEL_KEYS = { std: 'font.standard', lg: 'font.large', xl: 'font.extraLarge' };
+  const FONT_STEPS = [
+    ['std', () => muneaT('font.standard', '標準'), ''],
+    ['lg', () => muneaT('font.large', '大'), '1.07'],
+    ['xl', () => muneaT('font.extraLarge', '特大'), '1.14'],
+  ];
   function applyFontScale() {
     const cur = localStorage.getItem('munea.fontScale') || 'std';
     const step = FONT_STEPS.find(x => x[0] === cur) || FONT_STEPS[0];
@@ -10139,7 +10149,7 @@ function init() {
     // 一起納入，它們本來也一直沒被縮放到。
     document.querySelectorAll('.screen .pad, .modal, .reader-page').forEach(el => { el.style.zoom = step[2]; });
     const row = $('#fontNow');
-    if (row) row.textContent = muneaT(FONT_LABEL_KEYS[step[0]], step[1]) + ' ›';
+    if (row) row.textContent = step[1]() + ' ›';
   }
   window.__muneaApplyFontScale = applyFontScale;
   function markFontOpt() {
@@ -10155,7 +10165,7 @@ function init() {
     try { localStorage.setItem('munea.fontScale', o.dataset.f); } catch (e2) {}
     applyFontScale();
     markFontOpt();
-    const nm = (FONT_STEPS.find(x => x[0] === o.dataset.f) || [])[1] || '標準';
+    const nm = ((FONT_STEPS.find(x => x[0] === o.dataset.f) || FONT_STEPS[0])[1])();
     toast('好，改成「' + nm + '」了');
   });
   applyFontScale();
