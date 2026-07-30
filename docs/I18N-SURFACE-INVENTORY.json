@@ -67,7 +67,7 @@
         "support"
       ],
       "releaseGate": "Localized legal review",
-      "baselineHanCandidates": 146
+      "baselineHanCandidates": 178
     },
     {
       "id": "operations-admin",

@@ -83,6 +83,8 @@
   "auth.google": "Googleで続ける",
   "auth.termsPrefix": "続行すると、次の内容に同意したものとみなされます：",
   "auth.termsLink": "利用規約とプライバシーポリシー",
+  "auth.termsLinkTerms": "利用規約",
+  "auth.termsLinkPrivacy": "プライバシーポリシー",
   "auth.aiProcessingDisclosure": "音声とテキストはMuneaのAIシステムで処理され、一部のサービスは国外で運用されます。",
   "auth.developerMode": "開発者モードを使用",
   "auth.testAccount": "テストアカウントでログイン",
