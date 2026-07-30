@@ -240,7 +240,14 @@
     "沒開過": "never opened",
     "還沒開過 App": "Never opened the app",
     "今天有動作": "Active today",
-    "還沒有真實用戶——有人註冊後，這裡會列出每一家。": "No real members yet — each household will appear here once someone signs up."
+    "還沒有真實用戶——有人註冊後，這裡會列出每一家。": "No real members yet — each household will appear here once someone signs up.",
+    "使用狀況": "Usage",
+    "登入紀錄": "Sign-in history",
+    "最後開 App": "Last opened app",
+    "近 30 天通話": "Calls, past 30 days",
+    "還沒開過": "Never opened",
+    "沒有紀錄": "No record",
+    "1 點約 1 分鐘": "1 credit ≈ 1 minute"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },
