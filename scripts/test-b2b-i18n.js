@@ -68,6 +68,14 @@ for (const l of LOCALES) {
   assert.doesNotMatch(html, /url\('assets\//, at('CSS 裡有相對路徑的素材'));
   assert.match(html, /href="\/call\.html"/, at('通話頁連結不是根路徑'));
 
+  // 示範影片：每個語系播自己那支（英日西的夥伴要講當地語言），而且檔案真的在
+  const suffix = l.code === 'zh' ? '' : '-' + l.code;
+  for (const who of ['realfemale', 'realmale']) {
+    const mp4 = `${who}-talk-demo${suffix}.mp4`;
+    assert.match(html, new RegExp(`/assets/${mp4.replace('.', '\\.')}`), at(`示範影片沒指到 ${mp4}`));
+    assert.ok(fs.existsSync(path.join(OUT, 'assets', mp4)), at(`示範影片檔不見了：${mp4}`));
+  }
+
   // 表單真正送出的值要維持中文——名單進 Edward 信箱時四個語系長一樣
   for (const v of ['長照機構', '健康中心', '企業人資永續', '高齡村', '策略聯盟', '其他', '機構席次', 'ESG 席次', '白牌合作']) {
     assert.match(html, new RegExp(`value="${v}"`), at(`表單送出值 ${v} 被翻譯掉了`));
