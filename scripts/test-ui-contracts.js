@@ -325,7 +325,7 @@ assert(sendIndex > rewardIndex, 'Send invitation button must remain after the fo
 assert(!/#(?:chalModal\s+)?#?startChalBtn[^\{]*\{[^\}]*position\s*:\s*(?:sticky|fixed)/s.test(css), 'Send invitation button must scroll with form content');
 assert(!app.includes("$$('#chalModal .step-btn')"), 'Challenge stepper event handlers must stay removed');
 
-const familyActivitySection = html.match(/id="newChalBtn"[\s\S]*?<div class="sec-head"><div><h2>全家狀態/)?.[0] || '';
+const familyActivitySection = html.match(/id="newChalBtn"[\s\S]*?<div class="sec-head"><div><h2[^>]*>全家狀態/)?.[0] || '';
 assert(familyActivitySection.includes('id="actEmpty"'), 'Family activities must keep a real empty-state anchor');
 assert(!familyActivitySection.includes('class="quest-card'), 'Family activities must not ship hard-coded demo cards');
 assert(!html.includes('id="demoEventDate"') && !app.includes('fixDemoEventDate'), 'Retired demo activity dates must stay removed');
@@ -373,8 +373,8 @@ companionCards.forEach(([, ava, typeKey, typeFallback, traitKey, traitFallback])
   });
 });
 assert(
-  html.includes('<small id="settingsTemplateLabel">' + zhCatalog['companion.nening.label'] + '</small>'),
-  '設定頁角色說明的預設字必須跟文案表一致（不然沒載到翻譯時又會兩邊不一樣）',
+  html.includes('<small id="settingsTemplateLabel" data-i18n="companion.nening.label">' + zhCatalog['companion.nening.label'] + '</small>'),
+  '設定頁角色說明的預設字必須跟文案表一致、且綁定同一個文案 key（不然沒載到翻譯時又會兩邊不一樣）',
 );
 
 // 健康數據誠實層：蘋果不會告訴 App 讀取被拒絕，所以「有沒有資料」只能看真的讀到什麼，
