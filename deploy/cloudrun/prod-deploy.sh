@@ -78,6 +78,7 @@ RELEASE_VERSION=$(node -p "require(process.argv[1]).version" "$TMP/package.json"
 echo "   source: ${RELEASE_COMMIT:0:12} · v${RELEASE_VERSION} · $(git log -1 --format=%s "$RELEASE_COMMIT")"
 
 TAG="prod-$(date +%m%d-%H%M%S)-${RELEASE_COMMIT:0:7}"
+VERIFY_LOCALE_MODE=""
 
 if [ "$WHAT" = "brain" ]; then
   echo "== 部署 ${SVC}（正式管家腦・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
@@ -87,11 +88,12 @@ if [ "$WHAT" = "brain" ]; then
     --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_APNS_KEY_ID=59QVAHNMZP|MUNEA_APNS_TEAM_ID=V77L5245MR|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=production|MUNEA_RELEASE_VERSION=$RELEASE_VERSION|MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|SUPABASE_URL=https://fespbkdwafueyonppzwq.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_fP-PoA531waoIOmxl8tsWg_kCeZQD0e|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
     --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
 else
+  VERIFY_LOCALE_MODE="compatibility"
   echo "== 部署 ${SVC}（正式語音橋・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
-    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=production,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=1,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-491603544409.asia-east1.run.app" \
+    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=production,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=1,MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=1,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-491603544409.asia-east1.run.app" \
     --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
     --allow-unauthenticated --quiet
 fi
@@ -103,7 +105,9 @@ echo "== 新版測試網址（帶 tag、還沒吃正式流量）=="
 DOMAIN=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format="value(status.url)" | sed 's#https://##')
 echo "  https://${TAG}---${DOMAIN}"
 echo
-bash deploy/cloudrun/canary-verify.sh "$WHAT" "$TAG" production "$RELEASE_VERSION" "$RELEASE_COMMIT"
+bash deploy/cloudrun/canary-verify.sh \
+  "$WHAT" "$TAG" production "$RELEASE_VERSION" "$RELEASE_COMMIT" \
+  "$VERIFY_LOCALE_MODE"
 echo
 echo "真人與正式 Gate 都確認 OK 後，只能用這組 exact release 證據切 production 流量："
 echo "  bash deploy/cloudrun/promote.sh production $WHAT $TAG $RELEASE_VERSION $RELEASE_COMMIT"
