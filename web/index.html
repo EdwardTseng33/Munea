@@ -47,7 +47,7 @@
       <div class="task-card" id="taskCard">
         <div class="task-item" data-task="pill">
           <span class="task-ico pill"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span>
-          <div class="task-body"><div class="task-title" id="pillTitle">吃藥提醒</div><div class="task-sub" id="pillSub">今天的藥</div></div>
+          <div class="task-body"><div class="task-title" id="pillTitle" data-i18n="medication.reminderTitle">吃藥提醒</div><div class="task-sub" id="pillSub" data-i18n="medication.todayTitle">今天的藥</div></div>
           <span class="task-time">14:00</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
@@ -60,7 +60,7 @@
         <!-- 行程卡（7/16 Edward）：揪一攤的約會/聚餐「當天」才出現在今天一起完成 -->
         <div class="task-item" data-task="event" id="eventTask" style="display:none">
           <span class="task-ico visit"><svg class="ic" viewBox="0 0 24 24"><path d="M9 20H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M17.8 21.2c1.2-1.2 3.2-3 3.2-4.6a2 2 0 0 0-3.4-1.4l-.6.6-.6-.6a2 2 0 0 0-3.4 1.4c0 1.6 2 3.4 3.2 4.6l.8.8z"/></svg></span>
-          <div class="task-body"><div class="task-title" id="eventTaskTitle">行程</div><div class="task-sub" id="eventTaskSub">今天</div></div>
+          <div class="task-body"><div class="task-title" id="eventTaskTitle" data-i18n="schedule.title">行程</div><div class="task-sub" id="eventTaskSub">今天</div></div>
           <span class="task-time coral" id="eventTaskTime">今天</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
@@ -108,7 +108,7 @@
       </div>
       <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff">今天</span>
     </div>
-    <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)">今天的數據會即時整理在這裡。 <span style="color:#8FD4CC;font-weight:700">接上 Apple 健康或跟我聊聊</span>，我就開始幫你看著。</div>
+    <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)"><span data-i18n="status.todayDataHint">今天的數據會即時整理在這裡。 </span><span style="color:#8FD4CC;font-weight:700">接上 Apple 健康或跟我聊聊</span>，我就開始幫你看著。</div>
   </div>
 
   <!-- 情緒監測（產品核心 · 互動 hero）-->
@@ -239,7 +239,7 @@
           <button class="chal-act book" id="bookBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/></svg><span data-i18n="family.journal">家庭記錄簿</span></button>
         </div>
         <!-- 空狀態＝真活動卡的插入錨點（renderActCard 靠它定位，別拆）；有卡時由 JS 隱藏 -->
-        <div class="quest-empty" id="actEmpty"><span data-i18n="family.noActivities">還沒有進行中的活動</span><br>點上面「發起活動」，揪全家走走、猜謎、投票或聚餐</div>
+        <div class="quest-empty" id="actEmpty"><span data-i18n="family.noActivities">還沒有進行中的活動</span><br><span data-i18n="activity.emptyHint">點上面「發起活動」，揪全家走走、猜謎、投票或聚餐</span></div>
 
         <div class="sec-head"><div><h2 data-i18n="legacyUi.familyAllStatus">全家狀態</h2></div></div>
         <div class="health-list" id="healthList">
@@ -284,7 +284,7 @@
           <div class="mc-obs" id="mcObs"><span>聲音</span> 有精神　<span>聊天</span> 話匣子全開</div>
           <div class="mc-topics" id="mcTopics"><i>孫子畢業</i><i>推銷電話</i></div>
           <!-- 心情週/月直接切換、不用點進去（Edward 7/9）-->
-          <div class="mc-range"><div class="trend-tabs" id="mcRangeTabs"><button class="active" data-r="week">過去7天</button><button data-r="month">過去30天</button></div></div>
+          <div class="mc-range"><div class="trend-tabs" id="mcRangeTabs"><button class="active" data-r="week" data-i18n="family.rangeWeek">過去7天</button><button data-r="month" data-i18n="family.rangeMonth">過去30天</button></div></div>
           <div class="mc-range-body" id="mcRangeBody"></div>
           <div class="trend-note" id="mcRangeNote"></div>
         </div>
@@ -300,17 +300,17 @@
         </div>
 
         <div class="react-row" id="reactRow">
-          <button class="react-btn" data-react="送上愛心"><span class="re-ic coral"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>愛心</button>
-          <button class="react-btn" data-react="畫了張塗鴉"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span>塗鴉</button>
-          <button class="react-btn" data-react="留了語音"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span>語音</button>
+          <button class="react-btn" data-react="送上愛心"><span class="re-ic coral"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span data-i18n="interaction.heart">愛心</span></button>
+          <button class="react-btn" data-react="畫了張塗鴉"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span><span data-i18n="interaction.doodle">塗鴉</span></button>
+          <button class="react-btn" data-react="留了語音"><span class="re-ic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg></span><span data-i18n="interaction.voice">語音</span></button>
         </div>
       </div>
 
       <!-- 家庭記錄簿 -->
 
       <div class="fam-view" id="viewMood">
-        <div class="nav-head"><button class="nav-back" id="moodBack" aria-label="返回" data-i18n-aria-label="accessibility.back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="moodTitle">心情</span><span></span></div>
-        <div class="trend-tabs mood-range" id="moodRange"><button class="active" data-r="week">這一週</button><button data-r="month">這個月</button></div>
+        <div class="nav-head"><button class="nav-back" id="moodBack" aria-label="返回" data-i18n-aria-label="accessibility.back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="moodTitle" data-i18n="mood.title">心情</span><span></span></div>
+        <div class="trend-tabs mood-range" id="moodRange"><button class="active" data-r="week" data-i18n="mood.rangeWeek">這一週</button><button data-r="month" data-i18n="mood.rangeMonth">這個月</button></div>
         <div class="mood-week" id="moodWeek"></div>
         <div class="mood-month" id="moodMonth" style="display:none"></div>
         <div class="mood-day-detail" id="moodDayDetail"></div>
@@ -318,8 +318,8 @@
       </div>
       <div class="fam-view" id="viewBook">
         <div class="nav-head"><button class="nav-back" id="bookBack" aria-label="回全家" data-i18n-aria-label="accessibility.backToFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" data-i18n="family.journal">家庭記錄簿</span><span></span></div>
-        <div class="book-month">範例</div>
-        <div class="book-demo-note">以下為範例——開始你們的第一個活動，就會記在這裡。</div>
+        <div class="book-month" data-i18n="common.sampleTag">範例</div>
+        <div class="book-demo-note" data-i18n="activity.sampleHint">以下為範例——開始你們的第一個活動，就會記在這裡。</div>
         <div class="book-timeline">
         <div class="book-entry">
           <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg></span>一起走路 30,000 步</div><div class="be-date">6/19</div></div>
@@ -709,7 +709,7 @@
       <p class="modal-sub">挑幾個有興趣的（最多 5 個），<span class="cname" data-i18n="companion.nening.name">寧寧</span>會幫你留意這些話題的新鮮事，聊起來更對味。之後隨時可以回來改。</p>
       <div class="topic-chips" id="interestPicks"></div>
       <button class="modal-btn" id="interestsSave" data-i18n="legacyUi.topic.save">存起來</button>
-      <button type="button" class="topic-skip" id="interestsSkip">先跳過，直接開始聊</button>
+      <button type="button" class="topic-skip" id="interestsSkip" data-i18n="interests.skip">先跳過，直接開始聊</button>
     </div>
   </div>
 
@@ -742,7 +742,7 @@
       <button class="auth-close" id="companionCloseBtn" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2>陪伴角色</h2>
       <p class="modal-sub">先選角色、再取名字，個性、外觀、聲音由角色決定，名字由你決定。<br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換角色不會忘記你們聊過的事</b>，記憶跟著你，不跟角色走。</p>
-      <label class="companion-name-label" for="companionNameInput">幫角色取名稱</label>
+      <label class="companion-name-label" for="companionNameInput" data-i18n="companion.nameLabel">幫角色取名稱</label>
       <input class="companion-name-input" id="companionNameInput" value="寧寧" data-i18n-value="companion.nening.name" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿福" data-i18n-placeholder="companion.namePlaceholder" />
       <div class="field-label" data-i18n="legacyUi.companionRole">選擇互動 AI 角色</div>
       <div class="avatar-pick" id="avatarPick">
@@ -806,7 +806,7 @@
       <button class="auth-close" id="dataClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="data.title">我的資料</h2>
       <p class="modal-sub" data-i18n="data.description">對話摘要、提醒與紀錄都是你的：登入後可以立即建立只屬於你的 JSON 資料副本，或永久刪除帳號與雲端資料。若有 Apple 訂閱，刪除帳號不會自動取消續訂，請先到「訂閱與點數」管理。</p>
-      <button class="modal-btn" id="dataExportBtn">匯出一份給我</button>
+      <button class="modal-btn" id="dataExportBtn" data-i18n="report.exportButton">匯出一份給我</button>
       <button class="modal-btn danger" id="dataDeleteBtn" style="margin-top:10px" data-i18n="data.delete">刪除我的資料</button>
       <p class="modal-sub" style="margin-top:12px" data-i18n="data.policyHint">詳細規則在「隱私權政策」頁（設定裡可開）。</p>
     </div>
@@ -840,7 +840,7 @@
           <span class="pf-hint" data-i18n="legacyUi.profileLocationHint">選到「區」——天氣、附近餐廳與在地話題會更準</span></div>
       </div>
       <p class="pf-first-run-disclosure" id="pfFirstRunDisclosure" hidden>你填的稱呼、出生年月、所在縣市會安全同步到雲端（主機在國外），換手機登入也找得到；隨時能在這裡修改或清空。照片只留在這支手機、不會上傳。</p>
-      <button class="modal-btn" id="pfSaveBtn" style="margin-top:14px">存好</button>
+      <button class="modal-btn" id="pfSaveBtn" style="margin-top:14px" data-i18n="profile.saveButton">存好</button>
       <button class="modal-btn quiet" id="pfSkipBtn" type="button" style="margin-top:8px" hidden data-i18n="profile.skip">先跳過</button>
     </div>
   </div>
@@ -1058,7 +1058,7 @@
         </div>
         <div class="rc-week"><i>一</i><i>二</i><i>三</i><i>四</i><i>五</i><i>六</i><i>日</i></div>
         <div class="rc-grid" id="rcGrid"></div>
-        <p class="rc-hint" id="rcHint">點開始那天，再點結束那天</p>
+        <p class="rc-hint" id="rcHint" data-i18n="visit.rangePickHint">點開始那天，再點結束那天</p>
         <div class="rpt-card" id="rcResult" style="display:none"></div>
       </div>
     </div>
@@ -1094,17 +1094,17 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span id="medDueSay">吃藥時間到囉</span></div>
+      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span id="medDueSay" data-i18n="medicationReminder.dueTitle">吃藥時間到囉</span></div>
       <div class="med-pill-card">
         <div class="mpc-row">
           <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
-          <div><div class="mpc-name" id="medDueName">脈優</div><div class="mpc-desc" id="medDueDesc">照你設定的提醒 · 配溫開水就可以</div></div>
+          <div><div class="mpc-name" id="medDueName">脈優</div><div class="mpc-desc" id="medDueDesc" data-i18n="medicationReminder.instructionHint">照你設定的提醒 · 配溫開水就可以</div></div>
         </div>
         <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>已連續服藥 6 天，做得很好！</div>
       </div>
       <div class="med-actions" style="margin-top:14px">
         <button class="taken" id="medTaken"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="medicationReminder.taken">我吃過了</span></button>
-        <button class="snooze" id="medSnooze">等 10 分鐘<br>再提醒</button>
+        <button class="snooze" id="medSnooze"><span data-i18n="medicationReminder.snoozeTenMinutes">等 10 分鐘</span><br><span data-i18n="medicationReminder.snoozeButton">再提醒</span></button>
       </div>
     </div>
   </div>
@@ -1113,15 +1113,15 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <h2>用藥提醒</h2>
-      <p class="modal-sub">設定好，到時間會用系統通知提醒你；開啟 App 後可確認是否已服用。<br><span class="cname" data-i18n="companion.nening.name">寧寧</span>只協助提醒，不是藥師，藥怎麼吃請聽醫生的。</p>
+      <p class="modal-sub"><span data-i18n="medication.reminderSetupHint">設定好，到時間會用系統通知提醒你；開啟 App 後可確認是否已服用。</span><br><span class="cname" data-i18n="companion.nening.name">寧寧</span><span data-i18n="medication.reminderDisclaimer">只協助提醒，不是藥師，藥怎麼吃請聽醫生的。</span></p>
       <div id="medSlots"></div>
       <div class="field-label sect-new" data-i18n="medicationManager.addMedicine">新增一種藥</div>
       <input class="chal-input" id="medName" placeholder="藥名照藥袋抄（例：脈優）" data-i18n-placeholder="medication.namePlaceholder" />
       <div class="med-photo-row">
         <span class="med-photo-box" id="medPhotoBox"><svg class="ic" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
         <div class="med-photo-side">
-          <button class="med-photo-btn" id="medPhotoBtn" type="button">加藥物照片</button>
-          <span class="med-photo-hint">選填 · 幫你記得藥長什麼樣</span>
+          <button class="med-photo-btn" id="medPhotoBtn" type="button" data-i18n="medication.addPhotoButton">加藥物照片</button>
+          <span class="med-photo-hint" data-i18n="medication.addPhotoHint">選填 · 幫你記得藥長什麼樣</span>
         </div>
         <input type="file" id="medPhotoFile" accept="image/*" hidden />
       </div>
