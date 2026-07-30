@@ -1970,10 +1970,37 @@ function visitSummaryAsHTML(summary) {
   const sec = label => '<h2>' + rptEsc(label) + '</h2>';
   const rows = [];
 
-  // 抬頭：標題與期間同一條基線，下面一條實線＝這一頁唯一的品牌動作。
-  // 刻意只有一條線，不加色塊不加 logo——醫療文件多一個裝飾就少一分可信。
-  rows.push('<header><h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>'
-    + '<span class="period">' + rptEsc(period) + '</span></header>');
+  // 抬頭走「信紙」結構：上面一行品牌，下面一行文件標題。
+  //
+  // Edward 2026-07-30 指正要有品牌 logo 與名稱——我原本判斷「醫療文件多一個
+  // 裝飾就少一分可信」而整個省掉，那是把重點擺錯了：醫生手上這張紙如果連
+  // 是哪個 App 產的都看不出來，追溯來源、家屬事後對照都沒有依據。
+  // 分兩行而不是塞進標題列，是因為醫生要先知道「這是什麼文件」——
+  // 品牌是出處（安靜地放在信紙頭），標題才是主角。
+  //
+  // 標記是向量重畫的（水滴＋漣漪，對應 App Icon）。為什麼不內嵌 PNG：
+  // 離屏 webview 的 baseURL 是 nil 載不到外部檔案，而 AppIcon 有 421KB，
+  // 轉 base64 塞進這個字串會把 app.js 撐爆；向量在紙上任何尺寸都是實邊。
+  //
+  // **水滴實心、漣漪只有線條**——這不是偏好而是必要：品牌的橘 (#D98841) 與
+  // 青 (#3AA8A0) 相對亮度是 0.327 對 0.314，差 0.013，黑白印表機下會糊成
+  // 同一團灰。用「實心 vs 線條」讓形狀承載差異，灰階下才分得出來。
+  rows.push('<header>'
+    + '<div class="brand">'
+    +   '<svg class="mark" viewBox="0 0 40 40" aria-hidden="true">'
+    // 水滴在水面**之上**、和漣漪之間留出空隙。實心／線條的分法只在有間隔時
+    // 才有效——貼在一起的話灰階下會黏成一團（第一版就是這樣）。比例照 App Icon。
+    +     '<path d="M20 6c0 0-6.2 8.8-6.2 12.9a6.2 6.2 0 0 0 12.4 0C26.2 14.8 20 6 20 6z" fill="#D98841"/>'
+    +     '<g fill="none" stroke="#3AA8A0" stroke-linecap="round">'
+    +       '<ellipse cx="20" cy="30" rx="15" ry="4.2" stroke-width="2.2"/>'
+    +       '<ellipse cx="20" cy="30" rx="9.2" ry="2.5" stroke-width="2"/>'
+    +     '</g>'
+    +   '</svg>'
+    +   '<span class="name">沐寧 Munea</span>'
+    + '</div>'
+    + '<div class="title"><h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>'
+    +   '<span class="period">' + rptEsc(period) + '</span></div>'
+    + '</header>');
 
   // ① 想問醫生＝這張紙存在的理由，所以是唯一有底色、字也最大的一塊
   if (qs.length) {
@@ -2049,8 +2076,11 @@ function visitSummaryAsHTML(summary) {
         { names: visitPartialNames(summary.partial) })) + '</p>');
   }
 
-  rows.push('<footer>' + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷',
-    { companion })) + '</footer>');
+  // 頁尾也帶品牌名——這張紙被影印、抬頭被裁掉的時候，出處還在。
+  // 品牌名是專有名詞，不進 i18n 目錄（不該被翻譯），所以另外接在前面。
+  rows.push('<footer><b>沐寧 Munea</b> · '
+    + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion }))
+    + '</footer>');
 
   // lang 跟著 App 語系走：離屏 webview 的斷行與字型選擇吃這個屬性，
   // 寫死 zh-Hant 會讓日文那份用中文字形排版。
@@ -2069,8 +2099,12 @@ function visitSummaryAsHTML(summary) {
     +   'font-variant-numeric:tabular-nums}'
 
     // 抬頭：標題與期間同基線，下面一條 1.5pt 實線＝這一頁唯一的品牌動作
-    + 'header{display:flex;align-items:baseline;justify-content:space-between;gap:12pt;'
-    +   'border-bottom:1.5pt solid var(--teal);padding-bottom:5pt}'
+    + 'header{border-bottom:1.5pt solid var(--teal);padding-bottom:5pt}'
+    // 信紙頭：標記與品牌名，級數刻意壓小——出處不該跟文件標題爭
+    + '.brand{display:flex;align-items:center;gap:5pt;margin-bottom:3pt}'
+    + '.mark{width:15.5pt;height:15.5pt;flex:none}'
+    + '.name{font-size:9pt;font-weight:700;letter-spacing:.03em;color:var(--teal)}'
+    + '.title{display:flex;align-items:baseline;justify-content:space-between;gap:12pt}'
     + 'h1{font-family:"Songti TC","Noto Serif TC",Georgia,serif;font-size:18pt;font-weight:700;'
     +   'margin:0;line-height:1.2}'
     + '.period{font-size:9pt;color:var(--muted);white-space:nowrap}'
@@ -2112,6 +2146,7 @@ function visitSummaryAsHTML(summary) {
 
     + 'footer{margin-top:18pt;padding-top:5pt;border-top:.5pt solid var(--line);'
     +   'font-size:8.5pt;color:var(--muted);text-align:center}'
+    + 'footer b{color:var(--teal);font-weight:700}'
     + '</style></head><body>' + rows.join('') + '</body></html>';
 }
 
