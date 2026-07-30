@@ -39,9 +39,9 @@ class LoadAccountPlansTests(unittest.TestCase):
         """訂閱帳是流水，要取每戶最新一筆——舊的 free 不能蓋掉新的 pro。"""
         adapter = make_adapter()
         rows = [
-            {"account_id": A1, "active_plan": "pro", "status": "active", "created_at": "2026-07-30T10:04:59Z"},
-            {"account_id": A1, "active_plan": "free", "status": "inactive", "created_at": "2026-07-15T00:00:00Z"},
-            {"account_id": A2, "active_plan": "plus", "status": "active", "created_at": "2026-07-20T00:00:00Z"},
+            {"account_id": A1, "active_plan": "pro", "status": "active", "created_at": "2026-07-30T10:04:59Z", "updated_at": "2026-07-30T10:04:59Z"},
+            {"account_id": A1, "active_plan": "free", "status": "inactive", "created_at": "2026-07-15T00:00:00Z", "updated_at": "2026-07-15T00:00:00Z"},
+            {"account_id": A2, "active_plan": "plus", "status": "active", "created_at": "2026-07-20T00:00:00Z", "updated_at": "2026-07-20T00:00:00Z"},
         ]
         with patch.object(adapter, "_select", return_value=rows):
             plans = adapter.load_account_plans([A1, A2, A3])
@@ -53,8 +53,8 @@ class LoadAccountPlansTests(unittest.TestCase):
         """過期／降級的 pro 不該還掛著 Pro。"""
         adapter = make_adapter()
         rows = [
-            {"account_id": A1, "active_plan": "pro", "status": "expired", "created_at": "2026-07-30T00:00:00Z"},
-            {"account_id": A2, "active_plan": "plus", "status": "inactive", "created_at": "2026-07-30T00:00:00Z"},
+            {"account_id": A1, "active_plan": "pro", "status": "expired", "created_at": "2026-07-30T00:00:00Z", "updated_at": "2026-07-30T00:00:00Z"},
+            {"account_id": A2, "active_plan": "plus", "status": "inactive", "created_at": "2026-07-30T00:00:00Z", "updated_at": "2026-07-30T00:00:00Z"},
         ]
         with patch.object(adapter, "_select", return_value=rows):
             plans = adapter.load_account_plans([A1, A2])
@@ -73,12 +73,14 @@ class LoadAccountPlansTests(unittest.TestCase):
         calls = []
 
         def fake_select(table, query=None):
-            calls.append(table)
+            calls.append((table, (query or {}).get("order")))
             return []
 
         with patch.object(adapter, "_select", side_effect=fake_select):
             adapter.load_account_plans([A1, A2, A3])
-        self.assertEqual(calls, ["subscription_ledger"], "只准打一次，不要逐戶查")
+        self.assertEqual(len(calls), 1, "只准打一次，不要逐戶查")
+        self.assertEqual(calls[0][0], "subscription_ledger")
+        self.assertEqual(calls[0][1], "updated_at.desc", "排序要跟 App 讀訂閱帳那條路一致")
 
     def test_no_ids_skips_the_query(self):
         adapter = make_adapter()

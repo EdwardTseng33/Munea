@@ -2099,8 +2099,10 @@ class SupabaseAdapter:
             "subscription_ledger",
             {
                 "account_id": f"in.({','.join(ids)})",
-                "select": "account_id,active_plan,status,created_at",
-                "order": "created_at.desc",
+                "select": "account_id,active_plan,status,created_at,updated_at",
+                # 排序跟 App 那條路（load_billing_store）用同一個欄位。差一個欄位就可能各取到
+                # 不同的紀錄、後台與手機各說各話——顯示與執行連排序都要一致。
+                "order": "updated_at.desc",
                 "limit": str(int(limit)),
             },
         ) or []
