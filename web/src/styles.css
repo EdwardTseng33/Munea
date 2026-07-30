@@ -2083,6 +2083,8 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .ppk.sel.pro .ppk-price { color: #8A6410; }
 .ppk-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .ppk-feats li { position: relative; padding-left: 22px; font-size: 13.5px; line-height: 1.4; color: var(--ink); word-break: keep-all; }
+/* keep-all 禁止 CJK 字中換行——中文句短沒事，日文長句在特大字級會把方案卡撐寬 29px（證據閘 ja/xl 抓到）。日文放行自然換行。 */
+:is(html:lang(ja)) .ppk-feats li { word-break: normal; }
 .ppk-save { display: block; font-size: 11.5px; font-weight: 800; color: #C79A3B; margin-top: 3px; }
 .ppk-feats li b { font-weight: 800; }
 .ppk-feats li::before { content: ""; position: absolute; left: 0; top: 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232E8A83' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/9px no-repeat; }
