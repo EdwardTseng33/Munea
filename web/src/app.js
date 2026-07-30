@@ -8103,7 +8103,18 @@ function init() {
     try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); nm = (p.name || p.nick || '').trim(); ini = ((p.nick || nm || '我')[0]) || '我'; } catch (e) {}
     return { name: nm || '我', init: ini, tint: 'p-ama', self: true };
   }
-  function loadCircle() { try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); return Array.isArray(v) && v.length ? v : [circleSelfMember()]; } catch (e) { return [circleSelfMember()]; } }
+  // 本人那筆的稱呼與頭像一律以「個人資料」為準（Edward 2026-07-30 在名單上看到英文「Primary user」）。
+  // 為什麼要覆寫：雲端同步回來的家庭圈成員，後端對本人的預設名是英文 "Primary user"
+  //（engine/server.py 與 supabase_adapter.py 的 displayName 兜底值），會蓋掉使用者自己填的稱呼，
+  // 連頭像首字母都跟著變成「P」。本人是誰只有他自己說得準，不該讓後端的兜底值改寫。
+  // tint 也一起釘回 p-ama——照片是靠 applyUserAvatar() 找 .init-ava.p-ama 套上去的，換了色就套不到。
+  function loadCircle() {
+    let arr = [];
+    try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); if (Array.isArray(v)) arr = v; } catch (e) {}
+    if (!arr.length) return [circleSelfMember()];
+    const me = circleSelfMember();
+    return arr.map(m => (m && m.self) ? Object.assign({}, m, { name: me.name, init: me.init, tint: me.tint }) : m);
+  }
   function saveCircle(a2) {
     try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {}
     syncPush('circle', a2.map(m => ({ name: m.name, personId: m.personId, relationship: m.relationship, init: m.init, tint: m.tint })));   // 本人標記不上雲；personId 保留給指定收件人的傳話
@@ -8120,6 +8131,11 @@ function init() {
       return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
+    // 「退出這個健康圈」只在圈裡真的還有別人時才給（Edward 2026-07-30）：
+    // 圈裡只剩自己一個人的時候，沒有圈可以退——按下去只會把自己從自己的名單移除，
+    // 對使用者來說就是「按了沒事發生」。這種按鍵擺在那裡只會讓人以為壞掉。
+    const leave = $('#fcLeaveBtn');
+    if (leave) leave.hidden = members.filter(m => !m.self).length === 0;
     const inv = $('#fcInviteBtn');
     if (inv) {
       const full = members.length >= limit;
