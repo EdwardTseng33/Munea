@@ -87,6 +87,8 @@ function applyNonUserFacingReview(relativePath, candidates, review = loadNonUser
         'backend-template-identity',
         'legacy-brand-migration-sentinel',
         'legacy-storage-identity',
+        'debug-panel-diagnostic',
+        'developer-fixture',
       ]
         .includes(entry.reasonCode)
     ) {

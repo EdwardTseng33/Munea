@@ -1,128 +1,425 @@
 {
-  "schema": "munea.i18n-non-user-facing-review.v1",
-  "policy": {
-    "exactFileTextKindAndOccurrenceMatchRequired": true,
-    "newOccurrencesFailClosed": true,
-    "userVisibleFallbacksForbidden": true,
-    "evidenceFileRequired": true
+ "schema": "munea.i18n-non-user-facing-review.v1",
+ "policy": {
+  "exactFileTextKindAndOccurrenceMatchRequired": true,
+  "newOccurrencesFailClosed": true,
+  "userVisibleFallbacksForbidden": true,
+  "evidenceFileRequired": true
+ },
+ "entries": [
+  {
+   "id": "companion-backend-nening",
+   "path": "web/src/companion-profile.js",
+   "text": "寧寧",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "backend-template-identity",
+   "evidence": "scripts/test-companion-profile-localization.js"
   },
-  "entries": [
-    {
-      "id": "companion-backend-nening",
-      "path": "web/src/companion-profile.js",
-      "text": "寧寧",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "backend-template-identity",
-      "evidence": "scripts/test-companion-profile-localization.js"
-    },
-    {
-      "id": "companion-backend-ahong",
-      "path": "web/src/companion-profile.js",
-      "text": "阿宏",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "backend-template-identity",
-      "evidence": "scripts/test-companion-profile-localization.js"
-    },
-    {
-      "id": "companion-backend-xiaoyun",
-      "path": "web/src/companion-profile.js",
-      "text": "小昀",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "backend-template-identity",
-      "evidence": "scripts/test-companion-profile-localization.js"
-    },
-    {
-      "id": "companion-backend-ayuan",
-      "path": "web/src/companion-profile.js",
-      "text": "阿原",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "backend-template-identity",
-      "evidence": "scripts/test-companion-profile-localization.js"
-    },
-    {
-      "id": "companion-backend-mimi",
-      "path": "web/src/companion-profile.js",
-      "text": "咪咪",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "backend-template-identity",
-      "evidence": "scripts/test-companion-profile-localization.js"
-    },
-    {
-      "id": "companion-backend-wangcai",
-      "path": "web/src/companion-profile.js",
-      "text": "旺財",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "backend-template-identity",
-      "evidence": "scripts/test-companion-profile-localization.js"
-    },
-    {
-      "id": "companion-legacy-brand-sentinel",
-      "path": "web/src/companion-profile.js",
-      "text": "沐寧",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "legacy-brand-migration-sentinel",
-      "evidence": "scripts/test-companion-profile-localization.js"
-    },
-    {
-      "id": "medication-legacy-generic-name",
-      "path": "web/src/medication.js",
-      "text": "藥",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-medication-service.js"
-    },
-    {
-      "id": "notify-legacy-slot-after-breakfast",
-      "path": "web/src/notify.js",
-      "text": "早餐後",
-      "kind": "string",
-      "expectedOccurrences": 2,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-notification-platform.js"
-    },
-    {
-      "id": "notify-legacy-slot-after-lunch",
-      "path": "web/src/notify.js",
-      "text": "午餐後",
-      "kind": "string",
-      "expectedOccurrences": 2,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-notification-platform.js"
-    },
-    {
-      "id": "notify-legacy-slot-after-dinner",
-      "path": "web/src/notify.js",
-      "text": "晚餐後",
-      "kind": "string",
-      "expectedOccurrences": 2,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-notification-platform.js"
-    },
-    {
-      "id": "notify-legacy-slot-bedtime",
-      "path": "web/src/notify.js",
-      "text": "睡前",
-      "kind": "string",
-      "expectedOccurrences": 2,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-notification-platform.js"
-    },
-    {
-      "id": "notify-legacy-generic-medication-name",
-      "path": "web/src/notify.js",
-      "text": "藥",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-notification-platform.js"
-    }
-  ]
+  {
+   "id": "companion-backend-ahong",
+   "path": "web/src/companion-profile.js",
+   "text": "阿宏",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "backend-template-identity",
+   "evidence": "scripts/test-companion-profile-localization.js"
+  },
+  {
+   "id": "companion-backend-xiaoyun",
+   "path": "web/src/companion-profile.js",
+   "text": "小昀",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "backend-template-identity",
+   "evidence": "scripts/test-companion-profile-localization.js"
+  },
+  {
+   "id": "companion-backend-ayuan",
+   "path": "web/src/companion-profile.js",
+   "text": "阿原",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "backend-template-identity",
+   "evidence": "scripts/test-companion-profile-localization.js"
+  },
+  {
+   "id": "companion-backend-mimi",
+   "path": "web/src/companion-profile.js",
+   "text": "咪咪",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "backend-template-identity",
+   "evidence": "scripts/test-companion-profile-localization.js"
+  },
+  {
+   "id": "companion-backend-wangcai",
+   "path": "web/src/companion-profile.js",
+   "text": "旺財",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "backend-template-identity",
+   "evidence": "scripts/test-companion-profile-localization.js"
+  },
+  {
+   "id": "companion-legacy-brand-sentinel",
+   "path": "web/src/companion-profile.js",
+   "text": "沐寧",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "legacy-brand-migration-sentinel",
+   "evidence": "scripts/test-companion-profile-localization.js"
+  },
+  {
+   "id": "medication-legacy-generic-name",
+   "path": "web/src/medication.js",
+   "text": "藥",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "legacy-storage-identity",
+   "evidence": "scripts/test-medication-service.js"
+  },
+  {
+   "id": "notify-legacy-slot-after-breakfast",
+   "path": "web/src/notify.js",
+   "text": "早餐後",
+   "kind": "string",
+   "expectedOccurrences": 2,
+   "reasonCode": "legacy-storage-identity",
+   "evidence": "scripts/test-notification-platform.js"
+  },
+  {
+   "id": "notify-legacy-slot-after-lunch",
+   "path": "web/src/notify.js",
+   "text": "午餐後",
+   "kind": "string",
+   "expectedOccurrences": 2,
+   "reasonCode": "legacy-storage-identity",
+   "evidence": "scripts/test-notification-platform.js"
+  },
+  {
+   "id": "notify-legacy-slot-after-dinner",
+   "path": "web/src/notify.js",
+   "text": "晚餐後",
+   "kind": "string",
+   "expectedOccurrences": 2,
+   "reasonCode": "legacy-storage-identity",
+   "evidence": "scripts/test-notification-platform.js"
+  },
+  {
+   "id": "notify-legacy-slot-bedtime",
+   "path": "web/src/notify.js",
+   "text": "睡前",
+   "kind": "string",
+   "expectedOccurrences": 2,
+   "reasonCode": "legacy-storage-identity",
+   "evidence": "scripts/test-notification-platform.js"
+  },
+  {
+   "id": "notify-legacy-generic-medication-name",
+   "path": "web/src/notify.js",
+   "text": "藥",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "legacy-storage-identity",
+   "evidence": "scripts/test-notification-platform.js"
+  },
+  {
+   "id": "fixture-0407494dcb",
+   "path": "web/src/app.js",
+   "text": "<b>媽媽</b>要我提醒你：週末回家一起吃飯",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-0cc946bdc5",
+   "path": "web/src/app.js",
+   "text": "影音播放:成功",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-1426014722",
+   "path": "web/src/app.js",
+   "text": "喚醒顯卡中…",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-1a836ae14f",
+   "path": "web/src/app.js",
+   "text": "影像+聲音上行都就緒",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-1a912efc48",
+   "path": "web/src/app.js",
+   "text": "聲音到了（同線）",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-259b1edd97",
+   "path": "web/src/app.js",
+   "text": "姊",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-28776f46c1",
+   "path": "web/src/app.js",
+   "text": "<b>姊姊</b>傳了一個愛心，晚點想和你聊聊",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-2c22c1bb74",
+   "path": "web/src/app.js",
+   "text": "台北市中山區",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-326b84d3ef",
+   "path": "web/src/app.js",
+   "text": "按下開始通話",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-39e6e9831c",
+   "path": "web/src/app.js",
+   "text": "媽",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-3dac97d419",
+   "path": "web/src/app.js",
+   "text": "線路",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-3f565f9f1b",
+   "path": "web/src/app.js",
+   "text": "1990 年 3 月",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-531af8532f",
+   "path": "web/src/app.js",
+   "text": "媽媽",
+   "kind": "string",
+   "expectedOccurrences": 3,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-65474fff3e",
+   "path": "web/src/app.js",
+   "text": "<b>爸爸</b>今天走了 7,200 步，狀態很穩",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-67ef065dff",
+   "path": "web/src/app.js",
+   "text": "·備援",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-7280c8c644",
+   "path": "web/src/app.js",
+   "text": "(無stats)",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-7b53a04810",
+   "path": "web/src/app.js",
+   "text": "連線中（中繼",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-86c7d643c3",
+   "path": "web/src/app.js",
+   "text": "流量=",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-ae1675f743",
+   "path": "web/src/app.js",
+   "text": "3秒查:量表=",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-ba5ad3bfac",
+   "path": "web/src/app.js",
+   "text": "${activityEnd.getMonth() + 1}/${activityEnd.getDate()} 20:00 截止",
+   "kind": "template-string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-c38d06ffe0",
+   "path": "web/src/app.js",
+   "text": "影像軌到了，等待第一格",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-c591fabc9e",
+   "path": "web/src/app.js",
+   "text": "聲音上行就緒",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-d29c9b30ef",
+   "path": "web/src/app.js",
+   "text": "姊姊",
+   "kind": "string",
+   "expectedOccurrences": 3,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-d45ce71dd3",
+   "path": "web/src/app.js",
+   "text": "爸爸",
+   "kind": "string",
+   "expectedOccurrences": 3,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-d7d458059f",
+   "path": "web/src/app.js",
+   "text": "聲音軌到 str=",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-d946cee161",
+   "path": "web/src/app.js",
+   "text": "線路失敗 → 自動重連一次",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-da5930e53d",
+   "path": "web/src/app.js",
+   "text": "無",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-db7b612140",
+   "path": "web/src/app.js",
+   "text": "解鎖:改用簡易法",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-e3958d4633",
+   "path": "web/src/app.js",
+   "text": "全家一起走路",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-e52bef7c3e",
+   "path": "web/src/app.js",
+   "text": "B 音量=",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "fixture-e601bb9113",
+   "path": "web/src/app.js",
+   "text": "爸",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "developer-fixture",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-f8d292143b",
+   "path": "web/src/app.js",
+   "text": "·強制",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  },
+  {
+   "id": "diag-fb85162280",
+   "path": "web/src/app.js",
+   "text": "影像軌到 合成流含音軌=",
+   "kind": "string",
+   "expectedOccurrences": 1,
+   "reasonCode": "debug-panel-diagnostic",
+   "evidence": "scripts/test-debug-diagnostics-gated.js"
+  }
+ ]
 }
