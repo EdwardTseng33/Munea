@@ -1113,6 +1113,7 @@ function syncCompanionUI() {
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
   $$('.obs-ava img').forEach(i => { i.src = thumbSrc; });   // 狀態頁「○○的觀察」頭像＝跟著選的角色臉（Edward 2026-07-09）
   const obsHeading = $('#obsHeading'); if (obsHeading) obsHeading.textContent = muneaT('status.companionObservation', '{companion}的觀察', { companion: display });
+  const medSub = $('#medSub'); if (medSub) medSub.textContent = muneaT('medication.emptyHint', '還沒設定用藥，跟{companion}說一聲就好', { companion: display });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
   renderCompanionGreeting();
@@ -8018,7 +8019,11 @@ function init() {
       const nameInput = $('#pfName');
       if (nameInput && !nameInput.value && st && st.name) nameInput.value = String(st.name).trim().slice(0, 12);
     } catch (e) {}
-    const banner = $('#pfFirstRunBanner'); if (banner) banner.hidden = false;
+    const banner = $('#pfFirstRunBanner');
+    if (banner) {
+      banner.textContent = muneaT('profile.firstRunBanner', '填了這些，{companion}會用你習慣的稱呼、合你的節奏跟你說話，也能報你那邊的天氣。', { companion: cname() });
+      banner.hidden = false;
+    }
     // 沙利曼 Gate 5：資料在按「存好」當下就上傳，告知必須早於上傳（放在存好鈕正上方），
     // 不能只靠聊聊前的同意卡把關——那時個人資料早就已經存過雲了。
     const disclosure = $('#pfFirstRunDisclosure'); if (disclosure) disclosure.hidden = false;
