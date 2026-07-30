@@ -124,10 +124,13 @@ for (const locale of LOCALES) {
   });
   assert.ok(paidSummary.name);
   assert.ok(paidSummary.note.includes('300'));
-  const freeSummary = copy.planSummary({ plan: 'free', purchasedCredits: 0 });
+  const freeSummary = copy.planSummary({ plan: 'free', remainingCredits: 0 });
   assert.ok(freeSummary.note);
-  const leftoverSummary = copy.planSummary({ plan: 'free', purchasedCredits: 80 });
+  // 免費會員的說明句要講「手上還剩多少點」（伺服器錢包），不是「歷史買過多少點」
+  const leftoverSummary = copy.planSummary({ plan: 'free', remainingCredits: 80 });
   assert.ok(leftoverSummary.note.includes('80'));
+  // 舊參數名留著相容，行為要一致（還沒改完的呼叫端不會突然掉字）
+  assert.strictEqual(copy.planSummary({ plan: 'free', purchasedCredits: 80 }).note, leftoverSummary.note);
 
   const prompt = copy.profilePrompt();
   assert.ok(prompt.title && prompt.body && prompt.action);
