@@ -2,9 +2,9 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-29 02:50 Asia/Taipei` (Build 492 frozen-artifact evidence reconciled against post-package main; runtime and DB lanes otherwise unchanged)
+Snapshot time: `2026-07-30 19:47 Asia/Taipei` (source 升版為 1.0.45 Build 500；uploaded／review／iPhone 三條 lane 仍是 Build 492 的凍結成品，runtime 與 DB lane 未變)
 
-Source reconciliation baseline: `origin/main@db229d8c`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
+Source reconciliation baseline: `origin/main@4b04a86b`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -26,8 +26,8 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.44 (Build 492)` | 這是 post-package source，已在凍結 commit `72a0bd46` 之後加入 Voice／Gateway 等變更；沒有適用 current HEAD 的 Archive／IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source。下一次包版必須換新 Build number | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-29 02:50 |
-| Latest uploaded App | `1.0.44 (Build 492)` | App Store Release Archive／IPA 已建立；Apple 於 17:22:57 回傳 `Upload succeeded`，TestFlight upload status 與 Build 處理皆完成。IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1` | Xcode upload receipt; App Store Connect; `STATUS.md` | 2026-07-28 17:31 |
+| Latest source | `1.0.45 (Build 500)` | 純 source 升版（就診摘要／四語系／健康與登入修正一批），Build number 跳到 500（Edward 表示 492 之後又包過幾版，實際上傳到第幾號待他確認；跳號留出空間，避免撞號被 Apple 退件）。尚未 Archive、未打包、未上傳；沒有任何適用此版的 IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source | `package.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-30 19:47 |
+| Latest uploaded App | `unknown`（本表最後有憑證的是 `1.0.44 (Build 492)`） | **這一列已知過期。** Edward 2026-07-30 表示 492 之後又包過幾版，但那些 Archive／上傳沒有回填本表，所以最大 Build number 目前無法從 repo 證明。下面 492 的憑證只證明它上傳過，不證明它是最新：Apple 於 07-28 17:22:57 回傳 `Upload succeeded`，IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`。要恢復這一列，得由 Edward 從 App Store Connect 回填實際上傳過的版本與 Build | Xcode upload receipt（僅限 492）; App Store Connect（權威，尚未回讀） | 2026-07-28 17:31（已過期） |
 | App Store selected review lane | `1.0.44 (Build 492)` | 17:31 已選入 1.0.44 版本頁並儲存；頁面狀態仍為「準備提交」。未點「新增以供審查」、未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-28 17:31 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
