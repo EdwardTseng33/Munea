@@ -282,6 +282,14 @@ Phase 3d（2026-07-28）：可信 Live Voice locale session bridge
 - `engine/voice-locale-integration-manifest.json` 明確保持 Live Voice #270、Gateway #258 與 legacy token mode 未完成；新增 `voiceIntegration` 發布 Gate，三項未接完前即使有人放入 E2E JSON 也不能開語系。
 - 本批只新增獨立 bridge、測試與 Gate，不修改被佔用的正式 Voice／Gateway handler、不部署；屬 call-path risk，仍為 `App E2E pending`。
 
+Phase 3e（2026-07-30）：strict LocaleContext 0% canary 防誤切閘門
+
+- Gateway、Live Voice 與混語 session bridge 已完成程式接線與單元／pipeline 測試；發布 Gate 仍保留 `legacyTokenMode=compatibility`，不得把 coded + tested 說成已正式啟用。
+- Voice staging canary 只有明確同時設定 `MUNEA_VOICE_CALL_CONTROL_REQUIRED=1` 與 `MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=0` 才能進 strict mode；否則 fail closed，避免無 token 薄門繞過可信 `locale_context`。
+- canary verifier 會從 exact Cloud Run revision metadata 核對 strict／compatibility mode；strict revision 永遠維持 0% 流量，`promote.sh` 在任何 traffic mutation 前直接拒絕。
+- Call Control 的 `-StrictLocaleContext` 同樣只允許 `--no-traffic` canary；與 `-AllowTraffic` 同時使用會中止。
+- 這批只建立可重現且不可誤升流量的驗收通道，不部署、不切 staging／production 流量。完成 exact-build iPhone、四語真實通話與發布證據前，正式相容模式維持不變。
+
 此階段屬 chat-call path risk。完成程式與自動測試後仍標記 `App E2E pending`，直到使用受影響 profile 的實體 iPhone 完成完整通話驗收。
 
 ### Phase 4 — 後台與營運

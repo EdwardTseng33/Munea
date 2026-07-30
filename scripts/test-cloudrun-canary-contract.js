@@ -7,14 +7,20 @@ const verify = fs.readFileSync('deploy/cloudrun/canary-verify.sh', 'utf8');
 const promote = fs.readFileSync('deploy/cloudrun/promote.sh', 'utf8');
 
 assert.match(deploy, /--no-traffic/);
-assert.match(deploy, /canary-verify\.sh "\$WHAT" "\$TAG" staging "\$RELEASE_VERSION" "\$RELEASE_COMMIT"/);
+assert.match(
+  deploy,
+  /canary-verify\.sh[\s\S]*"\$WHAT" "\$TAG" staging "\$RELEASE_VERSION" "\$RELEASE_COMMIT"[\s\S]*"\$VERIFY_LOCALE_MODE"/
+);
 assert.doesNotMatch(deploy, /update-traffic|--to-latest/);
 
 assert.match(prodDeploy, /RELEASE_COMMIT="\$\(git rev-parse HEAD\)"/);
 assert.match(prodDeploy, /git archive --format=tar "\$RELEASE_COMMIT"/);
 assert.strictEqual((prodDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length, 2);
 assert.strictEqual((prodDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).length, 2);
-assert.match(prodDeploy, /canary-verify\.sh "\$WHAT" "\$TAG" production "\$RELEASE_VERSION" "\$RELEASE_COMMIT"/);
+assert.match(
+  prodDeploy,
+  /canary-verify\.sh[\s\S]*"\$WHAT" "\$TAG" production "\$RELEASE_VERSION" "\$RELEASE_COMMIT"[\s\S]*"\$VERIFY_LOCALE_MODE"/
+);
 assert.match(prodDeploy, /--no-traffic/);
 
 assert.match(verify, /\[ "\$PERCENT" = "0" \]/);
@@ -24,6 +30,9 @@ assert.match(verify, /VERSION_JSON/);
 assert.match(verify, /munea\.service-release\.v1/);
 assert.match(verify, /release_metadata_mismatch/);
 assert.match(verify, /revision=\$REVISION/);
+assert.match(verify, /MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT/);
+assert.match(verify, /MUNEA_CALL_CONTROL_REQUIRED/);
+assert.match(verify, /locale_mode=\$LOCALE_MODE/);
 assert.match(verify, /production:brain.*munea-brain/s);
 assert.match(verify, /production:voice.*munea-voice/s);
 assert.match(verify, /apple\/notifications/);
@@ -32,6 +41,11 @@ assert.match(verify, /尚未涵蓋.*Call Token/);
 assert.doesNotMatch(verify, /update-traffic|--to-latest|promote\.sh/);
 
 assert.match(promote, /canary-verify\.sh "\$WHAT" "\$TAG" "\$PROFILE" "\$EXPECTED_VERSION" "\$EXPECTED_COMMIT"/);
+assert.match(promote, /VERIFIED_LOCALE_MODE=/);
+assert.match(
+  promote,
+  /if \[ "\$VERIFIED_LOCALE_MODE" = "strict" \]; then[\s\S]*exit 1[\s\S]*--to-revisions "\$TARGET_REVISION=100"/
+);
 assert.match(promote, /--to-revisions "\$TARGET_REVISION=100"/);
 assert.match(promote, /--to-revisions "\$PREVIOUS_REVISION=100"/);
 assert.match(promote, /expected_one_100_percent_serving_revision/);

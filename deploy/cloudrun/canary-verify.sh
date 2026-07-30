@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 沐寧 · Cloud Run 0% canary 結構驗證
-# 用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag> staging|production <version> <commit>
+# 用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag> staging|production <version> <commit> [compatibility|strict]
 #
 # 只驗證部署層：tag 指向 Ready revision、該 revision 流量為 0%、HTTP 入口與 release identity 可用。
 # Voice 的 Call Token、Gemini 音訊、ASR、插話與真人體感仍須另外跑真機 Gate。
@@ -44,13 +44,22 @@ TAG="${2:-}"
 PROFILE="${3:-staging}"
 EXPECTED_VERSION="${4:-}"
 EXPECTED_COMMIT="${5:-}"
+EXPECTED_LOCALE_MODE="${6:-}"
 case "$WHAT" in
   brain) SVC="munea-brain-staging" ;;
   voice) SVC="munea-voice-staging" ;;
-  *) echo "用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag> staging|production <version> <commit>"; exit 1 ;;
+  *) echo "用法：bash deploy/cloudrun/canary-verify.sh brain|voice <canary-tag> staging|production <version> <commit> [compatibility|strict]"; exit 1 ;;
 esac
 [ -n "$TAG" ] || { echo "⛔ 缺少 canary tag"; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "⛔ 找不到 curl"; exit 1; }
+case "$EXPECTED_LOCALE_MODE" in
+  ""|compatibility|strict) ;;
+  *) echo "⛔ locale mode 必須是 compatibility 或 strict"; exit 1 ;;
+esac
+if [ "$WHAT" = "brain" ] && [ -n "$EXPECTED_LOCALE_MODE" ]; then
+  echo "⛔ Brain canary 不接受 Voice locale mode"
+  exit 1
+fi
 case "$PROFILE:$WHAT" in
   staging:brain) EXPECTED_ENV="staging"; EXPECTED_SERVICE="munea-brain" ;;
   staging:voice) EXPECTED_ENV="staging"; EXPECTED_SERVICE="munea-voice" ;;
@@ -88,8 +97,41 @@ data = json.load(sys.stdin)
 ready = next((item for item in data.get("status", {}).get("conditions", []) if item.get("type") == "Ready"), None)
 print((ready or {}).get("status", ""))
 ')"
-unset REVISION_JSON
 [ "$READY" = "True" ] || { echo "⛔ $REVISION 尚未 Ready：$READY"; exit 1; }
+
+LOCALE_MODE=""
+if [ "$WHAT" = "voice" ]; then
+  VOICE_LOCALE_META="$(printf '%s' "$REVISION_JSON" | "${PYTHON[@]}" -c '
+import json, sys
+data = json.load(sys.stdin)
+containers = data.get("spec", {}).get("containers") or data.get("template", {}).get("containers") or []
+envs = (containers[0] if containers else {}).get("env", [])
+values = {item.get("name"): item.get("value", "") for item in envs}
+print(values.get("MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT", ""))
+print(values.get("MUNEA_CALL_CONTROL_REQUIRED", ""))
+')"
+  ALLOW_LEGACY_LOCALE_CONTEXT="$(printf '%s\n' "$VOICE_LOCALE_META" | sed -n '1p')"
+  CALL_CONTROL_REQUIRED="$(printf '%s\n' "$VOICE_LOCALE_META" | sed -n '2p')"
+  case "$ALLOW_LEGACY_LOCALE_CONTEXT" in
+    1) LOCALE_MODE="compatibility" ;;
+    0)
+      [ "$CALL_CONTROL_REQUIRED" = "1" ] || {
+        echo "⛔ strict LocaleContext revision 沒有同時要求 Call Control"
+        exit 1
+      }
+      LOCALE_MODE="strict"
+      ;;
+    *)
+      echo "⛔ Voice revision 未明確設定 MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=0|1"
+      exit 1
+      ;;
+  esac
+  if [ -n "$EXPECTED_LOCALE_MODE" ] && [ "$LOCALE_MODE" != "$EXPECTED_LOCALE_MODE" ]; then
+    echo "⛔ Voice locale mode=$LOCALE_MODE，expected=$EXPECTED_LOCALE_MODE"
+    exit 1
+  fi
+fi
+unset REVISION_JSON
 
 ROOT_CODE="$(curl --retry 3 --retry-delay 1 -sS -o /dev/null -w '%{http_code}' "$CANARY_URL/")"
 [ "$ROOT_CODE" = "200" ] || { echo "⛔ $CANARY_URL/ 回 $ROOT_CODE"; exit 1; }
@@ -126,8 +168,11 @@ if [ "$WHAT" = "brain" ]; then
   }
   echo "✅ Brain canary PASS：$REVISION · 0% · root 200 · invalid Apple JWS 400"
 else
-  echo "✅ Voice canary 部署層 PASS：$REVISION · 0% · root 200"
+  echo "✅ Voice canary 部署層 PASS：$REVISION · 0% · root 200 · locale=$LOCALE_MODE"
   echo "⚠️ 尚未涵蓋：正式 Call Token、Gemini 音訊、ASR、插話、靜音與真人體感。"
 fi
 echo "revision=$REVISION"
 echo "canary_url=$CANARY_URL"
+if [ "$WHAT" = "voice" ]; then
+  echo "locale_mode=$LOCALE_MODE"
+fi

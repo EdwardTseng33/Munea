@@ -17,6 +17,21 @@ case "$VOICE_CALL_CONTROL_REQUIRED" in
   0|1) ;;
   *) echo "⛔ MUNEA_VOICE_CALL_CONTROL_REQUIRED 只能是 0 或 1"; exit 1 ;;
 esac
+VOICE_ALLOW_LEGACY_LOCALE_CONTEXT="${MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT:-1}"
+case "$VOICE_ALLOW_LEGACY_LOCALE_CONTEXT" in
+  0|1) ;;
+  *) echo "⛔ MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT 只能是 0 或 1"; exit 1 ;;
+esac
+if [ "$VOICE_ALLOW_LEGACY_LOCALE_CONTEXT" = "0" ] && [ "$VOICE_CALL_CONTROL_REQUIRED" != "1" ]; then
+  echo "⛔ strict LocaleContext canary 必須同時設定 MUNEA_VOICE_CALL_CONTROL_REQUIRED=1"
+  echo "   否則無 token 的薄門直連仍可繞過可信 locale_context。"
+  exit 1
+fi
+if [ "$VOICE_ALLOW_LEGACY_LOCALE_CONTEXT" = "0" ]; then
+  VOICE_LOCALE_MODE="strict"
+else
+  VOICE_LOCALE_MODE="compatibility"
+fi
 
 resolve_gcloud() {
   if command -v gcloud >/dev/null 2>&1; then
@@ -80,7 +95,7 @@ else
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
-    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
+    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED,MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=$VOICE_ALLOW_LEGACY_LOCALE_CONTEXT,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
     --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
     --allow-unauthenticated --quiet
 fi
@@ -96,8 +111,19 @@ DOMAIN=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$
 echo "  https://${TAG}---${DOMAIN}"
 echo
 echo "== 自動驗證 0% canary（不切 staging 預設流量）=="
-bash deploy/cloudrun/canary-verify.sh "$WHAT" "$TAG" staging "$RELEASE_VERSION" "$RELEASE_COMMIT"
+VERIFY_LOCALE_MODE=""
+if [ "$WHAT" = "voice" ]; then
+  VERIFY_LOCALE_MODE="$VOICE_LOCALE_MODE"
+fi
+bash deploy/cloudrun/canary-verify.sh \
+  "$WHAT" "$TAG" staging "$RELEASE_VERSION" "$RELEASE_COMMIT" \
+  "$VERIFY_LOCALE_MODE"
 echo
-echo "真人測過 OK 後，只能用這組 exact release 證據切 staging 流量："
-echo "  bash deploy/cloudrun/promote.sh staging $WHAT $TAG $RELEASE_VERSION $RELEASE_COMMIT"
-echo "不 OK：什麼都不用做——沒 promote 就沒切流量，staging 預設版完全沒被動到。"
+if [ "$WHAT" = "voice" ] && [ "$VOICE_LOCALE_MODE" = "strict" ]; then
+  echo "strict LocaleContext canary 僅供 0% 驗收；promote.sh 會拒絕切流量。"
+  echo "完成 exact-build App E2E 並更新發布證據前，不得把 strict revision 升成 staging 預設。"
+else
+  echo "真人測過 OK 後，只能用這組 exact release 證據切 staging 流量："
+  echo "  bash deploy/cloudrun/promote.sh staging $WHAT $TAG $RELEASE_VERSION $RELEASE_COMMIT"
+  echo "不 OK：什麼都不用做——沒 promote 就沒切流量，staging 預設版完全沒被動到。"
+fi
