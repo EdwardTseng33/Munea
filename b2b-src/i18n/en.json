@@ -295,5 +295,6 @@
   "js.demoSub": "Leave your details and we'll reply within one business day. The session covers where you are today, a live demonstration, and what a pilot would look like next.",
   "js.formErr": "Please fill in name, organization and email before sending.",
   "js.sending": "Sending…",
-  "js.copied": "Copied {mail}!"
+  "js.copied": "Copied {mail}!",
+  "foot.siteLink": "Munea App official site — see what families get →"
 }
