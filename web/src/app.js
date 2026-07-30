@@ -1947,73 +1947,171 @@ function visitSummaryAsText(summary) {
 }
 
 /* 摘要 → 一份自成一體的 A4 HTML，餵給原生外掛轉 PDF。
-   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的 modal，直接印會拿到
+   為什麼要另外組一份、不直接印畫面：摘要面板是可滾動的子頁，直接印會拿到
    App 的殼＋被裁掉的捲動內容。這份只有摘要本身，版面完全可控、每一份長一樣。
-   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS 根本不會被載到。 */
+   樣式全部行內寫死：離屏 webview 載入時 baseURL 是 nil，外部 CSS／字型根本不會被載到。
+
+   ── 這一頁的設計前提（決定了下面每一個選擇）───────────────────
+   ① 醫生大約 60 秒看完 → 可掃讀優先於好看。標題列、區塊標、數字對齊
+      都是為了「眼睛一路往下不用回頭」。
+   ② **診所印表機常常是黑白的** → 層級必須在灰階下就成立。顏色只作點綴，
+      任何意義都同時由字重／級數／線條承載，不單靠顏色。
+   ③ 不得有警示色（醫材紅線）——沒有紅、沒有橘、沒有底色分級。
+      時間軸三種來源用「形狀」區分，因為醫師要分辨的是可信度不是嚴重度。
+   ④ 字型吃系統：標題用襯線（沐寧頁面大標本來就是襯線，紙面也才有文件的重量），
+      內文用系統無襯線。數字一律 tabular-nums 才對得齊。
+   ⑤ 可能超過一頁（60 天資料多），所以每個區塊都不准被切開。 */
 function visitSummaryAsHTML(summary) {
   const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
+  const companion = (typeof cname === 'function' ? cname() : '沐寧');
+  const period = summary
+    ? muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to })
+    : '';
+  const sec = label => '<h2>' + rptEsc(label) + '</h2>';
   const rows = [];
-  rows.push('<h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>');
-  rows.push('<p class="sub">' + (summary
-    ? rptEsc(muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to }))
-    : '') + '</p>');
 
+  // 抬頭：標題與期間同一條基線，下面一條實線＝這一頁唯一的品牌動作。
+  // 刻意只有一條線，不加色塊不加 logo——醫療文件多一個裝飾就少一分可信。
+  rows.push('<header><h1>' + rptEsc(muneaT('visit.summaryTitle', '就診摘要')) + '</h1>'
+    + '<span class="period">' + rptEsc(period) + '</span></header>');
+
+  // ① 想問醫生＝這張紙存在的理由，所以是唯一有底色、字也最大的一塊
   if (qs.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.questionsTitle', '這次想問醫生')) + '</h2><ol>');
-    qs.forEach(q => rows.push('<li>' + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
-    rows.push('</ol>');
+    rows.push('<section class="ask">' + sec(muneaT('visit.questionsTitle', '這次想問醫生')) + '<ul>');
+    // 編號自己畫：::marker 的 color 在各家排版引擎支援不一致，
+    // 用 span 才保證印出來是主色、而且對得齊
+    qs.forEach((q, i) => rows.push('<li><span class="n">' + (i + 1) + '</span>'
+      + rptEsc(muneaSafeDisplayText(q.text, '')) + '</li>'));
+    rows.push('</ul></section>');
   }
+
+  // ② 時間軸
   if (summary && summary.timeline && summary.timeline.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.timelineTitle', '這段期間發生的事')) + '</h2><table>');
+    rows.push('<section>' + sec(muneaT('visit.timelineTitle', '這段期間發生的事')) + '<table class="tl">');
     summary.timeline.forEach(e => {
       rows.push('<tr><td class="d">' + rptEsc(rptShortDate(e.date)) + '</td>'
         + '<td class="m">' + (VISIT_SUMMARY_MARK[e.kind] || '·') + '</td>'
-        + '<td>' + rptEsc(e.text) + (e.detail ? '<span class="sm">（' + rptEsc(e.detail) + '）</span>' : '') + '</td></tr>');
+        + '<td>' + rptEsc(e.text)
+        + (e.detail ? '<span class="det">' + rptEsc(e.detail) + '</span>' : '') + '</td></tr>');
     });
-    rows.push('</table><p class="sm">' + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    rows.push('</table><p class="legend">'
+      + rptEsc(muneaT('visit.legend', '● 長輩自己說的　▲ 在家量的　✕ 用藥紀錄')) + '</p>');
+    // 截斷一定要說出來——悄悄少幾筆會讓醫師以為這就是全部
     if (summary.timelineOmitted > 0) {
-      rows.push('<p class="sm">'
+      rows.push('<p class="note">'
         + rptEsc(muneaT('visit.timelineOmitted', '另有 {n} 筆較早的紀錄沒有列出來。', { n: summary.timelineOmitted }))
         + '</p>');
     }
+    rows.push('</section>');
   }
-  if (summary && summary.vitals && summary.vitals.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.vitalsTitle', '在家量的')) + '</h2><ul>');
-    summary.vitals.forEach(v => rows.push('<li>' + rptEsc(v) + '</li>'));
-    rows.push('</ul><p class="sm">' + rptEsc(summary.baselineNote || '') + '</p>');
+
+  // ③④ 在家量的 ＋ 藥實際吃了沒：**併排兩欄**。
+  //     兩邊都是短清單，各佔一整列的話 A4 的寬度整片浪費，而且醫生的視線要
+  //     橫跨整頁才讀到一個數字。併排之後兩塊都在視線範圍內，一眼看完。
+  //     只有一邊有資料時自動吃滿整列。
+  const hasVitals = !!(summary && summary.vitals && summary.vitals.length);
+  const hasMeds = !!(summary && summary.medication && summary.medication.length);
+  if (hasVitals || hasMeds) {
+    rows.push('<div class="cols">');
+    if (hasVitals) {
+      rows.push('<section>' + sec(muneaT('visit.vitalsTitle', '在家量的')) + '<table class="kv">');
+      summary.vitals.forEach(v => {
+        // 「血壓 128/82 · 量了 14 天」→ 拆成項目／數值兩欄
+        const cut = String(v).indexOf(' ');
+        rows.push('<tr><th>' + rptEsc(cut > 0 ? v.slice(0, cut) : v) + '</th>'
+          + '<td>' + rptEsc(cut > 0 ? v.slice(cut + 1) : '') + '</td></tr>');
+      });
+      rows.push('</table>');
+      if (summary.baselineNote) rows.push('<p class="note">' + rptEsc(summary.baselineNote) + '</p>');
+      rows.push('</section>');
+    }
+    if (hasMeds) {
+      // 只給次數不給服藥率——百分比讀起來就是評分，評分就是判斷
+      rows.push('<section>' + sec(muneaT('visit.medTitle', '藥實際吃了沒')) + '<table class="kv">');
+      summary.medication.forEach(m => {
+        rows.push('<tr><th>' + rptEsc(m.name) + '</th><td>'
+          + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次',
+            { scheduled: m.scheduled, taken: m.taken }))
+          + (m.missed
+            ? '<span class="det">' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) + '</span>'
+            : '')
+          + '</td></tr>');
+      });
+      rows.push('</table></section>');
+    }
+    rows.push('</div>');
   }
-  if (summary && summary.medication && summary.medication.length) {
-    rows.push('<h2>' + rptEsc(muneaT('visit.medTitle', '藥實際吃了沒')) + '</h2><table>');
-    summary.medication.forEach(m => {
-      rows.push('<tr><td>' + rptEsc(m.name) + '</td><td>'
-        + rptEsc(muneaT('visit.medCounts', '排 {scheduled} 次 · 吃了 {taken} 次', { scheduled: m.scheduled, taken: m.taken }))
-        + (m.missed ? '　' + rptEsc(muneaT('visit.medMissed', '其中 {n} 次沒吃', { n: m.missed })) : '')
-        + '</td></tr>');
-    });
-    rows.push('</table>');
-  }
+
+  // 缺料要講——一份少了血壓的摘要看起來就像「他都沒量」
   if (summary && summary.partial && summary.partial.length) {
-    rows.push('<p class="sm">' + rptEsc(muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
-      { names: visitPartialNames(summary.partial) })) + '</p>');
+    rows.push('<p class="note incomplete">'
+      + rptEsc(muneaT('visit.partialNotePrint', '{names}這次沒有讀到，這一頁不是完整的。',
+        { names: visitPartialNames(summary.partial) })) + '</p>');
   }
-  rows.push('<p class="foot">' + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷',
-    { companion: (typeof cname === 'function' ? cname() : '沐寧') })) + '</p>');
+
+  rows.push('<footer>' + rptEsc(muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷',
+    { companion })) + '</footer>');
 
   // lang 跟著 App 語系走：離屏 webview 的斷行與字型選擇吃這個屬性，
   // 寫死 zh-Hant 會讓日文那份用中文字形排版。
-  return '<!doctype html><html lang="' + rptEsc(muneaLocale() === 'zh-TW' ? 'zh-Hant' : muneaLocale()) + '"><head><meta charset="utf-8">'
+  const lang = muneaLocale() === 'zh-TW' ? 'zh-Hant' : muneaLocale();
+  return '<!doctype html><html lang="' + rptEsc(lang) + '"><head><meta charset="utf-8">'
     + '<style>'
-    + '@page{size:A4;margin:14mm}'
-    + 'body{font-family:-apple-system,"PingFang TC","Heiti TC",sans-serif;color:#1a1a1a;font-size:12pt;line-height:1.6;margin:0}'
-    + 'h1{font-size:20pt;margin:0 0 2pt}'
-    + 'h2{font-size:12pt;margin:16pt 0 4pt;padding-bottom:2pt;border-bottom:1px solid #ccc}'
-    + '.sub{color:#555;margin:0 0 6pt;font-size:10.5pt}'
-    + 'ol,ul{margin:0;padding-left:18pt}li{margin:2pt 0}'
+    // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
+    // 取自 web/src/styles.css 的 :root（Edward 2026-07-03 定色），紙面只用其中最低限度的幾個
+    + ':root{--ink:#3A352E;--muted:#5A6963;--teal:#236C66;--mint:#E8F2EE;--line:#D9D3C7}'
+    + '@page{size:A4;margin:15mm 14mm 12mm}'
+    + '*{box-sizing:border-box}'
+    // 底色要印得出來（WKWebView.createPDF 吃這個屬性），否則問題區塊會變全白
+    + 'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    + 'body{margin:0;color:var(--ink);font-size:10.5pt;line-height:1.6;'
+    +   'font-family:-apple-system,"PingFang TC","Hiragino Sans","Heiti TC",sans-serif;'
+    +   'font-variant-numeric:tabular-nums}'
+
+    // 抬頭：標題與期間同基線，下面一條 1.5pt 實線＝這一頁唯一的品牌動作
+    + 'header{display:flex;align-items:baseline;justify-content:space-between;gap:12pt;'
+    +   'border-bottom:1.5pt solid var(--teal);padding-bottom:5pt}'
+    + 'h1{font-family:"Songti TC","Noto Serif TC",Georgia,serif;font-size:18pt;font-weight:700;'
+    +   'margin:0;line-height:1.2}'
+    + '.period{font-size:9pt;color:var(--muted);white-space:nowrap}'
+
+    // 區塊標：不用 uppercase（對中文完全無效），字距只給極小值——
+    // 中文被拉開字距看起來是排錯不是設計。層級靠「字重＋主色＋下方細線」建立，
+    // 這三者在黑白印表機下也還在（線與字重不吃顏色）。
+    + 'section{margin-top:12pt;page-break-inside:avoid;break-inside:avoid}'
+    + 'h2{font-size:9.5pt;font-weight:700;letter-spacing:.02em;color:var(--teal);'
+    +   'margin:0 0 4pt;padding-bottom:2pt;border-bottom:.5pt solid var(--line)}'
+
+    // ① 想問醫生：唯一有底色、字最大的一塊（這張紙存在的理由）
+    + '.ask{background:var(--mint);border-radius:2pt;padding:9pt 11pt 10pt;margin-top:10pt}'
+    + '.ask h2{border-bottom-color:rgba(35,108,102,.28);margin-bottom:5pt}'
+    + '.ask ul{margin:0;padding:0;list-style:none}'
+    + '.ask li{position:relative;padding-left:18pt;font-size:11.5pt;line-height:1.5;margin:4pt 0}'
+    + '.ask .n{position:absolute;left:0;top:0;width:13pt;text-align:right;'
+    +   'font-weight:700;color:var(--teal)}'
+
+    // 表格：只用細橫線，不用外框不用斑馬紋——紙上格線越少越好讀
     + 'table{width:100%;border-collapse:collapse}'
-    + 'td{padding:3pt 0;vertical-align:top;border-bottom:1px solid #eee}'
-    + 'td.d{width:42pt;color:#555;white-space:nowrap}td.m{width:16pt;text-align:center}'
-    + '.sm{font-size:9.5pt;color:#666;margin:4pt 0 0}'
-    + '.foot{margin-top:18pt;padding-top:6pt;border-top:1px solid #ccc;font-size:9pt;color:#666;text-align:center}'
+    + 'th,td{padding:3.5pt 0;vertical-align:baseline;border-bottom:.5pt solid var(--line);text-align:left}'
+    + 'tr:last-child th,tr:last-child td{border-bottom:0}'
+    + '.tl .d{width:34pt;color:var(--muted);font-size:9pt;white-space:nowrap}'
+    + '.tl .m{width:14pt;text-align:center;color:var(--teal)}'
+    + '.det{display:block;font-size:8.5pt;font-weight:400;color:var(--muted);margin-top:1pt}'
+
+    // 在家量的／藥：併排兩欄，數值緊跟在項目後面不貼頁緣
+    + '.cols{display:flex;gap:22pt;align-items:flex-start;'
+    +   'page-break-inside:avoid;break-inside:avoid}'
+    + '.cols>section{flex:1;min-width:0;margin-top:12pt}'
+    + '.kv th{font-weight:400;color:var(--muted);white-space:nowrap;padding-right:10pt}'
+    + '.kv td{text-align:right;font-weight:600}'
+
+    + '.legend{font-size:8.5pt;color:var(--muted);margin:5pt 0 0}'
+    + '.note{font-size:8.5pt;color:var(--muted);margin:4pt 0 0;line-height:1.5}'
+    // 缺料那句要看得見（但不用警示色——一條左側細線就夠）
+    + '.incomplete{margin-top:11pt;padding-left:7pt;border-left:2pt solid var(--line)}'
+
+    + 'footer{margin-top:18pt;padding-top:5pt;border-top:.5pt solid var(--line);'
+    +   'font-size:8.5pt;color:var(--muted);text-align:center}'
     + '</style></head><body>' + rows.join('') + '</body></html>';
 }
 
