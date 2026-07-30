@@ -1,0 +1,13 @@
+{
+  "_說明": "改完這裡或 i18n/*.json 之後，跑 `npm run b2b:build` 重新產生四個語系的合作頁。版型在 b2b-src/index.html，產出在 munea-b2b/。",
+
+  "siteUrl": "https://munea-b2b.vercel.app",
+  "contactEmail": "edwardt0303@gmail.com",
+
+  "langLabels": {
+    "zh": { "native": "中文", "short": "繁中" },
+    "en": { "native": "English", "short": "EN" },
+    "ja": { "native": "日本語", "short": "日本語" },
+    "es": { "native": "Español", "short": "ES" }
+  }
+}
