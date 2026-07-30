@@ -4516,16 +4516,9 @@ function completeChatSession(reason = 'ended') {
 }
 
 function showView(id) {
-  // 聊聊要登入才能用（7/9 Edward 拍板 A：免費 5 分鐘要綁帳號才守得住、不怕重裝重置）
-  // 所有進聊聊的路都經過這個路口——訪客點聊聊＝先引導 Google／Apple 登入、不進聊天頁
-  if (id === 'chat' && !isLoggedIn()) {
-    if (typeof openAuthSheet === 'function') openAuthSheet();
-    if (typeof setAuthMessage === 'function') {
-      setAuthMessage(muneaT('auth.signInDescription', '登入後就能和 {companion} 聊聊。', { companion: cname() }), 'ok');
-    }
-    try { trackProductEvent('login_gate_shown', { feature: 'chat' }); } catch (e) {}
-    return;
-  }
+  // 2026-07-30 Edward 拍板：訪客可以進聊聊頁看看（看得到誰要陪他講話、畫面長什麼樣），
+  // 關卡從「門口」移到「開始通話」那一刻（見 connectCall 開頭與 #callToggle）。
+  // 7/9 拍板 A 的原意沒有被放寬——免費 5 分鐘一樣要綁帳號才給，只是不再攔在門口。
   const t = $('#toast'); if (t) t.classList.remove('show');
   $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
   if (id === 'status') {
@@ -6853,6 +6846,13 @@ function setupHscrollHints() {
 }
 
 async function connectCall() {
+  // 真的要撥號才要求登入（Edward 2026-07-30：訪客能進聊聊頁看，點「開始通話」才跳登入）。
+  // 守門放在這裡＝所有撥號入口的共同關卡（通話鈕／同意跨境後接著撥／選完話題後接著撥），
+  // 少一條路都不會漏。免費 5 分鐘綁帳號的原則不變，只是把關卡從門口移到這一刻。
+  if (!requireLogin(muneaT(
+    'auth.chatSignInRequired',
+    '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+  ), 'chat')) return;
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
   hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
@@ -7414,6 +7414,15 @@ function init() {
       FaceIdle.start();
       return;
     }
+    // 訪客按「開始通話」＝立刻跳登入，不要先問跨境同意／聊天話題再回頭要他登入（那順序很莫名）。
+    // connectCall 開頭也有同一道關卡兜底，這裡是為了把提示提早到第一次點擊。
+    if (!callConnected && !isLoggedIn()) {
+      requireLogin(muneaT(
+        'auth.chatSignInRequired',
+        '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+      ), 'chat');
+      return;
+    }
     if (!callConnected && !localStorage.getItem('munea.consent.crossborder')) { $('#consentSheet').classList.add('show'); return; }
     // 第一次開聊前輕問一次「想聊什麼話題」（可跳過、之後在設定隨時改；只問這一次）
     if (!callConnected && !localStorage.getItem('munea.interestsAsked') && !loadInterests().length && window.__muneaOpenInterests) { window.__muneaOpenInterests(true); return; }
@@ -7471,12 +7480,12 @@ function init() {
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
-    if (!requireLogin(muneaT(
-      'auth.chatSignInRequired',
-      '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
-    ), 'chat')) return;
-    if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
-    else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
+    // 訪客直接進聊聊頁（Edward 2026-07-30），登入關卡留到頁內按「開始通話」那一刻。
+    // 已登入的人維持原本的點數／方案把關——先擋在首頁，免得進去了才發現沒點數可撥。
+    if (isLoggedIn()) {
+      if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
+      else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
+    }
     showView('chat');
   });
   // （提醒改為彈窗版；埋點併入 B1 排程處理器）
