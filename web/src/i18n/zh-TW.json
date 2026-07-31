@@ -705,7 +705,7 @@
   "subscription.confirmFacts": "每月 {credits} 點 · 家庭健康圈最多 {members} 人",
   "subscription.monthlyCreditsNote": "{credits} 點約可聊 {minutes} 分鐘；聊天用點數，用完補一下就能繼續。",
   "subscription.freeCreditsLeft": "你還有 {credits} 點沒用完，會一直留著；訂閱 Plus／Pro 就能繼續用這些點聊天。",
-  "subscription.freePlanNote": "目前是免費方案。綁定帳號送單次 5 分鐘聊天體驗；升級 Plus／Pro 可用點數聊天、看更久的紀錄及邀請家人加入全家健康圈。",
+  "subscription.freePlanNote": "目前是免費方案。綁定帳號送單次 5 分鐘聊天體驗，可以邀請 1 位家人加入全家健康圈；升級 Plus／Pro 可用點數聊天、看更久的紀錄，也能邀請更多家人。",
   "subscription.confirmAction": "向 Apple 確認",
   "subscription.cancel": "取消",
   "subscription.purchasePending": "訂閱正在等待 Apple 處理。",

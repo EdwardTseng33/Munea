@@ -1940,7 +1940,7 @@ class SupabaseAdapter:
                     "routineReminders": True,
                     "realtimeAvatar": True,
                     "premiumAvatarMinutesMonthly": 0,
-                    "familyMembersMax": 1,
+                    "familyMembersMax": 2,   # Edward 2026-07-31：免費也給 1 位家人（本人＋1），跟 server.py 的預設同步
                 },
                 "usageLedger": {
                     "period": time.strftime("%Y-%m"),

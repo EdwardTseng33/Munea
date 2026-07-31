@@ -8134,7 +8134,11 @@ function init() {
   if ($('#pfAvatarClear')) $('#pfAvatarClear').addEventListener('click', () => { _pfPendingAvatar = ''; renderPfAvatar('', ($('#pfNick') && $('#pfNick').value) || '我'); });
   applyUserAvatar();
   // 全家健康圈
-  const CIRCLE_LIMITS = { free: 1, plus: 4, pro: 12 };                       // 免費只含本人；Plus 4 人、Pro 12 人
+  // Edward 2026-07-31 拍板：免費也能有 1 位家人（本人＋1＝2）。
+  // 原本免費＝只有自己，等於免費版根本沒有家庭圈——那個分頁打開永遠是空的，
+  // 使用者體驗不到價值就不會想升級。付費牆本來就在點數（免費只有一次 5 分鐘），不在人數。
+  // 2 人＝一對夫妻／一對親子夠體驗，三代同堂或多個子女輪流照顧就得升 Plus，分界剛好。
+  const CIRCLE_LIMITS = { free: 2, plus: 4, pro: 12 };                       // 含本人：免費 2、Plus 4、Pro 12
   const circlePlanLabel = plan => plan === 'free' ? muneaT('subscription.planFree', '免費') : plan === 'pro' ? 'Pro' : 'Plus';
   const PLAN_POINTS = { free: 0, plus: 100, pro: 200 };                       // 每月贈點（2026-07-17 Edward 拍板：每分鐘 6 元錨）
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
@@ -8226,12 +8230,15 @@ function init() {
     renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
     toast(muneaT('familyCircle.removedToast', '已把 {name} 移出全家健康圈。', { name: rm.dataset.name }));
   });
-  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (!requireLoginForFamily(muneaT('familyCircle.joinLoginPrompt', '要加入家人的健康圈，先登入一下（換手機也找得回來）'))) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
+  // 免費也能加入別人的圈（Edward 2026-07-31）：不開這道，免費 A 邀請免費 B 時 B 會被擋在門外，
+  // 邀請發得出去卻沒人接得到＝整件事失效。人數由圈主的方案決定，伺服器端另有 circle_full 把關。
+  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (!requireLoginForFamily(muneaT('familyCircle.joinLoginPrompt', '要加入家人的健康圈，先登入一下（換手機也找得回來）'))) return; $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
   if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
   if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', async () => {
     if (!requireLoginForFamily(muneaT('familyCircle.loginToJoin', '要加入家人的健康圈，先登入一下'))) return;   // 雙保險：訪客不能入別人的圈
-    if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; }   // 雙保險：免費不能入別人的圈
+    // 2026-07-31：免費也能加入別人的圈（見上方 #fcJoinBtn 的說明）。人數上限由圈主的方案決定，
+    // 伺服器端 accept 那關會用邀請碼帶的 maxMembers 擋 circle_full，這裡不重複判斷。
     const code = ($('#joinCodeInput').value || '').trim();
     if (!code || code.replace(/\D/g, '').length < 4) { toast(muneaT('familyCircle.invitePlaceholderHint', "把家人給你的邀請碼打進去（例：MUNEA-284753）")); return; }
     const btn = $('#joinCircleBtn');
@@ -8275,7 +8282,9 @@ function init() {
   if ($('#famManageBtn')) $('#famManageBtn').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily(muneaT('familyCircle.loginToInvite', '要邀請家人連上你，先登入一下（這樣家人才連得到你）'))) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast(muneaT('familyCircle.fullUpgradeToast', '全家健康圈滿了，升級方案可以邀請更多家人。')); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
+  // 免費也能邀請（Edward 2026-07-31）：不再一律擋，改成只有「圈滿了」才擋——
+  // 免費上限 2（本人＋1 位），滿了照樣提示升級，所以升級動機沒有被拿掉，只是往後移了一位。
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily(muneaT('familyCircle.loginToInvite', '要邀請家人連上你，先登入一下（這樣家人才連得到你）'))) return; if (e.currentTarget.dataset.full) { toast(muneaT('familyCircle.fullUpgradeToast', '全家健康圈滿了，升級方案可以邀請更多家人。')); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
   // 邀請碼：跟雲端拿真的（6 位數、72 小時內有效、綁自己的家庭編號）；連不上雲端就先給本機碼並提示
   async function ensureCloudInvite() {
     // 已有 48 小時內拿到的雲端碼就沿用（雲端碼 72 小時有效，留 24 小時緩衝）
@@ -9336,8 +9345,7 @@ function init() {
     const p = b.dataset.person;
     if (p === 'all') showFamAll();
     else if (p === 'invite') {
-      // 家人頁的邀請入口也要守門：免費不能邀、滿了不能再邀（跟設定頁同一套規則）
-      if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; }
+      // 家人頁的邀請入口跟設定頁同一套規則：2026-07-31 起免費也能邀，只有圈滿了才擋
       if (loadCircle().length >= (CIRCLE_LIMITS[circlePlan()] || 4)) { toast(muneaT('familyCircle.fullUpgradeToast', '全家健康圈滿了，升級方案可以邀請更多家人。')); return; }
       if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); }
     }

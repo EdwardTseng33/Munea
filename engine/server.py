@@ -7247,9 +7247,13 @@ def default_billing_store():
             "signupTrialCredits": 5,
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
-            "familyMembersMax": 1,
-            "familyCircleInvite": False,
-            "familyCircleJoin": False,
+            # Edward 2026-07-31：免費也給 1 位家人（本人＋1＝2）。原本免費＝只有自己、
+            # 而且邀請與加入都是 False，等於免費版根本沒有家庭圈，那個分頁永遠是空的。
+            # 付費牆在點數（免費只有一次 5 分鐘），不在人數；滿 2 位照樣提示升級。
+            # 邀請與加入要一起開：只開邀請的話，免費 A 邀免費 B，B 會被擋在門外＝邀請沒人接得到。
+            "familyMembersMax": 2,
+            "familyCircleInvite": True,
+            "familyCircleJoin": True,
         },
         "usageLedger": {
             "period": time.strftime("%Y-%m"),
