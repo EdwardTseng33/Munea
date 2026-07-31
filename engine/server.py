@@ -9023,7 +9023,8 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
         log_fallback_exception("attach clinic visit cue", e)
     base += health_kb.injection_for(last_user, profile=_health_profile,
                                     hour=(context.get("now") or {}).get("hour"),
-                                    recent_topic=_recent_topic)
+                                    recent_topic=_recent_topic,
+                                    locale=context.get("locale"))
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):

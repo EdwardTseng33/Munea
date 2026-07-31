@@ -1,0 +1,117 @@
+{
+ "locale": "en",
+ "region": "US",
+ "verifiedAt": "2026-07-31",
+ "verifiedBy": "US health content pass (kb-i18n-20260731); emergency numbers per docs/qa/i18n/emergency-numbers-verification-2026-07-31.md",
+ "emergency": {
+  "all": {
+   "number": "911",
+   "use": "Medical / fire / police emergencies",
+   "hours": "24/7",
+   "note": "Single combined emergency number nationwide. Replaces every use of Taiwan's fire/ambulance number in localized copy."
+  },
+  "crisis": {
+   "number": "988",
+   "name": "988 Suicide & Crisis Lifeline",
+   "hours": "24/7",
+   "callOrText": true,
+   "note": "Call OR text the same three digits. Replaces Taiwan's mental-health hotline in localized copy.",
+   "sources": [
+    "https://988lifeline.org/",
+    "https://www.samhsa.gov/mental-health/988"
+   ]
+  },
+  "eldercare": {
+   "number": "1-800-677-1116",
+   "name": "Eldercare Locator",
+   "hours": "Mon-Fri 08:00-21:00 US Eastern — NOT 24 hours",
+   "use": "Connects callers to their local Area Agency on Aging: respite care, caregiver support, senior services. Replaces Taiwan's long-term-care hotline in localized copy.",
+   "note": "Every mention in say text must keep the 'weekdays' caveat. Emergencies always go to 911, never this line.",
+   "sources": [
+    "https://eldercare.acl.gov/"
+   ]
+  }
+ },
+ "numberPolicy": "No non-US hotline or emergency number may appear anywhere in the en overlay (no Taiwan, Japan, Spain, or EU numbers). The only numbers allowed in en say text are 911, 988, and 1-800-677-1116.",
+ "systemTerms": {
+  "healthInsurance": "Say 'Medicare' (federal, 65+), 'Medicaid' (low income), or 'your insurance' — never Taiwan NHI framing. Coverage claims in copy are limited to the two verified ones below (MTM and acupuncture).",
+  "primaryCare": "Entry-point doctor is 'your primary care doctor' (PCP) — the US equivalent of Taiwan's 家醫科 referral in refer cards.",
+  "pharmacistReview": {
+   "term": "medication review ('brown bag' review) at the pharmacy",
+   "medicare": "Medicare Part D plans must offer Medication Therapy Management (MTM) to members who qualify: a free annual Comprehensive Medication Review by a pharmacist covering prescriptions, OTC, vitamins, and supplements. Eligible members are auto-enrolled. Used in supp-ask-pharmacist and lex-pharmacist to replace Taiwan's NHI-funded 用藥整合.",
+   "sources": [
+    "https://www.medicare.gov/health-drug-plans/part-d/what-plans-cover/plan-rules/safety-management-programs",
+    "https://www.ncoa.org/article/medication-therapy-management/"
+   ]
+  },
+  "respiteCare": {
+   "term": "respite care, found via the Eldercare Locator / local Area Agency on Aging",
+   "note": "Replaces Taiwan 長照 1966 喘息服務 in sleep-respite-service and mood-caregiver-respite.",
+   "sources": [
+    "https://eldercare.acl.gov/"
+   ]
+  },
+  "acupunctureMedicare": {
+   "claim": "Medicare covers acupuncture ONLY for chronic low back pain: up to 12 sessions in 90 days, 8 more if improving (max 20 per 12 months), through Medicare-enrolled providers.",
+   "usedIn": "tcm-see-doctor",
+   "sources": [
+    "https://www.medicare.gov/coverage/acupuncture",
+    "https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=373"
+   ]
+  }
+ },
+ "regulatoryNotes": {
+  "melatonin": {
+   "status": "OTC dietary supplement in the US (opposite of Taiwan, where it is prescription-only). The Taiwan 'this is a prescription drug' card was fully rewritten for en.",
+   "facts": [
+    "Sold over the counter under DSHEA; no FDA pre-market approval of content or claims.",
+    "Best evidence: jet lag and circadian (body-clock timing) problems, short-term use.",
+    "AASM clinical practice guideline suggests clinicians NOT use melatonin for sleep-onset or sleep-maintenance chronic insomnia in adults (weak recommendation, low certainty); CBT-I is first-line.",
+    "Label accuracy is poor: JAMA 2023 analysis of 25 melatonin gummy products found 22 of 25 mislabeled, actual content 74%-347% of label, one product contained CBD instead of melatonin."
+   ],
+   "usedIn": "sleep-melatonin-blocked, lex-melatonin",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://pubmed.ncbi.nlm.nih.gov/27998379/",
+    "https://aasm.org/missing-the-mark-melatonin-finding-best-treatment-insomnia/",
+    "https://www.cbsnews.com/news/melatonin-gummies-inaccurately-labeled-study/",
+    "https://aasm.org/study-finds-that-melatonin-content-of-supplements-varies-widely/"
+   ]
+  },
+  "magnesiumUpperLimit": {
+   "note": "en copy uses 350 mg/day as the supplemental magnesium ceiling (US NIH ODS Tolerable Upper Intake Level for supplemental Mg in adults). The zh master says 250 mg/day per Taiwan dietitian guidance — deliberately localized, not a translation error.",
+   "usedIn": "sleep-magnesium-supplement",
+   "sources": [
+    "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/"
+   ]
+  },
+  "vitaminCUpperLimit": {
+   "note": "2,000 mg/day adult UL — same figure as zh master; matches US NIH ODS.",
+   "usedIn": "lex-vitamin-c",
+   "sources": [
+    "https://ods.od.nih.gov/factsheets/VitaminC-HealthProfessional/"
+   ]
+  },
+  "licorice": {
+   "note": "FDA consumer warning: real black licorice (glycyrrhizin) can raise blood pressure and lower potassium, notably in people 40+. Basis for the licorice line in tcm-herb-interaction (zh master's 甘草 warning, localized to the US licorice-candy/tea context).",
+   "sources": [
+    "https://www.fda.gov/consumers/consumer-updates/black-licorice-trick-or-treat"
+   ]
+  },
+  "redYeastRice": {
+   "note": "Sold as a supplement in the US; contains monacolin K (lovastatin-like), so the statin-interaction / muscle-damage warning from the zh master carries over unchanged and is highly relevant to US users.",
+   "usedIn": "supp-red-yeast"
+  },
+  "statsUsed": [
+   "Hypertension 65+: 'more than half, closer to two out of three' — conservative under both the 140/90 (~63%) and 130/80 (~74%) NHANES definitions.",
+   "Diabetes 65+: 'nearly three in ten' — CDC National Diabetes Statistics Report, 29.2% of Americans 65+.",
+   "Supplement use: 'about seven in ten older Americans' — CDC/NCHS Data Brief 399 (70.4% of adults 60+ used a dietary supplement in the past 30 days)."
+  ]
+ },
+ "skippedAsCulturallyUntranslatable": {
+  "TW-EDU-01": ["sleep-acupressure"],
+  "TW-EDU-30": ["tcm-listen", "tcm-acupressure", "tcm-tonic-caution"],
+  "TW-EDU-31": ["lex-essence-chicken", "lex-antrodia", "lex-nattokinase", "lex-bitter-melon", "lex-maca", "lex-gaba"],
+  "policy": "Fail-safe: solutions with no honest US localization are omitted from the overlay, so the layer never serves them in en. Every topic's L5 refer card is translated, so all ten topics stay live."
+ }
+}

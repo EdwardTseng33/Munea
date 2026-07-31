@@ -1,0 +1,635 @@
+{
+ "topics": {
+  "TW-EDU-01": {
+   "keywords": [
+    "can't sleep",
+    "can't fall asleep",
+    "can't stay asleep",
+    "insomnia",
+    "sleeping pills",
+    "sleep aid",
+    "tossing and turning",
+    "wake up too early",
+    "trouble sleeping",
+    "not sleeping well",
+    "melatonin",
+    "magnesium"
+   ],
+   "solutions": {
+    "sleep-screen-off": {
+     "label": "Put the phone away an hour before bed",
+     "say": "About an hour before bed, put the phone down somewhere out of reach and dim the lights — it tells your brain it's time to wind down. You can try it tonight."
+    },
+    "sleep-warm-bath": {
+     "label": "A warm bath or shower before bed",
+     "say": "A warm bath or shower an hour or two before bed helps — it's the cool-down afterward that makes you drowsy."
+    },
+    "sleep-fixed-waketime": {
+     "label": "Get up at the same time every day",
+     "say": "Get up at the same time every morning — weekends too. Your body clock resets from the morning end, and it usually takes about a week to feel the difference."
+    },
+    "sleep-daylight-walk": {
+     "label": "Daylight and a walk during the day",
+     "say": "Get outside in the daylight and walk a little every day. It sounds too simple, but sunlight during the day is one of the best things for sleep at night — especially as we get older."
+    },
+    "sleep-gentle-stretch": {
+     "label": "Gentle stretching before bed",
+     "say": "A few slow stretches and some deep breaths before bed — let the shoulders and neck loosen up. It helps the whole body get the message that the day is over."
+    },
+    "sleep-cut-caffeine": {
+     "label": "No caffeine after lunch",
+     "say": "After lunch, skip the coffee, strong tea, and colas. Caffeine hangs around in your system a lot longer than most people think."
+    },
+    "sleep-magnesium-food": {
+     "label": "Magnesium from food",
+     "say": "Leafy greens, nuts, beans, and bananas all have magnesium naturally. Getting it from food is the safest way — no worries about overdoing it."
+    },
+    "sleep-magnesium-supplement": {
+     "label": "Magnesium before bed (supplement)",
+     "dailyCap": "No more than 350 mg a day from supplements (the U.S. safe upper limit)",
+     "say": "There's a fairly new study — done in adults who sleep poorly, like you — where taking magnesium before bed did ease insomnia a little. But the effect was small, and it doesn't work for everyone. If you try it, keep supplements at or under 350 mg a day — that's the U.S. safe limit, and more than that tends to cause diarrhea. And if you have kidney trouble or blood pressure issues, check with your doctor or pharmacist first."
+    },
+    "sleep-split-rest": {
+     "label": "Sleep in two shifts",
+     "say": "If you know you'll be up in the night anyway, stop fighting it — plan your sleep in two blocks. Get a solid stretch in before they usually need you. It beats white-knuckling the whole night."
+    },
+    "sleep-respite-service": {
+     "label": "Respite care so you can catch up on sleep",
+     "say": "Respite care means someone else takes over for a few hours so you can rest — and it's something you've earned, not a luxury. The Eldercare Locator at 1-800-677-1116 (weekdays) can point you to respite programs near you. Want me to remember that number for you?"
+    },
+    "sleep-melatonin-blocked": {
+     "label": "Melatonin — the honest picture",
+     "say": "Melatonin is sold over the counter here, but let me give you the honest picture: it works best for jet lag and a body clock that's off schedule. For plain chronic insomnia, the sleep doctors' own association actually recommends against it — the evidence just isn't there. And the bottles are messy: when researchers lab-tested store-bought melatonin, most had far more or less in them than the label said. I can't tell you to take it or how much — if you want to try it, talk to your pharmacist first, especially if you're on blood thinners or other medicines."
+    },
+    "sleep-tcm-herbs": {
+     "label": "Herbal sleep remedies",
+     "say": "Herbal sleep remedies aren't something I can pick out for you. One thing I do want you to know: 'natural' doesn't mean it can't clash with your medications — herbs can interact with prescriptions even if you take them hours apart, because both stay in your body for days. If you use anything herbal, make sure your doctor and your pharmacist both know about it."
+    },
+    "sleep-refer-doctor": {
+     "label": "Time to see a doctor",
+     "say": "If this has gone on for a good while, or you're so tired it's affecting your days — or if you snore and seem to stop breathing in your sleep — that's worth a doctor visit. Start with your primary care doctor, and ask whether a sleep clinic makes sense."
+    }
+   }
+  },
+  "TW-EDU-03": {
+   "keywords": [
+    "blood pressure",
+    "high blood pressure",
+    "hypertension",
+    "blood pressure medicine",
+    "blood pressure pills",
+    "blood pressure monitor",
+    "my pressure is up",
+    "systolic",
+    "top number",
+    "blood pressure reading"
+   ],
+   "solutions": {
+    "bp-take-meds-on-time": {
+     "label": "Same time every day, no adjusting on your own",
+     "say": "The single biggest thing with blood pressure pills: same time every day, no skipping, no doubling up on your own. Keep them somewhere you can't miss — next to the toothbrush, or by the coffee maker."
+    },
+    "bp-measure-right": {
+     "label": "How to take your blood pressure right",
+     "say": "Sit and rest for five minutes first, keep your arm at heart level, and check at the same time of day each time. Readings naturally bounce around during the day — a sloppy reading just gives you a scare for nothing."
+    },
+    "bp-reduce-salt": {
+     "label": "Ease up on the salt",
+     "say": "For most Americans the salt isn't in the shaker — it's in canned soups, deli meats, frozen dinners, bread, and restaurant food. Cutting back there, and going easy on the sauces, does more than anything else you can do in the kitchen."
+    },
+    "bp-dash-diet": {
+     "label": "The DASH way of eating",
+     "say": "The DASH diet — plenty of vegetables and fruit, whole grains, low-fat dairy — was designed specifically for blood pressure, and the research behind it is solid. One caution: if your kidneys aren't in good shape, don't load up on potassium-rich foods without asking your doctor first."
+    },
+    "bp-walk": {
+     "label": "A regular walk",
+     "say": "A brisk half-hour walk, five days a week, genuinely moves the needle on blood pressure. You don't have to start there — ten minutes counts."
+    },
+    "bp-stress-sleep": {
+     "label": "Stress and bad sleep push it up too",
+     "say": "Stress, poor sleep, and sudden cold snaps can all send your numbers up for a while — it doesn't always mean the medicine stopped working. First ask yourself: has this been an especially rough week?"
+    },
+    "bp-normalize": {
+     "label": "You're in very common company",
+     "say": "More than half of Americans over 65 — closer to two out of three — have high blood pressure. It's the most common chronic condition there is. This isn't something you did wrong."
+    },
+    "bp-med-change-blocked": {
+     "label": "Changing your medication",
+     "say": "Switching, adding, or stopping blood pressure medicine is your doctor's call, not mine — and I don't interpret your readings either. What I can do is help you keep track of them to show your doctor."
+    },
+    "bp-refer": {
+     "label": "When it's an emergency",
+     "say": "If your top number reads over 180, or you notice a drooping face, a weak arm, or slurred speech (signs of stroke), or chest pressure with a cold sweat (signs of a heart attack) — call 911 right away. Don't wait for your next appointment."
+    }
+   }
+  },
+  "TW-EDU-04": {
+   "keywords": [
+    "blood sugar",
+    "diabetes",
+    "diabetic",
+    "A1C",
+    "glucose",
+    "my sugar is high",
+    "insulin",
+    "glucose meter",
+    "prediabetes",
+    "my sugar"
+   ],
+   "solutions": {
+    "dm-veggie-first": {
+     "label": "Change the order you eat",
+     "say": "Eat your vegetables and protein first, and save the bread, potatoes, or rice for last. Same meal, different order — your blood sugar climbs more gently. You can start at dinner tonight."
+    },
+    "dm-carb-swap": {
+     "label": "Swap half the white stuff",
+     "say": "Swap half of the white bread, white rice, and regular pasta for whole wheat, brown rice, oatmeal, or sweet potatoes. That beats any miracle diet you'll see on TV."
+    },
+    "dm-walk-after-meal": {
+     "label": "A short walk after meals",
+     "say": "Fifteen or twenty minutes of walking after a meal makes a real, well-documented difference to after-meal blood sugar. No need to hurry — a stroll counts."
+    },
+    "dm-sugary-drinks": {
+     "label": "Cut the sugary drinks first",
+     "say": "Soda, sweet tea, fruit juice, sports drinks — sugar you drink hits the bloodstream fastest of all. Cutting just this one thing changes the numbers for a lot of people."
+    },
+    "dm-take-meds": {
+     "label": "Stay steady with meds and checkups",
+     "say": "Take your medicine on schedule and don't put off your checkups. Blood sugar is a long game — stopping and starting is what does the most damage."
+    },
+    "dm-normalize": {
+     "label": "You're far from alone",
+     "say": "Nearly three in ten Americans over 65 have diabetes. It's one of the most common conditions of getting older — not a sign you didn't take care of yourself."
+    },
+    "dm-med-blocked": {
+     "label": "Adjusting doses or reading your numbers",
+     "say": "I don't interpret blood sugar readings, and adjusting your medicine is strictly your doctor's call. Whether a supplement is safe alongside your diabetes medicine — that's a question for your pharmacist."
+    },
+    "dm-refer": {
+     "label": "When to get help fast",
+     "say": "**Low blood sugar is the most urgent thing here**: a cold sweat and shakiness, but still awake and able to swallow — take glucose tablets, juice, or regular (not diet) soda right away. **And remember the second half: if they become confused or you can't wake them, call 911 immediately** — these two things always go together, never just the first part. Already confused or unresponsive means 911, now. Also: extreme thirst, confusion, and rapid breathing with fruity-smelling breath means get medical help immediately — and a sore or cut that just won't heal needs a doctor's look."
+    }
+   }
+  },
+  "TW-EDU-07": {
+   "keywords": [
+    "dizzy",
+    "dizziness",
+    "lightheaded",
+    "light-headed",
+    "feeling dizzy when I stand up",
+    "room is spinning",
+    "vertigo",
+    "woozy",
+    "almost fainted",
+    "faint"
+   ],
+   "solutions": {
+    "dizzy-two-step": {
+     "label": "Stand up in two stages",
+     "say": "Stand up in two stages: sit up first, wait a few seconds, then rise slowly. Getting out of bed, sit on the edge for a moment before you stand. You can start tonight — and it's the single most effective thing."
+    },
+    "dizzy-hydrate": {
+     "label": "Drink enough water, don't stand too long",
+     "say": "Hot days, too little water, and alcohol all make it worse. Keep the water coming, and avoid standing still in one spot for long stretches."
+    },
+    "dizzy-explain": {
+     "label": "What's actually happening",
+     "say": "This is called orthostatic hypotension — you change position, your blood pressure doesn't catch up fast enough, and the brain runs short for a moment. It's very common in older adults, and just knowing what it is takes some of the scare out."
+    },
+    "dizzy-med-review": {
+     "label": "Mention it at your next appointment",
+     "say": "Blood pressure pills and water pills are common culprits. At your next visit, tell your doctor 'I get dizzy when I stand up' and let them decide whether to adjust anything — **but never stop a medication on your own**."
+    },
+    "dizzy-fall-proof": {
+     "label": "Clear the fall hazards while you're at it",
+     "say": "Dizzy spells and falls travel together. A night light on the path to the bathroom, a non-slip mat in the shower, no loose rugs or clutter in the hallway — small stuff that prevents big trouble."
+    },
+    "dizzy-refer": {
+     "label": "When it's an emergency",
+     "say": "**If dizziness comes with weakness on one side, a drooping face, slurred speech, a sudden terrible headache, or double vision — those are stroke signs. Call 911 immediately.** And if the spells keep coming back, or you've already had a fall, have your doctor take a look."
+    }
+   }
+  },
+  "TW-EDU-11": {
+   "keywords": [
+    "heartburn",
+    "acid reflux",
+    "reflux",
+    "indigestion",
+    "GERD",
+    "bloated",
+    "bloating",
+    "gas",
+    "upset stomach",
+    "burping",
+    "acid coming up",
+    "stomach pain"
+   ],
+   "solutions": {
+    "reflux-no-lie-down": {
+     "label": "Don't lie down right after eating",
+     "say": "Stay upright for two or three hours after a meal, and try not to eat anything in the last three hours before bed. Of everything on this list, this is the one you'll feel the most."
+    },
+    "reflux-late-dinner": {
+     "label": "Skip the late-night eating",
+     "say": "Eating late and heading straight for the couch or bed is the classic heartburn recipe. If dinner has to be late, keep it small, skip the fried stuff, and give yourself a couple of hours before lying down."
+    },
+    "reflux-raise-head": {
+     "label": "Raise the head of the bed",
+     "say": "Raise the head end of your bed six to eight inches — blocks or risers under the bed legs, or a wedge pillow. Stacking regular pillows doesn't do it; the whole upper body needs the slope. It keeps the acid downhill while you sleep."
+    },
+    "reflux-diet": {
+     "label": "Less fried, less overstuffed",
+     "say": "Fried food, rich desserts, coffee, strong tea, and alcohol all invite the acid up. Trim those first, and stop eating before you're stuffed — an overfull stomach pushes back."
+    },
+    "reflux-weight": {
+     "label": "Weight makes a real difference",
+     "say": "Pressure around the middle squeezes the stomach upward, so losing even some weight genuinely helps heartburn. No rush — slow and steady is fine."
+    },
+    "reflux-meds-blocked": {
+     "label": "Heartburn medicines",
+     "say": "I can't tell you which heartburn medicine to take — and the over-the-counter acid reducers on every drugstore shelf aren't meant to be a long-term habit without a doctor involved. If you've been taking one for a long while, don't just quit on your own either; let your doctor decide."
+    },
+    "reflux-refer": {
+     "label": "When to see a doctor — and when it's the heart",
+     "say": "If food is getting hard to swallow, you're losing weight without trying, or your stools turn black — see a doctor and get the stomach checked. **And the big one: heartburn can mask a heart attack. If it comes with a cold sweat, shortness of breath, pain spreading to the left arm or jaw, or it gets worse when you move around — treat it as your heart and call 911.**"
+    }
+   }
+  },
+  "TW-EDU-16": {
+   "keywords": [
+    "supplements",
+    "supplement",
+    "vitamins",
+    "too many pills",
+    "red yeast rice",
+    "grapefruit",
+    "drug interactions",
+    "mix with my medications",
+    "herbals and my meds",
+    "fish oil and my meds"
+   ],
+   "solutions": {
+    "supp-inventory": {
+     "label": "List everything you take",
+     "say": "Let's make one list of everything — prescriptions, vitamins, supplements, the ones you take daily and the ones you take when you remember. Just seeing it all in one place, people usually spot the doubles themselves."
+    },
+    "supp-red-yeast": {
+     "label": "Red yeast rice + statins is a real risk",
+     "dailyCap": "Follow the product label — and never combine it with a statin without asking your doctor or pharmacist first",
+     "say": "Here's the one that matters most: red yeast rice naturally contains the same kind of compound as statin drugs. Taking it alongside a prescription statin doubles up the load and risks serious muscle damage. If you're on both, don't decide anything yourself — take both bottles to your pharmacist and ask."
+    },
+    "supp-grapefruit": {
+     "label": "Grapefruit makes some medicines too strong",
+     "askedFor": [
+      "grapefruit",
+      "grapefruit juice",
+      "pomelo"
+     ],
+     "say": "This one surprises a lot of people: **grapefruit — including grapefruit juice at breakfast — blocks the enzyme your liver uses to break down certain medicines, so the drug builds up stronger than intended**. Statins, some blood pressure pills, and some sleep medicines are on the list, and **the effect lasts two or three days, so spacing them apart doesn't help**. If you take any regular medication, ask your pharmacist 'is grapefruit okay with my pills?' before making it a habit. Pomelo does the same thing."
+    },
+    "supp-food-first": {
+     "label": "Food before pills, always",
+     "say": "Whatever you can get from real food, get from real food. Supplements are for filling genuine gaps — they're not a substitute for eating well."
+    },
+    "supp-ask-pharmacist": {
+     "label": "Take the whole bag to your pharmacist",
+     "say": "Once your list is made, here's the most practical step: bring the whole bag — pills, vitamins, everything — to your pharmacy and ask for a medication review. Pharmacists do this all the time, and if you're on a Medicare drug plan you may qualify for a free yearly review (it's called Medication Therapy Management — just ask). They can spot two bottles that fight each other at a glance."
+    },
+    "supp-normalize": {
+     "label": "A drawer full is normal",
+     "say": "About seven in ten older Americans take at least one supplement — a crowded medicine cabinet is completely normal, not a sign you've been foolish with your money."
+    },
+    "supp-no-brand-blocked": {
+     "label": "Brands, doses, and 'is it safe with my meds'",
+     "say": "I won't recommend specific brands or ingredients, I don't give doses, and I won't be the one to tell you 'that's fine with your medications' — that judgment belongs to your pharmacist, who can actually see the whole picture."
+    },
+    "supp-refer": {
+     "label": "When to stop and get help",
+     "say": "If after starting any supplement you get muscle pain or weakness, your skin or the whites of your eyes turn yellow, or your heart starts racing — stop taking it and get medical help promptly. That's not a wait-and-see situation."
+    }
+   }
+  },
+  "TW-EDU-18": {
+   "keywords": [
+    "feeling down",
+    "depressed",
+    "depression",
+    "no energy",
+    "don't feel like doing anything",
+    "lonely",
+    "overwhelmed",
+    "burned out",
+    "can't cope",
+    "sad all the time",
+    "what's the point",
+    "feeling blue"
+   ],
+   "solutions": {
+    "mood-listen-first": {
+     "label": "Being heard comes first",
+     "say": "We don't have to fix anything right now. If you feel like talking, I'm listening — saying this stuff out loud genuinely helps, all by itself."
+    },
+    "mood-daylight-walk": {
+     "label": "Daylight and a walk",
+     "say": "A twenty-minute walk outside in the daylight — for mild to moderate low mood, exercise has real research behind it. That's not a pep talk; it's one of the best-proven things there is."
+    },
+    "mood-one-connection": {
+     "label": "See someone once a week",
+     "say": "Too much time alone pulls the mood downward. One real get-together a week is enough to push back — an old friend, church, the senior center, coffee with a neighbor. Anything counts."
+    },
+    "mood-sleep-link": {
+     "label": "Check the sleep side first",
+     "say": "Bad sleep and low mood are usually two sides of the same coin. Sort out the sleep first, and the mood often loosens its grip a little on its own."
+    },
+    "mood-caregiver-respite": {
+     "label": "Caregivers need relief too",
+     "say": "You're not failing — you're running on empty, and you have been for a while. Respite care exists exactly for this: someone takes over for a few hours so you can breathe. Call the Eldercare Locator at 1-800-677-1116 (weekdays) and ask what's available near you. Taking a break is not quitting."
+    },
+    "mood-1925": {
+     "label": "The 988 Lifeline — someone to talk to, day or night",
+     "say": "If the nights are the hardest part — 988 is the Suicide & Crisis Lifeline. It's free, it's there 24/7, and you can call **or text** the same three digits. You don't have to be in crisis to reach out; feeling awful is reason enough."
+    },
+    "mood-antidep-blocked": {
+     "label": "Antidepressants",
+     "say": "Whether to take an antidepressant, and which one, is a decision for a doctor — and if you're already on one, never stop it cold on your own; coming off suddenly can feel terrible. That's a conversation with your prescriber."
+    },
+    "mood-refer": {
+     "label": "When to reach out for real help",
+     "say": "If you're having thoughts of hurting yourself, or life has started to feel like it's not worth living — call or text 988 right now, or call 911, and let someone close to you know. And if it's been two weeks or more of barely eating, barely sleeping, nothing bringing any interest — that's depression, a medical condition, not a character flaw. It deserves a doctor the same way a broken arm does."
+    }
+   }
+  },
+  "TW-EDU-26": {
+   "keywords": [
+    "menopause",
+    "hot flashes",
+    "hot flash",
+    "night sweats",
+    "change of life",
+    "hormones",
+    "hormone replacement",
+    "HRT",
+    "periods stopped",
+    "menopausal"
+   ],
+   "solutions": {
+    "meno-normalize": {
+     "label": "This is not a failing",
+     "say": "Menopause isn't an illness — it's your hormones recalibrating. The hot flashes, the rough sleep, the mood swings are real physical responses. You're not imagining it, and you're not being weak."
+    },
+    "meno-layers": {
+     "label": "Layers, a little fan, a cooler room",
+     "say": "For hot flashes, the unglamorous stuff works best: a cardigan you can peel off, a little fan in your purse, and a bedroom cooled down before you turn in. Simple, but it's what actually brings relief fastest."
+    },
+    "meno-triggers": {
+     "label": "Find your own trigger list",
+     "say": "Spicy food, hot drinks, alcohol, coffee, stress — everyone's triggers are different. Jot down what came right before a hot flash for a few days. Once you spot your pattern, it's much easier to dodge."
+    },
+    "meno-exercise": {
+     "label": "Regular exercise",
+     "say": "Regular exercise has solid evidence for menopause sleep and mood — and it protects your bones and heart at the same time, right when bone loss speeds up. Two birds, one stone."
+    },
+    "meno-sleep-link": {
+     "label": "Two different sleep problems",
+     "say": "People assume menopause simply equals bad sleep — but waking up drenched at 3 a.m. and being a light sleeper in general are two different problems, and they're tackled separately. You don't have to accept the whole package as your fate."
+    },
+    "meno-food": {
+     "label": "Plant estrogens from food",
+     "say": "Soy milk, tofu, edamame — soy foods naturally contain isoflavones, and the amounts you get from a normal diet are quite safe. Start with the grocery aisle before you reach for bottles."
+    },
+    "meno-isoflavone": {
+     "label": "Soy isoflavone supplements",
+     "askedFor": [
+      "soy isoflavones",
+      "isoflavones",
+      "menopause supplements",
+      "evening primrose"
+     ],
+     "dailyCap": "Follow the product label, and don't stack it with other isoflavone products",
+     "say": "Soy isoflavone supplements have middling-to-weak evidence for hot flashes — some women notice a difference, some don't. Worth a try if you're curious, but don't expect a miracle pill. **The part that matters most: if you've had breast cancer or any hormone-related cancer, or you're on anti-hormone medication like tamoxifen, do not take these without asking your doctor** — that's not a decision to make alone."
+    },
+    "meno-hrt-blocked": {
+     "label": "Hormone therapy",
+     "say": "Hormone therapy is a prescription decision — whether it's right for you and for how long depends on your personal history, and that's for your gynecologist or primary care doctor to weigh with you. I won't recommend it — but I will say this: if symptoms are wrecking your daily life, asking about it is a perfectly legitimate road. You don't have to just endure."
+    },
+    "meno-refer": {
+     "label": "When to see a doctor",
+     "say": "**Bleeding again after your periods have fully stopped — don't sit on that one; see a gynecologist promptly.** And if low mood has lasted more than two weeks, or symptoms are bad enough to derail work and daily life, that's not something to white-knuckle through — it's worth a doctor's visit."
+    }
+   }
+  },
+  "TW-EDU-30": {
+   "keywords": [
+    "acupuncture",
+    "acupuncturist",
+    "natural remedies",
+    "home remedies",
+    "home remedy",
+    "herbal remedies",
+    "herbal medicine",
+    "traditional medicine",
+    "Chinese medicine",
+    "ginger tea"
+   ],
+   "solutions": {
+    "tcm-see-doctor": {
+     "label": "Curious about acupuncture? Here's the lay of the land",
+     "askedFor": [
+      "acupuncture",
+      "acupuncturist"
+     ],
+     "say": "If you're curious about acupuncture, it's well established in the U.S. — look for a licensed acupuncturist (most states license them). The research support is strongest for certain kinds of pain, chronic low back pain especially. Worth knowing: **Medicare covers acupuncture for chronic low back pain** — up to 12 sessions in 90 days, through Medicare-enrolled providers — and some private plans cover more, so check before paying out of pocket."
+    },
+    "tcm-both-lanes": {
+     "label": "Tell both sides what you're taking",
+     "say": "If you use herbal or traditional remedies alongside regular medicine, don't keep either side in the dark — **your doctor and your pharmacist both need the full list**. Herbs and prescriptions can genuinely clash, and they can only protect you from that if they know."
+    },
+    "tcm-food-warm": {
+     "label": "Gentle kitchen remedies",
+     "askedFor": [
+      "ginger tea",
+      "chamomile",
+      "chicken soup"
+     ],
+     "say": "If you like starting gently, start in the kitchen: ginger tea for a queasy stomach, chicken soup when you're run down, chamomile tea in the evening to unwind. These are foods, not medicines — mild, cheap, and comforting — and there's nothing wrong with that."
+    },
+    "tcm-routine": {
+     "label": "Routine beats any supplement",
+     "say": "On this, traditional wisdom and modern medicine say the exact same thing: sleep on a regular schedule, eat regular meals, keep moving, and don't let stress stew. Get those right and they'll do more for you than anything sold in a bottle — and they're free."
+    },
+    "tcm-herb-interaction": {
+     "label": "A few herbs that need real caution",
+     "askedFor": [
+      "dong quai",
+      "licorice",
+      "licorice root",
+      "black licorice",
+      "herbal blend"
+     ],
+     "dailyCap": "I don't give amounts — run any herb past your doctor or pharmacist",
+     "say": "A few specific warnings worth having: **dong quai, found in some menopause and 'women's' herbal blends, can raise bleeding risk if you're on blood thinners**. And **real licorice — black licorice candy, or licorice root in teas and supplements — can push blood pressure up and potassium down** when you have it regularly; the FDA has warned about this, especially for folks over 40. I won't give you amounts for any herb — bring the package to your doctor or pharmacist. And during pregnancy or nursing, herbs are always an ask-first."
+    },
+    "tcm-prescribe-blocked": {
+     "label": "Diagnosing and dosing herbs",
+     "say": "I can't diagnose you in traditional-medicine terms, pick herbs for you, or tell you how much of one to take — that's for licensed professionals who can actually examine you. And one thing I will never do is tell you to drop a prescription in favor of an herb."
+    },
+    "tcm-refer": {
+     "label": "When to stop and see a doctor",
+     "say": "If after taking any herbal remedy your skin or the whites of your eyes turn yellow, you swell up, you bruise or bleed for no reason, or you get severe diarrhea or vomiting — **stop taking it and see a doctor promptly**. And the most important line of all: **never stop your prescription medicines to take an herb instead** — especially blood pressure, blood sugar, heart, or blood thinner medication. That risk is never worth it."
+    }
+   }
+  },
+  "TW-EDU-31": {
+   "keywords": [
+    "melatonin",
+    "fish oil",
+    "omega-3",
+    "turmeric",
+    "CoQ10",
+    "cranberry",
+    "vitamin D",
+    "vitamin C",
+    "B complex",
+    "B12",
+    "multivitamin",
+    "collagen",
+    "probiotics",
+    "probiotic",
+    "ginseng",
+    "reishi"
+   ],
+   "solutions": {
+    "lex-b-complex": {
+     "label": "B vitamins / B complex",
+     "askedFor": [
+      "B complex",
+      "B vitamins",
+      "B12",
+      "vitamin B"
+     ],
+     "dailyCap": "Follow the label; don't take high-dose B6 long term (it can cause nerve damage)",
+     "say": "B vitamins aren't an energy pill — they're helpers for your metabolism. **If you're low, topping up helps; if you're not, you mostly get expensive yellow urine** (that's normal, not proof it's working). Who actually runs low: strict vegetarians and vegans (B12), heavy drinkers, and people on certain long-term stomach-acid medicines. Three things: stick to the label; **high-dose B6 over the long haul can cause numb, tingling hands and feet** — more is not better; and it can interact with Parkinson's medication, so ask the doctor first if that applies."
+    },
+    "lex-vitamin-c": {
+     "label": "Vitamin C",
+     "askedFor": [
+      "vitamin C"
+     ],
+     "dailyCap": "Adult upper limit is 2,000 mg a day (a safety ceiling, not a target)",
+     "say": "On vitamin C and colds, the big research reviews are pretty deflating: **taking it regularly doesn't really prevent colds — at best it shaves a little off how long one lasts**. One orange or a cup of strawberries already covers your daily need. If you take it anyway: **stay under 2,000 mg a day** — more than that invites diarrhea — and **if you've had kidney stones, skip the high doses** (it raises oxalate). Fruit is still the better route."
+    },
+    "lex-vitamin-d": {
+     "label": "Vitamin D",
+     "askedFor": [
+      "vitamin D"
+     ],
+     "dailyCap": "Follow the label; it's fat-soluble and builds up — don't stack multiple products that contain D",
+     "say": "Plenty of older adults do run low on vitamin D — but here's the honest part: the biggest recent trials found that **for healthy people who aren't deficient, extra D didn't prevent fractures, cancer, or heart disease** the way everyone hoped. Correcting a real deficiency still matters. Sunlight is the cheapest source — ten or fifteen minutes a day helps. If you supplement: **D is fat-soluble and builds up in the body**, so don't stack several products that all contain it. A blood test at your next checkup settles whether you're actually low — just ask."
+    },
+    "lex-fish-oil": {
+     "label": "Fish oil (omega-3)",
+     "askedFor": [
+      "fish oil",
+      "omega-3",
+      "omega 3"
+     ],
+     "dailyCap": "Follow the label; ask your doctor before combining with blood thinners, and stop before surgery",
+     "say": "The fish oil story needs an update: **in the big recent trials, ordinary fish oil capsules mostly didn't prevent heart attacks or strokes**. (The one that did work is a high-dose prescription version — that comes from a doctor, not the supplement aisle.) What does have good evidence is simpler: **eat fish twice a week**. If you take fish oil anyway, remember **it thins the blood a little — check with your doctor if you're on a blood thinner, and stop it before surgery or dental work**. Fishy burps and an upset stomach are the common complaints."
+    },
+    "lex-q10": {
+     "label": "CoQ10",
+     "askedFor": [
+      "CoQ10",
+      "Q10",
+      "coenzyme Q10"
+     ],
+     "dailyCap": "Follow the product label",
+     "say": "People take CoQ10 for two main reasons: heart support (there's some early evidence as an add-on in heart failure — alongside treatment, never instead of it) and the muscle aches from statins (the studies there honestly disagree — it helps some people, does nothing for others). **The line that matters most: CoQ10 can weaken warfarin, the blood thinner** — if you're on it, ask your doctor first, because a quietly weakened blood thinner is a dangerous thing."
+    },
+    "lex-turmeric": {
+     "label": "Turmeric (curcumin)",
+     "askedFor": [
+      "turmeric",
+      "curcumin"
+     ],
+     "dailyCap": "Follow the label and don't chase high doses (liver-injury reports cluster at high doses)",
+     "say": "Turmeric — curcumin — has some small studies behind it for achy joints, but the body absorbs it poorly by nature; that's why every brand brags about its special formula. Three cautions: **skip it if you have gallstones** (it makes the gallbladder contract); **it thins the blood** — avoid combining it with blood thinners or taking it before surgery; and **high-dose curcumin has been linked to reported cases of liver injury** — if your liver isn't in great shape, ask a doctor first, and if your skin or eyes ever turn yellow, stop immediately."
+    },
+    "lex-cranberry": {
+     "label": "Cranberry",
+     "askedFor": [
+      "cranberry",
+      "cranberry pills",
+      "cranberry juice"
+     ],
+     "dailyCap": "Follow the label; never use it in place of a doctor for an active infection",
+     "say": "For **preventing repeat urinary tract infections**, the latest big research review actually came around: it does seem to help certain people — women with recurring UTIs especially. But **once an infection has started, cranberry won't treat it — that needs a doctor**. Two cautions: it interacts with **warfarin, the blood thinner**, and the juice carries a lot of sugar — if you're watching your blood sugar, the pills or a low-sugar version make more sense."
+    },
+    "lex-collagen": {
+     "label": "Collagen",
+     "askedFor": [
+      "collagen"
+     ],
+     "dailyCap": "Follow the product label",
+     "say": "Honest answer: collagen gets digested into building blocks like any other protein — **swallowing collagen doesn't ship collagen straight to your skin**. The skin studies show small improvements in moisture and elasticity, but they're small trials and many are industry-funded. Fine to try with 'we'll see' money — not with 'fountain of youth' money. Enough protein, enough vitamin C, and sunscreen all have stronger evidence for your skin. Allergic to fish or shellfish? Check the source on the label."
+    },
+    "lex-probiotic": {
+     "label": "Probiotics",
+     "askedFor": [
+      "probiotics",
+      "probiotic"
+     ],
+     "dailyCap": "Follow the label; don't stack several similar products at once",
+     "say": "With probiotics, everything depends on **which strain, for what problem** — no one bottle does it all. The evidence is better for digestive troubles than for 'immune boosting,' and what worked for your neighbor may do nothing for you. Three things: **space them two hours apart from antibiotics** (or they're wasted); **if your immune system is compromised or you're in cancer treatment, don't take them without asking your doctor**; and if a month or two brings no difference, stop — no loyalty to a bottle."
+    },
+    "lex-multivitamin": {
+     "label": "Multivitamins",
+     "askedFor": [
+      "multivitamin",
+      "multivitamins"
+     ],
+     "dailyCap": "One a day, and don't stack it on top of single-ingredient supplements",
+     "say": "Honest answer: the large studies keep coming back the same way — **a daily multivitamin makes little to no difference for preventing chronic disease or living longer**. Its reasonable job is filling gaps when eating has gotten spotty; it's not insurance and it's not treatment. If you take one: one a day, and **don't stack it on top of separate calcium, D, or B pills** — the fat-soluble ones build up. Money you want to spend on health buys more at the grocery store than at the vitamin shelf."
+    },
+    "lex-ginseng": {
+     "label": "Ginseng",
+     "askedFor": [
+      "ginseng"
+     ],
+     "dailyCap": "Don't make it a daily long-term habit; if you're on regular medications, ask first",
+     "say": "Ginseng has a long list of medicines it argues with: **blood thinners, diabetes medicines (it can push blood sugar too low), and some blood pressure pills**. Skip it when you're sick with a fever, and it winds some people up — worse sleep, feeling overheated. If you take any regular medication, run it past your pharmacist before starting."
+    },
+    "lex-lingzhi": {
+     "label": "Reishi mushroom",
+     "askedFor": [
+      "reishi",
+      "reishi mushroom"
+     ],
+     "dailyCap": "Follow the label — and treat any 'treats disease' claim as marketing",
+     "say": "Reishi's immune research is still at an early stage — and **any 'fights cancer' claim you see is marketing, not human evidence**. Two hard rules: **it affects blood clotting** — avoid it with blood thinners and before surgery; and **if you're on immune-suppressing drugs** (organ transplant, autoimmune treatment) **don't take it** — it pushes in the opposite direction from your medication."
+    },
+    "lex-melatonin": {
+     "label": "Melatonin",
+     "askedFor": [
+      "melatonin"
+     ],
+     "say": "Melatonin is sold right on the shelf here, so let me give you the straight story. Where it genuinely helps: **jet lag and a body clock that's shifted off schedule** — that's what the evidence supports, for short-term use. For plain chronic insomnia, **the American Academy of Sleep Medicine actually advises against it** — the evidence is too weak. One more honest wrinkle: **store-bought melatonin is famously inconsistent** — when researchers lab-tested melatonin gummies, most contained far more or less than the label claimed. If you try it: keep it short-term, mention it to your pharmacist (it can interact with blood thinners and other medicines), and if sleep has been bad for months, the better road is a talk with your doctor — there's a non-drug therapy for insomnia (CBT-I) with much stronger evidence."
+    },
+    "lex-one-at-a-time": {
+     "label": "One at a time, with a deadline",
+     "say": "Two rules when trying any new supplement: **add only one at a time** (otherwise you'll never know which one did what), and **give it a deadline** — if a month or two brings nothing you can feel, stop. I can remember the start date for you and check back in."
+    },
+    "lex-pharmacist": {
+     "label": "Take the whole bag to the pharmacist",
+     "say": "If your pills and supplements together number more than five, here's the most practical move there is: **bring the whole bag to your pharmacy and ask for a medication review**. If you're on a Medicare drug plan, you may qualify for a free yearly review — it's called Medication Therapy Management, just ask. A pharmacist can spot two bottles that fight each other at a glance."
+    },
+    "lex-refer": {
+     "label": "When to stop and get help",
+     "say": "After starting any supplement, if your skin or the whites of your eyes turn yellow, you break out in a rash or swell up, your heart races, or your muscles ache and feel weak — **stop taking it and see a doctor promptly**, and bring the bottle with you. And the most important rule of all: **never stop a prescription medicine in favor of a supplement** — that trade is never worth the risk."
+    }
+   }
+  }
+ }
+}

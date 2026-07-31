@@ -1,0 +1,95 @@
+{
+ "locale": "es",
+ "country": "España",
+ "safetyRegion": "ES",
+ "updatedAt": "2026-07-31",
+ "emergency": {
+  "112": {
+   "name": "Emergencias 112",
+   "scope": "Urgencias médicas, incendios y policía — número único europeo, gratuito, 24/7",
+   "usage": "疊層內所有急難話術一律用 112（取代主庫 119）",
+   "verifiedAt": "2026-07-31",
+   "source": "docs/qa/i18n/emergency-numbers-verification-2026-07-31.md（內政部）"
+  },
+  "024": {
+   "name": "Línea 024 de atención a la conducta suicida",
+   "scope": "24 horas, todos los días del año, gratuita y confidencial",
+   "usage": "心理危機一律用 024（取代主庫 1925）",
+   "verifiedAt": "2026-07-31",
+   "source": "https://www.sanidad.gob.es/linea024/home.htm"
+  },
+  "061": {
+   "name": "Urgencias sanitarias 061",
+   "scope": "只有部分自治區有的救護專線",
+   "usage": "疊層話術刻意不使用——涵蓋不全，統一走 112 才不會把長輩推向沒人接的電話",
+   "verifiedAt": "2026-07-31",
+   "source": "docs/qa/i18n/emergency-numbers-verification-2026-07-31.md"
+  },
+  "016": {
+   "name": "Teléfono 016 (violencia de género)",
+   "scope": "24 h, gratuito, no deja rastro en la factura; WhatsApp 600 000 016",
+   "usage": "P0 十題話術暫未用到，查證完成、保留備用",
+   "verifiedAt": "2026-07-31",
+   "source": "https://violenciagenero.igualdad.gob.es/informacion-3/recursos/telefono016/"
+  }
+ },
+ "institutions": {
+  "seguridadSocial": {
+   "term": "Seguridad Social",
+   "note": "公醫體系統稱；對應台灣「健保」的位置。疊層不做「免費／有給付」的具體宣稱（西班牙保健服務給付範圍與台灣不同、逐項查證前不寫）"
+  },
+  "centroDeSalud": {
+   "term": "centro de salud",
+   "note": "基層醫療中心，長輩看病的第一站；轉介卡的入口之一"
+  },
+  "medicoDeCabecera": {
+   "term": "médico de cabecera",
+   "note": "家庭醫師；所有 L5 轉介卡優先指向這裡（對應主庫「家醫科」）"
+  },
+  "farmacia": {
+   "term": "farmacia / farmacéutico de confianza",
+   "note": "西班牙社區藥局密度極高、口頭諮詢不收費、是保健品與交互作用的第一入口；取代主庫「健保給付的用藥整合」說法——疊層只寫「preguntar no cuesta nada」，不宣稱任何官方給付服務"
+  },
+  "serviciosSociales": {
+   "term": "servicios sociales del ayuntamiento",
+   "note": "市政社會服務；對應台灣 1966 長照專線的入口。喘息服務＝programas de respiro familiar（Ley de Dependencia 39/2006 框架下由自治區／市政府執行，各地名稱與額度不同，疊層只指路、不承諾額度）"
+  },
+  "herbolario": {
+   "term": "herbolario",
+   "note": "草藥／天然產品店，西班牙長輩熟悉的通路；TW-EDU-30 的中醫層改編為 remedios tradicionales 時的文化錨點之一"
+  }
+ },
+ "regulatory": {
+  "melatonin": {
+   "status": "≤1,9 mg＝食品補充劑（complemento alimenticio）可自由販售；≥2 mg＝藥品，須處方（Circadin 2 mg，適應症：55 歲以上原發性失眠短期治療）",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://www.aemps.gob.es/informa/la-aemps-retira-el-complemento-alimenticio-melatonin-3-mg-capsulas/",
+    "https://www.aesan.gob.es/AECOSAN/web/noticias_y_actualizaciones/noticias/2013/melatonina.htm",
+    "https://cima.aemps.es/cima/dochtml/p/07392003/P_07392003.html"
+   ],
+   "note": "AEMPS 曾下架標示 3 mg／5 mg 的「補充劑」產品——2 mg 起即視為具藥理作用。疊層兩張卡（sleep-melatonin-blocked、lex-melatonin）都照此照實寫，並保留「我不替你決定、去問醫師藥師」的守門立場"
+  },
+  "magnesiumSupplementCap": {
+   "status": "補充劑來源的鎂每日 250 mg 上限（EFSA 對 supplemental magnesium 的可容忍上限；食物來源不計入）",
+   "note": "與主庫台灣營養師建議數字一致；EFSA 意見書屬既有共識、本次未線上重查——建議人審抽查",
+   "verifiedAt": "沿用主庫 2026-07-29 查證＋EFSA 共識"
+  },
+  "redYeastRice": {
+   "status": "紅麴（levadura roja de arroz）在西班牙以補充劑流通；與 statin 併用的橫紋肌溶解交互作用照主庫保留",
+   "note": "歐盟自 2022 年起對紅麴 monacolin 有每日份量限制與強制警語（Reglamento (UE) 2022/860），此法規細節本次未線上重查——疊層話術刻意不寫任何數字，只寫交互作用警告＋「帶兩罐去藥局問」，故不受此影響；建議人審確認"
+  },
+  "anticoagulantNaming": {
+   "status": "疊層內抗凝血藥一律舉 Sintrom（acenocumarol）為例",
+   "note": "西班牙最常用的口服抗凝血藥是 acenocumarol（商品名 Sintrom），不是台灣主庫寫的 warfarin（華法林）；長輩聽得懂的是「el Sintrom」。交互作用機轉（魚油／Q10／銀杏／蔓越莓 vs 香豆素類抗凝血藥）兩者通用"
+  }
+ },
+ "styleNotes": [
+  "全部 usted 稱呼、España（不是拉美）用法：la tensión＝血壓、el azúcar＝血糖、ardor de estómago＝火燒心、sofocos＝熱潮紅、bajón＝情緒低落",
+  "TW-EDU-30 由中醫層改編為「remedios tradicionales」輕量版：manzanilla／tila 草藥茶文化＋herbolario＋藥局諮詢文化；中醫證型、穴位、冬令進補不硬翻",
+  "TW-EDU-31 只保留西班牙人真的在吃的品項；雞精、牛樟芝、納豆激酶、苦瓜胜肽、GABA、靈芝略過不寫（敗向安全：沒翻的方案引擎自動不端出）",
+  "統計數字在地化原則：台灣盛行率數字不搬運——能以西班牙事實支撐的改寫（65 歲以上過半有高血壓），無把握的改為不帶數字的常態化話術",
+  "絕不出現台灣或他國號碼（119／1925／1966／911／988）；急難一律 112、心理危機一律 024、長照喘息一律 servicios sociales del ayuntamiento"
+ ]
+}

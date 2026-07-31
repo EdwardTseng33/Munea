@@ -549,15 +549,18 @@ def health_watch_user_text(cid, st):
         # 語音線的因人分齡等於一直沒生效。改成接通時跟 Brain 要一次、存進這通的
         # 狀態裡（st 是每通獨立的；絕不做跨通的模組級快取，那會把 A 的資料端給 B）。
         _prof = st.get("health_profile") or {}
+        # 一國一庫：用「這通實際講哪種語言」挑觸發字與說法（同人設書同一個來源）；
+        # 那一國沒有疊層＝衛教不出手，安全話術絕不退回中文。
+        _kb_locale = (st.get("voice_locale_profile") or {}).get("sessionLocale")
         _hour = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).hour
-        ids = health_kb.match_topics(said, limit=1, exclude=sent)
+        ids = health_kb.match_topics(said, limit=1, exclude=sent, locale=_kb_locale)
         if not ids:
             return
         sent.add(ids[0])
-        st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour)
+        st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour, locale=_kb_locale)
         # 帳先備著、等這句真的送出去才記——提示是排在下一個輪替空檔送的，
         # 電話在那之前掛掉就等於她沒講過，記了下次會問「上次那個有試嗎」問空氣。
-        st["pending_health_record"] = (ids[0], said, _prof, _hour)
+        st["pending_health_record"] = (ids[0], said, _prof, _hour)  # 記帳不分語系（帳本是機器鍵）
         _diag(cid, "healthkb.hit", topic=ids[0])
     except Exception as e:
         _diag(cid, "healthkb.err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
