@@ -845,7 +845,9 @@
           <div class="pf-birth"><select class="chal-input" id="pfBirthY"></select><select class="chal-input" id="pfBirthM"></select></div>
         </div>
         <div class="pf-field"><span class="pf-label" data-i18n="profile.location">所在地</span>
+          <select class="chal-input" id="pfCountry" hidden style="margin-bottom:8px"></select>
           <div class="pf-birth"><select class="chal-input" id="pfCounty"></select><select class="chal-input" id="pfDistrict"></select></div>
+          <input class="chal-input" id="pfCityFree" hidden style="margin-top:8px" maxlength="40" />
           <span class="pf-hint" data-i18n="legacyUi.profileLocationHint">選到「區」——天氣、附近餐廳與在地話題會更準</span></div>
       </div>
       <p class="pf-first-run-disclosure" id="pfFirstRunDisclosure" hidden data-i18n="profile.firstRunDisclosure">你填的稱呼、出生年月、所在縣市會安全同步到雲端（主機在國外），換手機登入也找得到；隨時能在這裡修改或清空。照片只留在這支手機、不會上傳。</p>
@@ -1193,7 +1195,7 @@
   <script src="src/i18n.js?v=20260729-four-locale2"></script>
   <script src="src/i18n/app-renderer-copy.js?v=20260730-credits1"></script>
   <script src="src/i18n/purchase-flow.js?v=20260730-four-locale1"></script>
-  <script src="src/tw-districts.js?v=20260709-twdist"></script>
+  <script src="src/tw-districts.js?v=20260731-regions"></script><!-- 台灣行政區＋跨國註冊表；其他國家的清單在 src/regions/，用到才載 -->
   <script src="src/companion-profile.js?v=20260730-profile2"></script>
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
   <script src="src/auth.js?v=20260730-v1045"></script>

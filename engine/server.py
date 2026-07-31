@@ -2597,6 +2597,62 @@ def proactive_opening_response(data):
             "followUp": (health_followup.due_followups(person_id, limit=1) or [None])[0]}
 
 
+def resolve_person_region(person_id=None):
+    """這位長輩的天氣要看哪一區：本人填的縣市 → 她從對話記起來的住處 → 全域預設。
+
+    2026-07-31 Edward 定調「問一次就記住、之後不必重問」後補。原本天氣只吃全域
+    MUNEA_REGION（試營運單一長輩），多人與跨國上線後那等於「大家都看台北的天氣」。
+
+    刻意不做的事：不從口音、姓氏或任何間接線索猜地區——猜錯會讓她每天報錯天氣，
+    而且長輩不會知道為什麼。找不到就回 None，讓呼叫端退回全域預設。
+    """
+    import perception_engine
+    known = list(getattr(perception_engine, "_COORDS", {}).keys())
+
+    def _norm(value):
+        # 「臺」與「台」兩種寫法都要認得（用戶填的是台北市、氣象署用的是臺北市）
+        return (value or "").replace("臺", "台").strip()
+
+    def _match(free_text):
+        text = _norm(free_text)
+        if not text:
+            return None
+        for county in known:
+            if _norm(county) and _norm(county) in text:
+                return county
+        # 只講區沒講縣市（「我住南港區興南街」）→ 用區名補回縣市。
+        # 跨縣市同名的區（大安區台北台中都有、東區四個縣市都有）不在表裡＝不猜，
+        # 回 None 讓她照說明書問清楚，總比每天報錯城市的天氣好。
+        try:
+            import tw_district_index
+
+            for district, county in tw_district_index.DISTRICT_TO_COUNTY.items():
+                if _norm(district) in text:
+                    for candidate in known:
+                        if _norm(candidate) == _norm(county):
+                            return candidate
+                    return county
+        except Exception as e:
+            log_fallback_exception("match district to county", e)
+        return None
+
+    try:
+        profile = load_person_profile() or {}
+        hit = _match(profile.get("county"))
+        if hit:
+            return hit
+    except Exception as e:
+        log_fallback_exception("resolve region from person profile", e)
+    try:
+        living = load_living_profile(person_id) or {}
+        hit = _match(living.get("livesIn"))
+        if hit:
+            return hit
+    except Exception as e:
+        log_fallback_exception("resolve region from living profile", e)
+    return None
+
+
 def refresh_daily_briefing(region=None, person_id=None):
     """每日簡報功課：抓真天氣＋真空品＋明天預告＋本週話題（多則）＋今天回診 → 一句人話 → 存感知抽屜（帶當天到期）。
     設計為清晨定時跑（預設 06:30、掛 Cloud Scheduler）；也可由管理端手動觸發 POST /admin/daily-briefing。
@@ -2607,6 +2663,8 @@ def refresh_daily_briefing(region=None, person_id=None):
     Cloud Scheduler 打的入口也不用改，只要把 /admin/daily-briefing 的 handler 改成呼叫那層迴圈即可。"""
     import perception_engine
     person_id = person_id or PRIMARY_CARE_RECIPIENT_ID
+    # 沒指定就自己查這位長輩住哪（本人填的優先、否則用她記起來的）；都沒有才退回全域預設
+    region = region or resolve_person_region(person_id)
     try:
         briefing = perception_engine.build_briefing(region)  # 天氣＋空品＋明天預告（內部已零例外、都失敗回 None 不瞎編）
     except Exception as e:
@@ -3137,12 +3195,22 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
     if not briefing:
         # 簡報保鮮：沒有今天的就背景補做（去抖：同時只一條、失敗後 5 分鐘不狂試——高併發下不再拖垮語音）
         _maybe_refresh_briefing_bg()
+    living_profile = load_living_profile()
+    # 所在地三層來源（2026-07-31 Edward：問一次就記住、之後不必重問）：
+    # ① 本人在個人資料填的（最權威、他自己改得掉）
+    # ② 她從對話記起來的（活的側寫 livesIn）——長輩不填表、但會講
+    # ③ 都沒有＝空的，說明書會叫她在他問到地方相關的事時自然問一次
+    # 刻意不讓 ② 自動覆蓋 ①：AI 不改用戶自己填的資料（聽錯就回不去了），
+    # 要改由個人資料頁顯示「她記得你住在X」給他確認。
+    resolved_location = str(data.get("location") or "").strip()
+    if not resolved_location:
+        resolved_location = str((living_profile or {}).get("livesIn") or "").strip()
     return {
         "persona": persona,
         "guardian": guardian,
         "memories": memories,
         "perception": perception,
-        "livingProfile": load_living_profile(),
+        "livingProfile": living_profile,
         # 他自己的身體數據（檔位 2）。語音那條路的 Voice 程式沒有雲端鑰匙、也認不出來電者，
         # 所以它會先向 Brain 要好、從 data 餵進來（跟「上次聊天」同一個模子）。
         # 餵不進來（Brain 不通、認不出人）就自己撈；撈不到就是空的——圍籬會告訴她「你看不到」。
@@ -3151,7 +3219,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "dailyBriefing": briefing,                     # 今日簡報（清晨備好的真天氣/空品/行程/暖聞）
         "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
         "interests": interests,                         # 用戶挑的興趣話題（開場方向＋接話素材）
-        "location": str(data.get("location") or "").strip()[:24],  # 所在地（可到區）→ 在地推薦定位
+        "location": resolved_location[:40],            # 所在地（本人填的優先、否則用她記得的）→ 在地推薦定位
         "locale": locale,
     }
 
@@ -3251,18 +3319,41 @@ def reply_context_instruction(context):
     # 長輩聽到的就是「一直被問在XX區晃晃了嗎、有什麼好餐廳」＋一直卡。
     # 而「幫長輩推薦餐廳」本來就多半是假需求：他在那裡住了幾十年、比 AI 熟；
     # 長輩問在地問題多半是要「確認」（那家店還開嗎、明天市場開不開）不是要「發現」。
+    # 2026-07-31 Edward 重新定調：所在地的價值＝「問一次就記住、之後不必重問」＋
+    # 「推薦要摻進她記得的喜好與身體狀況」。原文寫於 2026-07-17，當時查詢還沒上正式機
+    # （要 8-9 秒又常失敗），所以整段寫成「你查不了就老實說不知道」。
+    # 查詢已於 2026-07-27 上正式機（1.3 秒），那句變成「明明查得到卻推說不知道」的舊指令，
+    # 這裡改掉。「不主動推、不當話題起頭」的紀律照舊保留——那是真機回報的教訓、沒有過期。
     location_line = (
         f"（他住在「{_loc}」——這是**背景知識、不是話題**：拿來聽懂他講的地名、把天氣講對、"
         "知道他要去的地方在哪。"
         "**絕對不要拿它當話題起頭**：不要主動問「最近有去哪走走嗎」「你們那邊有什麼好吃的」、"
         "不要主動推薦餐廳或景點。他在那裡住了幾十年、比你熟太多；而且長輩很多行動不便、不常出門、"
         "早就有吃了二三十年的固定那幾家——一直找他出門、一直推薦店家，是在戳他做不到、"
-        "或根本不需要的事，跟禁語「出去走走」是同一個錯。"
-        "**他自己開口問**附近哪裡吃、某家店還開不開、市場今天有沒有開時——"
-        "**你查不了，就老實說**：「這我就不知道了欸，你要不要打去問問看？」。"
-        "他問這種問題多半是想「確認」、不是想「發現」——他心裡通常已經有答案、也比你熟；"
-        "順著問他「你都去哪一家？」讓他講，比你硬掰一個店名好一百倍。）"
+        "或根本不需要的事，跟禁語「出去走走」是同一個錯。\n"
+        "**他自己開口問**附近哪裡吃、有什麼好去處、某家店還開不開時——"
+        "**這一通有查詢能力就真的去查**（查完只講查到的真店名真地點；查不到才老實說沒查到、"
+        "不准憑印象掰店名）。挑要講哪一家時，**用你記得的他**去挑，不要給對誰都通用的清單："
+        "牙口不好就別推硬的、行動不便就挑近的或有位子坐的、身體有狀況就避開對他不利的"
+        "（例如血糖高就別主打甜點）、他講過喜歡或討厭什麼就順著。**一次講一兩家就好**，"
+        "他有興趣再多講。\n"
+        "他問這種問題有時候是想「確認」而不是「發現」——聽起來像在確認（某家店還開不開、"
+        "市場今天有沒有開）而你查不到準的，就順著問他「你都去哪一家？」讓他講，"
+        "比硬掰一個店名好一百倍。）"
     ) if _loc else ""
+    # 沒有所在地時：允許她問一次、並且把答案記起來——不要每次問天氣都重問一遍。
+    location_ask_line = (
+        "（你還不知道他住哪裡。**他問到天氣、附近哪裡吃、附近有什麼好去處**這類跟地方有關的事時，"
+        "先很自然地問一次「你住在哪一區呀？」——**只問這一次**：他答了就記起來"
+        "（這屬於「值得長期記住的事實」），之後再問同樣的事就直接用，不要重問。\n"
+        "**他講完地名，一定要當場確認一次**（地名很容易聽錯，記錯了之後每次天氣都會報錯地方）：\n"
+        "・聽得清楚：把它**複誦進你的回話裡**當作確認，不要另外問一句——"
+        "像「台北市南港區喔，我記起來了，那邊今天……」。他聽到不對會自己更正。\n"
+        "・**沒把握（同音字、聽不清、只聽到一半）：直接問清楚、給他選**——"
+        "像「你說的是台北市的南港區嗎？還是南崗？」。**寧可多問一句，也不要記錯**。\n"
+        "他不想講就算了、別追問，改用他講得出來的範圍回答。"
+        "**不要為了問而問**：他沒問到跟地方有關的事，就不要主動問他住哪。）"
+    ) if not _loc else ""
     culture_line = (
         "（聊到影劇/戲劇/歌曲/新聞這類會隨時間變的話題：**你查不到現在在紅什麼**——"
         "只有「今日簡報」的本週話題是真的、可以講。**不要憑印象講可能過時或根本不存在的劇名歌名**"
@@ -3285,6 +3376,7 @@ def reply_context_instruction(context):
         mood_recorded_line,
         interests_line,
         location_line,
+        location_ask_line,
         culture_line,
         "（智慧鏡頭：可溫柔用台灣諺語、生活智慧、簡單的反思提問陪伴；對方有信仰才順著其信仰語彙。絕不捏造經文、不強加宗教、不說教；危機時安全規則優先於一切。）",
         health_line,
@@ -3983,8 +4075,11 @@ def normalize_person_profile(data):
         "nick": _clean_text(data.get("nick") or data.get("nickname"), 40),
         "birthYear": _clean_year(data.get("birthYear") if data.get("birthYear") is not None else data.get("birth_year")),
         "birthMonth": _clean_month(data.get("birthMonth") if data.get("birthMonth") is not None else data.get("birth_month")),
-        "county": _clean_text(data.get("county"), 20),
-        "district": _clean_text(data.get("district"), 20),
+        # 2026-07-31 跨國：西班牙省名/市名可到 26 字（Santa Cruz de Tenerife / San Cristóbal de La Laguna），
+        # 原本 20 字上限會把地名截半 → 放寬到 60；country 是 ISO 兩碼國別（決定要用哪一國的行政區清單）。
+        "county": _clean_text(data.get("county"), 60),
+        "district": _clean_text(data.get("district"), 60),
+        "country": (_clean_text(data.get("country"), 2) or "").upper(),
         "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
     }
 
