@@ -89,6 +89,9 @@ function applyNonUserFacingReview(relativePath, candidates, review = loadNonUser
         'legacy-storage-identity',
         'debug-panel-diagnostic',
         'developer-fixture',
+        'zh-intent-matcher',
+        'family-feed-recipient-locale',
+        'brand-proper-noun',
       ]
         .includes(entry.reasonCode)
     ) {

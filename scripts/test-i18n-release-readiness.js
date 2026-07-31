@@ -101,9 +101,11 @@ for (const locale of requiredLocales) {
     'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
     `${locale} App integration gate must include the complete shipping surface manifest`,
   );
+  // 2026-07-31 文案搬遷歸零：這關從「必須還在擋」反轉成「必須是綠的」。
+  // 再變紅＝有人加了沒綁鍵的新文案（worklist 契約會一起亮）。
   assert(
-    entry.blockers.some(({ gate }) => gate === 'sourceCopyMigration'),
-    `${locale} must remain blocked while hard-coded App WebView copy exists`,
+    !entry.blockers.some(({ gate }) => gate === 'sourceCopyMigration'),
+    `${locale} source copy migration reached zero on 2026-07-31 and must stay green`,
   );
   assert(
     entry.blockers.some(({ gate }) => gate === 'localeDataReadiness'),
@@ -187,7 +189,8 @@ for (const locale of ['en', 'ja', 'es']) {
   const entry = report.locales[locale];
   assert.equal(entry.gates.runtimeLocalization.passed, false);
   assert.equal(entry.gates.appUiIntegration.passed, true);
-  assert.equal(entry.gates.sourceCopyMigration.passed, false);
+  // 2026-07-31 歸零後：搬遷關對三語一樣轉綠（其餘關卡照舊擋著、語系開關仍未開）
+  assert.equal(entry.gates.sourceCopyMigration.passed, true);
   assert.equal(entry.gates.voiceIntegration.passed, false);
   assert.equal(entry.gates.binaryLocalization.passed, false);
   assert.equal(entry.gates.appStoreScreenshots.passed, false);

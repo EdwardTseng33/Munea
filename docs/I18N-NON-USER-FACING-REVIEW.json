@@ -1,425 +1,1730 @@
 {
- "schema": "munea.i18n-non-user-facing-review.v1",
- "policy": {
-  "exactFileTextKindAndOccurrenceMatchRequired": true,
-  "newOccurrencesFailClosed": true,
-  "userVisibleFallbacksForbidden": true,
-  "evidenceFileRequired": true
- },
- "entries": [
-  {
-   "id": "companion-backend-nening",
-   "path": "web/src/companion-profile.js",
-   "text": "寧寧",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "backend-template-identity",
-   "evidence": "scripts/test-companion-profile-localization.js"
+  "schema": "munea.i18n-non-user-facing-review.v1",
+  "policy": {
+    "exactFileTextKindAndOccurrenceMatchRequired": true,
+    "newOccurrencesFailClosed": true,
+    "userVisibleFallbacksForbidden": true,
+    "evidenceFileRequired": true
   },
-  {
-   "id": "companion-backend-ahong",
-   "path": "web/src/companion-profile.js",
-   "text": "阿宏",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "backend-template-identity",
-   "evidence": "scripts/test-companion-profile-localization.js"
-  },
-  {
-   "id": "companion-backend-xiaoyun",
-   "path": "web/src/companion-profile.js",
-   "text": "小昀",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "backend-template-identity",
-   "evidence": "scripts/test-companion-profile-localization.js"
-  },
-  {
-   "id": "companion-backend-ayuan",
-   "path": "web/src/companion-profile.js",
-   "text": "阿原",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "backend-template-identity",
-   "evidence": "scripts/test-companion-profile-localization.js"
-  },
-  {
-   "id": "companion-backend-mimi",
-   "path": "web/src/companion-profile.js",
-   "text": "咪咪",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "backend-template-identity",
-   "evidence": "scripts/test-companion-profile-localization.js"
-  },
-  {
-   "id": "companion-backend-wangcai",
-   "path": "web/src/companion-profile.js",
-   "text": "旺財",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "backend-template-identity",
-   "evidence": "scripts/test-companion-profile-localization.js"
-  },
-  {
-   "id": "companion-legacy-brand-sentinel",
-   "path": "web/src/companion-profile.js",
-   "text": "沐寧",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "legacy-brand-migration-sentinel",
-   "evidence": "scripts/test-companion-profile-localization.js"
-  },
-  {
-   "id": "medication-legacy-generic-name",
-   "path": "web/src/medication.js",
-   "text": "藥",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "legacy-storage-identity",
-   "evidence": "scripts/test-medication-service.js"
-  },
-  {
-   "id": "notify-legacy-slot-after-breakfast",
-   "path": "web/src/notify.js",
-   "text": "早餐後",
-   "kind": "string",
-   "expectedOccurrences": 2,
-   "reasonCode": "legacy-storage-identity",
-   "evidence": "scripts/test-notification-platform.js"
-  },
-  {
-   "id": "notify-legacy-slot-after-lunch",
-   "path": "web/src/notify.js",
-   "text": "午餐後",
-   "kind": "string",
-   "expectedOccurrences": 2,
-   "reasonCode": "legacy-storage-identity",
-   "evidence": "scripts/test-notification-platform.js"
-  },
-  {
-   "id": "notify-legacy-slot-after-dinner",
-   "path": "web/src/notify.js",
-   "text": "晚餐後",
-   "kind": "string",
-   "expectedOccurrences": 2,
-   "reasonCode": "legacy-storage-identity",
-   "evidence": "scripts/test-notification-platform.js"
-  },
-  {
-   "id": "notify-legacy-slot-bedtime",
-   "path": "web/src/notify.js",
-   "text": "睡前",
-   "kind": "string",
-   "expectedOccurrences": 2,
-   "reasonCode": "legacy-storage-identity",
-   "evidence": "scripts/test-notification-platform.js"
-  },
-  {
-   "id": "notify-legacy-generic-medication-name",
-   "path": "web/src/notify.js",
-   "text": "藥",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "legacy-storage-identity",
-   "evidence": "scripts/test-notification-platform.js"
-  },
-  {
-   "id": "fixture-0407494dcb",
-   "path": "web/src/app.js",
-   "text": "<b>媽媽</b>要我提醒你：週末回家一起吃飯",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-0cc946bdc5",
-   "path": "web/src/app.js",
-   "text": "影音播放:成功",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-1426014722",
-   "path": "web/src/app.js",
-   "text": "喚醒顯卡中…",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-1a836ae14f",
-   "path": "web/src/app.js",
-   "text": "影像+聲音上行都就緒",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-1a912efc48",
-   "path": "web/src/app.js",
-   "text": "聲音到了（同線）",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-259b1edd97",
-   "path": "web/src/app.js",
-   "text": "姊",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-28776f46c1",
-   "path": "web/src/app.js",
-   "text": "<b>姊姊</b>傳了一個愛心，晚點想和你聊聊",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-2c22c1bb74",
-   "path": "web/src/app.js",
-   "text": "台北市中山區",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-326b84d3ef",
-   "path": "web/src/app.js",
-   "text": "按下開始通話",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-39e6e9831c",
-   "path": "web/src/app.js",
-   "text": "媽",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-3dac97d419",
-   "path": "web/src/app.js",
-   "text": "線路",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-3f565f9f1b",
-   "path": "web/src/app.js",
-   "text": "1990 年 3 月",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-531af8532f",
-   "path": "web/src/app.js",
-   "text": "媽媽",
-   "kind": "string",
-   "expectedOccurrences": 3,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-65474fff3e",
-   "path": "web/src/app.js",
-   "text": "<b>爸爸</b>今天走了 7,200 步，狀態很穩",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-67ef065dff",
-   "path": "web/src/app.js",
-   "text": "·備援",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-7280c8c644",
-   "path": "web/src/app.js",
-   "text": "(無stats)",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-7b53a04810",
-   "path": "web/src/app.js",
-   "text": "連線中（中繼",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-86c7d643c3",
-   "path": "web/src/app.js",
-   "text": "流量=",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-ae1675f743",
-   "path": "web/src/app.js",
-   "text": "3秒查:量表=",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-ba5ad3bfac",
-   "path": "web/src/app.js",
-   "text": "${activityEnd.getMonth() + 1}/${activityEnd.getDate()} 20:00 截止",
-   "kind": "template-string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-c38d06ffe0",
-   "path": "web/src/app.js",
-   "text": "影像軌到了，等待第一格",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-c591fabc9e",
-   "path": "web/src/app.js",
-   "text": "聲音上行就緒",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-d29c9b30ef",
-   "path": "web/src/app.js",
-   "text": "姊姊",
-   "kind": "string",
-   "expectedOccurrences": 3,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-d45ce71dd3",
-   "path": "web/src/app.js",
-   "text": "爸爸",
-   "kind": "string",
-   "expectedOccurrences": 3,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-d7d458059f",
-   "path": "web/src/app.js",
-   "text": "聲音軌到 str=",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-d946cee161",
-   "path": "web/src/app.js",
-   "text": "線路失敗 → 自動重連一次",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-da5930e53d",
-   "path": "web/src/app.js",
-   "text": "無",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-db7b612140",
-   "path": "web/src/app.js",
-   "text": "解鎖:改用簡易法",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-e3958d4633",
-   "path": "web/src/app.js",
-   "text": "全家一起走路",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-e52bef7c3e",
-   "path": "web/src/app.js",
-   "text": "B 音量=",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "fixture-e601bb9113",
-   "path": "web/src/app.js",
-   "text": "爸",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "developer-fixture",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-f8d292143b",
-   "path": "web/src/app.js",
-   "text": "·強制",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  },
-  {
-   "id": "diag-fb85162280",
-   "path": "web/src/app.js",
-   "text": "影像軌到 合成流含音軌=",
-   "kind": "string",
-   "expectedOccurrences": 1,
-   "reasonCode": "debug-panel-diagnostic",
-   "evidence": "scripts/test-debug-diagnostics-gated.js"
-  }
- ]
+  "entries": [
+    {
+      "id": "companion-backend-nening",
+      "path": "web/src/companion-profile.js",
+      "text": "寧寧",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-ahong",
+      "path": "web/src/companion-profile.js",
+      "text": "阿宏",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-xiaoyun",
+      "path": "web/src/companion-profile.js",
+      "text": "小昀",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-ayuan",
+      "path": "web/src/companion-profile.js",
+      "text": "阿原",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-mimi",
+      "path": "web/src/companion-profile.js",
+      "text": "咪咪",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-backend-wangcai",
+      "path": "web/src/companion-profile.js",
+      "text": "旺財",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "companion-legacy-brand-sentinel",
+      "path": "web/src/companion-profile.js",
+      "text": "沐寧",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-brand-migration-sentinel",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
+      "id": "medication-legacy-generic-name",
+      "path": "web/src/medication.js",
+      "text": "藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-medication-service.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-breakfast",
+      "path": "web/src/notify.js",
+      "text": "早餐後",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-lunch",
+      "path": "web/src/notify.js",
+      "text": "午餐後",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-after-dinner",
+      "path": "web/src/notify.js",
+      "text": "晚餐後",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-slot-bedtime",
+      "path": "web/src/notify.js",
+      "text": "睡前",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "notify-legacy-generic-medication-name",
+      "path": "web/src/notify.js",
+      "text": "藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-notification-platform.js"
+    },
+    {
+      "id": "fixture-0407494dcb",
+      "path": "web/src/app.js",
+      "text": "<b>媽媽</b>要我提醒你：週末回家一起吃飯",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-0cc946bdc5",
+      "path": "web/src/app.js",
+      "text": "影音播放:成功",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-1426014722",
+      "path": "web/src/app.js",
+      "text": "喚醒顯卡中…",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-1a836ae14f",
+      "path": "web/src/app.js",
+      "text": "影像+聲音上行都就緒",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-1a912efc48",
+      "path": "web/src/app.js",
+      "text": "聲音到了（同線）",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-259b1edd97",
+      "path": "web/src/app.js",
+      "text": "姊",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-28776f46c1",
+      "path": "web/src/app.js",
+      "text": "<b>姊姊</b>傳了一個愛心，晚點想和你聊聊",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-2c22c1bb74",
+      "path": "web/src/app.js",
+      "text": "台北市中山區",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-326b84d3ef",
+      "path": "web/src/app.js",
+      "text": "按下開始通話",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-39e6e9831c",
+      "path": "web/src/app.js",
+      "text": "媽",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-3dac97d419",
+      "path": "web/src/app.js",
+      "text": "線路",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-3f565f9f1b",
+      "path": "web/src/app.js",
+      "text": "1990 年 3 月",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-531af8532f",
+      "path": "web/src/app.js",
+      "text": "媽媽",
+      "kind": "string",
+      "expectedOccurrences": 3,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-65474fff3e",
+      "path": "web/src/app.js",
+      "text": "<b>爸爸</b>今天走了 7,200 步，狀態很穩",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-67ef065dff",
+      "path": "web/src/app.js",
+      "text": "·備援",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-7280c8c644",
+      "path": "web/src/app.js",
+      "text": "(無stats)",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-7b53a04810",
+      "path": "web/src/app.js",
+      "text": "連線中（中繼",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-86c7d643c3",
+      "path": "web/src/app.js",
+      "text": "流量=",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-ae1675f743",
+      "path": "web/src/app.js",
+      "text": "3秒查:量表=",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-ba5ad3bfac",
+      "path": "web/src/app.js",
+      "text": "${activityEnd.getMonth() + 1}/${activityEnd.getDate()} 20:00 截止",
+      "kind": "template-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-c38d06ffe0",
+      "path": "web/src/app.js",
+      "text": "影像軌到了，等待第一格",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-c591fabc9e",
+      "path": "web/src/app.js",
+      "text": "聲音上行就緒",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-d29c9b30ef",
+      "path": "web/src/app.js",
+      "text": "姊姊",
+      "kind": "string",
+      "expectedOccurrences": 3,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-d45ce71dd3",
+      "path": "web/src/app.js",
+      "text": "爸爸",
+      "kind": "string",
+      "expectedOccurrences": 3,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-d7d458059f",
+      "path": "web/src/app.js",
+      "text": "聲音軌到 str=",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-d946cee161",
+      "path": "web/src/app.js",
+      "text": "線路失敗 → 自動重連一次",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-da5930e53d",
+      "path": "web/src/app.js",
+      "text": "無",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-db7b612140",
+      "path": "web/src/app.js",
+      "text": "解鎖:改用簡易法",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-e3958d4633",
+      "path": "web/src/app.js",
+      "text": "全家一起走路",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-e52bef7c3e",
+      "path": "web/src/app.js",
+      "text": "B 音量=",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "fixture-e601bb9113",
+      "path": "web/src/app.js",
+      "text": "爸",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-f8d292143b",
+      "path": "web/src/app.js",
+      "text": "·強制",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "diag-fb85162280",
+      "path": "web/src/app.js",
+      "text": "影像軌到 合成流含音軌=",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "b39-legacy-ec3507bd",
+      "path": "web/index.html",
+      "text": "低落",
+      "kind": "inline-string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-42334d6d",
+      "path": "web/index.html",
+      "text": "午餐後",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-a64aa07e",
+      "path": "web/index.html",
+      "text": "平穩",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-f96808e2",
+      "path": "web/index.html",
+      "text": "平靜",
+      "kind": "inline-string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-cbe4f611",
+      "path": "web/index.html",
+      "text": "愉快",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-dec63d5a",
+      "path": "web/index.html",
+      "text": "愉悅",
+      "kind": "inline-string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-e18c89e9",
+      "path": "web/index.html",
+      "text": "憤怒",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-dc5fe96b",
+      "path": "web/index.html",
+      "text": "早餐後",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-38e94796",
+      "path": "web/index.html",
+      "text": "晚餐後",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-f050d48c",
+      "path": "web/index.html",
+      "text": "焦慮",
+      "kind": "inline-string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-16b7c43a",
+      "path": "web/index.html",
+      "text": "煩躁",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-65e1a8c6",
+      "path": "web/index.html",
+      "text": "生氣",
+      "kind": "inline-string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-3c061e74",
+      "path": "web/index.html",
+      "text": "疲累",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-0d346039",
+      "path": "web/index.html",
+      "text": "睡前",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-a18f2874",
+      "path": "web/index.html",
+      "text": "緊張",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-1eedec7b",
+      "path": "web/index.html",
+      "text": "開心",
+      "kind": "inline-string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-d44f0682",
+      "path": "web/src/app.js",
+      "text": "\" data-rel=\"家人\" data-init=\"",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-d41e8387",
+      "path": "web/src/app.js",
+      "text": "(提醒|告訴)\\\\s*(",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-f1f4bbc0",
+      "path": "web/src/app.js",
+      "text": "(跟)\\\\s*(",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-06048000",
+      "path": "web/src/app.js",
+      "text": ")(說)\\\\s*(.{2,30})",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-a9c87571",
+      "path": "web/src/app.js",
+      "text": ")(說|，|要|來)?\\\\s*(.{2,30})",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-1332c281",
+      "path": "web/src/app.js",
+      "text": "</b> 抽中！",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-1e4edf86",
+      "path": "web/src/app.js",
+      "text": "</b> 最多票，收進<b>家庭記錄簿</b>",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-0a41e1bf",
+      "path": "web/src/app.js",
+      "text": "</b> 答對最多（",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-2072dc45",
+      "path": "web/src/app.js",
+      "text": "</b>今天把該做的都完成了，給他一個讚",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-447f95b1",
+      "path": "web/src/app.js",
+      "text": "</b>已記錄",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-8d345b8e",
+      "path": "web/src/app.js",
+      "text": "</b>的",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-92a7ed08",
+      "path": "web/src/app.js",
+      "text": "<b>你</b>完成了機智問答，答對",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-b6e41ead",
+      "path": "web/src/app.js",
+      "text": "<b>你</b>給${who}${b.dataset.react || '送上心意'}，${cname()}會在下次聊天時帶到",
+      "kind": "template-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-brand-59f6d5cf",
+      "path": "web/src/app.js",
+      "text": "<footer><b>沐寧 Munea</b> ·",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "brand-proper-noun",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-brand-8f533a24",
+      "path": "web/src/app.js",
+      "text": "<span class=\"logo-word\">Mu<b>nea</b><span class=\"logo-zh\">沐寧</span></span>",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "brand-proper-noun",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-e793623c",
+      "path": "web/src/app.js",
+      "text": "。到時間我會叫你，也會記下你有沒有吃。想改隨時跟我說。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-b588d210",
+      "path": "web/src/app.js",
+      "text": "」投票結束——<b>",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-40b34321",
+      "path": "web/src/app.js",
+      "text": "」結束了",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-faf8c268",
+      "path": "web/src/app.js",
+      "text": "」結束了，收進<b>家庭記錄簿</b>",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-7c8b7102",
+      "path": "web/src/app.js",
+      "text": "」結算了——<b>",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-cb2c0cf1",
+      "path": "web/src/app.js",
+      "text": "」開獎了——<b>",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-f59a3501",
+      "path": "web/src/app.js",
+      "text": "」，對嗎？",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-backend-6e3f643d",
+      "path": "web/src/app.js",
+      "text": "【檢舉家人動態】",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-7ce77fa9",
+      "path": "web/src/app.js",
+      "text": "一",
+      "kind": "string",
+      "expectedOccurrences": 4,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-e279b304",
+      "path": "web/src/app.js",
+      "text": "三",
+      "kind": "string",
+      "expectedOccurrences": 4,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-940d467e",
+      "path": "web/src/app.js",
+      "text": "上午",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-4a968d7a",
+      "path": "web/src/app.js",
+      "text": "下午",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-9267c4aa",
+      "path": "web/src/app.js",
+      "text": "下次打開聊聊時，我會先說「",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-4b1db382",
+      "path": "web/src/app.js",
+      "text": "不用謝，陪著你是我最想做的事。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-32f6c2bd",
+      "path": "web/src/app.js",
+      "text": "二",
+      "kind": "string",
+      "expectedOccurrences": 5,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-a589573d",
+      "path": "web/src/app.js",
+      "text": "五",
+      "kind": "string",
+      "expectedOccurrences": 4,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-e9e12bb1",
+      "path": "web/src/app.js",
+      "text": "今天",
+      "kind": "string",
+      "expectedOccurrences": 7,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-0beb1f0b",
+      "path": "web/src/app.js",
+      "text": "低落",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-e9d6af20",
+      "path": "web/src/app.js",
+      "text": "你",
+      "kind": "string",
+      "expectedOccurrences": 19,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-d6aa5afd",
+      "path": "web/src/app.js",
+      "text": "你的藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-9c48b2dd",
+      "path": "web/src/app.js",
+      "text": "健康養生",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-a3ac9dc1",
+      "path": "web/src/app.js",
+      "text": "兩",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-7168c817",
+      "path": "web/src/app.js",
+      "text": "六",
+      "kind": "string",
+      "expectedOccurrences": 4,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-backend-ee4bea8a",
+      "path": "web/src/app.js",
+      "text": "其他",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-6ae2a0ac",
+      "path": "web/src/app.js",
+      "text": "分鐘。放心，就算用完，基本陪伴也不會斷。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-3bfae5c0",
+      "path": "web/src/app.js",
+      "text": "午餐後",
+      "kind": "string",
+      "expectedOccurrences": 8,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-cf2bed95",
+      "path": "web/src/app.js",
+      "text": "半",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-9640da9d",
+      "path": "web/src/app.js",
+      "text": "咪咪",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-5b2dcf65",
+      "path": "web/src/app.js",
+      "text": "四",
+      "kind": "string",
+      "expectedOccurrences": 3,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-8e1b4132",
+      "path": "web/src/app.js",
+      "text": "回診",
+      "kind": "string",
+      "expectedOccurrences": 3,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-0f541212",
+      "path": "web/src/app.js",
+      "text": "回診。我前一天會提醒你，回診要問醫生的、要帶的東西，也會先幫你準備好。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-f7d8cddf",
+      "path": "web/src/app.js",
+      "text": "園藝花草",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-302b6dc5",
+      "path": "web/src/app.js",
+      "text": "天",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-360fc66a",
+      "path": "web/src/app.js",
+      "text": "天氣節氣",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-7b717704",
+      "path": "web/src/app.js",
+      "text": "好，",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-305cc20f",
+      "path": "web/src/app.js",
+      "text": "好，吃飯吃藥都別忘了，到時間我會叫你。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-af8c0df8",
+      "path": "web/src/app.js",
+      "text": "好，我先不傳。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-a0873e4b",
+      "path": "web/src/app.js",
+      "text": "好，我幫你記下來了：",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-78fa2731",
+      "path": "web/src/app.js",
+      "text": "好，跟我說是哪一天回診就好（像是「明天下午三點」「下週三」或「7 月 10 日」），我馬上幫你設。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-517c0032",
+      "path": "web/src/app.js",
+      "text": "家人",
+      "kind": "string",
+      "expectedOccurrences": 6,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-f78fa306",
+      "path": "web/src/app.js",
+      "text": "寧寧",
+      "kind": "string",
+      "expectedOccurrences": 3,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-bad02b96",
+      "path": "web/src/app.js",
+      "text": "寵物",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-b26dc365",
+      "path": "web/src/app.js",
+      "text": "小寶",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-550331cf",
+      "path": "web/src/app.js",
+      "text": "小昀",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-fbe7c34a",
+      "path": "web/src/app.js",
+      "text": "平穩",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-a9cb1d74",
+      "path": "web/src/app.js",
+      "text": "年",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-debug-51f20fb1",
+      "path": "web/src/app.js",
+      "text": "延遲量測：聽聲音、看嘴巴中…",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "b39-legacy-6cc38a4b",
+      "path": "web/src/app.js",
+      "text": "影劇戲劇",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-7862a45e",
+      "path": "web/src/app.js",
+      "text": "心率",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-87aca1de",
+      "path": "web/src/app.js",
+      "text": "志明",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-5067aa34",
+      "path": "web/src/app.js",
+      "text": "想家人了是吧？要不要我提醒他們今晚打給你？",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-8ab32db3",
+      "path": "web/src/app.js",
+      "text": "愉快",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-e65d4a69",
+      "path": "web/src/app.js",
+      "text": "懷舊老歌",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-a624bd47",
+      "path": "web/src/app.js",
+      "text": "我",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-a1696606",
+      "path": "web/src/app.js",
+      "text": "我剛剛沒聽清楚要帶的話，你再跟我說一次要跟",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-5f39fb5c",
+      "path": "web/src/app.js",
+      "text": "我看了一下，你還有",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-9a9827c7",
+      "path": "web/src/app.js",
+      "text": "我確認一下：你要我跟",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-a01f1321",
+      "path": "web/src/app.js",
+      "text": "提醒你吃",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-b146a3cf",
+      "path": "web/src/app.js",
+      "text": "新聞時事",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-160dcd5a",
+      "path": "web/src/app.js",
+      "text": "旅遊景點",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-08d034b6",
+      "path": "web/src/app.js",
+      "text": "日",
+      "kind": "string",
+      "expectedOccurrences": 4,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-566ba409",
+      "path": "web/src/app.js",
+      "text": "日一二三四五六",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-40cb8ff0",
+      "path": "web/src/app.js",
+      "text": "早餐後",
+      "kind": "string",
+      "expectedOccurrences": 12,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-d14ea1a1",
+      "path": "web/src/app.js",
+      "text": "旺財",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-1d290b21",
+      "path": "web/src/app.js",
+      "text": "昨天",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-78cec8b7",
+      "path": "web/src/app.js",
+      "text": "晚上",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-47d56523",
+      "path": "web/src/app.js",
+      "text": "晚餐後",
+      "kind": "string",
+      "expectedOccurrences": 8,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-61028eb7",
+      "path": "web/src/app.js",
+      "text": "月",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-16a84033",
+      "path": "web/src/app.js",
+      "text": "有去）",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-e43ade30",
+      "path": "web/src/app.js",
+      "text": "有看著",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-f4adba84",
+      "path": "web/src/app.js",
+      "text": "服藥，",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-d579fd2d",
+      "path": "web/src/app.js",
+      "text": "本人",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-d097db64",
+      "path": "web/src/app.js",
+      "text": "棋牌麻將",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-backend-f65e4c5b",
+      "path": "web/src/app.js",
+      "text": "檢舉動態",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-8004bc17",
+      "path": "web/src/app.js",
+      "text": "歷史故事",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-0251e46a",
+      "path": "web/src/app.js",
+      "text": "每天",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-72d8d891",
+      "path": "web/src/app.js",
+      "text": "活動",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-cef619c7",
+      "path": "web/src/app.js",
+      "text": "煩躁",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-63b8682a",
+      "path": "web/src/app.js",
+      "text": "疲累",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-83257d63",
+      "path": "web/src/app.js",
+      "text": "睡前",
+      "kind": "string",
+      "expectedOccurrences": 7,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-17b3ca51",
+      "path": "web/src/app.js",
+      "text": "美華",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-7cc1ec77",
+      "path": "web/src/app.js",
+      "text": "美食餐廳",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-ab277678",
+      "path": "web/src/app.js",
+      "text": "聽到你不太舒服，我有點擔心。先坐下歇會兒，需要的話我幫你通知家人。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-debug-f7c5ceb6",
+      "path": "web/src/app.js",
+      "text": "臉:",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "b39-debug-767447af",
+      "path": "web/src/app.js",
+      "text": "臉比聲音慢 ${last.toFixed(1)}s（這句） 近 ${n} 句平均 ${avg.toFixed(1)}s${auto} 對齊建議：聲音等臉 ${suggest}ms",
+      "kind": "template-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "b39-zh-13edfab4",
+      "path": "web/src/app.js",
+      "text": "藥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-ecd47beb",
+      "path": "web/src/app.js",
+      "text": "藥怎麼吃、吃幾顆，我不能幫你決定，這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-52b9a2c8",
+      "path": "web/src/app.js",
+      "text": "血壓",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-494c22af",
+      "path": "web/src/app.js",
+      "text": "血氧",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-debug-81971fde",
+      "path": "web/src/app.js",
+      "text": "解鎖影像播放器:成功",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "b39-zh-c4994707",
+      "path": "web/src/app.js",
+      "text": "記好了，",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-61eb9b88",
+      "path": "web/src/app.js",
+      "text": "記得隨天氣加減衣服，別著涼了。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-2b64073c",
+      "path": "web/src/app.js",
+      "text": "說「",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-106beab5",
+      "path": "web/src/app.js",
+      "text": "說什麼？",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-bea11aef",
+      "path": "web/src/app.js",
+      "text": "超出安全範圍，打通電話關心一下",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-76279f8b",
+      "path": "web/src/app.js",
+      "text": "辛苦了，累了就休息、不要硬撐，我在這裡陪你。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-28bc5d13",
+      "path": "web/src/app.js",
+      "text": "這句話目前還沒送出去，請先確認家庭圈成員名稱，再跟我說一次。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-a0cf9f94",
+      "path": "web/src/app.js",
+      "text": "這次",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-33f83250",
+      "path": "web/src/app.js",
+      "text": "運動",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-e0e64eb1",
+      "path": "web/src/app.js",
+      "text": "長期",
+      "kind": "string",
+      "expectedOccurrences": 5,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-1d1b9d85",
+      "path": "web/src/app.js",
+      "text": "開心",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-2b658986",
+      "path": "web/src/app.js",
+      "text": "阿原",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-9cd1a56b",
+      "path": "web/src/app.js",
+      "text": "阿嬤",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-legacy-33c56f93",
+      "path": "web/src/app.js",
+      "text": "阿宏",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-a63f8144",
+      "path": "web/src/app.js",
+      "text": "題），收進<b>家庭記錄簿</b>",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-f9016981",
+      "path": "web/src/app.js",
+      "text": "題，等大家玩完看排名",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-debug-3ce4e590",
+      "path": "web/src/app.js",
+      "text": "顯卡就緒",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "b39-zh-03e97cf0",
+      "path": "web/src/app.js",
+      "text": "點數用完了喔——補一些點數就能繼續跟我聊，設定裡就能加值。",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-a2c5193f",
+      "path": "web/src/app.js",
+      "text": "點，語音陪聊大概還能聊",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-backend-ca6ce8b5",
+      "path": "web/src/app.js",
+      "text": "（系統悄悄話，請不要唸出這段、也不要提到系統或倒數：免費體驗只剩大約一分鐘，請自然地把話題暖心收尾，溫柔說今天先聊到這。）",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-debug-abc6af9a",
+      "path": "web/src/app.js",
+      "text": "（自動補償中）",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "debug-panel-diagnostic",
+      "evidence": "scripts/test-debug-diagnostics-gated.js"
+    },
+    {
+      "id": "b39-zh-ea21cd91",
+      "path": "web/src/app.js",
+      "text": "（週",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-family-c4d58f08",
+      "path": "web/src/app.js",
+      "text": "，收進<b>家庭記錄簿</b>",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "family-feed-recipient-locale",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b39-zh-267074fa",
+      "path": "web/src/app.js",
+      "text": "，連續",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "zh-intent-matcher",
+      "evidence": "scripts/test-i18n-deferred-buckets.js"
+    }
+  ]
 }

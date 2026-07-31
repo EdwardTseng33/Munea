@@ -399,3 +399,18 @@ Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
 - 服務先接受 LocaleContext、再 shadow 記錄、再內部 canary，最後才分市場開流量。
 - Phase 0 不部署。後續每階段獨立 PR、獨立回滾點，不把三個市場同時打開。
 - 「程式完成」不等於「可上架」；必須分別記錄 coded、tested、merged、packaged、deployed、verified。
+
+
+## 2026-07-31 文案搬遷歸零與「暫不進目錄」歸類（批 33-39）
+
+App WebView 的中文文案搬遷於 2026-07-31 到達 **unbound = 0**（總量 1,834：1,516 綁定、318 誠實入冊）。守門自此反轉：`test-i18n-migration-worklist` 與 `test-i18n-surface-inventory` 由「還有債要擋」改為「不准出現新未綁」，release-readiness 的 `sourceCopyMigration` 關轉綠並鎖定。
+
+入冊（docs/I18N-NON-USER-FACING-REVIEW.json）新增三個 reasonCode，證據測試 `scripts/test-i18n-deferred-buckets.js`：
+
+- `zh-intent-matcher`：中文語音/文字指令的比對式與回話（CHAT_RULES → parseChatIntent → chatHandle 前半）。分語言指令設計是獨立工作項，不是漏翻。
+- `family-feed-recipient-locale`：寫進家人動態牆的存庫句。照「收件人語言」呈現屬後端 Phase 2b；前端先翻會把存庫內容綁死在發文者語言。
+- `brand-proper-noun`：「沐寧 Munea」品牌專名（報告紙本頁首尾）。
+
+另沿用 `legacy-storage-identity`（存庫代號：示範人名、心情詞、用藥時段、你/本人、親屬預設——顯示端拆分器齊備：moodDayShort／interestTopicLabel／localizedMedicationDuration／medSlotLabel／actDisplayName）與 `debug-panel-diagnostic`（含 AvSyncMeter 區塊與 _diag/_diagNote 本體）。原「force 黑盒子字」不入冊：故障時會真的跳給用戶，已全數就地包翻譯（avatar.force* 鍵、中文字面不變）。
+
+偵測器同日修正：模板字串內每個漢字都落在 muneaT 呼叫範圍即視為已綁（清除 76 條組字外殼誤報）；並補上漏建的 `activity.quizProgress` 鍵。

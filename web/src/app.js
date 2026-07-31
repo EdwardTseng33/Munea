@@ -3322,7 +3322,7 @@ const Avatar = {
       const on = force || (function () { try { return localStorage.getItem('munea.debug') === '1'; } catch (e) { return false; } })();
       if (on) {
         const d = document.getElementById('avatarDiagnostics');
-        if (d) { d.hidden = false; d.style.whiteSpace = 'pre-line'; d.style.maxHeight = '40vh'; d.style.overflow = 'auto'; d.textContent = '聲音診斷:\n' + Avatar._diagTrail.join('\n'); }
+        if (d) { d.hidden = false; d.style.whiteSpace = 'pre-line'; d.style.maxHeight = '40vh'; d.style.overflow = 'auto'; d.textContent = muneaT('avatar.forceDiagHeader', '聲音診斷:') + '\n' + Avatar._diagTrail.join('\n'); }
       }
     } catch (e) {}
   },
@@ -3405,7 +3405,7 @@ const Avatar = {
           try { Avatar._diagNote('影像軌到 合成流含音軌=' + this._renderStream.getAudioTracks().length); } catch (er) {}
           const _pv = vid.play();
           if (_pv && _pv.then) _pv.then(() => Avatar._diagNote('影音播放:成功')).catch((err) => {   // 被 iOS 擋（手勢斷鏈）→ 點畫面一下＝新手勢救回（先鋒 tap-to-play 的 App 版）
-            Avatar._diagNote('影音播放:被擋(' + (err && err.name) + ')', true);
+            Avatar._diagNote(muneaT('avatar.forcePlaybackBlocked', '影音播放:被擋({reason})', { reason: (err && err.name) || '' }), true);
             try { setLocalizedRuntimeHint('playbackBlocked', true); } catch (e2) {}
             try {
               document.getElementById('chat').addEventListener('click', () => {
@@ -3590,7 +3590,7 @@ const Avatar = {
     this._faceStallMs = 0;
     voiceCallFail('face_stream_stalled', 'no_new_frames_4s_while_audio', { rebuilds: this._faceRebuilds || 0 });
     try { trackProductEvent('face_stream_stalled', { rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
-    try { this._diagNote('臉凍住(有聲4秒無新幀)', true); } catch (e) {}
+    try { this._diagNote(muneaT('avatar.forceFaceFrozen', '臉凍住(有聲4秒無新幀)'), true); } catch (e) {}
     if ((this._faceRebuilds || 0) >= 2) { this._fallbackVoiceOnly('stall_after_rebuilds'); return; }   // 重建額度用完 → 降級純語音
     this._faceRebuilds = (this._faceRebuilds || 0) + 1;
     this._rebuildFace();
@@ -3616,7 +3616,7 @@ const Avatar = {
     this._faceFellBack = true;
     voiceCallMark('face_fallback_voice_only', 'pass', { reason: String(reason || 'face_stream_stalled'), rebuilds: this._faceRebuilds || 0 });
     try { trackProductEvent('face_fallback_voice_only', { reason: String(reason || ''), rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
-    try { this._diagNote('臉救不回→降級純語音繼續', true); } catch (e) {}
+    try { this._diagNote(muneaT('avatar.forceFaceGiveUp', '臉救不回→降級純語音繼續'), true); } catch (e) {}
     // 關鍵：同線模式的聲音出口在臉那條線上——不切回本地播放，臉一收聲音會跟著死。
     try {
       if (typeof LiveVoice !== 'undefined' && LiveVoice._sameLine) {
@@ -3969,7 +3969,7 @@ const LiveVoice = {
     // 跟「影像凍住救不回」同一條已驗證的降級路。
     this._sameLineFellBack = true;
     try { trackProductEvent('sameline_fellback', { reason: String(reason || '') }); } catch (e) {}
-    try { Avatar._diagNote('同線退回本地(' + reason + ')→臉一起收、換待機', true); } catch (e) {}
+    try { Avatar._diagNote(muneaT('avatar.forceSameLineFallback', '同線退回本地({reason})→臉一起收、換待機', { reason }), true); } catch (e) {}
     try { Avatar._fallbackVoiceOnly('sameline_' + String(reason || 'stutter')); } catch (e) {
       // 後備（降級路本身出錯時至少把聲音顧好）：靜音同線那軌、防兩邊一起出聲（7/11 教訓）
       try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e2) {}
@@ -4435,10 +4435,10 @@ const LiveVoice = {
                 // 關鍵：退回本地播放的同時「把同線那軌靜音」——不然引擎晚點醒過來、兩邊一起出聲＝回答重疊（Edward 2026-07-11 真機抓到）
                 try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
                 try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}   // 聲音改走影像播放器後（1.24.4）：退回時它也要閉嘴、同理防重疊
-                try { Avatar._diagNote('判定真沒聲→退回本地(會慢)', true); } catch (e) {}
+                try { Avatar._diagNote(muneaT('avatar.forceNoSoundFallback', '判定真沒聲→退回本地(會慢)'), true); } catch (e) {}
                 try { localStorage.setItem('munea.sameLineFellBack', String(Date.now())); } catch (e) {}
               } else {
-                try { Avatar._diagNote('同線活著→維持不退回' + (mx < 0.015 ? '(繞過iPhone坑)' : ''), mx < 0.015); } catch (e) {}
+                try { Avatar._diagNote(muneaT('avatar.forceSameLineAlive', '同線活著→維持不退回') + (mx < 0.015 ? muneaT('avatar.forceIphoneWorkaround', '(繞過iPhone坑)') : ''), mx < 0.015); } catch (e) {}
               }
             }, 3000);
           }
@@ -6474,7 +6474,7 @@ function syncPullAll(options) {
         const arr = st.circle.map(m => ({ name: m.name, personId: m.personId || m.id, relationship: m.relationship, init: m.init, tint: m.tint, self: !!mine && m.name === mine }));
         if (!arr.some(m => m.self)) {
           const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
-          arr.unshift({ name: mine || p.nick || '我', init: (p.nick || mine || '我')[0], tint: 'p-ama', self: true });
+          arr.unshift({ name: mine || p.nick || muneaT('common.meInitial', '我'), init: (p.nick || mine || muneaT('common.meInitial', '我'))[0], tint: 'p-ama', self: true });
         }
         localStorage.setItem('munea.circleMembers', JSON.stringify(arr));
         if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync();
@@ -7272,7 +7272,7 @@ async function connectCall() {
           const osc = Avatar._primeCtx.createOscillator(); osc.connect(g); g.connect(dst); osc.start();
           _fv.srcObject = dst.stream; _fv.muted = false;   // 無聲音軌、不影響待機影片（待機片在另一層）
           const _p2 = _fv.play();
-          if (_p2 && _p2.then) _p2.then(() => Avatar._diagNote('解鎖影像播放器:成功')).catch((er) => Avatar._diagNote('解鎖:被擋(' + (er && er.name) + ')', true));
+          if (_p2 && _p2.then) _p2.then(() => Avatar._diagNote('解鎖影像播放器:成功')).catch((er) => Avatar._diagNote(muneaT('avatar.forceUnlockBlocked', '解鎖:被擋({reason})', { reason: (er && er.name) || '' }), true));
         } catch (e3) { try { _fv.muted = false; const _p3 = _fv.play(); if (_p3 && _p3.catch) _p3.catch(() => {}); } catch (e4) {} Avatar._diagNote('解鎖:改用簡易法'); }
       }
       const _fa = document.getElementById('faceAud');
@@ -8158,8 +8158,8 @@ function init() {
     let nm = '';
     try { const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}'); nm = (p.name || p.nick || '').trim(); } catch (e) {}
     if (!nm) nm = selfAccountName();
-    const ini = (nm || '我')[0] || '我';
-    return { name: nm || '我', init: ini, tint: 'p-ama', self: true };
+    const ini = (nm || muneaT('common.meInitial', '我'))[0] || muneaT('common.meInitial', '我');
+    return { name: nm || muneaT('common.meInitial', '我'), init: ini, tint: 'p-ama', self: true };
   }
   // 本人那筆的稱呼與頭像一律以「個人資料」為準（Edward 2026-07-30 在名單上看到英文「Primary user」）。
   // 為什麼要覆寫：雲端同步回來的家庭圈成員，後端對本人的預設名是英文 "Primary user"
@@ -8249,7 +8249,7 @@ function init() {
         // 把自己掛進這家的圈名單（雲端），對方裝置拉回來就看得到你
         await syncPullAll();
         const mem = loadCircle();
-        const meName = p.nick || p.name || '我';
+        const meName = p.nick || p.name || muneaT('common.meInitial', '我');
         if (!mem.some(m => m.name === meName)) { mem.push({ name: meName, init: meName[0], tint: 'p-bao', self: true }); saveCircle(mem); }
         renderFamRoster(); renderFcRoster();
         $('#joinCircleModal').classList.remove('show'); $('#joinCodeInput').value = '';
@@ -9611,7 +9611,7 @@ function init() {
       const noCls = i3 === 0 ? 'n1' : i3 === 1 ? 'n2' : i3 === 2 ? 'n3' : '';
       return '<div class="rank-row"><span class="rank-no ' + noCls + '">' + (i3 + 1) + '</span>' +
         '<span class="rank-av"><span class="init-ava ' + av[1] + '">' + avInit + '</span></span>' +
-        '<b>' + r2[0] + '</b><span class="rank-score">' + muneaT('activity.rankCorrectCount', '答對 {count} 題', { count: r2[1] }) + '</span></div>';
+        '<b>' + actDisplayName(r2[0]) + '</b><span class="rank-score">' + muneaT('activity.rankCorrectCount', '答對 {count} 題', { count: r2[1] }) + '</span></div>';
     }).join('') + '</div><div class="qc-life">' + muneaT('activity.rankRetention', '排名保留一天，明天自動收進記錄簿') + '</div>';
   }
   // 揪一攤：我要去／我沒空 ＋ 名單（Edward 7/9：補完整互動）
@@ -9626,7 +9626,7 @@ function init() {
       '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + (act.dateLabel ? '<br>' + act.dateLabel : '') + '</div>' +
       '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go"' + (locked ? ' disabled' : '') + '>' + muneaT('activity.rsvpGo', '我要去') + '</button>' +
       '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no"' + (locked ? ' disabled' : '') + '>' + muneaT('activity.rsvpNo', '我沒空') + '</button></div>' +
-      '<div class="qc-num">' + (going.length ? muneaT('activity.rsvpGoing', '要去的：{names}', { names: going.join(muneaT('common.listSeparator', '、')) }) : muneaT('activity.rsvpNoneYet', '還沒有人回「要去」')) + (no.length ? '　·　' + muneaT('activity.rsvpBusy', '沒空：{names}', { names: no.join(muneaT('common.listSeparator', '、')) }) : '') +
+      '<div class="qc-num">' + (going.length ? muneaT('activity.rsvpGoing', '要去的：{names}', { names: going.map(actDisplayName).join(muneaT('common.listSeparator', '、')) }) : muneaT('activity.rsvpNoneYet', '還沒有人回「要去」')) + (no.length ? '　·　' + muneaT('activity.rsvpBusy', '沒空：{names}', { names: no.map(actDisplayName).join(muneaT('common.listSeparator', '、')) }) : '') +
       '；' + (locked ? muneaT('activity.rsvpLocked', '活動時間到了，不能再改。') : (my ? muneaT('activity.rsvpTailMine', '想改隨時再點另一個就好；{companion}會幫你問不方便滑手機的家人跟其他人。', { companion: cname() }) : muneaT('activity.rsvpTailAsk', '點一下回覆；{companion}會幫你問不方便滑手機的家人跟其他人。', { companion: cname() }))) + '</div>';
     if (!locked) box.querySelector('.rsvp-btns').addEventListener('click', e => {
       const b = e.target.closest('.rsvp-btn'); if (!b || b.disabled) return;
@@ -9660,7 +9660,7 @@ function init() {
       '<div class="walk-people">' + parts.map(n => {
         const av = FAM_AVA[n] || [(n || '')[0] || '', 'p-me'];
         const avInit = typeof av[0] === 'function' ? av[0]() : av[0];
-        return '<div class="walk-p"><span class="init-ava ' + av[1] + '">' + avInit + '</span><b>' + n + '</b><span>' + (+steps[n] || 0).toLocaleString() + ' ' + muneaT('health.unit.steps', '步') + '</span></div>';
+        return '<div class="walk-p"><span class="init-ava ' + av[1] + '">' + avInit + '</span><b>' + actDisplayName(n) + '</b><span>' + (+steps[n] || 0).toLocaleString() + ' ' + muneaT('health.unit.steps', '步') + '</span></div>';
       }).join('') + '</div>' +
       '<div class="qc-num">' + muneaT('activity.walkAutoNote', '你的步數自動從 Apple 健康帶入；{companion}會問其他人今天走多少，{due}結算。', { companion: cname(), due: act.dueLabel || muneaT('activity.daysChip', '{days} 天內', { days: act.days }) }) + '</div>';
   }
@@ -9752,6 +9752,7 @@ function init() {
     updateActEmpty();
   }
   function actParts(act) { return ['你'].concat(act.names || []); }
+  function actDisplayName(n) { return n === '你' ? muneaT('activity.selfName', '你') : n; }
   function avatarsHtml(names) {
     return names.map(n => { const a = FAM_AVA[n] || [(n || '')[0] || '', 'p-me']; return '<span class="init-ava ' + a[1] + '">' + a[0] + '</span>'; }).join('');
   }
@@ -9841,7 +9842,7 @@ function init() {
       const claim = act.winner === '你' ? muneaT('activity.claimSelf', '獎品就是你的了，跟家人說一聲') : (giver !== '你' ? muneaT('activity.claimFromGiver', '獎品請找{giver}領', { giver }) : muneaT('activity.claimYouGive', '獎品由你提供，記得拿給{winner}', { winner: muneaSafeDisplayText(act.winner, muneaT('familyCircle.member', '中獎的家人')) }));
       return '<div class="draw-stage"><div class="draw-confetti"></div><div class="draw-win-card' + (pop ? '' : ' nopop') + '">' +
         '<span class="dw-ico">' + AWARD + '</span>' +
-        '<div class="dw-name">' + muneaT('activity.winnerLine', '{winner} 抽中了', { winner: act.winner }) + '</div>' +
+        '<div class="dw-name">' + muneaT('activity.winnerLine', '{winner} 抽中了', { winner: actDisplayName(act.winner) }) + '</div>' +
         '<div class="dw-prize">「' + act.prize + '」</div>' +
         '<div class="dw-claim">' + claim + (act.winner === '你' ? muneaT('activity.winnerFollowupSelf', '；{companion}已經去恭喜你了，記錄收進家庭記錄簿。', { companion: cname() }) : muneaT('activity.winnerFollowupOther', '；{companion}已經去恭喜他了，記錄收進家庭記錄簿。', { companion: cname() })) + '</div>' +
         '</div></div>';
@@ -9861,7 +9862,7 @@ function init() {
     if (act.winner) {
       wrap.innerHTML = winCardHtml(false);
     } else {
-      wrap.innerHTML = '<div class="qc-num">' + muneaT('activity.drawAllIn', '{names} 都有份，{when}由{companion}開獎', { names: all.join(muneaT('common.listSeparator', '、')), when: act.when, companion: cname() }) + '</div>' +
+      wrap.innerHTML = '<div class="qc-num">' + muneaT('activity.drawAllIn', '{names} 都有份，{when}由{companion}開獎', { names: all.map(actDisplayName).join(muneaT('common.listSeparator', '、')), when: act.when, companion: cname() }) + '</div>' +
         '<button type="button" class="draw-now">' + muneaT('activity.drawNowButton', '現在開獎') + '</button>';
       wrap.querySelector('.draw-now').addEventListener('click', () => {
         const winner = all[Math.floor(Math.random() * all.length)];
@@ -9872,10 +9873,10 @@ function init() {
         const nameEl = wrap.querySelector('.dr-name');
         let i = 0, delay = 70;
         const spin = () => {
-          nameEl.textContent = all[i % all.length]; i++;
+          nameEl.textContent = actDisplayName(all[i % all.length]); i++;
           if (delay < 330) { delay *= 1.14; setTimeout(spin, delay); }
           else {
-            nameEl.textContent = winner;   // 定格在中獎者
+            nameEl.textContent = actDisplayName(winner);   // 定格在中獎者
             setTimeout(() => {
               // 儀式②：彩帶＋中獎卡（中了什麼、找誰領）
               wrap.innerHTML = winCardHtml(true);
