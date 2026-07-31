@@ -73,6 +73,8 @@
 ## 第 5 步 · 送審（約 15 分）
 
 1. App Store Connect → 新版本描述欄**確認 EULA 連結還在**（7/26 退件教訓：賣訂閱的描述欄 EULA 連結永遠不能刪）。
+   - ✅ **隱私權網址不用擔心**：三個語言的隱私頁（app.munea.net/legal/en|ja|es/privacy.html）
+     7/31 已實測，都活著、也都是對的語言。原本紀錄標成「還沒部署」是舊狀態，已更正。
 2. 四語 metadata、截圖掛好 → 「新增以供審查」→ 送出。
 3. 語系開關（`web/src/i18n/catalog-manifest.json` 的 en/ja/es runtimeEnabled）＝**全部關卡綠了才開**、開了才包最終送審版。
 
