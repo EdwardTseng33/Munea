@@ -3,7 +3,7 @@
 > Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.45 (Build 500)`; source-only bump, not yet archived or uploaded. The frozen uploaded binary remains `1.0.44 (Build 492)` at `72a0bd46`, and its acceptance evidence does not carry to 1.0.45.
+> **Current source:** `1.0.51 (Build 520)`; source-only bump, not yet archived or uploaded. Versions 1.0.46-1.0.50 only ever existed in Edward's local packaging and were never written back to the repo. The frozen uploaded binary remains `1.0.44 (Build 492)` at `72a0bd46`, and its acceptance evidence does not carry to 1.0.51.
 >
 > **Latest uploaded App:** `1.0.44 (Build 492)`; Apple processing completed and the Build was selected and saved for 1.0.44 at 17:31. It has not been submitted, approved or released.
 >

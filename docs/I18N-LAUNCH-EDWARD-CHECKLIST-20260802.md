@@ -26,8 +26,19 @@
    - **預期會紅一條**：「母語審查還沒過就開語系」。這是設計如此——第 4 步你拍板要怎麼處理
      母語審查之後，那條才會消。**紅這一條是對的，別當成壞掉。**
    - 其他條若也紅，那才是真問題，丟給我。
-4. 開 Xcode → Build number 往上加一號（**不能用 Build 500 舊包**——那顆不含四語系）。
-5. Archive → 上傳 App Store Connect，等 processing 跑完。
+4. **先對版號再開 Xcode**（7/31 新增 · 這步以前沒人做，結果版號斷了 6 版）：
+
+       node scripts/check-release-consistency.js
+
+   - repo 現在是 **1.0.51 (Build 520)**，四個檔已經對齊。
+   - 打開 App Store Connect 看**實際上傳過的最大 Build**。如果 ≥ 520，就把
+     `package.json`／`package-lock.json`／`web/src/version.js`／Xcode 專案四處
+     一起往上調到沒人用過的號（**四處都要改，只改 Xcode 主分支會紅**）。
+   - ⚠️ **打包完成後，如果你在 Xcode 裡動過版號或 Build，一定要回頭把那個號寫回 repo**。
+     7/31 的斷點就是這樣來的：你那端出到 1.0.49、要上 1.0.51，repo 卻停在 1.0.45，
+     於是每個 session 查到的都是舊號，使用者在設定頁看到的「更新內容」也停在 7/30。
+5. 開 Xcode → Build number 對到上一步確認的號（**不能用舊包**——那顆不含四語系）。
+6. Archive → 上傳 App Store Connect，等 processing 跑完。
    - ✅ 完成標準：App Store Connect 看得到新 Build；手機裝上後
      **「設定 → 沐寧」有「語言」那一列、而且看得到 English／日本語／Español**。
      沒有那一列＝第 2 步做不了，先回頭找我。
