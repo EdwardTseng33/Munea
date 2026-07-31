@@ -363,6 +363,23 @@ function bindingForIndex(bindings, index) {
   return binding ? { key: binding.key, type: binding.type } : null;
 }
 
+// 模板字串裡的中文若「每一個漢字」都落在 ${ muneaT('key', '…') } 的翻譯呼叫
+// 引數範圍內，整條視為已綁定——組字外殼只是 HTML 標籤與插值，不該誤報成未接。
+// 只要有任何一個漢字落在翻譯呼叫之外（原樣中文、插值裡的裸字串），照舊算未綁。
+function templateInterpolationBinding(source, bindings, start, end) {
+  const hanPattern = /\p{Script=Han}/gu;
+  const slice = source.slice(start, end);
+  let match;
+  let found = null;
+  while ((match = hanPattern.exec(slice)) !== null) {
+    const absoluteIndex = start + match.index;
+    const hit = bindings.find(({ start: s, end: e }) => absoluteIndex >= s && absoluteIndex < e);
+    if (!hit) return null;
+    if (!found) found = hit;
+  }
+  return found ? { key: found.key, type: found.type } : null;
+}
+
 function isRegexLiteralStart(source, index) {
   let cursor = index - 1;
   while (cursor >= 0 && /\s/.test(source[cursor])) cursor -= 1;
@@ -423,13 +440,17 @@ function scanJavaScript(source, catalogKeys = loadCatalogKeys()) {
         continue;
       }
       if (char === quote) {
+        let binding = bindingForIndex(bindings, start);
+        if (!binding && quote === '`') {
+          binding = templateInterpolationBinding(source, bindings, start, i);
+        }
         pushCandidate(
           candidates,
           source,
           start,
           quote === '`' ? 'template-string' : 'string',
           value,
-          bindingForIndex(bindings, start),
+          binding,
         );
         state = 'code';
         quote = '';

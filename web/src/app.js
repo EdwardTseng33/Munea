@@ -2087,7 +2087,7 @@ window.__muneaOpenVisitSummary = openVisitSummary;
 /* 摘要轉純文字——分享給家人、複製，也是 PDF 失敗時的退路。
    一樣只搬事實，不加任何一句解讀。 */
 function visitSummaryAsText(summary) {
-  const companion = (typeof cname === 'function' ? cname() : '沐寧');
+  const companion = (typeof cname === 'function' ? cname() : muneaT('app.shortName', '沐寧'));
   const footer = muneaT('visit.footer', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion });
   const patientName = visitSummaryPatientName();
   // 純文字版跟 PDF 是同一份摘要，姓名要一致——不然兩份給出去的東西身分不同
@@ -2144,7 +2144,7 @@ function visitSummaryAsText(summary) {
    ⑤ 可能超過一頁（60 天資料多），所以每個區塊都不准被切開。 */
 function visitSummaryAsHTML(summary) {
   const qs = (typeof openCareQuestions === 'function') ? openCareQuestions() : [];
-  const companion = (typeof cname === 'function' ? cname() : '沐寧');
+  const companion = (typeof cname === 'function' ? cname() : muneaT('app.shortName', '沐寧'));
   const period = summary
     ? muneaT('visit.coverage', '涵蓋 {from} – {to}', { from: summary.from, to: summary.to })
     : '';
@@ -5056,7 +5056,7 @@ function localizeAuthTerms() {
     // 連接詞從完整句切出來：en/es 需要前後空格，而字典值不允許留白邊
     const joiner = combinedText.startsWith(termsText) && combinedText.endsWith(privacyText)
       ? combinedText.slice(termsText.length, combinedText.length - privacyText.length)
-      : '與';
+      : muneaT('auth.termsJoiner', '與');
     link.textContent = termsText;
     link.setAttribute('href', '#');
     link.removeAttribute('target');
@@ -5384,7 +5384,7 @@ function _muneaNotChattedTodayLine(now, ask) {
     }
     const visit = _muneaVisitWithinDays(3);
     if (visit) {
-      const vt = muneaSafeDisplayText(visit.title, '') || muneaSafeDisplayText(visit.label, '') || '回診';   // 招呼卡引用看診標題前守門（Edward 2026-07-15 事故）
+      const vt = muneaSafeDisplayText(visit.title, '') || muneaSafeDisplayText(visit.label, '') || muneaT('visit.defaultTitle', '回診');   // 招呼卡引用看診標題前守門（Edward 2026-07-15 事故）
       const v = { visit: vt, ask };
       const leads = [muneaT('greet.visit1', '{visit}快到了，{ask}', v), muneaT('greet.visit2', '別忘了{visit}，{ask}', v), muneaT('greet.visit3', '{visit}的事，記得，{ask}', v), muneaT('greet.visit4', '要回診了，{ask}', v), muneaT('greet.visit5', '{visit}要記得，{ask}', v)];
       return leads[_muneaDayOfYear(now) % leads.length];
@@ -8619,7 +8619,7 @@ function init() {
   if ($('#moodTrendBtn')) $('#moodTrendBtn').addEventListener('click', () => {
     $('#viewPerson').classList.remove('active');
     $('#viewMood').classList.add('active');
-    const n = $('#ptName') ? $('#ptName').textContent : '家人';
+    const n = $('#ptName') ? $('#ptName').textContent : muneaT('familyCircle.memberFallback', '家人');
     if ($('#moodTitle')) $('#moodTitle').textContent = muneaT('mood.personTitle', '{name}的心情', { name: n });
     renderMoodWeek();
     const lg = $('#moodLegend');
@@ -9400,7 +9400,7 @@ function init() {
   function renderFamAct() {
     const box = $('#famActChart'), note = $('#trendNote');
     const t = famTrendFor(currentPerson);
-    if (!t || !(_famActRange === 'week' ? t.stepsW : t.stepsM).some(Boolean)) return famEmptyChart(box, note, currentPerson || '家人');
+    if (!t || !(_famActRange === 'week' ? t.stepsW : t.stepsM).some(Boolean)) return famEmptyChart(box, note, currentPerson || muneaT('familyCircle.memberFallback', '家人'));
     const wk = _famActRange === 'week';
     const vals = wk ? t.stepsW : t.stepsM;
     if (box) box.innerHTML = famBarsHTML(wk ? t.wd : FAM_WL.slice(0, vals.length), vals, FAM_STEP_GOAL, v => v >= FAM_STEP_GOAL ? 'var(--teal)' : 'var(--gold)', vals.length - 1);
@@ -9409,7 +9409,7 @@ function init() {
   function renderFamSleep() {
     const box = $('#famSleepChart'), note = $('#famSleepNote');
     const t = famTrendFor(currentPerson);
-    if (!t || !(_famSleepRange === 'week' ? t.sleepW : t.sleepM).some(Boolean)) return famEmptyChart(box, note, currentPerson || '家人');
+    if (!t || !(_famSleepRange === 'week' ? t.sleepW : t.sleepM).some(Boolean)) return famEmptyChart(box, note, currentPerson || muneaT('familyCircle.memberFallback', '家人'));
     const wk = _famSleepRange === 'week';
     const vals = wk ? t.sleepW : t.sleepM;
     if (box) box.innerHTML = famBarsHTML(wk ? t.wd : FAM_WL.slice(0, vals.length), vals, FAM_SLEEP_GOAL, v => v >= 7.5 ? 'var(--teal)' : (v >= 6.5 ? 'var(--gold)' : 'var(--coral)'), vals.length - 1);
@@ -9817,7 +9817,7 @@ function init() {
       const pct = total ? Math.round(n / total * 100) : 0;
       return '<button type="button" class="vote-opt' + (my === o ? ' mine' : '') + (my ? ' voted' : '') + '" data-o="' + o + '">' +
         '<i style="width:' + (my ? pct : 0) + '%"></i><span class="vo-txt">' + o + '</span>' +
-        (my ? '<span class="vo-n">' + n + ' 票</span>' : '') + (my === o ? '<span class="vo-check">✓</span>' : '') + '</button>';
+        (my ? '<span class="vo-n">' + muneaT('activity.voteCount', '{count} 票', { count: n }) + '</span>' : '') + (my === o ? '<span class="vo-check">✓</span>' : '') + '</button>';
     }).join('') + '<div class="qc-num">' + (my ? muneaT('activity.voteMineNote', '{companion}去問其他人了，誰投了什麼會直接亮在這裡', { companion: cname() }) : muneaT('activity.votePickNote', '點一個選項投下你的票')) + '</div>';
     if (!my) wrap.addEventListener('click', e => {
       const b = e.target.closest('.vote-opt');
