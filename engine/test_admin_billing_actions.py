@@ -175,6 +175,74 @@ class AdminSetPlanTests(unittest.TestCase):
         self.assertEqual(event["details"]["previousPlan"], "free")
         self.assertEqual(event["details"]["newPlan"], "pro")
 
+    def _grant_with_stale_expiry(self, payload):
+        """開通前先塞一張早就過期的到期日，模擬「以前試買過／前一次開通留下來的」。"""
+        billing_state = {"store": server.normalize_billing_store({
+            "accountId": ACCOUNT_ID,
+            "activePlan": "free",
+            "provider": "manual-admin-grant",
+            "subscription": {"status": "inactive", "expiresAt": "2026-01-01T00:00:00Z"},
+        })}
+        credits_state = {"store": server.normalize_credits_store({"accountId": ACCOUNT_ID, "wallets": []})}
+
+        def load_billing():
+            return billing_state["store"]
+
+        def save_billing(data, reconcile=True):
+            billing_state["store"] = server.normalize_billing_store(data)
+            return billing_state["store"]
+
+        def load_credits():
+            return credits_state["store"]
+
+        def save_credits(data):
+            credits_state["store"] = server.normalize_credits_store(data)
+            return credits_state["store"]
+
+        with patch.object(server, "_resolve_admin_target_identity", return_value=fake_target()), \
+             patch.object(server, "load_billing_store", side_effect=load_billing), \
+             patch.object(server, "save_billing_store", side_effect=save_billing), \
+             patch.object(server, "load_credits_store", side_effect=load_credits), \
+             patch.object(server, "save_credits_store", side_effect=save_credits), \
+             patch.object(server, "append_audit_event"):
+            result = server.admin_set_plan_response(payload)
+        return result, billing_state["store"]
+
+    def test_manual_grant_replaces_stale_expiry_so_it_survives_next_read(self):
+        """Edward 2026-07-31 親踩：開通當下十一項全對，隔天 App 一讀就被降回 free。
+
+        真兇是手動開通沿用了帳號原本那張早就過期的到期日——reconcile_billing_expiry()
+        看到「pro＋active＋到期日已過」就判定過期。開通必須換上新的死期，這筆才活得過明天。
+        """
+        result, store = self._grant_with_stale_expiry({"accountId": ACCOUNT_ID, "plan": "pro"})
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["activePlan"], "pro")
+        self.assertEqual(result["grantDays"], server.ADMIN_GRANT_DEFAULT_DAYS)
+        expires = store["subscription"]["expiresAt"]
+        self.assertTrue(expires, "手動開通付費方案一定要有到期日，否則沒人會去關它")
+        self.assertNotIn("2026-01-01", str(expires), "舊的過期日必須被換掉、不能沿用")
+        # 關鍵回歸：這筆會籍要撐得過「下一次讀取」的自動過期檢查
+        self.assertIsNone(
+            server.subscription_expiry_reason(store),
+            "剛開通的會籍不該立刻被判定過期",
+        )
+
+    def test_manual_grant_accepts_custom_days_and_rejects_out_of_range(self):
+        result, store = self._grant_with_stale_expiry({"accountId": ACCOUNT_ID, "plan": "plus", "days": 90})
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["grantDays"], 90)
+        self.assertIsNone(server.subscription_expiry_reason(store))
+
+        bad = server.admin_set_plan_response({
+            "accountId": ACCOUNT_ID, "plan": "pro", "days": server.ADMIN_EXTEND_DAYS_MAX + 1,
+        })
+        self.assertFalse(bad["ok"])
+        self.assertEqual(bad["error"]["code"], "days_out_of_range")
+
+        bad2 = server.admin_set_plan_response({"accountId": ACCOUNT_ID, "plan": "pro", "days": "三十"})
+        self.assertFalse(bad2["ok"])
+        self.assertEqual(bad2["error"]["code"], "invalid_days")
+
     def test_downgrade_to_free_closes_monthly_wallet_but_keeps_purchased(self):
         billing_state = {"store": server.normalize_billing_store({
             "accountId": ACCOUNT_ID,

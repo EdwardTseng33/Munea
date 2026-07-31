@@ -7834,6 +7834,10 @@ ADMIN_CREDIT_GRANT_MAX = 2000  # 單次發點上限：防手滑打錯位數（�
 ADMIN_ALLOWED_PLANS = {"free", "plus", "pro"}
 ADMIN_PLAN_MONTHLY_CREDITS = {"plus": 100, "pro": 200}
 ADMIN_PLAN_FAMILY_MEMBERS_MAX = {"plus": 4, "pro": 12}
+# 後台手動開通付費方案的預設期限（Edward 2026-07-31 拍板「改會籍要給 30 天」）。
+# 為什麼一定要有期限：內部授權沒有 Apple 的續訂週期，沒人會去更新到期日。
+# 給死期＝到期系統自動回免費，不必靠人記得去關；要更久用 days 指定（上限 ADMIN_EXTEND_DAYS_MAX）。
+ADMIN_GRANT_DEFAULT_DAYS = 30
 
 
 def _resolve_admin_target_identity(account_id):
@@ -7943,6 +7947,16 @@ def admin_set_plan_response(data, headers=None):
         return {"ok": False, "error": {"code": "account_id_required"}}
     if plan not in ADMIN_ALLOWED_PLANS:
         return {"ok": False, "error": {"code": "invalid_plan"}}
+    # 開通付費方案要給幾天（改回免費時用不到）。沿用延長天數那支的上限，避免兩支各有一套規矩。
+    grant_days = ADMIN_GRANT_DEFAULT_DAYS
+    raw_days = data.get("days")
+    if raw_days not in (None, ""):
+        try:
+            grant_days = int(raw_days)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": {"code": "invalid_days"}}
+        if grant_days <= 0 or grant_days > ADMIN_EXTEND_DAYS_MAX:
+            return {"ok": False, "error": {"code": "days_out_of_range", "limit": ADMIN_EXTEND_DAYS_MAX}}
     target = _resolve_admin_target_identity(account_id)
     if not target:
         return {"ok": False, "error": {"code": "account_not_found"}}
@@ -7969,6 +7983,21 @@ def admin_set_plan_response(data, headers=None):
         else:
             subscription.update({"status": "active", "willRenew": False, "lastVerifiedAt": now_iso})
             provider = billing.get("provider") if billing.get("provider") == "apple_storekit2" else "manual-admin-grant"
+            # 手動開通會「沿用」帳號原本的 subscription（上面 dict(billing.get("subscription"))），
+            # 所以更早的試買／前一次開通留下的 expiresAt 會一起被帶進來。內部授權沒有續訂週期、
+            # 沒人會去更新那個日期——留著的下場是：開通當下十一項顯示全對，隔天 App 一讀，
+            # reconcile_billing_expiry() 看到「方案 pro、狀態 active、但到期日已過」就判定過期，
+            # 靜靜把方案降回 free（Edward 2026-07-31 親踩：手機顯示 FREE、管理名冊卻還是 pro）。
+            #
+            # 修法（Edward 同日拍板「改會籍要給 30 天」）：內部授權一律換上新的到期日，
+            # 預設 ADMIN_GRANT_DEFAULT_DAYS 天、可用 days 指定。有死期＝到期系統自動回免費，
+            # 不必靠人記得去關；也不再有「沿用一張早就過期的日期」這種暗坑。
+            # 真的 Apple 訂閱不碰它的到期日——那必須以 Apple 為單一事實來源
+            #（要加碼天數走 admin_extend_plan_days，那支已經處理好會被 Apple 蓋掉的取捨）。
+            if provider != "apple_storekit2":
+                subscription["expiresAt"] = (
+                    datetime.now(timezone.utc) + timedelta(days=grant_days)
+                ).isoformat().replace("+00:00", "Z")
             billing = {
                 **billing,
                 "activePlan": plan,
@@ -8013,6 +8042,9 @@ def admin_set_plan_response(data, headers=None):
             "accountName": target.get("accountName"),
             "previousPlan": previous_plan,
             "newPlan": plan,
+            # 稽核要看得到「給到哪一天」，不然事後查不出這筆會籍為什麼還在／為什麼沒了
+            "grantDays": grant_days if plan != "free" else None,
+            "expiresAt": ((billing.get("subscription") or {}).get("expiresAt")) if plan != "free" else None,
         },
     })
     return {
@@ -8021,6 +8053,9 @@ def admin_set_plan_response(data, headers=None):
         "accountName": target.get("accountName"),
         "previousPlan": previous_plan,
         "activePlan": plan,
+        # 後台要能直接顯示「開通到什麼時候」，不必再打一次查詢
+        "grantDays": grant_days if plan != "free" else None,
+        "expiresAt": ((billing.get("subscription") or {}).get("expiresAt")) if plan != "free" else None,
         "billing": billing,
         "walletSummary": (grant or {}).get("walletSummary"),
     }
