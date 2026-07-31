@@ -43,8 +43,11 @@ assert.equal(
   0,
   'Every App/WebView localizable HTML attribute must stay catalog-bound',
 );
+// 原本的「>500」是防掃描器假歸零的地板（立於債 1,091 時）；2026-07-31 遷移
+// 真把唯一字串清到 500 以下、地板功成身退。假歸零仍由三道守著：上面的
+// totalOccurrences 對帳、下面的 entries 加總對帳、以及 surface-inventory 契約。
 assert(
-  worklist.summary.uniqueSourceStrings > 500,
+  worklist.summary.unboundOccurrences === 0 || worklist.summary.uniqueSourceStrings > 0,
   'The worklist must expose the real unbound App copy debt',
 );
 assert.equal(

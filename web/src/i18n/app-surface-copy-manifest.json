@@ -14,7 +14,7 @@
     {"state": "chat:text-fallback", "keyPrefixes": ["textChat.", "chat."], "requiredKeys": ["textChat.title", "textChat.send", "textChat.exit"]},
     {"state": "chat:error", "keyPrefixes": [], "requiredKeys": ["voice.call.unavailable", "voice.call.retryLater", "voice.call.microphonePermissionTitle", "voice.call.authExpiredTitle", "voice.call.disconnectedTitle", "error.offline", "common.retry"]},
     {"state": "cross-surface:error-and-empty", "keyPrefixes": ["common.", "error.", "locale.", "time."], "requiredKeys": ["error.generic", "common.retry", "locale.fallbackNotice"]},
-    {"state": "modal:quiz", "keyPrefixes": ["quiz."], "requiredKeys": ["quiz.title", "quiz.progress", "quiz.result"]},
+    {"state": "modal:quiz", "keyPrefixes": ["quiz.", "quiz."], "requiredKeys": ["quiz.title", "quiz.progress", "quiz.result"]},
     {"state": "modal:challenge", "keyPrefixes": ["activity.", "legacyUi.activity"], "requiredKeys": ["activity.createTitle", "activity.type", "activity.sendInvite"]},
     {"state": "modal:activity-detail", "keyPrefixes": ["activity.detail"], "requiredKeys": ["activity.detailTitle", "activity.participants", "activity.noParticipants", "activity.deadline", "activity.location"]},
     {"state": "modal:feedback", "keyPrefixes": ["feedback.", "legacyUi.feedback"], "requiredKeys": ["feedback.title", "feedback.placeholder", "feedback.submit"]},
