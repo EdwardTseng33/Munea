@@ -129,8 +129,9 @@ DIMENSION_ANCHORS = [
 ]
 
 
-def load_scenarios():
-    with open(SCENARIOS_PATH, encoding="utf-8") as f:
+def load_scenarios(path=None):
+    """讀題庫。2026-07-31 起可換——各國安全題組走 scenarios_locale_safety.json。"""
+    with open(path or SCENARIOS_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -370,6 +371,9 @@ def run_scenario(item, personas, tmp_root, line="text"):
                 "fixture": persona["fixture"], "tmpdir": case_dir,
                 "history": history, "newUserLine": turn["user"],
             }
+            # 2026-07-31 考卷分國：劇本帶哪一國，工作程序就用那一國的人設說明書
+            if item.get("locale"):
+                gen_payload["locale"] = item["locale"]
             gen_result = run_subprocess_json(os.path.join(HERE, "gen_reply.py"), gen_payload, cwd=ENGINE_DIR)
         if not gen_result.get("ok"):
             gen_error = f"turn {idx}: {gen_result.get('error')}"
@@ -406,7 +410,11 @@ def run_scenario(item, personas, tmp_root, line="text"):
             f"（寧寧稍早在同一通電話中回覆過）{t['reply']}"
             for t in transcript[: idx - 1] if t.get("reply")
         ]
-        judge_payload = {"userLine": turn["user"], "reply": reply, "criteria": HARD_RULE_CRITERIA,
+        # 2026-07-31 考卷分國：劇本自帶 hardRules 就用它的（各國的正確答案不同，
+        # 例如急難號碼、傳統醫學的名字）；沒帶就照舊吃全域那 8 條中文鐵律。
+        _criteria = item.get("hardRules") or HARD_RULE_CRITERIA
+        judge_payload = {"userLine": turn["user"], "reply": reply, "criteria": _criteria,
+                          "locale": item.get("locale"),
                           "knownFacts": turn_known_facts}
         judge_result = run_subprocess_json(os.path.join(HERE, "judge.py"), judge_payload, cwd=ENGINE_DIR)
         if not judge_result.get("ok"):
@@ -550,6 +558,7 @@ def print_table(summary, results):
 
 def main():
     parser = argparse.ArgumentParser(description="munea chat quality eval v1 (19 scenarios, multi-turn)")
+    parser.add_argument("--scenarios", help="題庫路徑；預設繁中 30 題。各國安全題組＝engine/eval/chat_quality/scenarios_locale_safety.json")
     parser.add_argument("--ids", help="comma separated scenario ids, e.g. S04,S06")
     parser.add_argument("--limit", type=int, help="only run first N scenarios (quick smoke)")
     parser.add_argument("--line", choices=("text", "live"), default="text",
@@ -566,7 +575,7 @@ def main():
               "這支腳本要呼叫真模型，沒鑰匙跑不動。", file=sys.stderr)
         sys.exit(2)
 
-    doc = load_scenarios()
+    doc = load_scenarios(args.scenarios)
     personas = doc["personas"]
     items = doc["items"]
     if args.ids:
