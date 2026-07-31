@@ -33,13 +33,20 @@ REQUIRED_SECTIONS = (
 # 紅線的章節骨架
 REQUIRED_RED_SECTIONS = ("①", "②", "③", "④", "⑤", "⑥")
 
-# 各國的急難號碼：號碼跟「人在哪個國家」走、不跟語言走。
-# 一本書至少要帶得出該語系主要市場的急救號碼，否則那一國的急難引導是空的。
-REQUIRED_EMERGENCY_NUMBERS = {
-    "zh-TW": ("119", "1925"),
-    "ja": ("119", "0120-279-338"),      # 消防救急／よりそいホットライン
-    "en": ("911", "988"),               # 美國：緊急／Suicide & Crisis Lifeline
-    "es": ("112", "024", "016"),        # 西班牙：緊急／自殺防治／性別暴力
+# 2026-07-31 Edward 拍板翻面：**人設書裡不准出現寫死的急難號碼。**
+# 原本每本書都硬寫自己母國的號碼（日文書寫 119、西班牙文書寫 112），
+# 但語言不等於國家——講西班牙文的人可能在墨西哥（是 911），講英文的可能在英國。
+# 現在號碼的唯一來源＝經過核定的「當地安全指引」（localization.regional_safety_instruction），
+# 書裡只留規則：不知道他在哪就問一句，或說「打當地的緊急電話」，絕不自己猜一個數字。
+FORBIDDEN_HARDCODED_NUMBERS = ("119", "911", "112", "110", "1925", "1995", "113",
+                               "988", "024", "016", "0120-279-338", "1-800-677-1116")
+
+# 每本書都必須留著「不准憑空報號碼」那條規則的關鍵字
+REQUIRED_NO_GUESS_RULE = {
+    "zh-TW": ("不准憑空講一個號碼", "你現在人在哪裡"),
+    "ja": ("番号を自分で思い出して言ってはいけません", "今どちらにいらっしゃいますか"),
+    "en": ("never state a number from your own memory", "Where are you right now"),
+    "es": ("nunca diga un número de memoria", "¿Dónde se encuentra ahora?"),
 }
 
 # 別國專屬內容不得殘留（授書時整段複製貼上最容易犯）
@@ -83,16 +90,28 @@ class PersonaBookContractTests(unittest.TestCase):
             for section in REQUIRED_RED_SECTIONS:
                 self.assertIn(section, red, f"{locale}：紅線缺了第 {section} 條")
 
-    def test_every_book_carries_its_local_emergency_numbers(self):
+    def test_no_book_hardcodes_an_emergency_number(self):
+        """書裡不准寫死號碼——語言不等於國家，寫死就會叫錯人撥錯號碼。"""
         for locale in self.locales:
-            expected = REQUIRED_EMERGENCY_NUMBERS.get(locale)
-            if not expected:
+            red = eng.red_lines(locale)
+            for number in FORBIDDEN_HARDCODED_NUMBERS:
+                self.assertNotIn(
+                    number, red,
+                    f"{locale}：紅線裡寫死了急難號碼 {number}。"
+                    f"號碼只能來自經過核定的當地安全指引，書裡不可以有",
+                )
+
+    def test_every_book_keeps_the_never_guess_rule(self):
+        """規則本身必須在：不知道他在哪就問一句，絕不自己猜一個數字。"""
+        for locale in self.locales:
+            markers = REQUIRED_NO_GUESS_RULE.get(locale)
+            if not markers:
                 continue
             red = eng.red_lines(locale)
-            for number in expected:
+            for marker in markers:
                 self.assertIn(
-                    number, red,
-                    f"{locale}：紅線裡沒有當地急難號碼 {number}——急難引導會是空的",
+                    marker, red,
+                    f"{locale}：少了「不准憑空報號碼／不知道就問」那條規則（{marker}）",
                 )
 
     def test_no_book_leaks_another_countrys_content(self):
@@ -109,19 +128,9 @@ class PersonaBookContractTests(unittest.TestCase):
 
     def test_escalation_asymmetry_survives_translation(self):
         """②-B「只往上推、永不往下擋」是安全面最重的一條，逐本確認它真的被寫進去。"""
-        markers = {
-            "zh-TW": ("119", "②-B"),
-            "ja": ("119", "②-B"),
-            "en": ("911", "②-B"),
-            "es": ("112", "②-B"),
-        }
         for locale in self.locales:
-            expected = markers.get(locale)
-            if not expected:
-                continue
             core = eng.core_instruction("offline", locale)
-            for marker in expected:
-                self.assertIn(marker, core, f"{locale}：②-B 就醫不對稱規則沒寫進去")
+            self.assertIn("②-B", core, f"{locale}：②-B 就醫不對稱規則沒寫進去")
 
 
 
@@ -149,6 +158,7 @@ class SafetyRegionWiringTests(unittest.TestCase):
             )
 
     def test_the_wired_region_actually_says_the_number(self):
+        """號碼的唯一來源＝當地安全指引，所以這裡必須講得出來（書裡已經沒有了）。"""
         import localization
 
         for locale in eng.persona_locales():
@@ -162,6 +172,18 @@ class SafetyRegionWiringTests(unittest.TestCase):
                 self.assertIn(
                     expected, instruction,
                     f"{market} 的急難句（{language}）裡沒有 {expected}",
+                )
+
+    def test_an_unknown_region_gives_no_number_at_all(self):
+        """不知道他在哪的時候，指引裡一個號碼都不准有——她要改用問的。"""
+        import localization
+
+        for language in ("zh-TW", "en", "ja", "es"):
+            instruction = localization.regional_safety_instruction(language, None)
+            for number in FORBIDDEN_HARDCODED_NUMBERS:
+                self.assertNotIn(
+                    number, instruction,
+                    f"安全區不明時，{language} 的指引卻給了號碼 {number}——那是猜的",
                 )
 
 

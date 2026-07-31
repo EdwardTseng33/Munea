@@ -928,16 +928,30 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     # Taiwan persona prompt above remains useful for the current launch, but it
     # must not override a signed non-Taiwan call context.
     locale_context = locale_profile["localeContext"]
+    # 每本人設書都是為「一個國家」寫的（日文書＝日本、英文書＝美國、西班牙文書＝西班牙），
+    # 裡面的急難號碼、醫療體系、法規都是那一國的。但語言不等於國家：
+    # 講西班牙文的人可能在墨西哥（急難是 911、不是 112），講英文的可能在英國（是 999）。
+    # 2026-07-31：這段原本寫死「不是台灣就忽略台灣的內容」——那是只有一本台灣書的年代寫的。
+    # 現在改成「不是這本書的母國，就忽略書裡的號碼，改用下面那句經過核定的當地指引」。
+    _book_home_country = eng.PERSONA_BOOK_HOME_COUNTRY.get(_book_locale, "TW")
+    _verified_region = locale_context["safetyRegion"]
     base += (
         "\n[Verified locale context]\n"
         f"Conversation locale: {locale_profile['sessionLocale']}. "
         f"Country: {locale_context['countryCode']}. "
         f"Timezone: {locale_context['timeZone']}. "
-        f"Safety region: {locale_context['safetyRegion']}. "
+        f"Safety region: {_verified_region}. "
         "Use the verified country only for local examples and services. "
-        "Ignore Taiwan-specific examples, cultural defaults, and hotline "
-        "numbers elsewhere in this prompt when the verified country or safety "
-        "region is not TW."
+        f"The persona guidance above was written for {_book_home_country}. "
+        f"The verified safety region for this call is {_verified_region}. "
+        "**When those two differ, every emergency number, hotline, healthcare "
+        "system detail and legal statement written into the persona guidance "
+        "above is wrong for this person — ignore all of them.** Use only the "
+        "regional safety guidance that follows this block, and if you are not "
+        "certain of a local number, say so and tell them to contact their local "
+        "emergency service rather than naming a number you are unsure of. "
+        "Cultural examples and hotline numbers tied to the guidance's home "
+        "country must not be repeated when the regions differ."
     )
     base += locale_profile["replyLanguageInstruction"]
     base += locale_profile["regionalSafetyInstruction"]

@@ -28,6 +28,16 @@ CHARS = json.load(open(os.path.join(HERE, "characters.json"), encoding="utf-8"))
 # 「不會查」與「就真的去查」同時在她腦裡＝編新聞/亂接的火種。
 PERSONA_DIR = os.path.join(HERE, "persona")
 DEFAULT_PERSONA_LOCALE = "zh-TW"
+# 每本人設書是為哪一個國家寫的——書裡的急難號碼、醫療體系、法規都是那一國的。
+# 語言不等於國家：講西班牙文的人可能在墨西哥、講英文的可能在英國。
+# 通話時若「核定的安全區」跟這裡的母國不同，語音線會叫模型忽略書裡的號碼，
+# 改用經過核定的當地指引（見 live_voice_server 的 [Verified locale context] 段）。
+PERSONA_BOOK_HOME_COUNTRY = {
+    "zh-TW": "TW",
+    "ja": "JP",
+    "en": "US",
+    "es": "ES",
+}
 _PERSONA_CACHE = {}
 
 
