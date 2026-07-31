@@ -205,7 +205,9 @@ class WiringContractTest(unittest.TestCase):
         self.assertIn("MAX_TOPICS_PER_CALL", src)
         # 2026-07-29：聊聊是主戰場——語音線也要把「這個人是誰、幾點」傳進去，
         # 不然長輩版跟青少年版會混在一起（文字線做了、語音線漏掉＝最容易發生的疏漏）。
-        self.assertIn("health_kb.voice_cue(ids[0], said, _prof, _hour)", src)
+        # 2026-07-31 一國一庫之後多帶了 locale——保證沒變（語音線照樣排隊送提示），
+        # 只是驗它現在的樣子，順便釘住「語系一定要一起傳」。
+        self.assertIn("health_kb.voice_cue(ids[0], said, _prof, _hour, locale=_kb_locale)", src)
 
     def test_eval_mirrors_production_injection(self):
         src = self._read(os.path.join("eval", "gen_reply.py"))

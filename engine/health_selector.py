@@ -11,6 +11,7 @@
 - **正確但做不到的建議比不給更傷**：輪班的人拿到「固定時間起床」會覺得你不懂他的生活。
 """
 import json
+import health_i18n_layer as _i18n
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -223,7 +224,7 @@ def health_kb_keywords(topic_id):
     return _TOPIC_KEYWORDS.get(topic_id) or []
 
 
-def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
+def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS, locale=None):
     """挑方案。回傳 dict：{"solutions": [...], "referral": {...}|None, "reframe": str|None, "urgent": bool}"""
     topic = TOPICS.get(topic_id)
     if not topic:
@@ -233,6 +234,13 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     urgent = _is_urgent(user_text, hour)
     proxy = _asking_for_someone_else(user_text)
     pool = topic.get("solutions") or []
+    # 一國一庫：非中文語系先把說法換成那一國的（缺說法的方案剔除；
+    # 轉介卡沒翻＝整題回空——安全話術絕不退回中文）。打分欄位語言中立、照常用。
+    if locale:
+        pool = _i18n.localized_solutions(topic_id, pool, locale)
+        if not pool:
+            return {"solutions": [], "referral": None, "reframe": None,
+                    "urgent": False, "proxy": False, "related": None}
     # 代問時只留「講給家長聽」的版本；本人問只留「講給本人聽」的版本；沒標的兩邊都給。
     pool = [s for s in pool if s.get("forWhom") in (None, "parent" if proxy else "self")]
     # 照顧者替家人問時，方案是要給**被照顧的那位**用的（2026-07-29 骨鬆題抓到）：
@@ -322,9 +330,9 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
             "urgent": urgent, "proxy": proxy, "related": related}
 
 
-def render(topic_id, user_text="", profile=None, hour=None):
+def render(topic_id, user_text="", profile=None, hour=None, locale=None):
     """組成注入給模型的那段話。沒挑到東西就回空字串（不佔說明書）。"""
-    res = pick(topic_id, user_text, profile, hour)
+    res = pick(topic_id, user_text, profile, hour, locale=locale)
     if not res["solutions"]:
         return ""
     parts = []
