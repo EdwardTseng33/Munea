@@ -53,10 +53,16 @@ def test_memory_route_only_uses_what_is_actually_written():
     assert "上面沒寫的一律不准提" in text
 
 
-def test_warmth_route_does_not_let_her_claim_an_experience():
-    """給情緒價值可以，但不准宣稱自己做了什麼、等了多久——她沒有那些事。"""
+def test_warmth_route_only_allows_what_is_true_right_now():
+    """給情緒價值可以，但只准用此刻成立的話。
+
+    「今天想到你」聽起來很暖，卻是在宣稱她這段時間有在想他——她沒有兩通之間的日子，
+    那跟我們正在修的編新聞是同一家族（憑空生一個聽起來合理的內容）。
+    """
     text = localization.voice_opening_instruction(familiarity=1)
-    assert "不要宣稱你做了什麼" in text
+    assert "此刻成立" in text
+    assert "今天想到你" in text and "不准說" in text, "要明列這句是禁例，不是示範"
+    assert "沒有兩通之間的日子" in text
 
 
 def test_daily_facts_never_leak_the_internal_name():
