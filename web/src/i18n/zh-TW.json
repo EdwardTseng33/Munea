@@ -677,7 +677,7 @@
   "subscription.billedYearly": "每年計費一次",
   "subscription.creditRulesTitle": "點數使用規則",
   "subscription.topUpCreditRulesTitle": "加購點數使用規則",
-  "subscription.monthlyCreditsTitle": "每月方案點數",
+  "subscription.monthlyCreditsTitle": "訂閱點數",
   "subscription.monthlyCreditsBody": "每個計費週期重新發放，未使用點數不會累積至下一期。",
   "subscription.purchasedCreditsTitle": "加購點數",
   "subscription.purchasedCreditsBody": "不會到期；即使訂閱結束，只要帳戶仍有效就會保留。",

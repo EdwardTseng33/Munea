@@ -677,7 +677,7 @@
   "subscription.billedYearly": "Billed once a year",
   "subscription.creditRulesTitle": "How credits work",
   "subscription.topUpCreditRulesTitle": "Top-up credit rules",
-  "subscription.monthlyCreditsTitle": "Monthly plan credits",
+  "subscription.monthlyCreditsTitle": "Subscription credits",
   "subscription.monthlyCreditsBody": "Issued again each billing period. Unused credits do not roll over.",
   "subscription.purchasedCreditsTitle": "Purchased credits",
   "subscription.purchasedCreditsBody": "They do not expire and remain available while your account is active, even after a subscription ends.",

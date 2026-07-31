@@ -677,7 +677,7 @@
   "subscription.billedYearly": "年1回のお支払い",
   "subscription.creditRulesTitle": "ポイントの仕組み",
   "subscription.topUpCreditRulesTitle": "追加購入ポイントの利用ルール",
-  "subscription.monthlyCreditsTitle": "毎月のプランポイント",
+  "subscription.monthlyCreditsTitle": "サブスクリプションポイント",
   "subscription.monthlyCreditsBody": "請求期間ごとに付与され、未使用分は次の期間へ繰り越されません。",
   "subscription.purchasedCreditsTitle": "追加購入ポイント",
   "subscription.purchasedCreditsBody": "有効期限はありません。アカウントが有効であれば、サブスクリプション終了後も残ります。",
