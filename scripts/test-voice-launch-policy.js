@@ -8,6 +8,28 @@ const styles = fs.readFileSync(path.join(root, 'web', 'src', 'styles.css'), 'utf
 const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
 const avatarServer = fs.readFileSync(path.join(root, 'deploy', 'runpod-avatar', 'flashhead_server.py'), 'utf8');
 const chatEngine = fs.readFileSync(path.join(root, 'engine', 'chat_engine.py'), 'utf8');
+// 2026-07-31：人設書改成一國一本後，語音風格規矩從 live_voice_server.py 搬進
+// engine/persona/voice-style.<國>.txt。守門要跟著看新地方——不然程式改對了、
+// 清單沒跟上，閘門紅著沒人發現（同一個病第六次）。四本都要有，缺一本＝那一國沒紀律。
+const personaDir = path.join(root, 'engine', 'persona');
+const VOICE_STYLE_LOCALES = ['zh-TW', 'ja', 'en', 'es'];
+const voiceStyleBooks = Object.fromEntries(VOICE_STYLE_LOCALES.map((loc) => [
+  loc, fs.readFileSync(path.join(personaDir, `voice-style.${loc}.txt`), 'utf8'),
+]));
+// 各國書用自己的語言寫段落標題（日文是［リアルタイム音声・話す量の上限］），
+// 所以按語言查標題、不是查中文字串。少一段＝那一國沒有這條紀律。
+const VOICE_STYLE_HEADINGS = {
+  volumeCap: {
+    'zh-TW': '[即時語音話量上限]', ja: '[リアルタイム音声・話す量の上限]',
+    en: '[Live speech · how much to say]', es: '[Voz en directo · cuánto hablar]',
+  },
+  energy: {
+    'zh-TW': '[即時語音能量]', ja: '[リアルタイム音声・声の温度]',
+    en: '[Live speech · energy]', es: '[Voz en directo · energía]',
+  },
+};
+const everyVoiceStyleBookHas = (section) =>
+  VOICE_STYLE_LOCALES.every((loc) => voiceStyleBooks[loc].includes(VOICE_STYLE_HEADINGS[section][loc]));
 const apiServer = fs.readFileSync(path.join(root, 'engine', 'server.py'), 'utf8');
 const characters = JSON.parse(fs.readFileSync(path.join(root, 'engine', 'characters.json'), 'utf8'));
 
@@ -145,9 +167,13 @@ expect(voiceServer.includes('await asyncio.sleep(1.0)') && voiceServer.includes(
   'opening speech can overlap the proactive greeting instead of using the one-second warmup window');
 expect(voiceServer.includes('"greet_requested": False') && voiceServer.includes('node.proactive_greet_ignored'),
   'duplicate greet requests can start overlapping model turns');
-expect(voiceServer.includes('[即時語音話量上限]') && voiceServer.includes('一般閒聊預設只回答一句'),
+expect(everyVoiceStyleBookHas('volumeCap'),
+  'a persona book is missing the one-sentence-default section');
+expect(voiceStyleBooks['zh-TW'].includes('一般閒聊預設只回答一句'),
   'live voice does not enforce the one-sentence default');
-expect(voiceServer.includes('[即時語音能量]') && voiceServer.includes('預設比對方穩一點'),
+expect(everyVoiceStyleBookHas('energy'),
+  'a persona book is missing the delivery-energy section');
+expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
 expect(avatarServer.includes('self.slot.audio_out.playout_held()'),
   'Avatar video can start consuming frames before the audio prebuffer releases');
