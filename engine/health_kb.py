@@ -32,9 +32,15 @@ MAX_TOPICS_PER_CALL = 3
 MAX_TOPICS_PER_TURN = 2
 
 
-def resident_rules():
-    """常駐保命紅線（進 chat_engine.RED、所有線路每輪都在）。"""
-    return _DOC["resident"]
+def resident_rules(locale="zh-TW"):
+    """常駐保命紅線（進 chat_engine.RED、所有線路每輪都在）。
+
+    2026-07-31 人設書分國後收語系：急症判斷（中風／心肌梗塞／低血糖／譫妄）各國通用，
+    但**法規那條各國不同**——褪黑激素在台灣是處方藥、在日本則是沒有核准上市，
+    講錯等於給錯法律資訊。該語系沒有專屬版本就退回中文版（不會開天窗）。
+    """
+    key = f"resident_{locale.replace('-', '_')}"
+    return _DOC.get(key) or _DOC["resident"]
 
 
 def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):

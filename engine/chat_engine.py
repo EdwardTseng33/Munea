@@ -87,7 +87,7 @@ def core_instruction(lookup="offline", locale=DEFAULT_PERSONA_LOCALE):
 
 def red_lines(locale=DEFAULT_PERSONA_LOCALE):
     """安全紅線（照語系）。衛教常駐紅線目前只有中文版、對所有語系一起帶。"""
-    return _persona_text("red", locale) + health_kb.resident_rules()
+    return _persona_text("red", locale) + health_kb.resident_rules(locale)
 
 
 # 預設（離線版）＝所有既有取用點的原行為；語音線在 live_voice_server 依模式另組

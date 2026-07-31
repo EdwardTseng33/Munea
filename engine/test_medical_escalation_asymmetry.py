@@ -126,7 +126,8 @@ class BothLinesInheritTheBaseTests(unittest.TestCase):
     def test_both_lines_pass_a_locale_through(self):
         """兩條線都必須把語系傳進去——漏傳＝那條線永遠只吃中文版（外國用戶拿到台灣說明書）。"""
         self.assertIn('_sys_for(char, context.get("locale"))', _read("server.py"))
-        self.assertIn('_book_locale = (locale_profile or {}).get("locale")', _read("live_voice_server.py"))
+        # sessionLocale＝這通實際講哪種語言（介面英文但講日文的人要拿日文書），不是介面語言
+        self.assertIn('_book_locale = (locale_profile or {}).get("sessionLocale")', _read("live_voice_server.py"))
 
     def test_every_shipped_locale_keeps_the_escalation_rule(self):
         """已授書的每一國，安全紅線都必須在——授書時漏抄＝那一國的長輩失去保護。"""
