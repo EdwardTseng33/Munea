@@ -778,8 +778,8 @@
     },
     "supp-red-yeast": {
      "label": "Levadura roja de arroz con pastillas del colesterol: cuidado",
-     "dailyCap": "Siga la etiqueta y, antes de mezclarla con la medicación del colesterol, consulte a su médico o farmacéutico",
-     "say": "Lo más importante de este tema: la levadura roja de arroz lleva de forma natural el mismo tipo de sustancia que las estatinas — las pastillas del colesterol. Tomadas juntas hay riesgo de efectos serios en los músculos. Si está tomando las dos cosas, no decida solo si dejar una: llévese los dos botes a la farmacia y pregunte."
+     "dailyCap": "En la UE el tope legal es menos de 3 mg de monacolina K al día — y aun así la etiqueta debe desaconsejarla a partir de los 70 años y junto a pastillas del colesterol",
+     "say": "Lo más importante de este tema: la levadura roja de arroz lleva de forma natural el mismo tipo de sustancia que las estatinas, las pastillas del colesterol. Tomadas juntas hay riesgo de efectos serios en los músculos. Y hay algo que mucha gente no sabe: en Europa la etiqueta está obligada a avisar de que no la tomen las personas de más de 70 años, ni quien ya esté tomando medicación para el colesterol. Si tiene un bote en casa, llévelo a la farmacia y pregunte antes de seguir."
     },
     "supp-grapefruit": {
      "label": "El pomelo hace más fuertes algunas medicinas",
@@ -1566,6 +1566,297 @@
     "lex-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "Después de tomar cualquier suplemento, si la piel o el blanco de los ojos se ponen amarillos, le salen ronchas, nota palpitaciones o dolor muscular con debilidad — **déjelo de inmediato y vaya al médico cuanto antes, llevando el bote**. Y la regla más importante de todas: **jamás deje una medicina recetada para sustituirla por un suplemento** — ese cambio nunca sale a cuenta."
+    }
+   }
+  },
+  "TW-EDU-33": {
+   "keywords": [
+    "colesterol",
+    "triglicérid",
+    "estatina",
+    "vastatina",
+    "lípido",
+    "grasa en la sangre",
+    "hdl",
+    "ldl",
+    "levadura roja",
+    "monacolina"
+   ],
+   "solutions": {
+    "lipid-numbers-blocked": {
+     "label": "Interpretar la analítica o ajustar la medicación",
+     "say": "Qué significan sus números del colesterol, si le toca tomar pastillas o si hay que cambiar la dosis — eso lo decide el médico mirando el riesgo entero: la edad, la tensión, si hay azúcar, si fuma. Yo no le voy a interpretar la analítica. Lo que sí puedo es acompañarle en la parte de la vida diaria, que también cuenta."
+    },
+    "lipid-statin-dont-stop": {
+     "label": "La pastilla del colesterol no se deja por cuenta propia",
+     "say": "Lo primero, que es lo más importante: **la pastilla del colesterol no se deja por su cuenta**. El colesterol alto no se nota nada, y mucha gente ve el número bien en la analítica y piensa «pues ya no me hace falta» — pero el número está bien precisamente porque la está tomando. Bajar la dosis o dejarla solo lo decide su médico."
+    },
+    "lipid-fiber": {
+     "label": "Más fibra: avena y legumbres",
+     "say": "La avena, las legumbres y la verdura llevan una fibra que se lleva por delante parte del colesterol en el intestino — de todo lo que se puede hacer comiendo, es lo que mejor evidencia tiene para el colesterol malo. Cambiar el pan blanco del desayuno por unos copos de avena ya es un paso concreto; y legumbres tres o cuatro veces por semana, que aquí eso lo tenemos fácil."
+    },
+    "lipid-fat-swap": {
+     "label": "Cambiar el tipo de grasa rinde más que quitarla",
+     "say": "La clave no es quitar toda la grasa, es **cambiar de cuál**: menos fritos, menos bollería y menos embutido, y más aceite de oliva, frutos secos y pescado azul. Con las mismas calorías, solo cambiando el tipo de grasa, la analítica sale distinta."
+    },
+    "lipid-move": {
+     "label": "Andar rápido, nadar o la bici",
+     "say": "Andar rápido, nadar, la bici — este tipo de ejercicio se nota sobre todo en **los triglicéridos y en el colesterol bueno**; el malo baja más con la comida y con la medicación. Ciento cincuenta minutos a la semana es una buena meta, y vale repartirlos: media hora casi todos los días ya es eso."
+    },
+    "lipid-tg-alcohol-sugar": {
+     "label": "Triglicéridos altos: primero el alcohol y el azúcar",
+     "say": "Si lo que tiene alto son **los triglicéridos** y no el colesterol, las dos cosas que más hacen son: menos alcohol y menos azúcar — refrescos, dulces y pan blanco. Esto responde mucho más rápido que el colesterol: en dos o tres meses ya se nota en la analítica."
+    },
+    "lipid-red-yeast-caution": {
+     "label": "Levadura roja de arroz: no la junte por su cuenta",
+     "dailyCap": "En la UE, menos de 3 mg de monacolina K al día — es un tope legal, no una dosis recomendada; y la etiqueta está obligada a avisar de que no la tomen los mayores de 70 años ni quien ya toma medicación para el colesterol",
+     "askedFor": [
+      "levadura roja",
+      "monacolina",
+      "arroz rojo"
+     ],
+     "say": "La levadura roja de arroz lleva de forma natural la misma sustancia que las estatinas — **tomarla junto con la pastilla del colesterol es tomar dos veces lo mismo**, y ahí es donde aparece el riesgo muscular serio. Hay algo que aquí mucha gente no sabe: desde 2022 la ley europea obliga a que estos botes lleven menos de 3 mg de monacolina K al día y a poner en la etiqueta que **no la tomen los mayores de 70 años, ni los menores de 18, ni las embarazadas, ni quien ya esté con medicación para el colesterol**. Y no sustituye a la pastilla. Si le tienta, llévese el bote a la farmacia y pregunte antes."
+    },
+    "lipid-normalize": {
+     "label": "El colesterol alto no se nota, y es normal",
+     "say": "El colesterol alto no duele ni se nota, así que casi todo el mundo se entera en un análisis de rutina — no es que usted no se haya cuidado: es que esto no avisa."
+    },
+    "lipid-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Si desde que toma la pastilla del colesterol nota **dolor muscular con debilidad por todo el cuerpo, o la orina oscura, como de coca-cola** — deje de tomarla y vaya al médico cuanto antes; eso hay que mirarlo enseguida. Si la piel o el blanco de los ojos se le ponen amarillos, igual. Y lo que más se teme con el colesterol alto es el corazón: **si aparece opresión o dolor en el pecho que no cede, con sudor frío o falta de aire, se trata primero como cosa del corazón — llame al 112 sin esperar**."
+    }
+   }
+  },
+  "TW-EDU-34": {
+   "keywords": [
+    "engord",
+    "adelgaz",
+    "delgad",
+    "kilos",
+    "peso",
+    "cintura",
+    "michelines",
+    "obesidad",
+    "grasa visceral",
+    "síndrome metabólico",
+    "hígado graso",
+    "en los huesos"
+   ],
+   "solutions": {
+    "wt-unintended-loss": {
+     "label": "Primero: ¿ha sido a propósito?",
+     "askedFor": [
+      "adelgaz",
+      "delgad",
+      "kilos",
+      "perdido peso",
+      "pantalones"
+     ],
+     "say": "Antes de nada, una pregunta importante: eso de adelgazar, **¿es porque usted lo está buscando y lo lleva controlado**, o ha ido bajando sin darse cuenta? Si es lo segundo — en medio año menos kilos sin proponérselo, los pantalones que le bailan — eso no es una buena noticia: el cuerpo puede estar avisando de otra cosa y hay que ir al médico a mirarlo. Aquí no toca felicitarse todavía."
+    },
+    "wt-waist-first": {
+     "label": "La cintura dice más que la báscula",
+     "askedFor": [
+      "barriga",
+      "tripa",
+      "cintura",
+      "perímetro"
+     ],
+     "say": "El número de la báscula engaña: el músculo pesa, y si hay líquido retenido también. **Medir la cintura dice bastante más.** En España se toma como referencia que a partir de unos 94 cm en el hombre y unos 80 cm en la mujer ya hay grasa de más por dentro, y que por encima de 102 y de 88 el aviso es más serio. Se mide con una cinta métrica a la altura del ombligo, de pie y sin meter tripa. Es una señal para mirarlo con el médico, no un diagnóstico."
+    },
+    "wt-metabolic-syndrome": {
+     "label": "El síndrome metabólico viene en grupo",
+     "say": "Cintura ancha, la tensión rozando lo alto, el azúcar rozando lo alto, los triglicéridos altos y el colesterol bueno bajo — **con tres de esas cinco ya se habla de síndrome metabólico**. No es una enfermedad en sí: es el aviso de que se está acercando una. Saque el papel de su última analítica y lo miramos juntos, así sabe en cuántas anda."
+    },
+    "wt-sugar-drinks": {
+     "label": "Primero, fuera las bebidas azucaradas",
+     "say": "Si va a cambiar una sola cosa, que sean los refrescos y los zumos envasados — el azúcar líquido no llena nada y es el que más fácil se va a la barriga. Solo con eso, a mucha gente ya le baja la cintura."
+    },
+    "wt-slow-is-right": {
+     "label": "Despacio es como se pierde de verdad",
+     "say": "Bajar un kilo o dos al mes es el ritmo bueno. Lo que se pierde muy deprisa es sobre todo agua y músculo, y en cuanto se para vuelve — y el músculo, a cierta edad, cuesta muchísimo recuperarlo. **Esto es de ir despacio.**"
+    },
+    "wt-fatty-liver": {
+     "label": "Hígado graso: el tratamiento es bajar peso",
+     "askedFor": [
+      "hígado graso",
+      "hígado"
+     ],
+     "say": "Que en una ecografía salga hígado graso es de lo más común. No hay pastilla para eso: **perdiendo entre un cinco y un diez por ciento del peso, la grasa del hígado baja de verdad** — es de las pocas cosas donde cambiar la vida diaria es el tratamiento, no el complemento. Nada de productos «para el hígado»: quitar azúcar y alcohol rinde mucho más."
+    },
+    "wt-muscle-not-just-diet": {
+     "label": "Comiendo menos a secas se pierde músculo",
+     "say": "Comiendo menos a secas, parte de lo que se pierde es músculo — y más a partir de cierta edad. Con proteína suficiente en cada comida y algo de fuerza (levantarse y sentarse de la silla, subir las bolsas de la compra), lo que se va es la grasa."
+    },
+    "wt-diet-pills-blocked": {
+     "label": "Pastillas y pinchazos para adelgazar",
+     "say": "Si le conviene o no un tratamiento para adelgazar, de pastillas o de esos pinchazos que están tan de moda, eso lo valora su médico: yo ni se lo recomiendo ni le doy pautas. Y una cosa se la digo clara: **lo que se compra por internet sin receta, ni tocarlo** — con eso ha habido sustos muy serios."
+    },
+    "wt-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "**Adelgazar sin explicación hay que estudiarlo.** Si en medio año ha perdido peso sin proponérselo, y además le ha bajado el apetito, le cuesta tragar, suda por las noches o hace las heces negras — pida cita con su médico de cabecera y cuéntelo entero: puede ser el tiroides, el estómago u otras cosas que conviene coger pronto. Y al revés: si el peso sube deprisa con las piernas hinchadas y cada vez le falta más el aire, eso no es engordar — eso es cosa del corazón o del riñón y hay que verlo pronto."
+    }
+   }
+  },
+  "TW-EDU-35": {
+   "keywords": [
+    "dieta",
+    "régimen",
+    "mediterrán",
+    "ayuno intermitente",
+    "16/8",
+    "cetogénic",
+    "keto",
+    "hidratos",
+    "carbohidrat",
+    "detox",
+    "dash"
+   ],
+   "solutions": {
+    "diet-mediterranean": {
+     "label": "Dieta mediterránea: la de mejor evidencia",
+     "askedFor": [
+      "mediterrán"
+     ],
+     "say": "Si hay que elegir una con evidencia de verdad a largo plazo, es la dieta mediterránea — la de aquí de toda la vida: verdura y fruta, legumbres, frutos secos, aceite de oliva, pescado un par de veces por semana y poca carne roja. Es la que mejores estudios tiene en corazón y, además, **no obliga a renunciar a nada, por eso se aguanta**. En la práctica: más verdura, la mitad del pan y del arroz integrales, el aceite de oliva de siempre y más pescado que carne."
+    },
+    "diet-dash": {
+     "label": "Dieta DASH: para quien tiene la tensión alta",
+     "askedFor": [
+      "dash",
+      "DASH"
+     ],
+     "say": "Si lo que tiene alto es la tensión, mire primero la dieta DASH: mucha verdura y fruta (que llevan potasio), lácteos, y sobre todo **menos sal** — para bajar la tensión la evidencia es clarísima. Un aviso: quien tenga algo de riñón no debe ponerse a tomar potasio a lo grande; eso hay que consultarlo antes con su médico."
+    },
+    "diet-low-carb-honest": {
+     "label": "Bajo en hidratos: rápido al principio, luego igual",
+     "askedFor": [
+      "hidratos",
+      "carbohidrat",
+      "cetogénic",
+      "keto"
+     ],
+     "say": "Le voy a ser sincera: quitar hidratos suele adelgazar más rápido los primeros meses, pero **al cabo de uno o dos años se parece a las demás** — lo que marca la diferencia es si se puede mantener. La cetogénica, que es la versión extrema, todavía cuesta más de sostener; y **quien toma medicación para el azúcar no debe quitarse hidratos por su cuenta, porque se puede quedar bajo de azúcar**. Si quiere probar, empiece por menos pan y menos arroz y más verdura, sin irse a los extremos."
+    },
+    "diet-fasting-honest": {
+     "label": "Ayuno intermitente: no es magia",
+     "askedFor": [
+      "ayun",
+      "intermitente",
+      "16/8"
+     ],
+     "say": "Lo que dicen los estudios del ayuno intermitente: **el resultado se parece bastante a comer esa misma cantidad de menos**; su gracia es que la regla es simple y a algunas personas les resulta más llevadero. Pero **quien toma medicación para el azúcar, quien está embarazada o dando el pecho, y quien haya tenido problemas con la comida, no debe hacerlo por su cuenta**. Y en personas mayores, cuidado: si ya se come poquito, apretar el horario deja la alimentación corta."
+    },
+    "diet-pick-what-you-can-keep": {
+     "label": "La mejor es la que usted pueda mantener",
+     "say": "Cuando se comparan todas las formas de comer, **la que gana es la que usted pueda mantener** — eso sale una y otra vez en los estudios. Así que la pregunta buena no es cuál es la mejor, sino cuál seguiría haciendo dentro de tres meses. ¿Cómo come usted normalmente? Empezamos por ahí y lo vamos ajustando."
+    },
+    "diet-detox-blocked": {
+     "label": "Detox, depurativos y curas de zumos",
+     "say": "Eso de «depurar» o «desintoxicar» no existe en medicina — de eso ya se encargan el hígado y el riñón todos los días. Las curas extremas y los días a base de zumos pueden descolocarle las sales del cuerpo, y si toma medicación, más todavía. No se lo voy a recomendar."
+    },
+    "diet-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Si al cambiar de alimentación le da mareo con sudor frío — sobre todo si toma medicación para el azúcar — tome algo dulce enseguida y coménteselo a su médico; **y si se queda aturdido o no responde, eso es 112 sin dudar**. Otra regla que no falla: **no se deje ninguna medicina recetada por hacer dieta**. Y si un mayor de la casa empieza a comer poco y a quedarse en los huesos, eso no es una dieta que funciona: hay que verlo con el médico."
+    }
+   }
+  },
+  "TW-EDU-36": {
+   "keywords": [
+    "alergi",
+    "alérgic",
+    "intoleran",
+    "lactosa",
+    "gluten",
+    "celiaq",
+    "marisco",
+    "cacahuete",
+    "urticaria",
+    "ronchas",
+    "anafilax",
+    "sienta mal"
+   ],
+   "solutions": {
+    "allergy-vs-intolerance": {
+     "label": "Alergia e intolerancia no son lo mismo",
+     "say": "Vamos a separar dos cosas que se confunden mucho. **La alergia** es el sistema de defensas reaccionando: ronchas, labios hinchados, ahogo, y en lo grave va a más muy deprisa — con una cantidad pequeñísima ya puede pasar. **La intolerancia** (la leche, por ejemplo, que sienta mal y da retortijones) es que el cuerpo no digiere bien eso: se pasa mal, pero no hay peligro para la vida, y con poca cantidad se suele tolerar. ¿Lo suyo a cuál de las dos se parece? Lo miramos por separado."
+    },
+    "allergy-record": {
+     "label": "Apunte qué comió, cuánto tardó y qué le salió",
+     "say": "Si sospecha de algún alimento, lo más útil es apuntarlo: qué comió, cuánto tardó en empezar, qué le salió y cuánto le duró. Ese papel, enseñado en la consulta, vale mucho más que andar adivinando — si quiere, se lo voy apuntando yo."
+    },
+    "allergy-label": {
+     "label": "Los catorce alérgenos que hay que declarar",
+     "say": "En toda la Unión Europea hay **catorce alérgenos de declaración obligatoria**, y en la etiqueta tienen que ir destacados: cereales con gluten, crustáceos, huevos, pescado, cacahuetes, soja, leche, frutos de cáscara, apio, mostaza, sésamo, sulfitos, altramuces y moluscos. Y en un bar o un restaurante, aunque la comida no venga envasada, **tienen la obligación de informarle si usted pregunta** — preguntar es su derecho, no es ser un pesado."
+    },
+    "allergy-lactose": {
+     "label": "Intolerancia a la lactosa: no hace falta dejar los lácteos",
+     "askedFor": [
+      "lactosa",
+      "leche"
+     ],
+     "say": "Si la leche le da gases y descomposición, lo más probable es que sea intolerancia a la lactosa y no alergia — y **no hace falta dejar los lácteos**: el yogur y el queso curado se llevan mucho mejor porque tienen menos lactosa, y además hay leche sin lactosa. Tómelo en poca cantidad y acompañado de comida. El calcio hay que seguir cubriéndolo igual."
+    },
+    "allergy-no-self-elimination": {
+     "label": "No se quite alimentos por su cuenta",
+     "say": "Quitar de golpe un montón de alimentos «por si acaso» sale caro, **y en personas mayores es directamente peligroso**: se acaba comiendo poco, faltando proteína y adelgazando. Si de verdad hay que retirar algo, que le acompañe su médico o un dietista-nutricionista — no vaya tachando alimentos usted solo."
+    },
+    "allergy-test-blocked": {
+     "label": "Tests de intolerancias alimentarias (IgG)",
+     "say": "Hay sitios que venden un «test de intolerancias alimentarias» por IgG que promete decirle qué no puede comer — **las sociedades de alergia no lo respaldan para decidir qué dejar de comer**, y con eso mucha gente acaba retirando comida sin ninguna necesidad. Si quiere salir de dudas, lo suyo es el alergólogo: él decide qué prueba toca."
+    },
+    "allergy-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "**Esto es lo más importante de todo: si después de comer se le hinchan los labios o la lengua, nota la garganta cerrada, se le va la voz, le cuesta respirar, o le sale un sarpullido por todo el cuerpo con mareo — eso es una reacción alérgica grave y cierra el paso del aire. Llame al 112 inmediatamente; no espere a ver si se pasa y no se vaya conduciendo usted.** Y si esto ya le ha ocurrido alguna vez, pregunte a su médico si debe llevar encima un autoinyector de adrenalina."
+    }
+   }
+  },
+  "TW-EDU-37": {
+   "keywords": [
+    "sarcopenia",
+    "múscul",
+    "muscular",
+    "proteín",
+    "fuerza",
+    "debilidad",
+    "de la silla",
+    "whey"
+   ],
+   "solutions": {
+    "sarco-what-it-looks-like": {
+     "label": "Las señales que importan más que el peso",
+     "say": "A partir de cierta edad, **quedarse sin músculo da más problemas que pesar de más**. Las señales son estas: no poder con el tapón de un bote, que las bolsas de la compra pesen cada vez más, tener que apoyarse en los brazos para levantarse de la silla, andar más despacio y que el semáforo no dé tiempo. Con eso ya toca empezar a moverse; no hace falta esperar a que nadie le ponga nombre."
+    },
+    "sarco-protein-每餐": {
+     "label": "Proteína en cada comida, no solo en la cena",
+     "say": "Mucha gente mayor desayuna un café con una galleta y solo toma proteína en la cena — pero **el cuerpo no aprovecha de golpe toda la del día**. Mejor un poco en cada comida: un huevo, un vaso de leche o un yogur, una lata de sardinas, un filete del tamaño de la palma de la mano, unas lentejas. La misma cantidad, repartida, sostiene mucho mejor el músculo."
+    },
+    "sarco-resistance": {
+     "label": "Ejercicio de fuerza, no solo pasear",
+     "say": "Pasear está muy bien, pero **para hacer músculo tiene que haber algo de esfuerzo**: levantarse y sentarse de la silla diez veces agarrándose al respaldo, subir y bajar una botella de agua con cada brazo, flexiones apoyado en la pared. Dos o tres veces por semana rinde más que andar mucho más rato. Y es lo que mejor previene una caída."
+    },
+    "sarco-sun-vitd": {
+     "label": "Sol y vitamina D",
+     "say": "Cuando falta vitamina D, la fuerza también flojea. Salga un rato a que le dé el sol y aproveche para andar un poco — eso es gratis. Y si sospecha que la tiene baja, se ve en un análisis: pídalo en la próxima revisión, mejor que empezar a tomar botes por su cuenta."
+    },
+    "sarco-protein-supp": {
+     "label": "Batidos de proteínas",
+     "dailyCap": "Siga la etiqueta; y si tiene algo de riñón o está en diálisis, la cantidad total de proteína la decide su médico o un dietista-nutricionista",
+     "askedFor": [
+      "proteína en polvo",
+      "batido",
+      "whey",
+      "suero"
+     ],
+     "say": "Los batidos de proteínas valen como parche cuando de verdad no se llega comiendo, pero seamos claros: **tomarlos sin moverse no hace músculo — solo funcionan acompañados de ejercicio de fuerza**. Y **quien tenga algo de riñón o esté en diálisis no puede subir la proteína por su cuenta**: esa cantidad la tiene que calcular su médico o un dietista-nutricionista. Primero, llegar con la comida; el bote va después."
+    },
+    "sarco-appetite": {
+     "label": "Si no entra la comida, ese es el problema de fondo",
+     "say": "Muchas veces no es que no quiera comer: es que la dentadura no ayuda, que da miedo atragantarse, o que comer solo quita las ganas. **Si eso no se arregla, la proteína no hay por dónde meterla** — buscar compañía para comer, la carne guisada y cortada pequeña, y una revisión de la boca."
+    },
+    "sarco-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Si en medio año ha adelgazado bastante **sin haberlo buscado**, eso hay que estudiarlo con el médico: no se queda en «es que voy perdiendo músculo». Y si se ha caído hace poco, o de repente anda más inseguro, que le hagan una valoración cuanto antes — una caída, a cierta edad, cambia mucho las cosas, y se puede prevenir."
     }
    }
   }

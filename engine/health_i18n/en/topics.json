@@ -1585,6 +1585,312 @@
      "say": "After starting any supplement, if your skin or the whites of your eyes turn yellow, you break out in a rash or swell up, your heart races, or your muscles ache and feel weak — **stop taking it and see a doctor promptly**, and bring the bottle with you. And the most important rule of all: **never stop a prescription medicine in favor of a supplement** — that trade is never worth the risk."
     }
    }
+  },
+  "TW-EDU-33": {
+   "keywords": [
+    "cholesterol",
+    "high cholesterol",
+    "statin",
+    "Lipitor",
+    "Crestor",
+    "triglyceride",
+    "LDL",
+    "HDL",
+    "bad cholesterol",
+    "cholesterol medicine",
+    "cholesterol pills",
+    "lipid panel"
+   ],
+   "solutions": {
+    "lipid-numbers-blocked": {
+     "label": "Reading your numbers, and changing the dose",
+     "say": "What your cholesterol numbers mean, whether you need medicine, and whether a dose should change — that's the doctor's call, made against your whole risk picture: your age, your blood pressure, whether you have diabetes, whether you smoke. I don't read numbers and I don't touch doses. What I can do is help you hold up the living end of it."
+    },
+    "lipid-statin-dont-stop": {
+     "label": "Never stop your statin on your own",
+     "say": "First, and it's the important one: **don't stop your statin on your own.** High cholesterol doesn't feel like anything, so plenty of people see a good number on the lab report and figure they're done — but the number is good *because* of the pill. Stopping it, or quietly skipping days, is your doctor's decision to make, not an experiment to run at home. If it's the cost or a side effect bothering you, say so at the appointment; there's usually another way."
+    },
+    "lipid-fiber": {
+     "label": "Fiber, especially oats and beans",
+     "say": "The soluble fiber in oatmeal, beans, barley, apples and psyllium grabs some of the cholesterol in your gut and carries it out the door — it's the best-evidenced thing on your plate for the bad cholesterol, solid enough that the FDA lets oat boxes say so. Trading the white toast for a bowl of oatmeal at breakfast is one plain step you can take tomorrow."
+    },
+    "lipid-fat-swap": {
+     "label": "Swapping the fat beats fearing all fat",
+     "say": "The point isn't to strip the fat out of your food — it's **which** fat. Less deep-fried, less of what's in pastries, biscuits and packaged baked goods; more olive oil, nuts and fish. The same calories on the plate, different numbers on the lab report."
+    },
+    "lipid-move": {
+     "label": "Regular aerobic exercise",
+     "say": "Brisk walking, swimming, riding a bike — that kind of steady movement does the most for **your triglycerides and your good cholesterol.** The bad cholesterol mostly answers to food and medicine; those two answer to your legs. Half an hour, five days a week is the usual target, and it still counts broken into ten-minute pieces."
+    },
+    "lipid-tg-alcohol-sugar": {
+     "label": "If it's the triglycerides, start with alcohol and sugar",
+     "say": "If the number that's high is your **triglycerides** rather than your cholesterol, the two things that move it most are cutting back on alcohol and cutting the sweet drinks and white starches. This one answers to food much faster than cholesterol does — two or three months and you can usually see it on the next lab report."
+    },
+    "lipid-red-yeast-caution": {
+     "label": "Red yeast rice isn't a free add-on",
+     "askedFor": [
+      "red yeast rice",
+      "red yeast",
+      "monacolin"
+     ],
+     "dailyCap": "Ask your doctor or pharmacist before taking it alongside a prescription cholesterol medicine — don't set a dose for yourself",
+     "say": "Red yeast rice naturally contains the same kind of compound as a statin drug — so **taking it on top of a prescription statin is a double dose of the same thing**, and that's how people end up with serious muscle damage. It's sold as a supplement, too, which means how much is really in the bottle varies a lot from brand to brand. If you want to try it, ask the pharmacist first, and never use it as a substitute for the medicine you were prescribed."
+    },
+    "lipid-normalize": {
+     "label": "There's nothing to feel, and that's normal",
+     "say": "High cholesterol almost never announces itself — no ache, no warning sign. That's why most people find out from a blood test at a checkup rather than from feeling anything. It isn't that you weren't paying attention to your body; there was nothing there to notice."
+    },
+    "lipid-refer": {
+     "label": "The muscle sign, and the chest sign",
+     "say": "Two things to know. **If you're on a statin and you get unexplained muscle pain, tenderness or weakness — especially all over, or along with feeling sick or feverish, or if your urine turns dark brown like tea — stop the statin and get seen right away.** That's the one exception to never stopping on your own: rarely, muscle can break down and injure the kidneys. And the reason cholesterol matters at all is the heart: **chest pressure or chest pain with a cold sweat means call 911 now** and treat it as the heart until someone proves otherwise. Yellowing of the skin or the whites of the eyes also needs to be looked at."
+    }
+   }
+  },
+  "TW-EDU-34": {
+   "keywords": [
+    "losing weight",
+    "lost weight",
+    "weight",
+    "belly",
+    "belly fat",
+    "gut",
+    "pants",
+    "waist",
+    "metabolic syndrome",
+    "fatty liver",
+    "overweight",
+    "BMI"
+   ],
+   "solutions": {
+    "wt-unintended-loss": {
+     "label": "First: did you mean to lose it?",
+     "askedFor": [
+      "losing weight",
+      "lost weight",
+      "dropping weight",
+      "pants",
+      "didn't mean to"
+     ],
+     "say": "Before anything else, one question that matters: is this weight loss **something you set out to do** — or did it just happen? If it happened on its own — noticeably lighter over the last six months, pants getting loose, no dieting behind it — that isn't good news, and I'm not going to congratulate you for it. Weight that leaves without being asked is usually the body saying something else, and it's worth having a doctor find out what."
+    },
+    "wt-waist-first": {
+     "label": "The tape measure tells you more than the scale",
+     "askedFor": [
+      "belly",
+      "gut",
+      "waist",
+      "beer belly",
+      "pot belly"
+     ],
+     "say": "The number on the scale can fool you — muscle weighs, water weighs. **Your waist is the better measure.** Run a tape measure around your middle at the belly button: over 40 inches for a man, over 35 for a woman is the line American doctors use for too much fat packed in around the organs. (If you're of Asian background, ask your doctor — the useful line sits lower.) One minute with a tape tells you more than stepping on the scale does."
+    },
+    "wt-metabolic-syndrome": {
+     "label": "Metabolic syndrome — they travel in a group",
+     "say": "A thick waist, blood pressure creeping up, blood sugar creeping up, high triglycerides, low good cholesterol — **any three of those five together is what's called metabolic syndrome.** It isn't a disease so much as a warning light. The lines used here are a waist over 40 inches for men or 35 for women, triglycerides at 150 or above, good cholesterol under 40 for men or under 50 for women, blood pressure at 130/85 or above (or already being treated), and a fasting blood sugar of 100 or above. Pull out your last lab report, count how many you've collected, and take that count to your doctor."
+    },
+    "wt-sugar-drinks": {
+     "label": "The sweet drinks go first",
+     "say": "If you're only going to change one thing, make it the sweet drinks — soda, sweet tea, juice, sports drinks, the big flavored coffees. Sugar you drink doesn't fill you up, and it lands around the middle faster than anything else. Plenty of people watch their waist change from that one swap alone."
+    },
+    "wt-slow-is-right": {
+     "label": "Slow is what actually stays off",
+     "say": "Two to four pounds a month is the pace that holds. Weight that comes off faster than that is mostly water and muscle, and it comes back the moment you stop — and muscle an older body gives up is hard to put back on. **This is one thing you can't hurry.**"
+    },
+    "wt-fatty-liver": {
+     "label": "Fatty liver: the treatment is weight, not a pill",
+     "askedFor": [
+      "fatty liver",
+      "MASLD",
+      "NAFLD",
+      "liver supplement"
+     ],
+     "say": "Fatty liver turns up on a great many scans — you may see it written the newer way now, MASLD. Here's the useful part: **losing five to ten percent of your body weight visibly clears fat back out of the liver**, which makes this one of the few conditions where changing how you live *is* the real treatment. There is now one prescription drug for the advanced form, but that's a liver specialist's decision, not a first step. Skip the liver-support supplements; cutting the sugar and the alcohol does far more."
+    },
+    "wt-muscle-not-just-diet": {
+     "label": "Eating less alone takes the muscle with it",
+     "say": "If the only thing you do is eat less, part of what comes off is muscle — more so as we get older. Get enough protein and add something with resistance in it (standing up out of a chair and sitting back down, lifting a jug of water), and what you lose will be the fat."
+    },
+    "wt-diet-pills-blocked": {
+     "label": "Weight-loss pills and the shots",
+     "say": "Whether a weight-loss medication — including the shots everybody's talking about — is right for you is a conversation between you and a doctor who knows your history. I won't tell you whether you're a candidate, and I don't discuss doses. Two honest things I will say: this is a real prescription route, so it's worth raising at your next appointment instead of wondering about it; and **stay away from compounded or online-sourced versions.** The FDA has logged people hospitalized after measuring the wrong amount out of those vials, and counterfeits are circulating. If you go this way, go through a licensed prescriber and a real pharmacy."
+    },
+    "wt-refer": {
+     "label": "The weight changes that need a doctor",
+     "say": "**Unexplained weight loss gets checked out, not celebrated** — noticeably lighter over six months or so with no diet behind it, especially alongside appetite falling off, trouble swallowing, night sweats, or black or bloody stools. Thyroid trouble, stomach and bowel problems, and cancer all show up this way, and the point of going in is to rule them out. It runs the other direction too: weight climbing quickly along with swelling in the legs and getting more short of breath is a heart and kidney question, not ordinary weight gain. Either one, get seen."
+    }
+   }
+  },
+  "TW-EDU-35": {
+   "keywords": [
+    "diet",
+    "Mediterranean",
+    "DASH",
+    "low carb",
+    "keto",
+    "carbs",
+    "intermittent fasting",
+    "fasting",
+    "eating plan",
+    "what should I eat",
+    "healthy eating"
+   ],
+   "solutions": {
+    "diet-mediterranean": {
+     "label": "The Mediterranean way has the sturdiest evidence",
+     "askedFor": [
+      "Mediterranean"
+     ],
+     "say": "If you want the one with real long-term evidence behind it, it's the Mediterranean pattern: vegetables and fruit, whole grains, beans, nuts, olive oil, fish a couple of times a week, and less red meat. The heart research behind it is the strongest of any way of eating — and just as important, **it doesn't ask you to give anything up entirely, so people stay on it.** In an American kitchen that looks like: vegetables on the plate first, olive oil instead of butter, half the white bread and rice traded for whole grain, and fish showing up more often than beef."
+    },
+    "diet-dash": {
+     "label": "If blood pressure is the problem, start with DASH",
+     "askedFor": [
+      "DASH"
+     ],
+     "say": "For anyone whose blood pressure is the issue, DASH is where to start — **more potassium from fruit and vegetables, more calcium, less sodium.** It was built for blood pressure, and the evidence is clear-cut. One caution: if your kidneys aren't in good shape, don't go loading up on potassium-rich foods without asking your doctor first."
+    },
+    "diet-low-carb-honest": {
+     "label": "Low-carb: fast at first, even later",
+     "askedFor": [
+      "low carb",
+      "keto",
+      "ketogenic",
+      "cutting carbs",
+      "carnivore"
+     ],
+     "say": "Straight talk: low-carb usually takes weight off faster in the first six months, but **a year or two out it comes out about the same as the other approaches** — what separates them is whether you can keep it up. Keto, the strict version, is harder to live with for long. And **if you take medicine for blood sugar, cutting carbs on your own can drop you too low** — that one goes past your doctor first, because the medicine may need to change along with the food. If you want to try it, start with one less serving of rice, bread or pasta and one more of vegetables. Don't jump to the far end."
+    },
+    "diet-fasting-honest": {
+     "label": "Intermittent fasting isn't magic — it's another way of eating less",
+     "askedFor": [
+      "intermittent fasting",
+      "fasting",
+      "16:8",
+      "time restricted",
+      "eating window"
+     ],
+     "say": "Where the research lands on intermittent fasting: **it works about the same as simply eating that much less** — there's no special metabolic trick in it. What it does have going for it is one simple rule, and some people find a rule easier to follow than counting. But **don't take it on by yourself if you're on blood sugar medicine, if you're pregnant or nursing, or if you've ever had an eating disorder.** And older folks deserve extra care here: if you're already eating lightly, squeezing meals into a short window is an easy way to come up short on protein."
+    },
+    "diet-pick-what-you-can-keep": {
+     "label": "The best one is the one you'll still be doing in three months",
+     "say": "Line all the diets up honestly and the strongest one turns out to be **the one you'll actually keep doing** — the research finds that over and over. So rather than asking which is most powerful, ask which one you'd still be following three months from now. Tell me how you eat these days and we'll adjust from there instead of starting you over."
+    },
+    "diet-detox-blocked": {
+     "label": "Detoxes, cleanses and juice fasts",
+     "say": "'Detox' isn't a real thing in medicine — your liver and kidneys do that work around the clock, and a cleanse doesn't help them do it. The extreme versions, days of nothing but juice, can throw your electrolytes off, which is genuinely risky if you take heart or blood pressure medicine. I won't recommend them."
+    },
+    "diet-refer": {
+     "label": "When a change in eating needs a doctor",
+     "say": "If you change how you're eating and get shaky, sweaty and lightheaded — **especially if you take medicine for blood sugar** — treat it as low blood sugar: juice or glucose tablets right away, then get advice about your doses. And one line that isn't up for negotiation: **don't drop a prescribed medicine to make a diet work.** If an older person starts eating less and less and keeps getting thinner, that isn't a diet succeeding — that needs a doctor. Same goes for dieting hard enough that periods stop or hair starts coming out."
+    }
+   }
+  },
+  "TW-EDU-36": {
+   "keywords": [
+    "food allergy",
+    "allergic",
+    "allergy",
+    "peanut",
+    "shrimp",
+    "shellfish",
+    "lactose",
+    "dairy",
+    "gluten",
+    "hives",
+    "swollen",
+    "swell",
+    "tongue"
+   ],
+   "solutions": {
+    "allergy-vs-intolerance": {
+     "label": "An allergy and an intolerance are two different things",
+     "say": "Let's sort out which one we're talking about, because they're handled completely differently. **An allergy is the immune system**: hives, swelling lips, wheezing, and at worst a whole-body reaction — and a tiny amount can set it off. **An intolerance is digestion** — milk leaving you gassy and running to the bathroom is the classic one: miserable, but not life-threatening, and a small amount is usually fine. Which of those sounds like yours?"
+    },
+    "allergy-record": {
+     "label": "Write down what, how long after, and what happened",
+     "say": "If you suspect a food, the most useful thing you can do is keep a record: what you ate, how long before it started, what happened, and how long it lasted. Handing a doctor that list beats guessing by a mile — and I can hold onto it for you if you tell me as it happens."
+    },
+    "allergy-label": {
+     "label": "Reading the label: the nine the US requires",
+     "say": "Packaged food sold here has to spell out nine major allergens: **milk, eggs, fish, crustacean shellfish, tree nuts, peanuts, wheat, soybeans — and sesame, which was added at the start of 2023.** Look for the 'Contains' line right under the ingredient list; that's the fastest place to check. Turning the box over before it goes in the cart is a lot easier than dealing with it afterward."
+    },
+    "allergy-lactose": {
+     "label": "Lactose intolerance: you don't have to give up dairy",
+     "askedFor": [
+      "lactose",
+      "lactose intolerant",
+      "milk",
+      "dairy"
+     ],
+     "say": "Milk leaving you bloated and headed for the bathroom is usually lactose intolerance rather than an allergy — and **you don't have to quit dairy over it.** Yogurt and aged cheeses carry much less lactose, lactose-free milk is in every grocery store, small amounts alongside a meal go down better, and the lactase tablets at the drugstore help some people. Just don't let the calcium slide while you're cutting back."
+    },
+    "allergy-no-self-elimination": {
+     "label": "Don't put yourself on a long avoid list",
+     "say": "Cutting out a whole list of foods on a hunch is riskier than it sounds — **especially for an older person**, where it quietly turns into not eating enough and losing weight. If something really does need to come out, do it with a doctor or a dietitian, one food at a time, rather than crossing things off month after month on your own."
+    },
+    "allergy-test-blocked": {
+     "label": "'Food sensitivity' panels (IgG testing)",
+     "say": "You'll see clinics and websites selling 'food sensitivity' panels — usually IgG testing — promising a list of everything you can't eat. **Allergy specialists advise against using those to decide what to avoid**: IgG mostly reflects what you've been eating, not what you react to, and the lists they hand back send people off a dozen foods for no good reason. If you want a real answer, see a board-certified allergist and let them choose the test that fits your story. I won't recommend a lab or interpret a panel for you."
+    },
+    "allergy-refer": {
+     "label": "The reaction that's an airway emergency",
+     "say": "**This is the one that matters most. If after eating, the lips or tongue swell, the throat feels tight, the voice goes hoarse, breathing turns hard or wheezy, or hives break out all over along with dizziness — that's a severe allergic reaction closing off the airway. Call 911 right now. Don't wait it out, and don't drive yourself.** If an epinephrine auto-injector has been prescribed, use it first and then call. And anyone who has ever reacted that way should ask their doctor about carrying one — that conversation belongs on the calendar, not in the middle of an emergency."
+    }
+   }
+  },
+  "TW-EDU-37": {
+   "keywords": [
+    "muscle",
+    "losing muscle",
+    "weak",
+    "no strength",
+    "protein",
+    "getting weaker",
+    "walking slower",
+    "grip",
+    "jar",
+    "unsteady",
+    "trouble getting up",
+    "wasting away"
+   ],
+   "solutions": {
+    "sarco-what-it-looks-like": {
+     "label": "The signs worth watching aren't on the scale",
+     "say": "As the years go by, **too little muscle causes more trouble than too much weight does.** The signs to watch: the jar lid you can't twist open anymore, groceries that suddenly feel heavy, needing to push off the armrests to stand up, and walking slowly enough that the crosswalk light beats you across. Any of those and it's time to start — you don't need a diagnosis first."
+    },
+    "sarco-protein-每餐": {
+     "label": "Protein at every meal, not all at dinner",
+     "say": "A lot of older folks have toast and coffee for breakfast and get all their protein at supper — but **the body can only use so much of it at once.** Put a serving in every meal instead: an egg, a cup of milk, Greek yogurt, cottage cheese, beans, tofu, or a palm-sized piece of fish or chicken. Same food overall, far more muscle out of it. Older adults generally need more protein than the old textbook number — the researchers land around 25 to 30 grams a meal — though **if your kidneys aren't in good shape, that number is your doctor's or a dietitian's to set, not mine.**"
+    },
+    "sarco-resistance": {
+     "label": "Strength work beats another walk",
+     "say": "Walking is good for you, but **muscle only grows against resistance**: standing up out of a chair and sitting back down ten times holding the back of it, lifting a jug of water up and down, push-ups against the wall, a resistance band. Two or three times a week does more than any amount of extra walking. This is the most basic fall prevention there is."
+    },
+    "sarco-sun-vitd": {
+     "label": "Daylight and vitamin D",
+     "say": "People who run low on vitamin D tend to be weaker, too. Fifteen or twenty minutes outside most days — and walk a little while you're out there — is the cheapest thing on this whole list."
+    },
+    "sarco-protein-supp": {
+     "label": "Whey and protein powders",
+     "askedFor": [
+      "whey",
+      "protein powder",
+      "protein shake",
+      "Ensure",
+      "nutrition shake"
+     ],
+     "dailyCap": "Follow the product label; if your kidneys aren't in good shape, how much protein you get in a day is your doctor's or dietitian's call, not the label's",
+     "say": "A protein shake is a fair way to fill the gap when someone honestly can't eat enough — but **on its own, without the strength work, it doesn't build much.** And **if your kidneys aren't in good shape, or you're on dialysis, don't add protein on your own**; that total has to be worked out with your doctor or a dietitian. Food first is the better road anyway: eggs, milk, yogurt, fish, beans."
+    },
+    "sarco-appetite": {
+     "label": "Not eating is the root of it",
+     "say": "Most older folks who don't eat enough aren't refusing food — their teeth hurt, they're afraid of choking, or eating alone has taken the appetite out of it. **Fix those first and the protein follows**: get the teeth or the dentures looked at, cook the meat softer and cut it smaller, and find someone to share the table with."
+    },
+    "sarco-refer": {
+     "label": "When it isn't just muscle",
+     "say": "If someone has **lost a noticeable amount of weight over the past six months without trying to**, that needs a doctor to find the reason — don't file it under muscle loss and leave it there. And a recent fall, or walking that's turned suddenly unsteady, should be looked at soon. A fall is the event that changes everything for an older person, and this is the part where you can still get ahead of it."
+    }
+   }
   }
  }
 }

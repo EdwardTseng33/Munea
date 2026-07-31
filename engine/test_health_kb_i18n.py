@@ -167,6 +167,34 @@ class TranslationQualityTest(unittest.TestCase):
                 self.assertIn(tid, health_kb.match_topics(kws[0].upper(), locale=loc),
                               f"{loc}/{tid}：全大寫就叫不出來")
 
+    def test_a_latin_keyword_must_start_at_a_word(self):
+        """拉丁語系的觸發字要從詞頭開始比。
+
+        西班牙版回報：「tos（咳嗽）」被「hidra*tos*（醣類）」叫起來，問醣類的人
+        會收到感冒衛教。中文沒有詞的空隙、必須用純包含比對，這個坑出國才踩到。
+        只綁詞頭、不綁詞尾——「aliment」還是要命中「alimentación」，
+        那正是我們要求觸發字寫詞根的原因。
+        """
+        self.assertNotIn("TW-EDU-19",
+                         health_kb.match_topics("los hidratos de carbono", locale="es"))
+        self.assertIn("TW-EDU-19", health_kb.match_topics("tengo mucha tos", locale="es"))
+        self.assertIn("TW-EDU-19", health_kb.match_topics("TOS SECA", locale="es"))
+        # 中文與日文不受影響：句中任何位置都要叫得出來
+        self.assertIn("TW-EDU-01", health_kb.match_topics("我最近都睡不好"))
+        self.assertIn("TW-EDU-01", health_kb.match_topics("最近よく眠れないんです", locale="ja"))
+
+    def test_spanish_red_yeast_carries_the_eu_age_warning(self):
+        """歐盟規定紅麴標示必須寫「逾 70 歲不得食用」——我們的用戶正好就是那群人。
+
+        寫死句子這件事只用在這種反向守門：這句掉了，就是我們比包裝上的字還不謹慎。
+        """
+        es = i18n.overlay("es")
+        if not es or "TW-EDU-16" not in es:
+            self.skipTest("西班牙版還沒有保健品題")
+        card = es["TW-EDU-16"]["solutions"]["supp-red-yeast"]
+        self.assertIn("70", card["say"])
+        self.assertIn("70", card.get("dailyCap", ""))
+
     def test_every_translated_topic_actually_fires(self):
         """有疊層就要叫得出來——翻了卻觸發不到等於沒做。"""
         for loc in locales_with_overlay():
