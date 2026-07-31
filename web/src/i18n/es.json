@@ -1035,5 +1035,22 @@
   "common.sampleTag": "Ejemplo",
   "common.cloudRetryToast": "No hay conexión con la nube; inténtalo cuando la señal mejore.",
   "health.reconnectHelp": "Munea no puede leer datos ahora mismo. La pantalla de permisos solo aparece una vez, así que Conectar te lleva a la app Salud: activa allí los datos de Munea.",
-  "health.connectedToast": "¡Conectado! A partir de ahora estaré pendiente de tus datos de salud."
+  "health.connectedToast": "¡Conectado! A partir de ahora estaré pendiente de tus datos de salud.",
+  "health.obsMetricBp": "Tensión {value}",
+  "health.obsMetricHr": "Pulso {value}",
+  "health.obsMetricSleep": "Sueño {value}",
+  "health.obsSteadyWithWorry": "Hoy: {metrics}. En general estable, aunque {worries}; lo vigilaré de cerca, no te preocupes.",
+  "health.obsAllGood": "Hoy: {metrics}; todo se ve bien. {cheer}, y si te apetece salir a caminar, te acompaño.",
+  "health.obsKeepItUp": "Mantener este ritmo está muy bien",
+  "health.worryBpHigh": "la tensión algo más alta de lo habitual",
+  "health.worryBpLow": "la tensión algo baja",
+  "health.worryHrFast": "el pulso algo rápido",
+  "health.worryHrSlow": "el pulso algo lento",
+  "health.worrySpo2": "el oxígeno algo bajo",
+  "health.worrySleepShort": "anoche dormiste poco",
+  "health.worryFewSteps": "hoy has caminado poco",
+  "health.bpHighHint": "Algo más alta de lo habitual; obsérvala",
+  "health.bpLowHint": "Algo baja; levántate despacio",
+  "health.bpNormalHint": "Dentro del rango normal",
+  "health.restingHrHint": "Frecuencia cardiaca en reposo"
 }

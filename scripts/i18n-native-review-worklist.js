@@ -16,6 +16,7 @@ const JA_SHARED_SOURCE_KEYS = Object.freeze([
   'activity.vote',
   'common.confirm',
   'demo.activity.doneShort',
+  'health.obsMetricSleep',
   'common.listSeparator',
   'familyCircle.you',
   'font.standard',

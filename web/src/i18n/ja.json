@@ -1035,5 +1035,22 @@
   "common.sampleTag": "サンプル",
   "common.cloudRetryToast": "いまクラウドにつながりません。電波が良くなってからもう一度どうぞ。",
   "health.reconnectHelp": "いまデータを読み取れません。許可画面は一度しか出ないため、「連携」を押すとヘルスケアへご案内します。そこで Munea の項目をオンにしてください。",
-  "health.connectedToast": "つながりました。これからは健康データを私が自動で見守ります。"
+  "health.connectedToast": "つながりました。これからは健康データを私が自動で見守ります。",
+  "health.obsMetricBp": "血圧 {value}",
+  "health.obsMetricHr": "心拍 {value}",
+  "health.obsMetricSleep": "睡眠 {value}",
+  "health.obsSteadyWithWorry": "今日は{metrics}。おおむね安定していますが、{worries}が気になります。私が注意して見ておきますので、ご安心ください。",
+  "health.obsAllGood": "今日は{metrics}。全体的にいい調子です。{cheer}。お散歩したくなったら、ご一緒しますよ。",
+  "health.obsKeepItUp": "この調子を保てていて、とてもいいです",
+  "health.worryBpHigh": "血圧がいつもより少し高め",
+  "health.worryBpLow": "血圧が低め",
+  "health.worryHrFast": "心拍がやや速め",
+  "health.worryHrSlow": "心拍がやや遅め",
+  "health.worrySpo2": "血中酸素がやや低め",
+  "health.worrySleepShort": "昨夜は睡眠少なめ",
+  "health.worryFewSteps": "今日は歩数少なめ",
+  "health.bpHighHint": "いつもより少し高めです。気をつけましょう",
+  "health.bpLowHint": "低めです。立ち上がりはゆっくりと",
+  "health.bpNormalHint": "正常範囲内です",
+  "health.restingHrHint": "安静時心拍数"
 }

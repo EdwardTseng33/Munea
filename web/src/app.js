@@ -5811,39 +5811,39 @@ window.__muneaSetHealth = function (s) {
     put('bpUnit', '/' + Math.round(dia) + ' mmHg');
     chip('bpChip', hi ? muneaT('health.high', '偏高') : lo ? muneaT('health.low', '偏低') : muneaT('health.stable', '穩定'), hi || lo);
     put('bpSub', hi ? '比平常高一點，晚點再量一次' : lo ? '偏低一些，起身動作放慢' : '正常範圍內');
-    if (hi) worry.push('血壓比平常高一點'); if (lo) worry.push('血壓偏低');
+    if (hi) worry.push(muneaT('health.worryBpHigh', '血壓比平常高一點')); if (lo) worry.push(muneaT('health.worryBpLow', '血壓偏低'));
   }
   if (hr) {
     const odd = hr < 50 || hr > 100;
     put('hrNum', String(Math.round(hr)));
     chip('hrChip', odd ? muneaT('health.attention', '注意') : muneaT('health.normal', '正常'), odd);
-    if (odd) worry.push('心跳' + (hr > 100 ? '偏快' : '偏慢'));
+    if (odd) worry.push(hr > 100 ? muneaT('health.worryHrFast', '心跳偏快') : muneaT('health.worryHrSlow', '心跳偏慢'));
   }
   if (spo2) {
     put('spo2Num', String(Math.round(spo2)));
-    if (spo2 < 95) worry.push('血氧有點低');
+    if (spo2 < 95) worry.push(muneaT('health.worrySpo2', '血氧有點低'));
   }
   if (sleep) {
     put('sleepNum', String(Math.round(sleep * 10) / 10));
-    if (sleep < 6) worry.push('昨晚睡得少');
+    if (sleep < 6) worry.push(muneaT('health.worrySleepShort', '昨晚睡得少'));
   }
   if (steps) {
     put('stepsNum', Math.round(steps).toLocaleString());
     // 運動量不足（7/9 Edward 點題）：傍晚後還走不到 3000 步才提、白天不亂催
-    if (new Date().getHours() >= 18 && steps < 3000) worry.push('今天走得比較少');
+    if (new Date().getHours() >= 18 && steps < 3000) worry.push(muneaT('health.worryFewSteps', '今天走得比較少'));
   }
   // 寧寧的觀察：有真資料才改寫，一句話講重點
   const obs = document.getElementById('obsText');
   if (obs && (sys || hr || sleep)) {
     const B = t => '<b style="color:#8FD4CC">' + t + '</b>';
     const bits = [];
-    if (sys && dia) bits.push('血壓 ' + B(Math.round(sys) + '/' + Math.round(dia)));
-    if (hr) bits.push('心率 ' + B(Math.round(hr)));
-    if (sleep) bits.push('睡眠 ' + B((Math.round(sleep * 10) / 10) + ' 小時'));
-    const head = '今天' + bits.join('、') + '，';
+    if (sys && dia) bits.push(muneaT('health.obsMetricBp', '血壓 {value}', { value: B(Math.round(sys) + '/' + Math.round(dia)) }));
+    if (hr) bits.push(muneaT('health.obsMetricHr', '心率 {value}', { value: B(Math.round(hr)) }));
+    if (sleep) bits.push(muneaT('health.obsMetricSleep', '睡眠 {value}', { value: B((Math.round(sleep * 10) / 10) + ' ' + muneaT('health.unit.hoursShort', '小時')) }));
+    const metricsLine = bits.join(muneaT('common.listSeparator', '、'));
     obs.innerHTML = worry.length
-      ? head + '大致都穩，不過' + B(worry.join('、')) + '，我幫你多留意，先別擔心。'
-      : head + '整體狀態不錯。<span style="color:#8FD4CC;font-weight:700">保持這個節奏就很好</span>，想出門走走我陪你。';
+      ? muneaT('health.obsSteadyWithWorry', '今天{metrics}，大致都穩，不過{worries}，我幫你多留意，先別擔心。', { metrics: metricsLine, worries: B(worry.join(muneaT('common.listSeparator', '、'))) })
+      : muneaT('health.obsAllGood', '今天{metrics}，整體狀態不錯。{cheer}，想出門走走我陪你。', { metrics: metricsLine, cheer: '<span style="color:#8FD4CC;font-weight:700">' + muneaT('health.obsKeepItUp', '保持這個節奏就很好') + '</span>' });
     window.__muneaObsReal = obs.innerHTML;   // 真觀察已寫：分頁切換不得用預設蓋掉
   }
   // 安全通知（真的動）：數據掉出危險範圍 → 寫進家人動態（雲端同步、家人打開沐寧就看到）；同類 6 小時最多一次
@@ -8409,11 +8409,11 @@ function init() {
     const d = { bp: null, hr: null, spo2: null, sleep: null, steps: null, med: null, day: v.day || '' };
     if (sys && dia) {
       const hi = sys >= 140 || dia >= 90, lo = sys < 90;
-      d.bp = { n: String(Math.round(sys)), u: '/' + Math.round(dia) + ' mmHg', chip: hi ? muneaT('health.high', '偏高') : lo ? muneaT('health.low', '偏低') : muneaT('health.stable', '穩定'), warn: (hi || lo) ? 1 : 0, sub: hi ? '比平常高一點，多留意' : lo ? '偏低一些，起身動作放慢' : '正常範圍內' };
+      d.bp = { n: String(Math.round(sys)), u: '/' + Math.round(dia) + ' mmHg', chip: hi ? muneaT('health.high', '偏高') : lo ? muneaT('health.low', '偏低') : muneaT('health.stable', '穩定'), warn: (hi || lo) ? 1 : 0, sub: hi ? muneaT('health.bpHighHint', '比平常高一點，多留意') : lo ? muneaT('health.bpLowHint', '偏低一些，起身動作放慢') : muneaT('health.bpNormalHint', '正常範圍內') };
     }
     if (hr) {
       const odd = hr < 50 || hr > 100;
-      d.hr = { n: String(Math.round(hr)), chip: odd ? muneaT('health.attention', '注意') : muneaT('health.normal', '正常'), warn: odd ? 1 : 0, sub: '靜息心率' };
+      d.hr = { n: String(Math.round(hr)), chip: odd ? muneaT('health.attention', '注意') : muneaT('health.normal', '正常'), warn: odd ? 1 : 0, sub: muneaT('health.restingHrHint', '靜息心率') };
     }
     if (spo2) d.spo2 = String(Math.round(spo2));
     if (sleep) d.sleep = String(Math.round(sleep * 10) / 10);
