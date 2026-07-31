@@ -4665,6 +4665,725 @@
           "say": "吃任何東西之後如果嘴唇腫、喉嚨緊、全身起疹子——那是過敏反應，**嚴重的會影響呼吸，立刻就醫或打 119**。上吐下瀉到站不穩、或吃了荔枝後頭暈冒冷汗又變得恍惚（低血糖），也都要儘快就醫，不是「排毒」。"
         }
       ]
+    },
+    "TW-EDU-33": {
+      "title": "血脂／膽固醇",
+      "solutions": [
+        {
+          "id": "lipid-numbers-blocked",
+          "label": "判讀我的數字／調藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "你的膽固醇數字代表什麼、要不要吃藥、藥要不要調——這是醫師看整體風險（年齡、血壓、有沒有糖尿病、抽不抽菸）算出來的，我不做判讀。我能做的是陪你把生活這塊顧好。",
+          "blocked": true
+        },
+        {
+          "id": "lipid-statin-dont-stop",
+          "label": "已經在吃的藥不要自己停",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker"
+          ],
+          "say": "先講最重要的一件：**降血脂藥不要自己停**。血脂高沒有感覺，很多人覺得「數字好了就不用吃」就停掉——但那個數字好，正是因為在吃。要不要減量停藥，一定要醫師決定。",
+          "leadWith": true
+        },
+        {
+          "id": "lipid-fiber",
+          "label": "多吃纖維，尤其燕麥豆類",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "燕麥、豆類、蔬菜裡的水溶性纖維會在腸子裡把膽固醇帶走一部分——這是飲食裡對壞膽固醇最有實證的一招。早餐把白吐司換成燕麥片，就是很具體的一步。"
+        },
+        {
+          "id": "lipid-fat-swap",
+          "label": "換油比戒油有用",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "重點不是完全不吃油，是**換掉哪一種**：少吃油炸、酥皮、糕餅裡的反式與飽和脂肪，改用橄欖油、堅果、深海魚。同樣熱量，換了種類血脂就會不一樣。"
+        },
+        {
+          "id": "lipid-move",
+          "label": "規律有氧",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "快走、游泳、騎車這類有氧，對**三酸甘油酯跟好膽固醇**特別有感——壞膽固醇主要靠飲食跟藥，好膽固醇跟三酸甘油酯靠動。一週累積 150 分鐘是個好目標，分次做也算。",
+          "notFor": [
+            "行動不便"
+          ]
+        },
+        {
+          "id": "lipid-tg-alcohol-sugar",
+          "label": "三酸甘油酯高：先減酒跟糖",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "elder"
+          ],
+          "say": "如果高的是**三酸甘油酯**（不是膽固醇），最有效的兩件事是減酒、減含糖飲料跟精緻澱粉——這一項對飲食的反應比膽固醇快很多，兩三個月就看得出來。"
+        },
+        {
+          "id": "lipid-red-yeast-caution",
+          "label": "紅麴不要自己配著吃",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "紅麴本身含天然的 Statin 成分——**跟醫師開的降血脂藥一起吃，等於同一種東西吃兩份**，有橫紋肌溶解的風險。想吃先問藥師，也不要自己拿它取代藥。",
+          "secondLine": true,
+          "askedFor": [
+            "紅麴",
+            "紅麹"
+          ],
+          "contraindications": [
+            "正在吃降血脂藥",
+            "肝功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "與降血脂藥併用前先問過醫師或藥師，不自行決定份量",
+          "evidence": {
+            "finding": "紅麴含天然 Statin 成分，與處方降血脂藥併用有橫紋肌溶解等風險"
+          },
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lipid-normalize",
+          "label": "血脂高沒有感覺，這很正常",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "血脂高幾乎不會有感覺，所以很多人是健檢才知道——不是你不注意身體，是它本來就不會痛。",
+          "secondLine": true
+        },
+        {
+          "id": "lipid-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "吃降血脂藥之後如果**全身肌肉痠痛沒力、小便變深褐色**——這可能是橫紋肌溶解，要立刻停藥並儘快就醫。另外血脂高最怕的是心血管，**一出現胸悶胸痛冒冷汗，先當心臟的事處理、立刻就醫或打 119**。",
+          "escalateWhen": [
+            "吃降血脂藥後肌肉痠痛無力",
+            "小便變深褐色",
+            "胸悶胸痛",
+            "皮膚眼白變黃"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-34": {
+      "title": "體重、內臟脂肪與代謝症候群",
+      "solutions": [
+        {
+          "id": "wt-unintended-loss",
+          "label": "先確認：是你想瘦的嗎？",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women",
+            "worker"
+          ],
+          "say": "先問一句要緊的：這個瘦是**你自己想瘦、有在控制**，還是不知不覺就掉了？如果是後者——半年內莫名輕了不少、褲子鬆了、沒特別減肥——那不是好消息，身體可能在告訴我們別的事，要看醫生。",
+          "askedFor": [
+            "瘦",
+            "變輕",
+            "褲子",
+            "體重掉",
+            "沒特別減"
+          ]
+        },
+        {
+          "id": "wt-waist-first",
+          "label": "看腰圍比看體重準",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "體重那個數字會騙人（肌肉重、水腫也重）。**量腰圍更準**——男生超過 90 公分、女生超過 80 公分，就是內臟脂肪偏多的訊號。拿條皮尺量肚臍那一圈就好，比站上體重計有用。",
+          "askedFor": [
+            "肚子",
+            "腰圍",
+            "小腹",
+            "啤酒肚"
+          ]
+        },
+        {
+          "id": "wt-metabolic-syndrome",
+          "label": "代謝症候群是「一群一起來」",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "腰圍粗、血壓偏高、血糖偏高、三酸甘油酯高、好膽固醇低——這五項**中了三項就叫代謝症候群**，它不是病，是「快要生病」的警告。健檢報告拿出來對一下就知道，中了幾項心裡有個底。",
+          "related": "TW-EDU-33"
+        },
+        {
+          "id": "wt-sugar-drinks",
+          "label": "先砍含糖飲料",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "teen",
+            "elder"
+          ],
+          "say": "要改一件事的話，先砍手搖跟含糖飲料——液體的糖不會讓你飽，卻最容易變成肚子上的脂肪。這一項單獨做，很多人腰圍就有差。"
+        },
+        {
+          "id": "wt-slow-is-right",
+          "label": "慢慢減才減得掉",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "一個月減一到兩公斤是最穩的速度。掉太快的多半是水分跟肌肉，停下來就反彈——而且長輩掉肌肉很難補回來。**這件事快不得。**"
+        },
+        {
+          "id": "wt-fatty-liver",
+          "label": "脂肪肝：沒有藥，減重就是治療",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "elder"
+          ],
+          "say": "健檢照出脂肪肝很常見。它目前沒有特效藥，**體重減個百分之五到十，肝的油就會明顯少**——這是少數「生活調整就是正規治療」的病。不用吃保肝的東西，把糖跟酒減掉更實在。",
+          "askedFor": [
+            "脂肪肝"
+          ]
+        },
+        {
+          "id": "wt-muscle-not-just-diet",
+          "label": "光少吃會連肌肉一起掉",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "只靠少吃，掉的有一部分是肌肉——尤其上了年紀。吃夠蛋白質＋做點阻力的動作（起立坐下、提水瓶），減掉的才會是脂肪。",
+          "notFor": [
+            "行動不便"
+          ],
+          "related": "TW-EDU-37"
+        },
+        {
+          "id": "wt-diet-pills-blocked",
+          "label": "減肥藥／減肥針",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "減肥藥、瘦瘦針這類要不要用、適不適合你，是醫師評估的事，我不會建議也不會報用法。**網路上買的來路不明減肥藥絕對不要碰**，那是真的出過人命的。",
+          "blocked": true
+        },
+        {
+          "id": "wt-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "**不明原因變瘦是要查的**——半年內莫名輕了、又合併食慾變差、夜間盜汗、或大便顏色變黑，都要看醫生（甲狀腺、腸胃、癌症都可能）。另外體重快速增加又合併水腫、越來越喘，那要看心臟跟腎臟，不是單純變胖。",
+          "escalateWhen": [
+            "半年內不明原因變瘦",
+            "合併食慾差或吞嚥困難",
+            "夜間盜汗",
+            "解黑便",
+            "越來越喘或水腫"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-35": {
+      "title": "飲食法怎麼選",
+      "solutions": [
+        {
+          "id": "diet-mediterranean",
+          "label": "地中海飲食：證據最紮實的一個",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "要挑一個有長期實證的，就是地中海飲食——蔬果、全穀、豆類、堅果、橄欖油、一週吃兩次魚、紅肉少一點。它在心血管的研究最紮實，而且**不用戒掉什麼、比較吃得久**。台灣版就是：多青菜、白飯換一半糙米、油改橄欖油、魚多過紅肉。",
+          "askedFor": [
+            "地中海"
+          ]
+        },
+        {
+          "id": "diet-dash",
+          "label": "得舒飲食：血壓高的人優先",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "血壓偏高的人優先看得舒飲食——重點是**多鉀（蔬果）、多鈣、少鈉**，降血壓的實證很明確。不過腎功能不好的人不適合刻意補鉀，要先問醫師。",
+          "askedFor": [
+            "得舒",
+            "DASH"
+          ],
+          "contraindications": [
+            "腎功能異常"
+          ],
+          "related": "TW-EDU-03"
+        },
+        {
+          "id": "diet-low-carb-honest",
+          "label": "低碳／減醣：短期有效，長期就看得住嗎",
+          "riskLevel": "L2",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "高",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "講實話：低碳前半年減重效果通常比較快，但**一兩年後跟其他方法差不多**——差別在能不能持續。生酮那種極端的更難長期執行，而且**有在吃血糖藥的人自己減醣很容易低血糖**，要先問醫師。想試就從「少一碗白飯、多一份青菜」開始，別跳到極端。",
+          "askedFor": [
+            "低碳",
+            "減醣",
+            "生酮"
+          ]
+        },
+        {
+          "id": "diet-fasting-honest",
+          "label": "168 斷食：不是魔法，是換個方式少吃",
+          "riskLevel": "L2",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "間歇斷食的研究看下來：**效果跟「同樣少吃那些熱量」差不多**，它的好處是規則簡單、有些人比較做得到。但**吃血糖藥的人、孕哺、有飲食失調史的人不要自己做**。長輩也要小心——本來就吃不多，再壓縮時間容易營養不夠。",
+          "askedFor": [
+            "斷食",
+            "168",
+            "間歇"
+          ],
+          "contraindications": [
+            "正在吃降血糖藥",
+            "懷孕哺乳",
+            "有飲食失調病史"
+          ]
+        },
+        {
+          "id": "diet-pick-what-you-can-keep",
+          "label": "挑一個你做得下去的",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "所有飲食法比到最後，**最強的那個是「你能持續做的那個」**——研究一再看到這件事。所以與其問哪個最厲害，不如想想哪個你三個月後還做得下去。你平常怎麼吃？我陪你從那裡調。",
+          "leadWith": true
+        },
+        {
+          "id": "diet-detox-blocked",
+          "label": "排毒餐、代餐、斷食排毒",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "「排毒」在醫學上沒有這回事——肝跟腎本來就在做這件事。極端的排毒餐、長時間只喝果汁，反而會電解質失衡。我不會推薦這類做法。",
+          "blocked": true
+        },
+        {
+          "id": "diet-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "改變飲食之後如果頭暈冒冷汗（尤其在吃血糖藥的人）——那可能是低血糖，先吃點糖並就醫。還有一條：**不要為了節食把醫師開的藥停掉**。長輩如果開始吃不下、越來越瘦，那不是減肥成功，要看醫生。",
+          "escalateWhen": [
+            "改變飲食後頭暈冒冷汗",
+            "長輩開始吃不下",
+            "為了節食停掉正在吃的藥",
+            "極端節食合併停經或掉髮"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-36": {
+      "title": "食物過敏與食物不耐",
+      "solutions": [
+        {
+          "id": "allergy-vs-intolerance",
+          "label": "過敏跟不耐是兩件事",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "先分清楚兩種：**過敏**是免疫系統反應——起疹子、嘴唇腫、喘、嚴重會休克，分量再少都可能發作；**不耐**（像喝牛奶會拉肚子）是消化不了，難受但不會有生命危險，而且通常吃少一點就還好。你是哪一種？我們分開處理。",
+          "leadWith": true
+        },
+        {
+          "id": "allergy-record",
+          "label": "把「吃了什麼、多久後、什麼症狀」記下來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "懷疑對什麼過敏，最有用的是記錄：吃了什麼、多久之後開始、什麼症狀、持續多久。這份紀錄拿給醫師看，比自己猜準得多——我可以幫你記著。"
+        },
+        {
+          "id": "allergy-label",
+          "label": "看標示：台灣強制標的那幾類",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "台灣規定包裝食品要標出常見過敏原——甲殼類、芒果、花生、牛奶、蛋、堅果、含麩質穀物、大豆、魚類、亞硫酸鹽這些。買之前翻到背面看一眼，比事後處理容易。"
+        },
+        {
+          "id": "allergy-lactose",
+          "label": "乳糖不耐：不用戒奶，換方式就好",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "喝牛奶會脹氣拉肚子，多半是乳糖不耐、不是過敏——**不用完全戒奶**：改喝優格或起司（乳糖已經被分解掉一部分）、一次少量配著飯吃、或買無乳糖牛奶。鈣還是要顧到。",
+          "askedFor": [
+            "乳糖",
+            "喝牛奶會拉"
+          ],
+          "related": "TW-EDU-17"
+        },
+        {
+          "id": "allergy-no-self-elimination",
+          "label": "別自己大範圍忌口",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "沒確定就把一大堆食物都戒掉，**長輩尤其危險**——很容易吃得不夠、營養失衡、越來越瘦。真的要排除某樣東西，讓醫師或營養師陪你做，不要自己一路刪。"
+        },
+        {
+          "id": "allergy-test-blocked",
+          "label": "急慢性過敏原檢測",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "外面有些自費「慢性食物過敏原檢測（IgG）」宣稱能找出你不能吃的東西——**主流過敏醫學並不建議用它來決定忌口**，很容易讓人白白戒掉一堆食物。真的要查，去看過敏免疫科，由醫師決定做哪種檢查。",
+          "blocked": true
+        },
+        {
+          "id": "allergy-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "say": "**這一條最要緊：吃完之後嘴唇舌頭腫、喉嚨緊、講話變啞、喘不過氣、或全身紅疹又頭暈——那是嚴重過敏反應，會壓迫呼吸道，立刻打 119 或衝急診，不要等、也不要自己開車去。**曾經這樣發作過的人，身上該備的急救針要問過醫師。",
+          "escalateWhen": [
+            "嘴唇或舌頭腫",
+            "喉嚨緊、聲音變啞",
+            "呼吸困難或喘鳴",
+            "全身紅疹合併頭暈",
+            "吃完後很快就不舒服且越來越嚴重"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-37": {
+      "title": "肌少症與蛋白質",
+      "solutions": [
+        {
+          "id": "sarco-what-it-looks-like",
+          "label": "這幾個訊號比體重更值得注意",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "上了年紀，**肌肉少比體重多更麻煩**。幾個訊號：擰不開瓶蓋、提菜提不動、從椅子上要撐著才站得起來、走路變慢（過馬路來不及）。有這些就該開始練，不用等診斷。",
+          "leadWith": true
+        },
+        {
+          "id": "sarco-protein-每餐",
+          "label": "蛋白質要每餐都有，不是晚餐補一次",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "長輩常常早餐只吃稀飯配醬瓜、晚餐才吃到肉——但身體**一次用不了那麼多蛋白質**。改成每一餐都有一份（一顆蛋、一杯豆漿、一塊手掌大的魚或肉、一塊豆腐），同樣的量，長肌肉的效果差很多。"
+        },
+        {
+          "id": "sarco-resistance",
+          "label": "練肌力比散步有效",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "散步很好，但**要長肌肉一定要有阻力**——扶著椅背起立坐下十下、提兩瓶水舉高放下、牆邊伏地挺身。一週兩三次，比走再多路都有用。這是防跌倒最根本的一招。",
+          "notFor": [
+            "行動不便"
+          ],
+          "related": "TW-EDU-17"
+        },
+        {
+          "id": "sarco-sun-vitd",
+          "label": "曬太陽跟維生素 D",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "維生素 D 不夠的人肌肉力氣也會比較差。每天出門曬十幾二十分鐘，順便走一走——最便宜的一招。"
+        },
+        {
+          "id": "sarco-protein-supp",
+          "label": "乳清或蛋白粉",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "蛋白粉可以當「真的吃不夠時」的補位，但**單吃不動效果有限——要配合阻力運動才長得到肌肉**。而且**腎功能不好的人不能自己加蛋白質**，那要營養師算過。先從食物吃夠是更好的路。",
+          "secondLine": true,
+          "askedFor": [
+            "乳清",
+            "蛋白粉",
+            "高蛋白"
+          ],
+          "contraindications": [
+            "腎功能異常",
+            "洗腎"
+          ],
+          "dailyCap": "依產品標示；腎功能不好的人蛋白質總量要由醫師或營養師決定",
+          "evidence": {
+            "finding": "配合阻力運動才有明顯效果；單吃補充品而不動效果有限"
+          },
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "sarco-appetite",
+          "label": "吃不下才是根本問題",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "很多長輩不是不想吃，是牙口不好、吞嚥怕嗆、或一個人吃沒胃口。**這幾個先解決，蛋白質才吃得進去**——找人一起吃、把肉煮軟切小、看看牙齒。",
+          "related": "TW-EDU-13"
+        },
+        {
+          "id": "sarco-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "如果是**半年內明顯變瘦、又沒特別在減肥**，那要看醫生查原因，不是單純肌少。另外最近跌倒過、或走路突然變不穩，也要儘快評估——跌倒是長輩最怕的分水嶺。",
+          "escalateWhen": [
+            "半年內明顯變瘦又沒特別減肥",
+            "最近跌倒過",
+            "走路突然變得不穩",
+            "握力明顯變差合併吞嚥困難"
+          ]
+        }
+      ]
     }
   }
 }
