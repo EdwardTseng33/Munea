@@ -47,6 +47,25 @@ fi
 #    自己之外又進了別條線的貨（含 #291 就醫安全鐵則），把已上線的安全功能蓋掉 8 分鐘。
 #    機器擋門：抓「正式機此刻在跑的版本」，HEAD 必須包含它（是它的後代）才准部署。
 #    真要非線性部署（例如緊急回退鏈）：MUNEA_DEPLOY_ALLOW_NONLINEAR=1 明示跳過、留下記錄。
+#
+#    2026-07-31 Edward 拍板「改成比內容、不比編號」：squash 合併會換編號——別條線
+#    從還沒合併的分支上正式，等它的 PR 合併之後，main 上是**另一個編號**的同一份貨，
+#    純血緣比對就會誤擋（當晚誤擋一次、我逐檔核對過內容才放行）。
+#    第二關改問 GitHub：那筆現跑的編號屬於哪個 PR、那個 PR 合進 main 了沒、
+#    合併後的編號在不在 HEAD 裡。三者都成立＝那份貨真的在，內容沒有倒退。
+#    查不到（沒有 gh／沒網／那筆不屬於任何已合併的 PR）就照舊擋——**判不出來一律當作會倒退**。
+serving_work_already_merged() {
+  local sha="$1" merged=""
+  command -v gh >/dev/null 2>&1 || return 1
+  sha=$(git rev-parse "$sha" 2>/dev/null) || return 1
+  merged=$(gh api "repos/EdwardTseng33/Munea/commits/${sha}/pulls" \
+    --jq '[.[] | select(.merged_at != null and .base.ref == "main")] | first | .merge_commit_sha' \
+    2>/dev/null) || return 1
+  [ -n "$merged" ] && [ "$merged" != "null" ] || return 1
+  git cat-file -e "$merged" 2>/dev/null || return 1
+  git merge-base --is-ancestor "$merged" HEAD 2>/dev/null || return 1
+  printf '%s' "$merged"
+}
 if [ "${MUNEA_DEPLOY_ALLOW_NONLINEAR:-0}" != "1" ]; then
   # 兩步取「吃流量那版」的版本（spec.template 是最新版模板、可能是還沒切流量的 canary——抓錯會誤判）
   SERVING_REV=$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format=json 2>/dev/null | python -c 'import json,sys; d=json.load(sys.stdin); tr=[t for t in d["status"].get("traffic",[]) if t.get("percent")]; print(tr[0]["revisionName"] if tr else "")' 2>/dev/null || true)
@@ -57,8 +76,12 @@ if [ "${MUNEA_DEPLOY_ALLOW_NONLINEAR:-0}" != "1" ]; then
   if [ -n "$SERVING_COMMIT" ]; then
     if git cat-file -e "$SERVING_COMMIT" 2>/dev/null && git merge-base --is-ancestor "$SERVING_COMMIT" HEAD 2>/dev/null; then
       echo "✅ 不倒退檢查 PASS：HEAD 包含正式機現跑版本 ${SERVING_COMMIT:0:12}"
+    elif MERGED_AS=$(serving_work_already_merged "$SERVING_COMMIT"); then
+      echo "✅ 不倒退檢查 PASS：正式機現跑 ${SERVING_COMMIT:0:12} 的編號雖然不在 HEAD 裡，"
+      echo "   但那份貨已經以 ${MERGED_AS:0:12} 合併進 main、且 HEAD 含它——內容沒有倒退。"
     else
-      echo "⛔ 不倒退檢查 FAIL：正式機現跑 ${SERVING_COMMIT:0:12}，你的 HEAD 不包含它——"
+      echo "⛔ 不倒退檢查 FAIL：正式機現跑 ${SERVING_COMMIT:0:12}，你的 HEAD 不包含它，"
+      echo "   也查不到那份貨已經合併進 main——"
       echo "   先 git fetch 並把 origin/main（或現跑版本）合併進來再部署，否則會蓋掉別條線已上線的貨。"
       echo "   （緊急情況明示 MUNEA_DEPLOY_ALLOW_NONLINEAR=1 才可跳過）"
       exit 1
