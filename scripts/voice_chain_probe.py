@@ -239,6 +239,33 @@ async def probe_voice_ready(report, voice_url, app_key, timeout, call_token=""):
         report.add("voice_ready", "FAIL", started, detail, voice_url)
 
 
+def resolve_serving_avatar_url(gateway_url, timeout):
+    """問總機「現在哪台臉機真的在服務」，回它的位址；問不到回空字串。
+
+    為什麼要這支（2026-08-01）：沒有租約時，這支工具原本退回 App 原始碼裡的預設臉機位址。
+    那份是舊的「記憶體版名單」殘影，通話真正走的是資料庫版 gpu_workers。8/1 凌晨實跑，
+    預設值指著早已退役的 tw-07 → 報 FAIL，而真正在服務的 tw-06 心跳好好的＝喊狼來了。
+    判準跟通話一致：只認 status=ready、而且心跳沒斷的那台。
+    """
+    admin_key = os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", "").strip()
+    if not admin_key:
+        return ""
+    req = urllib.request.Request(
+        gateway_url.rstrip("/") + "/health",
+        headers={"Authorization": "Bearer " + admin_key},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return ""
+    workers = ((data.get("snapshot") or {}).get("workers") or [])
+    for worker in workers:
+        if str(worker.get("status") or "").lower() == "ready" and worker.get("url"):
+            return str(worker["url"])
+    return ""
+
+
 def acquire_gateway_lease(report, gateway_url, access_token, timeout):
     started = time.monotonic()
     if not gateway_url:
@@ -382,9 +409,12 @@ async def run_probe(args):
 
     lease = None
     try:
+        # 2026-08-01：沒有使用者通行證時，改拿總機管理鑰匙當身分——否則 /health 一律 401，
+        # 整支工具第一關就紅，後面全被那個假紅蓋住（8/1 凌晨實跑就是這樣）。
         probe_http_health(
             report, "gateway_health", gateway_url, app_key, args.timeout,
-            durable=True, bearer=access_token,
+            durable=True,
+            bearer=access_token or os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", "").strip(),
         )
         lease = acquire_gateway_lease(report, gateway_url, access_token, args.timeout) if args.profile == "production" else None
         if lease:
@@ -399,6 +429,22 @@ async def run_probe(args):
         else:
             started = time.monotonic()
             report.add("voice_ready", "SKIP", started, "production Voice needs a Gateway call token")
+        # 2026-08-01：沒有租約時，臉機地址原本退回 App 原始碼裡的預設值——那份是「記憶體版
+        # 名單」的殘影（memory: 總機有兩份工作機名單）。8/1 凌晨實跑：它指著早就退役的
+        # tw-07、報 FAIL，而真正在服務的 tw-06 心跳好好的＝整支工具在喊狼來了。
+        # 改成：拿得到總機管理鑰匙時，先問總機「現在誰在服務」（資料庫版名單＝通話真正走的
+        # 那份），問不到才退回預設值，並在報告裡標明這個地址沒有驗證過。
+        if not lease:
+            live_url = resolve_serving_avatar_url(gateway_url, args.timeout)
+            if live_url:
+                if live_url != avatar_url:
+                    report.add("avatar_registry", "PASS", time.monotonic(),
+                               "改用總機名單上正在服務的臉機（預設值 %s 已過期）" % avatar_url, live_url)
+                avatar_url = live_url
+            else:
+                report.add("avatar_registry", "SKIP", time.monotonic(),
+                           "問不到總機名單（沒有管理鑰匙）——下面用的是原始碼預設值，可能已退役",
+                           avatar_url)
         probe_http_health(report, "avatar_health", avatar_url, app_key, args.timeout)
         if lease:
             # STATUS 125 defense line 1: re-probe the same /health with the
