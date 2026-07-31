@@ -1046,19 +1046,19 @@
       <div class="modal-grab"></div>
       <button class="auth-close" id="historyClose" type="button" aria-label="關閉紀錄" data-i18n-aria-label="history.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="history.title">過去紀錄</h2>
-      <p class="modal-sub">保存一年；滿一年前<span class="cname" data-i18n="companion.nening.name">寧寧</span>會先問你要不要留下來。</p>
+      <p class="modal-sub" id="retentionNotice"></p>
       <div class="seg" id="histSeg" style="margin-bottom:14px">
         <button class="seg-btn on" data-v="months" data-i18n="history.monthly">每月整理</button>
         <button class="seg-btn" data-v="range" data-i18n="history.dateRange">自選日期</button>
       </div>
       <div id="histMonths">
-        <button class="hist-row"><b>2026 年 6 月</b><span>吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時</span></button>
-        <button class="hist-row dim"><b>2026 年 5 月</b><span>已保存 · 點開看當月整理</span></button>
-        <button class="hist-row dim"><b>2026 年 4 月</b><span>已保存 · 點開看當月整理</span></button>
-        <button class="hist-row dim"><b>2026 年 3 月</b><span>已保存 · 點開看當月整理</span></button>
-        <button class="hist-row dim"><b>2026 年 2 月</b><span>已保存 · 點開看當月整理</span></button>
-        <button class="hist-row dim"><b>2026 年 1 月</b><span>已保存 · 點開看當月整理</span></button>
-        <p class="modal-sub" style="margin-top:6px">更早的（到 2025 年 8 月）也都在，往下會自動接著列。</p>
+        <button class="hist-row"><b data-i18n="demo.history.monthJun2026">2026 年 6 月</b><span data-i18n="demo.history.juneStats">吃藥準時 27/30 · 走路達標 18 天 · 平均睡 7.1 小時</span></button>
+        <button class="hist-row dim"><b data-i18n="demo.history.monthMay2026">2026 年 5 月</b><span data-i18n="demo.history.savedHint">已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b data-i18n="demo.history.monthApr2026">2026 年 4 月</b><span data-i18n="demo.history.savedHint">已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b data-i18n="demo.history.monthMar2026">2026 年 3 月</b><span data-i18n="demo.history.savedHint">已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b data-i18n="demo.history.monthFeb2026">2026 年 2 月</b><span data-i18n="demo.history.savedHint">已保存 · 點開看當月整理</span></button>
+        <button class="hist-row dim"><b data-i18n="demo.history.monthJan2026">2026 年 1 月</b><span data-i18n="demo.history.savedHint">已保存 · 點開看當月整理</span></button>
+        <p class="modal-sub" style="margin-top:6px" data-i18n="demo.history.earlierHint">更早的（到 2025 年 8 月）也都在，往下會自動接著列。</p>
       </div>
       <div id="histRange" style="display:none">
         <div class="rc-head">

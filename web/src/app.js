@@ -1110,6 +1110,7 @@ function syncCompanionUI() {
   $$('.obs-ava img').forEach(i => { i.src = thumbSrc; });   // 狀態頁「○○的觀察」頭像＝跟著選的角色臉（Edward 2026-07-09）
   const obsHeading = $('#obsHeading'); if (obsHeading) obsHeading.textContent = muneaT('status.companionObservation', '{companion}的觀察', { companion: display });
   const medSub = $('#medSub'); if (medSub) medSub.textContent = muneaT('medication.emptyHint', '還沒設定用藥，跟{companion}說一聲就好', { companion: display });
+  const retentionNotice = $('#retentionNotice'); if (retentionNotice) retentionNotice.textContent = muneaT('history.retentionNotice', '保存一年；滿一年前{companion}會先問你要不要留下來。', { companion: display });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
   renderCompanionGreeting();
@@ -10482,7 +10483,9 @@ function init() {
   function renderRangeCal() {
     const grid = $('#rcGrid');
     if (!grid) return;
-    if ($('#rcTitle')) $('#rcTitle').textContent = rcYear + ' 年 ' + (rcMonth + 1) + ' 月';
+    if ($('#rcTitle')) $('#rcTitle').textContent = (muneaLocale() || 'zh-TW').startsWith('zh')
+      ? muneaT('history.monthTitle', '{year} 年 {month} 月', { year: rcYear, month: rcMonth + 1 })
+      : new Intl.DateTimeFormat(muneaLocale(), { year: 'numeric', month: 'long' }).format(new Date(rcYear, rcMonth, 1));
     const startPad = (new Date(rcYear, rcMonth, 1).getDay() + 6) % 7;
     const daysInM = new Date(rcYear, rcMonth + 1, 0).getDate();
     const today = new Date(); today.setHours(0, 0, 0, 0);
