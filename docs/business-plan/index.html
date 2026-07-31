@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Munea 沐寧 · Business Plan 2026</title>
+<link rel="icon" href="assets/paining-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FAF7F2; --cream-2:#F3EDE3; --mint:#E8F2EE; --line:#E7E0D6;
+    --teal:#3AA8A0; --teal-d:#2E8A83; --teal-dd:#1F6560; --coral:#F4A261; --coral-d:#C97A3D; --coral-soft:#FBE3CF;
+    --ink:#33403D; --muted:#6E7B76; --r:22px;
+    --shadow-sm:0 4px 16px -8px rgba(51,64,61,.14);
+    --shadow:0 18px 44px -20px rgba(51,64,61,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Noto Sans TC",system-ui,sans-serif;background:var(--cream);color:var(--ink);line-height:1.85;font-size:16px}
+  ::selection{background:var(--mint)}
+
+  /* ── 版面：左側目錄＋主欄 ── */
+  .layout{display:grid;grid-template-columns:250px minmax(0,1fr);max-width:1240px;margin:0 auto}
+  nav.toc{position:sticky;top:0;height:100vh;overflow-y:auto;padding:34px 18px 40px 26px;border-right:1px solid var(--line)}
+  .toc .brand{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .toc .brand img{width:34px;height:34px}
+  .toc .brand b{font-family:"Poppins","Noto Sans TC",sans-serif;font-size:19px}
+  .toc .brand b i{font-style:normal;color:var(--teal-d)}
+  .toc .doc-type{font-size:11.5px;font-weight:700;letter-spacing:.14em;color:var(--coral-d);text-transform:uppercase;margin-bottom:22px}
+  .toc a{display:block;padding:7px 10px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:500;margin-bottom:2px;transition:.18s}
+  .toc a:hover{background:var(--mint);color:var(--teal-dd)}
+  .toc a.on{background:var(--mint);color:var(--teal-dd);font-weight:700}
+  .toc a .no{display:inline-block;width:22px;color:var(--teal);font-family:"Poppins",sans-serif;font-weight:700;font-size:12px}
+  main{padding:0 48px 90px;min-width:0}
+
+  /* ── 封面 ── */
+  header.cover{padding:86px 0 60px;border-bottom:1px solid var(--line);margin-bottom:26px}
+  .cover .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:"Poppins","Noto Sans TC",sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--teal-d);margin-bottom:18px}
+  .cover .eyebrow::before{content:"";width:26px;height:2px;background:var(--coral)}
+  .cover h1{font-size:clamp(34px,4.6vw,52px);font-weight:900;line-height:1.28;letter-spacing:.01em}
+  .cover h1 em{font-style:normal;color:var(--teal-d);position:relative}
+  .cover h1 em::after{content:"";position:absolute;left:0;right:0;bottom:6px;height:10px;background:var(--coral-soft);z-index:-1;border-radius:4px}
+  .cover .sub{font-size:18px;color:var(--muted);margin:18px 0 26px;max-width:720px;text-wrap:pretty}
+  .cover .meta{display:flex;flex-wrap:wrap;gap:10px}
+  .cover .meta span{font-size:12.5px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:100px;padding:6px 14px;color:var(--muted)}
+  .cover .meta span b{color:var(--teal-d)}
+
+  /* ── 章節通用 ── */
+  section.ch{padding:58px 0 8px;border-bottom:1px solid var(--line)}
+  .ch-head{margin-bottom:28px}
+  .ch-no{font-family:"Poppins",sans-serif;font-size:13px;font-weight:800;letter-spacing:.18em;color:var(--coral-d);text-transform:uppercase;margin-bottom:8px}
+  .ch h2{font-size:clamp(26px,3vw,34px);font-weight:900;line-height:1.35}
+  .ch h3{font-size:20px;font-weight:800;margin:36px 0 14px;display:flex;align-items:center;gap:10px}
+  .ch h3::before{content:"";width:5px;height:20px;border-radius:3px;background:var(--teal)}
+  .ch h4{font-size:16.5px;font-weight:700;margin:22px 0 8px}
+  .ch p{margin:0 0 14px;max-width:78ch;text-wrap:pretty}
+  .ch p.lead{font-size:17px}
+  .ch ul.pts{margin:0 0 16px 2px;list-style:none}
+  .ch ul.pts li{padding-left:26px;position:relative;margin-bottom:9px;max-width:76ch}
+  .ch ul.pts li::before{content:"";position:absolute;left:4px;top:11px;width:8px;height:8px;border-radius:50%;background:var(--teal)}
+  .ch ul.pts li b{color:var(--teal-dd)}
+
+  /* 結論先行卡 */
+  .verdict{display:flex;gap:16px;background:linear-gradient(135deg,var(--teal) 0%,var(--teal-d) 100%);color:#fff;border-radius:var(--r);padding:24px 26px;margin:0 0 30px;box-shadow:var(--shadow)}
+  .verdict .tag{flex-shrink:0;align-self:flex-start;font-family:"Poppins","Noto Sans TC",sans-serif;font-size:11.5px;font-weight:800;letter-spacing:.12em;background:rgba(255,255,255,.18);border-radius:100px;padding:5px 13px;margin-top:3px;white-space:nowrap}
+  .verdict p{margin:0;font-size:16.5px;font-weight:500;line-height:1.8;color:#fff;max-width:none}
+  .verdict p b{color:var(--coral-soft)}
+
+  /* 統計磚 */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:6px 0 26px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 18px 15px;box-shadow:var(--shadow-sm)}
+  .stat .v{font-family:"Poppins","Noto Sans TC",sans-serif;font-size:26px;font-weight:800;color:var(--teal-dd);line-height:1.2}
+  .stat .v small{font-size:14px;font-weight:700}
+  .stat .k{font-size:12.5px;color:var(--muted);font-weight:500;margin-top:4px;line-height:1.5}
+  .stat .src{font-size:10.5px;color:#A9B3AE;margin-top:6px}
+
+  /* 卡片組 */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:6px 0 26px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px 22px 18px;box-shadow:var(--shadow-sm)}
+  .card .ic{width:40px;height:40px;border-radius:12px;background:var(--mint);color:var(--teal-d);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+  .card .ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .card.coral .ic{background:var(--coral-soft);color:var(--coral-d)}
+  .card h4{margin:0 0 6px;font-size:16.5px}
+  .card p{font-size:14px;color:var(--muted);margin:0;line-height:1.75}
+
+  /* 表格 */
+  .tbl-wrap{overflow-x:auto;margin:6px 0 26px;border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow-sm)}
+  table{width:100%;border-collapse:collapse;background:#fff;font-size:14px;min-width:640px}
+  th{background:var(--mint);color:var(--teal-dd);font-weight:700;text-align:left;padding:12px 16px;white-space:nowrap}
+  td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:top;line-height:1.7}
+  td.strong{font-weight:700;white-space:nowrap}
+  tr:nth-child(even) td{background:#FCFAF6}
+
+  /* 圖表容器 */
+  .fig{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:26px 24px 16px;margin:6px 0 26px;box-shadow:var(--shadow-sm)}
+  .fig .fig-title{font-size:14.5px;font-weight:700;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .fig .fig-title::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--coral)}
+  .fig svg{width:100%;height:auto;display:block}
+  .fig .fig-note{font-size:11.5px;color:#A9B3AE;margin-top:10px}
+  .fig-scroll{overflow-x:auto}
+
+  /* App 截圖列 */
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin:6px 0 8px}
+  .shot{text-align:center}
+  .shot img{width:100%;border-radius:20px;border:1px solid var(--line);box-shadow:var(--shadow-sm)}
+  .shot .cap{font-size:13px;font-weight:700;margin-top:10px}
+  .shot .cap small{display:block;font-weight:500;color:var(--muted);font-size:11.5px;margin-top:2px}
+
+  /* 佔位（研究中） */
+  .pending{border:2px dashed var(--line);border-radius:var(--r);padding:30px;text-align:center;color:var(--muted);font-size:14.5px;margin:6px 0 26px;background:#FCFAF6}
+  .pending b{color:var(--coral-d)}
+
+  /* 引言帶 */
+  .quoteband{background:var(--mint);border-radius:var(--r);padding:28px 30px;margin:6px 0 26px}
+  .quoteband p{font-family:"Noto Serif TC",serif;font-size:19px;font-weight:700;color:var(--teal-dd);margin:0;line-height:1.9;max-width:none}
+
+  footer{padding:44px 0 20px;color:var(--muted);font-size:12.5px}
+
+  @media (max-width:960px){
+    .layout{grid-template-columns:1fr}
+    nav.toc{position:relative;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:24px 22px}
+    .toc a{display:inline-block;margin-right:4px}
+    .toc a .no{width:auto;margin-right:4px}
+    main{padding:0 22px 70px}
+    .verdict{flex-direction:column;gap:10px}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" id="toc">
+  <div class="brand"><img src="assets/paining-logo.png" alt=""><b>Mu<i>nea</i> 沐寧</b></div>
+  <div class="doc-type">Business Plan · 2026</div>
+  <a href="#s1"><span class="no">01</span>執行摘要</a>
+  <a href="#s2"><span class="no">02</span>市場分析</a>
+  <a href="#s3"><span class="no">03</span>用戶分析</a>
+  <a href="#s4"><span class="no">04</span>競品分析</a>
+  <a href="#s5"><span class="no">05</span>產品分析</a>
+  <a href="#s6"><span class="no">06</span>產品功能</a>
+  <a href="#s7"><span class="no">07</span>AI 模型與架構</a>
+  <a href="#s8"><span class="no">08</span>策略判斷</a>
+  <a href="#s8b"><span class="no">09</span>GTM 打法</a>
+  <a href="#s9"><span class="no">10</span>商業模式與定價</a>
+  <a href="#s9b"><span class="no">11</span>財務模型與指標</a>
+  <a href="#s10"><span class="no">12</span>目標與遠景</a>
+  <a href="#src"><span class="no">附</span>資料出處</a>
+</nav>
+
+<main>
+
+<header class="cover">
+  <div class="eyebrow">Munea Business Plan · 內部版</div>
+  <h1>為<em>一家人</em>而做的健康陪伴，<br>從爸媽開始。</h1>
+  <p class="sub">Munea 沐寧：住在手機裡、有真人臉與真人聲音的 AI 健康陪伴照護管家。本文件是<b>團隊與前期合作夥伴快速看懂產品的單一事實來源（SSOT）</b>——對齊產品方向、市場座標與技術輪廓，支援前期夥伴招募；不是募資簡報。</p>
+  <div class="meta">
+    <span>階段 <b>初創 · Pre-Sales</b></span>
+    <span>版本 <b>v1.0</b></span>
+    <span>日期 <b>2026 年 7 月</b></span>
+    <span>撰擬 <b>營運統籌</b></span>
+    <span>機密等級 <b>內部限閱</b></span>
+  </div>
+</header>
+
+<!-- ═══════════ 01 執行摘要 ═══════════ -->
+<section class="ch" id="s1">
+  <div class="ch-head"><div class="ch-no">Chapter 01</div><h2>執行摘要</h2></div>
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>Munea 是「<b>全家人的健康陪伴照護平台</b>」：以自研即時語音＋真人臉技術做出「像家人一樣陪伴」的 AI 管家。<b>現階段以高齡照護為灘頭堡</b>——那裡痛點最深、付費者最明確、政策順風最強；站穩後沿家庭健康圈向全家人的身心照護擴展。</p>
+  </div>
+  <!--EXEC_SUMMARY_BODY-->
+  <h3>一頁看懂：機會 × 能力 × 時機</h3>
+  <div class="stats">
+    <div class="stat"><div class="v">20.06<small>%</small></div><div class="k">台灣正式進入超高齡社會（2025-12），65+ 一人戶 117.9 萬（戶籍代理值）、列冊關懷僅 5.5 萬</div><div class="src">內政部, 2026-01</div></div>
+    <div class="stat"><div class="v">≈8,475<small>萬/年</small></div><div class="k">由下而上：一人戶代理池滲透 1% 的年化訂閱量級（0.5–2% ＝ 4,237 萬–1.7 億）——非預測、待試辦回填轉換率</div><div class="src">內政部分母 × Plus 定價，敏感度模型</div></div>
+    <div class="stat"><div class="v">3<small>地同構</small></div><div class="k">台日美共用「高齡化×人力缺口×政策補貼」結構——產品可跨市場複用</div><div class="src">本報告第 2 章</div></div>
+    <div class="stat"><div class="v">0<small>家</small></div><div class="k">三地皆無同時具備「真人臉真聲＋安全網＋家庭圈」的直接等價品</div><div class="src">本報告第 4 章</div></div>
+  </div>
+  <ul class="pts">
+    <li><b>機會</b>：照護人力缺口是結構性且無解（台 2028 缺 6.7 萬、日 2040 缺 57 萬）——AI 陪伴不是取代人，是接住人力永遠補不上的離峰與夜間。</li>
+    <li><b>能力</b>：兩個自研引擎（即時語音＋真人臉／三腦照護智慧）疊出「像家人一樣陪伴、出事有人接住」——技術、產品、信任三力同時成立，競品各缺一角。</li>
+    <li><b>時機</b>：2026 是政策與監管的雙重拐點——台灣補貼窗口大開（長照 3.0／輔具租賃／機構獎勵），全球監管把「安全網」變成合規門檻，我們天生站在對的一側。</li>
+    <li><b>打法</b>：品牌講「全家人的在乎關係」（不貼年齡標籤）、執行聚焦「幫在外地的子女守住爸媽」——先打贏高齡灘頭堡、拿到真數據，再沿家庭圈擴展全家身心照護（詳第 8 章）。</li>
+  </ul>
+</section>
+
+<!-- ═══════════ 02 市場分析 ═══════════ -->
+<section class="ch" id="s2">
+  <div class="ch-head"><div class="ch-no">Chapter 02</div><h2>市場分析：台灣 · 日本 · 北美</h2></div>
+  <!--MARKET_BODY-->
+  <!--MARKET_VERDICT-->
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>三地共用同一個結構：<b>高齡化加速 × 照護人力補不上 × 政府用補貼推科技解方</b>。台灣是主場（超高齡元年＋2026 政策密集開窗）、日本是下一站（付費文化已驗證 25 年）、北美是對標（監管正把「安全網」變成法定門檻——恰是我們天生的壁壘）。</p>
+  </div>
+  <h3>台灣：主場——超高齡元年 × 政策密集窗口</h3>
+  <!--MARKET_TW-->
+  <p class="lead"><b>洞見：台灣在 2025 年底正式跨入超高齡社會——這不是預測，是已發生的事實。</b>而 2026 下半年正是政策最密集的窗口期：長照 3.0 三階段全數啟動、智慧輔具租賃 7 月上路、政府 62.5 億投入獨居長者服務。</p>
+  <div class="stats">
+    <div class="stat"><div class="v">20.06<small>%</small></div><div class="k">65 歲以上 467.3 萬人，正式跨過超高齡社會門檻（2025-12 官方確認）</div><div class="src">內政部／中央社, 2026-01</div></div>
+    <div class="stat"><div class="v">117.9<small>萬</small></div><div class="k">65+ 一人戶（戶籍代理值——量級成立，但不直接等於孤獨或會付費）；列冊關懷僅約 5.5 萬</div><div class="src">內政部 114 年 6 月統計</div></div>
+    <div class="stat"><div class="v">6.7<small>萬人</small></div><div class="k">2028 年長照人力缺口預估；87.5% 機構長期缺工、照服員 69% 逾 45 歲</div><div class="src">報導者引國發會／國衛院, 2025</div></div>
+    <div class="stat"><div class="v">條件式</div><div class="k">長照 3.0 智慧輔具租賃（6 萬/3 年）＝失能等級 2–8、需評估核准與特約租賃通路的<b>條件式機會</b>——未核准前財務模型不列此收入</div><div class="src">衛福部長照給付辦法</div></div>
+  </div>
+
+  <div class="fig">
+    <div class="fig-title">由下而上算市場：可觸達單位 × 滲透率情境（不從兆元大盤切比例）</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <text x="30" y="34" font-size="13.5" font-weight="800" fill="#1F6560">B2C：65+ 一人戶代理池 117.9 萬戶 ×（Plus 599/月年化）</text>
+      <g font-size="12.5" fill="#33403D" font-weight="700">
+        <text x="40" y="66">保守 0.5%（5,895 戶）</text><text x="40" y="102">基準 1%（11,791 戶）</text><text x="40" y="138">上行 2%（23,581 戶）</text>
+      </g>
+      <g>
+        <rect x="230" y="52" width="88" height="20" rx="10" fill="#BFE0DA"/>
+        <rect x="230" y="88" width="176" height="20" rx="10" fill="#3AA8A0"/>
+        <rect x="230" y="124" width="352" height="20" rx="10" fill="#2E8A83"/>
+      </g>
+      <g font-size="12.5" font-weight="800" fill="#1F6560">
+        <text x="326" y="67">年化 4,237 萬</text><text x="414" y="103">年化 8,475 萬</text><text x="590" y="139" fill="#1F6560">年化 1.70 億</text>
+      </g>
+      <text x="30" y="184" font-size="13.5" font-weight="800" fill="#C97A3D">B2B：住宿式長照實際使用床位約 9.85 萬床 ×（600–900/床·月）</text>
+      <g font-size="12.5" fill="#33403D" font-weight="700">
+        <text x="40" y="216">保守 1%×600（985 席）</text><text x="40" y="252">基準 5%×750（4,927 席）</text><text x="40" y="288">上行 10%×900（9,853 席）</text>
+      </g>
+      <g>
+        <rect x="256" y="202" width="34" height="20" rx="10" fill="#FBE3CF"/>
+        <rect x="256" y="238" width="212" height="20" rx="10" fill="#F4A261"/>
+        <rect x="256" y="274" width="510" height="20" rx="10" fill="#C97A3D"/>
+      </g>
+      <g font-size="12.5" font-weight="800" fill="#C97A3D">
+        <text x="298" y="217">年化 709 萬</text><text x="476" y="253">年化 4,434 萬</text><text x="774" y="289" fill="#C97A3D">1.06 億</text>
+      </g>
+    </svg>
+    </div>
+    <div class="fig-note">分母有出處可追溯：一人戶＝內政部 114 年 6 月（65+ 457 萬 × 25.8%）；床位＝衛福部 113 年底盤點（1,687 家、11.87 萬床、使用率 83%）。此為量級敏感度、非營收預測——真實可服務市場還要再乘「需求符合率 × 可安裝率 × 付費轉換 × 留存」，以試辦數據回填。大盤參考（銀髮消費 ~3.6 兆／智慧照護軟體+AI ~30 億）僅作氛圍脈絡、不作推導分母。</div>
+  </div>
+
+  <h4>政策順風（2026 下半年密集開窗）</h4>
+  <ul class="pts">
+    <li><b>長照 3.0 上路</b>（行政院 2025-12-31 核定）：八大目標明列「導入智慧照顧」；長照資源與外籍看護不再互斥——家庭同時用外籍看護＋AI 陪伴不再有政策障礙。（遠見／衛福部）</li>
+    <li><b>智慧輔具全租賃</b>（2026-07-01）：安全看視類（EI01–EI05）與 Munea 守護能力高度對口；紅線＝只講「照顧安全／看視／提醒」、不做醫療宣稱。</li>
+    <li><b>住宿機構品質獎勵</b>（2024–2027）：含「智慧輔助照顧科技」指標，每家機構每年最高 101–240 萬元獎勵——機構導入 Munea 有政府出的理由。（衛福部 2024-09 公告）</li>
+    <li><b>獨居長者國家行動</b>：行政院 2026-03 拍板 62.5 億元、年內完成全台 75+ 獨居長者訪查並分 4 級追蹤——與 Munea 的看顧能力同方向。（TVBS 2026-03）</li>
+  </ul>
+
+  <h3>日本：下一站——全球最高齡的「見守り」市場</h3>
+  <!--MARKET_JP-->
+  <p class="lead"><b>洞見：日本是全球最高齡＋「子女付費給爸媽用」文化最成熟的市場。</b>Munea 的機會不在開新賽道，而在用「會話 AI ＋ 家庭圈 ＋ 危機轉介」的組合，卡進「見守り（遠距看顧）」與「企業防介護離職福利」兩個已被驗證願意付費、但現有玩家都只做到單點的位置。</p>
+  <div class="stats">
+    <div class="stat"><div class="v">29.3<small>%</small></div><div class="k">高齡化率全球最高；65 歲以上 3,619 萬人（2026/01）</div><div class="src">總務省統計局／內閣府高齡社會白書</div></div>
+    <div class="stat"><div class="v">25→57<small>萬人</small></div><div class="k">介護人力缺口：2026 年度缺 25 萬、2040 年度缺 57 萬</div><div class="src">厚勞省 第9期介護保険事業計画</div></div>
+    <div class="stat"><div class="v">76,941<small>人</small></div><div class="k">2025 年孤獨死人數——日本首次官方統計</div><div class="src">警察廳／內閣府, 2025</div></div>
+    <div class="stat"><div class="v">4/5</div><div class="k">2026 年度「介護科技導入」公費補助率；見守り・對話類列重點對象</div><div class="src">厚勞省, 2026-04</div></div>
+  </div>
+  <ul class="pts">
+    <li><b>「買的人 vs 用的人」分離已被驗證 25 年</b>：象印「みまもりほっとライン」（IoT 熱水瓶通知子女）自 2001 年運營至今、累計約 29 萬件——子女決策付費、長輩使用的模式正是 Munea 家庭健康圈的核心假設，在日本早有成熟先例。（ITmedia）</li>
+    <li><b>企業端有法定順風</b>：2025 年 4 月起日本企業依法須建置「介護與工作兩立支援」機制——Munea 企業席次在日本有現成採購理由（法遵＋防介護離職，年約 10.6 萬人因照護家人離職）。（經產省）</li>
+    <li><b>誠實揭露</b>：「見守りサービス」市場規模各調查機構口徑差異達 3 倍（約 100–400 億日圓區間）——市場邊界未定型，本身就說明組合式卡位仍有空間。（富士經濟／矢野經濟／Seed Planning 並陳）</li>
+    <li><b>認知症數據用最新版</b>：厚勞省 2025 年最新推計 471.6 萬人（舊制「700 萬人時代」已因調查方法改進下修約 3 成——對日方溝通引新數字，避免被點出資料過時）。</li>
+  </ul>
+
+  <h3>北美：成熟對標——痛點惡化中、資本已進場、監管正收緊</h3>
+  <p class="lead"><b>洞見：北美不是藍海，是「痛點巨大、資本進場、但沒人做對」的市場。</b>孤獨與照護者過勞兩個結構性壓力都在惡化，AI 陪伴資本已密集進場，而 2026 年起的監管收緊正把「安全網」從加分項變成法定要求——恰好是 Munea 天生內建的能力。</p>
+  <div class="stats">
+    <div class="stat"><div class="v">18.0<small>%</small></div><div class="k">美國 65 歲以上人口占比（6,120 萬人，歷史新高）</div><div class="src">PRB, 2026</div></div>
+    <div class="stat"><div class="v">6,300<small>萬</small></div><div class="k">美國家庭照護者人數，近 10 年成長近 5 成；6 成同時有全職工作</div><div class="src">AARP／NAC, 2025</div></div>
+    <div class="stat"><div class="v">1/2</div><div class="k">美國成人有可測量的孤獨程度；老年孤立每年多耗 Medicare 67 億美元</div><div class="src">綜合彙整, 2026</div></div>
+    <div class="stat"><div class="v">US$2,500</div><div class="k">企業家庭照顧福利年度預算中位數／員工——B2B 席次的既有預算池</div><div class="src">HR benefits 產業報告, 2026</div></div>
+  </div>
+
+  <div class="fig">
+    <div class="fig-title">孤獨不是心情問題，是健康風險因子（相對風險增幅）</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 820 210" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <g font-size="13.5" fill="#33403D" font-weight="700">
+        <text x="20" y="52">心臟病</text><text x="20" y="112">中風</text><text x="20" y="172">失智（長者）</text>
+      </g>
+      <g>
+        <rect x="130" y="34" width="382" height="26" rx="13" fill="#3AA8A0"/>
+        <rect x="130" y="94" width="422" height="26" rx="13" fill="#3AA8A0"/>
+        <rect x="130" y="154" width="660" height="26" rx="13" fill="#F4A261"/>
+      </g>
+      <g font-size="14" font-weight="800" fill="#1F6560">
+        <text x="522" y="53">＋29%</text><text x="562" y="113">＋32%</text><text x="700" y="173" fill="#C97A3D">＋50%</text>
+      </g>
+    </svg>
+    </div>
+    <div class="fig-note">社會孤立對健康結果的相對風險增幅。來源：U.S. Surgeon General Advisory（HHS）；孤獨被定調為「等同每天抽 15 根菸」的公衛危機。</div>
+  </div>
+
+  <h4>市場規模與資本動向</h4>
+  <ul class="pts">
+    <li><b>AgeTech 大盤</b>：50+ 全品類廣義估算達 2 兆美元；銀髮輔助科技細分 2026 年約 301 億美元、2034 年估 725 億美元（CAGR 11.5%）。（Global Venturing／MarketIntelo）</li>
+    <li><b>AI 陪伴細分最快</b>：長者陪伴機器人子類 2026 約 12.5 億美元、CAGR 22%；廣義 AI Companion 市場 CAGR 31–37%。（360iResearch 等，2026；各機構估算差異大、引用時標明機構）</li>
+    <li><b>資本已進場</b>：2024 年 AgeTech 創投私募 39 億美元創新高。（TheGerontechnologist 2025）</li>
+    <li><b>企業福利趨勢</b>：整合式家庭照顧福利（LSA）使用率 89%、遠高於獨立方案的 46%——Munea 企業席次要包進「family care benefit」大傘賣，不要單獨賣「銀髮陪伴」。（2026 HR 產業報告）</li>
+  </ul>
+
+  <h4>監管風向：安全網正在變成法律要求</h4>
+  <div class="fig">
+    <div class="fig-title">2025–2026 AI 陪伴監管時間軸——別人被逼著補，我們生來就有</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <line x1="40" y1="90" x2="820" y2="90" stroke="#E7E0D6" stroke-width="2"/>
+      <g><circle cx="120" cy="90" r="7" fill="#C97A3D"/>
+        <text x="120" y="60" text-anchor="middle" font-size="12.5" font-weight="800" fill="#C97A3D">2025-05</text>
+        <text x="120" y="118" text-anchor="middle" font-size="11.5" fill="#33403D">Replika 遭歐盟</text>
+        <text x="120" y="135" text-anchor="middle" font-size="11.5" fill="#33403D">個資重罰 €500 萬</text></g>
+      <g><circle cx="330" cy="90" r="7" fill="#C97A3D"/>
+        <text x="330" y="60" text-anchor="middle" font-size="12.5" font-weight="800" fill="#C97A3D">2025-10</text>
+        <text x="330" y="118" text-anchor="middle" font-size="11.5" fill="#33403D">加州 SB 243 簽署：</text>
+        <text x="330" y="135" text-anchor="middle" font-size="11.5" fill="#33403D">陪伴 AI 須自傷偵測＋危機轉介</text></g>
+      <g><circle cx="540" cy="90" r="7" fill="#C97A3D"/>
+        <text x="540" y="60" text-anchor="middle" font-size="12.5" font-weight="800" fill="#C97A3D">2026-01</text>
+        <text x="540" y="118" text-anchor="middle" font-size="11.5" fill="#33403D">SB 243 生效；Character.AI／</text>
+        <text x="540" y="135" text-anchor="middle" font-size="11.5" fill="#33403D">Google 未成年案進入和解</text></g>
+      <g><circle cx="760" cy="90" r="9" fill="#3AA8A0"/>
+        <text x="760" y="60" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1F6560">Munea</text>
+        <text x="760" y="118" text-anchor="middle" font-size="11.5" fill="#1F6560" font-weight="700">危機偵測＋分級轉介</text>
+        <text x="760" y="135" text-anchor="middle" font-size="11.5" fill="#1F6560" font-weight="700">是核心架構、非事後補丁</text></g>
+    </svg>
+    </div>
+    <div class="fig-note">來源：Skadden 法規分析、加州立法資訊、CNBC／CNN（2026-01）、Time。監管把「有安全網的陪伴」從道德加分變成合規門檻＝Munea 的先發壁壘。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 03 用戶分析 ═══════════ -->
+<section class="ch" id="s3">
+  <div class="ch-head"><div class="ch-no">Chapter 03</div><h2>用戶分析：三種人的痛，一套解方</h2></div>
+  <!--USER_BODY-->
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>三種用戶的痛都有官方數據撐著，不是想像的 persona。最關鍵的結構性事實：<b>買的人（子女／機構／企業）與用的人（長輩）是分開的</b>——行銷說服買的人、產品體驗留住用的人，Munea 的家庭健康圈正是為這個分離而生。</p>
+  </div>
+
+  <h3>長輩本人：孤獨是真的，門檻也是真的</h3>
+  <div class="stats">
+    <div class="stat"><div class="v">118.2<small>萬</small></div><div class="k">台灣 65+ 一人戶（占老年人口 25.8%），列冊關懷僅約 5.5 萬人——覆蓋率不到 5%</div><div class="src">內政部統計通報 2025-12／公視 2026</div></div>
+    <div class="stat"><div class="v">82.1<small>%</small></div><div class="k">70+ 未上網者「不願意學」；願意學的比例還在下降——教長輩用新工具是逆流</div><div class="src">TWNIC 台灣網路報告 2025</div></div>
+    <div class="stat"><div class="v">R²=44.4<small>%</small></div><div class="k">AI 陪伴的「自主／關係／能力支持」與長者心理幸福感顯著相關（N=418、60+ 受試；橫斷面自陳、模型解釋度——<b>非「改善 44.4%」的療效</b>）</div><div class="src">Frontiers in Public Health, 2026-05</div></div>
+  </div>
+  <ul class="pts">
+    <li><b>痛</b>：被看見、被記得的需求沒人接（獨居風險 118 萬 vs 列冊 5.5 萬的巨大缺口）→ <b>Munea 接法</b>：每天主動開口找長輩說話、跨通話記憶「上次你說膝蓋痛，好點沒」。</li>
+    <li><b>痛</b>：科技門檻——超過 3 個步驟多數第 2 週就棄用（內部用戶研究 2026-06）→ <b>接法</b>：語音優先、被動觸發、大字高對比單一主按鈕，三件同時成立。</li>
+    <li><b>痛</b>：抗拒被「老人化」——「她又沒老」→ <b>接法</b>：全產品不出現「銀髮／老人」標籤，按關係講話，是「記得你的人」不是「照顧你的工具」。</li>
+  </ul>
+
+  <h3>遠距子女：付費的人，買的是「安心的證據」</h3>
+  <div class="stats">
+    <div class="stat"><div class="v">200<small>萬+</small></div><div class="k">台灣就業人口約 1/5 同時是照顧者；每年約 13.3 萬人因照顧離職</div><div class="src">勞動部推估／康健</div></div>
+    <div class="stat"><div class="v">77.9<small>%</small></div><div class="k">「三明治世代」同時照顧長輩與子女（人力銀行調查，年份待查證）</div><div class="src">Tier C · 誠實標註</div></div>
+    <div class="stat"><div class="v">10<small>%+</small></div><div class="k">美國「長距離照顧者」占比，且是成長最快的照顧型態——跨國同構</div><div class="src">AARP Caregiving in the US 2025</div></div>
+  </div>
+  <ul class="pts">
+    <li><b>痛</b>：沒空天天打電話的內疚＋「今天不知道媽好不好」的焦慮 → <b>接法</b>：Munea 的每日主動陪伴＝子女沒空打的那通電話被 AI 接住；儀表板把焦慮變成可視化的安心。</li>
+    <li><b>痛</b>：出事怕來不及（獨居失聯要走里長→社會局→警方→破門，以「天」計）→ <b>接法</b>：危機偵測分級通知，把滯後從「天」往「分鐘」壓。</li>
+  </ul>
+
+  <h3>機構與企業：買的是人力與可量化的照顧</h3>
+  <ul class="pts">
+    <li><b>機構痛</b>：87.5% 長照機構長期缺工、25.7% 嚴重缺工；照服員 69% 已逾 45 歲、僅 2.4% 低於 25 歲（報導者／Ankecare 2025-11）→ <b>接法</b>：24 小時不受班表限制的主動關懷補離峰空窗；家屬儀表板把「報平安電話」自動化。</li>
+    <li><b>企業痛</b>：ESG 社會構面要可量化的員工照顧；台灣 2026 起以「ESG 評估」取代公司治理評估 → <b>接法</b>：席次使用率／關懷次數／滿意度直接餵永續報告書（此為策略假設，待首批 B2B 試辦回填真數據——誠實標註）。</li>
+    <li><b>2026 行為趨勢雙曲線</b>：長者 AI 陪伴接受度與正向訊號在升（Frontiers 2026-05 橫斷面研究；ElliQ 紐約州試辦 95% <b>使用者自陳</b>孤獨感下降——方案回報、非對照試驗）、但情感依賴監管同步收緊（中國 2026-07 新規、加州 SB 243）——<b>做得好是藍海，做不好是紅線，中間地帶很窄</b>；Munea 的安全網設計把自己放在安全的一側。</li>
+  </ul>
+</section>
+
+<!-- ═══════════ 04 競品分析 ═══════════ -->
+<section class="ch" id="s4">
+  <div class="ch-head"><div class="ch-no">Chapter 04</div><h2>競品分析：三地直接與潛在對手</h2></div>
+  <!--COMPETITOR_BODY-->
+  <!--COMPETITOR_VERDICT-->
+  <div class="fig">
+    <div class="fig-title">競品定位象限：互動深度 × 安全網——Munea 站在無人區</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 480" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <!-- 軸 -->
+      <line x1="430" y1="30" x2="430" y2="440" stroke="#E7E0D6" stroke-width="1.5"/>
+      <line x1="60" y1="235" x2="820" y2="235" stroke="#E7E0D6" stroke-width="1.5"/>
+      <g font-size="12" fill="#A9B3AE" font-weight="700">
+        <text x="66" y="228">← 被動監測</text>
+        <text x="710" y="228">深度互動陪伴 →</text>
+        <text x="438" y="48">安全網／合規 強 ↑</text>
+        <text x="438" y="432">安全網 弱 ↓</text>
+      </g>
+      <!-- 競品點 -->
+      <g font-size="12.5" font-weight="700" fill="#33403D">
+        <circle cx="185" cy="130" r="9" fill="#fff" stroke="#6E7B76" stroke-width="2"/><text x="185" y="108" text-anchor="middle">Sensi.ai</text><text x="185" y="158" text-anchor="middle" font-size="10.5" fill="#6E7B76" font-weight="500">聲學監測・不陪聊</text>
+        <circle cx="560" cy="120" r="9" fill="#fff" stroke="#6E7B76" stroke-width="2"/><text x="560" y="98" text-anchor="middle">Addison Care</text><text x="560" y="148" text-anchor="middle" font-size="10.5" fill="#6E7B76" font-weight="500">3D 頭像・醫療給付導向</text>
+        <circle cx="520" cy="290" r="9" fill="#fff" stroke="#6E7B76" stroke-width="2"/><text x="520" y="268" text-anchor="middle">ElliQ</text><text x="520" y="318" text-anchor="middle" font-size="10.5" fill="#6E7B76" font-weight="500">桌上機器人・無臉無視訊</text>
+        <circle cx="620" cy="330" r="9" fill="#fff" stroke="#6E7B76" stroke-width="2"/><text x="620" y="308" text-anchor="middle">care.coach</text><text x="620" y="358" text-anchor="middle" font-size="10.5" fill="#6E7B76" font-weight="500">真人客服穿 AI 皮・難規模化</text>
+        <circle cx="740" cy="400" r="9" fill="#fff" stroke="#C97A3D" stroke-width="2"/><text x="740" y="378" text-anchor="middle" fill="#C97A3D">Replika / C.AI</text><text x="740" y="428" text-anchor="middle" font-size="10.5" fill="#C97A3D" font-weight="500">高黏著・被監管追著跑</text>
+        <circle cx="150" cy="380" r="9" fill="#F3EDE3" stroke="#C9C2B6" stroke-width="2"/><text x="150" y="358" text-anchor="middle" fill="#A9B3AE">Alexa Together</text><text x="150" y="408" text-anchor="middle" font-size="10.5" fill="#A9B3AE" font-weight="500">2025 已下市</text>
+      </g>
+      <!-- Munea -->
+      <g>
+        <circle cx="742" cy="88" r="15" fill="#3AA8A0"/>
+        <circle cx="742" cy="88" r="22" fill="none" stroke="#3AA8A0" stroke-width="2" opacity=".35"/>
+        <text x="742" y="60" text-anchor="middle" font-size="15" font-weight="900" fill="#1F6560">Munea</text>
+        <text x="742" y="126" text-anchor="middle" font-size="11" fill="#1F6560" font-weight="700">真臉真聲＋安全網＋家庭圈</text>
+      </g>
+    </svg>
+    </div>
+    <div class="fig-note">象限：X＝互動深度（被動監測 → 深度陪伴）、Y＝安全網與合規強度。「深度互動＋強安全網」象限目前僅 Munea 一家同時成立。</div>
+  </div>
+
+  <h3>北美：五種形態，各缺一角</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>競品</th><th>定位／模式</th><th>強項</th><th>缺的那一角</th><th>威脅</th></tr>
+    <tr><td class="strong">Addison Care</td><td>3D 頭像照護助理，走美國醫療保險給付通路</td><td>唯一同走「頭像＋語音」路線；已入給付代碼</td><td>定位醫療監測非情感陪伴；零亞洲家庭文化理解</td><td>🔴 高</td></tr>
+    <tr><td class="strong">Sensi.ai</td><td>居家聲學監測（B2B 機構），募資 $98M+、年營收 +400%</td><td>資金最猛、機構通路強</td><td>純背景監測，沒有對話與陪伴</td><td>🟠 中高</td></tr>
+    <tr><td class="strong">ElliQ</td><td>桌上型陪伴機器人，硬體 $249＋月費 $30–40；已入州 Medicaid</td><td>品牌先行者、政府通路</td><td>無真人臉、無視訊，互動偏提醒與遊戲</td><td>🟡 中</td></tr>
+    <tr><td class="strong">care.coach</td><td>真人客服操作虛擬頭像，$199–249/月</td><td>有真人溫度、合規完備</td><td>人力密集無法規模化，成本隨用戶線性增加</td><td>🟡 中</td></tr>
+    <tr><td class="strong">Replika / Character.AI</td><td>通用情感陪伴（年輕族群），Replika 4,000 萬+ 用戶</td><td>對話黏著度</td><td>無安全網——未成年訴訟、罰款、被迫轉型</td><td>🟢 不同賽道</td></tr>
+    <tr><td class="strong">Amazon Alexa Together</td><td>遠端照護訂閱</td><td>生態系裝機量</td><td>2025 已停售——證明「純監控無陪伴」站不住</td><td>⚪ 已退場（盯 Alexa+ 回馬槍）</td></tr>
+  </table></div>
+  <p><b>北美結論</b>：沒有一家同時具備「真人臉真聲 × 安全網 × 家庭圈 × 亞洲家庭文化理解」。若未來進北美，第一個切入點是<b>北美亞裔／華語長者社群</b>——文化理解優勢最大化的灘頭堡，而非直接對撞主流市場。</p>
+
+  <h3>台灣：本土競品與潛在對手</h3>
+  <!--COMPETITOR_TW-->
+  <div class="tbl-wrap"><table>
+    <tr><th>競品</th><th>定位</th><th>強項</th><th>缺的那一角</th><th>威脅</th></tr>
+    <tr><td class="strong">智齡科技 Jubo</td><td>長照機構效率化 SaaS（電子病歷／交班／AI 分析）</td><td>台灣最大：官網自陳 <b>2,700+ 機構、33 萬專業使用者</b>（比外界舊報導的 1,200 家更成熟）、募資 6.2 億</td><td>不做 C 端家庭陪伴、不對長者本人互動——但機構通路綁得深，我們進機構要回答「跟既有系統怎麼共存」</td><td>🟢 低（互補多於競爭、觀察其家屬 App 動向）</td></tr>
+    <tr><td class="strong">上緯智聯 TaiiBot</td><td>硬體陪伴機器人（語音互動＋跌倒偵測）</td><td>上市集團資本；2026-03 開全台首座展示中心</td><td>綁硬體、部署成本高、尚無公開導入數字</td><td>🟡 中（資本是變數，盯下半年導入速度）</td></tr>
+    <tr><td class="strong">工研院 AMIBO</td><td>陪伴裝置＋子女手機連動（概念與 Munea 最像）</td><td>研究能量強</td><td>仍在技轉前期、未上市</td><td>🟡 中（潛在）</td></tr>
+    <tr><td class="strong">Osmile／GPS 手錶類</td><td>定位＋SOS＋跌倒偵測（NT$4,999–16,999）</td><td>通路廣、價格親民</td><td>純硬體定位，零對話零陪伴</td><td>🟢 低中（會分食輔具租賃通路排隊順位）</td></tr>
+    <tr><td class="strong">愛長照／優照護</td><td>長照資源媒合平台</td><td>用戶基數大、信任度高</td><td>是「長照版黃頁」，非 AI 陪伴</td><td>🟢 低（潛在導流合作對象）</td></tr>
+    <tr><td class="strong">電信三雄</td><td>樂齡資費＋遠距醫療布局</td><td>數百萬銀髮用戶關係＋通路</td><td>尚無 C 端陪伴型產品</td><td>🟠 中高（潛在——最有資格殺進來的巨頭）</td></tr>
+  </table></div>
+  <p><b>台灣結論</b>：「軟體 × 情感陪伴 × 安全整合」這個象限，台灣本土目前<b>沒有成熟玩家</b>——機構管理有人做（Jubo）、硬體看視有人做（Osmile／TaiiBot）、資源媒合有人做（愛長照），但「住在手機裡、會陪爸媽說話、出事會叫人」的位置是空的。國際對手（ElliQ／Hyodol）查證均無台灣代理引進計畫，語言與硬體成本是天然屏障。</p>
+
+  <h3>日本：見守り市場的既有玩家</h3>
+  <!--COMPETITOR_JP-->
+  <div class="tbl-wrap"><table>
+    <tr><th>競品</th><th>定位／模式</th><th>價格帶</th><th>現況（2026 上半年）</th><th>威脅</th></tr>
+    <tr><td class="strong">ElliQ × 兼松</td><td>AI 陪伴機器人進軍日本：健康管理＋防孤獨＋見守り一體</td><td>美國現價：開通費 $249＋月費 $39–59</td><td>2025/09 官宣出資、原目標 2026 春上市；<b>2026-03 兼松官方仍稱「檢討中」＝上市日期未定</b>。高可信威脅、時間表不確定</td><td>🔴 高（盯上市進度）</td></tr>
+    <tr><td class="strong">チカク「いっしょ。」</td><td>AI 角色 App＋家人見守報告＋認知症風險自測——概念與 Munea 最接近</td><td>月額 ¥9,800</td><td>2026/03 上線、4 月加認知症自測</td><td>🔴 高</td></tr>
+    <tr><td class="strong">Starley「茶の間Cotomo」</td><td>AI 每日定時來電對話→摘要給家人；地方政府＋東北大學合作驗證</td><td>月額 ¥2,980 起</td><td>2024/12 上線、累計募資約 10 億円</td><td>🟡 中</td></tr>
+    <tr><td class="strong">LOVOT／PALRO</td><td>實體陪伴／介護機器人（PALRO 已入 1,300+ 機構）</td><td>本體 ¥348,000–577,500＋月費</td><td>高單價硬體、對話力弱於新世代 AI</td><td>🟡 中</td></tr>
+    <tr><td class="strong">Sony aibo</td><td>寵物陪伴機器人</td><td>—</td><td><b>2026/06 官宣停售現行機型</b>——純硬體陪伴模式走弱的直接證據</td><td>🟢 警訊型參考</td></tr>
+  </table></div>
+  <ul class="pts">
+    <li><b>反直覺發現</b>：真正跑出規模與募資的（Starley 10 億円、チカク 15 億円）都是<b>純軟體＋低價訂閱＋家人共享報告</b>模式，而非高單價機器人——對 App 形態的 Munea 是有利訊號。</li>
+    <li><b>差異化必打深度</b>：日本「安否確認」已有便宜又可信的老牌解法（月費 ¥1,680–3,300 級）——Munea 要贏在既有玩家做不到的「真人臉即時互動＋長期記憶＋危機轉介」，不要去打基本看顧。</li>
+    <li><b>切入節奏</b>：搶在 ElliQ 鋪貨前建立信任錨點；走「介護科技補助 4/5」與「企業介護兩立法定義務」兩個 2025–26 剛開的政策窗；行銷措辭避開「診斷／篩檢」以免觸發日本醫材認定（薬機法）。</li>
+  </ul>
+</section>
+
+<!-- ═══════════ 05 產品分析 ═══════════ -->
+<section class="ch" id="s5">
+  <div class="ch-head"><div class="ch-no">Chapter 05</div><h2>產品分析：核心價值 · 技術力 · 差異化</h2></div>
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>Munea 的護城河不是單一功能，而是<b>三件難事同時成立</b>：像真人的即時互動（技術力）× 記得你、懂分寸的照護智慧（產品力）× 出事有人接住的安全網（信任力）。三者疊加後，市面上沒有直接等價品。</p>
+  </div>
+
+  <h3>核心價值：把「被記得、被陪著、被接住」做成產品</h3>
+  <p class="lead">市場上大家都在教 AI 回答問題，我們選擇教 AI 關心人。Munea 的核心價值主張只有一句：<b>讓每個家庭都有一位記得全家人、聽得出情緒、出事會叫人的健康管家。</b></p>
+  <div class="cards">
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></div><h4>被記得</h4><p>長期記憶讓每次對話從上次聊到的地方接著聊；提過的用藥、回診、喜好都替你記著。</p></div>
+    <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></div><h4>被陪著</h4><p>會動的真人臉、真人般的聲音、即時你來我往——不是冷冰冰的語音框，是「有人在」的臨場感。</p></div>
+    <div class="card coral"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h4>被接住</h4><p>危機語言即時辨識、風險分級、轉介 113／119／1925 與家人通知——陪伴之外，出事有人接。</p></div>
+  </div>
+
+  <h3>技術力：兩個自研引擎撐起一個管家</h3>
+  <ul class="pts">
+    <li><b>即時語音＋真人臉引擎（Realtime Voice + Avatar）</b>：對話當下即時生成的臉與聲音，嘴型跟著聲音、表情跟著語氣，可被打斷、可插話——台灣首創將此互動水準帶進家庭健康照護場景。</li>
+    <li><b>健康管家智慧核心（FamilyWellness AI）</b>:三顆分工明確的 AI 腦協同（即時對話／記憶感知／安全守門），安全具最高否決權、決策留痕——不是單一聊天機器人的套殼。</li>
+    <li><b>台灣在地化</b>：台灣繁體中文與台語原生、台灣腔語音、在地情境（回診、健保、節氣飲食）理解。</li>
+  </ul>
+
+  <h3>差異化：跟三類對手比，各贏在哪</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>對手類型</th><th>他們的強項</th><th>他們做不到的</th><th>Munea 的位置</th></tr>
+    <tr><td class="strong">陪伴機器人／硬體</td><td>實體存在感</td><td>價格高、佔空間、中文弱、更新慢</td><td>純軟體住進手機，價格是硬體的零頭，全家都能裝</td></tr>
+    <tr><td class="strong">情感陪伴 App</td><td>對話黏著度</td><td>缺安全網——已有情感依賴與自傷爭議案例</td><td>陪伴＋危機轉介安全網是核心架構，不是事後補丁</td></tr>
+    <tr><td class="strong">機構管理 SaaS</td><td>後台效率化</td><td>不做長者本人的陪伴、不對接家屬情緒</td><td>直接服務長輩與家屬，機構後台是加值不是本體</td></tr>
+  </table></div>
+</section>
+
+<!-- ═══════════ 06 產品功能 ═══════════ -->
+<section class="ch" id="s6">
+  <div class="ch-head"><div class="ch-no">Chapter 06</div><h2>產品功能：聊聊 · 健康數據 · 全家健康圈</h2></div>
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>五個分頁、一個閉環：<b>聊聊</b>建立關係與情緒訊號 → <b>健康</b>把提醒與數據看住 → <b>家人</b>把觀察變成家屬的安心。用得越久，管家越懂這家人，換掉的成本越高。</p>
+  </div>
+
+  <div class="shots">
+    <div class="shot"><img src="assets/app-home.png" alt="首頁"><div class="cap">首頁<small>記得你說過的話，主動關心今天</small></div></div>
+    <div class="shot"><img src="assets/app-status.png" alt="狀態"><div class="cap">狀態<small>情緒與健康數據追蹤</small></div></div>
+    <div class="shot"><img src="assets/app-family.png" alt="家人"><div class="cap">家人<small>全家健康圈與共同活動</small></div></div>
+    <div class="shot"><img src="assets/app-chat.png" alt="聊聊"><div class="cap">聊聊<small>真臉真聲即時視訊對話</small></div></div>
+    <div class="shot"><img src="assets/app-settings.png" alt="設定"><div class="cap">設定<small>訂閱方案與點數</small></div></div>
+  </div>
+
+  <h3>聊聊：跟她講話，像視訊一位家人</h3>
+  <ul class="pts">
+    <li><b>即時視訊對話</b>：真人臉即時生成、嘴型對聲音、想插話就插話；六款角色（擬真女／男、插畫、動物）可換，暱稱可自訂。</li>
+    <li><b>有分寸的關係</b>：剛認識有禮貌、處久了更親近；語氣隨長輩情緒調整，不硬要開朗。</li>
+    <li><b>記憶接續</b>：這次從上次聊到的地方繼續；聊完自動萃取「值得記住的事」進長期記憶。</li>
+  </ul>
+
+  <h3>健康數據：用藥、回診、生理數據，都替你看著</h3>
+  <ul class="pts">
+    <li><b>提醒做成對話</b>：吃藥、回診不是冷冰冰的推播，是管家在對話裡自然提起、確認、記錄。</li>
+    <li><b>數據同步</b>:自行量測與裝置（如手機健康資料）同步，趨勢與異常視覺化呈現。</li>
+    <li><b>異常察覺</b>：對話語意＋數據訊號交叉判讀，發現不對勁分級通知家人；醫療紅線清楚——不診斷、不判讀檢查、不動用藥，一律導回醫師。</li>
+  </ul>
+
+  <h3>全家健康圈：把「我很好」變成看得見的安心</h3>
+  <ul class="pts">
+    <li><b>家屬視角</b>：子女在自己的手機看到爸媽近況摘要與異常通知，不用每天奪命連環 call。</li>
+    <li><b>隱私分層</b>：長輩的對話內容不外流，家屬看到的是狀態與摘要；保護事件類不自動通知家庭（避免加害人即家人）。</li>
+    <li><b>一起玩在一起</b>：家庭共同活動與互動，讓照護不只是單向的「看著」，是全家的參與。</li>
+  </ul>
+</section>
+
+<!-- ═══════════ 07 AI 模型與架構 ═══════════ -->
+<section class="ch" id="s7">
+  <div class="ch-head"><div class="ch-no">Chapter 07</div><h2>AI 模型與架構</h2></div>
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>Munea 的 AI 是「<b>分工的團隊</b>」不是「一個大模型」：健康管家模型（FamilyWellness AI）三顆腦各司其職、安全握有否決權；自研 Realtime Voice + Avatar 模型負責讓這一切「有臉、有聲、像個人」。分層設計＝可控、可稽核、可替換。</p>
+  </div>
+
+  <h3>健康管家模型：三顆腦的照護智慧</h3>
+  <div class="fig">
+    <div class="fig-title">FamilyWellness AI · 三腦協同架構</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 430" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <!-- 使用者 -->
+      <rect x="20" y="165" width="130" height="86" rx="16" fill="#E8F2EE" stroke="#3AA8A0" stroke-width="1.5"/>
+      <text x="85" y="200" text-anchor="middle" font-size="15" font-weight="700" fill="#1F6560">長輩／家人</text>
+      <text x="85" y="222" text-anchor="middle" font-size="11.5" fill="#6E7B76">語音・視訊・文字</text>
+      <!-- 調度層 -->
+      <rect x="210" y="150" width="150" height="116" rx="16" fill="#fff" stroke="#E7E0D6" stroke-width="1.5"/>
+      <text x="285" y="185" text-anchor="middle" font-size="14.5" font-weight="700" fill="#33403D">指揮調度層</text>
+      <text x="285" y="207" text-anchor="middle" font-size="11" fill="#6E7B76">回應優先權仲裁</text>
+      <text x="285" y="224" text-anchor="middle" font-size="11" fill="#6E7B76">安全 &gt; 即時 &gt; 背景</text>
+      <text x="285" y="246" text-anchor="middle" font-size="11" fill="#6E7B76">角色人格 × 6</text>
+      <!-- 三腦 -->
+      <rect x="430" y="30" width="200" height="100" rx="16" fill="#fff" stroke="#3AA8A0" stroke-width="2"/>
+      <text x="530" y="62" text-anchor="middle" font-size="15" font-weight="800" fill="#2E8A83">反射腦</text>
+      <text x="530" y="84" text-anchor="middle" font-size="11.5" fill="#6E7B76">即時語音對話・可被打斷</text>
+      <text x="530" y="102" text-anchor="middle" font-size="11.5" fill="#6E7B76">語音臨場感</text>
+      <rect x="430" y="160" width="200" height="100" rx="16" fill="#fff" stroke="#3AA8A0" stroke-width="2"/>
+      <text x="530" y="192" text-anchor="middle" font-size="15" font-weight="800" fill="#2E8A83">管家腦</text>
+      <text x="530" y="214" text-anchor="middle" font-size="11.5" fill="#6E7B76">長期記憶・情境感知</text>
+      <text x="530" y="232" text-anchor="middle" font-size="11.5" fill="#6E7B76">健康提醒・每日簡報</text>
+      <rect x="430" y="290" width="200" height="110" rx="16" fill="#FBE3CF" stroke="#C97A3D" stroke-width="2"/>
+      <text x="530" y="322" text-anchor="middle" font-size="15" font-weight="800" fill="#C97A3D">守護腦（最高否決權）</text>
+      <text x="530" y="344" text-anchor="middle" font-size="11.5" fill="#8a6a4e">危機語言辨識・風險分級</text>
+      <text x="530" y="362" text-anchor="middle" font-size="11.5" fill="#8a6a4e">醫療邊界守門・決策留痕</text>
+      <text x="530" y="380" text-anchor="middle" font-size="11.5" fill="#8a6a4e">轉介 113／119／1925</text>
+      <!-- 輸出 -->
+      <rect x="700" y="150" width="140" height="116" rx="16" fill="#E8F2EE" stroke="#3AA8A0" stroke-width="1.5"/>
+      <text x="770" y="188" text-anchor="middle" font-size="14" font-weight="700" fill="#1F6560">家庭健康圈</text>
+      <text x="770" y="210" text-anchor="middle" font-size="11" fill="#6E7B76">家屬近況摘要</text>
+      <text x="770" y="228" text-anchor="middle" font-size="11" fill="#6E7B76">異常通知</text>
+      <text x="770" y="246" text-anchor="middle" font-size="11" fill="#6E7B76">機構關懷報告</text>
+      <!-- 連線 -->
+      <g stroke="#3AA8A0" stroke-width="1.8" fill="none">
+        <path d="M150 208 H210"/>
+        <path d="M360 190 C 395 170, 400 100, 430 82"/>
+        <path d="M360 208 H430"/>
+        <path d="M360 226 C 395 250, 400 320, 430 340"/>
+        <path d="M630 208 H700"/>
+      </g>
+      <g fill="#3AA8A0"><circle cx="207" cy="208" r="3.5"/><circle cx="427" cy="82" r="3.5"/><circle cx="427" cy="208" r="3.5"/><circle cx="427" cy="340" r="3.5"/><circle cx="697" cy="208" r="3.5"/></g>
+      <text x="530" y="425" text-anchor="middle" font-size="11" fill="#A9B3AE">最終回應 ＝ 角色人格 ＋ 使用者記憶 ＋ 即時感知 ＋ 當下對話 ＋ 安全規則</text>
+    </svg>
+    </div>
+    <div class="fig-note">安全守護腦對其他腦的回應具最高否決權；高風險決策全程留痕可稽核。模型均採美系供應商雲端服務、資料不經中國地區。</div>
+  </div>
+  <ul class="pts">
+    <li><b>反射腦</b>：負責「當下這句話」——低延遲即時語音對話，聽得懂就回、講到一半可以被插話。</li>
+    <li><b>管家腦</b>：負責「這個人的一生脈絡」——長期記憶、重要性判讀、時間／天氣／興趣的情境感知、健康提醒與每日簡報。</li>
+    <li><b>守護腦</b>：負責「不能出錯的時刻」——決定論規則引擎為主的危機辨識（自傷／急症／保護事件等）、醫療邊界守門；文字線紅線測試 13/13 通過。</li>
+    <li><b>心理支持約束層（研發中）</b>：以認知行為（CBT）、接納承諾（ACT）、動機式晤談（MI）方法論做對話分寸控制——是語氣與界線的設計方法，非心理治療。</li>
+  </ul>
+
+  <h3>Realtime Voice + Avatar：聲音視覺模型</h3>
+  <div class="fig">
+    <div class="fig-title">即時語音 ＋ 真人臉 · 生成鏈路</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 190" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <g>
+        <rect x="20" y="55" width="140" height="80" rx="14" fill="#E8F2EE" stroke="#3AA8A0" stroke-width="1.5"/>
+        <text x="90" y="88" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F6560">使用者開口</text>
+        <text x="90" y="110" text-anchor="middle" font-size="11" fill="#6E7B76">麥克風即時串流</text>
+        <rect x="200" y="55" width="150" height="80" rx="14" fill="#fff" stroke="#E7E0D6" stroke-width="1.5"/>
+        <text x="275" y="83" text-anchor="middle" font-size="13.5" font-weight="700" fill="#33403D">即時語音對話</text>
+        <text x="275" y="103" text-anchor="middle" font-size="11" fill="#6E7B76">聽懂・回話・可插話</text>
+        <text x="275" y="120" text-anchor="middle" font-size="11" fill="#6E7B76">台灣腔繁中</text>
+        <rect x="390" y="55" width="150" height="80" rx="14" fill="#fff" stroke="#E7E0D6" stroke-width="1.5"/>
+        <text x="465" y="83" text-anchor="middle" font-size="13.5" font-weight="700" fill="#33403D">臉部即時生成</text>
+        <text x="465" y="103" text-anchor="middle" font-size="11" fill="#6E7B76">嘴型對聲音</text>
+        <text x="465" y="120" text-anchor="middle" font-size="11" fill="#6E7B76">表情對語氣</text>
+        <rect x="580" y="55" width="120" height="80" rx="14" fill="#fff" stroke="#E7E0D6" stroke-width="1.5"/>
+        <text x="640" y="88" text-anchor="middle" font-size="13.5" font-weight="700" fill="#33403D">即時串流</text>
+        <text x="640" y="110" text-anchor="middle" font-size="11" fill="#6E7B76">低延遲影音傳輸</text>
+        <rect x="740" y="55" width="100" height="80" rx="14" fill="#E8F2EE" stroke="#3AA8A0" stroke-width="1.5"/>
+        <text x="790" y="88" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F6560">手機畫面</text>
+        <text x="790" y="110" text-anchor="middle" font-size="11" fill="#6E7B76">她在跟你視訊</text>
+      </g>
+      <g stroke="#3AA8A0" stroke-width="1.8" fill="none">
+        <path d="M160 95 H200"/><path d="M350 95 H390"/><path d="M540 95 H580"/><path d="M700 95 H740"/>
+      </g>
+      <text x="430" y="175" text-anchor="middle" font-size="11" fill="#A9B3AE">全鏈路即時生成——不是預錄影片、不是動畫，你說一句她反應一句</text>
+    </svg>
+    </div>
+    <div class="fig-note">自研整合層；對外不揭露底層模型、算力與供應商細節（營業機密）。</div>
+  </div>
+  <ul class="pts">
+    <li><b>為什麼要做臉</b>：對長輩來說，「看得到的人」與「聲音盒子」是兩種完全不同的關係。臉與聲音對齊，是「像真人」最關鍵也最難的一步。</li>
+    <li><b>角色系統</b>：同一組記憶與安全規則，六款角色（寧寧、阿原等）講出來語氣不同、事實一致。</li>
+    <li><b>成本與體驗的平衡</b>：即時生成吃算力——以點數制計價（訂閱含點數＋加購包），確保體驗與毛利同時成立。</li>
+  </ul>
+</section>
+
+<!-- ═══════════ 08 策略判斷 ═══════════ -->
+<section class="ch" id="s8">
+  <div class="ch-head"><div class="ch-no">Chapter 08</div><h2>策略判斷：SWOT 與主敘事抉擇</h2></div>
+  <!--STRATEGY_BODY-->
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>主敘事採「<b>兩層分開講</b>」：品牌定位講全家（不貼年齡標籤、留住擴張空間），執行與驗證敘事誠實聚焦「幫在外地的子女守住爸媽」。分析框架以 <b>JTBD 為主軸</b>（三種人各自要完成的「工作」），SWOT 降級為對外一頁摘要——不當分析引擎。</p>
+  </div>
+
+  <h3>定位宣言：市場定位 × 產品定位</h3>
+  <div class="cards">
+    <div class="card"><h4>市場定位</h4><p>台灣「智慧照護軟體＋AI」細分市場（3.6 兆銀髮消費裡僅約 30 億、尚無品類定義者）的<b>品類定義者</b>——我們不擠進既有品類，我們定義「家庭 AI 健康陪伴管家」這個新品類。</p></div>
+    <div class="card coral"><h4>產品定位（一句話）</h4><p>給擔心遠方爸媽的子女：Munea 是住在手機裡的 AI 健康陪伴管家——真人臉真聲的陪伴讓爸媽不孤單，安全網與家庭圈讓你安心。<b>看視硬體只監不陪、情感 App 陪而無守，我們兩者都給。</b></p></div>
+  </div>
+  <ul class="pts">
+    <li><b>品牌語言（已定案）</b>:「有一個人，會一直記得你」——按關係講話、不貼年齡標籤；全產品不出現「銀髮／老人」字眼。</li>
+    <li><b>對機構</b>：定位是「照護人力的延伸」不是「取代照服員」——省下的是問安與回報工時，人留給真正需要人的照護。</li>
+    <li><b>對企業</b>：定位是「可量化的員工家庭照顧福利」——放進 family care benefit 的大傘，不單獨賣「銀髮陪伴」。</li>
+  </ul>
+
+  <h3>主敘事抉擇：全家平台 vs 高齡突破口</h3>
+  <p class="lead">這是本計畫最重要的戰略判斷。兩條路的利弊攤開，再看三個國際先例怎麼選。</p>
+  <div class="tbl-wrap"><table>
+    <tr><th></th><th>先打高齡、再擴全家</th><th>直接講全家平台</th></tr>
+    <tr><td class="strong">聚焦度</td><td>高——產品約束明確（大字／語音優先／安全網），不會做成四不像</td><td>低——長輩要的「慢與簡單」和年輕人要的「快與多功能」互相拉扯</td></tr>
+    <tr><td class="strong">募資／補助敘事</td><td>清楚——政策對口明確、成效可量化、故事單線</td><td>模糊——「服務誰」答不精準，審查與投資人抓不到重點</td></tr>
+    <tr><td class="strong">品牌風險</td><td>若品牌語言也窄，未來擴張要付「重新定位稅」</td><td>若一開始語言就廣，未來擴張是同一產品的下一步</td></tr>
+    <tr><td class="strong">競品卡位</td><td>快——台灣家庭陪伴賽道尚無贏家，先卡位比想大故事急</td><td>慢——格局大但打不進任何單一市場</td></tr>
+  </table></div>
+
+  <h4>三個先例，三種選法</h4>
+  <div class="cards">
+    <div class="card"><h4>ElliQ：敘事最窄</h4><p>從第一天就是「長者陪伴」，靠窄敘事打進美國州政府與保險給付（華盛頓州 Medicaid、紐約州採購約 900 台）——證明<b>窄敘事在政府／保險通路是優勢</b>。</p></div>
+    <div class="card"><h4>Calm／Headspace：敘事最廣</h4><p>「給任何人」起家，企業版是順勢長出來的第二條收入線（Calm Business 服務 3,500+ 企業）——證明<b>廣品牌讓 B2B 擴張免付重新定位稅</b>。</p></div>
+    <div class="card coral"><h4>日本見守り：對準買的人</h4><p>25 年市場結構＝子女買給爸媽用，行銷語言天生對準「離家的你，如何安心」——證明<b>買的人≠用的人時，敘事主受眾是買的人</b>。</p></div>
+  </div>
+  <div class="quoteband"><p>「沐寧的品牌，是一段全家人都需要的在乎關係——這句話不會變。但我們今天唯一在打的仗，是幫在外地的子女守住爸媽的孤獨與安全。先打贏、拿到真數據，其他人群是同一個產品的下一步，不是另一個故事。」</p></div>
+
+  <h3>執行聚焦：一個核心市場、兩個條件式選項</h3>
+  <p class="lead">多客群並進是資源小團隊的大忌。基準計畫只押一個核心市場，其餘全部設「達標才啟動」的條件：</p>
+  <div class="cards">
+    <div class="card"><h4>核心市場（唯一主攻）</h4><p><b>台灣遠距子女 × 可自行使用智慧手機的 65–79 歲父母。</b>最符合純 App、子女付費、家庭圈的產品條件，也最能在 90 天內拿到留存與付費證據。</p></div>
+    <div class="card"><h4>條件式選項一：機構試辦</h4><p>長照機構<b>小型付費試辦</b>（10–30 席）。第一目標＝證明「照服員重複關懷與家屬詢問時間下降」，不是臨床效果；後台、通知責任、同意權、危機處理流程都過關才擴大。</p></div>
+    <div class="card coral"><h4>條件式選項二：補助與日本</h4><p>長照輔具補助＝先完成品項資格與租賃通路才列收入；日本＝等台灣有可重現的留存、付費與安全數據再啟動。<b>北美只作對標、不入 24 個月基準計畫。</b></p></div>
+  </div>
+
+  <h3>分析框架：2026 年怎麼分析這門生意</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>框架</th><th>用在哪</th><th>為什麼</th></tr>
+    <tr><td class="strong">JTBD ⭐ 主軸</td><td>三種人各自「要完成的工作」：長輩＝有人記得我；子女＝不用天天打電話也安心；機構＝同樣人力顧更多人</td><td>陪伴品類人人都說「陪伴」，差異在「工作」定義的精準度</td></tr>
+    <tr><td class="strong">價值主張畫布</td><td>三客群各一張：痛點 → 解方 → 額外價值</td><td>連接用戶研究到功能優先序的橋樑</td></tr>
+    <tr><td class="strong">PESTEL</td><td>監管雷達：AI 陪伴監管收緊 × 長照政策窗口 × 超高齡社會</td><td>這個品類 2026 年「法規變得比技術快」，必須有時間軸雷達</td></tr>
+    <tr><td class="strong">五力分析</td><td>護城河檢視：巨頭為何一時打不進來</td><td>對夥伴與合作方一頁講清楚結構性防禦</td></tr>
+    <tr><td class="strong">SWOT（降級）</td><td>只做對外一頁摘要</td><td>好讀但靜態，不逼出「所以呢」——不當分析引擎</td></tr>
+  </table></div>
+
+  <h4>SWOT 一頁摘要（對外溝通用）</h4>
+  <div class="cards">
+    <div class="card"><h4>S 優勢</h4><p>台灣首創真人臉真聲即時互動；三腦安全架構（監管收緊下的合規壁壘）；繁中台語在地深度；純軟體低導入門檻。</p></div>
+    <div class="card"><h4>W 劣勢</h4><p>新創品牌知名度低；即時視訊算力成本高（點數制對沖）；團隊規模小；行銷資源有限。</p></div>
+    <div class="card"><h4>O 機會</h4><p>台日超高齡＋照護人力缺口惡化；長照 3.0 輔具租賃與補助窗口；企業 ESG 員工照顧預算成形；競品各缺一角的無人區。</p></div>
+    <div class="card coral"><h4>T 威脅</h4><p>巨頭生成式語音助理殺回（Alexa+）；AI 陪伴品類負面新聞拖累信任；監管趨嚴的合規成本；日本 ElliQ × 兼松進場（目標春季、體驗活動已辦、正式開賣待確認）。</p></div>
+  </div>
+</section>
+
+<!-- ═══════════ 09 GTM 打法 ═══════════ -->
+<section class="ch" id="s8b">
+  <div class="ch-head"><div class="ch-no">Chapter 09</div><h2>GTM：市場進入與銷售打法</h2></div>
+  <!--GTM_BODY-->
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>12 人小團隊只有一條路是「不必新建組織就能跑」的：<b>C 端自帶動能（口碑／KOL／內容）為主引擎</b>。機構試辦是「證據工廠」不是銷售動能、電信保全異業是機會型洽談、政府補助與日本明確延後。原則：<b>先開不需要新建團隊的門。</b></p>
+  </div>
+
+  <h3>四個標竿，四種難度——為什麼我們現在只走一條</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>標竿</th><th>他們怎麼做的</th><th>需要什麼</th><th>對我們的用法</th></tr>
+    <tr><td class="strong">ElliQ（美國）</td><td>地方機構免費試點 → 用「互動頻率、孤獨感下降」數據往上談，2026-03 拿下全美首例 Medicaid 全額給付</td><td>專職政府關係人力＋<b>3–4 年</b>長週期</td><td>抄它「先小規模試點、拿數據再往上談」的順序，不抄它的時程</td></tr>
+    <tr><td class="strong">Calm／Headspace</td><td>C 端養信任 → 員工自己開口要公司買 → B2B 才進場（企業版占 Headspace 營收 4 成）</td><td>C 端規模與口碑要先夠大</td><td>正合我們主敘事——<b>產品裡先埋「分享給爸媽／幫家人開通」的自然擴散</b>，企業福利平台是第二階段、不是現在</td></tr>
+    <tr><td class="strong">日本見守り三雄</td><td>借別人建好的信任通路鋪貨：チカク綁 J:COM（548 萬戶有線電視）、SECOM 走保全業務員、象印靠家電品牌</td><td>異業通路合作談判</td><td>台灣中興／新光保全已在做獨居長者救援＋政府社會局合作——<b>是異業洽談對象、不是現在要建的通路團隊</b></td></tr>
+    <tr><td class="strong">智齡 Jubo（台灣）</td><td>嘉義高雄設駐點做區域面對面直銷＋長照政策順風，數年堆到 2,700+ 機構</td><td><b>專職區域業務團隊</b></td><td>正是「機構」被列為條件式而非核心的理由——我們沒餘裕複製區域直銷</td></tr>
+  </table></div>
+
+  <div class="fig">
+    <div class="fig-title">GTM 動能優先序：先走左下（低投入、快變現）</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <line x1="60" y1="30" x2="60" y2="360" stroke="#E7E0D6" stroke-width="1.5"/>
+      <line x1="60" y1="360" x2="820" y2="360" stroke="#E7E0D6" stroke-width="1.5"/>
+      <text x="60" y="24" font-size="12" fill="#A9B3AE" font-weight="700" text-anchor="middle">變現快 ↑</text>
+      <text x="820" y="384" font-size="12" fill="#A9B3AE" font-weight="700" text-anchor="end">所需組織投入 大 →</text>
+      <!-- 點 -->
+      <g font-size="12.5" font-weight="700">
+        <circle cx="150" cy="90" r="16" fill="#3AA8A0"/><text x="150" y="66" text-anchor="middle" fill="#1F6560" font-weight="900">① C 端自帶</text><text x="150" y="120" text-anchor="middle" font-size="10.5" fill="#6E7B76">口碑/KOL/內容·主引擎</text>
+        <circle cx="360" cy="180" r="12" fill="#F4A261"/><text x="360" y="158" text-anchor="middle" fill="#C97A3D">② 機構試辦</text><text x="360" y="206" text-anchor="middle" font-size="10.5" fill="#6E7B76">證據工廠·非銷售動能</text>
+        <circle cx="560" cy="250" r="11" fill="#fff" stroke="#6E7B76" stroke-width="2"/><text x="560" y="228" text-anchor="middle" fill="#33403D">③ 電信/保全異業</text><text x="560" y="276" text-anchor="middle" font-size="10.5" fill="#6E7B76">機會型 BD·不建團隊</text>
+        <circle cx="740" cy="320" r="11" fill="#fff" stroke="#C97A3D" stroke-width="2"/><text x="740" y="298" text-anchor="middle" fill="#C97A3D">④ 政府補助/日本</text><text x="740" y="346" text-anchor="middle" font-size="10.5" fill="#6E7B76">條件式·明確延後</text>
+      </g>
+    </svg>
+    </div>
+    <div class="fig-note">ElliQ（政府給付）落在右上高投入慢變現、Jubo（區域直銷）也偏右——小團隊現階段主力壓在左下「C 端自帶」，其餘按資源條件逐步開。</div>
+  </div>
+
+  <h3>台灣行銷：通路與訊息</h3>
+  <ul class="pts">
+    <li><b>買家是子女、不是長輩</b>：台灣保健品市場已驗證的購買行為＝決策者鎖定 30–50 歲中壯年子女——與我們核心市場假設完全吻合。熟齡 KOL 常「銀髮長輩＋子女／年輕網紅同框」，一支片觸及買的人與用的人兩端。</li>
+    <li><b>三種訴求分工、不是二選一</b>：<b>孝順／情感</b>破圈引流（高鐵「你有多久沒回家」、麥當勞母親節零預算 24 萬讚）→ <b>安心</b>在落地頁做三腦安全的具體機制說明 → <b>省事</b>在產品內轉化（「AI 幫你先問候，你不用天天打電話」）。漏斗上中下游各司其職。</li>
+    <li><b>誠實</b>：LINE 社團／藥局診所／電視購物是保健「食品」常見通路，但 App 訂閱走這些通路查無成功案例——不列近期重點、實測後再說。</li>
+  </ul>
+
+  <h3>從「方向」變「可執行 Pipeline」：第一批 100 組家庭怎麼來</h3>
+  <p class="lead">Pre-sales 階段不能只講「靠口碑」——要講清楚第一批家庭與機構<b>具體從哪來、每週接觸幾個、誰負責、轉換率多少</b>。這是把方向變成可追蹤的漏斗：</p>
+  <h4>C 端：100 組家庭的來源拆解（首 90 天）</h4>
+  <div class="tbl-wrap"><table>
+    <tr><th>來源</th><th>目標組數</th><th>怎麼接觸</th><th>負責</th></tr>
+    <tr><td class="strong">創辦團隊親友熟人</td><td>~20</td><td>直接邀請、手把手陪裝（最高轉換、最真回饋）</td><td>全員</td></tr>
+    <tr><td class="strong">熟齡 FB 社團／LINE 群</td><td>~30</td><td>真人現身徵求試用家庭、非投廣</td><td>營運</td></tr>
+    <tr><td class="strong">熟齡 KOL／KOC 合作</td><td>~30</td><td>子女×長輩同框內容，導少量精準試用</td><td>行銷</td></tr>
+    <tr><td class="strong">少量精準付費投放</td><td>~20</td><td>Meta 鎖 45–60 歲、測 CAC 與素材</td><td>行銷</td></tr>
+  </table></div>
+  <h4>每週節奏與轉換目標（先導期）</h4>
+  <div class="stats">
+    <div class="stat"><div class="v">30+<small>/週</small></div><div class="k">每週接觸家庭數（社團＋KOL＋投放合計）</div></div>
+    <div class="stat"><div class="v">≥70<small>%</small></div><div class="k">接觸→完成安裝（子女幫爸媽開通）</div></div>
+    <div class="stat"><div class="v">≥10<small>%</small></div><div class="k">試用→真實付費轉換（用完體驗點數後）</div></div>
+    <div class="stat"><div class="v">10–20<small>組深訪</div><div class="k">每週安排深度訪談＋失敗案例，找拒絕理由與對策</div></div>
+  </div>
+  <h4>B2B：20 家目標機構名單（類別，具名由 BD 補）</h4>
+  <ul class="pts">
+    <li><b>優先 A（先簽 2–3 家證據工廠）</b>：創辦團隊或股東人脈可直達的長照／日照中心——最快、最願意配合收數據。</li>
+    <li><b>優先 B</b>：銀髮宅／養生村（住民夜間孤獨、家屬要安心，付費意願高）。</li>
+    <li><b>優先 C</b>：健康中心／診所／藥局（衛教與慢箋提醒場景）。</li>
+    <li><b>目標漏斗</b>：碰 20 家 → 5–6 家進試辦 → 2–3 家轉付費（首 90 天）；每家指定窗口、成功指標開始前寫死（見第 10 章 Offer Sheet）。</li>
+  </ul>
+</section>
+
+<!-- ═══════════ 10 商業模式與定價 ═══════════ -->
+<section class="ch" id="s9">
+  <div class="ch-head"><div class="ch-no">Chapter 10</div><h2>商業模式與定價策略：B2C 訂閱 × B2B 席次</h2></div>
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>一套產品、兩條收入軌：<b>B2C 家庭訂閱</b>驗證「個人願意為陪伴付費」，<b>B2B 席次制</b>（機構＋企業 ESG）放大導入速度與客單。點數制把最貴的即時視訊成本與收入綁在一起，用越多收越多，毛利結構健康。</p>
+  </div>
+
+  <h3>B2C：家庭訂閱（試營運中）</h3>
+  <div class="stats">
+    <div class="stat"><div class="v">NT$599<small>/月</small></div><div class="k">Plus 方案 · 含 100 點即時視訊（≈100 分鐘）</div></div>
+    <div class="stat"><div class="v">NT$1,199<small>/月</small></div><div class="k">Pro 方案 · 含 200 點＋12 人照護圈</div></div>
+    <div class="stat"><div class="v">加購包</div><div class="k">100–1,000 點：NT$790–6,490，永久有效</div></div>
+    <div class="stat"><div class="v">免費體驗</div><div class="k">新用戶贈即時視訊體驗點數，綁帳號防重複領</div></div>
+  </div>
+  <ul class="pts">
+    <li><b>誰付錢</b>：多數是「子女買給爸媽」——付費者與使用者分離，是本產品商業設計的核心事實（家庭圈正是為此而生）。</li>
+    <li><b>點數制的用意</b>：即時真臉視訊是最大變動成本；點數讓重度使用者自然付更多，輕度使用者門檻低。</li>
+    <li><b>價格階梯原則（2026-07 定案）</b>：<b>加購一律貴過訂閱</b>——訂閱最划算 → 想要更多先升 Pro → 點數包是貴的便利品。同型市場每分鐘行情約 5–7 元，我們訂閱內約 6 元/分＝行情帶內、初期算力安全墊厚。</li>
+  </ul>
+
+  <h3>B2B：席次制（本階段推進重點）</h3>
+  <div class="verdict" style="margin-bottom:16px"><span class="tag">現況誠實說明（2026-07-21 校正）</span>
+    <p>App 本來就免費下載、免費用，唯一收費的是「聊聊」通話（吃點數）。所以企業／機構買席次，本質＝<b>幫長輩出通話費</b>：我們從管理後台把名單上的長輩<b>手動開通成折扣會員</b>（比個人自己訂閱便宜），長輩用自己手機下載即用、<b>無需啟用碼</b>。機構自助後台與自動數據儀表板仍在開發中；成果報告為人工加值服務。</p>
+  </div>
+  <div class="tbl-wrap"><table>
+    <tr><th>軌道</th><th>買家</th><th>計費</th><th>現在內含（做得到）</th></tr>
+    <tr><td class="strong">長照機構席次</td><td>住宿式機構・日照・高齡村</td><td>每席・月（30 席起）</td><td>長輩完整 App＋每月通話點數＋家屬連動＋異常通知</td></tr>
+    <tr><td class="strong">企業 ESG 席次</td><td>企業 HR／永續部門</td><td>每席・月（50 席起）</td><td>員工長輩完整 App＋每月通話點數＋異常通知員工</td></tr>
+    <tr><td class="strong">關懷／ESG 成果報告</td><td>機構或企業（加值）</td><td>月／季／年・另計維護費</td><td>人工彙整：使用概況＋GRI 對應＋永續報告書可引用段落＋年度回顧</td></tr>
+    <tr><td class="strong">白牌／API 合作</td><td>通路・保險・電信</td><td>分潤／平台授權＋用量</td><td>客製功能另談開發費（無「客製化軟體」概念）</td></tr>
+  </table></div>
+  <h4>開通與交付方式（現況）</h4>
+  <ul class="pts">
+    <li><b>後台手動開通</b>：企業／機構提供名單 → 我們從管理後台把每位長輩開通成折扣會員 → 長輩自己手機下載即用；<b>無啟用碼、無自助系統</b>，是人工開通（現在做得到）。</li>
+    <li><b>報告＝人工加值</b>：基本席次<b>不含</b>自動報表；需要月／季成效報告（含 ESG／GRI）另收維護費，由我們人工彙整交付。</li>
+    <li><b>開發中（不當現成功能賣）</b>：機構自助後台（總覽・異常提醒・關懷紀錄）、匿名彙總數據儀表板——列入 roadmap，簽約前據實告知。</li>
+  </ul>
+  <h4>席次階梯（每席月費隨規模遞減）</h4>
+  <div class="tbl-wrap"><table>
+    <tr><th>席次規模</th><th>每席・月</th><th>備註</th></tr>
+    <tr><td class="strong">30–49 席</td><td>NT$900</td><td>入門席次</td></tr>
+    <tr><td class="strong">50–199 席</td><td>NT$750</td><td>—</td></tr>
+    <tr><td class="strong">200 席以上</td><td>NT$600</td><td>大型連鎖／集團</td></tr>
+    <tr><td class="strong">NT$499</td><td>特案</td><td>僅限具體年度方案或超大型席次議定</td></tr>
+  </table></div>
+  <ul class="pts">
+    <li><b>定價錨</b>：對外「499 起」是量購甜頭；<b>實際成交走上面席次階梯</b>，對買家好算帳、對我們保住毛利。</li>
+    <li><b>⚠️ 待拍板</b>：一席開通的是 Plus（100 點）還是 Pro（200 點）等級？每席月費須<b>低於對應的個人訂閱</b>（個人 Plus 599／Pro 1,199）才撐得住「企業比較便宜」的說法——現行階梯 600/750/900 待依此校準。</li>
+    <li><b>試辦護欄</b>：免費試辦、限量席次＋體驗點數上限——沒效果不用買，也燒不垮我們的算力成本。</li>
+  </ul>
+
+  <h3>定價落點：用日本的價格，賣美國等級的功能</h3>
+  <p class="lead">跟全球同類比，我們 C 端定價<b>只有 ElliQ 的三成、care.coach 的一成不到</b>，但功能（真人臉真聲＋安全網）對標的正是這兩者；價格卻接近日本純監測產品——這是滲透期的「高性價比」定位。</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>產品</th><th>類型</th><th>月費（換算 NT$）</th><th>市場</th></tr>
+    <tr><td class="strong">care.coach</td><td>虛擬陪伴＋真人坐席</td><td>~6,270–7,850</td><td>美國</td></tr>
+    <tr><td class="strong">ElliQ</td><td>AI 陪伴機器人（另付硬體 $249）</td><td>~1,230–1,860</td><td>美國</td></tr>
+    <tr style="background:var(--mint)"><td class="strong">Munea Pro</td><td>AI 陪伴＋三腦安全＋12 人照護圈</td><td><b>1,199</b></td><td>台灣</td></tr>
+    <tr style="background:var(--mint)"><td class="strong">Munea Plus</td><td>AI 陪伴＋三腦安全</td><td><b>599</b></td><td>台灣</td></tr>
+    <tr><td class="strong">象印みまもり</td><td>IoT 熱水瓶安否確認（非對話）</td><td>~690</td><td>日本</td></tr>
+    <tr><td class="strong">チカク まごチャンネル</td><td>家庭相簿電視投放（非 AI）</td><td>~310</td><td>日本</td></tr>
+  </table></div>
+  <p style="font-size:12.5px;color:#A9B3AE">換算概估：1 USD≈NT$31.5、1 JPY≈NT$0.21。企業端對照：Headspace for Work ~NT$32–95/員工·月（極輕量）、企業照顧津貼中位 ~NT$6,560/員工·月（Compt 2026）——Munea B2B 499–900 落在兩者中段。</p>
+
+  <div class="fig">
+    <div class="fig-title">價值錨定：一位長輩一個月的陪伴，不到一次看護班的錢</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 250" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <g font-size="13" fill="#33403D" font-weight="700">
+        <text x="20" y="46">養護機構</text><text x="20" y="90">外籍看護（月薪含食宿）</text><text x="20" y="134">日照中心</text><text x="20" y="178">Munea Pro</text><text x="20" y="216">Munea Plus</text>
+      </g>
+      <g>
+        <rect x="250" y="30" width="520" height="22" rx="11" fill="#C97A3D"/><text x="758" y="47" text-anchor="end" font-size="12.5" font-weight="800" fill="#fff">~NT$25,000+/月</text>
+        <rect x="250" y="74" width="460" height="22" rx="11" fill="#E09A5A"/><text x="698" y="91" text-anchor="end" font-size="12.5" font-weight="800" fill="#fff">~NT$22,000/月</text>
+        <rect x="250" y="118" width="400" height="22" rx="11" fill="#F4A261"/><text x="638" y="135" text-anchor="end" font-size="12.5" font-weight="800" fill="#fff">~NT$20,000/月</text>
+        <rect x="250" y="162" width="46" height="22" rx="11" fill="#2E8A83"/><text x="304" y="179" font-size="12.5" font-weight="800" fill="#1F6560">NT$1,199</text>
+        <rect x="250" y="200" width="24" height="22" rx="11" fill="#3AA8A0"/><text x="282" y="217" font-size="12.5" font-weight="800" fill="#1F6560">NT$599</text>
+      </g>
+    </svg>
+    </div>
+    <div class="fig-note">替代方案月成本為台灣市場概估（本國居服員時薪 ~NT$200–260、外籍看護月薪 ~2–3 萬含食宿、日照月費 ~1.5–2.5 萬——精確市價待單獨查證校準）。抄 care.coach 官網打法：不比「哪個 App 便宜」，比「請一個人要多少錢」。</div>
+  </div>
+
+  <h4>定價策略站在 2026 浪頭上</h4>
+  <ul class="pts">
+    <li><b>訂閱＋點數混合＝主流不是落後</b>：2026 年 43%→61% 企業走混合定價；採混合制的公司營收成長率比純訂閱高 38%。點數被業界定義為「訂閱與用量之間的橋樑」——我們的 100/200 點制正踩在浪頭中央。（Chargebee／Flexprice 2026）</li>
+    <li><b>下一步該補</b>：把 B2B「499 起對應多少席、900 對應多少席以下」的階梯門檻寫進定價頁，讓企業客戶自己估得出來、不必全走客製報價（一般 SaaS 慣例：50 席內折 0–10%、200–1,000 席折 15–30%）。</li>
+  </ul>
+
+  <h3>機構試辦 Offer Sheet（一張可以直接簽的合作方案）</h3>
+  <p class="lead">Pre-sales 階段最缺的不是願景，是「對方看完就能點頭」的一頁條件。這張表把試辦講死，讓機構窗口不必來回問：</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>條款</th><th>內容</th></tr>
+    <tr><td class="strong">對象與席次</td><td>長照機構／日照／養生村；試辦 <b>10–30 席</b>（先導小組、非全機構）</td></tr>
+    <tr><td class="strong">期間</td><td>14 天免費（特殊需求延長至 30 天）</td></tr>
+    <tr><td class="strong">試辦價格</td><td>免費；若延長或加大席次收象徵性導入保證金，<b>轉正式後全額折抵</b></td></tr>
+    <tr><td class="strong">導入與客服範圍</td><td>標準導入免費（線上教育訓練＋我方後台手動開通會員＋導入期專人客服）；到場訓練或客製整合另計</td></tr>
+    <tr><td class="strong">資料・同意・異常通知責任</td><td>長輩對話內容不外流、機構端看狀態與摘要；使用前取得長輩／家屬同意；異常訊號分級通知（保護事件不自動通知家庭）；醫療紅線＝不診斷、不判讀、不動用藥，一律導回醫師</td></tr>
+    <tr><td class="strong">成功條件（雙方開始前講定）</td><td>例：使用率、家屬滿意度、照服員重複關懷／家屬來電時間下降 ≥20%——指標與目標值試辦前寫死</td></tr>
+    <tr><td class="strong">終止條件</td><td>任一方不滿意可隨時終止、無違約金；資料依約刪除</td></tr>
+    <tr><td class="strong">轉正式方案</td><td>達標即轉正式付費，價格照席次階梯（30–49 席 900／50–199 席 750／200＋ 600）事先寫定、不臨時加價</td></tr>
+  </table></div>
+  <p style="font-size:12.5px;color:#A9B3AE">此為對外可用的試辦條件框架；正式版另附雙方用印之試辦合作備忘（含窗口、期間、指標）。</p>
+</section>
+
+<!-- ═══════════ 11 財務模型與關鍵指標 ═══════════ -->
+<section class="ch" id="s9b">
+  <div class="ch-head"><div class="ch-no">Chapter 11</div><h2>財務模型與關鍵指標（財務長視角）</h2></div>
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>這章給前期夥伴與新成員一個誠實的財務輪廓：<b>產品與購買流程已具試營運條件，但尚未完成商業與規模化驗證</b>，還沒有規模化的真實留存數據。所以分三層講——<b>已知的真數字</b>（單位經濟站得住：C 端毛利約 7 成、B2B 約 5 成半）、<b>業界標竿的假設</b>（全部標註待驗證）、<b>情境推演</b>（不是承諾）。重點不是預測賺多少，是讓夥伴看懂「這門生意的錢怎麼進、成本怎麼走、接下來要驗證什麼」。</p>
+  </div>
+
+  <h3>第一層：已知的真數字（單位經濟）</h3>
+  <div class="stats">
+    <div class="stat"><div class="v">~72–75<small>%</small></div><div class="k">C 端每訂戶月毛利率（<b>口徑：以毛營收 599 為分母、蘋果抽成列入 COGS</b>）：599 −（蘋果 15% 約 90 ＋ 視訊變動 60–90）＝毛利 419–449</div><div class="src">內部成本實測（768 單路已驗）</div></div>
+    <div class="stat"><div class="v">~57<small>%</small></div><div class="k">B2B 機構案例毛利（100 席機構：月收 7 萬、語音＋算力成本約 3 萬）</div><div class="src">內部 GTM 定價模型 2026-07</div></div>
+    <div class="stat"><div class="v">30<small>席</small></div><div class="k">養活一張常駐顯卡的席次數——業務鐵律：先簽滿 30 席、再開第二張卡</div><div class="src">內部算力經濟 2026-07</div></div>
+    <div class="stat"><div class="v">~NT$93<small>萬/月</small></div><div class="k">固定燒錢：12 人團隊 ~78 萬＋雲端與工具 ~15 萬（補助期自負約half）</div><div class="src">依 2026-07 人事與設備表</div></div>
+  </div>
+  <ul class="pts">
+    <li><b>點數制＝成本與收入綁定</b>：最貴的即時視訊按分計價（訂閱內含約 6 元/分 vs 全包成本 0.6–0.9 元/分）——用越多收越多，毛利不會被重度用戶吃掉。</li>
+    <li><b>誠實註記</b>：0.6–0.9 元/分只在顯卡用得夠滿時成立；使用率低時單位成本膨脹數倍（「閒置死亡谷」）。對沖手段＝B2B 排程權把卡疊滿＋先簽滿 30 席再開卡。</li>
+    <li><b>蘋果抽成</b>：年營收未達 100 萬美元適用小型企業 15%；跨過門檻後 30%——模型兩檔都算過，跨檻時 C 端毛利率約降 9 個百分點、仍站得住。</li>
+    <li><b>B2B 價格口徑對齊（誠實註記）</b>：對外報價「NT$499 起/席」＝量大階梯的促銷起點；<b>財務模型一律以 NT$600／750／900 三檔敏感度計算</b>（內部成本模型的建議帶），毛利以 600 底價含全成本仍 ≥5 成才簽——兩個數字用途不同、不衝突，但簽約以模型價為底線。</li>
+  </ul>
+
+  <h3>第二層：核心健康指標——標竿 × 目標 × 驅動因子</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>指標</th><th>業界標竿（出處見附錄）</th><th>我們的目標</th><th>為什麼有機會（驅動因子）</th><th>首 90 天驗證</th></tr>
+    <tr><td class="strong">留存／轉換</td><td>健康類試用→付費中位 <b>37.7%</b>（前 25% ＞51.4%）；<b>年繳續訂率 83.4% vs 高價月繳 12 個月留存僅 6.7%</b>（RevenueCat 2026）</td><td>試用轉換達中位、6 個月進前 25%；<b>年繳佔比拉到 5 成</b></td><td>陪伴是<b>每天主動開口</b>的產品；「子女付費＋爸媽使用」雙留存結構。⚠ 我們的 599 屬「高價月繳」＝業界留存最弱的形態——<b>推年繳是留存第一槓桿</b>（年繳品項已有）</td><td>試用→付費轉換、D30、年繳佔比</td></tr>
+    <tr><td class="strong">淨收入留存<br>NRR</td><td>B2B SaaS 中位 101–106%（小客戶層 97%）；低客單 C 端僅 2.7% 能破 100%（FE Intl／SaaS Capital 系）</td><td><b>B2B 席次線 NRR ＞105%</b>；C 端不硬套 NRR、改揭露「續訂率＋每戶月均消費成長」雙指標（誠實口徑）</td><td>升級階梯：Plus→Pro（12 人照護圈）→點數包（加購貴過訂閱）；B2B 從 30 席試辦→全機構→加 ESG 報告服務</td><td>升級率、點數包購買率、B2B 席次擴張率</td></tr>
+    <tr><td class="strong">LTV : CAC</td><td>≥3 為門檻（David Skok／Bessemer：另要求回本 ＜18 個月）；訂閱 App 實務漸走 4–5:1；Calm 案例約 3:1</td><td>首年 ≥2.5、規模化後 ≥3.5（情境：月流失 5% 時 LTV 毛利 ~8,000 → CAC 上限 ~2,700）</td><td><b>家庭圈＝內建轉介引擎</b>（一位長輩牽動全家）；B2B 一單 30 席＝一次獲客 30 席。台灣健康類 CAC 無公開數據——實投後回填、不先編</td><td>各通路 CAC 實測、家庭圈每戶成員數</td></tr>
+    <tr><td class="strong">活躍黏著</td><td>一般 App「好」＝DAU/MAU 20%；<b>AI 陪伴類無公開 DAU/MAU</b>——最貼近的公開數字＝ElliQ 日均 30+ 次互動、每週 6 天（紐約州官方）</td><td>不硬套 DAU/MAU；主指標改「<b>每週互動天數</b>」對標 ElliQ 6/7 天＋每次互動時長</td><td>每日主動關懷＋用藥回診提醒＝每天至少一次互動理由；互動由管家發起、不靠長輩自己想到</td><td>每週互動天數分布、日均互動次數</td></tr>
+  </table></div>
+  <p style="font-size:13px;color:#A9B3AE">LTV 情境算法：月 ARPU 599×85%（蘋果後）×73% 毛利 × 平均壽命（月流失 8%→12.5 個月／5%→20 個月／3%→33 個月）＝ LTV 毛利約 5,000／8,000／13,300 → LTV:CAC≥3 之下 CAC 上限約 1,700／2,700／4,400。流失率假設未經驗證、上線後以真數據回填。</p>
+
+  <h3>第三層：24 個月成長情境（情境推演，非承諾）</h3>
+  <div class="fig">
+    <div class="fig-title">月經常性收入（MRR）三情境 vs 損益兩平線</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <!-- 軸 -->
+      <line x1="70" y1="20" x2="70" y2="280" stroke="#E7E0D6" stroke-width="1.5"/>
+      <line x1="70" y1="280" x2="830" y2="280" stroke="#E7E0D6" stroke-width="1.5"/>
+      <g font-size="11" fill="#A9B3AE">
+        <text x="62" y="285" text-anchor="end">0</text>
+        <text x="62" y="215" text-anchor="end">50萬</text>
+        <text x="62" y="150" text-anchor="end">100萬</text>
+        <text x="62" y="85" text-anchor="end">150萬</text>
+        <text x="62" y="28" text-anchor="end">200萬</text>
+        <text x="70" y="300" text-anchor="middle">上線</text>
+        <text x="260" y="300" text-anchor="middle">6 個月</text>
+        <text x="450" y="300" text-anchor="middle">12 個月</text>
+        <text x="640" y="300" text-anchor="middle">18 個月</text>
+        <text x="830" y="300" text-anchor="middle">24 個月</text>
+      </g>
+      <!-- 損益兩平線 143萬 -->
+      <line x1="70" y1="94" x2="830" y2="94" stroke="#C97A3D" stroke-width="1.5" stroke-dasharray="7 5"/>
+      <text x="86" y="86" font-size="11.5" fill="#C97A3D" font-weight="700">損益兩平 ≈ 月營收 143 萬（固定燒錢 93 萬 ÷ 混合毛利 65%）</text>
+      <!-- 保守 -->
+      <path d="M70 280 C 260 272, 450 252, 640 226 S 800 196, 830 190" fill="none" stroke="#A9B3AE" stroke-width="2.5"/>
+      <text x="790" y="212" font-size="11.5" fill="#6E7B76" font-weight="700">保守</text>
+      <!-- 基準 -->
+      <path d="M70 280 C 260 258, 450 200, 640 118 S 800 62, 830 52" fill="none" stroke="#3AA8A0" stroke-width="3"/>
+      <circle cx="672" cy="94" r="5" fill="#3AA8A0"/>
+      <text x="672" y="118" font-size="11.5" fill="#1F6560" font-weight="800">基準：約 16–18 個月損益兩平</text>
+      <!-- 樂觀 -->
+      <path d="M70 280 C 240 240, 400 150, 520 86 S 720 20, 830 8" fill="none" stroke="#F4A261" stroke-width="2.5"/>
+      <circle cx="500" cy="94" r="5" fill="#F4A261"/>
+      <text x="470" y="70" font-size="11.5" fill="#C97A3D" font-weight="700">樂觀：約 12 個月</text>
+    </svg>
+    </div>
+    <div class="fig-note">基準情境假設：18 個月時 C 端 ~1,500 訂戶（MRR ~90 萬）＋ B2B ~1,200 席（~84 萬）。假設全數標示於附錄、上線後逐月以真數據校正；此為情境推演、非財測承諾。</div>
+  </div>
+
+  <h4>營收不是願望——把 1,200 席反推成銷售產能</h4>
+  <p>光寫「18 個月做到 1,200 席」是收入願望；要變成營運模型，得反推需要幾家機構、什麼成交節奏、團隊做不做得到：</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>反推項</th><th>假設</th><th>推得</th></tr>
+    <tr><td class="strong">目標席次（18 個月）</td><td>1,200 席</td><td>—</td></tr>
+    <tr><td class="strong">平均每家機構席次</td><td>~40 席</td><td>需 <b>~30 家</b>付費機構</td></tr>
+    <tr><td class="strong">銷售週期</td><td>洽談→試辦→轉正式 約 2–4 個月</td><td>Phase 1 先深耕 2–3 家（證據工廠），Phase 2 才放大</td></tr>
+    <tr><td class="strong">成交率</td><td>試辦→付費 ~40%（未驗證假設）</td><td>要碰 ~75 家機構才成交 30 家</td></tr>
+    <tr><td class="strong">每月導入產能</td><td>Phase 2（第 7–18 月）平均</td><td>需 <b>~2.5 家/月</b>成交——是否可行取決於通路夥伴帶量</td></tr>
+  </table></div>
+  <p><b>誠實結論</b>：以 12 人團隊、無專職區域業務，<b>純靠自己直銷很難每月成交 2.5 家</b>——所以基準情境的 B2B 段其實隱含「Phase 2 要靠通路夥伴（電信／保全／機構公協會）帶量」這個前提。若通路沒談成，B2B 段要往保守情境靠、C 端要補上缺口。這也修正了敘事：<b>機構在 Phase 1 是「證據工廠」（少數幾家深耕）、到 Phase 2 才是「銷售引擎」（靠通路放大）</b>——兩個角色分屬不同階段、不衝突。</p>
+
+  <h3>敏感度與誠實風險（財務長最擔心的五件事）</h3>
+  <ul class="pts">
+    <li><b>算力閒置死亡谷</b>：收入起來前顯卡照燒（空轉期每月純燒 1.1–1.7 萬＋團隊薪資）——對策：常駐卡數量跟著簽約席次走、不預先擴張。</li>
+    <li><b>流失率假設未驗證</b>：整個 LTV 模型架在月流失 3–8% 的假設帶上——首 90 天的真實 D30 與退訂率是全模型最重要的一個數字。</li>
+    <li><b>B2B 收款節奏</b>：機構與企業有帳期（月結 30–60 天），成長越快、墊付越多——簽約時要守月結 30 天底線。</li>
+    <li><b>蘋果抽成跳檔</b>：年營收破 100 萬美元後 15%→30%，C 端毛利率降約 9 個百分點——屆時以年約與 B2B 佔比對沖。</li>
+    <li><b>補助依賴</b>：政府補助改善的是研發期現金流、不是單位經濟——模型全程以「無補助」口徑計算，補助視為加分不是前提；長照輔具補助屬條件式（資格與通路未完成前收入記 0）。</li>
+    <li><b>法規屬性未定案</b>：應向 TFDA 提出醫用軟體屬性管理查詢、建立「允許／禁止的健康宣稱矩陣」，並為危機事件建立可稽核的處理紀錄（誤報／漏報／通知時間可回溯）——這是進健康市場的信任地基，要在規模化前完成。</li>
+  </ul>
+
+  <h3>首 90 天驗證計畫（含通過門檻——過了才推進下一步）</h3>
+  <div class="tbl-wrap"><table>
+    <tr><th>驗證項</th><th>做法</th><th>通過門檻（暫定、可依品類基準校準）</th></tr>
+    <tr><td class="strong">① 客群證據</td><td>30 組遠距子女／長輩訪談＋失敗案例，明確排除不適用族群</td><td>7 成以上受訪者能清楚重述產品價值；前 3 大拒絕理由有對策</td></tr>
+    <tr><td class="strong">② C 端漏斗</td><td>至少 100 組真實家庭試辦（先 20–30 組可行性、再擴大）</td><td>安裝完成率 ≥70%、D30 家庭留存 ≥35%、試用→付費 ≥10%（真實付費、不用問卷代替）</td></tr>
+    <tr><td class="strong">③ B2B 付費證據</td><td>2 家機構、各 10–30 席，轉正式條件開始前寫死</td><td>至少 1 家真實付費續約；照服員重複關懷或家屬詢問時間下降 ≥20%</td></tr>
+    <tr><td class="strong">④ 單位經濟</td><td>以真實用量（p50／p90）重算每戶／每席貢獻毛利</td><td>含蘋果抽成、算力閒置、客服、退款、備援後<b>毛利 ≥60%、CAC 回收 ≤6 個月</b></td></tr>
+    <tr><td class="strong">⑤ 安全與法規</td><td>TFDA 屬性查詢＋宣稱矩陣＋危機事件演練與留痕</td><td>100% 高風險情境有可稽核處理紀錄；誤報／漏報／通知時間可回溯</td></tr>
+  </table></div>
+
+  <h3>本計畫的階段定位：初創 · Pre-Sales（正式營收前）</h3>
+  <p class="lead">用初創的階段來讀這份計畫，才不會拿錯尺量：Munea 現在是「<b>產品已備妥、進入市場驗證前</b>」的階段——iOS 試營運中、正式營收數據累積前。這個階段的商業計畫，本質是「<b>論證 × 行動藍圖</b>」，不是「已被驗證的損益表」。</p>
+  <div class="cards">
+    <div class="card"><h4>已經站得住的</h4><p>市場與產品論證——高齡化、照護缺口、痛點、技術差異化、定位，全部用可查證的外部證據撐著（本文第 2–7 章）。這是「為什麼值得做」的部分。</p></div>
+    <div class="card"><h4>本來就還在前方的</h4><p>真實牽引力數據（留存、付費、流失）——初創在這個階段本來就還沒有，這不是缺點，是<b>階段特徵</b>。它正是第 11 章 90 天先導試辦要親手生出來的第一批數據。</p></div>
+    <div class="card coral"><h4>下一個里程碑</h4><p>90 天五項驗證達標 ＝ 從「pre-sales 論證」進入「<b>可規模化</b>」的門票。在那之前，補助、日本、企業大單都是達標後才啟動的選項，不寫進基準營收。</p></div>
+  </div>
+  <p><b>正確讀法與用途</b>：把第 2–10 章當成「為什麼這門生意值得做」，把第 11 章的 90 天驗證計畫當成「接下來怎麼一步步把假設變成事實」。這份文件的用途是<b>招募前期合作夥伴、讓新成員與夥伴快速看懂產品全貌，並作為對齊用的單一事實來源</b>——不是募資簡報。</p>
+</section>
+
+<!-- ═══════════ 12 目標與遠景 ═══════════ -->
+<section class="ch" id="s10">
+  <div class="ch-head"><div class="ch-no">Chapter 12</div><h2>目標與遠景</h2></div>
+  <div class="verdict"><span class="tag">本章結論</span>
+    <p>我們的根很簡單一句話：<b>沒有人該在老去的路上，孤單到沒人發現。</b>遠景是讓「家裡有一個人一直都在」變成每個家庭都負擔得起的日常；目標分三階段推進，每階段只盯<b>一個北極星指標</b>——先證明陪伴、再放大家庭、最後成為基礎設施。</p>
+  </div>
+
+  <h3>遠景：我們的根</h3>
+  <div class="cards">
+    <div class="card coral"><h4>使命（我們為什麼存在）</h4><p><b>沒有人該在老去的路上，孤單到沒人發現。</b>我們用一個會記得你、聽得懂你、出事會叫人的 AI，讓「家裡有一個人一直都在」不再是奢侈，而是每個家庭都負擔得起的日常。</p></div>
+    <div class="card"><h4>願景（10 年）</h4><p>讓 Munea 成為<b>華語世界每個家庭的「健康陪伴基礎設施」</b>——家裡有長輩，就有沐寧，像水電一樣自然。再把這份有溫度的陪伴，帶向全球高齡化最深的市場。</p></div>
+  </div>
+
+  <h3>北極星指標：我們只認一個數字</h3>
+  <div class="quoteband"><p>北極星＝<b>「每週被好好陪到的長輩數」</b>（每週真的有互動、而且互動有意義的長輩人數）。</p></div>
+  <p>下載數、註冊數都會騙人。這門生意成立與否，只看一件事——<b>有多少長輩，每週真的被好好陪到了</b>。陪到了就會留下；留下了子女就願意付費；付費穩定，生意才成立。<b>營收是結果，陪伴是原因</b>——所以我們把「陪伴的量與質」當唯一的總指標，其他數字都是它的下游。</p>
+
+  <h3>目標：三階段，各盯一個北極星</h3>
+  <p class="lead">承接第 11 章的 90 天先導試辦——先跑出 PMF 訊號，才進 Phase 1；每階段的門要「數據達標」才開下一道。</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>階段</th><th>目標（這一仗打贏什麼）</th><th>北極星指標</th><th>對應追蹤數據</th></tr>
+    <tr>
+      <td class="strong">Phase 1<br>站穩灘頭堡<br><span style="font-weight:400;color:var(--muted)">現在–約 12 個月</span></td>
+      <td>台灣「遠距子女 × 可自用手機的 65–79 父母」站穩；用真數據驗證單位經濟；首批機構試辦轉正式付費。</td>
+      <td><b>每週被好好陪到的長輩數</b>（先重質：留得住、聊得深）</td>
+      <td>D30 家庭留存、每週互動天數、試用→付費轉換、年繳佔比、付費家庭數／MRR、機構付費續約數、危機事件正確處理率</td>
+    </tr>
+    <tr>
+      <td class="strong">Phase 2<br>從陪爸媽到陪全家<br><span style="font-weight:400;color:var(--muted)">約 12–24 個月</span></td>
+      <td>沿家庭健康圈把服務延伸到<b>全家人的身心照護</b>；B2B（機構＋企業 ESG）長成第二條收入引擎。</td>
+      <td><b>活躍家庭數</b>（家庭圈裡真的多人在用，不只長輩一人）</td>
+      <td>每戶平均活躍成員數、跨代使用率、NRR（B2B 席次線）、B2B 席次數與續約率、ESG 成果報告服務營收</td>
+    </tr>
+    <tr>
+      <td class="strong">Phase 3<br>成為基礎設施<br><span style="font-weight:400;color:var(--muted)">約 24 個月＋</span></td>
+      <td>把台灣可重現的「留存 × 付費 × 安全」數據帶去日本（<b>條件式：達標才啟動</b>）；朝「每個家庭的健康陪伴基礎設施」定位邁進。</td>
+      <td><b>服務涵蓋的家庭總數</b>（跨市場）</td>
+      <td>日本試點留存與付費、白牌／通路夥伴數、平台服務規模、涵蓋長輩總數</td>
+    </tr>
+  </table></div>
+
+  <h3>Roadmap：不是「同時做」，是「一關過了才開下一關」</h3>
+  <p class="lead">12 人團隊最大的風險是<b>什麼都想同時做</b>，把 pre-sales 驗證的力氣稀釋掉。所以路線圖不照日曆排、照<b>關卡</b>排：前一關的數據沒過，就不開下一關的功能與市場。</p>
+  <div class="fig">
+    <div class="fig-title">Gate 排序：驗證先於擴張</div>
+    <div class="fig-scroll">
+    <svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" font-family="Noto Sans TC,sans-serif">
+      <line x1="60" y1="90" x2="820" y2="90" stroke="#E7E0D6" stroke-width="2"/>
+      <!-- Gate 1 -->
+      <circle cx="120" cy="90" r="9" fill="#3AA8A0"/>
+      <text x="120" y="62" text-anchor="middle" font-size="13" font-weight="800" fill="#1F6560">Gate 1</text>
+      <text x="120" y="118" text-anchor="middle" font-size="11.5" fill="#33403D">家庭試辦成立</text>
+      <text x="120" y="135" text-anchor="middle" font-size="10.5" fill="#6E7B76">D30 留存、首通成功</text>
+      <!-- Gate 2 -->
+      <circle cx="330" cy="90" r="9" fill="#3AA8A0"/>
+      <text x="330" y="62" text-anchor="middle" font-size="13" font-weight="800" fill="#1F6560">Gate 2</text>
+      <text x="330" y="118" text-anchor="middle" font-size="11.5" fill="#33403D">付費意願成立</text>
+      <text x="330" y="135" text-anchor="middle" font-size="10.5" fill="#6E7B76">試用→付費 ≥10%</text>
+      <!-- Gate 3 -->
+      <circle cx="540" cy="90" r="9" fill="#3AA8A0"/>
+      <text x="540" y="62" text-anchor="middle" font-size="13" font-weight="800" fill="#1F6560">Gate 3</text>
+      <text x="540" y="118" text-anchor="middle" font-size="11.5" fill="#33403D">機構流程成立</text>
+      <text x="540" y="135" text-anchor="middle" font-size="10.5" fill="#6E7B76">1 家付費續約、省人力</text>
+      <!-- 擴張 -->
+      <circle cx="730" cy="90" r="9" fill="#F4A261"/>
+      <text x="730" y="62" text-anchor="middle" font-size="13" font-weight="800" fill="#C97A3D">才擴張</text>
+      <text x="730" y="118" text-anchor="middle" font-size="11.5" fill="#33403D">Android・ESG 深度</text>
+      <text x="730" y="135" text-anchor="middle" font-size="10.5" fill="#6E7B76">完整企業功能・規模投放</text>
+      <!-- 條件式後段 -->
+      <rect x="60" y="185" width="760" height="90" rx="14" fill="#FCFAF6" stroke="#E7E0D6"/>
+      <text x="80" y="212" font-size="12.5" font-weight="800" fill="#C97A3D">通過三關之後（條件式、非平行）</text>
+      <text x="80" y="236" font-size="11.5" fill="#33403D">▸ 全家身心照護功能擴展　▸ 長照 3.0 輔具租賃通路　▸ B2B 靠通路夥伴放大</text>
+      <text x="80" y="258" font-size="11.5" fill="#33403D">▸ 日本探路（台灣留存／付費／安全數據達標後才啟動）　▸ 長期：家庭健康陪伴基礎設施</text>
+    </svg>
+    </div>
+    <div class="fig-note">iOS 試營運與資安檢測是 Gate 1–2 期間的必要基建；Android、ESG 深度功能、完整企業後台、規模化投放都排在「付費與機構流程成立」之後——先證明再擴張，護住現金與團隊專注力。</div>
+  </div>
+
+  <div class="quoteband"><p>「我們不是在做一個 App，是在做每個家庭裡那位『一直都在』的人。」</p></div>
+</section>
+
+<!-- ═══════════ 附錄：資料出處 ═══════════ -->
+<section class="ch" id="src">
+  <div class="ch-head"><div class="ch-no">Appendix</div><h2>資料出處</h2></div>
+  <!--SOURCES_BODY-->
+  <h3>北美（第 2、4 章）</h3>
+  <ul class="pts" style="font-size:13.5px">
+    <li>Population Reference Bureau，Fact Sheet: Aging in the United States（2026）—— prb.org/resource/fact-sheet-aging-in-the-united-states</li>
+    <li>U.S. Census Bureau，Population 65 and Over 互動視覺（2050 預測）—— census.gov</li>
+    <li>AARP／National Alliance for Caregiving，Caregiving in the U.S. 2025（2025-07-24 發布）—— aarp.org/pri/topics/ltss/family-caregiving/caregiving-in-us-2025</li>
+    <li>U.S. Surgeon General Advisory，Our Epidemic of Loneliness and Isolation（HHS）—— hhs.gov</li>
+    <li>Global Venturing，Corporates' $2tn AgeTech Market；MarketIntelo，AgeTech／Silver Economy 報告（2026）</li>
+    <li>360iResearch，AI Elderly Companion Robot 市場報告（2026）；Fortune Business Insights／Business Research Insights，AI Companion 市場（2026）——多機構估算並陳</li>
+    <li>TheGerontechnologist，AgeTech Market Map 2025（創投投資年度數據）</li>
+    <li>Justworks／WEX，2026 Employee Benefits Trends；HR benefits 產業報告（LSA 使用率 89% vs 46%、福利中位數 $2,500）</li>
+    <li>Skadden，New California Companion Chatbot Law（SB 243 法規分析）；California Legislative Information（SB 243 條文）</li>
+    <li>CNBC／CNN（2026-01-07），Google 與 Character.AI 未成年訴訟和解報導；Time，Replika FTC 立案報導</li>
+    <li>Dallas Innovates（Cariloop 募資）；各競品官網與募資公開報導（ElliQ／care.coach／Sensi.ai／Addison Care／GrandPad）</li>
+  </ul>
+  <!--SOURCES_TW-->
+  <h3>台灣（第 2、3、4 章）</h3>
+  <ul class="pts" style="font-size:13.5px">
+    <li>內政部統計處，114 年第 48 週統計通報（65+ 人口、一人戶 25.8%）—— moi.gov.tw（2025-11-29）</li>
+    <li>中央社／公視新聞，台灣正式進入超高齡社會（467.3 萬人／20.06%）——（2026-01-09）；公視，僅老人居住宅近 92 萬宅（2026 Q1）</li>
+    <li>TVBS，行政院 62.5 億獨居長者服務（2026-03）；聯合新聞網，獨居長者相關報導（2026）</li>
+    <li>遠見雜誌／衛福部長照專區，長照 3.0 核定與三階段（2025-12-31 核定）；Ankecare，長照基金財源（2026-05-21）</li>
+    <li>中國時報（2026-07-02）／報導者／Ankecare（2025-11），照服員供需與缺工結構；中央社，外籍人力三階段（2026-07-01）</li>
+    <li>衛福部長照給付辦法（智慧輔具租賃 6 萬/3 年、安全看視類 EI01–EI05）；衛福部，住宿機構品質獎勵計畫公告（2024-09）</li>
+    <li>工研院 IEK（銀髮消費 3.6 兆）；PwC《2025 高齡與長照產業發展趨勢》（軟體＋AI 約 30 億——僅作氛圍脈絡、不作推導分母）；FINDIT 台灣新創投資趨勢年報（2025-10）</li>
+    <li>衛福部，住宿式長照機構盤點（113 年底 1,687 家、11.87 萬床、使用率 83%）——B2B 由下而上模型分母；TFDA 醫用軟體分類分級參考指引（屬性查詢依據）</li>
+    <li>內部事實查核（2026-07-18，Codex 獨立評審）——本版已依其修正：一人戶代理值註記、輔具補助改條件式、市場改由下而上模型、44.4% 與 ElliQ 95% 解讀降級為相關性與自陳、Jubo 更新 2,700+ 機構、ElliQ 日本上市未定、B2B 價格口徑對齊、90 天驗證加通過門檻</li>
+    <li>TWNIC《2025 台灣網路報告》（70+ 上網率與學習意願）；天下雜誌（孤獨死風險，原始統計 2021 年、誠實標註）</li>
+    <li>競品：天下／數位時代（智齡科技）；財訊／TechNews（上緯智聯 TaiiBot, 2026-03）；工研院 ICT 期刊（AMIBO）；Osmile 官網；愛長照官網；聯合新聞網（電信樂齡布局）</li>
+  </ul>
+  <!--SOURCES_JP-->
+  <h3>日本（第 2、4 章）</h3>
+  <ul class="pts" style="font-size:13.5px">
+    <li>內閣府《令和 7 年版高齡社會白書》；總務省統計局（65+ 3,618.9 萬人, 2026-01）；社人研世帶推計（獨居高齡世帶）</li>
+    <li>厚勞省，認知症高齡者最新推計 471.6 萬人（2025、基於 2022 悉皆調查——舊制 700 萬已下修）；第 9 期介護保險事業計畫（人力缺口 2026:25 萬／2040:57 萬）</li>
+    <li>警察廳／內閣府，孤獨死 2025 年 76,941 人（首次官方統計）；日經相關報導</li>
+    <li>厚勞省，2026 年度介護科技導入補助（公費 4/5、見守り・對話類重點）——各都道府縣 2026-04 發布；經產省，企業介護兩立支援指引（2025-04 法定義務）</li>
+    <li>市場規模並陳：富士經濟／矢野經濟／Seed Planning（口徑差異 3 倍、誠實標註）</li>
+    <li>兼松 × Intuition Robotics ElliQ 出資公告（2025-09）；Forbes JAPAN；高齡者住宅新聞（チカク「いっしょ。」2026-03 上線）；PR TIMES（Starley 茶の間Cotomo）；ロボスタ（LOVOT）；Sony 官網（aibo 停售公告 2026-06-25）；kiracare（PALRO 導入 1,300+ 機構）；ITmedia（象印みまもりほっとライン 25 年）；Secom（親御さん安心パッケージ／まごチャンネル）</li>
+  </ul>
+  <h3>財務標竿（第 11 章）</h3>
+  <ul class="pts" style="font-size:13.5px">
+    <li>RevenueCat，State of Subscription Apps 2026（試用→付費 37.7% 中位／年繳續訂 83.4%／高價月繳 12 個月留存 6.7%）—— revenuecat.com/state-of-subscription-apps；9to5Mac 報導（2026-05-27）</li>
+    <li>FE International／Levera Partners／SaaS Capital 系彙整，NRR 標竿（B2B 中位 101–106%、SMB 97%、低客單 C 端僅 2.7% 破 100%——後者為二手彙整、標「產業觀察」）</li>
+    <li>David Skok（Matrix Partners）SaaS Metrics 2.0（LTV:CAC ≥3 出處）；Foundry CRO 引 Bessemer 2026（回本 ＜18 個月）；SEM Nexus（訂閱 App 實務 4–5:1）；Replo（Calm 案例 LTV ~$120／CAC ~$40）</li>
+    <li>ElliQ 官網（訂閱 $29.99–39.99/月＋開通費 $249.99）；NY State Office for the Aging（日均 30+ 次互動、每週 6 天、孤獨感 95% 降幅——州政府一手）</li>
+    <li>Apple Developer 官方，App Store 小型企業計畫（淨營收 ＜US$100 萬適用 15%；訂閱標準制第一年 30%、第二年起 15%）</li>
+    <li>誠實聲明：D1/D7/D30 各來源互相矛盾（3%–25%）故不引精確數字；Replika／Headspace 營收各來源差 3–5 倍、僅作量級參考不引精確金額；台灣健康陪伴 App CAC 無公開數據、實投後回填。Calm／Headspace／Replika 皆未上市、數字為第三方推估。</li>
+  </ul>
+  <!--SOURCES_USER-->
+  <h3>用戶與策略（第 3、8 章）</h3>
+  <ul class="pts" style="font-size:13.5px">
+    <li>東華大學團隊，AI 陪伴與長者心理幸福感（418 位 60+ 受試、R²=44.4%），Frontiers in Public Health（2026-05）</li>
+    <li>TWNIC 2025（長者上網率 vs 學習意願）；AllSeniors（50+ GenAI 採用 18%→30%, 2026）</li>
+    <li>勞動部推估／康健（就業照顧者 200 萬+、年 13.3 萬人離職）；AARP Caregiving in the US 2025（長距離照顧者成長最快）；家庭照顧者 231 萬為 2015 年推估——誠實標舊、建議向家總索取新版</li>
+    <li>NY State Office for the Aging（ElliQ 試點：800+ 長者、日均 30 次互動、95% 回報孤獨感下降）；Fierce Healthcare（ElliQ 華盛頓州 Medicaid 給付）</li>
+    <li>Marketing Week／SBI Growth／Contrary Research（Headspace／Calm B2B 擴張路徑與 per-seat 價）；Seed Planning（日本見守り市場 2020:262 億→2030:381 億日圓）</li>
+    <li>GTM 標竿（第 9、10 章）：PR Newswire／NYSOFA（ElliQ Medicaid 給付 2026-03、3–4 年週期）；PR TIMES（チカク×J:COM 548 萬戶）／象印ダイレクト／SECOM 見守り（日本通路）；Jubo 官網 About（2,700+ 機構、嘉高駐點直銷）；care.coach pricing（$199–249／月、替代方案月成本錨定）；Chargebee／Flexprice／PYMNTS（2026 混合定價趨勢、混合制營收成長 +38%）；Compt 2026（企業照顧津貼中位 $2,500/員工/年）；愛長照／iSPOT Media／adHub（台灣熟齡行銷通路與訴求案例）</li>
+    <li>監管：Hong Kong Free Press（中國 AI 陪伴新規 2026-07-16 實施）；Fortune（Character.AI／Google 和解 2026-01）；加州 SB 243；美國 GUARD Act 進度</li>
+    <li>內部一手研究交叉校準：用戶洞察（2026-06-26）、市場競品調研（2026-06-26）、品牌定位（2026-06-27）、B2B 導入策略 GTM（2026-07-17）——均在 docs/</li>
+  </ul>
+</section>
+
+<footer>
+  Munea 沐寧 · 嘉瑪科技股份有限公司 ｜ 本文件為內部商業計畫，未經同意請勿外流。<br>
+  數據時效：優先採用 2026 年 3 月後公開資料；個別最新可得年份於出處註明。
+</footer>
+
+</main>
+</div>
+
+<script>
+/* 目錄捲動高亮 */
+(function(){
+  var links = document.querySelectorAll('.toc a');
+  var secs = [];
+  links.forEach(function(a){ var s = document.querySelector(a.getAttribute('href')); if (s) secs.push([s, a]); });
+  function onScroll(){
+    var y = window.scrollY + 140;
+    var cur = secs[0] && secs[0][1];
+    secs.forEach(function(p){ if (p[0].offsetTop <= y) cur = p[1]; });
+    links.forEach(function(a){ a.classList.toggle('on', a === cur); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+})();
+</script>
+</body>
+</html>
