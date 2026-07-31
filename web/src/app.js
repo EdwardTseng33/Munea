@@ -704,6 +704,7 @@ function setLocalizedCallHint(state, busy = false) {
     developerReady: 'voice.call.developerReady',
     firstWarmup: 'voice.call.firstWarmup',
     idleEnded: 'voice.call.idleEnded',
+    idleWarning: 'voice.call.idleWarning',
     openingWarmup: 'voice.call.openingWarmup',
     ready: 'voice.ready',
     speaking: 'voice.call.speaking',
@@ -4667,6 +4668,9 @@ window.MuneaAvSyncMeter = AvSyncMeter;
 // 聲波波頻：收音／講話都跟著「真實音量」跳；沒聲音就低伏收攏，不再是常亮的假 loading
 const FaceWave = {
   bars: null, raf: 0, src: null, cur: 0,
+  // 靜音門檻（2026-08-01）：安靜房間的底噪經過 micLevel 放大約落在 0.05-0.1，
+  // 低於這條線一律當作沒聲音＝波紋躺平不抖。調高＝更安靜但小聲說話會慢半拍才起波。
+  QUIET_FLOOR: 0.12,
   _init() { this.bars = Array.prototype.slice.call(document.querySelectorAll('.face-wave i')); },
   start(getLevel) {
     this.src = getLevel;                                     // 已在跑就只換來源（收音↔講話）
@@ -4674,13 +4678,19 @@ const FaceWave = {
     if (this.raf) return;
     const loop = () => {
       const n = this.bars.length;
-      const target = Math.max(0, Math.min(1, this.src ? (this.src() || 0) : 0));
+      // 2026-08-01（Edward 真機：「待機時收音動畫一直閃爍，感覺很怪」）：
+      // 安靜的房間麥克風還是會收到底噪（音量 × 8 放大後約 0.05-0.1），舊算式沒有靜音門檻，
+      // 那點底噪乘上每根自己的擺動就變成「沒人講話卻一直抖」。加一道靜音門檻：
+      // 低於門檻一律當作沒聲音，波紋安靜躺平；真的有人開口才起來。
+      const raw = Math.max(0, Math.min(1, this.src ? (this.src() || 0) : 0));
+      const target = raw < FaceWave.QUIET_FLOOR ? 0 : (raw - FaceWave.QUIET_FLOOR) / (1 - FaceWave.QUIET_FLOOR);
       this.cur += (target - this.cur) * 0.35;                // 平滑起落，不抖
       const t = performance.now() / 1000;
+      const quiet = this.cur < 0.02;                         // 已經躺平：連擺動都不要算，維持靜止高度
       for (let i = 0; i < n; i++) {
         const shape = 1 - Math.abs(i - (n - 1) / 2) / n;     // 中間高、兩側低＝聲波形狀
         const wob = 0.5 + 0.5 * Math.sin(t * (5.2 + (i % 4) * 1.9) + i * 1.9);  // 每根有自己的節奏＝顆粒感（Edward 7/9）
-        const h = 0.2 + this.cur * (0.3 + shape * 0.55 + wob * 0.65);
+        const h = quiet ? 0.2 : 0.2 + this.cur * (0.3 + shape * 0.55 + wob * 0.65);
         this.bars[i].style.transform = 'scaleY(' + Math.min(1.8, h).toFixed(2) + ')';
       }
       this.raf = requestAnimationFrame(loop);
@@ -4702,6 +4712,14 @@ let callPreflightPending = false;
 function setCallPreflightPending(on, pendingLabel = muneaT('voice.connecting', '')) {
   callPreflightPending = on;
   if (!on) hideBusyCard();   // 排隊卡跟著撥號前置狀態走：接通／取消／失敗任何一條路離開排隊就收卡
+  // 2026-08-01：撥號前置一結束、又沒真的撥起來（失敗／取消／被擋），把提早切過去的
+  // 「撥通中」畫面收回待機——配合 connectCall 開頭「先切畫面再跑網路」那一刀。
+  if (!on && !callDialing && !callConnected) {
+    try {
+      const _c = document.getElementById('chat');
+      if (_c && _c.dataset.state === 'connecting') _c.dataset.state = 'idle';
+    } catch (e) {}
+  }
   const b = $('#callToggle'); if (!b) return;
   b.setAttribute('aria-busy', on ? 'true' : 'false');
   const lbl = $('#callToggleLabel');
@@ -7350,6 +7368,15 @@ async function connectCall() {
   ), 'chat')) return;
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
+  // 2026-08-01（Edward 真機：「按下去會 lag 一陣子才轉撥通中，會以為當機」）：
+  // 畫面的「撥通中」原本要等帳號確認／點數／向總機叫號整趟跑完（那幾支各 0.7-1.2 秒）
+  // 才切——手指按下去到畫面有反應中間空白一大段。改成**先把畫面切過去、再去跑那些事**；
+  // 任何一條失敗路徑會經過 setCallPreflightPending(false)，那裡負責把畫面切回待機。
+  try {
+    const _chatEl0 = document.getElementById('chat');
+    if (_chatEl0 && _chatEl0.dataset.state !== 'connecting') _chatEl0.dataset.state = 'connecting';
+    setLocalizedCallHint('connecting', true);
+  } catch (e) {}
   hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
   if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 若正在「先用文字聊」，重新真的撥號前先收掉面板，避免兩層畫面疊在一起（2026-07-24 P0）
   // Give immediate, cancellable feedback before any optional network work.
@@ -7592,7 +7619,14 @@ async function connectCall() {
         // Edward 2026-07-11 拍板：提醒做不好就拿掉、不要再吵——兩段提醒全停（nudge 不再呼叫），
         // 只留第三段「沉默 90 秒安靜收線」。要復原提醒＝把下兩行換回 LiveVoice.nudge(1)/nudge(2)。
         if (_idleStage === 0) { _idleStage = 1; _idleLast = Date.now(); }
-        else if (_idleStage === 1) { _idleStage = 2; _idleLast = Date.now(); }
+        else if (_idleStage === 1) {
+          _idleStage = 2; _idleLast = Date.now();
+          // 2026-08-01（Edward 真機：「不講話怎麼自己就斷了」）：兩段語音提醒 7/11 已拿掉，
+          // 於是 90 秒沉默的自動收線變成「毫無預警忽然斷掉」＝很像當機。這裡補一句
+          // **畫面上的**預告（不出聲，維持 7/11「不要再吵」的決定），最後 30 秒才收線。
+          try { setLocalizedCallHint('idleWarning'); } catch (e) {}
+          try { trackProductEvent('voice_idle_warning_shown', { afterMs: _idleGapMs * 2 }); } catch (e) {}
+        }
         else { clearInterval(_idleMon); _autoEndCall(); }                              // 第三段沉默 → 自動收線
       }, 1500);
     };

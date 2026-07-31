@@ -454,6 +454,7 @@
   "voice.call.firstWarmup": "準備しています。初回は30秒ほどかかることがあります…",
   "voice.call.openingWarmup": "音声と映像を準備しています…",
   "voice.call.idleEnded": "いったん通話を終了しました。また話したくなったら呼んでください。",
+  "voice.call.idleWarning": "そこにいますか？このまま静かなら、いったん通話を終了しますね。",
   "voice.call.goodbye": "今日も楽しかったです。またお話ししましょう！",
   "voice.call.connectedCaption": "つながりました。そのまま話しかけてください。",
   "voice.call.listeningPrompt": "思いついたことを話してください。聞いています。",
