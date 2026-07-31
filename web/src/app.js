@@ -1493,15 +1493,26 @@ async function finishFamilyRelayClaim(relay, action) {
 window.__muneaFamilyRelays = { create: createFamilyRelay, claim: claimNextFamilyRelay, finish: finishFamilyRelayClaim, refreshMembers: refreshFamilyRelayMembers };
 
 // ===== 聊聊 AI 幫你把提醒設進 App（跟手動新增走同一份清單 + 同一套雲端/手機通知）· 2026-07-09 Edward =====
+const INTEREST_TOPIC_KEYS = { '旅遊景點': 'legacyUi.topic.travel', '美食餐廳': 'legacyUi.topic.food', '影劇戲劇': 'legacyUi.topic.tv', '新聞時事': 'legacyUi.topic.news', '健康養生': 'legacyUi.topic.health', '運動': 'legacyUi.topic.sports', '懷舊老歌': 'legacyUi.topic.music', '園藝花草': 'legacyUi.topic.gardening', '歷史故事': 'legacyUi.topic.history', '寵物': 'legacyUi.topic.pets', '棋牌麻將': 'legacyUi.topic.games', '天氣節氣': 'legacyUi.topic.weather' };
+function interestTopicLabel(t) { return INTEREST_TOPIC_KEYS[t] ? muneaT(INTEREST_TOPIC_KEYS[t], t) : t; }
 function aiVisitLabel(dateISO, time) {
   try {
     const d = new Date(dateISO + 'T00:00');
+    const hasTime = !!(time && /^\d{1,2}:\d{2}$/.test(time));
+    if (!(muneaLocale() || 'zh-TW').startsWith('zh')) {
+      let label = new Intl.DateTimeFormat(muneaLocale(), { month: 'numeric', day: 'numeric', weekday: 'short' }).format(d);
+      if (hasTime) {
+        const p = time.split(':').map(Number);
+        label += ' ' + new Intl.DateTimeFormat(muneaLocale(), { hour: 'numeric', minute: '2-digit' }).format(new Date(2000, 0, 1, p[0], p[1]));
+      }
+      return label;
+    }
     const md = (d.getMonth() + 1) + '/' + d.getDate();
-    const wd = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+    const wd = [muneaT('mood.weekdayShortSun', '日'), muneaT('mood.weekdayShortMon', '一'), muneaT('mood.weekdayShortTue', '二'), muneaT('mood.weekdayShortWed', '三'), muneaT('mood.weekdayShortThu', '四'), muneaT('mood.weekdayShortFri', '五'), muneaT('mood.weekdayShortSat', '六')][d.getDay()];
     let tstr = '';
-    if (time && /^\d{1,2}:\d{2}$/.test(time)) {
+    if (hasTime) {
       const p = time.split(':').map(Number), h = p[0], m = p[1];
-      const ap = h < 12 ? '上午' : '下午', h12 = ((h + 11) % 12) + 1;
+      const ap = h < 12 ? muneaT('common.am', '上午') : muneaT('common.pm', '下午'), h12 = ((h + 11) % 12) + 1;
       tstr = ' ' + ap + ' ' + h12 + ':' + String(m).padStart(2, '0');
     }
     return md + '（' + wd + '）' + tstr;
@@ -5262,8 +5273,8 @@ function setupAuthControls() {
   const CK = 'munea.wxCache';
   try { const c = JSON.parse(localStorage.getItem(CK) || 'null'); if (c && Date.now() - c.t < 1800000) { wx.textContent = c.text; wrap.style.display = ''; return; } } catch (e) {}
   function wtxt(code) {
-    const M = [[0, '☀ 晴'], [1, '🌤 晴時多雲'], [2, '⛅ 多雲'], [3, '☁ 陰'], [45, '🌫 有霧'], [51, '🌦 毛毛雨'], [61, '🌧 有雨'], [71, '❄ 下雪'], [80, '🌧 陣雨'], [95, '⛈ 雷雨']];
-    let t = '⛅ 多雲'; for (const [c, s] of M) if (code >= c) t = s; return t;
+    const M = [[0, '☀ ' + muneaT('weather.clear', '晴')], [1, '🌤 ' + muneaT('weather.mostlyClear', '晴時多雲')], [2, '⛅ ' + muneaT('weather.cloudy', '多雲')], [3, '☁ ' + muneaT('weather.overcast', '陰')], [45, '🌫 ' + muneaT('weather.fog', '有霧')], [51, '🌦 ' + muneaT('weather.drizzle', '毛毛雨')], [61, '🌧 ' + muneaT('weather.rain', '有雨')], [71, '❄ ' + muneaT('weather.snow', '下雪')], [80, '🌧 ' + muneaT('weather.showers', '陣雨')], [95, '⛈ ' + muneaT('weather.thunder', '雷雨')]];
+    let t = '⛅ ' + muneaT('weather.cloudy', '多雲'); for (const [c, s] of M) if (code >= c) t = s; return t;
   }
   function ok(text) { wx.textContent = text; wrap.style.display = ''; try { localStorage.setItem(CK, JSON.stringify({ t: Date.now(), text })); } catch (e) {} }
   function byCoords(lat, lon) {
@@ -9360,8 +9371,8 @@ function init() {
       '<div style="position:absolute;left:0;right:0;bottom:' + goalPct + '%;border-top:1.5px dashed rgba(90,105,99,.4)"></div>' + bars + '</div>';
   }
   // 家人示範數據（正式版＝那位家人自己的沐寧經雲端同步；頁面上方已標「示範資料」）
-  const FAM_WD = ['一', '二', '三', '四', '五', '六', '日'];
-  const FAM_WL = ['第1週', '第2週', '第3週', '第4週'];
+  const FAM_WD = [muneaT('mood.weekdayShortMon', '一'), muneaT('mood.weekdayShortTue', '二'), muneaT('mood.weekdayShortWed', '三'), muneaT('mood.weekdayShortThu', '四'), muneaT('mood.weekdayShortFri', '五'), muneaT('mood.weekdayShortSat', '六'), muneaT('mood.weekdayShortSun', '日')];
+  const FAM_WL = [1, 2, 3, 4].map(n => muneaT('mood.weekN', '第{n}週', { n }));
   // 7/9 正式化：家人趨勢改吃真同步的 35 天日記帳（沒有資料＝誠實空狀態）
   function famTrendFor(p) {
     const v = famVitalsFor(p);
@@ -9587,16 +9598,17 @@ function init() {
     try { trackProductEvent('activity_created', { kind: 'event', source: 'voice-ai' }); } catch (e) {}
     return { ok: true, title, label: act.dateLabel };
   };
-  const FAM_AVA = { '阿嬤': ['嬤', 'p-ama'], '美華': ['華', 'p-mei'], '志明': ['明', 'p-zhi'], '小寶': ['寶', 'p-bao'], '你': ['我', 'p-me'] };
+  const FAM_AVA = { '阿嬤': [() => muneaT('demo.family.gmInit', '嬤'), 'p-ama'], '美華': [() => muneaT('demo.family.d1Init', '華'), 'p-mei'], '志明': [() => muneaT('demo.family.s1Init', '明'), 'p-zhi'], '小寶': [() => muneaT('demo.family.g1Init', '寶'), 'p-bao'], '你': [() => muneaT('common.meInitial', '我'), 'p-me'] };
   function buildRankList(act) {
     const rows = Object.entries(act.answers).sort((x, y) => y[1] - x[1]);
     return '<div class="rank-list">' + rows.map((r2, i3) => {
       const av = FAM_AVA[r2[0]] || [r2[0][0], 'p-me'];
+      const avInit = typeof av[0] === 'function' ? av[0]() : av[0];
       const noCls = i3 === 0 ? 'n1' : i3 === 1 ? 'n2' : i3 === 2 ? 'n3' : '';
       return '<div class="rank-row"><span class="rank-no ' + noCls + '">' + (i3 + 1) + '</span>' +
-        '<span class="rank-av"><span class="init-ava ' + av[1] + '">' + av[0] + '</span></span>' +
-        '<b>' + r2[0] + '</b><span class="rank-score">答對 ' + r2[1] + ' 題</span></div>';
-    }).join('') + '</div><div class="qc-life">排名保留一天，明天自動收進記錄簿</div>';
+        '<span class="rank-av"><span class="init-ava ' + av[1] + '">' + avInit + '</span></span>' +
+        '<b>' + r2[0] + '</b><span class="rank-score">' + muneaT('activity.rankCorrectCount', '答對 {count} 題', { count: r2[1] }) + '</span></div>';
+    }).join('') + '</div><div class="qc-life">' + muneaT('activity.rankRetention', '排名保留一天，明天自動收進記錄簿') + '</div>';
   }
   // 揪一攤：我要去／我沒空 ＋ 名單（Edward 7/9：補完整互動）
   function renderEventBody(act, box) {
@@ -9643,7 +9655,8 @@ function init() {
       '<div class="walk-sum"><b>' + sum.toLocaleString() + '</b> / ' + goal.toLocaleString() + ' 步 · ' + (gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步' : '達標了！') + '</div>' +
       '<div class="walk-people">' + parts.map(n => {
         const av = FAM_AVA[n] || [(n || '')[0] || '', 'p-me'];
-        return '<div class="walk-p"><span class="init-ava ' + av[1] + '">' + av[0] + '</span><b>' + n + '</b><span>' + (+steps[n] || 0).toLocaleString() + ' 步</span></div>';
+        const avInit = typeof av[0] === 'function' ? av[0]() : av[0];
+        return '<div class="walk-p"><span class="init-ava ' + av[1] + '">' + avInit + '</span><b>' + n + '</b><span>' + (+steps[n] || 0).toLocaleString() + ' ' + muneaT('health.unit.steps', '步') + '</span></div>';
       }).join('') + '</div>' +
       '<div class="qc-num">你的步數自動從 Apple 健康帶入；' + cname() + '會問其他人今天走多少，' + (act.dueLabel || (act.days + ' 天內')) + '結算。</div>';
   }
@@ -10237,7 +10250,7 @@ function init() {
   let _intFromCall = false;
   function renderInterestPicks() {
     const box = $('#interestPicks');
-    if (box) box.innerHTML = INTEREST_TOPICS.map(t => '<button type="button" class="topic-chip' + (_intSel.includes(t) ? ' on' : '') + '" data-t="' + t + '">' + t + '</button>').join('');
+    if (box) box.innerHTML = INTEREST_TOPICS.map(t => '<button type="button" class="topic-chip' + (_intSel.includes(t) ? ' on' : '') + '" data-t="' + t + '">' + interestTopicLabel(t) + '</button>').join('');
     const now = $('#interestsNow');
     if (now) now.innerHTML = _intSel.length ? ('<b>已挑 ' + _intSel.length + ' 個</b> ›') : '›';
   }
