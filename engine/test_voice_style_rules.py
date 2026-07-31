@@ -171,6 +171,12 @@ class EveryShippedVoiceStyleBookTest(unittest.TestCase):
         "ja": ("[リアルタイム音声・話す量の上限]", "[リアルタイム音声・声の温度]",
                "[話しはじめの温度]", "[文の終わり方]", "[話と、その土地のこと]",
                "[気持ちを受けとめ、寄り添って導く]"),
+        "en": ("[Live speech · how much to say]", "[Live speech · energy]",
+               "[Warming up at the start]", "[How to end a sentence]",
+               "[Stories and local things]", "[Holding a feeling and walking with them]"),
+        "es": ("[Voz en directo · cuánto hablar]", "[Voz en directo · energía]",
+               "[El arranque, de menos a más]", "[Cómo terminar una frase]",
+               "[Historias y cosas de aquí]", "[Sostener lo que siente y acompañarle]"),
     }
 
     def test_every_book_keeps_the_six_sections(self):
@@ -186,7 +192,12 @@ class EveryShippedVoiceStyleBookTest(unittest.TestCase):
 
     def test_every_book_forbids_back_to_back_questions(self):
         """「不准連續兩輪都用問題收尾」是 Edward 兩次真機回報後立的硬規矩，每一國都要有。"""
-        markers = {"zh-TW": "不准連續兩輪都用問題收尾", "ja": "二巡続けて質問で終えてはいけません"}
+        markers = {
+            "zh-TW": "不准連續兩輪都用問題收尾",
+            "ja": "二巡続けて質問で終えてはいけません",
+            "en": "never end two turns in a row with a question",
+            "es": "nunca termine dos turnos seguidos con una pregunta",
+        }
         for locale in _shipped_voice_style_locales():
             marker = markers.get(locale)
             if not marker:
