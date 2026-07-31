@@ -705,7 +705,7 @@
   "subscription.confirmFacts": "{credits} credits each month · Up to {members} care circle members",
   "subscription.monthlyCreditsNote": "{credits} credits provide about {minutes} minutes of conversation. Add more when they run out to keep talking.",
   "subscription.freeCreditsLeft": "Your unused {credits} credits will remain available. Subscribe to Plus or Pro to use them for conversations.",
-  "subscription.freePlanNote": "You’re on the Free plan. Link an account for one 5-minute conversation. Plus and Pro add credit-based conversations, longer history, and family invitations.",
+  "subscription.freePlanNote": "You’re on the Free plan. Link an account for one 5-minute conversation and invite 1 family member to your circle. Plus and Pro add credit-based conversations, longer history, and more family members.",
   "subscription.confirmAction": "Confirm with Apple",
   "subscription.cancel": "Cancel",
   "subscription.purchasePending": "Apple is processing your subscription.",

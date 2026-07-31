@@ -705,7 +705,7 @@
   "subscription.confirmFacts": "毎月{credits}ポイント・家族ケアサークルは最大{members}人",
   "subscription.monthlyCreditsNote": "{credits}ポイントで約{minutes}分お話しできます。ポイントがなくなると会話は一時停止し、追加後に再開できます。",
   "subscription.freeCreditsLeft": "未使用の{credits}ポイントはそのまま残ります。PlusまたはProに登録すると会話に使えます。",
-  "subscription.freePlanNote": "現在は無料プランです。アカウント連携で1回5分の会話を体験できます。Plus／Proではポイントでの会話、より長い履歴、家族の招待が利用できます。",
+  "subscription.freePlanNote": "現在は無料プランです。アカウント連携で1回5分の会話を体験でき、ご家族を1名サークルに招待できます。Plus／Proではポイントでの会話、より長い履歴、さらに多くのご家族の招待が利用できます。",
   "subscription.confirmAction": "Appleで確認",
   "subscription.cancel": "キャンセル",
   "subscription.purchasePending": "Appleがサブスクリプションを処理しています。",
