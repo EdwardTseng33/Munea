@@ -104,14 +104,25 @@ class LiveVoiceLocaleWiringTests(unittest.TestCase):
         # 核定的當地指引要真的是墨西哥的
         self.assertIn("llama al 911", tail)
 
-    def test_the_override_names_taiwan_only_when_the_book_is_taiwanese(self):
-        """反向：繁中書的通話，母國要說 TW（不能寫死成別國）。"""
+    def test_no_mismatch_warning_when_the_book_matches_the_region(self):
+        """兩邊一樣（台灣人用繁中書）＝不貼那段作廢警告。
+
+        2026-08-01 說明書分章第 1 刀：那段約 500 字元的英文警告，只有在
+        「書的母國 ≠ 這通核定的安全區」時才有意義；兩邊一樣時它每輪都在重讀、
+        卻永遠不會觸發。國家與安全區本身仍要寫明（下面兩行照驗），
+        拿掉的只是「上面那些號碼對這個人是錯的」那整段。
+        上面 test_the_override_* 那題顧的就是真的不一樣時警告還在。
+        """
         profile = localization.voice_session_locale_profile()
         prompt = live_voice_server.system_instruction(
             demo_mode=True,
             locale_profile=profile,
         )
-        self.assertIn("written for TW", prompt[-2600:])
+        tail = prompt[-2600:]
+        self.assertIn("Country: TW", tail)
+        self.assertIn("Safety region: TW", tail)
+        self.assertNotIn("written for", tail)
+        self.assertNotIn("ignore all of them", tail)
 
     def test_lookup_tts_uses_each_response_locale_language_code(self):
         expected = {

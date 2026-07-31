@@ -1033,6 +1033,10 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     # 現在改成「不是這本書的母國，就忽略書裡的號碼，改用下面那句經過核定的當地指引」。
     _book_home_country = eng.PERSONA_BOOK_HOME_COUNTRY.get(_book_locale, "TW")
     _verified_region = locale_context["safetyRegion"]
+    # 2026-08-01 說明書分章第 1 刀：底下那段「兩邊不一樣就忽略書裡的號碼」的長警告，
+    # 只有在**人設書的母國 ≠ 這通核定的安全區**時才有意義（例如講西班牙文但人在墨西哥）。
+    # 兩邊一樣時（台灣人用中文書＝絕大多數通話）它是純肥肉：每一輪都要重讀約 500 個字元的
+    # 英文警告，卻永遠不會觸發。改成只在真的不一樣時才貼——警告一字未改、保護力不變。
     base += (
         "\n[Verified locale context]\n"
         f"Conversation locale: {locale_profile['sessionLocale']}. "
@@ -1040,17 +1044,20 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         f"Timezone: {locale_context['timeZone']}. "
         f"Safety region: {_verified_region}. "
         "Use the verified country only for local examples and services. "
-        f"The persona guidance above was written for {_book_home_country}. "
-        f"The verified safety region for this call is {_verified_region}. "
-        "**When those two differ, every emergency number, hotline, healthcare "
-        "system detail and legal statement written into the persona guidance "
-        "above is wrong for this person — ignore all of them.** Use only the "
-        "regional safety guidance that follows this block, and if you are not "
-        "certain of a local number, say so and tell them to contact their local "
-        "emergency service rather than naming a number you are unsure of. "
-        "Cultural examples and hotline numbers tied to the guidance's home "
-        "country must not be repeated when the regions differ."
     )
+    if _book_home_country != _verified_region:
+        base += (
+            f"The persona guidance above was written for {_book_home_country}. "
+            f"The verified safety region for this call is {_verified_region}. "
+            "**Those two differ, so every emergency number, hotline, healthcare "
+            "system detail and legal statement written into the persona guidance "
+            "above is wrong for this person — ignore all of them.** Use only the "
+            "regional safety guidance that follows this block, and if you are not "
+            "certain of a local number, say so and tell them to contact their local "
+            "emergency service rather than naming a number you are unsure of. "
+            "Cultural examples and hotline numbers tied to the guidance's home "
+            "country must not be repeated."
+        )
     base += locale_profile["replyLanguageInstruction"]
     base += locale_profile["regionalSafetyInstruction"]
     base += localization.live_voice_code_switch_instruction(
