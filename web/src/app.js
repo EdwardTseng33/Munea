@@ -765,21 +765,17 @@ function showBusyCard(mode, payload) {
       : muneaT('voice.queue.position', '你排第 {count} 位', { count: position });
     let etaLine;
     if (eta === 'soon') {
-      etaLine = muneaT(
-        preparing ? 'voice.queue.etaPreparingSoon' : 'voice.queue.etaWaitingSoon',
-        preparing ? '快好了，通常幾分鐘內就會自動接通。' : '快好了，很快就輪到你。',
-      );
+      etaLine = preparing
+        ? muneaT('voice.queue.etaPreparingSoon', '快好了，通常幾分鐘內就會自動接通。')
+        : muneaT('voice.queue.etaWaitingSoon', '快好了，很快就輪到你。');
     } else if (typeof eta === 'number') {
-      etaLine = muneaT(
-        preparing ? 'voice.queue.etaPreparingMinutes' : 'voice.queue.etaWaitingMinutes',
-        preparing ? '大約再 {minutes} 分鐘會自動接通。' : '大約再 {minutes} 分鐘會輪到你。',
-        { minutes: eta },
-      );
+      etaLine = preparing
+        ? muneaT('voice.queue.etaPreparingMinutes', '大約再 {minutes} 分鐘會自動接通。', { minutes: eta })
+        : muneaT('voice.queue.etaWaitingMinutes', '大約再 {minutes} 分鐘會輪到你。', { minutes: eta });
     } else {
-      etaLine = muneaT(
-        preparing ? 'voice.queue.etaPreparingUnknown' : 'voice.queue.etaWaitingUnknown',
-        preparing ? '通常幾分鐘內就好，準備好會自動接通。' : '輪到你會自動接通。',
-      );
+      etaLine = preparing
+        ? muneaT('voice.queue.etaPreparingUnknown', '通常幾分鐘內就好，準備好會自動接通。')
+        : muneaT('voice.queue.etaWaitingUnknown', '輪到你會自動接通。');
     }
     if (note) note.textContent = muneaT(
       'voice.queue.note',
@@ -1442,7 +1438,7 @@ async function createFamilyRelay(recipientName, message) {
   const matches = members.filter(m => !m.self && m.personId && [m.name, m.relationship].some(v => relayNameKey(v) === key));
   if (matches.length !== 1) {
     const error = matches.length > 1 ? 'recipient_ambiguous' : 'recipient_not_in_family_circle';
-    if (typeof toast === 'function') toast(matches.length > 1 ? '家庭圈裡有同名家人，請說完整名稱' : '家庭圈裡找不到「' + who + '」，請先確認家人名稱');
+    if (typeof toast === 'function') toast(matches.length > 1 ? muneaT('familyCircle.recipientAmbiguous', '家庭圈裡有同名家人，請說完整名稱') : muneaT('familyCircle.recipientNotFound', '家庭圈裡找不到「{name}」，請先確認家人名稱', { name: who }));
     return { ok: false, error };
   }
   const target = matches[0];
@@ -1461,7 +1457,7 @@ async function createFamilyRelay(recipientName, message) {
     if (typeof toast === 'function') toast(muneaT('chat.sendFailedToast', "這句話還沒送出去，請再試一次"));
     return { ok: false, error: (data && data.error) || 'relay_write_failed' };
   }
-  if (typeof toast === 'function') toast('已請' + cname() + '在' + target.name + '下次聊聊時轉達');
+  if (typeof toast === 'function') toast(muneaT('familyCircle.relayQueuedToast', '已請{companion}在{name}下次聊聊時轉達', { companion: cname(), name: target.name }));
   return { ok: true, relayId: data.relay.id, recipientName: target.name, message: content };
 }
 async function claimNextFamilyRelay() {
@@ -9748,7 +9744,7 @@ function init() {
       if (act.myDone && act.answers && act.answers['你'] !== undefined) { box.innerHTML = '<div class="ad-note">你答對 ' + act.answers['你'] + ' / ' + act.q + ' 題，等 ' + (act.names || []).join('、') + ' 答完看排名。</div>'; }
       else {
         box.innerHTML = '<div class="ad-note">你的 ' + act.q + ' 題準備好了，點下面開始作答；' + cname() + '會找其他人玩，都答完看排名。</div>';
-        const qb = document.createElement('button'); qb.className = 'modal-btn'; qb.style.marginTop = '14px'; qb.textContent = '開始作答';
+        const qb = document.createElement('button'); qb.className = 'modal-btn'; qb.style.marginTop = '14px'; qb.textContent = muneaT('activity.quizStart', '開始作答');
         qb.addEventListener('click', () => { sheet.classList.remove('show'); startQuiz(act, card || document.querySelector('[data-act-id="' + act.id + '"]')); });
         box.appendChild(qb);
       }
@@ -9922,7 +9918,7 @@ function init() {
     trackProductEvent('activity_created', { kind: kind });
     closeChal();
     renderActCard(act);
-    hint(kind === 'event' ? '好，' + cname() + '幫你問大家，誰能到、誰沒空，回覆齊了告訴你。' : kind === 'vote' ? '好，' + cname() + '把問題送出去了，誰投了什麼馬上看得到。' : kind === 'draw' ? '好，' + cname() + '把抽獎報給大家了，' + (act.when || '') + '開獎！' : '好，邀請發出去了，' + cname() + '會親口問不方便滑手機的家人，等大家答應就開始。');
+    hint(kind === 'event' ? muneaT('activity.launchedEventHint', '好，{companion}幫你問大家，誰能到、誰沒空，回覆齊了告訴你。', { companion: cname() }) : kind === 'vote' ? muneaT('activity.launchedVoteHint', '好，{companion}把問題送出去了，誰投了什麼馬上看得到。', { companion: cname() }) : kind === 'draw' ? muneaT('activity.launchedDrawHint', '好，{companion}把抽獎報給大家了，{when}開獎！', { companion: cname(), when: act.when || '' }) : muneaT('activity.launchedInviteHint', '好，邀請發出去了，{companion}會親口問不方便滑手機的家人，等大家答應就開始。', { companion: cname() }));
   });
   // 一張活動卡是不是「到期該收」（含自己發起的、含問答/投票、含沒設日期的殭屍卡）— Edward 7/9 修卡死
   // 這個活動「哪天算結束」（揪一攤=活動日、問答/投票=截止、運動=截止、抽獎=開獎日）
@@ -10171,7 +10167,7 @@ function init() {
     applyFontScale();
     markFontOpt();
     const nm = ((FONT_STEPS.find(x => x[0] === o.dataset.f) || FONT_STEPS[0])[1])();
-    toast('好，改成「' + nm + '」了');
+    toast(muneaT('font.changedToast', '好，改成「{name}」了', { name: nm }));
   });
   applyFontScale();
   // 條款／隱私閱讀器由最早期控制綁定，避免其他初始化失敗時連返回都不能操作。
@@ -10212,7 +10208,7 @@ function init() {
   if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
     $('#safetyModal').classList.remove('show');
     const sel = loadSafety();
-    toast(sel.length ? ('名單記好了：' + sel.join('、') + '。異常時我會第一時間讓家人知道。') : '還沒選聯絡人，等你想好再設定就好');
+    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。異常時我會第一時間讓家人知道。', { names: sel.join(muneaT('common.listSeparator', '、')) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();
@@ -10516,7 +10512,7 @@ function init() {
       '<div class="rpt-row"><span class="rpt-k">活動</span><div><b>達標 ' + act + ' 天</b></div></div>' +
       '<div class="rpt-row"><span class="rpt-k">睡眠</span><div><b>平均 7.2 小時</b></div></div>';
     box.style.display = '';
-    if ($('#rcHint')) $('#rcHint').textContent = '要看別段，再點一次新的開始日';
+    if ($('#rcHint')) $('#rcHint').textContent = muneaT('report.pickAnotherStart', '要看別段，再點一次新的開始日');
   }
   if ($('#rcGrid')) $('#rcGrid').addEventListener('click', e => {
     const cell = e.target.closest('.rc-cell');
@@ -10628,7 +10624,7 @@ function init() {
     sessionStorage.setItem('visitEveShown', '1');
     let _when = ((String(v.label || '').split('）')[1]) || '').trim();
     if (!_when && v.time && typeof fmtVisitTime === 'function') _when = fmtVisitTime(v.time);
-    setTimeout(() => toast('明天' + (_when ? _when + ' ' : '') + '回診，回診摘要我準備好了'), 1200);
+    setTimeout(() => toast(_when ? muneaT('visit.tomorrowAtToast', '明天{when} 回診，回診摘要我準備好了', { when: String(_when).trim() }) : muneaT('visit.tomorrowToast', '明天回診，回診摘要我準備好了')), 1200);
   })();
 
   // 機智問答（示範題庫；正式版由寧寧出題、語音作答）
@@ -10671,7 +10667,7 @@ function init() {
   }
   function finishQuiz() {
     const st = quizState;
-    $('#quizProgress').textContent = '完成！';
+    $('#quizProgress').textContent = muneaT('activity.quizDone', '完成！');
     $('#quizQ').textContent = '';
     $('#quizOpts').innerHTML = '<div class="quiz-score">答對 ' + st.score + ' / ' + st.n + ' 題</div>' +
       '<p class="modal-sub" style="text-align:center">寧寧會找 ' + st.act.names.join('、') + ' 來作答，都答完就看排名</p>' +
