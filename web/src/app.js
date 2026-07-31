@@ -4013,6 +4013,13 @@ const LiveVoice = {
   _armSameLineStutterWatch() {
     if (this._slStutterT) return;
     this._slPrevBytes = -1; this._slStallStreak = 0; this._slStalls = 0;
+    // 2026-08-01 量測修正（Edward 7/31 深夜回報「斷斷續續」，翻紀錄卻查無實據）：
+    // 這支表把「她這輪還沒開口」跟「講到一半斷掉」混成同一個數字。每輪伺服器一送
+    // 聲音，_playoutUntil 就往前推＝「她應該在講了」，但臉機要 1-2 秒才開始把聲音
+    // 送回來，於是每一輪固定誤記一次斷續（7/31 那通 6 輪剛好 6 次）。
+    // 拆成兩個各自誠實的數字：①臉機這輪隔多久才開口（sameline_face_lead_ms）
+    // ②真的開口以後中途斷了幾次（sameline_audio_stall，開口後才起算）。
+    this._slFaceStarted = false; this._slTurnStartAt = 0;
     this._slStutterT = setInterval(async () => {
       if (!this.on || !this._sameLine || this._sameLineFellBack === true) {
         clearInterval(this._slStutterT); this._slStutterT = null; return;
@@ -4020,8 +4027,11 @@ const LiveVoice = {
       const now = performance.now();
       // 只在「她此刻應該正在講話」的時間窗內量；剩不到 400ms 的句尾不算（自然收尾）
       if (!this._playoutUntil || now > this._playoutUntil - 400) {
-        this._slStallStreak = 0; this._slPrevBytes = -1; return;
+        this._slStallStreak = 0; this._slPrevBytes = -1;
+        this._slFaceStarted = false; this._slTurnStartAt = 0;
+        return;
       }
+      if (!this._slTurnStartAt) this._slTurnStartAt = now;   // 這一輪開始該有聲音了（±0.5 秒，這支表每 500ms 醒一次）
       let bytes = -1;
       try {
         const rcv = Avatar._faceAudReceiver;
@@ -4031,6 +4041,15 @@ const LiveVoice = {
         }
       } catch (e) {}
       if (bytes < 0) return;   // 讀不到就不判（寧可漏一拍、不誤退）
+      if (!this._slFaceStarted) {
+        // 這一輪臉機還沒開始送聲音回來：這段不算斷續，只量它讓人等了多久。
+        if (this._slPrevBytes >= 0 && (bytes - this._slPrevBytes) >= 200) {
+          this._slFaceStarted = true;
+          try { trackProductEvent('sameline_face_lead_ms', { ms: Math.round(now - this._slTurnStartAt), turn: this._playbackTurn || 0 }); } catch (e) {}
+        }
+        this._slPrevBytes = bytes;
+        return;
+      }
       if (this._slPrevBytes >= 0 && (bytes - this._slPrevBytes) < 200) {
         this._slStallStreak += 1;
         if (this._slStallStreak === 2) {   // 連續兩拍（約 1 秒）沒聲進來、而她應該在講＝一次斷續
