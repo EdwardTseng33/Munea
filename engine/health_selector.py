@@ -13,6 +13,7 @@
 import json
 import health_i18n_layer as _i18n
 import os
+import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SOLUTIONS_PATH = os.environ.get("MUNEA_HEALTH_SOLUTIONS_PATH") or os.path.join(HERE, "health_solutions.json")
@@ -119,9 +120,38 @@ def _profile_flags(profile):
     }
 
 
+_CJK = re.compile(r"[぀-ヿ㐀-鿿豈-﫿]")
+_WORD_START = {}
+
+
+def mentions(needle, text):
+    """這句話裡有沒有提到這個詞。**全庫唯一的比對規則**。
+
+    中文日文用純包含比對（本來就沒有詞的空隙，「睡不好」要能在句中任何位置命中）。
+    拉丁語系兩件事都要做：**忽略大小寫**（語音辨識會寫成「Plavix」「Ventolín」，
+    我們的字典是小寫）、而且**從詞頭開始比**（西班牙版回報「tos（咳嗽）」被
+    「hidra*tos*（醣類）」叫起來）。只綁詞頭、不綁詞尾，是為了留住詞根：
+    「aliment」還是要能命中「alimentación」。
+
+    2026-07-31：這支原本只長在觸發字那一邊，**點名字（askedFor）那一邊是生的**——
+    大寫就比不到。剛好新的「他點名了才回答」機制整個靠 askedFor，出國就會失靈。
+    兩邊改用同一支，以後不會再走鐘。
+    """
+    k = (needle or "").lower()
+    if not k:
+        return False
+    hay = (text or "").lower()
+    if _CJK.search(k) or not k[0].isalpha():
+        return k in hay
+    rx = _WORD_START.get(k)
+    if rx is None:
+        rx = _WORD_START[k] = re.compile(r"\b" + re.escape(k))
+    return rx.search(hay) is not None
+
+
 def _named(sol, user_text):
     """他自己把這樣東西講出來了嗎。"""
-    return any(w and w in (user_text or "") for w in (sol.get("askedFor") or []))
+    return any(mentions(w, user_text) for w in (sol.get("askedFor") or []))
 
 
 def _blocked_by_safety(sol, flags, user_text):
@@ -200,7 +230,7 @@ def _score(sol, flags, urgent, user_text):
     # 「我在吃抗凝血的藥，可以吃當歸嗎」——最該回答的那條卻因為分數不夠沒被選中，
     # 端出去的是三句通用的話。askedFor 原本只用來解除陪襯層降級，不夠；
     # 他指名問的，本來就該排到前面，不然等於答非所問。
-    if any(w and w in text for w in (sol.get("askedFor") or [])):
+    if any(mentions(w, text) for w in (sol.get("askedFor") or [])):
         score += 5.0
 
     # 證據強度：同分時已證實的排前面
@@ -279,7 +309,7 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS, l
     def _demoted(s):
         if not s.get("secondLine"):
             return False
-        return not any(w and w in (user_text or "") for w in (s.get("askedFor") or []))
+        return not _named(s, user_text)
 
     # leadWith＝陪襯層的反面（2026-07-29 加貧血題時抓到）：有些方案是「門檻」——
     # 不先做這件事，後面每一條都失去意義。貧血題的「先驗血、別盲補」就是，
@@ -347,7 +377,7 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS, l
     related = None
     for r in topic.get("relatedTopics") or []:
         cue = health_kb_keywords(r.get("topicId"))
-        if cue and any(k in (user_text or "") for k in cue):
+        if cue and any(mentions(k, user_text) for k in cue):
             related = r.get("say")
             break
 

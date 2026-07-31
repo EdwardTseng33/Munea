@@ -255,6 +255,66 @@ class SelectionParityTest(unittest.TestCase):
             self.assertNotIn("sleep-magnesium-supplement", ids, f"{loc}：腎功能異常還端出鎂")
 
 
+class HonestRefusalsWorkAbroadTest(unittest.TestCase):
+    """「他點名了就要答」這件事，不能只有中文那條線做得到。
+
+    2026-07-31 抓到的是同一個病的兩層：主庫 31 張誠實回話卡（褪黑激素、換藥、
+    瘦瘦針、排毒、IgG 檢測…）在挑選層被當成整條剔除，一次都沒講出來過；
+    修好之後才發現**外語那邊還是死的**——疊層的點名字是敗向安全的（沒給就清空，
+    免得中文字跑進外語對話），所以三國各有 29 張叫不出來。
+    日本用戶問「メラトニンって飲んでもいいの？」，我們有稿卻拿不到。
+    """
+
+    @staticmethod
+    def _blocked_ids():
+        import json
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "health_solutions.json"), encoding="utf-8") as f:
+            topics = json.load(f)["topics"]
+        return {s["id"]: tid for tid, t in topics.items()
+                for s in t["solutions"] if s.get("blocked")}
+
+    def test_every_blocked_card_can_be_named_in_every_locale(self):
+        for loc in locales_with_overlay():
+            ov = i18n.overlay(loc)
+            for sid, tid in self._blocked_ids().items():
+                sol = ((ov.get(tid) or {}).get("solutions") or {}).get(sid)
+                if sol is None:
+                    continue                  # 那一國略過了整張＝敗向安全，不算漏
+                self.assertTrue(sol.get("askedFor"),
+                                f"{loc}/{tid}/{sid} 沒有點名字＝這張卡在那一國是死的")
+
+    def test_naming_it_serves_it_and_never_first(self):
+        prof = {"audience": "elder", "audiences": ["elder"]}
+        for loc in locales_with_overlay():
+            ov = i18n.overlay(loc)
+            for sid, tid in self._blocked_ids().items():
+                sol = ((ov.get(tid) or {}).get("solutions") or {}).get(sid)
+                if not (sol and sol.get("askedFor")):
+                    continue
+                said = sol["askedFor"][0]
+                got = [s["id"] for s in hs.pick(tid, said, prof, 15, locale=loc)["solutions"]]
+                self.assertIn(sid, got, f"{loc}/{tid}：他講了「{said}」還是沒回答")
+                if len(got) > 1:
+                    self.assertNotEqual(got[0], sid, f"{loc}/{tid}/{sid} 當了第一句")
+
+    def test_capitalisation_never_loses_the_answer(self):
+        """語音辨識會寫成「Plavix」「Ventolín」，我們的字典是小寫——比對必須忽略大小寫。"""
+        for loc in locales_with_overlay():
+            if loc == "ja":
+                continue
+            ov = i18n.overlay(loc)
+            for sid, tid in self._blocked_ids().items():
+                sol = ((ov.get(tid) or {}).get("solutions") or {}).get(sid)
+                if not (sol and sol.get("askedFor")):
+                    continue
+                word = sol["askedFor"][0]
+                if not word[:1].isalpha():
+                    continue
+                self.assertTrue(hs.mentions(word, word.upper()),
+                                f"{loc}/{sid}：使用者用大寫講「{word}」就比不到了")
+
+
 class WiringTest(unittest.TestCase):
     """接線鎖：做了但沒接上正式線＝白做（這個病 7 月已經犯過六次）。"""
 
