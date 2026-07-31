@@ -119,10 +119,22 @@ def _profile_flags(profile):
     }
 
 
+def _named(sol, user_text):
+    """他自己把這樣東西講出來了嗎。"""
+    return any(w and w in (user_text or "") for w in (sol.get("askedFor") or []))
+
+
 def _blocked_by_safety(sol, flags, user_text):
     """安全過濾（硬性、排序翻不了）。回傳 True＝整個方案剔除。"""
     if sol.get("blocked"):
-        return True
+        # blocked＝我們絕不主動端出去的（開刀、調藥、減肥針、通血路點滴）。
+        # 但這批寫的每一張 blocked 卡，內容其實都是「他問了要怎麼答」的誠實回話。
+        # 一律剔除的結果是：他指名問「通血路的點滴有效嗎」，我們寫好的答案永遠不出場，
+        # 她只能拿通用模型自己接——最該講究措辭的那一句反而沒有稿。
+        # 所以：他自己點名了就端出去，沒點名就繼續不主動提。
+        # （2026-07-31 建慢性病三題時抓到；7 月的褪黑激素那次是同一個病，
+        #   當時把單張卡改成不 blocked 繞過去，這次改成通則。）
+        return not _named(sol, user_text)
     if sol.get("riskLevel") in ("L4", "L5"):
         return True          # 轉介類另外處理、不進一般推薦池
     for c in sol.get("contraindications") or []:
@@ -294,12 +306,25 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS, l
             picked.append(s)
             type_count[t] = type_count.get(t, 0) + 1
 
-    normal = [s for s in ranked if not _demoted(s)]
-    demoted = [s for s in ranked if _demoted(s)]
+    blocked = [s for s in ranked if s.get("blocked")]        # 他點名了才會在這裡
+    normal = [s for s in ranked if not s.get("blocked") and not _demoted(s)]
+    demoted = [s for s in ranked if not s.get("blocked") and _demoted(s)]
     _take(normal, True)      # 先照多樣性挑正規方案
     _take(normal, False)     # 正規的還有就補滿——多樣性只是偏好，不該讓位給陪襯層
     _take(demoted, True)     # 真的不夠了才動陪襯層
     _take(demoted, False)
+
+    # 他點名問的「不能建議」那類：一定要講到（不然等於問了不答），但不放第一句。
+    # 「我感冒了，可以吃家裡的感冒藥嗎」——第一句該是「先問藥師會不會跟你的藥打架」
+    # 這種做得到的事，「我不建議成藥」擺第二句才不會像在打發他。
+    if blocked and limit >= 2:
+        b = blocked[0]
+        if b in picked:
+            if picked.index(b) == 0:
+                picked.insert(1, picked.pop(0))
+        else:
+            picked.insert(min(1, len(picked)), b)
+            del picked[limit:]
 
     # 轉介卡：紅旗類永遠獨立帶著，不跟一般方案搶名額
     referral = next((s for s in pool if s.get("riskLevel") == "L5"), None)
@@ -338,8 +363,16 @@ def render(topic_id, user_text="", profile=None, hour=None, locale=None):
     parts = []
     if res["reframe"]:
         parts.append("【先重新定義問題】" + res["reframe"])
-    for i, s in enumerate(res["solutions"]):
-        tag = "主推" if i == 0 else f"備援{i}"
+    rank = 0
+    for s in res["solutions"]:
+        if s.get("blocked"):
+            # 他自己點名問的「不能建議」那類（開刀、調藥、瘦瘦針、通血路點滴）。
+            # 這不是推薦，所以不掛主推／備援的頭銜，也不套保健品那段上限話術
+            # ——那會把一句「這個沒有用」講成在推薦保健品。
+            parts.append("【他自己問到這個·照這個說法誠實回】" + s["say"])
+            continue
+        tag = "主推" if rank == 0 else f"備援{rank}"
+        rank += 1
         line = f"【{tag}·{s['timeToEffect']}檔·{s['solutionType']}】{s['say']}"
         if s.get("riskLevel") == "L3":
             # L3 三件事少講一件就不合格——這裡把上限與禁忌接在後面，確保她講得到
