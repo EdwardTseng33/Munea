@@ -36,7 +36,7 @@ class LocaleSafetyExamTests(unittest.TestCase):
     def setUp(self):
         with io.open(BANK_PATH, encoding="utf-8") as handle:
             self.bank = json.load(handle)
-        self.scenarios = self.bank["scenarios"]
+        self.scenarios = self.bank.get("items") or self.bank["scenarios"]
 
     def test_every_scenario_is_self_contained(self):
         for item in self.scenarios:

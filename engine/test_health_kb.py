@@ -87,9 +87,14 @@ class HealthTopicsDataTest(unittest.TestCase):
 class ResidentRulesTest(unittest.TestCase):
     def test_resident_covers_four_emergencies_and_melatonin(self):
         r = health_kb.resident_rules()
-        for needle in ("臉歪", "119", "心肌梗塞", "低血糖", "方糖或含糖飲料", "急性譫妄",
-                       "褪黑激素在台灣是處方藥"):
+        # 2026-07-31 Edward 拍板「不准憑空報號碼」後改：這裡守的是「四種急症判斷都在」，
+        # 不是「有沒有寫 119」——號碼改由經過核定的當地安全指引供應，
+        # 保命規則裡只說「撥當地的急救電話」（語言不等於國家，寫死會叫錯人撥錯號碼）。
+        for needle in ("臉歪", "當地的急救電話", "心肌梗塞", "低血糖", "方糖或含糖飲料",
+                       "急性譫妄", "褪黑激素在台灣是處方藥"):
             self.assertIn(needle, r)
+        for forbidden in ("119", "911", "112", "1925"):
+            self.assertNotIn(forbidden, r, f"保命規則裡不該寫死號碼 {forbidden}")
 
     def test_resident_rules_flow_into_chat_engine_red(self):
         """常駐紅線併進 RED＝文字線（server /chat）、語音線（live system_instruction）、

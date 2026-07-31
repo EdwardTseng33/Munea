@@ -8992,7 +8992,15 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     """帶完整對話脈絡，用該角色的腦＋記憶回話。"""
     context = context or build_reply_context(history, char, data)
     base, _ = _sys_for(char, context.get("locale"))
-    base = base + reply_context_instruction(context) + localization.reply_language_instruction(context.get("locale"))
+    # 2026-07-31 Edward 拍板「不准憑空講急難號碼」：號碼的唯一來源＝經過核定的當地指引。
+    # 這條線原本沒帶這段（只有語音線有），等於號碼只能從說明書裡來——正是要禁的。
+    # safetyRegion 不明時 regional_safety_instruction 會給不含號碼的通用句，
+    # 說明書則要求她改用問的（「你現在人在哪裡？」）。
+    _safety_region = ((context.get("localeContext") or {}).get("safetyRegion")
+                      or (data or {}).get("safetyRegion"))
+    base = (base + reply_context_instruction(context)
+            + localization.reply_language_instruction(context.get("locale"))
+            + localization.regional_safety_instruction(context.get("locale"), _safety_region))
     # B2 衛教（2026-07-24）：按最後一句用戶的話命中策展題庫才注入；沒命中＝空字串、不佔說明書。
     last_user = ""
     for h in reversed(history or []):
