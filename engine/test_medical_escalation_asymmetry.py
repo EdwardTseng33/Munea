@@ -109,15 +109,33 @@ class BothLinesInheritTheBaseTests(unittest.TestCase):
     所以規則進了 CORE 不等於用戶受保護，要鎖住兩條線都真的吃到。
     """
 
+    # 2026-07-31 人設書分國：兩條線改成「照這通電話的語系拿書」（core_instruction(lookup, locale)
+    # ＋ red_lines(locale)）。契約從比對字面改成比對「三件都在、而且語系是傳進去的」——
+    # 守的行為不變：規則進了說明書，兩條線都要真的吃到，而且不會有一條偷偷吃到別國的書。
     def test_text_line_composes_core_and_red(self):
-        self.assertIn("eng.CORE + c[\"persona\"] + eng.RED", _read("server.py"))
+        _srv = _read("server.py")
+        self.assertIn('eng.core_instruction("offline", book_locale)', _srv)
+        self.assertIn('c["persona"]', _srv)
+        self.assertIn('eng.red_lines(book_locale)', _srv)
 
     def test_voice_line_composes_core_and_red(self):
-        # 2026-07-30 瘦身下半場：共同底盤改依查詢模式組裝（core_instruction），
-        # 契約從「字面 eng.CORE」改成「組裝函式＋persona＋RED 三件都在同一行」——守的行為不變。
         _srv = _read("live_voice_server.py")
         self.assertIn('eng.core_instruction(', _srv)
-        self.assertIn('_core + c.get("persona", "") + eng.RED', _srv)
+        self.assertIn('_core + c.get("persona", "") + eng.red_lines(_book_locale)', _srv)
+
+    def test_both_lines_pass_a_locale_through(self):
+        """兩條線都必須把語系傳進去——漏傳＝那條線永遠只吃中文版（外國用戶拿到台灣說明書）。"""
+        self.assertIn('_sys_for(char, context.get("locale"))', _read("server.py"))
+        self.assertIn('_book_locale = (locale_profile or {}).get("locale")', _read("live_voice_server.py"))
+
+    def test_every_shipped_locale_keeps_the_escalation_rule(self):
+        """已授書的每一國，安全紅線都必須在——授書時漏抄＝那一國的長輩失去保護。"""
+        for locale in eng.persona_locales():
+            core = eng.core_instruction("offline", locale)
+            red = eng.red_lines(locale)
+            self.assertTrue(core.strip(), f"{locale} core book is empty")
+            self.assertTrue(red.strip(), f"{locale} red lines are empty")
+            self.assertNotIn("&&LOOKUP_SECTION&&", core, f"{locale} core still has an unfilled slot")
 
 
 if __name__ == "__main__":

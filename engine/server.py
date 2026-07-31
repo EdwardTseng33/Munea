@@ -2597,60 +2597,78 @@ def proactive_opening_response(data):
             "followUp": (health_followup.due_followups(person_id, limit=1) or [None])[0]}
 
 
+def resolve_location_text(free_text, country=None):
+    """把一句地名（他自己講的、或他自己填的）對回一個查得到天氣的地方。
+
+    回 (一級行政區名, 座標)；對不到就回 (None, None)——**絕不猜**。
+    跨行政區同名的地名（台北台中都有大安區、美國好幾州都有 Springfield）刻意不收，
+    猜錯的後果是她每天報成別的城市的天氣，而長輩不會知道為什麼。
+
+    2026-07-31 Edward 定調「問一次就記住」後補；正本清單在 web/src/regions/，
+    引擎這份由 node scripts/gen-region-index.js 產生。
+    """
+    text = (free_text or "").replace("臺", "台").strip()
+    if not text:
+        return (None, None)
+    try:
+        import region_index
+    except Exception as e:
+        log_fallback_exception("load region index", e)
+        return (None, None)
+
+    order = [c for c in ([country.upper()] if country else []) if c in region_index.REGIONS]
+    order += [c for c in region_index.REGIONS if c not in order]
+
+    def _norm(value):
+        return (value or "").replace("臺", "台").strip()
+
+    for code in order:
+        book = region_index.REGIONS[code]
+        # 先比一級（他講了縣市／都道府県／省／州）
+        for name, coords in book["tier1"].items():
+            if _norm(name) and _norm(name) in text:
+                return (name, coords)
+        # 再比二級（他只講區／市町村／市——很常見：「我住南港區興南街」）
+        for city, region in book["tier2_to_tier1"].items():
+            if _norm(city) and _norm(city) in text:
+                return (region, book["tier1"].get(region))
+    return (None, None)
+
+
 def resolve_person_region(person_id=None):
-    """這位長輩的天氣要看哪一區：本人填的縣市 → 她從對話記起來的住處 → 全域預設。
+    """這位長輩的天氣要看哪一區：本人自己填的 → 她從對話記起來的 → 都沒有回 (None, None)。
+
+    回 (一級行政區名, 座標)。座標給境外用（日本、西班牙、美國走全球氣象資料源）；
+    台灣照舊用縣市名走中央氣象署。
 
     2026-07-31 Edward 定調「問一次就記住、之後不必重問」後補。原本天氣只吃全域
     MUNEA_REGION（試營運單一長輩），多人與跨國上線後那等於「大家都看台北的天氣」。
-
-    刻意不做的事：不從口音、姓氏或任何間接線索猜地區——猜錯會讓她每天報錯天氣，
-    而且長輩不會知道為什麼。找不到就回 None，讓呼叫端退回全域預設。
     """
-    import perception_engine
-    known = list(getattr(perception_engine, "_COORDS", {}).keys())
-
-    def _norm(value):
-        # 「臺」與「台」兩種寫法都要認得（用戶填的是台北市、氣象署用的是臺北市）
-        return (value or "").replace("臺", "台").strip()
-
-    def _match(free_text):
-        text = _norm(free_text)
-        if not text:
-            return None
-        for county in known:
-            if _norm(county) and _norm(county) in text:
-                return county
-        # 只講區沒講縣市（「我住南港區興南街」）→ 用區名補回縣市。
-        # 跨縣市同名的區（大安區台北台中都有、東區四個縣市都有）不在表裡＝不猜，
-        # 回 None 讓她照說明書問清楚，總比每天報錯城市的天氣好。
-        try:
-            import tw_district_index
-
-            for district, county in tw_district_index.DISTRICT_TO_COUNTY.items():
-                if _norm(district) in text:
-                    for candidate in known:
-                        if _norm(candidate) == _norm(county):
-                            return candidate
-                    return county
-        except Exception as e:
-            log_fallback_exception("match district to county", e)
-        return None
-
+    country = None
+    candidates = []
     try:
         profile = load_person_profile() or {}
-        hit = _match(profile.get("county"))
-        if hit:
-            return hit
+        country = (profile.get("country") or "").upper() or None
+        for value in (profile.get("county"), profile.get("district")):
+            if value:
+                candidates.append(value)
+        # 舊資料是「台北市大安區」這種合成字串，整串也丟進去比
+        if profile.get("county") and profile.get("district"):
+            candidates.insert(0, f"{profile['county']}{profile['district']}")
     except Exception as e:
         log_fallback_exception("resolve region from person profile", e)
     try:
         living = load_living_profile(person_id) or {}
-        hit = _match(living.get("livesIn"))
-        if hit:
-            return hit
+        if living.get("livesIn"):
+            candidates.append(living["livesIn"])
     except Exception as e:
         log_fallback_exception("resolve region from living profile", e)
-    return None
+
+    for text in candidates:
+        region, coords = resolve_location_text(text, country)
+        if region:
+            return (region, coords)
+    return (None, None)
 
 
 def refresh_daily_briefing(region=None, person_id=None):
@@ -2664,9 +2682,11 @@ def refresh_daily_briefing(region=None, person_id=None):
     import perception_engine
     person_id = person_id or PRIMARY_CARE_RECIPIENT_ID
     # 沒指定就自己查這位長輩住哪（本人填的優先、否則用她記起來的）；都沒有才退回全域預設
-    region = region or resolve_person_region(person_id)
+    coords = None
+    if not region:
+        region, coords = resolve_person_region(person_id)
     try:
-        briefing = perception_engine.build_briefing(region)  # 天氣＋空品＋明天預告（內部已零例外、都失敗回 None 不瞎編）
+        briefing = perception_engine.build_briefing(region, coords)  # 天氣＋空品＋明天預告（內部已零例外、都失敗回 None 不瞎編）
     except Exception as e:
         log_fallback_exception("build daily briefing", e)
         return {"ok": False, "brain": "butler", "action": "daily_briefing", "error": "briefing_failed"}
@@ -8954,17 +8974,24 @@ def account_deletion_response(data, auth_gate=None):
     }
 
 
-def _sys_for(char):
-    """組這個角色的系統人格：人格 + 醫療界線 +（真人才帶）記憶側寫。"""
+def _sys_for(char, locale=None):
+    """組這個角色的系統人格：人格 + 醫療界線 +（真人才帶）記憶側寫。
+
+    2026-07-31 起照語系拿書：日文用戶拿日文版說明書（含當地急難號碼、當地醫療體系、
+    對長輩該有的敬語距離），不再是「台灣版＋一張叫她忽略台灣內容的紙條」。
+    該語系還沒授書就自動退回中文版（不開天窗），但上架守門會擋著不准開那個語系。
+    """
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
-    base = eng.CORE + c["persona"] + eng.RED  # 記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
+    book_locale = locale or eng.DEFAULT_PERSONA_LOCALE
+    # 記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
+    base = eng.core_instruction("offline", book_locale) + c["persona"] + eng.red_lines(book_locale)
     return base, c
 
 
 def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     """帶完整對話脈絡，用該角色的腦＋記憶回話。"""
-    base, _ = _sys_for(char)
     context = context or build_reply_context(history, char, data)
+    base, _ = _sys_for(char, context.get("locale"))
     base = base + reply_context_instruction(context) + localization.reply_language_instruction(context.get("locale"))
     # B2 衛教（2026-07-24）：按最後一句用戶的話命中策展題庫才注入；沒命中＝空字串、不佔說明書。
     last_user = ""

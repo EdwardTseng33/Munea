@@ -619,8 +619,13 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
     # 共同底盤依查詢模式組裝（2026-07-30）：開內建搜尋＝線上版查詢規則（不再跟
     # 「你不會自己上網查」同時出現＝不打架）；其餘模式＝離線版原行為。
-    _core = eng.core_instruction("online" if (native_search_enabled() and not demo_mode) else "offline")
-    base += _core + c.get("persona", "") + eng.RED
+    # 2026-07-31：說明書照這通電話的語系拿（locale_profile 已在上面解出來、是可信來源）
+    _book_locale = (locale_profile or {}).get("locale") or eng.DEFAULT_PERSONA_LOCALE
+    _core = eng.core_instruction(
+        "online" if (native_search_enabled() and not demo_mode) else "offline",
+        _book_locale,
+    )
+    base += _core + c.get("persona", "") + eng.red_lines(_book_locale)
     if native_search_enabled() and not demo_mode:
         # 2026-07-29：這通有內建搜尋（她可以自己查）——但共用說明書寫的是「你不會自己上網查」，
         # 兩邊會打架。這段把規矩講清楚，而且補上最重要的一條：**健康問題不准用搜尋回答**。

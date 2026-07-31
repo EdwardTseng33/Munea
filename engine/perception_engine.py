@@ -99,14 +99,18 @@ def _weather_cwa(region):
     }
 
 
-def _weather_openmeteo(region):
-    """Open-Meteo 免費免鑰匙兜底（真實預報、非瞎編）。"""
-    lat, lon = _COORDS.get(region, _COORDS[DEFAULT_REGION])
+def _weather_openmeteo(region, coords=None):
+    """Open-Meteo 免費免鑰匙兜底（真實預報、非瞎編）。全球覆蓋，帶座標就查那個地方。
+
+    2026-07-31 跨國：coords 由 server.resolve_location_text() 對照出來（五國行政區表）。
+    時區交給 Open-Meteo 自己判（timezone=auto）——寫死 Asia/Taipei 會讓日本、西班牙、
+    美國的「今天」抓錯天。"""
+    lat, lon = coords if coords else _COORDS.get(region, _COORDS[DEFAULT_REGION])
     url = ("https://api.open-meteo.com/v1/forecast?"
            + urllib.parse.urlencode({
                "latitude": lat, "longitude": lon,
                "daily": "temperature_2m_min,temperature_2m_max,precipitation_probability_max",
-               "timezone": "Asia/Taipei", "forecast_days": 1,
+               "timezone": ("Asia/Taipei" if coords is None else "auto"), "forecast_days": 1,
            }))
     data = _http_json(url)
     daily = data.get("daily") or {}
@@ -125,12 +129,17 @@ def _weather_openmeteo(region):
     }
 
 
-def fetch_weather(region=None):
-    """今天的真天氣：CWA（有鑰匙）優先、Open-Meteo 兜底；都失敗回 None（寧寧就不提、不瞎編）。"""
+def fetch_weather(region=None, coords=None):
+    """今天的真天氣：CWA（有鑰匙）優先、Open-Meteo 兜底；都失敗回 None（寧寧就不提、不瞎編）。
+
+    境外（region 不在台灣縣市表裡）直接走 Open-Meteo——中央氣象署只有台灣的資料，
+    拿日本地名去問它只會白等一次逾時。"""
     region = region or DEFAULT_REGION
-    for fn in (_weather_cwa, _weather_openmeteo):
+    overseas = coords is not None and region not in _COORDS
+    sources = (_weather_openmeteo,) if overseas else (_weather_cwa, _weather_openmeteo)
+    for fn in sources:
         try:
-            w = fn(region)
+            w = fn(region, coords) if fn is _weather_openmeteo else fn(region)
             if w and (w.get("tempMax") is not None or w.get("desc")):
                 return w
         except Exception:
@@ -192,14 +201,14 @@ def _weather_cwa_tomorrow(region):
     return {"source": "cwa", "region": region, "desc": desc, "tempMin": tmin, "tempMax": tmax, "rainProb": rain}
 
 
-def _weather_openmeteo_tomorrow(region):
+def _weather_openmeteo_tomorrow(region, coords=None):
     """Open-Meteo 免費免鑰匙兜底：明天預報（forecast_days=2、取索引 1＝明天）。"""
-    lat, lon = _COORDS.get(region, _COORDS[DEFAULT_REGION])
+    lat, lon = coords if coords else _COORDS.get(region, _COORDS[DEFAULT_REGION])
     url = ("https://api.open-meteo.com/v1/forecast?"
            + urllib.parse.urlencode({
                "latitude": lat, "longitude": lon,
                "daily": "temperature_2m_min,temperature_2m_max,precipitation_probability_max,weathercode",
-               "timezone": "Asia/Taipei", "forecast_days": 2,
+               "timezone": ("Asia/Taipei" if coords is None else "auto"), "forecast_days": 2,
            }))
     data = _http_json(url)
     daily = data.get("daily") or {}
@@ -218,13 +227,14 @@ def _weather_openmeteo_tomorrow(region):
             "tempMin": tmin, "tempMax": tmax, "rainProb": rain}
 
 
-def fetch_tomorrow_preview(region=None):
+def fetch_tomorrow_preview(region=None, coords=None):
     """明天預告：CWA（有鑰匙）優先、Open-Meteo 兜底；都失敗回 None（寧寧就不先講、不瞎編）。
     給清晨簡報用——讓寧寧能自然說『明天會下雨、記得帶傘』。"""
     region = region or DEFAULT_REGION
-    for fn in (_weather_cwa_tomorrow, _weather_openmeteo_tomorrow):
+    overseas = coords is not None and region not in _COORDS
+    for fn in ((_weather_openmeteo_tomorrow,) if overseas else (_weather_cwa_tomorrow, _weather_openmeteo_tomorrow)):
         try:
-            w = fn(region)
+            w = fn(region, coords) if fn is _weather_openmeteo_tomorrow else fn(region)
             if w and (w.get("tempMax") is not None or w.get("desc")):
                 return w
         except Exception:
@@ -251,21 +261,25 @@ def _aqi_moenv(region):
     return {"source": "moenv", "region": region, "aqi": best} if best is not None else None
 
 
-def _aqi_openmeteo(region):
-    lat, lon = _COORDS.get(region, _COORDS[DEFAULT_REGION])
+def _aqi_openmeteo(region, coords=None):
+    lat, lon = coords if coords else _COORDS.get(region, _COORDS[DEFAULT_REGION])
     url = ("https://air-quality-api.open-meteo.com/v1/air-quality?"
            + urllib.parse.urlencode({"latitude": lat, "longitude": lon,
-                                     "current": "us_aqi", "timezone": "Asia/Taipei"}))
+                                     "current": "us_aqi",
+                                     "timezone": ("Asia/Taipei" if coords is None else "auto")}))
     data = _http_json(url)
     aqi = (data.get("current") or {}).get("us_aqi")
     return {"source": "open-meteo", "region": region, "aqi": aqi} if aqi is not None else None
 
 
-def fetch_aqi(region=None):
+def fetch_aqi(region=None, coords=None):
+    """空氣品質：環境部（台灣）優先、Open-Meteo 兜底。境外只走 Open-Meteo。"""
     region = region or DEFAULT_REGION
-    for fn in (_aqi_moenv, _aqi_openmeteo):
+    overseas = coords is not None and region not in _COORDS
+    sources = (_aqi_openmeteo,) if overseas else (_aqi_moenv, _aqi_openmeteo)
+    for fn in sources:
         try:
-            a = fn(region)
+            a = fn(region, coords) if fn is _aqi_openmeteo else fn(region)
             if a and a.get("aqi") is not None:
                 return a
         except Exception:
@@ -311,7 +325,7 @@ def _aqi_label(aqi_value):
     return "不健康"
 
 
-def build_briefing(region=None):
+def build_briefing(region=None, coords=None):
     """今日簡報：抓真天氣＋真空品＋明天預告 → 一句人話（scoped 最小注入，不塞原始資料）。
     設計為清晨背景跑；回 dict（facts ＋ briefingLine ＋ tomorrowLine ＋ careHints）。
     per-region（上線接法）：region 參數＝要備的縣市；目前試營運單一長輩（單一 MUNEA_REGION）。
@@ -319,9 +333,9 @@ def build_briefing(region=None):
     迴圈每個長輩呼叫 build_briefing(該長輩的縣市) 再各自存各自 personId 的 snapshot，本函式簽章不用改。"""
     region = region or DEFAULT_REGION
     ctx = now_context()
-    weather = fetch_weather(region)
-    aqi = fetch_aqi(region)
-    tomorrow = fetch_tomorrow_preview(region)
+    weather = fetch_weather(region, coords)
+    aqi = fetch_aqi(region, coords)
+    tomorrow = fetch_tomorrow_preview(region, coords)
     parts = []
     if weather:
         seg = f"{region}今天"
