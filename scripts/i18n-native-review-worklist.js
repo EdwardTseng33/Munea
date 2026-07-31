@@ -25,6 +25,8 @@ const JA_SHARED_SOURCE_KEYS = Object.freeze([
   'health.famSleepNote',
   'health.famStepsUnitWeeks',
   'report.periodLabel',
+  'report.kSleep',
+  'health.activityAmount',
   'health.normal',
   'health.notProvided',
   'health.unit.minutes',
