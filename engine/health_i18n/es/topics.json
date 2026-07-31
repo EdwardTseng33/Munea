@@ -71,6 +71,64 @@
     }
    }
   },
+  "TW-EDU-02": {
+   "keywords": [
+    "me duelen las rodillas",
+    "dolor de rodilla",
+    "artrosis",
+    "las rodillas",
+    "me crujen las rodillas",
+    "no puedo bajar escaleras",
+    "me cuesta subir escaleras",
+    "no puedo agacharme",
+    "rodilla hinchada",
+    "glucosamina",
+    "condroitina",
+    "parches para el dolor"
+   ],
+   "solutions": {
+    "knee-thigh-strength": {
+     "label": "Fortalecer el muslo",
+     "say": "Para las rodillas, lo que más funciona es fortalecer el muslo: sentado, estire la pierna y aguante unos segundos; o levantarse y sentarse de la silla apoyándose en los brazos. Unas cuantas veces al día basta. Si el músculo sujeta, la rodilla no tiene que cargar con todo."
+    },
+    "knee-weight": {
+     "label": "El peso",
+     "say": "Cada kilo que baja le quita a la rodilla varias veces esa carga en cada paso — de todo lo que existe para las rodillas, esto es lo que mejor respaldo tiene, mucho más que cualquier bote."
+    },
+    "knee-avoid-squat": {
+     "label": "Los movimientos que castigan la rodilla",
+     "say": "Camine por terreno llano, evite las escaleras cuando pueda y no esté mucho rato en cuclillas ni de rodillas. Para fregar el suelo, fregona de mango largo o hágalo sentado — nada de ponerse de rodillas."
+    },
+    "knee-patch": {
+     "label": "Parches y cremas para el dolor",
+     "askedFor": [
+      "parches",
+      "parche para el dolor",
+      "crema antiinflamatoria",
+      "pomada"
+     ],
+     "say": "Un parche para pasar mejor el rato está bien, pero no se tire meses tapando el dolor con ellos — el dolor es el cuerpo avisando de algo."
+    },
+    "knee-glucosamine": {
+     "label": "Glucosamina y condroitina",
+     "dailyCap": "Siga la etiqueta y no lo duplique con otros productos que lleven lo mismo",
+     "askedFor": [
+      "glucosamina",
+      "condroitina",
+      "colágeno para las rodillas"
+     ],
+     "say": "La glucosamina y la condroitina tienen una evidencia entre floja y media, y no todo el mundo lo nota — se puede probar, pero que no sea su apuesta principal. Lo que de verdad funciona es bajar peso y fortalecer el muslo. **Y si toma anticoagulantes como el Sintrom, anda mal del riñón o es alérgico al marisco, pregúntelo antes a su médico o a su farmacéutico.**"
+    },
+    "knee-surgery-blocked": {
+     "label": "Operarse o infiltraciones",
+     "say": "Si le conviene operarse, o ponerse infiltraciones de ácido hialurónico o de corticoide, eso lo decide el traumatólogo. Yo no voy a tomar esa decisión por usted."
+    },
+    "knee-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si se le hincha una rodilla de repente y está caliente, y encima tiene fiebre, o si después de un golpe no puede apoyar el pie — eso no es el desgaste de siempre: hay que ir al médico cuanto antes para descartar una infección o una fractura."
+    }
+   }
+  },
   "TW-EDU-03": {
    "keywords": [
     "tensión alta",
@@ -170,6 +228,108 @@
     }
    }
   },
+  "TW-EDU-05": {
+   "keywords": [
+    "gota",
+    "ataque de gota",
+    "ácido úrico",
+    "tengo el úrico alto",
+    "se me ha hinchado el dedo gordo del pie",
+    "me duele el dedo del pie",
+    "articulación hinchada",
+    "úrico"
+   ],
+   "solutions": {
+    "gout-avoid-triggers": {
+     "label": "Lo primero que hay que quitar",
+     "say": "Las vísceras (hígado, riñones, mollejas), el marisco, los caldos y consomés muy concentrados, y el alcohol — la cerveza es la que más se nota. En pleno ataque, fuera todo eso: son las mechas más habituales."
+    },
+    "gout-water": {
+     "label": "Beba más agua",
+     "say": "Beber agua ayuda a eliminar el ácido úrico — repártala a lo largo del día. Si su médico le ha mandado limitar los líquidos, mande lo que él le haya dicho."
+    },
+    "gout-sugary-drinks": {
+     "label": "Los refrescos también cuentan",
+     "say": "Esto lo sabe poca gente: los refrescos y los zumos envasados con fructosa suben el ácido úrico casi tanto como la cerveza. Empiece por quitar eso."
+    },
+    "gout-weight": {
+     "label": "Bajar peso, pero despacio",
+     "say": "Al bajar peso el ácido úrico suele bajar con él — pero poco a poco: adelgazar de golpe puede provocar justo lo contrario, un ataque."
+    },
+    "gout-lemon-soda": {
+     "label": "Agua con limón, bicarbonato",
+     "askedFor": [
+      "agua con limón",
+      "limón",
+      "bicarbonato",
+      "agua con gas"
+     ],
+     "say": "Lo del agua con limón o el bicarbonato es más costumbre que evidencia — tomarlo no hace daño, pero no lo tome por tratamiento: lo que hay que evitar, hay que seguir evitándolo igual."
+    },
+    "gout-med-blocked": {
+     "label": "Antiinflamatorios y pastillas del úrico",
+     "say": "Las cantidades de los antiinflamatorios o de la medicación para bajar el úrico no se las voy a decir yo. Y si toma diuréticos, si tienen algo que ver con sus ataques lo tiene que valorar su médico."
+    },
+    "gout-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si esa articulación está roja, hinchada y muy caliente y además tiene fiebre, o si el dolor se va extendiendo — hay que ir al médico cuanto antes para descartar una infección de la articulación o una celulitis. Eso no se arregla poniéndose hielo en casa y esperando."
+    }
+   }
+  },
+  "TW-EDU-06": {
+   "keywords": [
+    "estreñimiento",
+    "estreñido",
+    "estreñida",
+    "no puedo ir al baño",
+    "llevo días sin ir",
+    "hacer de vientre",
+    "voy muy duro",
+    "no puedo hacer caca",
+    "laxante",
+    "supositorio"
+   ],
+   "solutions": {
+    "consti-water": {
+     "label": "Beber agua suficiente",
+     "say": "Mucha gente mayor bebe poco por miedo a levantarse de noche, y así todavía cuesta más. Sin agua, la fibra no empuja — repártala a lo largo del día y no espere a tener sed."
+    },
+    "consti-fiber-food": {
+     "label": "Fibra, de la comida",
+     "say": "Verdura de hoja verde, boniato, fruta con piel, legumbres, y cambiar la mitad del pan blanco por integral. La fibra de la comida es la más fiable — eso sí, siempre acompañada de agua."
+    },
+    "consti-kiwi-prune": {
+     "label": "Kiwi o ciruelas pasas",
+     "say": "Dos kiwis al día, o unas cuantas ciruelas pasas. De todos los alimentos que se recomiendan para esto, estos dos son de los pocos que aguantan bien el examen de los estudios."
+    },
+    "consti-routine": {
+     "label": "Al baño siempre a la misma hora",
+     "say": "Media hora después del desayuno es cuando el intestino está más dispuesto. Siéntese a esa hora, sin prisa y sin agobiarse — con el tiempo el cuerpo va cogiendo el ritmo."
+    },
+    "consti-walk": {
+     "label": "Moverse un poco",
+     "say": "Si uno pasa el día sentado, el intestino también se apalanca. Un paseo de diez o quince minutos después de comer — más barato imposible."
+    },
+    "consti-probiotics": {
+     "label": "Probióticos",
+     "dailyCap": "Siga la etiqueta y no acumule varios productos del mismo tipo a la vez",
+     "askedFor": [
+      "probióticos",
+      "lactobacilos",
+      "bífidus"
+     ],
+     "say": "Los probióticos se pueden probar, pero el efecto depende mucho de la cepa y no todo el mundo lo nota — la evidencia no es tan sólida como la de beber agua y comer fibra; que no sean su apuesta principal. **Si tiene las defensas bajas o está en quimioterapia, pregunte al médico antes de tomarlos.**"
+    },
+    "consti-laxative-blocked": {
+     "label": "Laxantes y supositorios",
+     "say": "Qué laxante, qué supositorio o qué enema y en qué cantidad, no se lo puedo decir yo. Y tirar de laxantes durante mucho tiempo deja el intestino todavía más vago — eso lo tiene que valorar su médico."
+    },
+    "consti-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si ve sangre en las heces o se le ponen negras, si está adelgazando sin explicación, o si de repente no puede ir de ninguna manera y le duele mucho la barriga con vómitos — eso hay que verlo con el médico cuanto antes; no se arregla cambiando la dieta."
+    }
+   }
+  },
   "TW-EDU-07": {
    "keywords": [
     "mareo",
@@ -206,6 +366,151 @@
     "dizzy-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "**Si el mareo viene con fuerza perdida en un lado, la boca torcida, dificultad para hablar, un dolor de cabeza repentino y muy fuerte, o visión doble — eso es aviso de ictus: llame al 112 inmediatamente.** Y si los mareos se repiten o ya se ha caído alguna vez, pida cita para que su médico lo valore."
+    }
+   }
+  },
+  "TW-EDU-08": {
+   "keywords": [
+    "cataratas",
+    "vista cansada",
+    "veo borroso",
+    "lo veo todo nublado",
+    "no veo bien",
+    "la vista",
+    "me lloran los ojos",
+    "ojos secos",
+    "luteína",
+    "gafas"
+   ],
+   "solutions": {
+    "eye-light-safety": {
+     "label": "Luz y orden en casa",
+     "say": "Cuando uno no ve bien, lo que más asusta es caerse. Ponga más luz en casa, deje una lucecita encendida en el pasillo y en la escalera, y tenga las cosas de siempre en su sitio de siempre."
+    },
+    "eye-uv": {
+     "label": "Gorra y gafas de sol",
+     "say": "El sol acelera las cataratas. Con salir con una gorra o unas gafas de sol ya hace mucho — barato y eficaz."
+    },
+    "eye-food": {
+     "label": "Verdura y fruta de color",
+     "say": "Las verduras de hoja verde, el maíz y la yema del huevo ya llevan luteína de por sí. Sacarlo de la comida es lo más sensato, y encima no cuesta dinero."
+    },
+    "eye-normalize": {
+     "label": "Es parte del envejecimiento",
+     "say": "Las cataratas son parte muy común de hacerse mayor: a partir de cierta edad las tiene muchísima gente, en mayor o menor grado. No es que usted esté especialmente mal de salud."
+    },
+    "eye-lutein": {
+     "label": "Luteína",
+     "dailyCap": "Siga la etiqueta y no la duplique con otros productos que también lleven luteína",
+     "askedFor": [
+      "luteína",
+      "vitaminas para la vista",
+      "pastillas para los ojos"
+     ],
+     "say": "La luteína tiene algún respaldo para proteger la mácula, pero **no hay ninguna evidencia de que haga desaparecer una catarata que ya está** — es protección, no tratamiento: no espere ver más claro por tomarla. Las verduras de hoja verde, el maíz y la yema ya la llevan. **Si toma anticoagulantes o le van a operar, consúltelo antes con su médico.**"
+    },
+    "eye-surgery-blocked": {
+     "label": "Operarse de cataratas",
+     "say": "Si hay que operarse de cataratas y cuándo, eso es una decisión médica del oftalmólogo. Yo no la voy a tomar por usted."
+    },
+    "eye-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si de **repente** ve mucho peor, si le falta un trozo del campo de visión, o si le duele mucho un ojo — vaya a urgencias sin esperar: puede ser un ataque de glaucoma o un desprendimiento de retina, y eso no es vista cansada."
+    }
+   }
+  },
+  "TW-EDU-09": {
+   "keywords": [
+    "me pica todo",
+    "picor",
+    "picores",
+    "piel seca",
+    "no paro de rascarme",
+    "me rasco hasta hacerme heridas",
+    "sarpullido",
+    "me pica la espalda",
+    "se me descama la piel",
+    "me pica por la noche"
+   ],
+   "solutions": {
+    "itch-shower-temp": {
+     "label": "El agua de la ducha, menos caliente",
+     "say": "La ducha muy caliente sienta de gloria, pero se lleva la grasa de la piel y después pica más. Baje la temperatura y acorte la ducha — de todo esto, es lo que antes se nota."
+    },
+    "itch-moisturize": {
+     "label": "Crema con la piel aún húmeda",
+     "say": "Póngase la crema hidratante nada más salir de la ducha, con la piel todavía húmeda: así el agua se queda dentro. Si espera a estar seco del todo, no es ni parecido."
+    },
+    "itch-clothes": {
+     "label": "Algodón y ropa holgada",
+     "say": "Lo que le toque la piel, mejor de algodón y holgado. La lana y los tejidos ásperos rozan todo el día, y cuanto más rozan más pica."
+    },
+    "itch-humidity": {
+     "label": "Que la casa no esté muy seca",
+     "say": "Con el aire acondicionado o la calefacción puestos muchas horas, el aire se reseca. Un recipiente con agua o un humidificador y la piel lo agradece."
+    },
+    "itch-normalize": {
+     "label": "Es cosa de la edad",
+     "say": "Con los años la piel produce menos grasa y retiene peor el agua: el picor en personas mayores es muy frecuente. No es que tenga usted nada raro."
+    },
+    "itch-steroid-blocked": {
+     "label": "Las pomadas",
+     "say": "La potencia de una pomada de corticoide y cómo aplicarla no se la voy a decir yo: depende de la zona y de lo fuerte que sea la cosa — eso se pregunta al médico o al farmacéutico."
+    },
+    "itch-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si además del picor se le pone la piel o el blanco de los ojos amarillo, adelgaza sin explicación, le salen bultos en los ganglios, o el picor no le deja dormir y se rasca hasta hacerse heridas que supuran — hay que verlo con el dermatólogo o con su médico: puede ser aviso del hígado, del riñón o de una infección, y no simple sequedad."
+    }
+   }
+  },
+  "TW-EDU-10": {
+   "keywords": [
+    "próstata",
+    "me levanto a orinar por la noche",
+    "orino muchas veces",
+    "voy mucho al baño",
+    "no vacío bien",
+    "el chorro flojo",
+    "ganas de orinar a cada rato",
+    "próstata grande",
+    "hago pis muchas veces",
+    "la vejiga"
+   ],
+   "solutions": {
+    "noct-fluid-timing": {
+     "label": "Beba más de día y menos de noche",
+     "say": "No hace falta beber menos al día: solo repartirlo mejor. Beba poco en las dos o tres horas antes de acostarse y recupérelo durante el día — normalmente ya se levanta usted menos veces."
+    },
+    "noct-caffeine-alcohol": {
+     "label": "Por la noche, ni café ni alcohol",
+     "say": "El café, el té cargado y el alcohol hacen orinar más. Por la noche, mejor dejarlos."
+    },
+    "noct-night-safety": {
+     "label": "El camino al baño, seguro",
+     "say": "De madrugada es cuando más se cae la gente. Deje una lucecita del dormitorio al baño, el suelo despejado, y al levantarse quédese un momento sentado en el borde de la cama antes de andar."
+    },
+    "noct-normalize": {
+     "label": "Es de lo más corriente",
+     "say": "Que la próstata vaya creciendo con los años le pasa a la mayoría de los hombres — es de lo más corriente que hay. No hay nada de qué avergonzarse por contarlo."
+    },
+    "noct-saw-palmetto": {
+     "label": "Saw palmetto y productos para la próstata",
+     "dailyCap": "Siga la etiqueta y no lo mezcle por su cuenta con la medicación de la próstata",
+     "askedFor": [
+      "saw palmetto",
+      "sabal",
+      "aceite de semilla de calabaza",
+      "producto para la próstata"
+     ],
+     "say": "El saw palmetto (sabal) y los productos parecidos tienen una evidencia floja — yo no se los voy a recomendar por iniciativa propia. **Y si ya toma medicación para la próstata, pregunte en la farmacia antes de añadir nada por su cuenta.**"
+    },
+    "noct-dx-blocked": {
+     "label": "Si es benigno o es otra cosa",
+     "say": "Si es un crecimiento benigno de la próstata o es otra cosa, yo no lo voy a juzgar — eso se ve con las pruebas del urólogo."
+    },
+    "noct-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si no consigue orinar nada, si ve sangre en la orina, o si le duele muchísimo el costado y además tiene fiebre — eso es urgente: vaya a urgencias sin esperar. Y otra cosa: levantarse mucho por la noche a veces es aviso del azúcar o del corazón; si además se le hinchan las piernas o se ahoga, dígaselo también al médico."
     }
    }
   },
@@ -252,6 +557,204 @@
     "reflux-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "Si le cuesta tragar, pierde peso sin explicación o las heces se le ponen negras, hay que ir al digestivo para descartar cosas del esófago y del estómago. **Y lo más importante: el ardor puede disfrazar un infarto — si viene con sudor frío, ahogo, dolor que se va al brazo izquierdo o a la mandíbula, o empeora al moverse, trátelo como cosa del corazón: llame al 112 inmediatamente.**"
+    }
+   }
+  },
+  "TW-EDU-12": {
+   "keywords": [
+    "vacuna",
+    "vacunas",
+    "la vacuna de la gripe",
+    "ponerme la vacuna",
+    "vacuna del neumococo",
+    "herpes zóster",
+    "culebrilla",
+    "campaña de la gripe",
+    "me toca vacunarme",
+    "vacunarse"
+   ],
+   "solutions": {
+    "vax-free-eligibility": {
+     "label": "Las vacunas que le tocan por edad",
+     "say": "En España hay un calendario de vacunación para toda la vida, no solo de niños. A partir de los 60 años entra en el grupo al que se le recomienda la vacuna de la gripe cada otoño; a partir de los 65, la del neumococo y la del herpes zóster (lo que aquí se llama culebrilla). Están financiadas para quien las tiene recomendadas, pero **cada comunidad autónoma organiza su campaña a su manera y las fechas cambian** — lo más práctico es preguntar en su centro de salud cuáles le tocan a usted."
+    },
+    "vax-why": {
+     "label": "Por qué en los mayores importa más",
+     "say": "Con los años las defensas bajan, y una gripe o una neumonía se complican con más facilidad. La vacuna no le garantiza que no vaya a ponerse malo: lo que hace es bajar bastante las probabilidades de que la cosa acabe en el hospital."
+    },
+    "vax-side-effects": {
+     "label": "Los efectos, sin cuentos",
+     "say": "Lo más habitual es que el brazo quede dolorido un par de días, y a algunas personas les da algo de destemplanza o unas décimas. Suele pasarse en un día o dos — ni es lo que cuentan por ahí, ni es que no se note nada."
+    },
+    "vax-eligibility-blocked": {
+     "label": "Si a usted le conviene ponérsela",
+     "say": "Si en su situación concreta le conviene vacunarse hoy — si tiene fiebre, si toma algo que le baje las defensas, si es alérgico a algún componente — eso lo tiene que decir el médico o la enfermera. Pregúntelo antes de que se la pongan."
+    },
+    "vax-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Si después de vacunarse le cuesta respirar, se le hincha la cara o le sale un sarpullido por todo el cuerpo — **eso no espera: llame al 112 o vaya a urgencias de inmediato.**"
+    }
+   }
+  },
+  "TW-EDU-13": {
+   "keywords": [
+    "me atraganto",
+    "atragantarse",
+    "me cuesta tragar",
+    "no puedo tragar",
+    "no puedo masticar",
+    "la dentadura",
+    "dentadura postiza",
+    "se me va por otro lado",
+    "toso al comer",
+    "se me atraviesa la comida"
+   ],
+   "solutions": {
+    "swallow-texture": {
+     "label": "Cambiar la textura de la comida",
+     "say": "Corte en trozos pequeños, cueza la comida un poco más y espese algo las salsas — el mismo plato, hecho de otra manera, se traga muchísimo mejor."
+    },
+    "swallow-thin-liquid": {
+     "label": "Lo que más se atraganta es el agua",
+     "say": "Mucha gente cree que lo líquido se traga mejor, y es al revés: el agua sola es lo que más se va por otro lado. Si se atraganta con el agua a menudo, pregunte a un profesional si le convendría un espesante."
+    },
+    "swallow-pace": {
+     "label": "Despacio y sin hablar mientras come",
+     "say": "Masticar despacio, bocados pequeños, no hablar mientras traga y comer bien sentado con la espalda recta — con estas cuatro cosas se evitan muchísimos atragantamientos."
+    },
+    "swallow-eval": {
+     "label": "Que le valoren la deglución",
+     "say": "Si se atraganta a menudo, lo más útil es que un logopeda o el otorrino le hagan una valoración de la deglución. Cambiar la textura ayuda, pero no sustituye a que se lo miren bien."
+    },
+    "swallow-normalize": {
+     "label": "Es muy frecuente",
+     "say": "Que la boca y la garganta pierdan fuerza con los años es muy frecuente, sobre todo en personas mayores — no es que usted se esté volviendo un inútil."
+    },
+    "swallow-dental-blocked": {
+     "label": "Dentadura postiza o implantes",
+     "say": "Si le conviene una dentadura postiza o un implante, y de qué tipo, eso lo decide el dentista. Yo no voy a tomar esa decisión por usted."
+    },
+    "swallow-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "**Si se atraganta y no puede hablar ni respirar y se le pone la cara morada — llame al 112 inmediatamente y hágale la maniobra de Heimlich**: eso no se arregla «cortando en trocitos». Y si se atraganta una y otra vez o está perdiendo peso deprisa, pida que le valoren la deglución."
+    }
+   }
+  },
+  "TW-EDU-14": {
+   "keywords": [
+    "se me olvidan las cosas",
+    "se me olvida todo",
+    "mala memoria",
+    "me falla la memoria",
+    "no me acuerdo de nada",
+    "alzhéimer",
+    "demencia",
+    "estoy muy despistado",
+    "estoy muy despistada",
+    "me quedo en blanco",
+    "ginkgo",
+    "se me va el santo al cielo"
+   ],
+   "solutions": {
+    "mci-normalize-vs-warn": {
+     "label": "Qué es normal y qué no lo es",
+     "say": "Que no le salga un nombre, o que no recuerde dónde dejó algo pero se acuerde en cuanto se lo recuerdan — eso se parece más al envejecimiento normal. Lo que sí conviene mirar es olvidar la conversación entera, repetir la misma pregunta muchas veces, o perderse en un camino de toda la vida."
+    },
+    "mci-exercise": {
+     "label": "Ejercicio regular",
+     "say": "Para cuidar la cabeza, el ejercicio es lo que mejor evidencia tiene — muchísimo más que cualquier bote «para la memoria». Con caminar a buen paso unas cuantas veces por semana ya cuenta."
+    },
+    "mci-social": {
+     "label": "Trato con gente y la cabeza ocupada",
+     "say": "Charlar, la partida de cartas, aprender algo nuevo, el centro de mayores del barrio — el trato con gente y tener la cabeza ocupada ayudan a frenar el deterioro, y funcionan mejor que hacer pasatiempos solo en casa."
+    },
+    "mci-hearing-vision": {
+     "label": "El oído y la vista, lo primero",
+     "say": "Esto se pasa por alto muy a menudo: oír mal y ver mal hacen que uno salga menos y se vaya encerrando, y son de los pocos factores de riesgo de demencia que **sí se pueden cambiar**. Si toca audífono o toca revisarse la vista, hágalo."
+    },
+    "mci-vascular": {
+     "label": "Cuidar la tensión y el azúcar es cuidar la cabeza",
+     "say": "Con la tensión, el azúcar y el colesterol controlados se cuidan las arterias del cerebro — cuidar la cabeza no va de tomar botes, va de esto."
+    },
+    "mci-brain-supp": {
+     "label": "Ginkgo, omega 3 y productos «para la memoria»",
+     "dailyCap": "Siga la etiqueta y no lo duplique con otros productos del mismo tipo",
+     "askedFor": [
+      "ginkgo",
+      "omega 3 para la memoria",
+      "fosfatidilserina",
+      "pastillas para la memoria"
+     ],
+     "say": "Le voy a ser sincera: el ginkgo, el omega 3 y compañía **no tienen evidencia suficiente** para prevenir ni retrasar la demencia — no ponga ahí el dinero ni la esperanza. El ejercicio, controlar la tensión y el azúcar, y el trato con gente tienen muchísimo más respaldo. Si aun así quiere tomarlo: **el ginkgo aumenta el riesgo de sangrado si toma anticoagulantes como el Sintrom o aspirina** — pregúnteselo antes a su médico."
+    },
+    "mci-checkup": {
+     "label": "Que se lo valoren bien",
+     "say": "Mejor que estar dándole vueltas: pida cita con su médico de cabecera para que le valore y, si hace falta, le mande a neurología o a una unidad de memoria. A veces la memoria falla por el tiroides, por falta de B12, por un bajón de ánimo o por la medicación — y esas sí tienen arreglo."
+    },
+    "mci-dementia-drug-blocked": {
+     "label": "Medicación para la demencia",
+     "say": "Si hay que tomar medicación para la demencia y cuál, lo decide el médico después de valorarle. Yo no voy a juzgar eso por usted."
+    },
+    "mci-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Si se ha vuelto confuso **de repente**, no reconoce a la gente o dice cosas sin sentido — eso no es demencia, es un cuadro agudo de confusión que puede venir de una infección o de la medicación: hay que ir a urgencias sin esperar. Si va poco a poco — perderse en un camino conocido, repetir la misma pregunta, un cambio grande de carácter — pida cita para que le valoren la memoria."
+    }
+   }
+  },
+  "TW-EDU-15": {
+   "keywords": [
+    "calambres",
+    "calambres por la noche",
+    "se me agarrota la pierna",
+    "calambre en el gemelo",
+    "me da un tirón en la pantorrilla",
+    "se me sube la pierna",
+    "calambre en la pierna"
+   ],
+   "solutions": {
+    "cramp-stretch-before-bed": {
+     "label": "Estirar el gemelo antes de dormir",
+     "say": "Antes de acostarse, apóyese en la pared y estire la parte de atrás de la pierna: aguante treinta segundos, dos o tres veces. De todo lo que se recomienda para los calambres de la noche, esto es de lo poco que tiene estudios detrás."
+    },
+    "cramp-hydration": {
+     "label": "Agua y sales",
+     "say": "Los días de mucho sudor o de beber poca agua se agarrota uno más. Recupere el agua a lo largo del día, no de golpe justo antes de acostarse."
+    },
+    "cramp-warm": {
+     "label": "Calor y baño de pies",
+     "askedFor": [
+      "baño de pies",
+      "manta eléctrica",
+      "tengo los pies fríos",
+      "calor"
+     ],
+     "say": "Con los pies fríos dan más calambres. Un baño de pies con agua templada antes de dormir y los pies bien tapados — no tiene ningún inconveniente, y mucha gente nota la diferencia."
+    },
+    "cramp-food-minerals": {
+     "label": "Minerales, de la comida",
+     "say": "Plátano, verdura de hoja verde, frutos secos, leche — el potasio, el magnesio y el calcio de la comida rinden más que cualquier bote."
+    },
+    "cramp-magnesium": {
+     "label": "Magnesio en suplemento",
+     "dailyCap": "Como suplemento, no más de 250 mg al día",
+     "askedFor": [
+      "magnesio",
+      "citrato de magnesio",
+      "pastillas de magnesio"
+     ],
+     "say": "El magnesio tiene mucha fama para los calambres, pero seré sincera: en los ensayos con personas mayores y calambres de noche, la mayoría no vieron un efecto claro; donde la evidencia es algo mejor es en los calambres del embarazo. Se puede probar, pero sin muchas expectativas. **Si anda mal del riñón, no lo tome por su cuenta**; y con ciertos antibióticos y con las pastillas del hueso hay que separarlo unas horas — pregunte en la farmacia."
+    },
+    "cramp-med-review": {
+     "label": "¿Será la medicación?",
+     "say": "Algunos diuréticos y algunas pastillas del colesterol dan más calambres. Si le empezaron justo cuando le cambiaron la medicación, coméntelo en la próxima consulta."
+    },
+    "cramp-quinine-blocked": {
+     "label": "Pastillas para los calambres",
+     "say": "Los medicamentos que se han usado para los calambres (la quinina y parecidos) tienen efectos adversos serios y ya no se recomiendan para esto — no le voy a decir que se haga con ellos."
+    },
+    "cramp-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si tiene una pantorrilla hinchada, dolorida y caliente solo de un lado (hay que descartar un trombo), si los calambres vienen con debilidad o con la pierna adormecida, o si al andar un rato le duele la pierna y tiene que pararse — eso no son calambres normales: hay que verlo con el médico."
     }
    }
   },
@@ -309,6 +812,67 @@
     }
    }
   },
+  "TW-EDU-17": {
+   "keywords": [
+    "osteoporosis",
+    "huesos débiles",
+    "descalcificación",
+    "calcio",
+    "pastillas de calcio",
+    "densitometría",
+    "me he caído",
+    "miedo a caerme",
+    "fractura",
+    "me he roto la cadera",
+    "vitamina d",
+    "me estoy encorvando"
+   ],
+   "solutions": {
+    "osteo-fall-proof-home": {
+     "label": "Quitar de casa los puntos de caída",
+     "say": "Lo grave de la osteoporosis es la caída. Esto se puede hacer esta misma tarde: alfombrilla antideslizante en la ducha, el pasillo despejado, los cables recogidos y una lucecita en el camino al baño para la noche."
+    },
+    "osteo-strength-balance": {
+     "label": "Fuerza y equilibrio",
+     "say": "Sujetarse al respaldo de una silla y sostenerse a la pata coja, levantarse y sentarse, taichí — entrenar el equilibrio y la fuerza de las piernas tiene más respaldo para evitar fracturas que tomar calcio."
+    },
+    "osteo-sunlight": {
+     "label": "El sol",
+     "say": "Salga cada día un cuarto de hora o veinte minutos a que le dé el sol, y aproveche para caminar. Es la vitamina D más barata que existe."
+    },
+    "osteo-calcium-food": {
+     "label": "Calcio de la comida",
+     "say": "Leche y yogur, queso, sardinas con su espina, tofu, legumbres, verdura de hoja verde, sésamo — el calcio de la comida se aprovecha mejor y no trae el problema de las piedras."
+    },
+    "osteo-calcium-vitd-supp": {
+     "label": "Calcio y vitamina D en suplemento",
+     "dailyCap": "Contando lo que ya viene de la comida, en adultos no conviene pasar de unos 2.000-2.500 mg de calcio al día — es un límite de seguridad, no una meta",
+     "askedFor": [
+      "calcio",
+      "pastillas de calcio",
+      "vitamina d",
+      "calcio con vitamina d"
+     ],
+     "say": "Si por mucho que lo intente no llega con la comida, tomar calcio con vitamina D es razonable — pero acuérdese de tres cosas: no tome mucho de golpe, se aprovecha mejor repartido; **si ha tenido piedras en el riñón o tiene el calcio alto, no lo tome por su cuenta**; y con las pastillas del hueso y las del tiroides hay que separarlo unas horas. Cuánto y si de verdad le hace falta, llévese su medicación y pregúnteselo al médico o al farmacéutico."
+    },
+    "osteo-quit-smoke-alcohol": {
+     "label": "Menos tabaco y menos alcohol",
+     "say": "Fumar y beber aceleran la pérdida de hueso: reducir estas dos cosas hace más que un bote más de calcio."
+    },
+    "osteo-dexa": {
+     "label": "Hágase una densitometría",
+     "say": "Para no estar adivinando si tiene los huesos flojos o no, lo más práctico es hacerse una densitometría ósea. Coméntelo con su médico de cabecera, que le dirá si en su caso está indicada."
+    },
+    "osteo-meds-blocked": {
+     "label": "Los medicamentos para el hueso",
+     "say": "Si hay que tomar medicación para la osteoporosis (en pastillas o en inyección) y cuál, lo decide el médico según su densitometría y su riesgo de fractura. Yo no voy a juzgar eso por usted."
+    },
+    "osteo-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Si se cae y no consigue levantarse, o le duele tanto que no puede moverse — **que no intenten incorporarle: llame al 112.** Y si ha menguado de estatura de forma llamativa, se le está encorvando la espalda deprisa, o le ha dado un dolor de espalda de repente, puede ser un aplastamiento de vértebra: hay que ir al médico."
+    }
+   }
+  },
   "TW-EDU-18": {
    "keywords": [
     "triste",
@@ -356,6 +920,230 @@
     "mood-refer": {
      "label": "Cuándo pedir ayuda",
      "say": "Si le pasan por la cabeza ideas de hacerse daño, o siente que vivir ya no tiene sentido — llame ahora mismo al 024, o al 112 si es una emergencia, y dígaselo también a alguien de confianza. Y si lleva más de dos semanas sin comer, sin dormir y sin ganas de nada, hay que consultarlo con el médico: es una enfermedad que se trata, no una debilidad ni una manía."
+    }
+   }
+  },
+  "TW-EDU-19": {
+   "keywords": [
+    "catarro",
+    "resfriado",
+    "constipado",
+    "estoy acatarrado",
+    "estoy acatarrada",
+    "mocos",
+    "me duele la garganta",
+    "tos",
+    "toso mucho",
+    "fiebre",
+    "tengo décimas",
+    "estoy pachucho"
+   ],
+   "solutions": {
+    "cold-ask-pharmacist": {
+     "label": "Pregunte si se lleva bien con su medicación",
+     "say": "Lo más importante de este tema: los antigripales y los calmantes que uno tiene por casa chocan con la medicación crónica con muchísima facilidad. Antes de tomarse nada, pregunte en la farmacia «¿esto se lleva bien con lo que tomo?» — es cosa de un minuto."
+    },
+    "cold-rest-fluids": {
+     "label": "Agua y descanso",
+     "say": "El catarro corriente casi siempre es cosa de un virus: bebiendo bastante y durmiendo lo suyo, en una semana más o menos la cosa suele ir aflojando."
+    },
+    "cold-protect-others": {
+     "label": "No se lo pegue a los de casa",
+     "say": "Mascarilla y lavarse las manos a menudo, sobre todo si en casa hay mayores o niños pequeños — para usted son unos días de estar pachucho; para un abuelo puede ser un ingreso."
+    },
+    "cold-warm-fluids": {
+     "label": "Lo templado alivia la garganta",
+     "askedFor": [
+      "miel con limón",
+      "caldo",
+      "infusión para la garganta"
+     ],
+     "say": "Agua templada, un caldo caliente, miel con limón (a los bebés de menos de un año, nada de miel) para la garganta irritada — eso alivia el rato, no cura nada."
+    },
+    "cold-otc-blocked": {
+     "label": "Marcas y cantidades",
+     "say": "No le voy a recomendar ninguna marca de antigripal ni ninguna cantidad, y tampoco voy a decidir si esto es un catarro, una gripe o una neumonía — eso lo tiene que ver el médico."
+    },
+    "cold-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si la fiebre no cede en tres días, si le cuesta respirar, si nota a la persona rara o muy adormilada, o si la enfermedad crónica que ya tenía se le ha descontrolado claramente — eso ya no es un catarro que se pase solo: hay que ir al médico."
+    }
+   }
+  },
+  "TW-EDU-20": {
+   "keywords": [
+    "palpitaciones",
+    "el corazón me va muy deprisa",
+    "taquicardia",
+    "arritmia",
+    "me da un vuelco el corazón",
+    "me late muy fuerte el corazón",
+    "opresión en el pecho",
+    "se me salta el corazón",
+    "noto el corazón raro"
+   ],
+   "solutions": {
+    "palp-record": {
+     "label": "Apunte cómo fue",
+     "say": "La próxima vez que le pase, apunte cuatro cosas: a qué hora, cuánto le duró, si vino con mareo o con opresión en el pecho, y qué estaba haciendo. Al cardiólogo eso le sirve muchísimo — mucho más que intentar recordarlo después."
+    },
+    "palp-caffeine": {
+     "label": "¿Será la cafeína?",
+     "say": "El café, el té cargado, las bebidas energéticas y dormir poco hacen que uno note más el corazón. Pruebe a reducirlo una semana y vea si cambia algo."
+    },
+    "palp-anxiety": {
+     "label": "Con los nervios se notan más",
+     "say": "Las palpitaciones muchas veces tienen que ver con la ansiedad y no siempre son cosa del corazón. Cuando le vengan, siéntese y suelte el aire despacio; no se ponga a andar de golpe."
+    },
+    "palp-anemia": {
+     "label": "También puede ser anemia",
+     "say": "A veces las palpitaciones vienen de una anemia, sobre todo en mujeres. En el próximo análisis puede pedir que se lo miren."
+    },
+    "palp-normalize": {
+     "label": "En los mayores es frecuente",
+     "say": "En personas mayores las arritmias son bastante frecuentes — que den miedo es de lo más normal, pero no todas son peligrosas."
+    },
+    "palp-dx-blocked": {
+     "label": "Si es benigna o peligrosa",
+     "say": "Si su arritmia es benigna o peligrosa, eso no lo puedo juzgar de ninguna manera: es un diagnóstico médico. Lo que sí puedo es ayudarle a apuntarlo y acompañarle a que se lo miren."
+    },
+    "palp-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "**Si las palpitaciones vienen con dolor en el pecho, ahogo, un desmayo, sudor frío, o un dolor que se le va al brazo izquierdo o a la mandíbula — llame al 112 inmediatamente.** Y otra cosa: algunas arritmias aumentan el riesgo de ictus, así que si aparece la cara torcida, un brazo caído o dificultad para hablar, también al 112 sin esperar."
+    }
+   }
+  },
+  "TW-EDU-22": {
+   "keywords": [
+    "dolor de cuello",
+    "me duele el cuello",
+    "contractura",
+    "dolor de espalda",
+    "me duele la espalda",
+    "lumbago",
+    "me he quedado clavado",
+    "tortícolis",
+    "las cervicales",
+    "hombros cargados",
+    "de estar sentado todo el día",
+    "dolor lumbar"
+   ],
+   "solutions": {
+    "neck-strength-training": {
+     "label": "Fortalecer cuello y hombros",
+     "say": "Aquí hay algo que va contra la intuición: lo que de verdad tiene respaldo en los estudios es **hacer fuerza**, no estarse estirando todo el día. Encogimientos de hombros, remo con una goma elástica, abrir el pecho contra la pared — unas cuantas veces por semana rinde más que media hora de estiramientos a diario."
+    },
+    "neck-workstation": {
+     "label": "Ajuste la mesa, la silla y la pantalla",
+     "say": "La pantalla a la altura de los ojos, la silla de modo que los pies lleguen al suelo, y los codos apoyados. En los estudios, ajustar el puesto de trabajo junto con hacer fuerza es la combinación que mejor funciona — y esto se puede hacer hoy mismo."
+    },
+    "neck-microbreak": {
+     "label": "Levántese cada hora",
+     "say": "Póngase una alarma y cada hora levántese un minuto y mueva los hombros. Lo que más castiga de estar sentado no es la mala postura: es estar en la misma postura demasiado rato."
+    },
+    "neck-heat": {
+     "label": "Calor para aflojar",
+     "askedFor": [
+      "calor",
+      "manta eléctrica",
+      "bolsa de agua caliente"
+     ],
+     "say": "Cuando duele mucho, el calor local alivia el rato — eso es para pasarlo mejor, no para arreglar el fondo del asunto."
+    },
+    "neck-gentle-yoga": {
+     "label": "Estiramientos y yoga",
+     "say": "Los estiramientos y el yoga sientan bien y también ayudan; solo que en los estudios no tienen tanto respaldo como hacer fuerza. Como relajación, estupendo — pero que no sean lo único."
+    },
+    "neck-caregiver-transfer": {
+     "label": "Cómo levantar a alguien sin destrozarse la espalda",
+     "say": "Al ayudarle a levantarse, doble las rodillas y acérquese a él antes de hacer fuerza; no se doble por la cintura para tirar con la espalda. Las lumbalgias de quien cuida se fabrican así, poco a poco. En los servicios sociales de su ayuntamiento también puede preguntar por ayudas técnicas y préstamo de material."
+    },
+    "neck-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "Si nota hormigueo o falta de fuerza en la mano, o si le duele tanto que no le deja dormir — eso hay que verlo con el médico: normalmente le mandarán a rehabilitación o a traumatología. No lo aguante indefinidamente."
+    }
+   }
+  },
+  "TW-EDU-23": {
+   "keywords": [
+    "no hay quien lo levante",
+    "no se levanta por las mañanas",
+    "se acuesta tardísimo",
+    "trasnocha",
+    "llega tarde al instituto",
+    "no duerme lo suficiente",
+    "está con el móvil hasta las tantas",
+    "mi hijo adolescente",
+    "el instituto",
+    "los exámenes",
+    "jugando hasta tarde"
+   ],
+   "solutions": {
+    "teen-explain-biology": {
+     "label": "Esto es biología, no vagancia",
+     "say": "Discutir con él para que se acueste antes no suele servir de nada, porque a esa hora su cuerpo de verdad todavía no tiene sueño: en la adolescencia el reloj interno se retrasa. En vez de pelear, ponga el foco en dos cosas: cómo levantarse mejor por la mañana, y no recuperar de más el fin de semana."
+    },
+    "teen-weekend-anchor": {
+     "label": "El fin de semana, sin pasarse durmiendo",
+     "say": "El fin de semana, como mucho una o dos horas más que entre semana. Si duerme hasta el mediodía, cada finde le empuja el reloj un poco más tarde — y el lunes es todavía peor."
+    },
+    "teen-morning-light": {
+     "label": "Luz nada más levantarse",
+     "say": "Al levantarse, que suba la persiana y salga unos minutos a la calle: la luz es lo que más adelanta el reloj interno — mucho más que dormir diez minutos de más."
+    },
+    "teen-screen-limit": {
+     "label": "Las pantallas antes de dormir",
+     "say": "En los estudios, lo que más daño hace de las pantallas no es la luz azul: es que uno se engancha, pierde la noción del tiempo y se come el sueño. Más que prohibir, pacten juntos una «hora de dormir del móvil» y que lo deje cargando fuera de la habitación."
+    },
+    "teen-no-blame-talk": {
+     "label": "No lo hable a gritos",
+     "say": "A esta edad, cuanto más le riña, menos le va a contar la verdad. Pruebe con «¿tú crees que duermes bastante? ¿te cuesta mucho levantarte?» — que lo diga él vale más que diez frases suyas."
+    },
+    "teen-refer": {
+     "label": "Cuándo pedir ayuda",
+     "say": "Si de día está tan cansado que se duerme en clase, o si le nota muy bajo de ánimo y sin ganas de ir al instituto, hay que consultarlo — empiece por el pediatra o por su médico de cabecera, que si hace falta le derivan a salud mental infanto-juvenil. **Y si dice cosas como que no quiere vivir o que nada tiene sentido, eso no espera: llame al 024, que atiende las 24 horas, es gratuito y confidencial — y no le deje solo.**"
+    }
+   }
+  },
+  "TW-EDU-25": {
+   "keywords": [
+    "estrés",
+    "mucho estrés",
+    "no puedo más",
+    "estoy quemado",
+    "estoy quemada",
+    "agobiado",
+    "agobiada",
+    "ansiedad",
+    "estoy agotado",
+    "estoy agotada",
+    "no doy más de mí",
+    "de cuidar estoy agotada"
+   ],
+   "solutions": {
+    "stress-name-it": {
+     "label": "Primero, dígalo en voz alta",
+     "say": "Solo con decir «estoy con mucho estrés» y que alguien lo escuche, el cuerpo ya afloja un poco. Si le apetece contármelo, yo estoy aquí."
+    },
+    "stress-micro-break": {
+     "label": "Un rato al día que sea suyo",
+     "say": "Quince minutos al día sin contestar mensajes ni resolverle nada a nadie, haciendo algo que le apetezca a usted. No hace falta que sea mucho rato — pero que sea todos los días."
+    },
+    "stress-caregiver-respite": {
+     "label": "El respiro de quien cuida no es un lujo",
+     "say": "Los programas de respiro familiar están hechos precisamente para usted; no es escaquearse. Si usted cae, en casa no queda nadie que sostenga — cuidarse también es cuidarle a él. En los servicios sociales de su ayuntamiento se lo explican."
+    },
+    "stress-breathing": {
+     "label": "Respirar despacio",
+     "say": "Cuando sienta que no puede más: coja aire cuatro segundos y suéltelo en seis, diez veces. Que la salida sea más larga que la entrada es lo que le dice al cuerpo que ya puede aflojar."
+    },
+    "stress-move": {
+     "label": "Moverse rinde más que quedarse tirado",
+     "say": "Con estrés, el cuerpo pide movimiento: veinte minutos andando a buen paso sueltan esa tensión mucho mejor que quedarse en el sofá con el móvil."
+    },
+    "stress-refer": {
+     "label": "Cuándo pedir ayuda",
+     "say": "Si esto le dura ya más de dos semanas y hasta lo que antes le gustaba le da igual, no es que usted sea poco fuerte: es momento de hablarlo con un profesional — con pedir cita a su médico de cabecera ya vale. **Y si le pasan por la cabeza ideas de no querer seguir viviendo, eso no espera: llame al 024, que es gratuito, confidencial y atiende las 24 horas.**"
     }
    }
   },
@@ -415,6 +1203,147 @@
     "meno-refer": {
      "label": "Cuándo ir al médico",
      "say": "**Si después de retirarse la regla vuelve a sangrar — eso no se deja pasar: pida cita con el ginecólogo.** Y si el ánimo lleva más de dos semanas por los suelos, o los síntomas le impiden trabajar o hacer vida normal, no es cuestión de «aguantar el chaparrón»: merece consultarse."
+    }
+   }
+  },
+  "TW-EDU-27": {
+   "keywords": [
+    "dolor de regla",
+    "me duele la regla",
+    "reglas dolorosas",
+    "la regla",
+    "el periodo",
+    "me va a bajar la regla",
+    "síndrome premenstrual",
+    "coágulos",
+    "regla muy abundante",
+    "tengo la regla"
+   ],
+   "solutions": {
+    "period-heat": {
+     "label": "Calor en la tripa",
+     "say": "Ponerse calor en la parte baja de la tripa es de lo poco que tiene estudios detrás, y además se puede hacer esta misma noche: una bolsa de agua caliente, una manta eléctrica o un baño calentito."
+    },
+    "period-movement": {
+     "label": "Moverse un poco viene mejor que quedarse quieta",
+     "say": "Cuando duele solo apetece tumbarse, pero andar un poco y estirarse suele aliviar más — no le digo que se vaya a entrenar, solo que no pase el día encogida."
+    },
+    "period-track": {
+     "label": "Apunte el ciclo",
+     "say": "Apunte cuándo le baja, cuántos días le duele y cuánto. Así deja de pillarla por sorpresa — y si va al médico, ese apunte es lo más útil que puede llevar."
+    },
+    "period-pms-plan": {
+     "label": "Los días de antes, baje el ritmo",
+     "say": "Si los días previos está más irritable, hinchada o llorosa, eso no es que tenga usted mal carácter. Sabiendo más o menos qué días son, procure no dejar ahí las reuniones importantes ni las batallas gordas."
+    },
+    "period-food": {
+     "label": "Cómo comer esos días",
+     "say": "Antes de la regla, menos sal y menos cafeína ayudan con la hinchazón y con el pecho dolorido; durante la regla se pierde hierro, así que la verdura de hoja verde, la carne roja y las legumbres vienen bien."
+    },
+    "period-painkiller-blocked": {
+     "label": "Los calmantes",
+     "say": "Qué calmante tomar y cómo no se lo puedo decir yo: eso es del médico o del farmacéutico. Pero sí quiero decirle una cosa: **tomar algo para el dolor de regla no es «falta de aguante»** — si le está estropeando la vida, hay que ponerle remedio."
+    },
+    "period-refer": {
+     "label": "Cuándo ir al médico",
+     "say": "**Si le duele tanto que tiene que faltar al trabajo o a clase, si vomita o se marea del dolor, o si de repente sangra mucho más de lo suyo — vaya a la ginecóloga y no lo aguante.** La endometriosis tarda años en diagnosticarse, y muchas veces es justo porque se da por hecho que la regla tiene que doler. Y si sangra fuera de la regla, o lleva más de un mes sin que le baje y no está embarazada, también hay que consultarlo."
+    }
+   }
+  },
+  "TW-EDU-28": {
+   "keywords": [
+    "anemia",
+    "estoy anémica",
+    "me falta hierro",
+    "tengo el hierro bajo",
+    "estoy muy pálida",
+    "me canso enseguida",
+    "hemoglobina baja",
+    "me ahogo al subir escaleras",
+    "pastillas de hierro"
+   ],
+   "solutions": {
+    "iron-test-first": {
+     "label": "Primero un análisis, no a ciegas",
+     "say": "Cansarse, marearse o estar pálida no siempre es falta de hierro — lo primero es un análisis con la hemoglobina y la ferritina, porque esto solo sirve si se acierta con lo que falta. **Pasarse con el hierro hace daño de verdad**, así que no conviene ir a ciegas."
+    },
+    "iron-food": {
+     "label": "Hierro de la comida",
+     "say": "Carne roja, hígado, almejas y berberechos, verdura de hoja verde, legumbres — el hierro de origen animal se aprovecha mucho mejor que el vegetal, así que quien no come carne tiene que estar más atento."
+    },
+    "iron-vitc": {
+     "label": "Con vitamina C se aprovecha más",
+     "say": "Esto es muy práctico: acompañe lo que lleve hierro con naranja, kiwi, pimiento o tomate — la vitamina C hace que se absorba bastante mejor."
+    },
+    "iron-avoid-tea": {
+     "label": "Ni té ni café a la vez",
+     "say": "Los taninos del té y del café bloquean el hierro — deje pasar una hora o dos después de comer. Esto no cuesta dinero y se nota."
+    },
+    "iron-supplement": {
+     "label": "Pastillas de hierro",
+     "dailyCap": "La dosis y cuánto tiempo, siempre lo que le diga el médico o el farmacéutico — no lo suba por su cuenta",
+     "askedFor": [
+      "hierro",
+      "pastillas de hierro",
+      "suplemento de hierro"
+     ],
+     "say": "Si el análisis confirma que le falta hierro, el suplemento es de lo poco en este tema que **sí se nota de verdad** — pero **la dosis y cuánto tiempo lo decide el médico**, y antes hay que averiguar por qué le falta (en adultos, una falta de hierro sin explicación a veces es un sangrado lento del aparato digestivo). El hierro suele estreñir y sentar mal al estómago; y con la medicación del tiroides y con ciertos antibióticos hay que separarlo unas horas."
+    },
+    "iron-cause-blocked": {
+     "label": "Por qué le falta hierro",
+     "say": "Por qué le falta hierro no lo voy a juzgar yo — puede ser por reglas abundantes, por un sangrado digestivo o porque no lo absorbe bien. Eso lo tiene que investigar el médico."
+    },
+    "iron-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Si con la anemia aparecen heces negras, se ahoga mucho o adelgaza sin explicación — hay que ir al médico cuanto antes a buscar la causa. **Y sobre todo: si al que le falta hierro es un hombre, o una mujer que ya no tiene la regla, eso casi siempre significa que hay un sangrado lento en algún sitio — hay que averiguarlo; no basta con tomar hierro.**"
+    }
+   }
+  },
+  "TW-EDU-29": {
+   "keywords": [
+    "estoy embarazada",
+    "embarazada",
+    "el embarazo",
+    "dando el pecho",
+    "lactancia",
+    "estamos buscando embarazo",
+    "puedo tomar estando embarazada",
+    "puedo tomar dando el pecho",
+    "amamantar"
+   ],
+   "solutions": {
+    "preg-ask-first": {
+     "label": "En esta etapa, pregunte antes de tomar nada",
+     "say": "Durante el embarazo y la lactancia soy mucho más prudente de lo normal con los suplementos — no es que no quiera ayudarle: es que en esta etapa hay pocos datos de seguridad, y de muchos ingredientes nadie puede decir con honestidad «esto no le hace nada al bebé». Cualquier suplemento, planta o preparado, coménteselo antes a su matrona, a su ginecólogo o al farmacéutico."
+    },
+    "preg-folate": {
+     "label": "El ácido fólico sí tiene recomendación clara",
+     "askedFor": [
+      "ácido fólico",
+      "qué tomar si busco embarazo",
+      "vitaminas para el embarazo"
+     ],
+     "say": "El ácido fólico es de lo poquísimo con recomendación clara: se aconseja tomarlo cuando se busca embarazo y en los primeros meses. La verdura de hoja verde y las legumbres ya lo llevan de por sí. Cuánto y hasta cuándo se lo dirán en la consulta de embarazo — se lo van a plantear ellos, no tiene que acordarse usted."
+    },
+    "preg-food-safety": {
+     "label": "Estas cosas, fuera",
+     "say": "Crudos y poco hechos (sushi, huevo poco cuajado, embutidos curados y quesos sin pasteurizar), los pescados grandes por el mercurio, y el alcohol — nada de eso. Con la cafeína, moderación; la cantidad, pregúntela en la consulta."
+    },
+    "preg-herbs-caution": {
+     "label": "Las plantas y los aceites esenciales también cuentan",
+     "say": "«Natural» no quiere decir «seguro en el embarazo»: muchas infusiones, plantas del herbolario y aceites esenciales están en duda durante el embarazo y la lactancia. Con lo que le regale la familia con toda su buena intención, igual — pregunte antes, sin ningún apuro."
+    },
+    "preg-rest": {
+     "label": "Si está cansada, descanse; no es ser delicada",
+     "say": "En esta etapa el cansancio es real. Duerma cuando se lo pida el cuerpo y pida la baja si la necesita: está haciendo algo que consume muchísimo, no es que sea usted delicada."
+    },
+    "preg-med-blocked": {
+     "label": "Qué medicamentos puede tomar",
+     "say": "Qué medicamentos se pueden tomar en el embarazo y la lactancia no lo voy a juzgar en absoluto — ni siquiera un antigripal o un calmante: eso se pregunta al médico o al farmacéutico. Y la medicación crónica que ya tomaba, no la deje por su cuenta: el que la ajusta es su médico."
+    },
+    "preg-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "**Si sangra, si le duele la barriga sin parar, si nota que el bebé se mueve mucho menos, o si rompe aguas — vaya a urgencias sin esperar.** Y si le da un dolor de cabeza fuerte con la vista borrosa o se hincha de repente, puede ser aviso de preeclampsia: también de inmediato. Después del parto, si el ánimo lleva tiempo por los suelos y nada le hace ilusión, eso es una depresión posparto — es una enfermedad, no es «no querer bastante al bebé»; y el 024 atiende las 24 horas, todos los días."
     }
    }
   },
