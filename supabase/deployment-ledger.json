@@ -212,6 +212,12 @@
           "sha256": "8ca87fe025316592663dec83fc828a44f899c8e03f3ca736696f21815d6091d8",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
+        },
+        {
+          "filename": "028_person_country.sql",
+          "sha256": "73662272b604c17306f19700cbd1989bf23644090504b2b76616088fdbb032f4",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
         }
       ],
       "rollback": {
