@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-07-31 蘇菲/城堡 🌍 App 四語系文案搬遷歸零（批 33-39 · PR #431-#437 全合）
+
+- **歸零**：App WebView 1,834 處中文＝1,516 處接上翻譯（四語 1,529 鍵）＋318 處誠實入冊（docs/I18N-NON-USER-FACING-REVIEW.json：中文指令比對 41／家人動態牆待後端分語 26／存庫代號／診斷門後字／後端載荷／品牌專名；證據測試 scripts/test-i18n-deferred-buckets.js）。未綁 **0**。
+- **守門反轉**：test-i18n-migration-worklist／test-i18n-surface-inventory 由「還有債要擋」改為「不准新欠債」；release-readiness 的 sourceCopyMigration 關轉綠鎖定。**之後新增中文文案沒綁鍵（或沒入冊）＝主分支直接紅。**
+- **順手修掉的真蟲**：①用藥語音新增紀錄 by:'美華'（示範人名寫進真用戶資料，#430）②付費牆文案載入當下定死語言（改懶載入，#432）③連接鍵 data-label 永遠蓋掉翻譯（#432）④activity.quizProgress 從沒進型錄——外語會冒中文（#436）⑤文字備援聊天「幫你通知美華」→家人（#433）⑥問答結束句寫死寧寧→跟角色名走（#435）⑦force 黑盒子診斷字 9 鍵包翻譯、中文字面不變（#437）。偵測器同時修掉 76 條「muneaT 在模板字串內」假陽性。
+- **剩餘＝證據待批類（Edward 8/2 動手清單：docs/I18N-LAUNCH-EDWARD-CHECKLIST-20260802.md）**：新 build number 重打包（Build 500 不含四語系不能用）→ 實機四語 38 畫面走查＋40 風險圖 → 通話全鏈＋混語 → 8 內購 Sandbox → App Store Connect 唯讀對帳（要 Edward API 鑰匙）→ 送審。語系開關（catalog-manifest.json）全關卡綠才開。**App E2E pending 照硬 Gate 維持。**
+
 ### 2026-07-29 蘇菲 🏗️ 上線併發機制收尾（PR #300 · 鏡像/十席/看門狗已上線、全鏈演習卡 RunPod 餘額）
 
 - **已上線（雲端操作、依部署長期授權）**：①印象檔重烤（雙程序版 dualproc-20260729）＋三地入倉（asia-east1 正本＋asia-northeast1 東京＋europe-west4 歐洲、munea-ar-reader 已授權）②RunPod 分機房模板 JP=`k9wr1ijfeh`／EU=`4xj6bbg1h9` ③管家 `munea-runpod-controller-00009-84c`：SLOTS=2／MAX_PODS=4／TARGET=10（主卡2席＋備援4×2＝10席）＋TEMPLATE_MAP 分機房開卡＋開卡等待 600s ④看門狗 `munea-gateway-monitor-00009-skj`：時鐘偏差偵測插電（MUNEA_APP_KEY）＋自動收屍（unhealthy+心跳斷>30分→自動標 terminated、7/23-24 alerts 翻面根因）⑤GCP 6 條正式線 uptime 檢查綁上警報（email、原本 0 條 alert policy=巡了沒人知道）。
