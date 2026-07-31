@@ -71,7 +71,14 @@ async def run_call(case, person_id, replies):
 
     char = case.get("character") or "寧寧"
     # 跟正式通話同一支組態函式＝同一份說明書、同一組聽話節奏、同一個思考深度旋鈕。
-    cfg = lv.live_config(char=char, name=char)
+    # 2026-07-31 考卷分國：劇本帶哪一國，真通話就用那一國的說明書（沒帶＝繁中）
+    _profile = None
+    if case.get("locale"):
+        import localization as _loc
+        _profile = _loc.voice_session_locale_profile(
+            _loc.build_locale_context({"conversationLocale": case["locale"],
+                                       "uiLocale": case["locale"]}))
+    cfg = lv.live_config(char=char, name=char, locale_profile=_profile)
     thinking = cfg.thinking_config.thinking_level if cfg.thinking_config else None
 
     # 2026-07-30 引擎開關：跟正式線同一套 _make_client——vertex25 走 Google 雲正式版、

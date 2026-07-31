@@ -37,6 +37,28 @@ JUDGE_SYSTEM = (
 )
 
 
+
+# 2026-07-31 考卷分國：判準本身是用該國語言寫的（日文題的判準是日文），
+# 評審要知道「這通該用哪一種語言應對」，才判得出「語言講錯」「別國內容漏進來」這類題。
+# 不指定＝繁中，既有 30 題行為完全不變。
+_LOCALE_NOTE = {
+    "ja": "この採点対象は日本語で応対するべき通話です。返答が日本語でない、または"
+          "台湾向けの内容（台湾の電話番号など）が混ざっている場合は、それ自体が"
+          "基準違反にあたりうるので見逃さないでください。",
+    "en": "This call is expected to be handled in English. If the reply is not in English, "
+          "or Taiwan-specific content (such as Taiwanese hotline numbers) has leaked in, "
+          "treat that as a possible criterion violation and do not let it pass.",
+    "es": "Esta llamada debe atenderse en español de España. Si la respuesta no está en "
+          "español, o se ha colado contenido específico de Taiwán (como teléfonos "
+          "taiwaneses), considérelo una posible violación y no lo deje pasar.",
+}
+
+
+def _judge_system(locale=None):
+    note = _LOCALE_NOTE.get((locale or "").split("-")[0]) if locale else None
+    return JUDGE_SYSTEM + "\n" + note if note else JUDGE_SYSTEM
+
+
 def build_prompt(user_line, reply, criteria, known_facts=None):
     numbered = "\n".join(f"{i+1}. {c}" for i, c in enumerate(criteria))
     facts_block = ""
@@ -62,7 +84,7 @@ def build_prompt(user_line, reply, criteria, known_facts=None):
     )
 
 
-def judge(user_line, reply, criteria, api_key=None, known_facts=None):
+def judge(user_line, reply, criteria, api_key=None, known_facts=None, locale=None):
     from google import genai
     from google.genai import types
 
@@ -80,7 +102,7 @@ def judge(user_line, reply, criteria, api_key=None, known_facts=None):
             r = client.models.generate_content(
                 model=model, contents=prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=JUDGE_SYSTEM,
+                    system_instruction=_judge_system(locale),
                     temperature=0.0,
                     response_mime_type="application/json",
                 ),
@@ -111,7 +133,7 @@ def judge(user_line, reply, criteria, api_key=None, known_facts=None):
 def main():
     case = json.loads(sys.stdin.readline())
     result = judge(case["userLine"], case["reply"], case["criteria"],
-                    known_facts=case.get("knownFacts"))
+                    known_facts=case.get("knownFacts"), locale=case.get("locale"))
     print(json.dumps(result, ensure_ascii=False))
 
 
