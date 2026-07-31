@@ -108,5 +108,53 @@ class FamilyRelayTests(unittest.TestCase):
         self.assertNotEqual(reclaimed["claimToken"], claimed["claimToken"])
 
 
+class RelayConfirmationRuleTests(unittest.TestCase):
+    """傳話要「整理過、唸回去、他點頭」才送（Edward 2026-07-31）。
+
+    他對寧寧說的是「幫我跟他說他晚餐的藥忘記吃了」——那是講給寧寧聽的第三人稱。
+    原句照送，收到的人會看到一句在講別人的話。所以要先轉成「直接對收件人說」的口氣；
+    但整理會有走鐘風險，唸回去讓他點頭就是那道保險。這兩件缺一不可，所以一起守。
+    """
+
+    def setUp(self):
+        with open(live_voice_server.__file__, encoding="utf-8") as source:
+            self.source = source.read()
+
+    def _relay_rule(self):
+        start = self.source.index("他要傳話給家庭圈成員時")
+        return self.source[start:start + 900]
+
+    def test_relay_rule_requires_rewriting_into_second_person(self):
+        rule = self._relay_rule()
+        self.assertIn("直接對收件人說", rule)
+        self.assertIn("第二人稱", rule)
+
+    def test_relay_rule_keeps_meaning_locked_while_rewording(self):
+        rule = self._relay_rule()
+        self.assertIn("只能改說法", rule)
+        for forbidden in ("不補他沒說的事", "不刪他交代的細節", "不猜他的用意"):
+            self.assertIn(forbidden, rule)
+
+    def test_relay_rule_requires_read_back_and_explicit_yes(self):
+        rule = self._relay_rule()
+        self.assertIn("這樣可以嗎", rule)
+        self.assertIn("他明確說可以才呼叫 send_family_relay", rule)
+        self.assertIn("沒得到同意就不要送", rule)
+
+    def test_relay_rule_handles_a_correction_round(self):
+        # 他說「不對，要改」的時候不能就這樣送出去，也不能默默丟掉——要重整理再確認一次
+        self.assertIn("重整理、再唸一次確認", self._relay_rule())
+
+    def test_relay_tool_description_states_the_gate(self):
+        declaration = next(
+            fn for tool in (live_voice_server._REMINDER_TOOLS,)
+            for fn in tool.function_declarations if fn.name == "send_family_relay"
+        )
+        self.assertIn("明確說可以之後", declaration.description)
+        self.assertIn("不要呼叫", declaration.description)
+        message = declaration.parameters.properties["message"].description
+        self.assertIn("直接對收件人說", message)
+
+
 if __name__ == "__main__":
     unittest.main()

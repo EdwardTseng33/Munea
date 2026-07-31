@@ -256,6 +256,7 @@
   "home.profilePromptBody": "呼び名、誕生日、地域を入力すると、自然にお呼びでき、天気もより正確になります。",
   "home.profilePromptAction": "入力する",
   "home.care.familyRelayTitle": "ご家族から伝言があります",
+  "home.care.familyFeedTitle": "ご家族のようす",
   "home.relayMore": "すべて見る",
   "home.care.familyRelayFrom": "{name}さんからの伝言です",
   "home.care.acknowledge": "わかりました",

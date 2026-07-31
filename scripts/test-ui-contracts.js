@@ -393,6 +393,12 @@ assert(/function loadHomeRelay\(\)[\s\S]{0,600}?HOME_RELAY_TTL_MS[\s\S]{0,300}?m
   'A shown relay must fade on its own: superseded by a chat, by a newer message, or by the next day');
 assert(/if \(!_relayOnButlerCard\) items\.push\(familyItem\)/.test(app),
   'The care carousel must not repeat a relay that the butler card is already delivering');
+// 輪播那格也不准再猜（2026-07-31 收尾）：它只負責唸出動態牆最新的一則。
+// 用中文句型撈「哪一則是傳話」，換成英日西就整條認不出來——真傳話已經由上面那張卡直接拿了。
+assert(!/feed\.find\([^)]*要我提醒你/.test(app) && !/match\(\/\^\(\.\+\?\)要我提醒你/.test(app),
+  'The care carousel must not sniff the family feed for relays by matching Chinese sentence patterns');
+assert(/const feedTop = feed\.length \? feed\[0\] : null/.test(app),
+  'The care carousel should simply surface the newest family-feed entry');
 assert(/\.butler-card\.has-relay \.bc-msg-t \{[^}]*-webkit-line-clamp: 4/s.test(css)
   && /\.butler-card\.has-relay\.relay-open \.bc-msg-t \{[^}]*-webkit-line-clamp: unset/s.test(css),
   'Relay text must show up to four lines and stay fully readable via the show-all control');
