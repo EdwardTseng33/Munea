@@ -1842,6 +1842,18 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 設計稿：訊息＝純文字（無泡泡）、13.5px/--ink-2、行高 1.5 */
 .bc-msg { margin-top: 2px; background: none; padding: 0; font-size: 14px; line-height: 1.5; color: #5A5349; } /* 設計稿訊息暖灰 */
 .bc-msg-t { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 64px; }
+/* 家人帶話時放到 4 行（Edward 2026-07-31 指定）：平常的問候一句話就夠，
+   但轉達家人的話要看得完整——被切一半的叮嚀等於沒傳到。
+   真的超過 4 行就給「看全部」，寧可多一次點擊也不能默默吃掉後半句。 */
+.butler-card.has-relay .bc-msg-t { -webkit-line-clamp: 4; max-height: 86px; }
+.butler-card.has-relay.relay-open .bc-msg-t { -webkit-line-clamp: unset; max-height: none; }
+.bc-relay-more { border: none; background: none; padding: 0; margin-top: 4px; color: var(--teal-dd); font-family: var(--display); font-weight: 800; font-size: 13px; cursor: pointer; text-decoration: underline; }
+.butler-card.has-relay .bc-msg { color: var(--ink); font-size: 15px; font-weight: 600; }
+.bc-relay-tag { background: var(--coral-soft); color: var(--coral-text); }
+/* 「我知道了」是回條、不是這頁的主要行動——用實心綠會跟下面的「開始聊聊」搶。
+   走跟輪播「去看看」同一款的白底綠框，份量剛好夠按又不搶戲。 */
+.bc-relay-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.bc-relay-ok { min-height: 36px; padding: 0 16px; border: 1.5px solid var(--teal-d); border-radius: 12px; background: #fff; color: var(--teal-dd); font-family: var(--display); font-weight: 800; font-size: 14px; cursor: pointer; }
 /* ③ 首頁進場節奏：卡片一張張輕輕浮上（總長 <0.5 秒） */
 #home.screen.active .pad > * { animation: viewIn .3s cubic-bezier(.22,.9,.32,1) both; }
 #home.screen.active .pad > *:nth-child(2) { animation-delay: .05s; }

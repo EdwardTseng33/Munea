@@ -454,14 +454,45 @@ function localizePurchasePlanContent() {
   if (restore) restore.textContent = muneaT('purchase.restore', 'Restore purchases');
 }
 
-function muneaIsCleanZhText(raw) {
+// 這句話「像不像使用者真的說出口的話」——判準跟著他當下的語系走（Edward 2026-07-31 拍板）
+//
+// 為什麼不能一套標準管四國：台灣的長輩不會突然冒出韓文，出現韓文＝語音聽錯了、必須擋
+// （7/14 事故就是「アラ」混在中文裡、被比例式守門放行）；但日文版看到假名是天經地義的，
+// 同一套標準會把日本用戶的正常句子整批擋在門外——那不是防雜訊，那是讓功能對外國人全滅。
+//
+// 夾雜英文一律放行：長輩會說「我去看 doctor」「血壓 OK」，那是正常說法不是雜訊；
+// 舊版「連續 3 個英文字母就擋」連這種話都擋，是只有中文時期的權宜寫法。
+const MUNEA_SPEECH_RULES = {
+  // local＝這個語系的本命字；alien＝一出現就代表聽錯了的字；minUnique＝字元重複到什麼程度算雜訊
+  // 拉丁語系的 minUnique 必須放低：字母只有 26 個，長句本來就一直重複，用中文的 0.5 會誤殺整句英文
+  'zh-TW': { local: /[一-龥]/, alien: /[぀-ヿ가-힣Ѐ-ӿ]/, minUnique: 0.5 },
+  ja: { local: /[぀-ヿ一-龥]/, alien: /[가-힣Ѐ-ӿㄅ-ㄪ]/, minUnique: 0.45 },
+  en: { local: /[A-Za-z]/, alien: /[぀-ヿ가-힣Ѐ-ӿ一-龥ㄅ-ㄪ]/, minUnique: 0.22 },
+  es: { local: /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/, alien: /[぀-ヿ가-힣Ѐ-ӿ一-龥ㄅ-ㄪ]/, minUnique: 0.22 },
+};
+function muneaSpeechRule(locale) {
+  return MUNEA_SPEECH_RULES[locale || muneaLocale()] || MUNEA_SPEECH_RULES['zh-TW'];
+}
+function muneaIsCleanSpeechText(raw, locale) {
   const s = String(raw == null ? '' : raw).replace(/\s+/g, '');
   if (!s) return false;
-  if (/[぀-ヿ가-힣Ѐ-ӿ]/.test(s)) return false; // 平假名／片假名／韓文／西里爾（俄文）——出現一個字就擋
-  if (/[a-zA-Z]{3,}/.test(s)) return false; // 連續 3+ 英文字母＝疑似辨識雜訊，不是正常中文夾一兩個英文縮寫
-  const cjk = (s.match(/[一-龥]/g) || []).length;
-  if (cjk / s.length < 0.6) return false; // 中文字比例仍要夠高，防大量符號／數字灌水
-  if (new Set(s).size / s.length < 0.5) return false; // 同字元大量重複＝疑似亂碼
+  const rule = muneaSpeechRule(locale);
+  if (rule.alien.test(s)) return false;         // 別的語系的字冒出來＝聽錯了（7/14 事故那道防線，逐語系保留）
+  if (/(.)\1{4,}/.test(s)) return false;        // 同一個字連著出現 5 次以上＝雜訊，跟語言無關
+  // 算比例前先扣掉標點與符號，否則「血壓 OK！」的驚嘆號會稀釋掉本命字
+  const meaningful = s.replace(/[\p{P}\p{S}\p{Z}\p{M}]/gu, '');
+  if (!meaningful) return false;
+  const chars = [...meaningful];
+  let localCount = 0, latinCount = 0, digitCount = 0;
+  chars.forEach(c => {
+    if (rule.local.test(c)) localCount += 1;
+    if (/[A-Za-z]/.test(c)) latinCount += 1;
+    if (/\d/.test(c)) digitCount += 1;
+  });
+  if (!localCount) return false;                                       // 一個本命字都沒有＝這不是他在講的語言
+  if ((localCount + latinCount + digitCount) / chars.length < 0.9) return false;  // 其餘都是不明字元＝雜訊
+  if (localCount / chars.length < 0.3) return false;                   // 夾字可以，但不能反客為主
+  if (new Set(s).size / s.length < rule.minUnique) return false;
   return true;
 }
 function muneaIsCleanDisplayText(raw) {
@@ -1433,7 +1464,7 @@ async function createFamilyRelay(recipientName, message) {
   const content = String(message || '').trim().replace(/^[，,：:]*/, '').slice(0, 240);
   if (!isLoggedIn()) return { ok: false, error: 'login_required' };
   if (!who || content.length < 2) return { ok: false, error: 'recipient_or_message_required' };
-  if (!muneaIsCleanZhText(content)) return { ok: false, error: 'message_not_clean_zh' };
+  if (!muneaIsCleanSpeechText(content)) return { ok: false, error: 'message_not_clean_zh' };
   let members = await refreshFamilyRelayMembers();
   const key = relayNameKey(who);
   const matches = members.filter(m => !m.self && m.personId && [m.name, m.relationship].some(v => relayNameKey(v) === key));
@@ -1491,6 +1522,8 @@ async function finishFamilyRelayClaim(relay, action) {
   return !!(data && data.ok);
 }
 window.__muneaFamilyRelays = { create: createFamilyRelay, claim: claimNextFamilyRelay, finish: finishFamilyRelayClaim, refreshMembers: refreshFamilyRelayMembers };
+// 首頁那張卡的重繪入口掛出來：驗收時要能在不打真電話的情況下看到「家人帶話」長什麼樣
+window.__muneaHomeRelayView = { sync: () => syncHomeFamilyRelay(), ack: () => ackHomeFamilyRelay(), preview: relay => { _muneaHomeRelay = relay || null; renderCompanionGreeting(); } };
 
 // ===== 聊聊 AI 幫你把提醒設進 App（跟手動新增走同一份清單 + 同一套雲端/手機通知）· 2026-07-09 Edward =====
 const INTEREST_TOPIC_KEYS = { '旅遊景點': 'legacyUi.topic.travel', '美食餐廳': 'legacyUi.topic.food', '影劇戲劇': 'legacyUi.topic.tv', '新聞時事': 'legacyUi.topic.news', '健康養生': 'legacyUi.topic.health', '運動': 'legacyUi.topic.sports', '懷舊老歌': 'legacyUi.topic.music', '園藝花草': 'legacyUi.topic.gardening', '歷史故事': 'legacyUi.topic.history', '寵物': 'legacyUi.topic.pets', '棋牌麻將': 'legacyUi.topic.games', '天氣節氣': 'legacyUi.topic.weather' };
@@ -1520,7 +1553,7 @@ function aiVisitLabel(dateISO, time) {
 }
 async function aiAddVisitReminder(a) {
   const rawTitle = String((a && a.title) || '').trim();
-  const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : '回診';   // AI 語音辨識可能夾雜外文雜訊，存檔前先守門（Edward 2026-07-15 事故：aiAddVisitReminder / aiAddMedReminder 原本沒接共用守門）
+  const title = (rawTitle && muneaIsCleanSpeechText(rawTitle)) ? rawTitle : '回診';   // AI 語音辨識可能夾雜外文雜訊，存檔前先守門（Edward 2026-07-15 事故：aiAddVisitReminder / aiAddMedReminder 原本沒接共用守門）
   const dateISO = String((a && a.dateISO) || '').trim();
   const time = String((a && a.time) || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
@@ -1565,7 +1598,7 @@ function openCareQuestions() {
 async function aiAddCareQuestion(a) {
   const raw = String((a && a.question) || '').trim().slice(0, CARE_Q_MAX_LEN);
   // 同一道共用守門：辨識雜訊／外文亂碼寧可拒收讓她再問一次，不存假問題（沿用 2026-07-15 事故的教訓）
-  if (!raw || !muneaIsCleanZhText(raw)) return { ok: false, error: 'question_text_unclear' };
+  if (!raw || !muneaIsCleanSpeechText(raw)) return { ok: false, error: 'question_text_unclear' };
   const arr = loadCareQuestions();
   const norm = raw.replace(/\s+/g, '');
   if (arr.some(q => !q.askedAt && String(q.text || '').replace(/\s+/g, '') === norm)) {
@@ -1934,7 +1967,7 @@ function addCareQuestionManually() {
   if (raw === null) return;
   const text = String(raw).trim().slice(0, CARE_Q_MAX_LEN);
   if (!text) return;
-  if (!muneaIsCleanZhText(text)) { toast(muneaT('visit.questionUnclear', '這句我看不懂，換個說法再試一次')); return; }
+  if (!muneaIsCleanSpeechText(text)) { toast(muneaT('visit.questionUnclear', '這句我看不懂，換個說法再試一次')); return; }
   const arr = loadCareQuestions();
   const norm = text.replace(/\s+/g, '');
   if (arr.some(q => !q.askedAt && String(q.text || '').replace(/\s+/g, '') === norm)) {
@@ -4341,7 +4374,7 @@ const LiveVoice = {
                 // 只存「乾淨、像一句話」的內容當首頁話題，擋語音辨識亂碼／英數雜訊（Edward 2026-07-12）
                 const clean = this._userBuf.replace(/\s+/g, '');
                 const cjk = (clean.match(/[一-龥]/g) || []).length;
-                const looksClean = clean.length >= 5 && clean.length <= 16 && muneaIsCleanZhText(clean);   // 改用共用嚴格守門：出現任一日文/韓文/俄文字元就擋（Edward 2026-07-14 事故：「アラ」混在中文裡、比例式守門放行）
+                const looksClean = clean.length >= 5 && clean.length <= 16 && muneaIsCleanSpeechText(clean);   // 改用共用嚴格守門：出現任一日文/韓文/俄文字元就擋（Edward 2026-07-14 事故：「アラ」混在中文裡、比例式守門放行）
                 if (looksClean) { try { localStorage.setItem('munea.lastTopic', clean.slice(0, 16)); } catch (e3) {} this._topicSaved = true; }
                 else if (clean.length >= 24) { this._topicSaved = true; }   // 累積夠長仍不乾淨＝這通沒有適合話題、別硬塞亂碼
               }
@@ -4883,6 +4916,8 @@ function showView(id) {
   // 7/9 拍板 A 的原意沒有被放寬——免費 5 分鐘一樣要綁帳號才給，只是不再攔在門口。
   const t = $('#toast'); if (t) t.classList.remove('show');
   $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
+  // 回到首頁就去看有沒有家人帶話——長輩不會為了看訊息特地去按什麼，話要自己送到他眼前
+  if (id === 'home') { try { syncHomeFamilyRelay(); } catch (e) {} }
   if (id === 'status') {
     renderStatusCharts();
     if (typeof window.__muneaRefreshMedicationUi === 'function') window.__muneaRefreshMedicationUi();
@@ -5183,6 +5218,8 @@ function updateAuthUI() {
   renderMemBadge();
   renderFreeMemberBadge();
   syncProfileNudge();
+  // 剛登入完就去看有沒有人留話給他——不必等他自己切分頁（登出時這支會把卡片收乾淨）
+  try { syncHomeFamilyRelay(); } catch (e) {}
   renderAiDiagnostics();
 }
 async function signInWithAuthProvider(provider) {
@@ -5320,18 +5357,44 @@ function _muneaAskByHour(h) {
 }
 // 順位 0：只取家人動態最上面一則，格式要真的是「XX要我提醒你：YYY」，內容再過一次乾淨中文守門
 // ——這裡是全家人都看得到的位置，比首頁話題本身更危險（Edward 2026-07-14）
-function _muneaFamilyRelayGreeting() {
+// 首頁那張卡上的家人帶話（Edward 2026-07-31）
+//
+// 舊寫法是撈「家人動態牆」的第一則、再用比對句子的方式猜哪句是傳話（`^(.+?)要我提醒你`）——
+// 那等於拿畫面上的文字反推資料：中文文案改一個字就失靈，換成英日西更是整條認不出來。
+// 而且動態牆是 App 自己產的句子，真正的傳話根本不在裡面——長輩只有在「開始聊聊」時
+// 才聽得到寧寧唸，首頁完全看不到。現在直接跟雲端拿真的那一則。
+//
+// 用 claim 不用 list：claim 會把這則鎖住並給回條，按了「我知道了」才算送達；
+// 沒按就離開的話 10 分鐘後自動退回待傳，下次再出現——訊息不會因為滑過去就消失。
+let _muneaHomeRelay = null;
+function homeRelayText(relay) {
+  if (!relay) return '';
+  const body = muneaSafeDisplayText(relay.content, '');
+  if (!body) return '';
+  const who = muneaSafeDisplayText(relay.senderLabel, '') || muneaT('familyCircle.someoneInFamily', '家人');
+  return muneaT('familyCircle.relayLine', '{name}要我提醒你：{body}', { name: who, body });
+}
+async function syncHomeFamilyRelay() {
+  const had = !!_muneaHomeRelay;
+  if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
+    _muneaHomeRelay = null;
+    if (had) renderCompanionGreeting();
+    return;
+  }
+  let relay = null;
+  try { relay = await claimNextFamilyRelay(); } catch (e) { relay = null; }
+  _muneaHomeRelay = homeRelayText(relay) ? relay : null;
+  if (had || _muneaHomeRelay) renderCompanionGreeting();
+}
+async function ackHomeFamilyRelay() {
+  const relay = _muneaHomeRelay;
+  if (!relay) return;
+  _muneaHomeRelay = null;          // 先收起來，讓按下去立刻有反應；雲端回報失敗也不會把話再貼回臉上
+  renderCompanionGreeting();
   try {
-    const feed = (typeof loadFeed === 'function') ? loadFeed() : [];
-    const top = feed && feed[0];
-    if (!top) return '';
-    const flat = (typeof plain === 'function') ? plain(top) : String(top).replace(/<[^>]+>/g, '');
-    const m = flat.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/);
-    if (!m) return '';
-    const fromWho = m[1].trim(), body = m[2].trim();
-    if (!fromWho || !body || !muneaIsCleanZhText(body)) return '';
-    return muneaT('familyCircle.relayLine', '{name}要我提醒你：{body}', { name: fromWho, body });
-  } catch (e) { return ''; }
+    await finishFamilyRelayClaim(relay, 'ack');
+    rememberSpokenFamilyRelay(relay);   // 記下這則已經到了，通話時不必再唸一次
+  } catch (e) {}
 }
 // 用藥有沒打勾（順位 2-b）：跟 renderPillTask() 同一套算法（今天還沒吃的下一項 / 完成數 / 總數）
 function _muneaPillStatusToday() {
@@ -5428,8 +5491,9 @@ function renderCompanionGreeting(now = new Date()) {
   const nm = (typeof cname === 'function' ? cname() : muneaT('companion.nening.name', '寧寧'));
   const ask = _muneaAskByHour(now.getHours());
   let line = '';
+  let relayLine = '';
   try {
-    const relayLine = _muneaFamilyRelayGreeting();
+    relayLine = homeRelayText(_muneaHomeRelay);
     const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
     if (relayLine) {
       line = relayLine;
@@ -5445,6 +5509,17 @@ function renderCompanionGreeting(now = new Date()) {
   }
   if (!line) line = nm + '，' + ask;
   msg.textContent = line;
+  // 有家人帶話時整張卡換一個樣子：標上「家人帶話」、字放大到 4 行、給一顆「我知道了」。
+  // 沒有帶話就回到平常的問候，一顆多餘的按鍵都不留。
+  const card = $('#butlerCard'), tag = $('#bcRelayTag'), acts = $('#bcRelayActions'), more = $('#bcRelayMore');
+  if (card) { card.classList.toggle('has-relay', !!relayLine); if (!relayLine) card.classList.remove('relay-open'); }
+  if (tag) tag.hidden = !relayLine;
+  if (acts) acts.hidden = !relayLine;
+  // 話太長被切掉時才給「看全部」——切掉的後半可能正是重點（幾點回診、東西放哪）
+  if (more) {
+    const clipped = !!relayLine && !card.classList.contains('relay-open') && msg.scrollHeight > msg.clientHeight + 1;
+    more.hidden = !clipped;
+  }
   // 聊聊頁人物畫面上的那顆字泡（faceIdleHi）已整個拿掉（Edward 2026-07-16）——首頁卡片這行照舊
 }
 
@@ -5471,6 +5546,17 @@ function renderHomeGreeting() {
   if (big) big.textContent = k;
 }
 renderHomeGreeting();
+// 「我知道了」＝家人的話真的送到了；綁一次就好，卡片本身不重建、只切換樣子
+document.addEventListener('click', e => {
+  const el = e.target && e.target.closest;
+  if (!el) return;
+  if (e.target.closest('#bcRelayAck')) { ackHomeFamilyRelay(); return; }
+  if (e.target.closest('#bcRelayMore')) {
+    const card = $('#butlerCard');
+    if (card) card.classList.add('relay-open');
+    const more = $('#bcRelayMore'); if (more) more.hidden = true;
+  }
+});
 
 function loadMeds() {
   // 沒設用藥就是空的——首頁不該有吃藥任務、用藥管理顯示空狀態（Edward 2026-07-07）
@@ -6598,6 +6684,9 @@ function buildCareItems() {
   const defaultRelay = rendererCopy
     ? rendererCopy.familyRelay({ body: _feed0Safe, companion: cname() })
     : null;
+  // 上面那張卡正在轉達真的家人帶話時，這裡就不要再講一次同一件事（Edward 2026-07-31）——
+  // 一件事在同一個畫面出現兩遍，看的人會以為有兩則留言。
+  const _relayOnButlerCard = !!(typeof _muneaHomeRelay !== 'undefined' && _muneaHomeRelay);
   const familyItem = _relayClean
     ? { k: 'family', tone: '', icon: 'msg', title: _rTitle, sub: _rSub, btn: careLabels.acknowledge, feedIdx: _feedIdx }
     : {
@@ -6683,7 +6772,7 @@ function buildCareItems() {
       btn: careLabels.open,
     });
   }
-  items.push(familyItem);
+  if (!_relayOnButlerCard) items.push(familyItem);
   let v = null;
   try {
     let arr = JSON.parse(localStorage.getItem('munea.visits') || 'null');
@@ -9597,7 +9686,7 @@ function init() {
   // 同步與「活動前 30 分提醒」都沿用現成水管（saveActs 內建）；看診/用藥帳本完全不碰
   window.__muneaAddPersonalEvent = async function (a) {
     const rawTitle = String((a && a.title) || '').trim();
-    const title = (rawTitle && muneaIsCleanZhText(rawTitle)) ? rawTitle : muneaT('event.familyTitle', '和家人的約');
+    const title = (rawTitle && muneaIsCleanSpeechText(rawTitle)) ? rawTitle : muneaT('event.familyTitle', '和家人的約');
     const dateISO = String((a && a.dateISO) || '').trim();
     const time = String((a && a.time) || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
@@ -9606,7 +9695,7 @@ function init() {
     const rawPlace = String((a && a.place) || '').trim();
     const act = {
       id: Date.now(), kind: 'event', names: [], owner: myFeedName(),
-      title, place: (rawPlace && muneaIsCleanZhText(rawPlace)) ? rawPlace : '',
+      title, place: (rawPlace && muneaIsCleanSpeechText(rawPlace)) ? rawPlace : '',
       dateISO, time, dateLabel: fmtDay(when) + ' ' + _clock12(time),
     };
     const acts = loadActs(); acts.push(act); saveActs(acts);
@@ -10846,7 +10935,7 @@ function init() {
       if (who.length < 2) who = relay0[2];
       const _msg = relay0[4].replace(/^[要說來，]/, '').replace(/[。！]$/, '');
       // 傳話會印在對方首頁最顯眼的位置，聽錯就是別人替你出糗、而他無從核對 → push 前先擋（Edward 2026-07-14）
-      if (!muneaIsCleanZhText(_msg)) return '我剛剛沒聽清楚要帶的話，你再跟我說一次要跟' + who + '說什麼？';
+      if (!muneaIsCleanSpeechText(_msg)) return '我剛剛沒聽清楚要帶的話，你再跟我說一次要跟' + who + '說什麼？';
       _pendingFamilyRelayDraft = { recipientName: who, message: _msg };
       return '我確認一下：你要我跟' + who + '說「' + _msg + '」，對嗎？';
     }

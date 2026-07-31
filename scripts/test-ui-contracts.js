@@ -68,11 +68,20 @@ assert(contrastRatio('#37A099', '#FFFFFF') >= 3, 'Primary button mint must keep 
 assert(contrastRatio('#B0392D', '#FFFFFF') >= 4.5, 'Danger action red must keep WCAG AA contrast on white');
 assert(css.includes('--teal: #3AA8A0;') && css.includes('--btn-green: #37A099;') && css.includes('--coral: #F4A261;'),
   'Brand tokens must stay pinned to the 2026-07-30 ruling: mint primary, mint button, logo orange');
-// 同日晚間補訓：橘不做文字色（達標/隨時/設定頁的深橘字被 Edward 抓＝規範外）。
-// --coral-d 只剩圖示/圖形深階（#E08B45＝官網同款）；文字一律白/石墨黑，功能性小標薄荷綠深階。
+// 7/30 晚間補訓：橘不做文字色（那天的深橘字被 Edward 抓＝規範外）。
+// 7/31 Edward 改判：整頁全綠「色調單調失衡」，小字點綴要回暖色——但**只准走 --coral-text**
+// 這一階，而且要暖不要暗（試過的 #A8611E 4.78 被嫌太暗）。--coral-d 維持圖形專用、
+// 不得當文字色，7/30 那道防線原封不動。
 assert(css.includes('--coral-d: #E08B45;'), 'The orange deep step must stay the graphic-only #E08B45, not a text brown');
-assert(/\.task-time \{[^}]*color: var\(--teal-dd\)/s.test(css) && /\.set-section \{ color: var\(--teal-dd\); \}/.test(css),
-  'Task time labels and settings section kickers must use the mint deep text tier, never orange text');
+assert(css.includes('--coral-text: #B0651B;'), 'Small-text orange accents must come from the pinned --coral-text step');
+// 4.45 在白卡上差 AA 小字 0.05——這是拍板取捨，跟主按鈕薄荷綠（3.16，只守大字級）同一種：
+// 再深一階的 #A8611E 有 4.78 卻被 Edward 嫌太暗。門檻釘 4.4 是防它往更淺走，不是宣稱它過 AA。
+assert(contrastRatio('#B0651B', '#FFFFFF') >= 4.4, 'The orange text step must not drift lighter than the 2026-07-31 ruling');
+assert(/\.task-time \{[^}]*color: var\(--coral-text\)/s.test(css) && /\.set-section \{ color: var\(--coral-text\); \}/.test(css),
+  'Task time labels and settings section kickers must use the pinned orange text step (Edward 2026-07-31 ruling)');
+// 「寧寧幫你留意」是區塊名、下面接待辦清單，染橘會跟卡片內容搶戲——同日拍板留深綠。
+assert(/\.care-head \{[^}]*color: var\(--teal-dd\)/s.test(css),
+  'The home care-carousel heading must stay on the mint deep tier, not the orange accent');
 assert(!/\.(?:task-time|set-section|tier-tag|mem-badge|md-status|low-strip)[^{]*\{[^}]*color:\s*var\(--coral-d\)/s.test(css),
   'Status labels and badges must not use orange as a text color (Edward 2026-07-30 evening ruling)');
 assert(css.includes('--danger-d: #B0392D;'), 'Accessible danger color token must stay pinned');
@@ -234,9 +243,13 @@ assert(app.includes('function localizeAuthTerms()') && /refreshLocalizedDynamicU
 assert(app.includes('function localizeMedicationSurfaces()')
   && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeMedicationSurfaces\(\)/.test(app),
   'Medication manager and due-reminder surfaces must refresh when the App locale changes');
+// 反向守門升級（2026-07-31）：中文專用的 muneaIsCleanZhText 已整支退場，改成跟著語系走的
+// muneaIsCleanSpeechText。原本只盯藥名那一處，現在直接禁止整份 app.js 再長回中文專用寫法。
 assert(/async function aiAddMedReminder[\s\S]*?muneaIsCleanDisplayText\(rawName\)/.test(app)
-  && !/async function aiAddMedReminder[\s\S]{0,260}?muneaIsCleanZhText\(rawName\)/.test(app),
-  'Voice-created medication names must accept safe English, Japanese, and Spanish text');
+  && !app.includes('muneaIsCleanZhText')
+  && app.includes('const MUNEA_SPEECH_RULES = {')
+  && /MUNEA_SPEECH_RULES\s*=\s*\{[\s\S]{0,600}?\bja:[\s\S]{0,400}?\ben:[\s\S]{0,400}?\bes:/.test(app),
+  'Voice-created medication names must accept safe English, Japanese, and Spanish text, and the text guard must stay locale-aware for all four locales');
 assert(app.includes('function canonicalMedicationSlot(slot)')
   && app.includes("import './i18n/medication-schedule.js'")
   && app.includes("'after-breakfast': '早餐後'")
@@ -343,7 +356,45 @@ assert(/\.auth-ava-img\[hidden\]\s*\{\s*display:\s*none(?:\s*!important)?;\s*\}/
 assert((html.match(/id="memBadge"/g) || []).length === 1 && !html.includes('authDevBadge'), 'Account card must render exactly one plan or TEST badge');
 assert(app.includes('function authDisplayName(state)') && /name:\s*userMetadata\.name/.test(auth), 'Signed-in account card must receive and display the Google or Apple name');
 assert(/\.auth-title\s*\{[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s.test(css), 'Long account names and translated guest labels must wrap instead of truncating');
-assert(/\.auth-secondary\s*\{[^}]*height:\s*40px;[^}]*background:\s*var\(--mint\);[^}]*border:\s*1px solid var\(--teal-d\);/s.test(css), 'Sign-out must keep the latest secondary-button design');
+// 登出跟登入必須一眼分得出來（Edward 2026-07-31）：原本兩顆都是綠色系（一實心一淡底），
+// 份量看起來一樣重、容易誤按。登入是往前走的動作留實心綠，登出走中性外框。
+// 這裡守的是「不准再回到綠底」，不是釘死某個灰值——換別的中性色仍可過。
+{
+  const authSecondary = (css.match(/\.auth-secondary\s*\{[^}]*\}/s) || [''])[0];
+  assert(/height:\s*40px/.test(authSecondary)
+    && /border:\s*1px solid/.test(authSecondary)
+    && !/background:\s*var\(--(?:mint|btn-green|teal)\b[^)]*\)/.test(authSecondary),
+    'Sign-out must stay visually distinct from the mint sign-in button, not share the green family');
+}
+/* 首頁那張卡要轉達「真的家人帶話」（Edward 2026-07-31）
+ *
+ * 原本這裡是撈家人動態牆的第一則、用比對句子的方式猜哪句是傳話——中文改一個字就失靈、
+ * 換成英日西整條認不出來；而真正的傳話當時只在通話時唸，首頁根本看不到。
+ * 這幾條守的是接線本身：資料要來自傳話接口、要在進首頁與登入後主動去拿、
+ * 上面講了下面就不要重複講、話太長不能默默切掉。 */
+assert(!app.includes('function _muneaFamilyRelayGreeting')
+  && /function homeRelayText\(relay\)[\s\S]{0,500}?relay\.content[\s\S]{0,300}?relay\.senderLabel/.test(app)
+  && !/function homeRelayText\(relay\)[\s\S]{0,500}?(?:loadFeed\(\)|要我提醒你\[)/.test(app),
+  'The butler card must read the relay record itself, not sniff the family feed by pattern-matching Chinese copy');
+assert(/async function syncHomeFamilyRelay\(\)[\s\S]{0,800}?claimNextFamilyRelay\(\)/.test(app),
+  'The home butler card must pull the real relay from the family-relay endpoint');
+assert(/if \(id === 'home'\) \{[^}]*syncHomeFamilyRelay\(\)/.test(app)
+  && /syncProfileNudge\(\);[\s\S]{0,200}?syncHomeFamilyRelay\(\)/.test(app),
+  'Relays must be fetched when the user lands on home and right after sign-in, not only during a call');
+assert(/async function ackHomeFamilyRelay\(\)[\s\S]{0,600}?finishFamilyRelayClaim\(relay, 'ack'\)/.test(app),
+  'Acknowledging a relay must report delivery back to the cloud, not just hide the card');
+assert(/if \(!_relayOnButlerCard\) items\.push\(familyItem\)/.test(app),
+  'The care carousel must not repeat a relay that the butler card is already delivering');
+assert(/\.butler-card\.has-relay \.bc-msg-t \{[^}]*-webkit-line-clamp: 4/s.test(css)
+  && /\.butler-card\.has-relay\.relay-open \.bc-msg-t \{[^}]*-webkit-line-clamp: unset/s.test(css),
+  'Relay text must show up to four lines and stay fully readable via the show-all control');
+['home.relayTag', 'home.relayAck', 'home.relayMore', 'familyCircle.someoneInFamily'].forEach(key =>
+  assert(zhCatalog[key], `Relay surface catalog key missing for: ${key}`));
+// 方案標籤跟著頭像走、右欄只留按鍵並垂直置中（同日）——右欄再塞回標籤就會重心偏頭重腳輕。
+assert(/<div class="auth-id">[\s\S]{0,400}?id="authAvatar"[\s\S]{0,600}?id="memBadge"[\s\S]{0,80}?<\/div>/.test(html),
+  'The plan badge must sit under the avatar inside .auth-id, not in the action column');
+assert(/\.auth-actions\s*\{[^}]*justify-content:\s*center/s.test(css),
+  'With only one button left, the account-card action column must stay vertically centered');
 assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:\s*var\(--ink\);/s.test(css), 'Development account must use the single TEST badge design (soft orange chip, ink text — orange is not a text color)');
 
 const authSheet = html.match(/<div class="modal-mask auth-sheet" id="authSheet"[\s\S]*?<\/div>\s*<!-- ===== 底部 5 分頁 ===== -->/)?.[0] || '';

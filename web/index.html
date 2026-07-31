@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;800&family=Noto+Serif+TC:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="src/styles.css?v=20260731-v1045" />
+  <link rel="stylesheet" href="src/styles.css?v=20260731b-v1045" />
 </head>
 <body>
 <div class="app-shell">
@@ -22,13 +22,19 @@
         <span class="home-meta"><span class="mem-badge free home-badge" id="homeMemberBadge" hidden>FREE</span><span class="home-date" id="metaDate">—</span><span id="homeWxWrap" style="display:none"><span class="home-sep">·</span><b id="homeWx"></b></span></span>
       </div>
 
-      <div class="butler-card">
+      <!-- 家人帶話時，這張卡就是寧寧在轉達（Edward 2026-07-31）：她本來就是家裡的傳話人，
+           這是首頁最大的一塊、原本只放一句固定問候，把最有份量的話放在最顯眼的地方才對。 -->
+      <div class="butler-card" id="butlerCard">
         <div class="bc-row">
           <div class="bc-avatar"><img class="ava-img" src="avatars/nening-hero.jpg" alt="寧寧" data-i18n-alt="companion.nening.name"></div>
           <div class="bc-info">
-            <div class="bc-name"><span id="companionHomeName" data-i18n="companion.nening.name">寧寧</span></div>
+            <div class="bc-name"><span id="companionHomeName" data-i18n="companion.nening.name">寧寧</span><span class="bc-tag bc-relay-tag" id="bcRelayTag" hidden data-i18n="home.relayTag">家人帶話</span></div>
             <div class="bc-msg"><span class="bc-msg-t" id="bcMsg"></span></div>
+            <button class="bc-relay-more" id="bcRelayMore" type="button" hidden data-i18n="home.relayMore">看全部</button>
           </div>
+        </div>
+        <div class="bc-relay-actions" id="bcRelayActions" hidden>
+          <button class="bc-relay-ok" id="bcRelayAck" type="button" data-i18n="home.relayAck">我知道了</button>
         </div>
       </div>
       <button class="video-btn" id="startCall"><svg class="ic" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span data-i18n="home.startChat">開始聊聊</span></button>
@@ -1266,7 +1272,7 @@
   <script src="src/voice-turn-policy.js?v=20260716-v1024"></script>
   <script src="src/voice-call-diagnostics.js?v=20260715-v1"></script>
   <script src="src/visit-summary-logo.js?v=20260730-brand"></script><!-- 就診摘要 PDF 的品牌標記（base64；離屏 webview 的 baseURL 是 nil，載不到外部檔） -->
-  <script type="module" src="src/app.js?v=20260731-v1045"></script>
+  <script type="module" src="src/app.js?v=20260731b-v1045"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
 <script>
