@@ -74,8 +74,16 @@ class LipidTest(unittest.TestCase):
         self.assertIn("不要自己停", first["say"])
 
     def test_reading_my_numbers_is_blocked(self):
-        for s in hs.pick("TW-EDU-33", "我的膽固醇 240 算高嗎", real(1950), 15)["solutions"]:
-            self.assertNotEqual(s.get("riskLevel"), "L4")
+        """他報數字問高不高，我們不判讀——但要親口說不判讀。
+
+        （2026-07-31 量法改過：原本禁止輸出裡出現 L4，連「我不做判讀」那張卡也被
+        擋掉，等於問了不答。現在守的是：端出去的用藥級卡片必須是「不建議」那種。）
+        """
+        picked = hs.pick("TW-EDU-33", "我的膽固醇 240 算高嗎", real(1950), 15)["solutions"]
+        for s in picked:
+            if s.get("riskLevel") == "L4":
+                self.assertTrue(s.get("blocked"), "把判讀數字端上桌了")
+        self.assertIn("lipid-numbers-blocked", [s["id"] for s in picked])
 
     def test_red_yeast_double_dosing_is_spelled_out(self):
         say = next(s for s in hs.TOPICS["TW-EDU-33"]["solutions"]
