@@ -380,6 +380,16 @@
           <button class="plan-btn ghost" id="managePlanBtn">訂閱方案</button>
           <button class="plan-btn" id="topUpBtn" data-i18n="legacyUi.topUpTitle">加值點數</button>
         </div>
+        <!-- 「管理訂閱／恢復購買」從訂閱方案頁搬來這裡（Edward 2026-07-31）。
+             原本它們並排在「升級」鍵正下方，跟主要動作搶注意力；Duolingo 也是放設定、不放付費牆。
+             「恢復購買」是蘋果的硬性要求（有訂閱就必須提供、可放設定或付費牆），所以只搬位置不移除；
+             刻意不學 Duolingo 收到設定最底——正式庫至今零筆成功的蘋果交易，購買流程還沒被證明過，
+             萬一有人付了錢權益沒進來，這顆是他唯一能自救的按鍵，得找得到。 -->
+        <div class="plan-links">
+          <button class="plan-link" id="planCancelBtn" type="button" data-i18n="purchase.manageSubscription">管理訂閱</button>
+          <span class="plan-link-sep" aria-hidden="true">·</span>
+          <button class="plan-link" id="restoreBtn" type="button" data-i18n="purchase.restore">恢復購買</button>
+        </div>
       </div>
 
       <h2 class="set-section" data-i18n="settings.section.accountFamily">帳號與家庭</h2>
@@ -976,8 +986,8 @@
           </button>
         </div>
         <button class="sub-cta" id="subCta" type="button">Upgrade to Pro</button>
-        <button class="sub-cancel2" id="planCancelBtn" type="button" data-i18n="purchase.manageSubscription">Manage subscription</button>
-        <button class="sub-cancel2" id="restoreBtn" type="button" data-i18n="purchase.restore">Restore purchases</button>
+        <!-- 「管理訂閱／恢復購買」已搬到設定頁的「我的訂閱」卡（Edward 2026-07-31）：
+             這一頁只留一條路——選方案 → 升級。想改或想救回舊訂閱的人會去設定找，不該在這裡分心。 -->
         <p class="sub-legal">Subscriptions renew automatically through your Apple Account. Manage or cancel in iPhone Settings; access continues through the current billing period. Purchased credits do not expire. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
         <span id="planHeroName" hidden></span><span id="planHeroPts" hidden></span><span id="planHeroMeta" hidden></span>
       </div>
