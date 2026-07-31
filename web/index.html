@@ -1066,7 +1066,7 @@
           <b id="rcTitle">2026 年 7 月</b>
           <button class="rc-nav" id="rcNext" type="button" aria-label="下個月" data-i18n-aria-label="history.nextMonth">›</button>
         </div>
-        <div class="rc-week"><i>一</i><i>二</i><i>三</i><i>四</i><i>五</i><i>六</i><i>日</i></div>
+        <div class="rc-week"><i data-i18n="visit.weekdayMon">一</i><i data-i18n="visit.weekdayTue">二</i><i data-i18n="visit.weekdayWed">三</i><i data-i18n="visit.weekdayThu">四</i><i data-i18n="visit.weekdayFri">五</i><i data-i18n="visit.weekdaySat">六</i><i data-i18n="visit.weekdaySun">日</i></div>
         <div class="rc-grid" id="rcGrid"></div>
         <p class="rc-hint" id="rcHint" data-i18n="visit.rangePickHint">點開始那天，再點結束那天</p>
         <div class="rpt-card" id="rcResult" style="display:none"></div>
@@ -1080,12 +1080,12 @@
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span data-i18n="consent.title">開始聊之前，先跟你說一聲</span></div>
       <ul class="consent-points">
-        <li><i class="cp-dot"></i><div><b>你說的話會加密後送到國外的雲端處理</b><small>全程加密傳輸，只用來聽懂你、記得你，你也能隨時查看——不外流、不販售、不做廣告</small></div></li>
-        <li><i class="cp-dot"></i><div><b>只留對話重點，原始錄音不保存</b><small>你隨時能在「我的資料」查看或刪除</small></div></li>
-        <li><i class="cp-dot"></i><div><b>聲音只用來聽懂你在說什麼</b><small>不做其他辨識用途，你隨時能查看這部分怎麼被使用</small></div></li>
-        <li><i class="cp-dot"></i><div><b>你填的稱呼、出生年月、所在縣市會同步到雲端</b><small>雲端主機在國外；換手機、換裝置登入都找得到，你隨時能查看、修改或清空，照片只留在這支手機</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point1Title">你說的話會加密後送到國外的雲端處理</b><small data-i18n="consent.point1Body">全程加密傳輸，只用來聽懂你、記得你，你也能隨時查看——不外流、不販售、不做廣告</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point2Title">只留對話重點，原始錄音不保存</b><small data-i18n="consent.point2Body">你隨時能在「我的資料」查看或刪除</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point3Title">聲音只用來聽懂你在說什麼</b><small data-i18n="consent.point3Body">不做其他辨識用途，你隨時能查看這部分怎麼被使用</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point4Title">你填的稱呼、出生年月、所在縣市會同步到雲端</b><small data-i18n="consent.point4Body">雲端主機在國外；換手機、換裝置登入都找得到，你隨時能查看、修改或清空，照片只留在這支手機</small></div></li>
       </ul>
-      <p class="consent-note">資料由沐寧（Munea）保管，只在你使用期間保存；隨時可查詢、更正或要求刪除。沐寧是陪伴、不是緊急服務。遇到急難請撥 <b>119</b>，想找人說說話可撥 <b>1925</b>。</p>
+      <p class="consent-note" id="consentNote"></p>
       <button type="button" class="consent-go" id="consentAgree" data-i18n="consent.agree">我知道了，開始聊</button>
       <button type="button" class="consent-link" id="consentDetail" data-i18n="consent.detail">先看完整隱私說明</button>
     </div>

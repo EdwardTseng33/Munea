@@ -11067,6 +11067,20 @@ function refreshLocalizedDynamicUi() {
   if (document.readyState === 'loading') return;
   try { if (window.MuneaI18n) window.MuneaI18n.apply(); } catch (e) {}
   try { localizeLegacyStaticCopy(); } catch (e) {}
+  try {
+    const consentNote = $('#consentNote');
+    if (consentNote) {
+      // 急難號碼跟安全區走、不跟語言走：安全區接線前，中文＝台灣現行（119/1925 粗體），
+      // 其他語言用區域安全政策的「聯絡當地緊急服務」通用句、不輸出台灣號碼。
+      const zhSafety = (muneaLocale() || 'zh-TW').startsWith('zh');
+      consentNote.innerHTML = muneaT('consent.custody', '資料由沐寧（Munea）保管，只在你使用期間保存；隨時可查詢、更正或要求刪除。沐寧是陪伴、不是緊急服務。')
+        + (zhSafety ? '' : ' ')
+        + muneaT('consent.emergency', '遇到急難請撥 {emergency}，想找人說說話可撥 {talkline}。', {
+          emergency: zhSafety ? '<b>119</b>' : '',
+          talkline: zhSafety ? '<b>1925</b>' : '',
+        });
+    }
+  } catch (e) {}
   try { renderCareCarousel(); } catch (e) {}
   try { syncCompanionUI(); } catch (e) {}
   try { renderHomeGreeting(); } catch (e) {}
