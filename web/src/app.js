@@ -8279,7 +8279,7 @@ function init() {
   if ($('#famManageBtn')) $('#famManageBtn').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
-  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily(muneaT('familyCircle.loginToInvite', '要邀請家人連上你，先登入一下（這樣家人才連得到你）'))) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast('全家健康圈滿了，升級方案可以邀請更多家人。'); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
+  if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily(muneaT('familyCircle.loginToInvite', '要邀請家人連上你，先登入一下（這樣家人才連得到你）'))) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; } if (e.currentTarget.dataset.full) { toast(muneaT('familyCircle.fullUpgradeToast', '全家健康圈滿了，升級方案可以邀請更多家人。')); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
   // 邀請碼：跟雲端拿真的（6 位數、72 小時內有效、綁自己的家庭編號）；連不上雲端就先給本機碼並提示
   async function ensureCloudInvite() {
     // 已有 48 小時內拿到的雲端碼就沿用（雲端碼 72 小時有效，留 24 小時緩衝）
@@ -8621,7 +8621,7 @@ function init() {
     $('#viewPerson').classList.remove('active');
     $('#viewMood').classList.add('active');
     const n = $('#ptName') ? $('#ptName').textContent : '家人';
-    if ($('#moodTitle')) $('#moodTitle').textContent = n + '的心情';
+    if ($('#moodTitle')) $('#moodTitle').textContent = muneaT('mood.personTitle', '{name}的心情', { name: n });
     renderMoodWeek();
     const lg = $('#moodLegend');
     if (lg && !lg.childElementCount) lg.innerHTML = Object.keys(MOODS).map(k =>
@@ -8728,7 +8728,7 @@ function init() {
       return;
     }
     const meds = loadMeds();
-    const med = { name, time: times.join('、'), days, by: '美華', photo: _medPendingPhoto };
+    const med = { name, time: times.join('、'), days, by: '本人', photo: _medPendingPhoto };
     ensureMedReminderId(med);
     meds.push(med);
     try { localStorage.setItem('munea.meds', JSON.stringify(meds)); syncPush('meds', meds); } catch (e) {}
@@ -9342,7 +9342,7 @@ function init() {
     else if (p === 'invite') {
       // 家人頁的邀請入口也要守門：免費不能邀、滿了不能再邀（跟設定頁同一套規則）
       if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('family-invite'); return; }
-      if (loadCircle().length >= (CIRCLE_LIMITS[circlePlan()] || 4)) { toast('全家健康圈滿了，升級方案可以邀請更多家人。'); return; }
+      if (loadCircle().length >= (CIRCLE_LIMITS[circlePlan()] || 4)) { toast(muneaT('familyCircle.fullUpgradeToast', '全家健康圈滿了，升級方案可以邀請更多家人。')); return; }
       if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); }
     }
     else showFamPerson(p, b.dataset.rel, b.dataset.init, b.dataset.tint);
@@ -9394,7 +9394,7 @@ function init() {
   const FAM_STEP_GOAL = 7000, FAM_SLEEP_GOAL = 7.5;
   function famAvg(a, dec) { let s = 0; a.forEach(v => s += v); const m = s / a.length; return dec ? +m.toFixed(dec) : Math.round(m); }
   function famEmptyChart(box, note, name) {
-    if (box) box.innerHTML = '<div style="padding:16px 2px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">等' + name + '連上沐寧，這裡就會長出他的真數據</div>';
+    if (box) box.innerHTML = '<div style="padding:16px 2px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">' + muneaT('health.famEmptyData', '等{name}連上沐寧，這裡就會長出他的真數據', { name }) + '</div>';
     if (note) note.textContent = '';
   }
   let _famActRange = 'week', _famSleepRange = 'week', _famMoodRange = 'week';
@@ -9405,7 +9405,7 @@ function init() {
     const wk = _famActRange === 'week';
     const vals = wk ? t.stepsW : t.stepsM;
     if (box) box.innerHTML = famBarsHTML(wk ? t.wd : FAM_WL.slice(0, vals.length), vals, FAM_STEP_GOAL, v => v >= FAM_STEP_GOAL ? 'var(--teal)' : 'var(--gold)', vals.length - 1);
-    if (note) note.innerHTML = '日均 <b>' + famAvg(vals).toLocaleString() + ' 步</b> · 達標 ' + vals.filter(v => v >= FAM_STEP_GOAL).length + '/' + vals.length + (wk ? ' 天' : ' 週') + (vals.length < (wk ? 7 : 4) ? ' · 累積中' : '');
+    if (note) note.innerHTML = muneaT('health.famStepsNote', '日均 {avgBold} · 達標 {met}/{total}{unit}{trailing}', { avgBold: '<b>' + famAvg(vals).toLocaleString() + ' ' + muneaT('health.unit.steps', '步') + '</b>', met: vals.filter(v => v >= FAM_STEP_GOAL).length, total: vals.length, unit: ' ' + (wk ? muneaT('health.famStepsUnitDays', '天') : muneaT('health.famStepsUnitWeeks', '週')), trailing: vals.length < (wk ? 7 : 4) ? ' · ' + muneaT('health.famAccumulating', '累積中') : '' });
   }
   function renderFamSleep() {
     const box = $('#famSleepChart'), note = $('#famSleepNote');
@@ -9414,7 +9414,7 @@ function init() {
     const wk = _famSleepRange === 'week';
     const vals = wk ? t.sleepW : t.sleepM;
     if (box) box.innerHTML = famBarsHTML(wk ? t.wd : FAM_WL.slice(0, vals.length), vals, FAM_SLEEP_GOAL, v => v >= 7.5 ? 'var(--teal)' : (v >= 6.5 ? 'var(--gold)' : 'var(--coral)'), vals.length - 1);
-    if (note) note.innerHTML = '平均 <b>' + famAvg(vals.filter(Boolean), 1) + ' 小時</b>' + (famAvg(vals.filter(Boolean), 1) >= 7 ? ' · 睡得穩' : ' · 睡得偏少，多留意');
+    if (note) note.innerHTML = muneaT('health.famSleepNote', '平均 {avgBold}{quality}', { avgBold: '<b>' + famAvg(vals.filter(Boolean), 1) + ' ' + muneaT('health.unit.hoursShort', '小時') + '</b>', quality: ' · ' + (famAvg(vals.filter(Boolean), 1) >= 7 ? muneaT('health.famSleepSteady', '睡得穩') : muneaT('health.famSleepShort', '睡得偏少，多留意')) });
   }
   // 心情週/月：色點跟狀態頁情緒球同一套顏色
   const FAM_MOOD_COLS = ['#F4B63A', '#2FB7A8', '#236C66', '#6D7F91', '#D98A32', '#E95B4F'];
@@ -9429,7 +9429,7 @@ function init() {
   function renderFamMoodRange() {
     const box = $('#mcRangeBody'), note = $('#mcRangeNote');
     const seq = null;   // 7/9 正式化：心情軌跡只認真資料；跨裝置心情水管還沒接、一律誠實空狀態
-    if (!seq) { if (box) box.innerHTML = ''; if (note) note.textContent = '等' + (currentPerson || '家人') + '開始用沐寧聊天，這裡會長出他的心情軌跡。'; return; }
+    if (!seq) { if (box) box.innerHTML = ''; if (note) note.textContent = muneaT('mood.familyTrailEmpty', '等{name}開始用沐寧聊天，這裡會長出他的心情軌跡。', { name: currentPerson || muneaT('familyCircle.memberFallback', '家人') }); return; }
     if (_famMoodRange === 'week') {
       if (box) box.innerHTML = '<div class="mood-mini">' + seq.map((mi, i) =>
         '<div class="mm-day"><div class="mm-dot" style="background:' + FAM_MOOD_COLS[mi] + '"></div><div class="mm-lab">' + FAM_WD[i] + '</div></div>').join('') + '</div>';
@@ -9439,7 +9439,7 @@ function init() {
     } else {
       const cells = Array.from({ length: 30 }, (_, i) => seq[i % seq.length]);
       if (box) box.innerHTML = '<div class="mood-grid">' + cells.map(mi => '<i style="background:' + FAM_MOOD_COLS[mi] + '"></i>').join('') + '</div>';
-      if (note) note.innerHTML = '過去 30 天的心情地圖；一格一天、顏色跟情緒球同一套。';
+      if (note) note.innerHTML = muneaT('mood.monthMapNote', '過去 30 天的心情地圖；一格一天、顏色跟情緒球同一套。');
     }
   }
   function renderFamTrends() { renderFamAct(); renderFamSleep(); renderFamMoodRange(); }
@@ -9544,8 +9544,14 @@ function init() {
     } catch (e) {}
     chalModal.classList.add('show');
   });
-  const WD = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-  function fmtDay(d) { return (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()] + '）'; }
+  const WD_KEYS = ['mood.weekdayShortSun', 'mood.weekdayShortMon', 'mood.weekdayShortTue', 'mood.weekdayShortWed', 'mood.weekdayShortThu', 'mood.weekdayShortFri', 'mood.weekdayShortSat'];
+  const WD_ZH = ['日', '一', '二', '三', '四', '五', '六'];
+  function fmtDay(d) {
+    if (!(muneaLocale() || 'zh-TW').startsWith('zh')) {
+      return new Intl.DateTimeFormat(muneaLocale(), { month: 'numeric', day: 'numeric', weekday: 'short' }).format(d);
+    }
+    return (d.getMonth() + 1) + '/' + d.getDate() + '（' + muneaT('mood.weekdayLabel', '週{day}', { day: muneaT(WD_KEYS[d.getDay()], WD_ZH[d.getDay()]) }) + '）';
+  }
   function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function buildCalGrid(boxSel) {
     const box = boxSel ? $(boxSel) : null;
@@ -9893,7 +9899,7 @@ function init() {
     const act = { id: Date.now(), kind, names };
     if (kind === 'walk') {
       act.goal = +(($('#walkGoal') && $('#walkGoal').value) || 30000);
-      act.title = '一起運動';
+      act.title = muneaT('activity.exercise', '一起運動');
       // 挑戰截止（跟其他活動同款日期＋時間）：今天開始、到期自動結算 — Edward 7/9
       const wd0 = ($('#walkDue') && $('#walkDue').value) ? new Date($('#walkDue').value + 'T00:00') : null;
       if (!wd0 || isNaN(wd0)) { toast(muneaT('activity.pickChallengeDeadline', "先選挑戰截止的日期")); return; }
@@ -9904,15 +9910,15 @@ function init() {
       act.days = Math.max(1, Math.round((wd0 - day0) / 86400000));
       act.dateISO = isoOf(wd0);
       act.dueTime = wt;
-      act.dueLabel = fmtDay(wd0) + ' ' + _clock12(wt) + ' 截止';
+      act.dueLabel = muneaT('activity.dueAt', '{when} 截止', { when: fmtDay(wd0) + ' ' + _clock12(wt) });
     } else if (kind === 'quiz') {
       act.q = +(($('#quizN') && $('#quizN').value) || 10);
-      act.title = '機智問答';
+      act.title = muneaT('activity.quiz', '機智問答');
       const qd = ($('#quizDue') && $('#quizDue').value) ? new Date($('#quizDue').value + 'T00:00') : null;
       const qt = ($('#quizDueTime') && $('#quizDueTime').value) || '20:00';
-      if (qd && !isNaN(qd)) { act.dueISO = isoOf(qd); act.dueTime = qt; act.dueLabel = fmtDay(qd) + ' ' + _clock12(qt) + ' 截止'; }
+      if (qd && !isNaN(qd)) { act.dueISO = isoOf(qd); act.dueTime = qt; act.dueLabel = muneaT('activity.dueAt', '{when} 截止', { when: fmtDay(qd) + ' ' + _clock12(qt) }); }
     } else if (kind === 'vote') {
-      act.title = (($('#voteQ') && $('#voteQ').value.trim()) || '家庭投票');
+      act.title = (($('#voteQ') && $('#voteQ').value.trim()) || muneaT('activity.defaultVoteTitle', '家庭投票'));
       act.opts = ['#vo1', '#vo2', '#vo3'].map(x => ($(x) && $(x).value.trim()) || '').filter(Boolean);
       if (act.opts.length < 2) { toast(muneaT('activity.voteNeedsTwoOptions', "投票至少要兩個選項")); return; }
       // 投票要有截止（到期自動公布結果、收進記錄簿）— Edward 7/9
@@ -9920,7 +9926,7 @@ function init() {
       if (!vd0 || isNaN(vd0)) { toast(muneaT('activity.pickVoteDeadline', "先選投票截止的日期")); return; }
       const vt = ($('#voteDueTime') && $('#voteDueTime').value) || '20:00';
       act.dueISO = isoOf(vd0); act.dueTime = vt; act.dateISO = act.dueISO;
-      act.dueLabel = fmtDay(vd0) + ' ' + _clock12(vt) + ' 截止';
+      act.dueLabel = muneaT('activity.dueAt', '{when} 截止', { when: fmtDay(vd0) + ' ' + _clock12(vt) });
       act.votes = {};
       ['#voteQ', '#vo1', '#vo2', '#vo3'].forEach(x => { if ($(x)) $(x).value = ''; });
     } else if (kind === 'draw') {
@@ -9931,7 +9937,7 @@ function init() {
       const dtv = ($('#drawTime') && $('#drawTime').value) || '20:00';
       act.dateISO = isoOf(dd);
       act.when = fmtDay(dd) + ' ' + _clock12(dtv);
-      act.title = '幸運抽獎';
+      act.title = muneaT('activity.luckyDrawTitle', '幸運抽獎');
       if ($('#drawPrize')) $('#drawPrize').value = '';
     } else {
       const ed0 = ($('#evDate') && $('#evDate').value) ? new Date($('#evDate').value + 'T00:00') : null;
