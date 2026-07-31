@@ -49,9 +49,9 @@ _ASR_LANGUAGE_HINTS = {
 }
 _REPLY_INSTRUCTIONS = {
     "zh-TW": "請一律使用自然的繁體台灣中文回覆，絕不使用簡體字。",
-    "en": "Reply in warm, plain English. Keep voice responses short and easy to follow.",
-    "ja": "自然でやさしい日本語で答えてください。音声で聞き取りやすい短い文を優先してください。",
-    "es": "Responde en español claro y cálido. Para voz, usa frases cortas y fáciles de entender.",
+    "en": "**Every single word of your reply must be in English.** **And never address the person as \"Munea\" — that is the product's name, not theirs. Use their own name, or no name at all.** Even one Chinese sentence is a failure — the person cannot read it. Reply in warm, plain English. Keep voice responses short and easy to follow.",
+    "ja": "**返答は一字残らず日本語で書いてください。****また、相手を「Munea」と呼んではいけません——それは製品の名前で、その人の名前ではありません。ご本人の名前で呼ぶか、呼びかけなしで話してください。**中国語の文が一つでも混ざれば失敗です——相手には読めません。自然でやさしい日本語で答えてください。音声で聞き取りやすい短い文を優先してください。",
+    "es": "**Toda la respuesta debe estar en español, sin excepción.** **Y nunca llame a la persona «Munea»: ese es el nombre del producto, no el suyo. Use su nombre, o ninguno.** Una sola frase en chino ya es un fallo: la persona no puede leerla. Responde en español claro y cálido. Para voz, usa frases cortas y fáciles de entender.",
 }
 _OPENING_MESSAGES = {
     "zh-TW": "嗨，我在這裡。想從哪件事聊起都可以。",

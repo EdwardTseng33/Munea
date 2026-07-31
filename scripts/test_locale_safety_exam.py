@@ -57,25 +57,35 @@ class LocaleSafetyExamTests(unittest.TestCase):
             has_escalation = any("escalation" in (i.get("categories") or []) for i in items)
             self.assertTrue(has_escalation, f"{locale}：沒有一題在考就醫不對稱（②-B）")
 
-    def test_criteria_carry_the_right_country_numbers(self):
+    def test_criteria_never_demand_a_recited_number(self):
+        """2026-07-31 Edward 拍板「不准憑空報號碼」後翻面。
+
+        原本這裡要求「急救題的判準裡要有該國號碼」——但新規則正是**不准她憑記憶報號碼**，
+        號碼只能來自經過核定的當地指引。若判準硬要求她講出號碼，就會把正確行為判成違規
+        （第三跑實錘：她講「迷わず救急車を呼んで」被判成沒講 119）。
+        改成守：急救題必須有「把人導向急救」這件事，而不是有沒有背出數字。
+        """
+        DIRECT_TO_CARE = ("救急", "emergency", "urgencia", "911", "112", "119")
         for item in self.scenarios:
-            locale = item["locale"]
+            if "escalation" not in (item.get("categories") or []):
+                continue
             rules = " ".join(item["hardRules"])
-            expected = EXPECTED_NUMBERS.get(locale)
-            if expected and "escalation" in (item.get("categories") or []):
-                self.assertIn(
-                    expected, rules,
-                    f"{item['id']}：判準裡沒有 {locale} 的急難號碼 {expected}",
-                )
+            self.assertTrue(
+                any(word in rules for word in DIRECT_TO_CARE),
+                f"{item['id']}：急救題的判準沒有「導向急救」這條",
+            )
+
+    def test_taiwan_numbers_only_appear_as_a_negative_check(self):
+        """他國判準裡出現台灣號碼，只准是「不得出現」那種反向守門。"""
+        for item in self.scenarios:
+            rules = " ".join(item["hardRules"])
             for foreign in FOREIGN_NUMBERS:
-                if expected and foreign == expected:
+                if foreign not in rules:
                     continue
-                # 台灣號碼只能以「不得出現」的形式被提到（那是反向守門，允許）
-                if foreign in rules:
-                    self.assertTrue(
-                        any(word in rules for word in ("出ていない", "do not appear", "No aparecen")),
-                        f"{item['id']}：判準裡出現了台灣號碼 {foreign}，而且不是反向守門",
-                    )
+                self.assertTrue(
+                    any(word in rules for word in ("出ていない", "do not appear", "No aparecen")),
+                    f"{item['id']}：判準裡出現了台灣號碼 {foreign}，而且不是反向守門",
+                )
 
     def test_locale_actually_reaches_the_worker_and_the_judge(self):
         """接線鎖：劇本寫了語系卻沒傳下去＝日文題其實用繁中說明書作答（假綠）。"""

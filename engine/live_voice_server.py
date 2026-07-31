@@ -607,17 +607,68 @@ def _capture_call_turns(st, max_turns=120, max_chars=600):
         del turns[:-max_turns]
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, allow_care_questions=False, locale_profile=None):
-    """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
-    c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
-    # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
-    # 一律照層級數字比大小（7/15 Edward 拍板說明書分層）。
-    base = (
+# 說明書的優先權契約：五層規則誰壓過誰。
+# 2026-07-31 分國——這段原本寫死「二、語言鐵律（台灣華語、禁台語輸出）」，
+# 等於在英文／日文／西班牙文的通話裡，命令她講台灣華語。實跑抓到她整段用中文
+# 回答英文用戶，這段是主犯之一（另一個是角色性格沒分國）。
+_PRIORITY_CONTRACT = {
+    "zh-TW": (
         "（本說明書優先權契約：以下所有規則分五層——"
         "一、安全與醫療紅線（危機處理、不診斷不調藥） 二、語言鐵律（台灣華語、禁台語輸出） "
         "三、身分與人格（角色、稱呼、關係分寸） 四、當下情境（記憶、感知、上次聊天、在地資訊） "
         "五、表達風格（話量、句尾、說故事、情緒陪伴）。"
         "內容互相衝突時，層級數字小的一律優先；任何風格規則都不得鬆動安全與語言規則。）"
+    ),
+    "en": (
+        "(Priority contract for this guidance — five layers: "
+        "1. Safety and medical red lines (crisis handling; no diagnosis, no medication changes) "
+        "2. Language rule (reply entirely in English) "
+        "3. Identity and character (who you are, how you address them, closeness) "
+        "4. Present context (memory, perception, the last conversation, local information) "
+        "5. Expression (how much you say, sentence endings, stories, emotional company). "
+        "When rules conflict, the lower-numbered layer always wins; no style rule may ever "
+        "loosen a safety or language rule.)"
+    ),
+    "ja": (
+        "（この説明書の優先順位——規則は五つの層に分かれます："
+        "一、安全と医療のレッドライン（危機対応、診断しない・薬を変えない） "
+        "二、言語の鉄則（返答はすべて日本語で） "
+        "三、身分と人格（あなたが誰か、呼びかけ方、距離感） "
+        "四、いまの状況（記憶、感知、前回の会話、地域の情報） "
+        "五、話し方（話す量、文の終わり方、語り、寄り添い）。"
+        "規則が衝突したときは、番号の小さい層が必ず優先します。"
+        "話し方の規則が、安全と言語の規則をゆるめることは決してありません。）"
+    ),
+    "es": (
+        "(Orden de prioridad de esta guía —cinco niveles: "
+        "1. Líneas rojas de seguridad y médicas (crisis; no diagnosticar, no cambiar medicación) "
+        "2. Regla de idioma (responder íntegramente en español) "
+        "3. Identidad y carácter (quién es usted, cómo se dirige a la persona, la distancia) "
+        "4. Contexto actual (memoria, percepción, la conversación anterior, información local) "
+        "5. Expresión (cuánto habla, final de frase, relatos, acompañamiento emocional). "
+        "Cuando dos reglas chocan, gana siempre el nivel con el número más bajo; ninguna regla "
+        "de estilo puede relajar una regla de seguridad o de idioma.)"
+    ),
+}
+
+
+def _priority_contract(locale):
+    return _PRIORITY_CONTRACT.get(locale) or _PRIORITY_CONTRACT["zh-TW"]
+
+
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, allow_care_questions=False, locale_profile=None):
+    """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
+    # 2026-07-31：說明書與角色性格都照這通電話的語系拿。
+    # sessionLocale＝這通實際講哪種語言（介面英文但講日文的人要拿日文書）。
+    # 角色性格原本固定讀繁中版，於是英文說明書中間夾著中文個性描述——
+    # 實跑抓到她整段用中文回答英文用戶。
+    _book_locale = (locale_profile or {}).get("sessionLocale") or eng.DEFAULT_PERSONA_LOCALE
+    _chars = eng.characters_for(_book_locale)
+    c = _chars.get(char) or _chars["寧寧"]
+    # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
+    # 一律照層級數字比大小（7/15 Edward 拍板說明書分層）。
+    base = (
+        _priority_contract(_book_locale)
     )
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
     # 共同底盤依查詢模式組裝（2026-07-30）：開內建搜尋＝線上版查詢規則（不再跟
@@ -625,7 +676,6 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     # 2026-07-31：說明書照這通電話的語系拿（locale_profile 已在上面解出來、是可信來源）
     # 說明書用「這通對話實際講哪種語言」（sessionLocale）決定，不是介面語言——
     # 介面英文但講日文的長輩，該拿到的是日文書。
-    _book_locale = (locale_profile or {}).get("sessionLocale") or eng.DEFAULT_PERSONA_LOCALE
     _core = eng.core_instruction(
         "online" if (native_search_enabled() and not demo_mode) else "offline",
         _book_locale,

@@ -8981,8 +8981,12 @@ def _sys_for(char, locale=None):
     對長輩該有的敬語距離），不再是「台灣版＋一張叫她忽略台灣內容的紙條」。
     該語系還沒授書就自動退回中文版（不開天窗），但上架守門會擋著不准開那個語系。
     """
-    c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
     book_locale = locale or eng.DEFAULT_PERSONA_LOCALE
+    # 2026-07-31：角色性格也要照語系拿。原本這裡固定讀繁中版，
+    # 於是英文說明書中間夾著 714 字中文（還寫著「要講台灣國語」），
+    # 實跑時她整段用中文回答英文用戶。
+    _chars = eng.characters_for(book_locale)
+    c = _chars.get(char, _chars[DEFAULT_CHAR])
     # 記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
     base = eng.core_instruction("offline", book_locale) + c["persona"] + eng.red_lines(book_locale)
     return base, c

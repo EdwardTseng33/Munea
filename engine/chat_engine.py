@@ -65,6 +65,36 @@ def _persona_text(kind, locale=DEFAULT_PERSONA_LOCALE):
     raise FileNotFoundError(f"persona book missing: {kind}")
 
 
+def characters_for(locale=DEFAULT_PERSONA_LOCALE):
+    """角色性格照語系拿。
+
+    2026-07-31 實跑抓到的真因：說明書分國了，但**角色性格沒分國**——
+    寧寧那 714 字的中文個性描述整段夾在英文說明書中間，裡面還寫死
+    「要像在台灣生活長大的台灣人、用自然台灣國語」。等於一邊叫她講英文、
+    一邊叫她講台灣國語，結果她整段用中文回答英文用戶。
+
+    正本仍是 characters.json（繁中）；其他語系只覆寫 persona 與 style 兩欄，
+    其餘（backendChar、聲音代號等）一律沿用正本，沒授書的角色自動用正本。
+    """
+    if locale == DEFAULT_PERSONA_LOCALE:
+        return CHARS
+    path = os.path.join(PERSONA_DIR, f"characters.{locale}.json")
+    if not os.path.exists(path):
+        return CHARS
+    key = ("characters", locale)
+    if key in _PERSONA_CACHE:
+        return _PERSONA_CACHE[key]
+    with open(path, encoding="utf-8") as handle:
+        overrides = json.load(handle)
+    merged = {}
+    for name, base in CHARS.items():
+        entry = dict(base)
+        entry.update(overrides.get(name) or {})
+        merged[name] = entry
+    _PERSONA_CACHE[key] = merged
+    return merged
+
+
 def persona_locales():
     """有哪幾國已經授書（core 與 red 都齊才算）。"""
     if not os.path.isdir(PERSONA_DIR):
