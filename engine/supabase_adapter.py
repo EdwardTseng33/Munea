@@ -1726,6 +1726,7 @@ class SupabaseAdapter:
             "birthMonth": row.get("birth_month"),
             "county": row.get("county") or "",
             "district": row.get("district") or "",
+            "country": (row.get("country") or "").upper(),
             "updatedAt": row.get("updated_at") or row.get("created_at"),
         }
 
@@ -1754,10 +1755,13 @@ class SupabaseAdapter:
                 row["birth_month"] = month if 1 <= month <= 12 else None
             except (TypeError, ValueError):
                 row["birth_month"] = None
+        # 2026-07-31 跨國：地名上限跟 server.py 一致放寬到 60（西班牙市名最長 26 字）
         if profile.get("county") is not None:
-            row["county"] = (str(profile.get("county") or "").strip()[:20]) or None
+            row["county"] = (str(profile.get("county") or "").strip()[:60]) or None
         if profile.get("district") is not None:
-            row["district"] = (str(profile.get("district") or "").strip()[:20]) or None
+            row["district"] = (str(profile.get("district") or "").strip()[:60]) or None
+        if profile.get("country") is not None:
+            row["country"] = (str(profile.get("country") or "").strip()[:2].upper()) or None
         return row
 
     def load_person_profile(self):
