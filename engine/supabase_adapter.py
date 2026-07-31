@@ -1295,6 +1295,53 @@ class SupabaseAdapter:
         rows = self._select("enterprise_seats", filters)
         return [self.enterprise_seat_row_to_item(row) for row in rows or []]
 
+    def load_account_enterprise_seats(self, account_ids, limit=5000):
+        """後台名冊用：一次撈出這批帳號各自「還在效期內的企業席次是哪一家公司的」。
+        名冊只顯示 free/plus/pro 看不出這個人是自己買的還是企業給的——收費對帳與客服
+        都需要知道（2026-07-30 Edward）。
+
+        只認 active／grace／waiting 三種狀態：released 已經是歷史、pending 還沒綁到帳號。
+        同一帳號理論上只會有一顆有效席次，真的撞到多顆就取最早建立那顆（跟開通順序一致）。
+        """
+        wanted = [aid for aid in (account_ids or []) if self._is_uuid(aid or "")]
+        if not self.configured() or not wanted:
+            return {}
+        rows = self._select("enterprise_seats", {
+            "account_id": f"in.({','.join(wanted)})",
+            "status": "in.(active,grace,waiting)",
+            "select": "id,account_id,enterprise_client_id,status,grace_until,waiting_until,activated_at",
+            "order": "created_at.asc",
+            "limit": str(max(1, min(5000, int(limit or 5000)))),
+        }) or []
+        seats = {}
+        for row in rows:
+            seats.setdefault(row.get("account_id"), row)
+        if not seats:
+            return {}
+        client_ids = sorted({s.get("enterprise_client_id") for s in seats.values()
+                             if self._is_uuid(s.get("enterprise_client_id") or "")})
+        names = {}
+        if client_ids:
+            for row in self._select("enterprise_clients", {
+                "id": f"in.({','.join(client_ids)})",
+                "select": "id,name,plan_tier,contract_end",
+            }) or []:
+                names[row.get("id")] = row
+        out = {}
+        for account_id, seat in seats.items():
+            client = names.get(seat.get("enterprise_client_id")) or {}
+            out[account_id] = {
+                "seatId": seat.get("id"),
+                "seatStatus": seat.get("status"),
+                "clientId": seat.get("enterprise_client_id"),
+                "clientName": client.get("name") or "",
+                "planTier": client.get("plan_tier") or "",
+                "contractEnd": client.get("contract_end"),
+                "graceUntil": seat.get("grace_until"),
+                "waitingUntil": seat.get("waiting_until"),
+            }
+        return out
+
     def get_enterprise_seat(self, seat_id):
         if not self.enabled() or not self._is_uuid(seat_id or ""):
             return None
@@ -1679,6 +1726,7 @@ class SupabaseAdapter:
             "birthMonth": row.get("birth_month"),
             "county": row.get("county") or "",
             "district": row.get("district") or "",
+            "country": (row.get("country") or "").upper(),
             "updatedAt": row.get("updated_at") or row.get("created_at"),
         }
 
@@ -1707,10 +1755,13 @@ class SupabaseAdapter:
                 row["birth_month"] = month if 1 <= month <= 12 else None
             except (TypeError, ValueError):
                 row["birth_month"] = None
+        # 2026-07-31 跨國：地名上限跟 server.py 一致放寬到 60（西班牙市名最長 26 字）
         if profile.get("county") is not None:
-            row["county"] = (str(profile.get("county") or "").strip()[:20]) or None
+            row["county"] = (str(profile.get("county") or "").strip()[:60]) or None
         if profile.get("district") is not None:
-            row["district"] = (str(profile.get("district") or "").strip()[:20]) or None
+            row["district"] = (str(profile.get("district") or "").strip()[:60]) or None
+        if profile.get("country") is not None:
+            row["country"] = (str(profile.get("country") or "").strip()[:2].upper()) or None
         return row
 
     def load_person_profile(self):
@@ -1889,7 +1940,7 @@ class SupabaseAdapter:
                     "routineReminders": True,
                     "realtimeAvatar": True,
                     "premiumAvatarMinutesMonthly": 0,
-                    "familyMembersMax": 1,
+                    "familyMembersMax": 2,   # Edward 2026-07-31：免費也給 1 位家人（本人＋1），跟 server.py 的預設同步
                 },
                 "usageLedger": {
                     "period": time.strftime("%Y-%m"),
@@ -3841,15 +3892,26 @@ class SupabaseAdapter:
             "raw_event_ref": store.get("rawEventRef") or store.get("raw_event_ref"),
         }
 
+    # 訂閱還算不算生效的狀態。跟 engine/enterprise_seats.py 的 INDIVIDUAL_ACTIVE_STATUSES 同一組，
+    # 兩邊要一起改——一邊認生效、另一邊不認，就會出現「後台說過期、App 還在用付費功能」。
+    ACTIVE_SUBSCRIPTION_STATUSES = ("active", "trial", "grace_period")
+
     def billing_rows_to_store(self, subscription_row=None, usage_rows=None, period=None):
         row = subscription_row or {}
         usage = self.usage_rows_to_usage_ledger(usage_rows or [], period=period)
+        # 方案要跟著狀態走。舊版直接讀 active_plan、不管狀態——正式庫現在就有 21 筆
+        # 「狀態已失效、方案欄還掛著付費」的紀錄，那種紀錄如果剛好是有效的方案名稱，
+        # App 會一直把人當付費會員（企業席次到期收回時第一個會踩到，2026-07-30 補）。
+        status = str(row.get("status") or "inactive").strip().lower()
+        active_plan = row.get("active_plan") or "free"
+        if status not in self.ACTIVE_SUBSCRIPTION_STATUSES:
+            active_plan = "free"
         return {
             "schemaVersion": 1,
             "accountId": self.account_id,
             "platform": row.get("platform") or "ios",
             "provider": row.get("provider") or "storekit2-or-revenuecat",
-            "activePlan": row.get("active_plan") or "free",
+            "activePlan": active_plan,
             "subscription": {
                 "status": row.get("status") or "inactive",
                 "productId": row.get("product_id"),

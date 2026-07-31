@@ -27,19 +27,6 @@ const expectedProfiles = [
   ['iphone-standard', 390, 844, 'std'],
   ['iphone-dynamic-type-large', 390, 844, 'xl'],
 ];
-const evidenceSourcePaths = [
-  'web',
-  'scripts/app-full-surface-i18n-browser-precheck.js',
-  'scripts/app-i18n-fixture-server.js',
-];
-
-function gitLines(args) {
-  return execFileSync('git', args, {
-    cwd: ROOT,
-    encoding: 'utf8',
-  }).trim().split(/\r?\n/u).filter(Boolean);
-}
-
 assert.equal(report.schema, 'munea.app-full-surface-local-browser-precheck.v2');
 assert.equal(report.result, 'pass-local-precheck');
 assert.equal(report.releaseEvidence, false);
@@ -47,11 +34,6 @@ assert.match(
   report.sourceBaseCommit,
   /^[0-9a-f]{40}$/u,
   'Browser evidence must identify the exact 40-character source commit',
-);
-assert.deepEqual(
-  report.sourceChangedFiles,
-  [],
-  'Browser evidence captured from a dirty worktree cannot certify the App source',
 );
 assert.doesNotThrow(
   () => execFileSync(
@@ -61,16 +43,10 @@ assert.doesNotThrow(
   ),
   'Browser evidence source commit must be an ancestor of the tested HEAD',
 );
-assert.deepEqual(
-  gitLines(['diff', '--name-only', report.sourceBaseCommit, '--', ...evidenceSourcePaths]),
-  [],
-  'Browser evidence is stale because shipping WebView or capture source changed',
-);
-assert.deepEqual(
-  gitLines(['status', '--short', '--untracked-files=all', '--', ...evidenceSourcePaths]),
-  [],
-  'Browser evidence cannot pass with uncommitted shipping WebView or capture source changes',
-);
+// 2026-07-30 Edward 兩度拍板：①開發「動到哪個畫面才截那幾張」（capture 工具的
+// --states/--locales/--profiles），不必每次改版全拍 456 張；②打包出貨前也不強制全拍——
+// 全套模式純屬選用工具，任何關卡都不逼它。原「證據跟上每次畫面改動」的新鮮度檢查已整組移除。
+// 這裡只驗留存證據本身完整（張數、雜湊、零失敗、可追到來源存檔點），因為壞掉的證據比沒有更誤導。
 assert.equal(report.scope.environment, 'local-fixture-only');
 assert.deepEqual(
   report.scope.captureProfiles.map(({ id, viewport, appFontScale }) => [

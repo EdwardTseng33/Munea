@@ -76,3 +76,6 @@ deploy/flashhead-poc/assets/*.mp4
 deploy/glows/glows_ed25519
 deploy/glows/.env
 .vercel
+
+# 局部畫面驗收的輸出（開發自驗用、不進版控）
+docs/qa/i18n/local-browser-precheck/_targeted/

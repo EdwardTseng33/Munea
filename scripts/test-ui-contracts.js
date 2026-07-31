@@ -68,6 +68,25 @@ assert(contrastRatio('#37A099', '#FFFFFF') >= 3, 'Primary button mint must keep 
 assert(contrastRatio('#B0392D', '#FFFFFF') >= 4.5, 'Danger action red must keep WCAG AA contrast on white');
 assert(css.includes('--teal: #3AA8A0;') && css.includes('--btn-green: #37A099;') && css.includes('--coral: #F4A261;'),
   'Brand tokens must stay pinned to the 2026-07-30 ruling: mint primary, mint button, logo orange');
+// 7/30 晚間補訓：橘不做文字色（那天的深橘字被 Edward 抓＝規範外）。
+// 7/31 Edward 改判：整頁全綠「色調單調失衡」，小字點綴要回暖色——但**只准走 --coral-text**
+// 這一階，而且要暖不要暗（試過的 #A8611E 4.78 被嫌太暗）。--coral-d 維持圖形專用、
+// 不得當文字色，7/30 那道防線原封不動。
+assert(css.includes('--coral-d: #E08B45;'), 'The orange deep step must stay the graphic-only #E08B45, not a text brown');
+// 2026-07-31 Edward 改口：「整個畫面都是綠的、色調單調失衡」→ 小字改暖橘點綴（#463）。
+// 7/30 那條「橘不做文字色」的禁令因此退場，但**當初禁它的理由（長輩讀不清楚）沒有退場**——
+// 所以守門從「不准用橘」改成「用橘可以，但必須讀得清楚」：對白底至少 AA 小字 4.5。
+assert(css.includes('--coral-text: #AB6119;'),
+  'The warm text orange must stay the AA-passing step, not drift back to a low-contrast tint');
+assert(contrastRatio('#AB6119', '#FFFFFF') >= 4.5,
+  'Warm orange text must keep WCAG AA small-text contrast on white — our readers are seniors');
+assert(/\.task-time \{[^}]*color: var\(--coral-text\)/s.test(css) && /\.set-section \{ color: var\(--coral-text\); \}/.test(css),
+  'Task time labels and settings section kickers must use the pinned orange text step (Edward 2026-07-31 ruling)');
+// 「寧寧幫你留意」是區塊名、下面接待辦清單，染橘會跟卡片內容搶戲——同日拍板留深綠。
+assert(/\.care-head \{[^}]*color: var\(--teal-dd\)/s.test(css),
+  'The home care-carousel heading must stay on the mint deep tier, not the orange accent');
+assert(!/\.(?:task-time|set-section|tier-tag|mem-badge|md-status|low-strip)[^{]*\{[^}]*color:\s*var\(--coral-d\)/s.test(css),
+  'Status labels and badges must not use orange as a text color (Edward 2026-07-30 evening ruling)');
 assert(css.includes('--danger-d: #B0392D;'), 'Accessible danger color token must stay pinned');
 assert(/class="modal-btn danger" id="dataDeleteBtn"/.test(html), 'Data deletion must use the danger style instead of the primary action style');
 assert(/\.modal-btn\.danger\[data-arm="1"\]\s*\{[^}]*background:\s*var\(--danger-d\);[^}]*color:\s*#fff;/s.test(css), 'Armed deletion must render as a solid danger action');
@@ -194,6 +213,15 @@ runtimeVoiceKeys.forEach(key => assert(zhCatalog[key], `Voice runtime catalog ke
 assert(app.includes('function setLocalizedRuntimeHint(state, busy = false)')
   && app.includes('function setLocalizedRuntimeCaption(state)'),
   'Voice runtime hints and recovery captions must use named localized renderers');
+const voiceRuntimeCopyBlock = app.slice(
+  app.indexOf('const VOICE_RUNTIME_KEYS'),
+  app.indexOf('function setLocalizedRuntimeHint(state, busy = false)'),
+);
+assert(voiceRuntimeCopyBlock && !/\p{Script=Han}/u.test(voiceRuntimeCopyBlock),
+  'Voice runtime state mapping must contain catalog keys only, without inline Han fallback copy');
+assert(rendererCopySource.includes('function voiceRuntimeText(state)')
+  && rendererCopySource.includes('function voiceRuntimeCaption(state)'),
+  'Voice runtime text and recovery captions must be owned by the shared renderer-copy module');
 assert(!/setCallHint\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),
   'Call runtime hints must not bypass the locale catalog with inline Han copy');
 assert(!/setCaption\(\s*['"`][^'"`\r\n]*\p{Script=Han}/u.test(app),
@@ -218,9 +246,13 @@ assert(app.includes('function localizeAuthTerms()') && /refreshLocalizedDynamicU
 assert(app.includes('function localizeMedicationSurfaces()')
   && /refreshLocalizedDynamicUi\(\)[\s\S]*?localizeMedicationSurfaces\(\)/.test(app),
   'Medication manager and due-reminder surfaces must refresh when the App locale changes');
+// 反向守門升級（2026-07-31）：中文專用的 muneaIsCleanZhText 已整支退場，改成跟著語系走的
+// muneaIsCleanSpeechText。原本只盯藥名那一處，現在直接禁止整份 app.js 再長回中文專用寫法。
 assert(/async function aiAddMedReminder[\s\S]*?muneaIsCleanDisplayText\(rawName\)/.test(app)
-  && !/async function aiAddMedReminder[\s\S]{0,260}?muneaIsCleanZhText\(rawName\)/.test(app),
-  'Voice-created medication names must accept safe English, Japanese, and Spanish text');
+  && !app.includes('muneaIsCleanZhText')
+  && app.includes('const MUNEA_SPEECH_RULES = {')
+  && /MUNEA_SPEECH_RULES\s*=\s*\{[\s\S]{0,600}?\bja:[\s\S]{0,400}?\ben:[\s\S]{0,400}?\bes:/.test(app),
+  'Voice-created medication names must accept safe English, Japanese, and Spanish text, and the text guard must stay locale-aware for all four locales');
 assert(app.includes('function canonicalMedicationSlot(slot)')
   && app.includes("import './i18n/medication-schedule.js'")
   && app.includes("'after-breakfast': '早餐後'")
@@ -309,7 +341,7 @@ assert(sendIndex > rewardIndex, 'Send invitation button must remain after the fo
 assert(!/#(?:chalModal\s+)?#?startChalBtn[^\{]*\{[^\}]*position\s*:\s*(?:sticky|fixed)/s.test(css), 'Send invitation button must scroll with form content');
 assert(!app.includes("$$('#chalModal .step-btn')"), 'Challenge stepper event handlers must stay removed');
 
-const familyActivitySection = html.match(/id="newChalBtn"[\s\S]*?<div class="sec-head"><div><h2>全家狀態/)?.[0] || '';
+const familyActivitySection = html.match(/id="newChalBtn"[\s\S]*?<div class="sec-head"><div><h2[^>]*>全家狀態/)?.[0] || '';
 assert(familyActivitySection.includes('id="actEmpty"'), 'Family activities must keep a real empty-state anchor');
 assert(!familyActivitySection.includes('class="quest-card'), 'Family activities must not ship hard-coded demo cards');
 assert(!html.includes('id="demoEventDate"') && !app.includes('fixDemoEventDate'), 'Retired demo activity dates must stay removed');
@@ -327,8 +359,60 @@ assert(/\.auth-ava-img\[hidden\]\s*\{\s*display:\s*none(?:\s*!important)?;\s*\}/
 assert((html.match(/id="memBadge"/g) || []).length === 1 && !html.includes('authDevBadge'), 'Account card must render exactly one plan or TEST badge');
 assert(app.includes('function authDisplayName(state)') && /name:\s*userMetadata\.name/.test(auth), 'Signed-in account card must receive and display the Google or Apple name');
 assert(/\.auth-title\s*\{[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s.test(css), 'Long account names and translated guest labels must wrap instead of truncating');
-assert(/\.auth-secondary\s*\{[^}]*height:\s*40px;[^}]*background:\s*var\(--mint\);[^}]*border:\s*1px solid var\(--teal-d\);/s.test(css), 'Sign-out must keep the latest secondary-button design');
-assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:\s*var\(--coral-d\);/s.test(css), 'Development account must use the single TEST badge design');
+// 2026-07-31 #463 Edward「登出改次要鍵」：從薄荷填色改成白底細框，比原本更不搶眼——
+// 那正是次要鍵該有的樣子。所以守門改成守**意圖**而不是守某一版的顏色：
+// ①仍是 40px 的實體按鍵 ②不得使用主要動作的填色（不能長得像主要按鈕）③字要讀得清楚。
+assert(/\.auth-secondary\s*\{[^}]*height:\s*40px;[^}]*border:\s*1px solid var\(--line\);/s.test(css),
+  'Sign-out must stay a real 40px secondary button with a hairline border');
+assert(!/\.auth-secondary\s*\{[^}]*background:\s*var\(--btn-green\)/s.test(css),
+  'Sign-out must never take the primary action fill — it is a secondary action');
+assert(contrastRatio('#5A6963', '#FFFFFF') >= 4.5,
+  'Sign-out label must keep AA small-text contrast — our readers are seniors');
+/* 首頁那張卡要轉達「真的家人帶話」（Edward 2026-07-31）
+ *
+ * 原本這裡是撈家人動態牆的第一則、用比對句子的方式猜哪句是傳話——中文改一個字就失靈、
+ * 換成英日西整條認不出來；而真正的傳話當時只在通話時唸，首頁根本看不到。
+ * 這幾條守的是接線本身：資料要來自傳話接口、要在進首頁與登入後主動去拿、
+ * 上面講了下面就不要重複講、話太長不能默默切掉。 */
+assert(!app.includes('function _muneaFamilyRelayGreeting')
+  && /function homeRelayText\(relay\)[\s\S]{0,500}?relay\.content[\s\S]{0,300}?relay\.senderLabel/.test(app)
+  && !/function homeRelayText\(relay\)[\s\S]{0,500}?(?:loadFeed\(\)|要我提醒你\[)/.test(app),
+  'The butler card must read the relay record itself, not sniff the family feed by pattern-matching Chinese copy');
+assert(/async function syncHomeFamilyRelay\(\)[\s\S]{0,800}?claimNextFamilyRelay\(\)/.test(app),
+  'The home butler card must pull the real relay from the family-relay endpoint');
+assert(/if \(id === 'home'\) \{[^}]*syncHomeFamilyRelay\(\)/.test(app)
+  && /syncProfileNudge\(\);[\s\S]{0,200}?syncHomeFamilyRelay\(\)/.test(app),
+  'Relays must be fetched when the user lands on home and right after sign-in, not only during a call');
+// 沒有確認鍵（Edward 2026-07-31）：話送到眼前就算送到，長輩不必為了讓它消失而學按什麼。
+// 消失靠的是日子往前走——聊過天、有新的一則、或放到隔天。
+assert(!app.includes('ackHomeFamilyRelay') && !html.includes('bcRelayAck'),
+  'The relay card must not ask the reader to tap a confirmation button');
+assert(/async function syncHomeFamilyRelay\(\)[\s\S]{0,1200}?finishFamilyRelayClaim\(relay, 'ack'\)/.test(app),
+  'Showing the relay must report delivery back to the cloud, otherwise it will be re-sent forever');
+assert(/function loadHomeRelay\(\)[\s\S]{0,600}?HOME_RELAY_TTL_MS[\s\S]{0,300}?munea\.lastChatAt/.test(app),
+  'A shown relay must fade on its own: superseded by a chat, by a newer message, or by the next day');
+assert(/if \(!_relayOnButlerCard\) items\.push\(familyItem\)/.test(app),
+  'The care carousel must not repeat a relay that the butler card is already delivering');
+// 輪播那格也不准再猜（2026-07-31 收尾）：它只負責唸出動態牆最新的一則。
+// 用中文句型撈「哪一則是傳話」，換成英日西就整條認不出來——真傳話已經由上面那張卡直接拿了。
+assert(!/feed\.find\([^)]*要我提醒你/.test(app) && !/match\(\/\^\(\.\+\?\)要我提醒你/.test(app),
+  'The care carousel must not sniff the family feed for relays by matching Chinese sentence patterns');
+assert(/const feedTop = feed\.length \? feed\[0\] : null/.test(app),
+  'The care carousel should simply surface the newest family-feed entry');
+assert(/\.butler-card\.has-relay \.bc-msg-t \{[^}]*-webkit-line-clamp: 4/s.test(css)
+  && /\.butler-card\.has-relay\.relay-open \.bc-msg-t \{[^}]*-webkit-line-clamp: unset/s.test(css),
+  'Relay text must show up to four lines and stay fully readable via the show-all control');
+['home.relayMore', 'familyCircle.someoneInFamily'].forEach(key =>
+  assert(zhCatalog[key], `Relay surface catalog key missing for: ${key}`));
+// 送出提示不能再說「下次聊聊時轉達」——傳話現在一開 App 就看得到，那句話已經不是事實
+assert(!/下次聊聊/.test(zhCatalog['familyCircle.relayQueuedToast'] || ''),
+  'The relay-sent confirmation must match the new behaviour: the message shows on home, not only during the next call');
+// 方案標籤跟著頭像走、右欄只留按鍵並垂直置中（同日）——右欄再塞回標籤就會重心偏頭重腳輕。
+assert(/<div class="auth-id">[\s\S]{0,400}?id="authAvatar"[\s\S]{0,600}?id="memBadge"[\s\S]{0,80}?<\/div>/.test(html),
+  'The plan badge must sit under the avatar inside .auth-id, not in the action column');
+assert(/\.auth-actions\s*\{[^}]*justify-content:\s*center/s.test(css),
+  'With only one button left, the account-card action column must stay vertically centered');
+assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:\s*var\(--ink\);/s.test(css), 'Development account must use the single TEST badge design (soft orange chip, ink text — orange is not a text color)');
 
 const authSheet = html.match(/<div class="modal-mask auth-sheet" id="authSheet"[\s\S]*?<\/div>\s*<!-- ===== 底部 5 分頁 ===== -->/)?.[0] || '';
 assert(authSheet.includes('id="authAppleBtn"') && authSheet.includes('id="authGoogleBtn"'), 'Auth sheet must keep Apple and Google sign-in');
@@ -357,8 +441,8 @@ companionCards.forEach(([, ava, typeKey, typeFallback, traitKey, traitFallback])
   });
 });
 assert(
-  html.includes('<small id="settingsTemplateLabel">' + zhCatalog['companion.nening.label'] + '</small>'),
-  '設定頁角色說明的預設字必須跟文案表一致（不然沒載到翻譯時又會兩邊不一樣）',
+  html.includes('<small id="settingsTemplateLabel" data-i18n="companion.nening.label">' + zhCatalog['companion.nening.label'] + '</small>'),
+  '設定頁角色說明的預設字必須跟文案表一致、且綁定同一個文案 key（不然沒載到翻譯時又會兩邊不一樣）',
 );
 
 // 健康數據誠實層：蘋果不會告訴 App 讀取被拒絕，所以「有沒有資料」只能看真的讀到什麼，
@@ -477,15 +561,35 @@ assert(renderSubUiBody.includes("if (cur === 'free') showSubPane('plans')"), 'Fr
 assert(/dataset\.pane === 'points' && circlePlan\(\) === 'free'\) return;/.test(app), 'Clicking the points tab must be blocked for free members as a second guard');
 assert(app.includes('function showSubPane'), 'Pane switching must go through one function so the free guard cannot be bypassed');
 assert(renderPlanStateBody.includes("_tBtn.style.display = _isFreeP ? 'none' : ''"), 'The top-up button must stay hidden for free members');
-// 只要有點數就一定看得到餘額（Edward 親訓）
-assert(renderPlanStateBody.includes('const _leftover = _isFreeP ? POINTS.bought : 0'), 'Leftover purchased points must be computed for free members');
-assert(renderPlanStateBody.includes("_lbl.style.display = (!_isFreeP || _leftover > 0) ? '' : 'none'"), 'Any member holding points must still see the balance');
-// 2026-07-30 改寫：這句也搬進文案表（subscription.freeCreditsLeft），app.js 只剩 key 與剩餘點數。
+// 只要有點數就一定看得到餘額（Edward 親訓）。
+// 2026-07-30 晚改寫：餘額與說明句從 renderPlanState 搬進 renderCreditRow，且改讀伺服器錢包。
+// 原因是同一張卡上兩個數字來自兩個來源——餘額讀伺服器、說明句讀本機「歷史累計買過」
+// （localStorage munea.ptsBought，只增不減、後台發的點也永遠不會寫進來）：
+//   ① 餘額 193 卻寫「你還有 500 點沒用完」
+//   ② 後台發點給免費會員，本機沒有那筆 → 整列餘額被藏起來，違反這條拍板本身
+const renderCreditRowBody = app.match(/function renderCreditRow\(\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(renderCreditRowBody, 'renderCreditRow must remain a readable single function');
+assert(/function creditsInHand\(\) \{[^}]*ptsLeft\(\)/.test(app), '手上還剩多少點必須讀 ptsLeft（伺服器餘額優先）');
+assert(/const inHand = isFree \? creditsInHand\(\) : 0;/.test(renderCreditRowBody), 'Leftover points must come from the server wallet, not a local counter');
+assert(/lbl\.style\.display = \(!isFree \|\| inHand > 0\) \? '' : 'none'/.test(renderCreditRowBody), 'Any member holding points must still see the balance');
+// 反向守門：餘額／說明句一旦回頭讀本機累計，上面兩個症狀就會同時復發
+assert(!/POINTS\.bought/.test(renderCreditRowBody), '點數列不准讀本機累計購買數（只增不減、看不到後台發的點）');
+assert(!/POINTS\.bought/.test(renderPlanStateBody), '方案卡不准用本機累計購買數決定要不要顯示餘額');
+// 伺服器餘額（/credits/balance）回來時只會走 renderPoints，它必須回頭重算這一列，
+// 否則開機兩支並行、餘額後到就沒人重畫（畫面停在「手上沒有點數」）
 assert(
-  renderPlanStateBody.includes("'subscription.freeCreditsLeft'") && renderPlanStateBody.includes('{ credits: _leftover }'),
+  (app.match(/function renderPoints\(\) \{[\s\S]*?\n\}/)?.[0] || '').includes('__muneaRenderCreditRow'),
+  'A late server balance must still repaint the settings credit row',
+);
+assert(
+  renderCreditRowBody.includes("'subscription.freeCreditsLeft'") && renderCreditRowBody.includes('{ credits: inHand }'),
   'Free members with leftover points must be told the points are kept and how to use them',
 );
 assertCatalogSays('subscription.freeCreditsLeft', { 'zh-TW': [/留著|保留/, /訂閱/], en: [/remain/i, /subscribe/i] }, '免費會員手上剩的加購點數必須說明會留著、以及怎麼用');
+assert(/remainingCredits/.test(rendererCopySource), '文案層的免費說明句必須吃「手上還剩多少點」');
+// 換方案時不准憑空生出「已用」——舊寫法填 Math.round(pts * 0.3)，畫面會寫「每月送 100 · 已用 30」，
+// 那 30 點誰都沒用過。本機只負責不要顯示超過額度的數，真相在伺服器。
+assert(!/POINTS\.used = Math\.round\(pts \* 0\.3\)/.test(app), '換方案不准捏造「已用」點數');
 const ptsPillHiddenBody = app.match(/function ptsPillHidden\(\) \{[^}]*\}/)?.[0] || '';
 assert(/isFree\(\)\) && ptsLeft\(\) <= 0/.test(ptsPillHiddenBody), 'The chat points chip may only hide when a free member truly has zero points');
 // 「點數快用完、去加值」只對付費成立（免費 0 點時 0 < 30 會誤觸發、且加值鈕根本是藏的）
@@ -569,6 +673,8 @@ require('./test-i18n-pseudo-catalog.js');
 require('./test-companion-profile-localization.js');
 require('./test-medication-schedule-i18n.js');
 require('./test-i18n-surface-inventory.js');
+require('./test-debug-diagnostics-gated.js');
+require('./test-i18n-deferred-buckets.js');
 require('./test-purchase-flow-localizations.js');
 require('./test-purchase-flow-view-model.js');
 require('./test-app-screen-localizations.js');

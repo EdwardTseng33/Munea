@@ -55,8 +55,23 @@ expect(app.includes('result.exportPackage') && app.includes("navigator.share") &
 expect(app.includes('deletion && deletion.ok && deletion.accountDeleted'), 'local data can be cleared before cloud deletion succeeds');
 expect(app.includes('const POINTS = { total: 0, used: 0'), 'point wallet still starts with a stale paid-plan allowance');
 expect(app.includes('plus: 100, pro: 200'), 'current subscription grants are missing from the app');
-expect(app.includes('free: 1, plus: 4, pro: 12'), 'current family limits are missing from the app');
-expect(index.includes('NT$1,199') && index.includes('NT$599'), 'current subscription prices are missing from the app');
+// 2026-07-31 #458 Edward 拍板：免費也能有 1 位家人（含本人＝2）。守的意圖沒變
+// ——App 手上的名額必須是現行方案——只是數字跟著改。
+expect(app.includes('free: 2, plus: 4, pro: 12'), 'current family limits are missing from the app');
+// 價格自 b30b3672（訂閱四語系化）起不再寫死在 index.html：正常路徑讀 StoreKit displayPrice，讀不到才用 app.js 的 SUB_PRICE 兜底。
+// 守的意圖沒變——App 手上的價格必須是核准價——但要去現在真的存價格的地方守，不是繼續 grep 已經拆掉的 markup。
+expect(app.includes('plus: { month: 599,') && app.includes('pro: { month: 1199,'), 'current subscription prices are missing from the app');
+expect(
+  /id="pricePro">—<small>\/month<\/small>/.test(index) &&
+  /id="pricePlus">—<small>\/month<\/small>/.test(index),
+  'subscription placeholders must wait for localized StoreKit displayPrice'
+);
+expect(
+  app.includes("typeof window.MuneaStore.getProducts !== 'function'") &&
+  app.includes('window.MuneaStore.getProducts()') &&
+  app.includes('product.displayPrice'),
+  'subscription prices are not sourced from localized StoreKit displayPrice'
+);
 expect(index.includes('data-p="100"') && index.includes('data-p="300"') && index.includes('data-p="600"') && index.includes('data-p="1000"'), 'current point packs are missing from the app');
 expect(admin.includes('每月贈 100 點') && admin.includes('每月贈 200 點'), 'admin still shows retired subscription grants');
 expect(!admin.includes('每月贈 150 點') && !admin.includes('每月贈 300 點') && !admin.includes('每月贈 400 點'), 'admin contains retired subscription grants');
@@ -213,7 +228,10 @@ expect((canaryDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).leng
 expect(prodDeploy.includes('RELEASE_COMMIT="$(git rev-parse HEAD)"') && prodDeploy.includes('git archive --format=tar "$RELEASE_COMMIT"'), 'production deploy release commit is not tied to its source archive');
 expect(prodDeploy.includes('require(process.argv[1]).version') && (prodDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length === 2, 'production deploy does not inject the committed package version into Brain and Voice');
 expect((prodDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).length === 2 && !/^\s*--set-env-vars/m.test(prodDeploy), 'production deploy does not safely merge the source commit into Brain and Voice');
-expect(prodDeploy.includes('canary-verify.sh "$WHAT" "$TAG" production "$RELEASE_VERSION" "$RELEASE_COMMIT"'), 'production deploy does not verify its zero-traffic release metadata');
+expect(
+  /canary-verify\.sh[\s\S]*"\$WHAT" "\$TAG" production "\$RELEASE_VERSION" "\$RELEASE_COMMIT"[\s\S]*"\$VERIFY_LOCALE_MODE"/.test(prodDeploy),
+  'production deploy does not verify zero-traffic release metadata and the expected locale mode'
+);
 expect(cloudRunDeploy.includes('$gitCommit = (& git rev-parse HEAD).Trim()') && cloudRunDeploy.includes('New-CleanSourceFromCommit $tempRoot $gitCommit'), 'PowerShell deploy release commit is not tied to its source archive');
 expect(cloudRunDeploy.includes('ConvertFrom-Json') && (cloudRunDeploy.match(/MUNEA_RELEASE_VERSION=\$releaseVersion/g) || []).length === 2, 'PowerShell deploy does not inject the committed package version into Brain and Voice');
 expect((cloudRunDeploy.match(/MUNEA_RELEASE_COMMIT=\$gitCommit/g) || []).length === 2 && !/^\s*"--set-env-vars"/m.test(cloudRunDeploy), 'PowerShell deploy does not safely merge the source commit into Brain and Voice');

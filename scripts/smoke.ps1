@@ -2823,11 +2823,17 @@ required_index = [
     "AI",
     "\u5883\u5916",
     "119",
-    "1925",
 ]
 missing_index = [token for token in required_index if token not in index]
 if missing_index:
     raise SystemExit("Missing in-app AI provider consent disclosure tokens: " + ", ".join(missing_index))
+
+# 2026-07-31: consent \u7d50\u5c3e\u53e5\u6539\u7531\u7a0b\u5f0f\u7d44\u5b57\uff08\u591a\u8a9e\u5316\uff09\uff1b\u6025\u96e3\u63ed\u9732\u6539\u5728\u7d44\u5b57\u8655\u9a57\u3001
+# \u9328\u66f4\u7dca\u2014\u2014119/1925 \u5fc5\u9808\u4ee5\u7c97\u9ad4\u51fa\u73fe\u5728 consent.emergency \u7684\u7d44\u5b57\u88e1\uff08\u8ddf\u5b89\u5168\u5340\u8d70\u3001\u4e0d\u8ddf\u8a9e\u8a00\u8d70\uff09\u3002
+required_consent_runtime = ["consent.emergency", "<b>119</b>", "<b>1925</b>"]
+missing_runtime = [token for token in required_consent_runtime if token not in app]
+if missing_runtime:
+    raise SystemExit("Missing consent emergency disclosure in runtime consent build: " + ", ".join(missing_runtime))
 
 # 2026-07-24: welcome wizard retired (account + profile rework). onboarding.html is no
 # longer the home of AI-provider consent. Consent now shows on first call-gate

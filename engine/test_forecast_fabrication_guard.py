@@ -79,7 +79,9 @@ class WiringTest(unittest.TestCase):
         self.assertIn('has_briefing=bool((context or {}).get("dailyBriefing"))', src)
 
     def test_the_prompt_layer_also_names_the_failure_mode(self):
-        src = self._read("chat_engine.py")
+        # 2026-07-31 人設書分國：這段話搬進 engine/persona/lookup-offline.zh-TW.txt
+        src = self._read("chat_engine.py") + self._read(
+            os.path.join("persona", "lookup-offline.zh-TW.txt"))
         self.assertIn("沒有數字也算捏造", src)
         self.assertIn("引用一個你沒有的來源比講錯天氣更嚴重", src)
 

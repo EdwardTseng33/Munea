@@ -607,6 +607,11 @@ pre { max-height: 320px; overflow: auto; margin: 12px 0 0; border-radius: var(--
 /* nowrap 會讓「Munea Care Circle」這種長名字直接撐出格子、疊到隔壁欄的文字上
    （2026-07-29 截圖抓到）。允許換行，欄窄的時候折行而不是溢出。 */
 .u-fam{ font-weight:600; color:var(--ink-2); white-space:normal; overflow-wrap:anywhere; }
+/* 方案下面那行「企業席次 · 公司名」。跟表格其他次要文字同一個層級，
+   不給 min-width（欄寬交給表格分配，2026-07-29 疊字事故的規則）。 */
+.plan-src{ margin-top:3px; font-size:11.5px; line-height:1.3; color:var(--muted);
+  white-space:normal; overflow-wrap:anywhere; min-width:0; }
+.plan-src.is-ending{ color:var(--coral-d); font-weight:600; }
 .family-cell{ display:inline-flex; align-items:baseline; flex-wrap:wrap; column-gap:4px; white-space:normal; }
 .use-nums{ display:flex; flex-direction:column; line-height:1.25; }
 /* 用戶欄裝的是姓名＋登入方式＋信箱，內容最長——給它一個比例寬度，信箱才不會折成三行。

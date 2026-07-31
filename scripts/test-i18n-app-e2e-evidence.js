@@ -116,11 +116,20 @@ assert.throws(
   /opaque, non-sensitive reference/,
 );
 
-const spanish = complete('es');
-spanish.purchase.storeLocale = 'es-ES';
+const spanishSelected = complete('es');
+spanishSelected.purchase.storeLocale = 'es-ES';
+assert.equal(
+  compileAppE2eEvidence(spanishSelected, { ipaPath }).purchase.storeLocale,
+  'es-ES',
+  '2026-07-30 decision: es-ES is the selected Spanish variant and must compile',
+);
+
+const spanishUnselected = complete('es');
+spanishUnselected.purchase.storeLocale = 'es-MX';
 assert.throws(
-  () => compileAppE2eEvidence(spanish, { ipaPath }),
-  /Spanish App Store variant is not selected/,
+  () => compileAppE2eEvidence(spanishUnselected, { ipaPath }),
+  /must match selected variant es-ES/,
+  'evidence for the unselected es-MX variant must be rejected',
 );
 
 const differentIpaPath = path.join(temp, 'different.ipa');

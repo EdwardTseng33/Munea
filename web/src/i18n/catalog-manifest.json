@@ -21,9 +21,9 @@
       "htmlLang": "en",
       "weatherLanguage": "en",
       "catalog": "en.json",
-      "status": "development",
-      "runtimeEnabled": false,
-      "binaryLocalizationEnabled": false
+      "status": "release-candidate",
+      "runtimeEnabled": true,
+      "binaryLocalizationEnabled": true
     },
     {
       "locale": "ja",
@@ -32,9 +32,9 @@
       "htmlLang": "ja",
       "weatherLanguage": "ja",
       "catalog": "ja.json",
-      "status": "development",
-      "runtimeEnabled": false,
-      "binaryLocalizationEnabled": false
+      "status": "release-candidate",
+      "runtimeEnabled": true,
+      "binaryLocalizationEnabled": true
     },
     {
       "locale": "es",
@@ -43,9 +43,9 @@
       "htmlLang": "es",
       "weatherLanguage": "es",
       "catalog": "es.json",
-      "status": "development",
-      "runtimeEnabled": false,
-      "binaryLocalizationEnabled": false
+      "status": "release-candidate",
+      "runtimeEnabled": true,
+      "binaryLocalizationEnabled": true
     }
   ],
   "releaseGates": [

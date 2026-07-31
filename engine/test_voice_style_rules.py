@@ -6,12 +6,32 @@ import os
 import unittest
 
 SRC = os.path.join(os.path.dirname(__file__), "live_voice_server.py")
+PERSONA_DIR = os.path.join(os.path.dirname(__file__), "persona")
+
+
+def _voice_style_book(locale):
+    path = os.path.join(PERSONA_DIR, f"voice-style.{locale}.txt")
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _shipped_voice_style_locales():
+    if not os.path.isdir(PERSONA_DIR):
+        return []
+    return sorted(
+        name[len("voice-style."):-len(".txt")]
+        for name in os.listdir(PERSONA_DIR)
+        if name.startswith("voice-style.") and name.endswith(".txt")
+    )
 
 
 class VoiceStyleRulesTest(unittest.TestCase):
     def setUp(self):
+        # 2026-07-31 口語風格分國：規則從程式碼搬進 engine/persona/voice-style.<語系>.txt。
+        # 這支守的東西沒變（規則被刪就要亮紅燈），只是現在要連書一起看——
+        # 兩邊合起來當作「說明書的全文」。
         with open(SRC, encoding="utf-8") as f:
-            self.src = f.read()
+            self.src = f.read() + _voice_style_book("zh-TW")
 
     def test_priority_contract_present_and_first(self):
         """優先權契約（五層、小者優先）必須存在，且在說明書組裝的最前面。"""
@@ -95,8 +115,8 @@ class VoiceStyleRulesTest(unittest.TestCase):
         flow = self.src[self.src.index("async def _run_live_lookup"):]
         # 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，
         # 呼叫點仍必須在真的打網路查詢之前。
-        self.assertLess(flow.index("await _send_lookup_cue(category)"),
-                        flow.index("search_current_information(cli"))
+        self.assertLess(flow.index("await _send_lookup_cue(category, response_locale)"),
+                        flow.index("search_current_information("))
         for event in ("node.lookup_started", "node.lookup_cue_sent", "node.lookup_done",
                       "node.lookup_failed", "node.lookup_answer_audio"):
             self.assertIn(event, self.src)
@@ -134,6 +154,56 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self_awareness = self.src[self.src.index("純語音的現實：你們之間只有「聲音」"):
                                    self.src.index("讓他消化或接話。）")]
         self.assertNotIn("長輩", self_awareness)
+
+
+
+class EveryShippedVoiceStyleBookTest(unittest.TestCase):
+    """已授書的每一國，語音風格的六節都必須在。
+
+    授書＝用另一種語言重寫一整套口語規則。漏抄一節不會有錯誤訊息——
+    電話照樣打得通，只是那一國的長輩會遇到一個講太多、一直反問、
+    一接通就很high 的她。所以逐本檢查骨架。
+    """
+
+    SECTIONS_BY_LOCALE = {
+        "zh-TW": ("[即時語音話量上限]", "[即時語音能量]", "[開場升溫]",
+                  "[句尾收法]", "[說故事與在地內容]", "[接住情緒與陪伴引導]"),
+        "ja": ("[リアルタイム音声・話す量の上限]", "[リアルタイム音声・声の温度]",
+               "[話しはじめの温度]", "[文の終わり方]", "[話と、その土地のこと]",
+               "[気持ちを受けとめ、寄り添って導く]"),
+        "en": ("[Live speech · how much to say]", "[Live speech · energy]",
+               "[Warming up at the start]", "[How to end a sentence]",
+               "[Stories and local things]", "[Holding a feeling and walking with them]"),
+        "es": ("[Voz en directo · cuánto hablar]", "[Voz en directo · energía]",
+               "[El arranque, de menos a más]", "[Cómo terminar una frase]",
+               "[Historias y cosas de aquí]", "[Sostener lo que siente y acompañarle]"),
+    }
+
+    def test_every_book_keeps_the_six_sections(self):
+        for locale in _shipped_voice_style_locales():
+            sections = self.SECTIONS_BY_LOCALE.get(locale)
+            self.assertIsNotNone(
+                sections,
+                f"{locale}：授了語音風格書卻沒登記章節骨架——這支守不到它，等於沒守",
+            )
+            book = _voice_style_book(locale)
+            for section in sections:
+                self.assertIn(section, book, f"{locale}：語音風格缺了 {section} 這一節")
+
+    def test_every_book_forbids_back_to_back_questions(self):
+        """「不准連續兩輪都用問題收尾」是 Edward 兩次真機回報後立的硬規矩，每一國都要有。"""
+        markers = {
+            "zh-TW": "不准連續兩輪都用問題收尾",
+            "ja": "二巡続けて質問で終えてはいけません",
+            "en": "never end two turns in a row with a question",
+            "es": "nunca termine dos turnos seguidos con una pregunta",
+        }
+        for locale in _shipped_voice_style_locales():
+            marker = markers.get(locale)
+            if not marker:
+                continue
+            self.assertIn(marker, _voice_style_book(locale),
+                          f"{locale}：少了「不准連續兩輪反問」的硬規矩")
 
 
 if __name__ == "__main__":

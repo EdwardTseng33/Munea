@@ -33,11 +33,21 @@ for (const locale of requiredLocales) {
     requiredPages,
     `${locale} must declare privacy, terms, and support pages`,
   );
-  assert.equal(
-    locale === 'zh-TW' ? config.legalReview : config.legalReview.startsWith('pending'),
-    locale === 'zh-TW' ? 'approved' : true,
-    `${locale} legal-review state must remain release-gated`,
+  // 核准狀態只能是 approved 或 pending 開頭——不接受隨手寫的字。
+  // 原本寫死「非中文一律 pending」，那是三語法律頁還掛著「翻譯稿」時的狀態；
+  // 2026-07-31 Edward 核准發佈後前提就變了。真正該守的不是「誰不准核准」，
+  // 而是「核准的必須留下具名依據」——沒人簽名就不算數。
+  assert.ok(
+    config.legalReview === 'approved' || config.legalReview.startsWith('pending'),
+    `${locale} 的法務狀態只能是 approved 或 pending 開頭，現在是「${config.legalReview}」`,
   );
+  if (config.legalReview === 'approved') {
+    const basis = config.approvalBasis;
+    assert.ok(
+      basis && basis.approvedBy && basis.approvedAt && basis.basis,
+      `${locale} 法務標成已核准，卻沒有 approvalBasis——要寫明誰、哪一天、憑什麼核准`,
+    );
+  }
 
   localizedHtml[locale] = {};
   for (const pageName of requiredPages) {

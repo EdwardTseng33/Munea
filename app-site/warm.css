@@ -84,11 +84,14 @@ nav{display:flex;align-items:center;justify-content:space-between;height:76px}
 .blob.c{width:200px;height:200px;background:radial-gradient(circle,#d9efe8,transparent 70%);top:40%;left:46%;opacity:.5}
 .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center;position:relative;z-index:1}
 .hero h1{font-size:clamp(32px,5vw,56px);line-height:1.14;font-weight:700;letter-spacing:-.01em;margin:20px 0 22px}
-/* 中文一句短，整句不斷行沒問題；英文／西班牙文一個 .word 是一整句，
-   窄螢幕上不准斷行會把整欄撐寬，底下的字全被切掉（2026-07-29 抓到）。
-   桌機維持不斷行的排版意圖，窄螢幕一律放行。 */
-.hero h1 .word{white-space:nowrap}
-@media(max-width:900px){.hero h1 .word{white-space:normal}}
+/* 「整段不斷行」只有中文撐得住：中文一段就幾個字。
+   英文／日文／西班牙文一個 .word 是一整句，不准斷行就會撐爆欄位被切掉
+   ——2026-07-29 先只放行窄螢幕，7/30 Edward 截圖抓到桌機一樣被切
+   （英文主標整句 734px、欄位只有 532px，每一種桌機寬度都切）。
+   改成只有中文頁套，其他語系一律正常斷行。
+   ⚠ 中文頁的 lang 是 zh-Hant，:lang(zh) 選不到，要寫 :lang(zh-Hant)。 */
+html:lang(zh-Hant) .hero h1 .word{white-space:nowrap}
+@media(max-width:900px){html:lang(zh-Hant) .hero h1 .word{white-space:normal}}
 /* 格線子欄預設 min-width:auto，內容一寬就撐破欄位——一律准縮 */
 .hero-grid>*,.persona-wrap>*,.pz>*,.story-grid>*{min-width:0}
 .hero h1 .hl{color:var(--teal);position:relative;display:inline-block}

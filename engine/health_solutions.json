@@ -223,7 +223,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "褪黑激素在台灣是處方藥，我不能建議你去買——這個要跟醫師討論才行。"
+          "say": "褪黑激素在台灣是處方藥，我不能建議你去買——這個要跟醫師討論才行。",
+          "askedFor": [
+            "褪黑激素",
+            "褪黑素",
+            "安眠藥",
+            "助眠"
+          ]
         },
         {
           "id": "sleep-tcm-herbs",
@@ -244,7 +250,13 @@
             "finding": "中西藥「隔一兩小時仍算併用」——藥物可能 72 小時才完全排出，不是錯開時間就沒事"
           },
           "say": "中藥調理要給中醫師把脈開方，我不能建議你吃什麼。有一件事一定要提醒你：**很多人以為中藥西藥隔一兩個小時吃就沒事，其實那樣還是算一起吃**——藥物在身體裡可能要好幾天才排乾淨。你如果同時在吃西藥，一定要讓中醫師和西醫都知道。",
-          "verifiedAt": "2026-07-29"
+          "verifiedAt": "2026-07-29",
+          "askedFor": [
+            "酸棗仁",
+            "安神",
+            "中藥",
+            "藥方"
+          ]
         },
         {
           "id": "sleep-refer-doctor",
@@ -726,7 +738,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "胃藥的種類跟吃法我不能建議；長期在吃的也別自己停，那要醫師評估。"
+          "say": "胃藥的種類跟吃法我不能建議；長期在吃的也別自己停，那要醫師評估。",
+          "askedFor": [
+            "胃藥",
+            "制酸",
+            "胃乳",
+            "氫離子"
+          ]
         },
         {
           "id": "reflux-refer",
@@ -863,7 +881,14 @@
           "effortCost": "高",
           "audience": [],
           "blocked": true,
-          "say": "要不要開刀、要不要打玻尿酸或類固醇，這是骨科醫師的判斷，我不能替你決定。"
+          "say": "要不要開刀、要不要打玻尿酸或類固醇，這是骨科醫師的判斷，我不能替你決定。",
+          "askedFor": [
+            "玻尿酸",
+            "換關節",
+            "置換",
+            "開刀",
+            "打針"
+          ]
         },
         {
           "id": "knee-refer",
@@ -1013,7 +1038,36 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "換藥、加藥、停藥只有醫師能決定，我不會替你判斷，血壓的數字我也不做解讀。"
+          "say": "換藥、加藥、停藥只有醫師能決定，我不會替你判斷，血壓的數字我也不做解讀。",
+          "askedFor": [
+            "換藥",
+            "加藥",
+            "停藥",
+            "減藥",
+            "血壓藥"
+          ]
+        },
+        {
+          "id": "bp-salt-substitute-caution",
+          "label": "薄鹽、低鈉鹽不是人人可用",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "askedFor": [
+            "薄鹽",
+            "低鈉鹽",
+            "代鹽",
+            "健康鹽",
+            "美味鹽"
+          ],
+          "say": "薄鹽、低鈉鹽確實能少掉一半的鈉，對多數人是好選擇。但它是拿「鉀」去代替鈉——腎功能不好的人排不掉鉀，用了會全身無力、嚴重時心跳會亂；有些血壓藥本身也會讓血鉀偏高。所以如果你腎不好或在吃血壓藥，換鹽之前先問醫師或藥師一句。要減鹹最安全的做法，其實是蔥薑蒜、洋蔥、檸檬、黑胡椒提味。"
         },
         {
           "id": "bp-refer",
@@ -1035,6 +1089,12 @@
             "胸悶痛冒冷汗"
           ],
           "say": "量到收縮壓超過 180、或是出現臉歪、手垂、講話大舌頭（中風警訊），或胸悶胸痛冒冷汗（心臟警訊）——立刻打 119，不要等回診。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-16",
+          "say": "你提到柚子（葡萄柚也一樣）——它會讓部分血壓藥、降血脂藥在身體裡變太濃，而且錯開時間吃也躲不掉。回診或去藥局時問一句「我的藥能不能配柚子」最保險。"
         }
       ]
     },
@@ -1080,6 +1140,28 @@
           },
           "say": "這題最重要的一條：紅麴本身含天然的 Statin 成分，跟醫師開的降血脂藥一起吃，有橫紋肌溶解這類交互作用的風險。如果你兩個都在吃，先別自己決定要不要停，帶著兩瓶去問藥師。",
           "verifiedAt": "2026-07-29"
+        },
+        {
+          "id": "supp-grapefruit",
+          "label": "葡萄柚跟柚子會讓藥變太強",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "葡萄柚",
+            "柚子",
+            "文旦"
+          ],
+          "say": "這條很多人不知道、但每年中秋都該講一次：**葡萄柚和柚子（文旦也是）會擋住肝臟分解藥的酵素，讓某些藥在身體裡變太濃**——降血脂、部分血壓藥、部分安眠藥都在名單上，而且**效果可以持續兩三天，錯開時間吃也沒用**。有在吃慢性病藥的人，中秋收到文旦先問藥師「我的藥能不能配柚子」，再決定吃多少。",
+          "verifiedAt": "2026-07-31"
         },
         {
           "id": "supp-food-first",
@@ -1136,7 +1218,15 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "我不會主動推薦特定品牌或成分、不報份量，也不會替你判斷「配你的藥沒問題」——那要藥師看過才算數。"
+          "say": "我不會主動推薦特定品牌或成分、不報份量，也不會替你判斷「配你的藥沒問題」——那要藥師看過才算數。",
+          "askedFor": [
+            "哪個牌子",
+            "品牌",
+            "推薦哪",
+            "吃幾顆",
+            "劑量",
+            "幾毫克"
+          ]
         },
         {
           "id": "supp-refer",
@@ -1282,7 +1372,14 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "瀉藥、軟便劑、浣腸的種類跟用量我不能建議；長期靠瀉藥腸子會更懶，那要醫師評估。"
+          "say": "瀉藥、軟便劑、浣腸的種類跟用量我不能建議；長期靠瀉藥腸子會更懶，那要醫師評估。",
+          "askedFor": [
+            "瀉藥",
+            "軟便",
+            "浣腸",
+            "甘油球",
+            "番瀉"
+          ]
         },
         {
           "id": "consti-refer",
@@ -1430,7 +1527,11 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "治抽筋的藥（像奎寧那類）有嚴重副作用、國外已經不建議這樣用，我不會建議你去弄來吃。"
+          "say": "治抽筋的藥（像奎寧那類）有嚴重副作用、國外已經不建議這樣用，我不會建議你去弄來吃。",
+          "askedFor": [
+            "奎寧",
+            "抽筋的藥"
+          ]
         },
         {
           "id": "cramp-refer",
@@ -1586,7 +1687,14 @@
           "effortCost": "高",
           "audience": [],
           "blocked": true,
-          "say": "骨鬆的藥（打針的、吃的）要不要用、用哪一種，是醫師依照你的骨密度跟骨折風險決定的，我不會替你判斷。"
+          "say": "骨鬆的藥（打針的、吃的）要不要用、用哪一種，是醫師依照你的骨密度跟骨折風險決定的，我不會替你判斷。",
+          "askedFor": [
+            "骨鬆藥",
+            "骨鬆針",
+            "打針",
+            "保骼",
+            "福善美"
+          ]
         },
         {
           "id": "osteo-refer",
@@ -1718,7 +1826,13 @@
           "effortCost": "中",
           "audience": [],
           "blocked": true,
-          "say": "抗憂鬱的藥要不要吃、吃哪一種，是身心科醫師的判斷；已經在吃的更不要自己停，那反彈會很不舒服。"
+          "say": "抗憂鬱的藥要不要吃、吃哪一種，是身心科醫師的判斷；已經在吃的更不要自己停，那反彈會很不舒服。",
+          "askedFor": [
+            "抗憂鬱",
+            "憂鬱的藥",
+            "身心科的藥",
+            "百憂解"
+          ]
         },
         {
           "id": "mood-refer",
@@ -1874,7 +1988,13 @@
           "effortCost": "高",
           "audience": [],
           "blocked": true,
-          "say": "失智相關的藥物要不要用、用哪一種，是醫師評估後的決定，我不會替你判斷。"
+          "say": "失智相關的藥物要不要用、用哪一種，是醫師評估後的決定，我不會替你判斷。",
+          "askedFor": [
+            "失智藥",
+            "失智的藥",
+            "愛憶欣",
+            "有沒有藥"
+          ]
         },
         {
           "id": "mci-refer",
@@ -2001,7 +2121,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "血糖的數字我不做判讀，調藥也只有醫師能決定；保健品會不會跟你的藥打架，要問藥師。"
+          "say": "血糖的數字我不做判讀，調藥也只有醫師能決定；保健品會不會跟你的藥打架，要問藥師。",
+          "askedFor": [
+            "血糖藥",
+            "降血糖",
+            "胰島素",
+            "糖化血色素"
+          ]
         },
         {
           "id": "dm-refer",
@@ -2121,7 +2247,12 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "降尿酸藥、消炎止痛藥的用量我不能建議。如果你在吃利尿劑那類的藥，跟痛風有沒有關係要問醫師。"
+          "say": "降尿酸藥、消炎止痛藥的用量我不能建議。如果你在吃利尿劑那類的藥，跟痛風有沒有關係要問醫師。",
+          "askedFor": [
+            "降尿酸",
+            "秋水仙",
+            "痛風藥"
+          ]
         },
         {
           "id": "gout-refer",
@@ -2353,7 +2484,13 @@
           "effortCost": "高",
           "audience": [],
           "blocked": true,
-          "say": "要不要開刀換水晶體、什麼時候開，是眼科的醫療判斷，我不會替你決定。"
+          "say": "要不要開刀換水晶體、什麼時候開，是眼科的醫療判斷，我不會替你決定。",
+          "askedFor": [
+            "水晶體",
+            "開刀",
+            "手術",
+            "雷射"
+          ]
         },
         {
           "id": "eye-refer",
@@ -2465,7 +2602,12 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "類固醇藥膏的強度跟擦法我不能建議，那要看部位跟嚴重度，得問醫師或藥師。"
+          "say": "類固醇藥膏的強度跟擦法我不能建議，那要看部位跟嚴重度，得問醫師或藥師。",
+          "askedFor": [
+            "類固醇",
+            "藥膏",
+            "擦的藥"
+          ]
         },
         {
           "id": "itch-refer",
@@ -2590,7 +2732,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "是良性肥大還是別的問題，我不會判斷——這要泌尿科檢查才知道。"
+          "say": "是良性肥大還是別的問題，我不會判斷——這要泌尿科檢查才知道。",
+          "askedFor": [
+            "攝護腺",
+            "前列腺",
+            "肥大",
+            "嚴不嚴重"
+          ]
         },
         {
           "id": "noct-refer",
@@ -2676,7 +2824,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "你現在的身體狀況適不適合打（正在發燒、免疫功能的問題、對成分過敏），這要醫師判斷，去打之前跟醫師確認一下。"
+          "say": "你現在的身體狀況適不適合打（正在發燒、免疫功能的問題、對成分過敏），這要醫師判斷，去打之前跟醫師確認一下。",
+          "askedFor": [
+            "能不能打",
+            "可以打",
+            "適不適合",
+            "會不會有副作用"
+          ]
         },
         {
           "id": "vax-refer",
@@ -2697,7 +2851,7 @@
             "臉部腫脹",
             "全身紅疹"
           ],
-          "say": "打完如果出現呼吸困難、臉腫起來、全身紅疹——立刻就醫，不要等。"
+          "say": "打完如果出現呼吸困難、臉腫起來、全身紅疹——**這是過敏性休克的樣子，會壓到呼吸道，立刻打 119 或衝急診**，不要等、也不要自己開車去。"
         }
       ]
     },
@@ -2784,7 +2938,13 @@
           "effortCost": "高",
           "audience": [],
           "blocked": true,
-          "say": "假牙、植牙該不該做、做哪一種，是牙科的判斷，我不會替你決定。"
+          "say": "假牙、植牙該不該做、做哪一種，是牙科的判斷，我不會替你決定。",
+          "askedFor": [
+            "假牙",
+            "植牙",
+            "牙橋",
+            "活動式"
+          ]
         },
         {
           "id": "swallow-refer",
@@ -2881,7 +3041,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "我不會建議特定的成藥牌子或用量，也不會判斷這是感冒、流感還是肺炎——那要看醫師。"
+          "say": "我不會建議特定的成藥牌子或用量，也不會判斷這是感冒、流感還是肺炎——那要看醫師。",
+          "askedFor": [
+            "感冒藥",
+            "成藥",
+            "普拿疼",
+            "退燒藥"
+          ]
         },
         {
           "id": "cold-refer",
@@ -3001,7 +3167,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "這是良性還是危險的心律不整，我完全不能判斷——那是醫療診斷。我能做的是陪你記錄、陪你去看醫生。"
+          "say": "這是良性還是危險的心律不整，我完全不能判斷——那是醫療診斷。我能做的是陪你記錄、陪你去看醫生。",
+          "askedFor": [
+            "嚴不嚴重",
+            "危不危險",
+            "要不要緊",
+            "會不會怎樣"
+          ]
         },
         {
           "id": "palp-refer",
@@ -3158,7 +3330,13 @@
           "effortCost": "中",
           "audience": [],
           "blocked": true,
-          "say": "荷爾蒙治療是處方，要不要用、用多久，要婦產科醫師依你的病史評估——我不會建議，但如果你困擾到影響生活，這是可以去問的一條路，不用忍。"
+          "say": "荷爾蒙治療是處方，要不要用、用多久，要婦產科醫師依你的病史評估——我不會建議，但如果你困擾到影響生活，這是可以去問的一條路，不用忍。",
+          "askedFor": [
+            "荷爾蒙",
+            "賀爾蒙",
+            "補充療法",
+            "女性荷爾蒙"
+          ]
         },
         {
           "id": "meno-refer",
@@ -3279,7 +3457,13 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "止痛藥的種類跟吃法我不能建議，那要問醫師或藥師。不過有一件事想跟你說：**經痛吃止痛藥不是「意志力不夠」**，痛到影響生活就該處理。"
+          "say": "止痛藥的種類跟吃法我不能建議，那要問醫師或藥師。不過有一件事想跟你說：**經痛吃止痛藥不是「意志力不夠」**，痛到影響生活就該處理。",
+          "askedFor": [
+            "止痛藥",
+            "普拿疼",
+            "經痛藥",
+            "吃藥"
+          ]
         },
         {
           "id": "period-refer",
@@ -3409,7 +3593,12 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "缺鐵的原因我不做判斷——月經量多、腸胃出血、吸收不良都有可能，這要醫師查。"
+          "say": "缺鐵的原因我不做判斷——月經量多、腸胃出血、吸收不良都有可能，這要醫師查。",
+          "askedFor": [
+            "為什麼會",
+            "原因",
+            "怎麼會缺"
+          ]
         },
         {
           "id": "iron-refer",
@@ -3519,7 +3708,15 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "孕期跟哺乳期哪些藥能吃、哪些不行，我完全不做判斷——連感冒藥、止痛藥都要問過醫師或藥師。原本在吃的慢性病藥更不要自己停，那要醫師調整。"
+          "say": "孕期跟哺乳期哪些藥能吃、哪些不行，我完全不做判斷——連感冒藥、止痛藥都要問過醫師或藥師。原本在吃的慢性病藥更不要自己停，那要醫師調整。",
+          "askedFor": [
+            "吃藥",
+            "感冒藥",
+            "止痛藥",
+            "藥可以",
+            "藥能",
+            "會不會影響寶寶"
+          ]
         },
         {
           "id": "preg-refer",
@@ -3744,7 +3941,14 @@
           "effortCost": "低",
           "audience": [],
           "blocked": true,
-          "say": "我不會替你判斷是「腎虛」還是「肝火旺」，也不會開方子或說哪個藥材吃幾錢——那是中醫師望聞問切之後才能做的事。我更不會叫你把西藥停掉改吃中藥。"
+          "say": "我不會替你判斷是「腎虛」還是「肝火旺」，也不會開方子或說哪個藥材吃幾錢——那是中醫師望聞問切之後才能做的事。我更不會叫你把西藥停掉改吃中藥。",
+          "askedFor": [
+            "幾錢",
+            "藥方",
+            "開方",
+            "抓藥",
+            "什麼體質"
+          ]
         },
         {
           "id": "tcm-refer",
@@ -3768,6 +3972,2243 @@
             "為了吃中藥自行停掉西藥"
           ],
           "say": "吃中藥之後如果皮膚或眼白變黃、水腫、莫名瘀青出血、或嚴重腹瀉嘔吐——**先停下來、儘快就醫**。另外一條最重要：**不要為了吃中藥自己把西藥停掉**，尤其血壓、血糖、心臟、抗凝血的藥，那個風險很高。"
+        }
+      ]
+    },
+    "TW-EDU-31": {
+      "title": "保健品百科",
+      "solutions": [
+        {
+          "id": "lex-essence-chicken",
+          "label": "雞精／滴雞精",
+          "riskLevel": "L3",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "雞精",
+            "滴雞精"
+          ],
+          "contraindications": [
+            "痛風／尿酸過高",
+            "腎功能異常",
+            "洗腎"
+          ],
+          "dailyCap": "一天一瓶為限；痛風、腎臟病人飲用前先問醫師",
+          "evidence": {
+            "finding": "抗疲勞多為小型試驗；蛋白質含量低於一顆雞蛋；普林與鈉鉀含量是主要風險"
+          },
+          "say": "雞精是台灣人最愛送的補品，講實話：它的蛋白質含量其實**不如一顆蛋**，抗疲勞的研究多是小型試驗、證據不算強——當心意收很好，別當營養主力。三件事要記得：一天一瓶就好、別當水喝；**痛風的人要小心（普林高）**；腎功能不好的人鉀跟蛋白都有講究、喝之前問醫師。血壓高的人挑低鈉版本。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-b-complex",
+          "label": "B群",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "B群",
+            "維他命B",
+            "維生素B"
+          ],
+          "contraindications": [
+            "帕金森氏症用藥中"
+          ],
+          "dailyCap": "依產品標示；B6 不長期高劑量（會神經病變）",
+          "evidence": {
+            "finding": "缺乏者補充有效；非缺乏者無提神實證；尿黃為核黃素正常排出"
+          },
+          "say": "B群不是提神劑——它是身體代謝的小幫手，**缺的人補了才有感，不缺的人吃了就是尿變黃**（那是正常的，不是更有效）。真的容易缺的是：吃全素的人（B12）、喝酒多的人、某些胃藥長期吃的人。三件事：照產品標示吃就好；**B6 長期高劑量會手腳發麻**，不是越多越好；跟帕金森氏症的藥有交互，有在治療的先問醫師。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-vitamin-c",
+          "label": "維他命C",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "維他命C",
+            "維生素C"
+          ],
+          "contraindications": [
+            "有腎結石病史"
+          ],
+          "dailyCap": "成人上限一天 2000 毫克（官方安全上限，不是目標）",
+          "evidence": {
+            "finding": "Cochrane 回顧：一般人規律補充不減少感冒次數、僅輕微縮短病程"
+          },
+          "say": "維他命C 預防感冒的效果，大型回顧看下來是**「不太能預防、頂多讓病程短一點點」**——芭樂一顆的維他命C 就超過每天需要量了。要吃記得：**一天不要超過 2000 毫克**，吃太多會拉肚子；**有腎結石病史的人高劑量要避開**（會增加草酸）。從水果吃永遠是更好的路。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-vitamin-d",
+          "label": "維他命D",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "維他命D",
+            "維生素D"
+          ],
+          "contraindications": [
+            "高血鈣",
+            "副甲狀腺問題",
+            "結節病"
+          ],
+          "dailyCap": "依產品標示；脂溶性會累積、不與其他含D產品重複",
+          "evidence": {
+            "finding": "VITAL 等大型試驗：無缺乏的健康成人補充未降低骨折/癌症/心血管風險；缺乏者矯正仍有意義"
+          },
+          "say": "台灣人維他命D不足的比例確實高（怕曬又擦防曬），但講實話：近年最大型的研究顯示，**健康的人額外補充，對防骨折防慢性病的效果比想像小**。先曬太陽最實在——每天十幾分鐘就夠。真的要補：它是**脂溶性、會累積**，別跟多種含D的產品疊著吃；抽血知道自己缺不缺最準，回診時可以請醫師順便驗。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-fish-oil",
+          "label": "魚油（護心）",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "魚油"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "即將手術"
+          ],
+          "dailyCap": "依產品標示；與抗凝血藥併用前先問醫師、術前停用",
+          "evidence": {
+            "finding": "ASCEND/VITAL 等大型試驗：一般劑量魚油補充未降低心血管事件；吃魚本身證據較好"
+          },
+          "say": "魚油護心臟的說法要更新了：**近年的大型試驗，一般魚油補充品對預防心血管疾病大多沒看到效果**（有效的那個是高濃度處方藥、那是醫師開的，不是架上買的）。真的有實證的是**每週吃兩次魚**這件事。要吃記得：**它會讓血比較不容易凝固——跟抗凝血藥一起吃要問醫師，手術或拔牙前要停**；腸胃不適和魚腥嗝是常見副作用。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-q10",
+          "label": "Q10",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "Q10",
+            "輔酶"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑"
+          ],
+          "dailyCap": "依產品標示",
+          "evidence": {
+            "finding": "心衰輔助有初步證據；statin 肌痛緩解證據分歧；與 warfarin 有明確交互（降低藥效）"
+          },
+          "say": "Q10 常見兩種吃法：心臟保養（心衰竭輔助有一些證據、要配合治療不是取代）跟緩解降血脂藥的肌肉痠（研究結果其實很分歧、不是人人有效）。**最重要的一條：Q10 會讓抗凝血藥（華法林）效果變弱**——有在吃的人要先問醫師，不然藥被悄悄抵銷了很危險。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-turmeric",
+          "label": "薑黃",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "薑黃",
+            "薑黃素"
+          ],
+          "contraindications": [
+            "膽結石",
+            "正在吃抗凝血劑",
+            "肝功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "依產品標示、不追高劑量（肝損傷通報多在高劑量）",
+          "evidence": {
+            "finding": "關節症狀有小型試驗支持；生物利用率低；高劑量肝損傷已有官方通報"
+          },
+          "say": "薑黃素對關節不舒服有一些小型研究支持，但**吸收率天生很差**（所以廠商都在拚配方）。三個要小心的：**膽結石的人不要吃**（會刺激膽囊收縮）；**會抗凝血**，跟抗凝血藥或手術前都要避；**近年歐洲通報過高劑量薑黃素的肝損傷案例**——肝不好的人先問醫師，吃了皮膚眼白變黃立刻停。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-cranberry",
+          "label": "蔓越莓",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "蔓越莓"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑"
+          ],
+          "dailyCap": "依產品標示；急性感染不可用它取代就醫",
+          "evidence": {
+            "finding": "Cochrane 2023：反覆UTI 族群預防有效；急性治療無效；與 warfarin 交互"
+          },
+          "say": "蔓越莓對**反覆泌尿道感染的預防**，最新的大型回顧轉為「某些族群有幫助」（反覆感染的女性、小孩）——但**已經感染了它治不了，那要看醫生**。兩個要注意：跟**抗凝血藥（華法林）**有交互；市售果汁糖分高，糖尿病的人選錠劑或低糖版本。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-collagen",
+          "label": "膠原蛋白",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "膠原蛋白"
+          ],
+          "contraindications": [
+            "對魚類或甲殼類過敏"
+          ],
+          "dailyCap": "依產品標示",
+          "evidence": {
+            "finding": "小型試驗顯示皮膚水分/彈性小幅改善、多為業界贊助；蛋白質與防曬的實證更強"
+          },
+          "say": "講實話：膠原蛋白吃下去會被分解成胺基酸，**「吃膠原長膠原」在科學上不是直達車**。皮膚保濕彈性的研究多是小型、而且不少是廠商贊助的——可以抱著「試試看」的心情，別抱「回春」的期待。蛋白質夠、維他命C夠、防曬做好，對皮膚的實證比它強。對魚蝦過敏的人注意來源。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-probiotic",
+          "label": "益生菌（顧腸胃）",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "益生菌",
+            "乳酸菌"
+          ],
+          "contraindications": [
+            "免疫功能低下",
+            "正在化療",
+            "短腸症"
+          ],
+          "dailyCap": "依產品標示、不同時疊多種同類",
+          "evidence": {
+            "finding": "菌株特異性高；腸道症狀證據較佳、免疫宣稱證據弱；與抗生素需間隔"
+          },
+          "say": "益生菌的效果**看菌株、看目的**——不是一罐通吃。腸胃道的證據比「增強免疫」紮實；同一罐對別人有效對你未必。三件事：**跟抗生素要隔開兩小時**（不然白吃）；**免疫功能低下、正在化療的人不要自己吃**，要問醫師；吃一兩個月沒感覺就停，不用戀戰。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-multivitamin",
+          "label": "綜合維他命",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "綜合維他命",
+            "綜合維它命"
+          ],
+          "contraindications": [
+            "正在吃多種單方補充品（重複疊加風險）"
+          ],
+          "dailyCap": "一天一顆、不與單方重複疊加",
+          "evidence": {
+            "finding": "多項大型世代與試驗：對慢性病預防與死亡率無顯著差異"
+          },
+          "say": "講實話：大型研究看下來，**綜合維他命對預防慢性病、延長壽命幾乎沒有差**。它的合理角色是「吃得很不均衡時的補位」，不是保險也不是治療。要吃記得：**別跟單方（鈣、D、B群）疊著吃**，脂溶性的會累積；一天一顆就好。錢想花在健康上，買菜比買罐子實在。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-ginseng",
+          "label": "人蔘",
+          "riskLevel": "L3",
+          "maturity": "traditional",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "人蔘",
+            "人參",
+            "蔘"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "正在吃降血糖藥",
+            "高血壓控制不佳",
+            "感冒發燒中"
+          ],
+          "dailyCap": "份量由中醫師定；不長期天天當茶喝",
+          "evidence": {
+            "finding": "部分試驗顯示疲勞改善；與抗凝血/降血糖藥交互明確；發燒時忌補為中醫共識"
+          },
+          "say": "人蔘是補氣的經典，但它**跟西藥打架的名單很長**：抗凝血藥、降血糖藥（會加強、可能低血糖）、部分血壓藥。**感冒發燒的時候不要補**（中醫自己也這樣說）；睡不好、容易燥熱的人吃了可能更睡不著。有在吃慢性病藥的，帶著藥單問過中醫師或藥師再吃。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-lingzhi",
+          "label": "靈芝",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "靈芝"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "正在吃免疫抑制劑",
+            "即將手術"
+          ],
+          "dailyCap": "依產品標示；治療性宣稱一律不信",
+          "evidence": {
+            "finding": "免疫調節僅細胞/動物與小型研究；抗癌無人體實證；凝血與免疫交互明確"
+          },
+          "say": "靈芝的免疫調節研究還在初步階段，「抗癌」這種話**沒有人體實證、聽到請當行銷**。兩個硬規矩：**會影響凝血**，抗凝血藥使用者與手術前避開；**免疫抑制劑（器官移植、自體免疫治療）使用者不要吃**——它跟藥的方向相反。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-antrodia",
+          "label": "牛樟芝",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "牛樟芝",
+            "樟芝"
+          ],
+          "contraindications": [
+            "肝功能異常",
+            "腎功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "不建議長期自行服用",
+          "evidence": {
+            "finding": "人體證據薄弱；動物試驗曾有毒性疑慮通報；價格與證據不成比例"
+          },
+          "say": "牛樟芝是台灣特有、也賣得特別貴，但講實話：**人體實證很薄，而且過去有肝腎毒性的安全疑慮通報**——花大錢買「可能傷肝」的東西，這筆帳不划算。肝腎功能不好的人不要碰；真的想吃，先問醫師，吃了不舒服立刻停。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-nattokinase",
+          "label": "納豆激酶",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "納豆激酶"
+          ],
+          "contraindications": [
+            "正在吃抗凝血劑",
+            "出血性疾病",
+            "即將手術"
+          ],
+          "dailyCap": "抗凝血藥使用者禁止自行併用",
+          "evidence": {
+            "finding": "人體證據弱；與抗凝血藥疊加出血風險；納豆食物的維生素K反向干擾 warfarin"
+          },
+          "say": "納豆激酶主打「溶血栓」，但人體證據還很弱。這一條**最容易搞混、也最危險**：它本身會抗凝血、**跟抗凝血藥疊加會增加出血風險**；但發酵的納豆「食物」本身維生素K很高、方向剛好**相反**（會削弱華法林）——一個讓血太稀、一個讓藥失效。有在吃抗凝血藥的人，這兩樣都先問醫師，不要自己配。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-bitter-melon",
+          "label": "苦瓜胜肽",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "苦瓜胜肽",
+            "苦瓜萃取"
+          ],
+          "contraindications": [
+            "正在吃降血糖藥",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "依產品標示；絕不取代血糖用藥",
+          "evidence": {
+            "finding": "初步小型試驗；效果量小；與降血糖藥疊加低血糖風險"
+          },
+          "say": "苦瓜胜肽主打「調節血糖」，研究還在早期、效果量也不大。**最重要的一條：它不能取代血糖藥**——有人吃了自己減藥，血糖反彈更危險；跟降血糖藥一起吃**可能疊出低血糖**（冒冷汗、手抖）。有糖尿病的人要吃之前，帶著藥單問醫師。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-maca",
+          "label": "瑪卡",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "瑪卡"
+          ],
+          "contraindications": [
+            "荷爾蒙相關癌症病史",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "依產品標示",
+          "evidence": {
+            "finding": "小樣本試驗；性功能/活力證據弱；荷爾蒙敏感族群安全性未明"
+          },
+          "say": "瑪卡主打活力跟「那方面」的表現，研究都是小樣本、證據弱——當食物吃可以，當仙丹會失望。**有荷爾蒙相關疾病病史的人（乳癌、攝護腺癌等）先問醫師**，它的作用機轉還不清楚，這種時候保守才聰明。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-gaba",
+          "label": "GABA／芝麻明類助眠",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "GABA",
+            "芝麻明",
+            "助眠保健"
+          ],
+          "contraindications": [
+            "正在吃安眠藥"
+          ],
+          "dailyCap": "依產品標示、不與安眠藥併用",
+          "evidence": {
+            "finding": "口服 GABA 通過血腦障壁存疑；助眠證據弱於睡眠衛生"
+          },
+          "say": "GABA 這類助眠保健品，講實話：**口服進得了大腦多少，科學上還有爭議**，助眠證據弱。睡前不滑手機、白天曬太陽的實證都比它強。要試可以，**別跟安眠藥疊著吃**（頭暈跌倒風險）；吃兩週沒感覺就停。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lex-melatonin",
+          "label": "褪黑激素",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "求助資源",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "褪黑激素",
+            "退黑激素"
+          ],
+          "say": "褪黑激素**在台灣是處方藥**，不是保健品——國外帶回來或網購都不建議。真的長期睡不好，掛個門診跟醫師談，比自己買安全得多。"
+        },
+        {
+          "id": "lex-one-at-a-time",
+          "label": "一次試一種、給它一個期限",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "想試新的保健品，記得兩個原則：**一次只加一種**（不然有效沒效分不出來）、**給它一個期限**（一兩個月沒感覺就停）。我可以幫你記著開始的日子，到時候問你有沒有差。"
+        },
+        {
+          "id": "lex-pharmacist",
+          "label": "整袋帶去給藥師看",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker",
+            "women"
+          ],
+          "say": "手上的保健品跟藥加起來超過五種，最實在的一步：**整袋帶去藥局請藥師做用藥整合**——健保有給付、不用錢，哪兩瓶會打架他們一眼就看得出來。"
+        },
+        {
+          "id": "lex-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吃了之後皮膚或眼白變黃",
+            "起疹子或水腫",
+            "心悸",
+            "肌肉痠痛無力",
+            "為了吃保健品自行停藥"
+          ],
+          "say": "吃了任何保健品之後，如果皮膚眼白變黃、起疹子、心悸、肌肉痠痛沒力——**立刻停用、儘快就醫**，帶著那罐東西去。還有一條最重要：**不要為了吃保健品把醫師開的藥停掉**，那個風險完全不對等。"
+        }
+      ]
+    },
+    "TW-EDU-32": {
+      "title": "食物寒熱與藥食同源",
+      "solutions": [
+        {
+          "id": "food-banana",
+          "label": "香蕉很寒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "香蕉"
+          ],
+          "say": "傳統上香蕉算「寒」，怕冷、容易拉肚子的人少吃點是老智慧。從實證看，香蕉真正要注意的其實是**鉀很高**——**腎功能不好、在洗腎的人才是真的要節制的人**（高血鉀會影響心臟）；一般人吃香蕉沒什麼好怕，它還是抽筋跟便祕的好朋友。怕「寒」的話，不要空腹吃、不要冰的，就很夠了。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-mango",
+          "label": "芒果很毒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "芒果"
+          ],
+          "say": "老人家說芒果「有毒」「很濕熱」，皮膚不好不能吃。實話是：芒果**皮**含有跟漆樹同類的致敏成分，**削皮吃、別啃皮，過敏的多半就沒事**；真的對芒果過敏的人（嘴邊紅癢）才需要整個避開。糖分偏高，血糖高的人吃半顆就好。不是毒，是要挑吃法。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-watermelon",
+          "label": "西瓜很寒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "西瓜"
+          ],
+          "say": "西瓜「寒」的老說法，翻成白話其實有幾分道理：水分多、糖也不少。真正要注意的兩種人：**血糖高的**（西瓜升糖快、一次一兩片就好）跟**夜尿多的**（睡前吃等於睡前灌水）。腸胃弱的人不要吃冰的、不要飯後馬上吃——這樣就把「寒」避掉了。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-lychee",
+          "label": "荔枝一次別吃太多",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "荔枝",
+            "龍眼"
+          ],
+          "say": "荔枝「很燥」的說法先放著，有一條**真的要小心**：**空腹一次吃很多荔枝，可能引發低血糖**（頭暈、冒冷汗）——這在醫學上是真的有記載的，小孩跟長輩特別要注意。吃飽飯後當點心、一次十顆以內，就安全得多。糖分高，血糖高的人更要節制。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-bamboo",
+          "label": "竹筍很「毒」？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "竹筍"
+          ],
+          "say": "竹筍常被說「毒」「冷」，實證的翻譯是：**纖維粗、不好消化**——胃不好、剛開完刀、牙口差的人確實該少吃或切細煮軟；它也含普林，**痛風發作期先避開**。一般人吃當季竹筍是好事，纖維對腸子很好。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-radish-ginseng",
+          "label": "白蘿蔔跟人蔘相沖？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "白蘿蔔",
+            "菜頭"
+          ],
+          "say": "「吃人蔘不能配白蘿蔔」是流傳很廣的說法（傳統認為一補一破）。實證上**沒有明確的科學依據**，不小心一起吃到了不用緊張。不過如果你是中醫師開的補藥，**照他的醫囑吃最好**——不是因為蘿蔔真的會「解藥」，是尊重開方的人對你的整體安排。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-sticky-rice",
+          "label": "糯米很難消化？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "糯米",
+            "油飯",
+            "粽子"
+          ],
+          "say": "這條老智慧是真的：糯米的澱粉結構讓它**排空慢、脹氣機會高**——胃食道逆流、消化不良、剛動過腸胃手術的人，粽子油飯確實要節制。要吃就：小顆的、趁溫熱吃（冷糯米更難消化）、配茶不配湯灌。節日吃一顆開心就好。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-crab",
+          "label": "螃蟹很寒？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "螃蟹"
+          ],
+          "say": "螃蟹「寒」的提醒，實證上對應到三件真的事：**普林高（痛風要忌）**、**膽固醇集中在蟹黃**（血脂高的少吃蟹黃）、**不新鮮容易吃壞肚子**（傳統說的「寒瀉」很多其實是這個）。挑新鮮的、蒸熟透、痛風跟血脂高的人節制——這樣吃就不用怕。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-herbal-tea",
+          "label": "青草茶、苦茶退火？",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "青草茶",
+            "苦茶",
+            "退火",
+            "降火"
+          ],
+          "say": "覺得「上火」想喝青草茶退火——偶爾喝無妨，但三個提醒：**成分不明的路邊青草茶，腎不好的人最好避開**（有些草藥傷腎）；**體質怕冷、容易拉肚子的人少喝**（傳統跟實證在這點上難得一致）；「火氣大」如果是嘴破不斷、睡不好，先把睡眠顧好比狂灌涼茶有用。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-goji-reddate",
+          "label": "枸杞紅棗怎麼吃才對",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "枸杞",
+            "紅棗"
+          ],
+          "say": "枸杞、紅棗是官方認可「可以當食品用的中藥材」，泡水煮湯都安全。兩個小提醒：**都有糖分**，血糖高的人枸杞一天一小把、紅棗三五顆就好；枸杞傳統上「感冒發燒時不吃」，跟著這個習慣走沒壞處。當日常茶飲很好，別期待它治什麼病。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-tremella",
+          "label": "白木耳、蓮子、百合這類燉品",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "白木耳",
+            "蓮子",
+            "百合",
+            "山藥",
+            "薏仁"
+          ],
+          "say": "白木耳、蓮子、百合、山藥、薏仁這些都是官方認可的藥食同源食材，燉湯當甜品很好——纖維跟膠質對腸子友善，也符合「覺得燥就吃潤的」老智慧。提醒兩個：市售甜湯**糖常常加很兇**，自己燉少糖最好；**薏仁傳統上孕婦忌吃**，實證雖不強，懷孕的人避開它心安也無妨。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-chrysanthemum",
+          "label": "菊花茶、決明子茶",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "askedFor": [
+            "菊花茶",
+            "決明子"
+          ],
+          "say": "菊花、決明子泡茶是常見的「降火」茶飲，也都在官方可用清單上。提醒：**決明子有輕瀉效果**——本來就容易拉肚子的人少喝、反而便祕的人有時剛好；**血壓藥吃了會頭暈的人**，這類茶飲別一次喝太濃太多（有輕微降壓效果、疊起來可能更暈）。",
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "food-nature-frame",
+          "label": "「寒熱」怎麼聽才對",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "長輩講的「寒」「燥」「毒」，很多時候是幾百年觀察的濃縮——翻成現在的話常常對應到真的事（高鉀、難消化、普林高、過敏原）。所以我不會笑這些說法，但我會幫你翻譯：**哪些人真的要注意、注意的是什麼**。想知道哪樣食物，直接問我就好。"
+        },
+        {
+          "id": "food-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "escalateWhen": [
+            "吃了之後嘴唇腫或喉嚨緊",
+            "全身起疹子",
+            "上吐下瀉到虛脫",
+            "吃荔枝後頭暈冒冷汗且意識變差"
+          ],
+          "say": "吃任何東西之後如果嘴唇腫、喉嚨緊、全身起疹子——那是過敏反應，**嚴重的會影響呼吸，立刻就醫或打 119**。上吐下瀉到站不穩、或吃了荔枝後頭暈冒冷汗又變得恍惚（低血糖），也都要儘快就醫，不是「排毒」。"
+        }
+      ]
+    },
+    "TW-EDU-33": {
+      "title": "血脂／膽固醇",
+      "solutions": [
+        {
+          "id": "lipid-numbers-blocked",
+          "label": "判讀我的數字／調藥",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "你的膽固醇數字代表什麼、要不要吃藥、藥要不要調——這是醫師看整體風險（年齡、血壓、有沒有糖尿病、抽不抽菸）算出來的，我不做判讀。我能做的是陪你把生活這塊顧好。",
+          "blocked": true,
+          "askedFor": [
+            "算不算高",
+            "算高嗎",
+            "正常嗎",
+            "要不要吃藥",
+            "代表什麼"
+          ]
+        },
+        {
+          "id": "lipid-statin-dont-stop",
+          "label": "已經在吃的藥不要自己停",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "worker"
+          ],
+          "say": "先講最重要的一件：**降血脂藥不要自己停**。血脂高沒有感覺，很多人覺得「數字好了就不用吃」就停掉——但那個數字好，正是因為在吃。要不要減量停藥，一定要醫師決定。",
+          "leadWith": true
+        },
+        {
+          "id": "lipid-fiber",
+          "label": "多吃纖維，尤其燕麥豆類",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "燕麥、豆類、蔬菜裡的水溶性纖維會在腸子裡把膽固醇帶走一部分——這是飲食裡對壞膽固醇最有實證的一招。早餐把白吐司換成燕麥片，就是很具體的一步。"
+        },
+        {
+          "id": "lipid-fat-swap",
+          "label": "換油比戒油有用",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "重點不是完全不吃油，是**換掉哪一種**：少吃油炸、酥皮、糕餅裡的反式與飽和脂肪，改用橄欖油、堅果、深海魚。同樣熱量，換了種類血脂就會不一樣。"
+        },
+        {
+          "id": "lipid-move",
+          "label": "規律有氧",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "快走、游泳、騎車這類有氧，對**三酸甘油酯跟好膽固醇**特別有感——壞膽固醇主要靠飲食跟藥，好膽固醇跟三酸甘油酯靠動。一週累積 150 分鐘是個好目標，分次做也算。",
+          "notFor": [
+            "行動不便"
+          ]
+        },
+        {
+          "id": "lipid-tg-alcohol-sugar",
+          "label": "三酸甘油酯高：先減酒跟糖",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "elder"
+          ],
+          "say": "如果高的是**三酸甘油酯**（不是膽固醇），最有效的兩件事是減酒、減含糖飲料跟精緻澱粉——這一項對飲食的反應比膽固醇快很多，兩三個月就看得出來。"
+        },
+        {
+          "id": "lipid-red-yeast-caution",
+          "label": "紅麴不要自己配著吃",
+          "riskLevel": "L3",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "紅麴本身含天然的 Statin 成分——**跟醫師開的降血脂藥一起吃，等於同一種東西吃兩份**，有橫紋肌溶解的風險。想吃先問藥師，也不要自己拿它取代藥。",
+          "secondLine": true,
+          "askedFor": [
+            "紅麴",
+            "紅麹"
+          ],
+          "contraindications": [
+            "正在吃降血脂藥",
+            "肝功能異常",
+            "懷孕哺乳"
+          ],
+          "dailyCap": "與降血脂藥併用前先問過醫師或藥師，不自行決定份量",
+          "evidence": {
+            "finding": "紅麴含天然 Statin 成分，與處方降血脂藥併用有橫紋肌溶解等風險"
+          },
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "lipid-normalize",
+          "label": "血脂高沒有感覺，這很正常",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "血脂高幾乎不會有感覺，所以很多人是健檢才知道——不是你不注意身體，是它本來就不會痛。",
+          "secondLine": true
+        },
+        {
+          "id": "lipid-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "吃降血脂藥之後如果**全身肌肉痠痛沒力、小便變深褐色**——這可能是橫紋肌溶解，要立刻停藥並儘快就醫。另外血脂高最怕的是心血管，**一出現胸悶胸痛冒冷汗，先當心臟的事處理、立刻就醫或打 119**。",
+          "escalateWhen": [
+            "吃降血脂藥後肌肉痠痛無力",
+            "小便變深褐色",
+            "胸悶胸痛",
+            "皮膚眼白變黃"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-34": {
+      "title": "體重、內臟脂肪與代謝症候群",
+      "solutions": [
+        {
+          "id": "wt-unintended-loss",
+          "label": "先確認：是你想瘦的嗎？",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women",
+            "worker"
+          ],
+          "say": "先問一句要緊的：這個瘦是**你自己想瘦、有在控制**，還是不知不覺就掉了？如果是後者——半年內莫名輕了不少、褲子鬆了、沒特別減肥——那不是好消息，身體可能在告訴我們別的事，要看醫生。",
+          "askedFor": [
+            "瘦了",
+            "變瘦",
+            "瘦很",
+            "瘦下",
+            "變輕",
+            "褲子",
+            "體重掉",
+            "沒特別減",
+            "沒減肥"
+          ]
+        },
+        {
+          "id": "wt-waist-first",
+          "label": "看腰圍比看體重準",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "體重那個數字會騙人（肌肉重、水腫也重）。**量腰圍更準**——男生超過 90 公分、女生超過 80 公分，就是內臟脂肪偏多的訊號。拿條皮尺量肚臍那一圈就好，比站上體重計有用。",
+          "askedFor": [
+            "肚子",
+            "腰圍",
+            "小腹",
+            "啤酒肚"
+          ]
+        },
+        {
+          "id": "wt-metabolic-syndrome",
+          "label": "代謝症候群是「一群一起來」",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "腰圍粗、血壓偏高、血糖偏高、三酸甘油酯高、好膽固醇低——這五項**中了三項就叫代謝症候群**，它不是病，是「快要生病」的警告。健檢報告拿出來對一下就知道，中了幾項心裡有個底。",
+          "related": "TW-EDU-33"
+        },
+        {
+          "id": "wt-sugar-drinks",
+          "label": "先砍含糖飲料",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "teen",
+            "elder"
+          ],
+          "say": "要改一件事的話，先砍手搖跟含糖飲料——液體的糖不會讓你飽，卻最容易變成肚子上的脂肪。這一項單獨做，很多人腰圍就有差。"
+        },
+        {
+          "id": "wt-slow-is-right",
+          "label": "慢慢減才減得掉",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "一個月減一到兩公斤是最穩的速度。掉太快的多半是水分跟肌肉，停下來就反彈——而且長輩掉肌肉很難補回來。**這件事快不得。**"
+        },
+        {
+          "id": "wt-fatty-liver",
+          "label": "脂肪肝：沒有藥，減重就是治療",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "elder"
+          ],
+          "say": "健檢照出脂肪肝很常見。它目前沒有特效藥，**體重減個百分之五到十，肝的油就會明顯少**——這是少數「生活調整就是正規治療」的病。不用吃保肝的東西，把糖跟酒減掉更實在。",
+          "askedFor": [
+            "脂肪肝"
+          ]
+        },
+        {
+          "id": "wt-muscle-not-just-diet",
+          "label": "光少吃會連肌肉一起掉",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "只靠少吃，掉的有一部分是肌肉——尤其上了年紀。吃夠蛋白質＋做點阻力的動作（起立坐下、提水瓶），減掉的才會是脂肪。",
+          "notFor": [
+            "行動不便"
+          ],
+          "related": "TW-EDU-37"
+        },
+        {
+          "id": "wt-diet-pills-blocked",
+          "label": "減肥藥／減肥針",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "減肥藥、瘦瘦針這類要不要用、適不適合你，是醫師評估的事，我不會建議也不會報用法。**網路上買的來路不明減肥藥絕對不要碰**，那是真的出過人命的。",
+          "blocked": true,
+          "askedFor": [
+            "減肥藥",
+            "瘦瘦針",
+            "瘦瘦筆",
+            "善纖達",
+            "猛健樂",
+            "肚子針"
+          ]
+        },
+        {
+          "id": "wt-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "**不明原因變瘦是要查的**——半年內莫名輕了、又合併食慾變差、夜間盜汗、或大便顏色變黑，都要看醫生（甲狀腺、腸胃、癌症都可能）。另外體重快速增加又合併水腫、越來越喘，那要看心臟跟腎臟，不是單純變胖。",
+          "escalateWhen": [
+            "半年內不明原因變瘦",
+            "合併食慾差或吞嚥困難",
+            "夜間盜汗",
+            "解黑便",
+            "越來越喘或水腫"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-35": {
+      "title": "飲食法怎麼選",
+      "solutions": [
+        {
+          "id": "diet-mediterranean",
+          "label": "地中海飲食：證據最紮實的一個",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "要挑一個有長期實證的，就是地中海飲食——蔬果、全穀、豆類、堅果、橄欖油、一週吃兩次魚、紅肉少一點。它在心血管的研究最紮實，而且**不用戒掉什麼、比較吃得久**。台灣版就是：多青菜、白飯換一半糙米、油改橄欖油、魚多過紅肉。",
+          "askedFor": [
+            "地中海"
+          ]
+        },
+        {
+          "id": "diet-dash",
+          "label": "得舒飲食：血壓高的人優先",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "say": "血壓偏高的人優先看得舒飲食——重點是**多鉀（蔬果）、多鈣、少鈉**，降血壓的實證很明確。不過腎功能不好的人不適合刻意補鉀，要先問醫師。",
+          "askedFor": [
+            "得舒",
+            "DASH"
+          ],
+          "contraindications": [
+            "腎功能異常"
+          ],
+          "related": "TW-EDU-03"
+        },
+        {
+          "id": "diet-low-carb-honest",
+          "label": "低碳／減醣：短期有效，長期就看得住嗎",
+          "riskLevel": "L2",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "高",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "講實話：低碳前半年減重效果通常比較快，但**一兩年後跟其他方法差不多**——差別在能不能持續。生酮那種極端的更難長期執行，而且**有在吃血糖藥的人自己減醣很容易低血糖**，要先問醫師。想試就從「少一碗白飯、多一份青菜」開始，別跳到極端。",
+          "askedFor": [
+            "低碳",
+            "減醣",
+            "生酮"
+          ]
+        },
+        {
+          "id": "diet-fasting-honest",
+          "label": "168 斷食：不是魔法，是換個方式少吃",
+          "riskLevel": "L2",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "worker",
+            "women"
+          ],
+          "say": "間歇斷食的研究看下來：**效果跟「同樣少吃那些熱量」差不多**，它的好處是規則簡單、有些人比較做得到。但**吃血糖藥的人、孕哺、有飲食失調史的人不要自己做**。長輩也要小心——本來就吃不多，再壓縮時間容易營養不夠。",
+          "askedFor": [
+            "斷食",
+            "168",
+            "間歇"
+          ],
+          "contraindications": [
+            "正在吃降血糖藥",
+            "懷孕哺乳",
+            "有飲食失調病史"
+          ]
+        },
+        {
+          "id": "diet-pick-what-you-can-keep",
+          "label": "挑一個你做得下去的",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "所有飲食法比到最後，**最強的那個是「你能持續做的那個」**——研究一再看到這件事。所以與其問哪個最厲害，不如想想哪個你三個月後還做得下去。你平常怎麼吃？我陪你從那裡調。",
+          "leadWith": true
+        },
+        {
+          "id": "diet-detox-blocked",
+          "label": "排毒餐、代餐、斷食排毒",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "「排毒」在醫學上沒有這回事——肝跟腎本來就在做這件事。極端的排毒餐、長時間只喝果汁，反而會電解質失衡。我不會推薦這類做法。",
+          "blocked": true,
+          "askedFor": [
+            "排毒",
+            "清宿便",
+            "果汁",
+            "斷食排毒",
+            "淨化"
+          ]
+        },
+        {
+          "id": "diet-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "改變飲食之後如果頭暈冒冷汗（尤其在吃血糖藥的人）——那可能是低血糖，先吃點糖並就醫。還有一條：**不要為了節食把醫師開的藥停掉**。長輩如果開始吃不下、越來越瘦，那不是減肥成功，要看醫生。",
+          "escalateWhen": [
+            "改變飲食後頭暈冒冷汗",
+            "長輩開始吃不下",
+            "為了節食停掉正在吃的藥",
+            "極端節食合併停經或掉髮"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-36": {
+      "title": "食物過敏與食物不耐",
+      "solutions": [
+        {
+          "id": "allergy-vs-intolerance",
+          "label": "過敏跟不耐是兩件事",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "先分清楚兩種：**過敏**是免疫系統反應——起疹子、嘴唇腫、喘、嚴重會休克，分量再少都可能發作；**不耐**（像喝牛奶會拉肚子）是消化不了，難受但不會有生命危險，而且通常吃少一點就還好。你是哪一種？我們分開處理。",
+          "leadWith": true
+        },
+        {
+          "id": "allergy-record",
+          "label": "把「吃了什麼、多久後、什麼症狀」記下來",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "懷疑對什麼過敏，最有用的是記錄：吃了什麼、多久之後開始、什麼症狀、持續多久。這份紀錄拿給醫師看，比自己猜準得多——我可以幫你記著。"
+        },
+        {
+          "id": "allergy-label",
+          "label": "看標示：台灣強制標的那幾類",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver"
+          ],
+          "say": "台灣規定包裝食品要標出常見過敏原——甲殼類、芒果、花生、牛奶、蛋、堅果、含麩質穀物、大豆、魚類、亞硫酸鹽這些。買之前翻到背面看一眼，比事後處理容易。"
+        },
+        {
+          "id": "allergy-lactose",
+          "label": "乳糖不耐：不用戒奶，換方式就好",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "women"
+          ],
+          "say": "喝牛奶會脹氣拉肚子，多半是乳糖不耐、不是過敏——**不用完全戒奶**：改喝優格或起司（乳糖已經被分解掉一部分）、一次少量配著飯吃、或買無乳糖牛奶。鈣還是要顧到。",
+          "askedFor": [
+            "乳糖",
+            "喝牛奶會拉"
+          ],
+          "related": "TW-EDU-17"
+        },
+        {
+          "id": "allergy-no-self-elimination",
+          "label": "別自己大範圍忌口",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "沒確定就把一大堆食物都戒掉，**長輩尤其危險**——很容易吃得不夠、營養失衡、越來越瘦。真的要排除某樣東西，讓醫師或營養師陪你做，不要自己一路刪。"
+        },
+        {
+          "id": "allergy-test-blocked",
+          "label": "急慢性過敏原檢測",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "用藥",
+          "effortCost": "低",
+          "audience": [],
+          "say": "外面有些自費「慢性食物過敏原檢測（IgG）」宣稱能找出你不能吃的東西——**主流過敏醫學並不建議用它來決定忌口**，很容易讓人白白戒掉一堆食物。真的要查，去看過敏免疫科，由醫師決定做哪種檢查。",
+          "blocked": true,
+          "askedFor": [
+            "過敏原檢測",
+            "慢性過敏",
+            "IgG",
+            "自費檢測",
+            "抽血驗過敏"
+          ]
+        },
+        {
+          "id": "allergy-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "women",
+            "caregiver",
+            "teen"
+          ],
+          "say": "**這一條最要緊：吃完之後嘴唇舌頭腫、喉嚨緊、講話變啞、喘不過氣、或全身紅疹又頭暈——那是嚴重過敏反應，會壓迫呼吸道，立刻打 119 或衝急診，不要等、也不要自己開車去。**曾經這樣發作過的人，身上該備的急救針要問過醫師。",
+          "escalateWhen": [
+            "嘴唇或舌頭腫",
+            "喉嚨緊、聲音變啞",
+            "呼吸困難或喘鳴",
+            "全身紅疹合併頭暈",
+            "吃完後很快就不舒服且越來越嚴重"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-37": {
+      "title": "肌少症與蛋白質",
+      "solutions": [
+        {
+          "id": "sarco-what-it-looks-like",
+          "label": "這幾個訊號比體重更值得注意",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "上了年紀，**肌肉少比體重多更麻煩**。幾個訊號：擰不開瓶蓋、提菜提不動、從椅子上要撐著才站得起來、走路變慢（過馬路來不及）。有這些就該開始練，不用等診斷。",
+          "leadWith": true
+        },
+        {
+          "id": "sarco-protein-每餐",
+          "label": "蛋白質要每餐都有，不是晚餐補一次",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "食補",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver",
+            "women"
+          ],
+          "say": "長輩常常早餐只吃稀飯配醬瓜、晚餐才吃到肉——但身體**一次用不了那麼多蛋白質**。改成每一餐都有一份（一顆蛋、一杯豆漿、一塊手掌大的魚或肉、一塊豆腐），同樣的量，長肌肉的效果差很多。"
+        },
+        {
+          "id": "sarco-resistance",
+          "label": "練肌力比散步有效",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "散步很好，但**要長肌肉一定要有阻力**——扶著椅背起立坐下十下、提兩瓶水舉高放下、牆邊伏地挺身。一週兩三次，比走再多路都有用。這是防跌倒最根本的一招。",
+          "notFor": [
+            "行動不便"
+          ],
+          "related": "TW-EDU-17"
+        },
+        {
+          "id": "sarco-sun-vitd",
+          "label": "曬太陽跟維生素 D",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "women"
+          ],
+          "say": "維生素 D 不夠的人肌肉力氣也會比較差。每天出門曬十幾二十分鐘，順便走一走——最便宜的一招。"
+        },
+        {
+          "id": "sarco-protein-supp",
+          "label": "乳清或蛋白粉",
+          "riskLevel": "L3",
+          "maturity": "emerging",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "蛋白粉可以當「真的吃不夠時」的補位，但**單吃不動效果有限——要配合阻力運動才長得到肌肉**。而且**腎功能不好的人不能自己加蛋白質**，那要營養師算過。先從食物吃夠是更好的路。",
+          "secondLine": true,
+          "askedFor": [
+            "乳清",
+            "蛋白粉",
+            "高蛋白"
+          ],
+          "contraindications": [
+            "腎功能異常",
+            "洗腎"
+          ],
+          "dailyCap": "依產品標示；腎功能不好的人蛋白質總量要由醫師或營養師決定",
+          "evidence": {
+            "finding": "配合阻力運動才有明顯效果；單吃補充品而不動效果有限"
+          },
+          "verifiedAt": "2026-07-31"
+        },
+        {
+          "id": "sarco-appetite",
+          "label": "吃不下才是根本問題",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "很多長輩不是不想吃，是牙口不好、吞嚥怕嗆、或一個人吃沒胃口。**這幾個先解決，蛋白質才吃得進去**——找人一起吃、把肉煮軟切小、看看牙齒。",
+          "related": "TW-EDU-13"
+        },
+        {
+          "id": "sarco-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "如果是**半年內明顯變瘦、又沒特別在減肥**，那要看醫生查原因，不是單純肌少。另外最近跌倒過、或走路突然變不穩，也要儘快評估——跌倒是長輩最怕的分水嶺。",
+          "escalateWhen": [
+            "半年內明顯變瘦又沒特別減肥",
+            "最近跌倒過",
+            "走路突然變得不穩",
+            "握力明顯變差合併吞嚥困難"
+          ]
+        }
+      ]
+    },
+    "TW-EDU-38": {
+      "title": "慢性腎臟病與洗腎",
+      "solutions": [
+        {
+          "id": "ckd-stage-decides-everything",
+          "label": "每一期吃法不一樣，甚至相反",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "leadWith": true,
+          "say": "腎臟病的飲食，每一期講的不一樣，有些地方甚至剛好相反——還沒洗腎的時候多半要控制蛋白質，開始洗腎之後反而要吃夠。網路上的說法會互相打架，就是因為大家沒講自己在哪一期。你手上那張抽血報告跟醫生講的期別，才是準的。"
+        },
+        {
+          "id": "ckd-salt-substitute-danger",
+          "label": "薄鹽、低鈉鹽對腎友是危險的",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "askedFor": [
+            "薄鹽",
+            "低鈉鹽",
+            "代鹽",
+            "健康鹽",
+            "美味鹽"
+          ],
+          "say": "有件事很多人不知道：薄鹽、低鈉鹽、代鹽是拿「鉀」去代替「鈉」的。一般人用沒問題，但腎不好的人排不掉鉀，用了反而危險——會全身無力，嚴重的時候心跳會亂。要減鹹，改用蔥薑蒜、洋蔥、檸檬、黑胡椒、香菜提味，比換鹽安全得多。"
+        },
+        {
+          "id": "ckd-potassium-cooking",
+          "label": "菜先燙過、湯少喝",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "鉀很會溶在水裡，所以蔬菜先用滾水燙過、把水倒掉再炒，可以少掉不少。反過來說，菜湯、火鍋湯、燉補的湯，鉀都跑進湯裡了——料可以吃，湯少喝。要不要嚴格控制，看你的抽血結果，問一下你的醫師或營養師。"
+        },
+        {
+          "id": "ckd-phosphorus-is-hidden",
+          "label": "磷藏在加工食品裡，不是只看肉",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "磷不是只藏在肉跟豆子裡。真正麻煩的是加工食品裡「加進去」的那種——火鍋料、加工肉、可樂汽水、奶精、三合一咖啡、麵包改良劑。那種磷身體吸收得特別好，也特別難擋。看成分表如果有一串「磷酸鹽」，就是它。"
+        },
+        {
+          "id": "ckd-painkillers",
+          "label": "痠痛就吞止痛藥，是腎最常見的隱形傷害",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "askedFor": [
+            "止痛藥",
+            "消炎藥",
+            "痠痛藥",
+            "止痛"
+          ],
+          "say": "腰痠、膝蓋痛就自己買止痛藥吃，是腎不好的人最常見的隱形傷害——止痛藥不是全都一樣，有一類消炎止痛的對腎特別不友善。不必自己判斷是哪一類：買成藥、看牙、看別科的時候，先講一句「我腎功能不好」，藥師跟醫師會幫你換。"
+        },
+        {
+          "id": "ckd-unknown-herbs",
+          "label": "來路不明的藥粉、草藥不要碰",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "askedFor": [
+            "草藥",
+            "藥粉",
+            "偏方",
+            "祖傳",
+            "來路不明",
+            "黑藥丸"
+          ],
+          "say": "這件事台灣有過教訓：民國 92 年起，含馬兜鈴酸的幾味藥材（關木通、廣防己那些）已經全面禁用，因為它傷腎是回不去的。看合格中醫師、從合格中藥房拿藥，是安全的；真正危險的是市場、遊覽車、鄰居給的那種沒有標示的藥粉跟黑藥丸。分別在有沒有來路，不在中藥西藥。"
+        },
+        {
+          "id": "ckd-protein-ask-dietitian",
+          "label": "蛋白質不是越少越好",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "很多人一聽「顧腎要少蛋白」就整個不敢吃肉，結果瘦下來、沒力氣、跌倒——那對腎一點好處也沒有。正確的是「吃得剛剛好、而且吃品質好的」。腎臟科通常配有營養師，回診時開口要求排一次飲食諮詢，比自己猜有用太多。"
+        },
+        {
+          "id": "ckd-bp-sugar-is-the-kidney",
+          "label": "顧血壓血糖，就是在顧腎",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "台灣洗腎的人裡，最大的兩個源頭是糖尿病跟高血壓。所以血壓藥、血糖藥按時吃、在家量、數字記下來，聽起來跟腎沒關係，其實就是最實在的顧腎。"
+        },
+        {
+          "id": "ckd-anemia-is-different",
+          "label": "腎友的貧血，補鐵不一定有用",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "askedFor": [
+            "貧血",
+            "鐵劑",
+            "補血"
+          ],
+          "say": "腎不好的人容易貧血，但原因常常不是缺鐵——是腎臟做不出叫骨髓造血的那個荷爾蒙。所以自己去買鐵劑不一定補得起來，還可能吃太多。這種貧血有專門的針劑可以處理，回診時把「我容易累、臉色差」講出來。"
+        },
+        {
+          "id": "ckd-dialysis-not-the-end",
+          "label": "洗腎不是末日，早點準備反而輕鬆",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "askedFor": [
+            "洗腎",
+            "透析",
+            "腹膜透析",
+            "血液透析",
+            "瘻管"
+          ],
+          "say": "很多人一聽到洗腎就整個不想面對，拖到喘不過氣被送急診、脖子插管才開始——那是最辛苦的走法。提早幾個月討論，可以從容做好手臂的瘻管，或選在家做的腹膜透析，生活安排的空間差很多。要不要開始、什麼時候開始，是可以坐下來談的，不是判決。"
+        },
+        {
+          "id": "ckd-kidney-supplements-blocked",
+          "label": "沒有保健品能修回腎功能",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "blocked": true,
+          "askedFor": [
+            "顧腎",
+            "護腎",
+            "排毒",
+            "保健食品",
+            "保健品"
+          ],
+          "say": "老實說：目前沒有任何一種保健品能把已經壞掉的腎功能修回來。標榜「顧腎」「排毒」的產品反而常是地雷——成分不透明、劑量不明，而且腎不好的人排不掉多餘的東西。錢跟力氣花在血壓血糖、少碰不明藥物上，回報實在得多。"
+        },
+        {
+          "id": "ckd-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver",
+            "women"
+          ],
+          "escalateWhen": [
+            "尿量突然變很少",
+            "幾天內水腫變快或體重跳好幾公斤",
+            "躺下就喘、坐著才睡得著",
+            "全身無力加上心跳怪怪的"
+          ],
+          "say": "這幾種要儘快去看醫生，不要等下次回診：尿突然變很少、幾天內水腫變明顯或體重跳好幾公斤、全身沒力氣又覺得心跳怪怪的。如果已經喘到躺不下來、只能坐著喘，或是意識變得不清楚——直接打 119。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-04",
+          "say": "你提到血糖——台灣洗腎最大的來源就是糖尿病。把血糖顧好，等於幫腎爭取很多年。"
+        },
+        {
+          "topicId": "TW-EDU-30",
+          "say": "你提到中醫——合格中醫師開的藥、合格中藥房買的藥材，是可以跟腎臟科並行的；記得跟兩邊都講你在吃什麼。真正要避開的是沒有來路的藥粉。"
+        }
+      ]
+    },
+    "TW-EDU-39": {
+      "title": "氣喘與慢性阻塞性肺病（一直喘、咳不停）",
+      "solutions": [
+        {
+          "id": "lung-controller-vs-reliever",
+          "label": "兩支吸入劑是不同工作",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "leadWith": true,
+          "say": "如果醫生給你兩支吸入劑，它們的工作不一樣：一支是每天固定用的保養藥，一支是難受的時候救急用的。最常見的狀況是——救急那支隨身帶，保養那支覺得沒事就收起來。偏偏會讓病愈拖愈重的，正是這個。保養的那支就算今天很好也要用。"
+        },
+        {
+          "id": "lung-reliever-frequency-warning",
+          "label": "救急那支用得越來越勤＝警訊",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "救急吸入劑用得比以前頻繁，不是「還好我有帶」，是控制沒做好的訊號。一個好記的標準：如果一週要用到兩次以上（半夜被喘醒也算），把這件事帶去回診，藥該調整了。"
+        },
+        {
+          "id": "lung-inhaler-technique",
+          "label": "請人看你吸一次",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "askedFor": [
+            "吸入劑",
+            "吸入器",
+            "噴劑"
+          ],
+          "say": "吸入劑吸法不對，藥就停在嘴巴裡沒進到肺。最實在的一招：下次回診帶著你的吸入劑，請護理師或藥師看你吸一次，兩分鐘就能抓出問題。常見的錯是沒搖勻、按下去跟吸氣沒同時、吸完沒閉氣。還有一個很多人漏掉——含類固醇的吸完一定要漱口，不然嘴巴容易長黴。"
+        },
+        {
+          "id": "lung-dont-stop-controller",
+          "label": "覺得好了就停保養藥，最容易復發",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "保養型吸入劑是「因為在用才好」，不是「好了所以可以停」。自己停掉通常撐一陣子就打回原形，而且回來的那次常常更難壓。要減量要停，讓醫生看著慢慢來。"
+        },
+        {
+          "id": "lung-quit-smoking",
+          "label": "戒菸是唯一能讓它變慢的事",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "高",
+          "audience": [
+            "elder",
+            "worker"
+          ],
+          "askedFor": [
+            "抽菸",
+            "香菸",
+            "戒菸",
+            "菸"
+          ],
+          "say": "講實話會有點不中聽：對慢性阻塞性肺病，藥可以讓你舒服，但目前唯一被證明能讓肺功能掉得比較慢的，是戒菸。而且不管幾歲開始都有用。醫院有戒菸門診，有藥物可以幫忙、費用也有補助——靠意志力硬撐的成功率，本來就比有人陪著低很多。"
+        },
+        {
+          "id": "lung-exacerbation-three-signs",
+          "label": "痰變多、變色、更喘——三中二就別等回診",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "有三個變化要一起看：痰變多、痰的顏色變黃綠、喘得比平常厲害。三個裡出現兩個，通常就是急性惡化，早幾天去看比拖到住院輕鬆太多。長輩自己常常會說「還好啦」，家人看到痰的樣子不對就可以先提醒。",
+          "askedFor": [
+            "痰",
+            "黃痰",
+            "濃痰",
+            "咳得比較厲害"
+          ]
+        },
+        {
+          "id": "lung-breathing-and-moving",
+          "label": "越不敢動就越喘的循環",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "中",
+          "audience": [
+            "elder"
+          ],
+          "say": "喘就不敢動，不動肌肉就退，退了走兩步更喘——這個循環比病本身還磨人。慢慢走、走走停停也算數，重點是天天有。喘的時候試試圓唇吐氣：鼻子吸一拍，嘴唇像吹蠟燭那樣慢慢吐兩拍，很多人吐長一點就沒那麼慌。醫院的肺部復健課，走不動的人最需要。"
+        },
+        {
+          "id": "lung-air-triggers",
+          "label": "認出會惹到你的那幾樣",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver"
+          ],
+          "say": "每個人的地雷不太一樣，但常見的就那幾樣：突然的冷空氣、油煙、二手菸、香跟金紙的煙、空氣品質差的日子、剛裝修的味道。抓出你自己的那幾樣，比全面戒備有用——出門前看一眼空品，紅色的日子改成室內活動就好。"
+        },
+        {
+          "id": "lung-vaccines",
+          "label": "這類人打疫苗特別划算",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "就醫",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "肺本來就不好的人，一場流感或肺炎常常就是一次住院。流感疫苗每年打、肺炎鏈球菌看年齡跟身分有公費，回診時問一句「我這個狀況該打哪些」最快。"
+        },
+        {
+          "id": "lung-comfort-remedies",
+          "label": "枇杷膏、蒸氣那些的定位",
+          "riskLevel": "L2",
+          "maturity": "traditional",
+          "timeToEffect": "今晚",
+          "solutionType": "食補",
+          "effortCost": "低",
+          "audience": [
+            "elder"
+          ],
+          "secondLine": true,
+          "askedFor": [
+            "枇杷膏",
+            "蒸氣",
+            "精油",
+            "喉糖",
+            "川貝"
+          ],
+          "say": "枇杷膏、蒸氣、喉糖那些，讓喉嚨舒服是真的，當作陪伴沒問題。只是要分清楚：它們沒有辦法把縮起來的氣管打開。所以可以用，但不能拿來代替吸入劑，也不要因為喝了舒服就把該用的藥往後推。"
+        },
+        {
+          "id": "lung-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver",
+            "women"
+          ],
+          "escalateWhen": [
+            "一句話要換好幾口氣",
+            "嘴唇或指甲發紫",
+            "坐著不動也喘",
+            "救急吸入劑吸了沒有改善"
+          ],
+          "say": "這幾種是不能等的：講一句話要換好幾口氣、嘴唇或指甲發紫、坐著不動也喘、或者救急吸入劑吸了還是沒好轉——立刻打 119。發燒又喘、痰變濃變多的時候，也要當天就去看，不要撐到隔天。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-12",
+          "say": "你提到疫苗——肺本來就不好的人，流感跟肺炎鏈球菌疫苗的回報特別高，一場感染常常就是一次住院。"
+        },
+        {
+          "topicId": "TW-EDU-20",
+          "say": "你提到心臟——喘這件事，肺跟心臟都可能是原因，有時候還一起來。跟醫生講的時候，把「什麼時候喘、躺著會不會更喘」講清楚，很有幫助。"
+        }
+      ]
+    },
+    "TW-EDU-40": {
+      "title": "中風後照護與預防再中風",
+      "solutions": [
+        {
+          "id": "stroke-fast-recognize",
+          "label": "再中風要認得出來、要記時間",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "leadWith": true,
+          "say": "中風過一次的人，再來一次的機會比一般人高，所以全家都要認得那三個樣子：臉歪一邊、手抬不起來、話講不清楚。看到就記下「開始的時間」再打 119——能不能用那個打通血管的針，就看發作到現在多久，這句話說得出來，救回來的東西差很多。"
+        },
+        {
+          "id": "stroke-dont-stop-antiplatelet",
+          "label": "抗血小板、抗凝血藥不能自己停",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "askedFor": [
+            "阿斯匹靈",
+            "保栓通",
+            "抗凝血",
+            "血栓",
+            "薄血藥"
+          ],
+          "say": "中風後的抗血小板或抗凝血藥，是拿來擋下一次的，多半要長期吃。自己停掉——不管是因為怕傷胃、還是覺得都好了——再中風的機會會明顯往上跳。要拔牙、開刀、做胃鏡大腸鏡之前，先告訴那位醫師你在吃這個藥，由他決定要不要停、停幾天，你不用自己判斷。"
+        },
+        {
+          "id": "stroke-three-highs-are-the-cause",
+          "label": "顧三高才是擋第二次的主力",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "藥擋掉一部分，剩下的靠血壓、血糖、血脂。這三個顧好，是目前為止最有把握擋住第二次中風的做法——比任何補品都實在。在家量血壓、把數字記下來帶去回診，就是最有用的那件小事。"
+        },
+        {
+          "id": "stroke-rehab-window",
+          "label": "前半年進步最快，之後不是就沒用了",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "運動",
+          "effortCost": "高",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "復健通常前半年進步最明顯，所以那段時間值得拚。但半年之後不是就沒用了——停下來反而會退回去。真正有效的是把復健放進生活：自己拿杯子、自己穿衣服、扶著走去廁所，都算。做得比治療室的一小時還多。"
+        },
+        {
+          "id": "stroke-swallow-and-pneumonia",
+          "label": "吃飯會嗆，是要處理的事",
+          "riskLevel": "L2",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "中風後最常見的致命併發症是嗆到造成的肺炎，而它的開頭常常只是「吃飯偶爾咳一下」。看到這個不要當成小事：坐直、一口別太大、吞完再講話，能先擋一些。真的常嗆，回診要求評估吞嚥，語言治療師會教怎麼調食物的稠度。"
+        },
+        {
+          "id": "stroke-depression-is-part-of-it",
+          "label": "中風後心情低落，是病的一部分",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "低",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "中風之後情緒低落很常見，那不是想不開、也不是性格變壞——腦子受傷本身就會這樣，而且它會讓人不想復健，變成惡性循環。這是可以治療的，回診時主動講出來；家人不必急著鼓勵，先聽他講就很有用。"
+        },
+        {
+          "id": "stroke-caregiver-support",
+          "label": "照顧者也要有人接手",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "求助資源",
+          "effortCost": "中",
+          "audience": [
+            "caregiver"
+          ],
+          "say": "照顧中風的家人，累的不是哪一天，是看不到頭。長照專線 1966 可以申請居家復健、喘息服務、輔具跟無障礙改造補助——喘息服務就是讓你休息幾天、有人接手的那種。不是撐到垮才有資格用，是本來就該用。"
+        },
+        {
+          "id": "stroke-fall-and-home",
+          "label": "半邊無力的人，家裡要重排",
+          "riskLevel": "L1",
+          "maturity": "proven",
+          "timeToEffect": "一週",
+          "solutionType": "行為調整",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "say": "一邊比較沒力的人，跌倒的機會高很多，而跌一次骨折常常把復健成果一次歸零。浴室加扶手跟防滑墊、夜燈開著、地上不要有電線跟小地毯——這些補助也可以申請。"
+        },
+        {
+          "id": "stroke-blocked-remedies",
+          "label": "「通血路」的點滴、活血補品",
+          "riskLevel": "L4",
+          "maturity": "proven",
+          "timeToEffect": "慢養",
+          "solutionType": "保健品",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "caregiver"
+          ],
+          "blocked": true,
+          "askedFor": [
+            "通血路",
+            "銀杏",
+            "納豆激酶",
+            "紅麴",
+            "活血",
+            "點滴",
+            "放血"
+          ],
+          "say": "很多人會被推薦去打「通血路」的點滴，或吃銀杏、納豆激酶那類活血的東西。老實講：這些沒有證據能取代你在吃的藥，而且它們跟抗血小板、抗凝血藥疊在一起，會把出血的風險往上推——中風的人身上，這個風險不是小事。要吃任何一樣，先把瓶子帶去給醫師看。"
+        },
+        {
+          "id": "stroke-refer",
+          "label": "轉介就醫",
+          "riskLevel": "L5",
+          "maturity": "proven",
+          "timeToEffect": "今晚",
+          "solutionType": "就醫",
+          "effortCost": "中",
+          "audience": [
+            "elder",
+            "worker",
+            "caregiver",
+            "women"
+          ],
+          "escalateWhen": [
+            "臉歪、手垂、講話不清楚",
+            "突然看不見或看東西變兩個",
+            "突然天旋地轉站不住",
+            "從來沒有過的劇烈頭痛"
+          ],
+          "say": "臉歪、手抬不起來、話講不清楚——立刻打 119，並且記下開始的時間。另外這幾種也一樣不能等：突然一邊看不見或看東西變兩個、突然天旋地轉站不穩、或是這輩子沒痛過的那種劇烈頭痛。寧可白跑一趟，也不要在家裡等它自己好。"
+        }
+      ],
+      "relatedTopics": [
+        {
+          "topicId": "TW-EDU-03",
+          "say": "你提到血壓——中風之後，血壓是擋住第二次最關鍵的一個數字，在家量比在診間量準。"
+        },
+        {
+          "topicId": "TW-EDU-13",
+          "say": "你提到吞嚥——中風後嗆到造成的肺炎很常見，這件事值得單獨處理，不只是「吃慢一點」。"
         }
       ]
     }

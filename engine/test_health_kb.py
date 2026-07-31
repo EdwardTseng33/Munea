@@ -87,9 +87,14 @@ class HealthTopicsDataTest(unittest.TestCase):
 class ResidentRulesTest(unittest.TestCase):
     def test_resident_covers_four_emergencies_and_melatonin(self):
         r = health_kb.resident_rules()
-        for needle in ("臉歪", "119", "心肌梗塞", "低血糖", "方糖或含糖飲料", "急性譫妄",
-                       "褪黑激素在台灣是處方藥"):
+        # 2026-07-31 Edward 拍板「不准憑空報號碼」後改：這裡守的是「四種急症判斷都在」，
+        # 不是「有沒有寫 119」——號碼改由經過核定的當地安全指引供應，
+        # 保命規則裡只說「撥當地的急救電話」（語言不等於國家，寫死會叫錯人撥錯號碼）。
+        for needle in ("臉歪", "當地的急救電話", "心肌梗塞", "低血糖", "方糖或含糖飲料",
+                       "急性譫妄", "褪黑激素在台灣是處方藥"):
             self.assertIn(needle, r)
+        for forbidden in ("119", "911", "112", "1925"):
+            self.assertNotIn(forbidden, r, f"保命規則裡不該寫死號碼 {forbidden}")
 
     def test_resident_rules_flow_into_chat_engine_red(self):
         """常駐紅線併進 RED＝文字線（server /chat）、語音線（live system_instruction）、
@@ -205,7 +210,9 @@ class WiringContractTest(unittest.TestCase):
         self.assertIn("MAX_TOPICS_PER_CALL", src)
         # 2026-07-29：聊聊是主戰場——語音線也要把「這個人是誰、幾點」傳進去，
         # 不然長輩版跟青少年版會混在一起（文字線做了、語音線漏掉＝最容易發生的疏漏）。
-        self.assertIn("health_kb.voice_cue(ids[0], said, _prof, _hour)", src)
+        # 2026-07-31 一國一庫之後多帶了 locale——保證沒變（語音線照樣排隊送提示），
+        # 只是驗它現在的樣子，順便釘住「語系一定要一起傳」。
+        self.assertIn("health_kb.voice_cue(ids[0], said, _prof, _hour, locale=_kb_locale)", src)
 
     def test_eval_mirrors_production_injection(self):
         src = self._read(os.path.join("eval", "gen_reply.py"))

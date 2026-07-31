@@ -240,8 +240,35 @@ window.MuneaHealth = (function () {
   }
 
   // 讀最新健康摘要，餵回網頁
+  // 重裝 App 之後自動接回（2026-07-31 Edward 實測回報：健康 App 顯示已授權、
+  // 沐寧卻說未連結）。原因：「已連結」看的是我們自己存在手機裡的旗子，
+  // 重裝就被清掉了；但蘋果的授權還在（那個視窗一輩子只跳一次、補不回來）。
+  // 這裡在「旗子沒立、但外掛在、而且真的讀得到值」時把旗子補立回去——
+  // 完全無害：讀不到就什麼都不做，不會憑空把沒連的人標成已連。
+  let relinkTried = false;
+  async function relinkIfAlreadyAuthorized() {
+    if (connected() || relinkTried) return false;
+    // **他自己按過「解除連接」就不准自動接回**——那是他的決定，不是重裝造成的失憶。
+    // （解除時會蓋一個時間戳，重裝會連這個一起清掉，所以兩種情況分得開。）
+    try { if (localStorage.getItem('munea.health.disconnectedAt')) return false; } catch (e) {}
+    relinkTried = true;                       // 一次啟動只試一次，不重複打擾原生層
+    const p = plugin();
+    if (!p || typeof p.getSummary !== 'function') return false;
+    try {
+      const s = await p.getSummary();
+      if (!hasAnyValue(s)) return false;      // 讀不到值＝真的沒連或沒分享項目
+      try { localStorage.setItem('munea.devicesOn', '1'); } catch (e) {}
+      lastSummary = s;
+      return true;
+    } catch (e) { return false; }
+  }
+
   async function refresh(options) {
-    if (!connected()) return null;
+    if (!connected()) {
+      // 沒立旗子時先探一次：授權可能還在（重裝清掉的只是我們的旗子）
+      const relinked = await relinkIfAlreadyAuthorized();
+      if (!relinked) return null;
+    }
     const p = plugin();
     if (!p) return null;
     if (refreshPromise) return refreshPromise;

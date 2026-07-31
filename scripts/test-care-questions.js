@@ -45,7 +45,12 @@ function sliceBlock(source, startMarker, endMarker, label) {
 }
 
 // 共用文字守門（事故①的那道門）＋口袋問題區塊
-const guardBlock = sliceBlock(app, 'function muneaIsCleanZhText(raw) {', '\n}', 'muneaIsCleanZhText');
+// 守門在 2026-07-31 從「中文專用」改成「跟著使用者語系走」，所以要連規則表一起抽進沙盒跑
+const guardBlock = [
+  sliceBlock(app, 'const MUNEA_SPEECH_RULES = {', '\n};', 'MUNEA_SPEECH_RULES'),
+  sliceBlock(app, 'function muneaSpeechRule(locale) {', '\n}', 'muneaSpeechRule'),
+  sliceBlock(app, 'function muneaIsCleanSpeechText(raw, locale) {', '\n}', 'muneaIsCleanSpeechText'),
+].join('\n');
 const careBlock = sliceBlock(
   app,
   "const CARE_Q_KEY = 'munea.careQuestions';",
@@ -62,6 +67,8 @@ const sandbox = {
     removeItem: k => store.delete(k),
   },
   trackProductEvent: (name, props) => { events.push({ name, props }); return Promise.resolve(null); },
+  // 守門要看當下語系；沙盒預設繁中，四語行為另在 B 段逐一指定 locale 驗
+  muneaLocale: () => 'zh-TW',
   Date, Math, JSON, String, Array, Object, Number, Set, console,
 };
 sandbox.window = sandbox;
@@ -193,6 +200,40 @@ expect(CARE_Q_MAX > 0 && CARE_Q_MAX_LEN > 0, '常數沒有正確導出，後面�
     `A-9 清單滿了卻跟他說「沒聽清楚」，他會一直重講：${toasts.join(' / ')}`);
   expect(toasts.some(m => m.includes('記滿')), `A-9 沒有講出真正的原因：${toasts.join(' / ')}`);
   console.log('PASS A-9 清單滿了講真正的原因，不謊稱沒聽清楚');
+
+  /* A-10 守門要跟著語系走（Edward 2026-07-31）
+   *
+   * 舊版寫死中文：出現一個假名就擋、連續 3 個英文字母就擋、中文字要佔六成。
+   * 那在只有中文的時期是對的（7/14「アラ」事故就是它擋下來的），四語上線後卻會把
+   * 日英西用戶的正常句子整批擋在門外——日本的女兒傳話給爸爸，爸爸這邊什麼都收不到。
+   * 所以標準改成每個語系各自認自己的字，同時保住「別國文字冒出來＝聽錯了」那道防線。 */
+  const { muneaIsCleanSpeechText: guard } = sandbox;
+  const localeCases = [
+    // [語系, 這句話, 應該收嗎, 為什麼]
+    ['zh-TW', '膝蓋痠兩個禮拜了，要不要照X光？', true, '正常中文'],
+    ['zh-TW', '血壓 OK 嗎', true, '長輩會夾英文短字'],
+    ['zh-TW', '我去看 doctor 好不好', true, '夾一個英文單字仍是中文句'],
+    ['zh-TW', 'アイウエオ', false, '中文情境冒出假名＝聽錯（7/14 事故那條）'],
+    ['zh-TW', '안녕하세요 의사', false, '中文情境冒出韓文＝聽錯'],
+    ['zh-TW', 'hello there doctor', false, '中文情境整句英文＝聽錯'],
+    ['ja', 'あした病院に行きます', true, '正常日文＝假名加漢字'],
+    ['ja', '血圧の薬を飲みましたか', true, '正常日文'],
+    ['ja', '안녕하세요 의사', false, '日文情境冒出韓文＝聽錯'],
+    ['ja', 'ㄅㄆㄇㄈ', false, '日文情境冒出注音＝聽錯'],
+    ['en', 'Mom asked me to remind you to take your medicine', true, '正常英文長句（舊版一定被擋）'],
+    ['en', '膝蓋痠兩個禮拜了', false, '英文情境冒出中文＝聽錯'],
+    ['en', 'あした病院', false, '英文情境冒出日文＝聽錯'],
+    ['es', 'Recuerda tomar tu medicina después de la cena', true, '正常西班牙文'],
+    ['es', 'Mañana el niño va al médico', true, '西班牙文含重音與 ñ'],
+    ['es', '膝蓋痠兩個禮拜了', false, '西文情境冒出中文＝聽錯'],
+    ['zh-TW', '啊啊啊啊啊啊啊啊', false, '同一個字連著出現＝雜訊，四語通用'],
+    ['en', 'aaaaaaaaaa', false, '同一個字連著出現＝雜訊，四語通用'],
+  ];
+  for (const [loc, text, want, why] of localeCases) {
+    const got = guard(text, loc);
+    expect(got === want, `A-10 [${loc}] ${want ? '應該收' : '應該擋'}「${text}」（${why}），實得 ${got}`);
+  }
+  console.log(`PASS A-10 守門跟著語系走，四語共 ${localeCases.length} 種說法判斷正確`);
 
   /* ─── Part B · 契約：跨檔接線的 source-level 鎖 ──────────────── */
 

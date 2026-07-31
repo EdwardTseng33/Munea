@@ -11,10 +11,14 @@ param(
   [string]$PrimaryWorkerId = "glows-rtx6000ada-tw07",
   [int]$PrimarySlots = 3,
   [switch]$AllowTraffic,
+  [switch]$StrictLocaleContext,
   [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
+if ($StrictLocaleContext -and $AllowTraffic) {
+  throw "StrictLocaleContext is acceptance-only and must remain a 0% canary until exact-build App E2E passes."
+}
 $root = Split-Path -Parent $PSScriptRoot
 $source = Join-Path $root "deploy\gateway"
 
@@ -68,6 +72,7 @@ $envValues = [ordered]@{
   SUPABASE_URL = $SupabaseUrl
   SUPABASE_ANON_KEY = $publishableKey
   MUNEA_GATEWAY_REQUIRE_DURABLE = "1"
+  MUNEA_GATEWAY_ALLOW_LEGACY_LOCALE_CONTEXT = if ($StrictLocaleContext) { "0" } else { "1" }
   MUNEA_GATEWAY_QUEUE_MAX_DEPTH = "30"
   MUNEA_GATEWAY_VOICE_LIMIT = "30"
   MUNEA_PRIMARY_AVATAR_URL = $PrimaryAvatarUrl
@@ -81,7 +86,8 @@ $envLines = foreach ($entry in $envValues.GetEnumerator()) {
 }
 [IO.File]::WriteAllLines($envFile, $envLines, [Text.UTF8Encoding]::new($false))
 
-$tag = "acceptance-" + (Get-Date -Format "MMdd-HHmm")
+$tagPrefix = if ($StrictLocaleContext) { "i18n-strict-" } else { "acceptance-" }
+$tag = $tagPrefix + (Get-Date -Format "MMdd-HHmm")
 $argsList = @(
   "run", "deploy", $Service,
   "--source", $source,
@@ -121,3 +127,6 @@ $hostName = $serviceUrl -replace '^https://', ''
 $canaryUrl = "https://$tag---$hostName"
 Write-Host "Canary: $canaryUrl" -ForegroundColor Green
 Write-Host "The durable health gate must report ok=true before traffic promotion." -ForegroundColor Yellow
+if ($StrictLocaleContext) {
+  Write-Host "Strict LocaleContext is enabled on this 0% canary. Traffic promotion is prohibited until exact-build App E2E passes." -ForegroundColor Yellow
+}

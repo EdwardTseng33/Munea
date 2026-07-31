@@ -37,6 +37,25 @@ Do not treat an HTTP 200 admin shell or security headers alone as proof that the
 2. Verify the printed tagged URL and complete the required human Gate.
 3. Run the exact `promote.sh staging ... <tag> <version> <commit>` command printed by the deploy script.
 
+Voice strict-locale acceptance is an explicit 0% canary mode:
+
+```bash
+MUNEA_VOICE_CALL_CONTROL_REQUIRED=1 \
+MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=0 \
+bash deploy/cloudrun/canary-deploy.sh voice
+```
+
+This mode records `MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=0` on the exact
+revision, requires Call Control, and is verified from Cloud Run revision
+metadata. It intentionally prints no promotion command, and `promote.sh`
+rejects the strict revision before any traffic mutation. The release gate must
+remain in compatibility mode until the exact-build installed-App and four-locale
+real-call evidence is approved.
+
+Shared Call Control can be packaged as a separate 0% strict canary with
+`scripts/cloud-run-deploy-gateway.ps1 -StrictLocaleContext`. Combining
+`-StrictLocaleContext` with `-AllowTraffic` fails closed.
+
 ### Production
 
 1. First verify the same committed release on staging.
@@ -87,5 +106,8 @@ A merged PR is source evidence only. It does not prove deployment, traffic, data
 
 ## Known remaining control gaps
 
+- Strict LocaleContext can now be reproduced and proved on 0% Voice and Call
+  Control canaries, but traffic promotion remains deliberately blocked until
+  exact-build App E2E and four-locale real-call evidence exist.
 - The staging human Gate is still procedural evidence. Before a 90-point release score, create a signed or repository-recorded staging attestation that binds environment, service, tag, revision, version, commit, test result and approver; `prod-deploy.sh` must consume that attestation.
 - `promote.sh` rechecks tag and serving revision immediately before mutation, but Cloud Run traffic updates do not yet use a repository-level cross-session lease or compare-and-swap guard. A narrow control-plane race remains until a deployment lock is implemented.

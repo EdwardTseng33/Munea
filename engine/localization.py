@@ -49,9 +49,9 @@ _ASR_LANGUAGE_HINTS = {
 }
 _REPLY_INSTRUCTIONS = {
     "zh-TW": "請一律使用自然的繁體台灣中文回覆，絕不使用簡體字。",
-    "en": "Reply in warm, plain English. Keep voice responses short and easy to follow.",
-    "ja": "自然でやさしい日本語で答えてください。音声で聞き取りやすい短い文を優先してください。",
-    "es": "Responde en español claro y cálido. Para voz, usa frases cortas y fáciles de entender.",
+    "en": "**Every single word of your reply must be in English.** **And never address the person as \"Munea\" — that is the product's name, not theirs. Use their own name, or no name at all.** Even one Chinese sentence is a failure — the person cannot read it. Reply in warm, plain English. Keep voice responses short and easy to follow.",
+    "ja": "**返答は一字残らず日本語で書いてください。****また、相手を「Munea」と呼んではいけません——それは製品の名前で、その人の名前ではありません。ご本人の名前で呼ぶか、呼びかけなしで話してください。**中国語の文が一つでも混ざれば失敗です——相手には読めません。自然でやさしい日本語で答えてください。音声で聞き取りやすい短い文を優先してください。",
+    "es": "**Toda la respuesta debe estar en español, sin excepción.** **Y nunca llame a la persona «Munea»: ese es el nombre del producto, no el suyo. Use su nombre, o ninguno.** Una sola frase en chino ya es un fallo: la persona no puede leerla. Responde en español claro y cálido. Para voz, usa frases cortas y fáciles de entender.",
 }
 _OPENING_MESSAGES = {
     "zh-TW": "嗨，我在這裡。想從哪件事聊起都可以。",
@@ -89,14 +89,32 @@ _MEXICO_EMERGENCY_GUIDANCE = {
     "ja": "メキシコで差し迫った危険がある場合は911へ連絡し、近くの信頼できる人にも助けを求めてください。",
     "es": "Si alguien está en peligro inmediato en México, llama al 911 y pide ayuda a una persona de confianza cercana.",
 }
+_JAPAN_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在日本有立即危險，請立刻撥打 119（消防／救護）；報警是 110。要不要叫救護車拿不定主意時可撥 #7119（部分地區未開通）。心理支持可撥 0120-279-338，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Japan, call 119 for fire and ambulance (110 for police). If unsure whether to call an ambulance, #7119 offers guidance in many areas. For mental-health support, call 0120-279-338, and ask a trusted person nearby to help.",
+    "ja": "日本で差し迫った危険がある場合は、119番（消防・救急）へ。警察は110番です。救急車を呼ぶか迷うときは#7119（地域により未対応）。こころの相談はよりそいホットライン0120-279-338（24時間・無料）へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Japón, llama al 119 (bomberos y ambulancia); el 110 es para la policía. Si dudas si llamar a una ambulancia, el #7119 orienta en muchas zonas. Para apoyo psicológico, llama al 0120-279-338 y pide ayuda a una persona de confianza cercana.",
+}
+
+_UNITED_STATES_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在美國有立即危險，請立刻撥打 911（醫療、消防、警察共用）；想不開時可撥打或傳簡訊到 988，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in the United States, call 911 (medical, fire and police). For thoughts of suicide, call or text 988, and ask a trusted person nearby to help.",
+    "ja": "アメリカで差し迫った危険がある場合は911番（救急・消防・警察）へ。死にたい気持ちのときは988に電話またはテキストで連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Estados Unidos, llama al 911 (sanitario, bomberos y policía). Ante ideas de suicidio, llama o envía un mensaje al 988, y pide ayuda a una persona de confianza cercana.",
+}
+
 _REGIONAL_EMERGENCY_GUIDANCE = {
     "TW": _TAIWAN_EMERGENCY_GUIDANCE,
     "ES": _SPAIN_EMERGENCY_GUIDANCE,
     "MX": _MEXICO_EMERGENCY_GUIDANCE,
+    "JP": _JAPAN_EMERGENCY_GUIDANCE,
+    "US": _UNITED_STATES_EMERGENCY_GUIDANCE,
 }
 REGIONAL_SAFETY_POLICY_SOURCES = {
     "ES": "https://www.interior.gob.es/opencms/en/contacta-con-nosotros/contacto-prueba-3-hide/index.html",
     "MX": "https://www.gob.mx/911/articulos/que-es-el-911emergencias?idiom=es",
+    "JP": "https://www.fdma.go.jp/mission/enrichment/appropriate/appropriate003.html",
+    "US": "https://988lifeline.org/",
 }
 
 # Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current

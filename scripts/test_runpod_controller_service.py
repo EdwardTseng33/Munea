@@ -105,7 +105,22 @@ def check_health_behaviour(service) -> None:
     assert payload["state"] == "stalled"
 
 
+def check_event_ledger(service) -> None:
+    """開卡/收卡帳本（2026-07-31）：三條接線——
+    ①run_once 成功後要把結果交給 _record_event（決定不能只活在 last_result 一格）
+    ②非 no_change 動作要 print 進 Cloud Run 日誌（永久帳）
+    ③/events 查帳口存在。"""
+    src = SERVICE
+    assert "_record_event(result)" in src, "run_once 結果沒接到帳本"
+    record = src.split("def _record_event", 1)[1].split("\ndef ", 1)[0]
+    assert "no_change" in record and "return" in record, "帳本要跳過 no_change"
+    assert "print(" in record and "flush=True" in record, "帳本沒印進日誌（重啟就消失）"
+    assert '@app.get("/events")' in src, "/events 查帳口不見了"
+    print("event ledger wiring: PASS")
+
+
 def main() -> None:
+    check_event_ledger(SERVICE)
     assert 'config.mode != "active"' in SERVICE
     assert 'MUNEA_GATEWAY_ADMIN_KEY is required' in SERVICE
     assert 'MUNEA_AVATAR_APP_KEY is required' in SERVICE

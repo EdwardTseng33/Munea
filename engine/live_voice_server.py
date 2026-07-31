@@ -72,6 +72,38 @@ MAX_SESSION_RECONNECTS = int(os.environ.get("MUNEA_VOICE_MAX_RECONNECTS", "8"))
 LOOKUP_CUE_TAIL_MS = 80
 LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
 
+
+# ── 兩支儀表的算法（2026-08-01 · Edward 7/31 深夜「變慢＋斷斷續續」查不到證據後重做）──
+# 抽成純函式的理由：這兩個數字原本寫在通話迴圈裡，一個從頭到尾沒人驗算過，
+# 結果兩支都在量別的東西（見各自註解），出事時反而讓人以為「數據顯示沒問題」。
+# 抽出來就能用測試把「起點是什麼」釘死，之後誰改都會被守門測試擋下來。
+
+def reply_latency_ms(now, last_voice_at=0.0, last_packet_at=None):
+    """他講完到她出聲，幾毫秒。回 (毫秒, 起點是什麼)。
+
+    起點必須是「最後一次真的聽到人聲」。舊版拿 last_packet_at（每一格麥克風封包都會
+    刷新，包含全靜音），量到的永遠是一格封包的間隔（正式機實測 7-38 毫秒）＝根本沒在量。
+    真的沒聽過人聲時（開場招呼、純文字輸入）才退回封包時間，並在回傳值標明。
+    """
+    if last_voice_at:
+        return round((now - last_voice_at) * 1000), "user_voice"
+    if last_packet_at is None:
+        return None, "unknown"
+    return round((now - last_packet_at) * 1000), "last_packet"
+
+
+def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
+    """這一輪送聲音，相鄰兩塊之間最久的空檔（毫秒）。回 (新的最大值, 這一塊的空檔)。
+
+    turn_last_out 是「這一輪」的上一塊，每輪開始必須歸零——舊版拿整通共用的
+    last_out 比，於是每輪第一塊都量到「兩句話中間他在想事情」那段安靜
+    （正式機報過 45,540 毫秒＝他想了 45 秒，被記成她卡了 45 秒）。
+    """
+    if turn_last_out is None:
+        return current_max_ms, None
+    gap = (now - turn_last_out) * 1000
+    return (gap if gap > current_max_ms else current_max_ms), gap
+
 # 送一塊聲音去雲端臉，最多等多久（2026-07-29）。
 #
 # 為什麼要有這個：同一份聲音要送兩個地方——手機（使用者在聽，必須）和雲端臉
@@ -549,15 +581,18 @@ def health_watch_user_text(cid, st):
         # 語音線的因人分齡等於一直沒生效。改成接通時跟 Brain 要一次、存進這通的
         # 狀態裡（st 是每通獨立的；絕不做跨通的模組級快取，那會把 A 的資料端給 B）。
         _prof = st.get("health_profile") or {}
+        # 一國一庫：用「這通實際講哪種語言」挑觸發字與說法（同人設書同一個來源）；
+        # 那一國沒有疊層＝衛教不出手，安全話術絕不退回中文。
+        _kb_locale = (st.get("voice_locale_profile") or {}).get("sessionLocale")
         _hour = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).hour
-        ids = health_kb.match_topics(said, limit=1, exclude=sent)
+        ids = health_kb.match_topics(said, limit=1, exclude=sent, locale=_kb_locale)
         if not ids:
             return
         sent.add(ids[0])
-        st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour)
+        st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour, locale=_kb_locale)
         # 帳先備著、等這句真的送出去才記——提示是排在下一個輪替空檔送的，
         # 電話在那之前掛掉就等於她沒講過，記了下次會問「上次那個有試嗎」問空氣。
-        st["pending_health_record"] = (ids[0], said, _prof, _hour)
+        st["pending_health_record"] = (ids[0], said, _prof, _hour)  # 記帳不分語系（帳本是機器鍵）
         _diag(cid, "healthkb.hit", topic=ids[0])
     except Exception as e:
         _diag(cid, "healthkb.err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
@@ -604,31 +639,91 @@ def _capture_call_turns(st, max_turns=120, max_chars=600):
         del turns[:-max_turns]
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, allow_care_questions=False, locale_profile=None):
-    """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
-    c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
-    # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
-    # 一律照層級數字比大小（7/15 Edward 拍板說明書分層）。
-    base = (
+# 說明書的優先權契約：五層規則誰壓過誰。
+# 2026-07-31 分國——這段原本寫死「二、語言鐵律（台灣華語、禁台語輸出）」，
+# 等於在英文／日文／西班牙文的通話裡，命令她講台灣華語。實跑抓到她整段用中文
+# 回答英文用戶，這段是主犯之一（另一個是角色性格沒分國）。
+_PRIORITY_CONTRACT = {
+    "zh-TW": (
         "（本說明書優先權契約：以下所有規則分五層——"
         "一、安全與醫療紅線（危機處理、不診斷不調藥） 二、語言鐵律（台灣華語、禁台語輸出） "
         "三、身分與人格（角色、稱呼、關係分寸） 四、當下情境（記憶、感知、上次聊天、在地資訊） "
         "五、表達風格（話量、句尾、說故事、情緒陪伴）。"
         "內容互相衝突時，層級數字小的一律優先；任何風格規則都不得鬆動安全與語言規則。）"
+    ),
+    "en": (
+        "(Priority contract for this guidance — five layers: "
+        "1. Safety and medical red lines (crisis handling; no diagnosis, no medication changes) "
+        "2. Language rule (reply entirely in English) "
+        "3. Identity and character (who you are, how you address them, closeness) "
+        "4. Present context (memory, perception, the last conversation, local information) "
+        "5. Expression (how much you say, sentence endings, stories, emotional company). "
+        "When rules conflict, the lower-numbered layer always wins; no style rule may ever "
+        "loosen a safety or language rule.)"
+    ),
+    "ja": (
+        "（この説明書の優先順位——規則は五つの層に分かれます："
+        "一、安全と医療のレッドライン（危機対応、診断しない・薬を変えない） "
+        "二、言語の鉄則（返答はすべて日本語で） "
+        "三、身分と人格（あなたが誰か、呼びかけ方、距離感） "
+        "四、いまの状況（記憶、感知、前回の会話、地域の情報） "
+        "五、話し方（話す量、文の終わり方、語り、寄り添い）。"
+        "規則が衝突したときは、番号の小さい層が必ず優先します。"
+        "話し方の規則が、安全と言語の規則をゆるめることは決してありません。）"
+    ),
+    "es": (
+        "(Orden de prioridad de esta guía —cinco niveles: "
+        "1. Líneas rojas de seguridad y médicas (crisis; no diagnosticar, no cambiar medicación) "
+        "2. Regla de idioma (responder íntegramente en español) "
+        "3. Identidad y carácter (quién es usted, cómo se dirige a la persona, la distancia) "
+        "4. Contexto actual (memoria, percepción, la conversación anterior, información local) "
+        "5. Expresión (cuánto habla, final de frase, relatos, acompañamiento emocional). "
+        "Cuando dos reglas chocan, gana siempre el nivel con el número más bajo; ninguna regla "
+        "de estilo puede relajar una regla de seguridad o de idioma.)"
+    ),
+}
+
+
+def _priority_contract(locale):
+    return _PRIORITY_CONTRACT.get(locale) or _PRIORITY_CONTRACT["zh-TW"]
+
+
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, allow_care_questions=False, locale_profile=None):
+    """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
+    # 2026-07-31：說明書與角色性格都照這通電話的語系拿。
+    # sessionLocale＝這通實際講哪種語言（介面英文但講日文的人要拿日文書）。
+    # 角色性格原本固定讀繁中版，於是英文說明書中間夾著中文個性描述——
+    # 實跑抓到她整段用中文回答英文用戶。
+    _book_locale = (locale_profile or {}).get("sessionLocale") or eng.DEFAULT_PERSONA_LOCALE
+    _chars = eng.characters_for(_book_locale)
+    c = _chars.get(char) or _chars["寧寧"]
+    # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
+    # 一律照層級數字比大小（7/15 Edward 拍板說明書分層）。
+    base = (
+        _priority_contract(_book_locale)
     )
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
-    base += eng.CORE + c.get("persona", "") + eng.RED
+    # 共同底盤依查詢模式組裝（2026-07-30）：開內建搜尋＝線上版查詢規則（不再跟
+    # 「你不會自己上網查」同時出現＝不打架）；其餘模式＝離線版原行為。
+    # 2026-07-31：說明書照這通電話的語系拿（locale_profile 已在上面解出來、是可信來源）
+    # 說明書用「這通對話實際講哪種語言」（sessionLocale）決定，不是介面語言——
+    # 介面英文但講日文的長輩，該拿到的是日文書。
+    _core = eng.core_instruction(
+        "online" if (native_search_enabled() and not demo_mode) else "offline",
+        _book_locale,
+    )
+    base += _core + c.get("persona", "") + eng.red_lines(_book_locale)
     if native_search_enabled() and not demo_mode:
         # 2026-07-29：這通有內建搜尋（她可以自己查）——但共用說明書寫的是「你不會自己上網查」，
         # 兩邊會打架。這段把規矩講清楚，而且補上最重要的一條：**健康問題不准用搜尋回答**。
         # 為什麼：搜尋結果沒人審過（內容農場跟醫學會指引在她眼裡長一樣），
         # 而健康建議一旦講錯，長輩會照著做。7/24 三路調研已拍板「健康走策展題庫、不走現查」。
+        # 2026-07-30 瘦身下半場：原本這段開頭在「覆蓋掉共用說明書那句『你不會自己上網查』」
+        # ——那是補丁蓋補丁；現在共用底盤已依模式二選一（core_instruction），矛盾在源頭解掉，
+        # 這裡只留它真正的貢獻＝健康除外條款（守門測試釘著原句、不得改寫）。
         base += (
-            "（這一通你有一個查資料的能力，可以自己查天氣、新聞時事、店家營業時間這類——"
-            "覆蓋掉上面說明書裡「你不會自己上網查」那句。用的時候不要說「我幫你查一下」再消失，"
-            "查到就自然講出來、像本來就知道一樣；查不到就老實說不知道。"
-            "**但有一條硬規矩：健康、身體、用藥、症狀、保健品這類問題，絕對不准用查到的網路內容回答**——"
-            "那些東西沒有人審過，內容農場跟醫學會的說法在搜尋結果裡長得一樣。"
+            "（查詢的健康除外條款（硬規矩）：健康、身體、用藥、症狀、保健品這類問題，"
+            "**絕對不准用查到的網路內容回答**——那些沒人審過，內容農場跟醫學會的說法在搜尋結果裡長得一樣。"
             "健康的事只能用系統給你的衛教資料回答（下面若有「因人挑選的方案」或「衛教資料庫」那段就是），"
             "沒有那段就老實說「這個我不太確定，你要不要問醫生或藥師」——**寧可說不知道，也不要拿網路上的東西當健康建議**。）"
         )
@@ -866,7 +961,15 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "（你可以「直接幫他把提醒設進 App」：他說要設看診／回診提醒，就呼叫 set_clinic_reminder；"
             "他說要設吃藥／用藥提醒，就呼叫 set_medication_reminder。呼叫前若日期、時間、藥名或科別沒聽清楚，"
             "先用一句話問清楚再設，不要自己亂猜。只有工具回覆 status=ok 才能說設好了；若回覆 error，誠實說沒有設成功並請他重試。"
-            "他要傳話給家庭圈成員時，先用一句話複誦收件人與完整內容，得到確認後才呼叫 send_family_relay；不要自行添加、刪改或猜測內容。"
+            # 傳話要「整理過再確認」而不是原句照送（Edward 2026-07-31）：
+            # 他對你說的是「幫我跟他說他晚餐的藥忘記吃了」——那是講給你聽的第三人稱。
+            # 原封不動送出去，收到的人會看到一句在講別人的話，很怪。
+            # 但整理只能動說法、不能動意思，所以一定要唸回去讓他點頭，這是防走鐘的保險。
+            "他要傳話給家庭圈成員時，先把那句話整理成「直接對收件人說」的口氣："
+            "換成第二人稱、去掉贅字與口頭禪、把時間地點講清楚，讓對方一聽就懂。"
+            "整理只能改說法，「絕對不可以」改變意思——不補他沒說的事、不刪他交代的細節、不猜他的用意、不加自己的評論。"
+            "整理完先用一句話唸回去給他聽並問可不可以（例如「我跟他說『晚餐的藥還沒吃，記得去吃』，這樣可以嗎？」），"
+            "他明確說可以才呼叫 send_family_relay；他說不對或要改，就照他的意思重整理、再唸一次確認，沒得到同意就不要送。"
             "設好之後用一句溫暖口語的話跟他確認你設了什麼"
             "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。"
             "「分類鐵律」：看診提醒只能用在真的要去醫院、診所看醫生；用藥提醒只能用在吃藥。"
@@ -906,70 +1009,39 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "他說要換，就請他自己在 App 的就診摘要裡刪掉那一題——你沒有刪除的工具，不要說你幫他刪了。）"
         )
     locale_profile = locale_profile or localization.voice_session_locale_profile()
-    base += (
-        "\n[即時語音話量上限]\n"
-        "一般閒聊預設只回答一句、約十五到三十個中文字，講完就停。"
-        "只有對方明確要求解釋、比較或提供做法時，才可以回答兩句；一次仍只談一個重點。"
-        "不要把同理、回顧、建議和追問全部塞在同一輪，也不要為了延續聊天自行補第二個話題。"
-        "危急安全導引與必要的工具操作確認不受句數限制，但仍要短而清楚。"
-        "\n[即時語音能量]\n"
-        "預設比對方穩一點、慢一點，像熟朋友自然說話；不要高亢、大聲熱場、連續驚嘆或用過多感嘆號。"
-        "對方很有精神時才可以小幅跟上，開場仍保持沉穩。"
-        # 開場升溫（2026-07-16 Edward：「用戶最剛開始聊話不要太多、太熱情」）——不分熟識度、每通無條件生效
-        "\n[開場升溫]\n"
-        "不管你們多熟，每通電話的開頭都從低溫起步：前三輪每輪最多一句話、先聽多講少，"
-        "像老朋友接電話那種自然鬆弛；不要一接通就高能量歡迎、不要問候＋關心＋提問三連發、"
-        "也不要自顧自鋪話題。對方聊開了，話量和溫度才跟著慢慢升。"
-        "\n[句尾收法]\n"
-        "不要每句話的結尾都反問或拋問題。大多數回合用溫暖的陳述句自然收尾，"
-        "把說話權留給對方、讓他決定要不要接；真的想多了解他，隔幾輪才問一次、一次只問一個。"
-        # 反問再收緊（2026-07-16 Edward：「回話少一點反問」）——給硬規矩，比「大多數」咬得住
-        "硬規矩：不准連續兩輪都用問題收尾；想表達關心時，優先用陳述句把你聽到的說回去"
-        "（像「這聽起來真的不容易」），而不是把球丟回去反問他。"
-        "\n[說故事與在地內容]\n"
-        "他想聽故事時，講一個「完整的小故事」：有開頭、有轉折，結尾一定要用一句話點出這個故事的意思（寓意），"
-        "最好能輕輕連回他的生活；不要講一半沒收尾、也不要像報流水帳。"
-        "故事、時事、文化、生活知識預設以台灣為主：台灣的人物、地方、節慶、俗諺，"
-        "和老一輩熟悉的年代記憶（廟口、眷村、火車、割稻這類），用台灣人的講法講；"
-        "講到外國的內容時，用台灣人熟悉的角度帶進來。**不確定的史實就不要講**——你查不了，"
-        "寧可說「這我記不太清楚了」或反問他「那時候是什麼樣子？」讓他講，也不要編。"
-        "\n[接住情緒與陪伴引導]\n"
-        "聽出他情緒不對時，照三步走、不要跳步。"
-        "第一步「接住」——先用他的話把感受說回去（例如「聽起來這件事讓你很委屈」），讓他知道你真的聽懂了；"
-        "這一步絕對不給建議、不講道理。各種情緒的接法："
-        "孤單→承認一個人的時間特別長，告訴他你在、想聽他說；"
-        "低落→不打氣、不催他振作，陪他把「最重的那塊」說出來；"
-        "焦慮→先放慢你自己的語速，帶他慢呼吸（吸四秒、吐六秒），等他穩一點再談內容；"
-        "崩潰→句子放短、聲音放穩，告訴他「我在，不用急著講」，先陪、不先問；"
-        "難過→讓他慢慢說完，不打斷、不急著安慰，他想哭就陪著；"
-        "生氣→先認他的感受（「難怪你會氣」），不評對錯、不幫任何一方講話（尤其是家人），讓他把氣講完。"
-        "\n第二步「找到問題所在」——等情緒緩一點，用開放的問題一次一個、輕輕往下問："
-        "「什麼時候開始的？」「那天發生了什麼？」「最讓你難受的是哪一部分？」「你覺得是因為什麼？」。"
-        "目標是讓他自己說出原因，不是你替他下結論；把「發生的事」「他怎麼解讀」「他的感受」當三件事分開聽，"
-        "聽到他把某個解讀當成事實時，溫柔問一句「有沒有別的可能？」。問兩三個就好，不要像問卷。"
-        "\n第三步「量身的建議與關懷」——建議必須連著第二步找到的原因，而且用他自己的生活來做："
-        "他講過的家人、老朋友、興趣、住的地方、生活習慣。一次只給一個、小到今天或明天就做得到，"
-        "給完問他「你覺得做得到嗎？」，他說難就一起調整、不硬塞。"
-        "有時候他要的不是辦法、是陪伴——不確定就直接問：「你想要我幫你想想辦法，還是先聽你說就好？」"
-        "\n整段禁止：「出去走走」「看看海」「想開一點」「加油」「不要想太多」「會過去的」"
-        "這類一百個人講一百次的罐頭話單獨當建議；也不要說教、不要比慘（「別人更慘」）、不要還沒聽完就給答案。"
-        "\n界線：低落持續兩週以上、開始影響吃飯睡覺，就溫柔建議找專業的人聊聊（1925 安心專線），"
-        "說明這跟感冒去看醫生一樣自然；醫療紅線與危機處理規則永遠優先於本節。"
-    )
+    # 口語風格（話量上限／聲音溫度／開場升溫／句尾收法／說故事／接住情緒）照語系拿。
+    # 2026-07-31 Edward 拍板「口語風格也要跟著國家調」後搬成檔案：
+    # 日文要敬語距離與相づち、中文要台灣國語的自然口吻——同一份稿子翻譯過去會走味。
+    # 沒授書的語系自動退回中文版（不開天窗）；正本在 engine/persona/voice-style.<語系>.txt。
+    base += eng._persona_text("voice-style", _book_locale)
     # Keep verified language and region policy absolutely last. The long-lived
     # Taiwan persona prompt above remains useful for the current launch, but it
     # must not override a signed non-Taiwan call context.
     locale_context = locale_profile["localeContext"]
+    # 每本人設書都是為「一個國家」寫的（日文書＝日本、英文書＝美國、西班牙文書＝西班牙），
+    # 裡面的急難號碼、醫療體系、法規都是那一國的。但語言不等於國家：
+    # 講西班牙文的人可能在墨西哥（急難是 911、不是 112），講英文的可能在英國（是 999）。
+    # 2026-07-31：這段原本寫死「不是台灣就忽略台灣的內容」——那是只有一本台灣書的年代寫的。
+    # 現在改成「不是這本書的母國，就忽略書裡的號碼，改用下面那句經過核定的當地指引」。
+    _book_home_country = eng.PERSONA_BOOK_HOME_COUNTRY.get(_book_locale, "TW")
+    _verified_region = locale_context["safetyRegion"]
     base += (
         "\n[Verified locale context]\n"
         f"Conversation locale: {locale_profile['sessionLocale']}. "
         f"Country: {locale_context['countryCode']}. "
         f"Timezone: {locale_context['timeZone']}. "
-        f"Safety region: {locale_context['safetyRegion']}. "
+        f"Safety region: {_verified_region}. "
         "Use the verified country only for local examples and services. "
-        "Ignore Taiwan-specific examples, cultural defaults, and hotline "
-        "numbers elsewhere in this prompt when the verified country or safety "
-        "region is not TW."
+        f"The persona guidance above was written for {_book_home_country}. "
+        f"The verified safety region for this call is {_verified_region}. "
+        "**When those two differ, every emergency number, hotline, healthcare "
+        "system detail and legal statement written into the persona guidance "
+        "above is wrong for this person — ignore all of them.** Use only the "
+        "regional safety guidance that follows this block, and if you are not "
+        "certain of a local number, say so and tell them to contact their local "
+        "emergency service rather than naming a number you are unsure of. "
+        "Cultural examples and hotline numbers tied to the guidance's home "
+        "country must not be repeated when the regions differ."
     )
     base += locale_profile["replyLanguageInstruction"]
     base += locale_profile["regionalSafetyInstruction"]
@@ -1013,12 +1085,19 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
     ),
     types.FunctionDeclaration(
         name="send_family_relay",
-        description="使用者明確確認要把一句話轉達給家庭圈中的指定成員後呼叫。必須保留原意，不可自行加油添醋。",
+        description=(
+            "把一句話轉達給家庭圈中的指定成員。**只有在你已經把整理過的內容唸給使用者聽、"
+            "而且他明確說可以之後**才呼叫；他還沒點頭、或說要改，就不要呼叫。"
+            "整理只能改說法不能改意思：不補他沒說的、不刪他交代的、不加自己的評論。"
+        ),
         parameters=types.Schema(
             type=types.Type.OBJECT,
             properties={
                 "recipientName": types.Schema(type=types.Type.STRING, description="家庭圈收件人的名稱或稱呼，例如「小宇」"),
-                "message": types.Schema(type=types.Type.STRING, description="已向使用者複誦並確認的完整傳話內容，最多 240 字"),
+                "message": types.Schema(type=types.Type.STRING, description=(
+                    "整理成「直接對收件人說」的口氣、並且已經唸給使用者聽過、他也同意的內容，最多 240 字。"
+                    "例：他說「跟他說他晚餐的藥忘記吃了」→「晚餐的藥還沒吃，記得去吃喔」。"
+                )),
             },
             required=["recipientName", "message"],
         ),
@@ -1398,7 +1477,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
 
 
-async def search_current_information(search_client, query, location=None):
+async def search_current_information(search_client, query, location=None, locale="zh-TW"):
     """Run one bounded, grounded lookup outside the Live session.
 
     2026-07-16 事故夜實測：gemini-2.5-flash 晚間尖峰整批回 503（客滿）＝「我幫你查一下」
@@ -1436,7 +1515,7 @@ async def search_current_information(search_client, query, location=None):
             response = await asyncio.wait_for(
                 search_client.aio.models.generate_content(
                     model=model,
-                    contents=live_lookup.build_request(clean_query, location),
+                    contents=live_lookup.build_request(clean_query, location, locale),
                     config=types.GenerateContentConfig(
                         temperature=0.2,
                         tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -1529,10 +1608,11 @@ LOOKUP_WAIT_TEXT = live_lookup.WAIT_PHRASES[0]  # 舊常數保留相容：預設
 _LOOKUP_WAIT_PCM = {}
 
 
-def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT):
+def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT, locale="zh-TW"):
     """查詢超過幾秒還沒回來時的安撫短句（2026-07-25 去罐頭化：句庫輪替，
-    快取鍵改成 (char, text)——同一句只要生成過一次，之後都是命中快取。"""
-    cache_key = (str(char or ""), text)
+    2026-07-30 快取鍵加入 locale，避免同字串跨語系誤用音訊。"""
+    normalized_locale = localization.normalize_locale(locale)
+    cache_key = (str(char or ""), normalized_locale, text)
     cached = _LOOKUP_WAIT_PCM.get(cache_key)
     if cached is not None:
         return cached
@@ -1540,11 +1620,11 @@ def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT):
         cached = _LOOKUP_WAIT_PCM.get(cache_key)
         if cached is not None:
             return cached
-        same_voice = _gemini_tts_pcm(text, char)
+        same_voice = _gemini_tts_pcm(text, char, normalized_locale)
         if same_voice:
             _LOOKUP_WAIT_PCM[cache_key] = same_voice
             return same_voice
-        encoded = server.tts_b64(text, char, "zh-TW")
+        encoded = server.tts_b64(text, char, normalized_locale)
         if not encoded:
             _LOOKUP_WAIT_PCM[cache_key] = b""
             return b""
@@ -1564,12 +1644,12 @@ def _char_voice_name(char):
         return "Leda"
 
 
-def _gemini_tts_pcm(text, char):
+def _gemini_tts_pcm(text, char, locale="zh-TW"):
     """用她本人的聲線唸一句話（同 voice_name 的官方配音通道 · 7/16 實測 24kHz 原生同規格）。
     失敗回空 bytes、呼叫端自動退回舊配音——聲線一致是體驗、不是可用性前提。
-    2026-07-25：補上 language_code（比照 server.tts_b64 與主線 Live config 的 cmn-TW）——
-    這裡原本沒設，退回通用華語腔（其他註解提過的「馬來腔」／自己念成jì-jǐ），跟她在
-    電話裡本人的台灣腔對不上，長輩聽得出來過場句換了一個腔調。"""
+    2026-07-25：補上 language_code，避免繁中退回通用華語腔。
+    2026-07-30：language_code 跟當輪 responseLocale 走，讓英文、日文、西文過場音
+    不會拿 cmn-TW 合成。"""
     try:
         _, cli = _pick_client()
         r = cli.models.generate_content(
@@ -1578,7 +1658,7 @@ def _gemini_tts_pcm(text, char):
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
-                    language_code=localization.speech_language_code("zh-TW"),
+                    language_code=localization.speech_language_code(locale),
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=_char_voice_name(char)))),
             ),
@@ -1596,11 +1676,12 @@ def _gemini_tts_pcm(text, char):
         return b""
 
 
-def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
-    """Generate once per (companion, phrase) so a lookup can acknowledge before
+def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT, locale="zh-TW"):
+    """Generate once per (companion, locale, phrase) so a lookup can acknowledge before
     network I/O. 2026-07-25：句庫去罐頭化後同一個角色會有好幾句過場，快取鍵改成
-    (char, text)——只有第一次講某一句才付真的 TTS 成本，之後同一句都是快取命中。"""
-    cache_key = (str(char or ""), text)
+    (char, locale, text)——只有第一次講某語系的某一句才付真的 TTS 成本。"""
+    normalized_locale = localization.normalize_locale(locale)
+    cache_key = (str(char or ""), normalized_locale, text)
     cached = _LOOKUP_CUE_PCM.get(cache_key)
     if cached is not None:
         return cached
@@ -1608,11 +1689,11 @@ def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
         cached = _LOOKUP_CUE_PCM.get(cache_key)
         if cached is not None:
             return cached
-        same_voice = _gemini_tts_pcm(text, char)
+        same_voice = _gemini_tts_pcm(text, char, normalized_locale)
         if same_voice:
             _LOOKUP_CUE_PCM[cache_key] = same_voice
             return same_voice
-        encoded = server.tts_b64(text, char, "zh-TW")
+        encoded = server.tts_b64(text, char, normalized_locale)
         if not encoded:
             _LOOKUP_CUE_PCM[cache_key] = b""
             return b""
@@ -1624,15 +1705,16 @@ def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
         return pcm
 
 
-def _warm_lookup_cue_pool(char):
+def _warm_lookup_cue_pool(char, locale="zh-TW"):
     """在 Live handshake 空檔把這個角色所有過場／安撫句都先快取好，之後不管抽到哪一句
     都不用臨時付 TTS 成本；同一個角色第二通之後這裡全是快取命中，幾乎零成本
     （沿用原本「handshake 空檔先把固定成本付掉」的設計，只是從一句擴成整個句庫）。"""
-    for pool in live_lookup.CUE_PHRASES.values():
+    normalized_locale = localization.normalize_locale(locale)
+    for pool in live_lookup.CUE_PHRASES_BY_LOCALE[normalized_locale].values():
         for phrase in pool:
-            _lookup_cue_pcm(char, phrase)
-    for phrase in live_lookup.WAIT_PHRASES:
-        _lookup_wait_pcm(char, phrase)
+            _lookup_cue_pcm(char, phrase, normalized_locale)
+    for phrase in live_lookup.WAIT_PHRASES_BY_LOCALE[normalized_locale]:
+        _lookup_wait_pcm(char, phrase, normalized_locale)
 
 
 def _new_call_state():
@@ -1640,6 +1722,11 @@ def _new_call_state():
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
     return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False,
+          # last_voice_at＝最後一次「真的聽到人在講話」的時刻（音量過門檻的那一格）。
+          # 2026-08-01 新增：first_audio 原本從 last_in（每一格麥克風封包都會刷新，
+          # 包含全靜音）起算，量到的永遠是 7-38 毫秒＝等於沒在量。反應快慢要從
+          # 「他講完」到「她出聲」，所以改用這個。
+          "last_voice_at": 0.0,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -1931,19 +2018,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     async def _mark_first_audio(source):
         if not st.get("await_first") or st.get("last_in") is None:
             return
-        latency_ms = round((time.monotonic() - st["last_in"]) * 1000)
+        # 2026-08-01 量測修正：起點改成「最後一次真的聽到人聲」（算法與理由見 reply_latency_ms）。
+        latency_ms, basis = reply_latency_ms(
+            time.monotonic(), st.get("last_voice_at") or 0.0, st["last_in"])
         st["await_first"] = False
-        _diag(cid, "node.first_audio", latency_ms=latency_ms, source=source)
+        _diag(cid, "node.first_audio", latency_ms=latency_ms, source=source, basis=basis)
         try:
             await ws.send(json.dumps({"type": "diag", "firstAudioMs": latency_ms}))
         except Exception:
             pass
 
-    async def _send_lookup_cue(category):
+    async def _send_lookup_cue(category, locale):
         cue_started = time.monotonic()
         # 貼題輪替（2026-07-25 去罐頭化）：用這通已經查過幾次當index，
         # 同一類問題問第二次就換下一句，不會整通電話都聽到同一句。
-        phrase = live_lookup.cue_phrase(category, st["lookup_count"])
+        phrase = live_lookup.cue_phrase(
+            category, st["lookup_count"], locale=locale,
+        )
         await ws.send(json.dumps({
             "type": "caption", "who": "nening", "text": phrase,
         }, ensure_ascii=False))
@@ -1956,7 +2047,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # _lookup_cue_pcm 自己有鎖＋快取，暖機已經做完就秒回，還沒做完就它自己單獨
             # 補一句（跟原本沒有暖機時的成本一樣，不會比修改前更差）。
             pcm = await asyncio.get_running_loop().run_in_executor(
-                _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char, phrase)
+                _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char, phrase, locale)
         except Exception as exc:
             pcm = b""
             _diag(cid, "node.lookup_cue_failed", err=f"{type(exc).__name__}:{str(exc)[:60]}")
@@ -1974,7 +2065,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             await _forward_audio(LOOKUP_CUE_TAIL_PCM)
         _diag(
             cid, "node.lookup_cue_sent", audio=bool(pcm), out_bytes=len(pcm),
-            phrase=phrase, category=category,
+            phrase=phrase, category=category, locale=locale,
             latency_ms=round((time.monotonic() - cue_started) * 1000),
         )
         return bool(pcm)
@@ -1982,13 +2073,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     async def _run_live_lookup(fargs, cue_already_spoken=False):
         query = live_lookup.normalize_query((fargs or {}).get("query"))
         lookup_location = str((fargs or {}).get("location") or location or "").strip()[:80]
-        category = live_lookup.classify_query_topic(query)  # 貼題過場話用：天氣/新聞/店家景點/其他
+        active_profile = voice_locale_session.current_profile()
+        response_locale = active_profile["responseLocale"]
+        category = live_lookup.classify_query_topic(
+            query, locale=response_locale,
+        )  # 貼題過場話用：天氣/新聞/店家景點/其他
         st["lookup_count"] += 1
         st["lookup_requested_at"] = time.monotonic()
         asr_started = st.get("user_turn_started_at")
         _diag(
             cid, "node.lookup_requested", query_chars=len(query),
-            has_location=bool(lookup_location),
+            has_location=bool(lookup_location), locale=response_locale,
             asr_to_lookup_ms=(round((st["lookup_requested_at"] - asr_started) * 1000)
                               if asr_started else 0),
         )
@@ -2007,8 +2102,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             _diag(cid, "node.lookup_suppressed", cooldown_s=round(st["lookup_block_until"] - _lk_now))
             return {
                 "status": "error", "error": "lookup_unavailable",
-                "instruction": "查詢服務暫時沒有回應。請直接用一句話跟用戶說現在查不到、"
-                               "建議晚點再問，然後繼續原本的聊天。不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "unavailable", response_locale,
+                ),
             }
 
         if cue_already_spoken:
@@ -2020,7 +2116,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             _diag(cid, "node.lookup_cue_skipped", reason="recently_played")
         else:
             st["lookup_cue_at"] = _lk_now
-            cue_audio = await _send_lookup_cue(category)
+            cue_audio = await _send_lookup_cue(category, response_locale)
         network_started = time.monotonic()
         _diag(cid, "node.lookup_started", cue_audio=cue_audio, category=category)
 
@@ -2028,10 +2124,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # 查太久（備胎鏈換手時）不讓長輩對著沉默等：5.5 秒還沒回來就先安撫一句
             # （2026-07-25 去罐頭化：句庫輪替，不再固定唸同一句）
             await asyncio.sleep(5.5)
-            wait_text = live_lookup.wait_phrase(st["lookup_count"])
+            wait_text = live_lookup.wait_phrase(
+                st["lookup_count"], locale=response_locale,
+            )
             try:
                 pcm = await asyncio.get_running_loop().run_in_executor(
-                    _VOICE_CUE_EXECUTOR, _lookup_wait_pcm, char, wait_text)
+                    _VOICE_CUE_EXECUTOR, _lookup_wait_pcm, char, wait_text,
+                    response_locale)
             except Exception:
                 pcm = b""
             if not pcm:
@@ -2052,7 +2151,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         st["bg_tasks"].append(wait_cue_task)
         try:
             result = await asyncio.wait_for(
-                search_current_information(cli, query, lookup_location),
+                search_current_information(
+                    cli, query, lookup_location, locale=response_locale,
+                ),
                 timeout=float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "13")),
             )
         except asyncio.TimeoutError:
@@ -2068,8 +2169,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 st["lookup_block_until"] = time.monotonic() + 120
             return {
                 "status": "error", "error": "lookup_timeout",
-                "instruction": "查詢沒有回應。請用一句話跟用戶說現在查不到、之後再幫忙看，"
-                               "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "timeout", response_locale,
+                ),
             }
         except Exception as exc:
             st["lookup_failures"] += 1
@@ -2084,8 +2186,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 st["lookup_block_until"] = time.monotonic() + 120
             return {
                 "status": "error", "error": "lookup_failed",
-                "instruction": "查詢出了點狀況。請用一句話跟用戶說現在查不到、之後再幫忙看，"
-                               "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "failed", response_locale,
+                ),
             }
         finally:
             # 查詢一有結果（成功或失敗）就取消「還在找」安撫句——別讓它插在答案中間
@@ -2189,7 +2292,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 n = len(message)
                 st["in"] += n
                 st["last_in"] = time.monotonic()
-                st["await_first"] = True
+                # 2026-08-01：原本這裡每收一格麥克風封包就重新舉手要量 first_audio，
+                # 等於一輪內反覆量、而且起點永遠是「剛剛那一格」。改成只在真的聽到
+                # 人聲時舉手（見下方門檻判斷），一輪一次、起點是他講的最後一聲。
                 if st.get("greet_requested") and not st.get("opening_window_complete") and not st.get("opening_voice_detected"):
                     try:
                         samples = memoryview(message).cast("h")
@@ -2215,6 +2320,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
                 if _eg_window and _eg_rms >= _eg_hot:
                     st["last_hot_voice_at"] = _eg_now   # 窗內聽到真的夠大聲＝可信的人聲（插話裁判的依據）
+                if _eg_rms >= _eg_hot:
+                    # 2026-08-01 反應時間量測的起點：這一格夠大聲＝他正在講話。
+                    # 他講整句的期間這裡會一直更新，所以停下來的那一刻就是「他講完」。
+                    # （她講話中時 _eg_hot 是熱門檻、殘響不會誤算成人聲；她沒講話時就是原門檻。）
+                    st["last_voice_at"] = _eg_now
+                    st["await_first"] = True
                 if _eg_window and guard_enabled() and _eg_rms < _eg_hot:
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
@@ -2319,6 +2430,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             while True:
                 turn_out = 0
                 turn_max_gap_ms = 0.0   # 這一輪送聲音時，相鄰兩塊之間最久的一次空檔（抖動指標）
+                turn_last_out = None    # 這一輪送出的上一塊聲音是幾點（2026-08-01：抖動只跟同一輪比）
                 got = False
                 async for msg in session.receive():
                     got = True
@@ -2412,11 +2524,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         # 會卡其中某個字」，但體感沒有數字就查不動——這裡記下相鄰兩塊聲音之間
                         # 最久的一次空檔，收在 turn_done 一起報。手順的時候這個值很小；
                         # 一旦有東西在跟它搶（7/28 那包 76 秒的暖機就是），這裡會立刻看得出來。
+                        # 2026-08-01 量測修正：空檔只跟「這一輪的上一塊」比（算法與理由見
+                        # note_turn_gap）。st["last_out"] 仍要更新——回音濾網要用它。
                         _now_out = time.monotonic()
-                        if st.get("last_out") is not None:
-                            _gap = (_now_out - st["last_out"]) * 1000
-                            if _gap > turn_max_gap_ms:
-                                turn_max_gap_ms = _gap
+                        turn_max_gap_ms, _ = note_turn_gap(_now_out, turn_last_out, turn_max_gap_ms)
+                        turn_last_out = _now_out
                         st["last_out"] = _now_out
                         # 回音窗 v2（2026-07-29）：鏡射 App 播放節奏、推進「手機大概播到哪」。
                         # Gemini 送資料比講話快，只看送出時間會讓句子後半的回音落在窗外＝自問自答。
@@ -2500,6 +2612,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
                                 await _send_turn_tail()
                             turn_out = 0
+                            # 2026-08-01：這兩個原本只在 while 外層歸零，同一條連線第二輪
+                            # 以後會沿用上一輪的最大值＝越報越大、且永遠是舊帳。
+                            turn_max_gap_ms = 0.0
+                            turn_last_out = None
                             st["await_first"] = True
                             if st.get("language_block"):
                                 source = st.get("language_block_source") or "unknown"
@@ -2800,7 +2916,8 @@ async def handle(ws):
         # 就把 15 句配音塞進只有 2 個工人的小隊列，一顆 CPU 上跟送聲音的主線搶，一搶就是好幾分鐘。
         if live_lookup_enabled():
             lookup_cue_future = asyncio.get_running_loop().run_in_executor(
-                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char)
+                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char,
+                st["voice_locale_profile"]["sessionLocale"])
             st["lookup_cue_task"] = lookup_cue_future
         asr_context_terms = [char, name, user, location, *(topics or [])]
         # 通話延長（2026-07-25）：這通電話對 App／使用者永遠是「同一通」，但底層可能換過

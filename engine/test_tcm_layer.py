@@ -25,6 +25,23 @@ def real(birth_year):
     return {"audience": hs.audience_from_birth_year(birth_year)}
 
 
+
+
+def _chat_engine_and_books():
+    """2026-07-31 人設書分國：⑥-TCM 那些規則從程式碼搬進 engine/persona/core.zh-TW.txt。
+
+    這支守的東西沒變（規則被刪就亮紅燈），只是現在要把程式碼與繁中書合起來看。
+    ⚠ 只看繁中版：中醫這一節是台灣專屬，其他國家的書用當地的傳統醫學（日本＝漢方）。
+    """
+    parts = [open(os.path.join(HERE, "chat_engine.py"), encoding="utf-8").read()]
+    for kind in ("core", "red", "lookup-offline", "lookup-online"):
+        path = os.path.join(HERE, "persona", kind + ".zh-TW.txt")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                parts.append(handle.read())
+    return chr(10).join(parts)
+
+
 class UnderstandingTest(unittest.TestCase):
     """聽得懂：長輩用體質語言描述身體時，要接得住、不裝沒聽到、也不糾正他。"""
 
@@ -38,7 +55,7 @@ class UnderstandingTest(unittest.TestCase):
         self.assertEqual(first["id"], "tcm-listen")
 
     def test_the_prompt_tells_her_to_understand_the_language(self):
-        src = open(os.path.join(HERE, "chat_engine.py"), encoding="utf-8").read()
+        src = _chat_engine_and_books()
         self.assertIn("⑥-TCM", src)
         self.assertIn("不要因為那是中醫用語就裝作沒聽到", src)
 
@@ -73,11 +90,11 @@ class RedLineTest(unittest.TestCase):
         """為了吃中藥自己停降壓藥／抗凝血藥——這是會出人命的一條。"""
         ref = hs.pick(TOPIC, "我想吃中藥", real(1950), 20)["referral"]
         self.assertIn("不要為了吃中藥自己把西藥停掉", ref["say"])
-        src = open(os.path.join(HERE, "chat_engine.py"), encoding="utf-8").read()
+        src = _chat_engine_and_books()
         self.assertIn("絕不建議他停掉西藥改吃中藥", src)
 
     def test_no_brand_or_herb_shop_recommendation(self):
-        src = open(os.path.join(HERE, "chat_engine.py"), encoding="utf-8").read()
+        src = _chat_engine_and_books()
         self.assertIn("不推薦特定中藥行、藥材品牌或坊間偏方", src)
 
 
@@ -122,7 +139,7 @@ class ProportionTest(unittest.TestCase):
         self.assertEqual(health_kb.match_topics("肩頸很痠想按摩")[:1], ["TW-EDU-22"])
 
     def test_the_prompt_states_the_proportion_rule(self):
-        src = open(os.path.join(HERE, "chat_engine.py"), encoding="utf-8").read()
+        src = _chat_engine_and_books()
         self.assertIn("他沒提就別主動把話帶去中醫", src)
 
 
@@ -134,8 +151,19 @@ class AskedForIsGeneralTest(unittest.TestCase):
         self.assertEqual(first["id"], "knee-glucosamine")
 
     def test_the_bonus_lives_in_the_scorer_not_just_the_demotion_lift(self):
-        src = open(os.path.join(HERE, "health_selector.py"), encoding="utf-8").read()
-        self.assertIn('if any(w and w in text for w in (sol.get("askedFor") or [])):', src)
+        """點名加分要真的加在分數上，不能只是「把陪襯層放行」。
+
+        （2026-07-31 量法改過：原本是去 health_selector.py 裡比對一行程式碼長什麼樣，
+        改一行寫法就紅——這種守門守的是「這一版怎麼寫」、不是「要守什麼」，
+        7 月已經被咬過五次。改成看行為：一張**沒有被降級**的卡，他點名之後
+        要真的往前排；如果加分只長在解除降級那邊，這條就會紅。）
+        """
+        sol = next(s for s in hs.TOPICS["TW-EDU-02"]["solutions"] if s["id"] == "knee-glucosamine")
+        self.assertTrue(sol.get("secondLine"), "這題的前提是它本來是陪襯層")
+        flags = hs._profile_flags(real(1950))
+        plain = hs._score(sol, flags, False, "膝蓋痛怎麼辦")
+        named = hs._score(sol, flags, False, "葡萄糖胺有效嗎")
+        self.assertGreater(named, plain + 3.0, "點名沒有在分數上加到東西")
 
     def test_safety_still_wins_over_being_asked_by_name(self):
         """他點名問，也翻不了禁忌——安全永遠在最上面。"""

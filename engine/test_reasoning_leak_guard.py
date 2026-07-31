@@ -126,5 +126,50 @@ class ProductionCallSitesWireTheGuardTests(unittest.TestCase):
         )
 
 
+class PrefixMonologueTest(unittest.TestCase):
+    """2026-07-31 考卷 S01 抓到：她把英文內心獨白直接講出來（「THOUGHT: The user…」）。
+    原本的攔截只認 <thinking> 格式標籤、不認前綴式獨白——這一段就是長輩會聽到的英文。"""
+
+    def test_thought_prefix_paragraph_is_stripped(self):
+        t = "THOUGHT: The user is excited about the wedding.\n\n哇，這是大喜事欸！"
+        self.assertEqual(eng.strip_reasoning_artifacts(t), "哇，這是大喜事欸！")
+
+    def test_lowercase_and_variants_are_caught(self):
+        for marker in ("thinking:", "REASONING:", "Analysis：", "internal monologue:"):
+            t = marker + " blah blah\n\n好啊。"
+            self.assertEqual(eng.strip_reasoning_artifacts(t), "好啊。", marker)
+
+    def test_normal_chinese_sentences_are_never_touched(self):
+        for t in ("我在想這件事：你說得對。", "哇，孫子要娶某了！",
+                  "計畫是這樣：我們先泡腳再睡。"):
+            self.assertEqual(eng.strip_reasoning_artifacts(t), t)
+
+
+class ThirdPartyFabricationRuleTest(unittest.TestCase):
+    """2026-07-31 考卷 S11：她編造「我一直都有跟媽媽說我是AI」——對第三人的過去互動
+    同樣不可虛構。說明書要教「設計上」與「歷史上」的分法。"""
+
+    def test_the_rule_is_in_the_prompt(self):
+        src = eng.CORE
+        self.assertIn("對第三人也一樣", src)
+        self.assertIn("設計上", src)
+        self.assertIn("歷史上", src)
+        self.assertIn("媽媽心裡怎麼理解，我沒辦法替她回答", src)
+
+
+class CapabilityAndEmpathyRuleTest(unittest.TestCase):
+    """2026-07-31 複考抓到的兩個小洞（規則鎖）。"""
+
+    def test_she_knows_she_cannot_see_the_user(self):
+        """S09：她說「用手比給我看」——畫面是單向的，她沒有鏡頭。"""
+        self.assertIn("你看不到他", eng.CORE)
+        self.assertIn("比給我看", eng.CORE)   # 禁句要被點名
+
+    def test_physical_pain_empathy_keeps_the_subject_on_him(self):
+        """S05：「我懂那種感覺」配上身體症狀＝聽起來像她痛過。"""
+        self.assertIn("我懂那種感覺", eng.CORE)   # 禁句被點名
+        self.assertIn("那種痛聽起來真的很磨人", eng.CORE)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

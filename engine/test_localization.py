@@ -452,8 +452,13 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(profile["captionLocale"], "en")
         self.assertEqual(profile["speechLanguageCode"], "en-US")
         self.assertTrue(profile["openingMessage"].startswith("Hi,"))
-        self.assertNotIn("119", profile["regionalSafetyInstruction"])
+        # 2026-07-31 補上日本安全區之後改寫：這條守的本意是「台灣專屬的號碼不可以
+        # 外洩到日本的通話」，不是「不准出現 119」——日本的消防救急剛好也是 119。
+        # 所以改成守台灣專屬的 1925／1995，並要求日本的指引真的是日本的。
         self.assertNotIn("1925", profile["regionalSafetyInstruction"])
+        self.assertNotIn("1995", profile["regionalSafetyInstruction"])
+        self.assertNotIn("Taiwan", profile["regionalSafetyInstruction"])
+        self.assertIn("Japan", profile["regionalSafetyInstruction"])
         self.assertEqual(profile["localeContext"]["countryCode"], "JP")
         self.assertEqual(profile["localeContext"]["safetyRegion"], "JP")
 
@@ -559,7 +564,9 @@ class LocalizationTests(unittest.TestCase):
     def test_regional_safety_policy_sources_are_explicit_and_official(self):
         self.assertEqual(
             set(localization.REGIONAL_SAFETY_POLICY_SOURCES),
-            {"ES", "MX"},
+            # 2026-07-31 四語上架籌備：日本與美國安全區補上（實測抓到英文書寫了 911、
+            # 但通話的急難句沒設 US，美國長輩會只聽到「聯絡當地緊急服務」）
+            {"ES", "MX", "JP", "US"},
         )
         self.assertIn(
             "interior.gob.es",
