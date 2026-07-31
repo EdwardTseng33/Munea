@@ -161,6 +161,9 @@
 			developmentRegion = "zh-Hant";
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				"en",
+				"es",
+				"ja",
 				"zh-Hant",
 				Base,
 			);
@@ -218,6 +221,9 @@
 		A1AA0001B2BB0001C3CC0040 /* InfoPlist.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
+				A1AA0001B2BB0001C3CC0043 /* en */,
+				A1AA0001B2BB0001C3CC0046 /* es */,
+				A1AA0001B2BB0001C3CC0044 /* ja */,
 				A1AA0001B2BB0001C3CC0042 /* zh-Hant */,
 			);
 			name = InfoPlist.strings;

@@ -26,6 +26,21 @@
     "en": {
       "contentVariant": "international-English",
       "speechVariantPolicy": "country-dependent",
+      "releaseCandidateSignoff": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-08-01",
+        "basis": "把語系放進 App 包裡，讓 8/2 的實機四語走查做得起來——這一步只准打包與測試，不等於可以對外發佈。",
+        "evidence": "文案 1,529 鍵四語齊全；各國安全題組每國三題 9/9 全過、紅線零違規（7/31 兩個 session 各自跑出同樣結果）。",
+        "stillPending": [
+          "nativeLanguageReview（Edward 7/31 拍板免做——沒有母語者看過，這是他知情後承擔的風險）",
+          "visualQA（8/2 實機逐語系走查才生得出證據）",
+          "voiceE2E（8/2 實機各語言各打一通電話）",
+          "regionalSafetyAndLegal（regional-safety-policy.json 標著 repository-draft-only 且禁止自動放行，要 Edward 另外拍板）",
+          "appStoreMetadata（商店文案已填進 App Store Connect，還缺唯讀對帳落檔）",
+          "inAppPurchaseLocalization（8 個商品的各語言說明還沒上傳到 App Store Connect）",
+          "marketAvailability（美日已開放；西班牙待歐盟貿易商狀態審查通過）"
+        ]
+      },
       "catalogCoverage": "approved",
       "nativeLanguageReview": "pending",
       "visualQA": "pending",
@@ -38,6 +53,21 @@
     "ja": {
       "contentVariant": "ja-JP",
       "speechVariantPolicy": "ja-JP",
+      "releaseCandidateSignoff": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-08-01",
+        "basis": "把語系放進 App 包裡，讓 8/2 的實機四語走查做得起來——這一步只准打包與測試，不等於可以對外發佈。",
+        "evidence": "文案 1,529 鍵四語齊全；日本安全題組三題全過（胸が苦しい卻「迷惑をかけたくない」、漢方で血圧の薬をやめたい、覚えのない「前に言ってくれたよね」）。",
+        "stillPending": [
+          "nativeLanguageReview（Edward 7/31 拍板免做——日文沒有母語者看過，這是他知情後承擔的風險）",
+          "visualQA（8/2 實機逐語系走查才生得出證據）",
+          "voiceE2E（8/2 實機用日文打一通電話）",
+          "regionalSafetyAndLegal（regional-safety-policy.json 標著 repository-draft-only 且禁止自動放行，要 Edward 另外拍板）",
+          "appStoreMetadata（商店文案已填進 App Store Connect，還缺唯讀對帳落檔）",
+          "inAppPurchaseLocalization（8 個商品的日文說明還沒上傳到 App Store Connect）",
+          "marketAvailability（日本已開放供應中）"
+        ]
+      },
       "catalogCoverage": "approved",
       "nativeLanguageReview": "pending",
       "visualQA": "pending",
@@ -50,6 +80,21 @@
     "es": {
       "contentVariant": "neutral-international-Spanish",
       "speechVariantPolicy": "country-dependent",
+      "releaseCandidateSignoff": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-08-01",
+        "basis": "把語系放進 App 包裡，讓 8/2 的實機四語走查做得起來——這一步只准打包與測試，不等於可以對外發佈。",
+        "evidence": "文案 1,529 鍵四語齊全；西班牙安全題組三題全過（胸の痛みで「迷惑をかけたくない」相當題、想用草藥換降血壓藥、預設用 usted 的稱呼與登錄）。",
+        "stillPending": [
+          "nativeLanguageReview（Edward 7/31 拍板免做——西文沒有母語者看過，這是他知情後承擔的風險）",
+          "visualQA（8/2 實機逐語系走查才生得出證據）",
+          "voiceE2E（8/2 實機用西班牙文打一通電話）",
+          "regionalSafetyAndLegal（regional-safety-policy.json 標著 repository-draft-only 且禁止自動放行，要 Edward 另外拍板）",
+          "appStoreMetadata（商店文案已填進 App Store Connect，還缺唯讀對帳落檔）",
+          "inAppPurchaseLocalization（8 個商品的西文說明還沒上傳到 App Store Connect）",
+          "marketAvailability（西班牙卡在歐盟貿易商狀態，7/31 已送件、審查中；另本次只做西班牙不做墨西哥）"
+        ]
+      },
       "catalogCoverage": "approved",
       "nativeLanguageReview": "pending",
       "visualQA": "pending",

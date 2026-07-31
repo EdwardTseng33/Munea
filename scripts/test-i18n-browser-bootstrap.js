@@ -128,18 +128,38 @@ function createBrowser(options = {}) {
   return { document, events, html, observations, signIn, tab, window };
 }
 
+// 開了哪些語系跟著開關表走，別在測試裡寫死清單——寫死的話語系一開這裡就紅，
+// 而紅的原因跟「程式對不對」無關，只是清單過期。（2026-08-01 三語開通當晚踩到）
+const enabled = new Set(
+  manifest.locales.filter((entry) => entry.runtimeEnabled).map((entry) => entry.locale),
+);
+// 每個語系各挑一句，用來驗「畫面真的換成那個語言」
+const HOME_TAB = { 'zh-TW': '首頁', ja: 'ホーム', en: 'Home', es: 'Inicio' };
+const HTML_LANG = { 'zh-TW': 'zh-Hant-TW', ja: 'ja', en: 'en', es: 'es' };
+
 (async () => {
+  // 這條規矩不管開幾種語系都要成立：**目錄裡沒有的語言一律退回繁中**。
+  // 用德文來守，因為德文永遠不在四語裡，不會因為開關變動而失效。
+  const unsupported = createBrowser({ languages: ['de-DE'] });
+  await unsupported.window.MuneaI18n.ready;
+  assert.equal(
+    unsupported.window.MuneaI18n.current(),
+    'zh-TW',
+    '沒收錄的裝置語言必須退回繁中，不能繞過關卡',
+  );
+
+  // 裝置語言是 ja-JP／en-US：日文開著就該落在日文，沒開就退回繁中
   const production = createBrowser();
   const productionReady = await production.window.MuneaI18n.ready;
-  assert.deepEqual({ ...productionReady }, { locale: 'zh-TW', fallback: false });
+  const shown = enabled.has('ja') ? 'ja' : 'zh-TW';
+  assert.deepEqual({ ...productionReady }, { locale: shown, fallback: false });
   assert.equal(
     production.window.MuneaI18n.current(),
-    'zh-TW',
-    'A device language must not bypass a disabled locale release gate',
+    shown,
+    `裝置語言 ja-JP 在日文${enabled.has('ja') ? '已開' : '未開'}時應落在 ${shown}`,
   );
-  assert.equal(production.tab.textContent, '首頁');
-  assert.equal(production.signIn.textContent, '登入');
-  assert.equal(production.html.getAttribute('lang'), 'zh-Hant-TW');
+  assert.equal(production.tab.textContent, HOME_TAB[shown]);
+  assert.equal(production.html.getAttribute('lang'), HTML_LANG[shown]);
   assert.equal(production.observations.length, 2, 'Dynamic and declarative App content must be observed');
   const dynamicObservation = production.observations.find(
     ({ observerOptions }) => Array.isArray(observerOptions.attributeFilter),
@@ -149,8 +169,22 @@ function createBrowser(options = {}) {
   dynamicObservation.observer.callback([
     { type: 'childList', addedNodes: [dynamic] },
   ]);
-  assert.equal(dynamic.textContent, '通知中心');
-  assert.equal(production.window.MuneaI18n.setLocale('es'), 'zh-TW');
+  assert.equal(
+    dynamic.textContent,
+    catalogs[`${shown}.json`]['notification.centerTitle'],
+    '後來才長出來的畫面元素也要跟著當前語言',
+  );
+  // setLocale 刻意不接受呼叫端指定語言（見 i18n.js 的註解）：
+  // 介面語言只跟著 iPhone 的「設定 → Munea → 語言」走，App 內部沒有語言切換鈕。
+  // 所以不管傳什麼進去，都必須回到「裝置決定的那個語言」——這是防止程式碼某處
+  // 偷偷把使用者切到別的語言。
+  for (const attempt of ['es', 'de', 'zh-TW']) {
+    assert.equal(
+      production.window.MuneaI18n.setLocale(attempt),
+      shown,
+      `setLocale('${attempt}') 必須被忽略、維持裝置決定的 ${shown}——語言只由系統設定決定`,
+    );
+  }
 
   const preview = createBrowser({
     devConfig: { enabled: true, i18nPreviewLocale: 'ja-JP' },
@@ -173,10 +207,16 @@ function createBrowser(options = {}) {
   assert(localeReady, 'Browser bootstrap must announce locale readiness');
   assert.equal(localeReady.detail.preview, true);
 
+  // 連不到網路、文案表載不下來時，必須退回內建的繁中，不能整個畫面空白。
+  // 這條跟開幾種語系無關——載不到就是載不到，一律走內建那份。
   const fallback = createBrowser({ failFetch: true, languages: ['es-MX'] });
   const fallbackReady = await fallback.window.MuneaI18n.ready;
-  assert.equal(fallbackReady.fallback, true);
-  assert.equal(fallback.window.MuneaI18n.current(), 'zh-TW');
+  assert.equal(fallbackReady.fallback, true, '載不到文案表時必須標成 fallback');
+  assert.equal(
+    fallback.window.MuneaI18n.current(),
+    'zh-TW',
+    '載不到文案表就只剩內建繁中，不論裝置語言是什麼',
+  );
   assert.equal(fallback.tab.textContent, '首頁');
 
   console.log('PASS: browser i18n bootstrap follows device language and release gates');

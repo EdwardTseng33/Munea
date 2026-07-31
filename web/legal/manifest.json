@@ -7,6 +7,12 @@
       "htmlLang": "zh-Hant",
       "contentVariant": "zh-Hant-TW",
       "legalReview": "approved",
+      "approvalBasis": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-07-22",
+        "basis": "owner-accepted-for-publication",
+        "note": "中文正本自上架起即為 owner 核准發佈、未經律師逐字審查。2026-08-01 補記這筆依據——原本這欄是空的，只有一個 approved，看不出是誰憑什麼核准的。日期取頁面的最後更新日。"
+      },
       "pages": {
         "privacy": "../privacy.html",
         "terms": "../terms.html",
