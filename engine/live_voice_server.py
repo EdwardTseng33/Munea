@@ -72,6 +72,38 @@ MAX_SESSION_RECONNECTS = int(os.environ.get("MUNEA_VOICE_MAX_RECONNECTS", "8"))
 LOOKUP_CUE_TAIL_MS = 80
 LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
 
+
+# ── 兩支儀表的算法（2026-08-01 · Edward 7/31 深夜「變慢＋斷斷續續」查不到證據後重做）──
+# 抽成純函式的理由：這兩個數字原本寫在通話迴圈裡，一個從頭到尾沒人驗算過，
+# 結果兩支都在量別的東西（見各自註解），出事時反而讓人以為「數據顯示沒問題」。
+# 抽出來就能用測試把「起點是什麼」釘死，之後誰改都會被守門測試擋下來。
+
+def reply_latency_ms(now, last_voice_at=0.0, last_packet_at=None):
+    """他講完到她出聲，幾毫秒。回 (毫秒, 起點是什麼)。
+
+    起點必須是「最後一次真的聽到人聲」。舊版拿 last_packet_at（每一格麥克風封包都會
+    刷新，包含全靜音），量到的永遠是一格封包的間隔（正式機實測 7-38 毫秒）＝根本沒在量。
+    真的沒聽過人聲時（開場招呼、純文字輸入）才退回封包時間，並在回傳值標明。
+    """
+    if last_voice_at:
+        return round((now - last_voice_at) * 1000), "user_voice"
+    if last_packet_at is None:
+        return None, "unknown"
+    return round((now - last_packet_at) * 1000), "last_packet"
+
+
+def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
+    """這一輪送聲音，相鄰兩塊之間最久的空檔（毫秒）。回 (新的最大值, 這一塊的空檔)。
+
+    turn_last_out 是「這一輪」的上一塊，每輪開始必須歸零——舊版拿整通共用的
+    last_out 比，於是每輪第一塊都量到「兩句話中間他在想事情」那段安靜
+    （正式機報過 45,540 毫秒＝他想了 45 秒，被記成她卡了 45 秒）。
+    """
+    if turn_last_out is None:
+        return current_max_ms, None
+    gap = (now - turn_last_out) * 1000
+    return (gap if gap > current_max_ms else current_max_ms), gap
+
 # 送一塊聲音去雲端臉，最多等多久（2026-07-29）。
 #
 # 為什麼要有這個：同一份聲音要送兩個地方——手機（使用者在聽，必須）和雲端臉
@@ -1690,6 +1722,11 @@ def _new_call_state():
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
     return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False,
+          # last_voice_at＝最後一次「真的聽到人在講話」的時刻（音量過門檻的那一格）。
+          # 2026-08-01 新增：first_audio 原本從 last_in（每一格麥克風封包都會刷新，
+          # 包含全靜音）起算，量到的永遠是 7-38 毫秒＝等於沒在量。反應快慢要從
+          # 「他講完」到「她出聲」，所以改用這個。
+          "last_voice_at": 0.0,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
@@ -1981,9 +2018,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     async def _mark_first_audio(source):
         if not st.get("await_first") or st.get("last_in") is None:
             return
-        latency_ms = round((time.monotonic() - st["last_in"]) * 1000)
+        # 2026-08-01 量測修正：起點改成「最後一次真的聽到人聲」（算法與理由見 reply_latency_ms）。
+        latency_ms, basis = reply_latency_ms(
+            time.monotonic(), st.get("last_voice_at") or 0.0, st["last_in"])
         st["await_first"] = False
-        _diag(cid, "node.first_audio", latency_ms=latency_ms, source=source)
+        _diag(cid, "node.first_audio", latency_ms=latency_ms, source=source, basis=basis)
         try:
             await ws.send(json.dumps({"type": "diag", "firstAudioMs": latency_ms}))
         except Exception:
@@ -2253,7 +2292,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 n = len(message)
                 st["in"] += n
                 st["last_in"] = time.monotonic()
-                st["await_first"] = True
+                # 2026-08-01：原本這裡每收一格麥克風封包就重新舉手要量 first_audio，
+                # 等於一輪內反覆量、而且起點永遠是「剛剛那一格」。改成只在真的聽到
+                # 人聲時舉手（見下方門檻判斷），一輪一次、起點是他講的最後一聲。
                 if st.get("greet_requested") and not st.get("opening_window_complete") and not st.get("opening_voice_detected"):
                     try:
                         samples = memoryview(message).cast("h")
@@ -2279,6 +2320,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
                 if _eg_window and _eg_rms >= _eg_hot:
                     st["last_hot_voice_at"] = _eg_now   # 窗內聽到真的夠大聲＝可信的人聲（插話裁判的依據）
+                if _eg_rms >= _eg_hot:
+                    # 2026-08-01 反應時間量測的起點：這一格夠大聲＝他正在講話。
+                    # 他講整句的期間這裡會一直更新，所以停下來的那一刻就是「他講完」。
+                    # （她講話中時 _eg_hot 是熱門檻、殘響不會誤算成人聲；她沒講話時就是原門檻。）
+                    st["last_voice_at"] = _eg_now
+                    st["await_first"] = True
                 if _eg_window and guard_enabled() and _eg_rms < _eg_hot:
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
@@ -2383,6 +2430,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             while True:
                 turn_out = 0
                 turn_max_gap_ms = 0.0   # 這一輪送聲音時，相鄰兩塊之間最久的一次空檔（抖動指標）
+                turn_last_out = None    # 這一輪送出的上一塊聲音是幾點（2026-08-01：抖動只跟同一輪比）
                 got = False
                 async for msg in session.receive():
                     got = True
@@ -2476,11 +2524,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         # 會卡其中某個字」，但體感沒有數字就查不動——這裡記下相鄰兩塊聲音之間
                         # 最久的一次空檔，收在 turn_done 一起報。手順的時候這個值很小；
                         # 一旦有東西在跟它搶（7/28 那包 76 秒的暖機就是），這裡會立刻看得出來。
+                        # 2026-08-01 量測修正：空檔只跟「這一輪的上一塊」比（算法與理由見
+                        # note_turn_gap）。st["last_out"] 仍要更新——回音濾網要用它。
                         _now_out = time.monotonic()
-                        if st.get("last_out") is not None:
-                            _gap = (_now_out - st["last_out"]) * 1000
-                            if _gap > turn_max_gap_ms:
-                                turn_max_gap_ms = _gap
+                        turn_max_gap_ms, _ = note_turn_gap(_now_out, turn_last_out, turn_max_gap_ms)
+                        turn_last_out = _now_out
                         st["last_out"] = _now_out
                         # 回音窗 v2（2026-07-29）：鏡射 App 播放節奏、推進「手機大概播到哪」。
                         # Gemini 送資料比講話快，只看送出時間會讓句子後半的回音落在窗外＝自問自答。
@@ -2564,6 +2612,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
                                 await _send_turn_tail()
                             turn_out = 0
+                            # 2026-08-01：這兩個原本只在 while 外層歸零，同一條連線第二輪
+                            # 以後會沿用上一輪的最大值＝越報越大、且永遠是舊帳。
+                            turn_max_gap_ms = 0.0
+                            turn_last_out = None
                             st["await_first"] = True
                             if st.get("language_block"):
                                 source = st.get("language_block_source") or "unknown"
