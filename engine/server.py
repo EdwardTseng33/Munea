@@ -2708,11 +2708,21 @@ def refresh_daily_briefing(region=None, person_id=None):
     except Exception as e:
         log_fallback_exception("load today care items for briefing", e)
         briefing["scheduleToday"] = []
-    try:
-        topics = perception_engine.fetch_weekly_topics(count=3)  # 本週話題（暖新聞＋生活健康＋懷舊，有護欄、找不到寧可少給）
-    except Exception as e:
-        log_fallback_exception("fetch weekly topics for briefing", e)
-        topics = []
+    # 本週話題預設關閉（2026-08-01 Edward 拍板）。
+    # 為什麼砍：這疊素材是每天清晨叫模型配搜尋「生」出來的閒聊話題（7/31 那份是少棒奪冠、
+    # 8/1 是輪椅捐贈）。它跟開場路線「帶個輕鬆話題來」一湊，就成了「手上有一疊像新聞的東西
+    # ＋被要求開個有內容的頭」→ 7/31 深夜真機她講出「這次奧運台灣選手很有精神」，而當天
+    # 那份資料裡一個奧運的字都沒有＝憑空編新聞（紅線：長輩會當真、還會轉述給別人）。
+    # 分工改成：天天問、答案一天只變一次的（天氣／明天／空品／回診）＝清晨備好、秒答；
+    # 隨口問、答案隨時在變的（新聞時事店家）＝他問了才即時查，沒問就不主動報。
+    # 要退回：MUNEA_BRIEFING_WEEKLY_TOPICS=1（素材產生器本身完好、只是預設不叫它）。
+    topics = []
+    if os.environ.get("MUNEA_BRIEFING_WEEKLY_TOPICS", "0").strip() == "1":
+        try:
+            topics = perception_engine.fetch_weekly_topics(count=3)
+        except Exception as e:
+            log_fallback_exception("fetch weekly topics for briefing", e)
+            topics = []
     briefing["topics"] = topics
     briefing["newsLine"] = topics[0]["line"] if topics else ""  # 相容舊欄位（單則、給還沒升級的讀取端）
     expires = briefing["date"] + "T23:59:59+08:00"  # 當天有效、隔天自然過期
@@ -3287,7 +3297,13 @@ def reply_context_instruction(context):
         _brief_topics = [{"line": brief["newsLine"]}]
     if (brief.get("briefingLine") or brief.get("tomorrowLine") or brief.get("careHints")
             or brief.get("scheduleToday") or _brief_topics):
-        seg = "（今日簡報（已核實的真實資料，可自然帶進關心、不要照唸）："
+        # 2026-08-01 Edward：「不要講簡報，用戶不需要知道我們早上會去爬資料。」
+        # 舊標題直接把內部叫法（今日簡報）遞到她面前，她就會說出「我今天的簡報說…」
+        # 「系統給我的資料」這種話——長輩只會覺得「你哪來的簡報」。
+        # 資料照給、來源不准講：她要像「本來就知道今天天氣」的朋友，不是在唸手上的單子。
+        seg = ("（你今天已經知道的事（真實資料，可自然帶進關心、不要照唸；"
+               "**絕對不要提起這些是哪裡來的**——不准說「簡報」「系統」「我今天查過」"
+               "「我這邊的資料」，就像朋友本來就知道今天天氣那樣講）：")
         if brief.get("briefingLine"):
             seg += brief["briefingLine"] + "。"
         if brief.get("tomorrowLine"):
@@ -3297,7 +3313,11 @@ def reply_context_instruction(context):
         if brief.get("scheduleToday"):
             seg += "今天的重要日子：" + "、".join(brief["scheduleToday"]) + "（要記得溫柔提醒）。"
         if _brief_topics:
-            seg += "這週可以聊的話題（挑一兩則自然帶入、別一次唸完）：" + "、".join(t["line"] for t in _brief_topics)
+            # 2026-08-01：這疊素材預設已經不再產生（見 refresh_daily_briefing）。
+            # 萬一被打開，也只准「他自己聊到相關的事」時接一句，**開場永遠不准用**——
+            # 開場拿它當話題正是 7/31 那句假奧運新聞的成因。
+            seg += ("他若自己聊到相關的事，可以接的閒聊素材（**開場絕對不要用、不要當新聞報**"
+                    "、一次最多一則）：" + "、".join(t["line"] for t in _brief_topics))
         brief_line = seg + "）"
     living = context.get("livingProfile") or {}
     living_parts = []
@@ -3339,8 +3359,13 @@ def reply_context_instruction(context):
     ) if _um else ""
     _ints = context.get("interests") or []
     interests_line = (
+        # 2026-08-01：舊版這裡寫「搭今日簡報或最近的真時事更好」——等於明著叫她開場
+        # 用時事起頭，但她手上根本沒有「最近的時事」這種東西（那是要現查的）。
+        # 7/31 深夜那句假奧運新聞，這行是最直接的推手之一。改成：從話題方向起頭可以，
+        # 但**用問的**、不准自己補時事內容；真要講時事只有一條路——他問了、你查了。
         "（他勾選過想聊的話題：" + "、".join(_ints) + "。"
-        "開場或冷場時可以從這幾個方向自然起頭（搭今日簡報或最近的真時事更好）；"
+        "開場或冷場時可以從這幾個方向自然起頭，但**用問的**（問他最近還有沒有在做、喜不喜歡），"
+        "**不准自己補上時事、比賽、活動或任何你沒查過的近況**；"
         "聊到相關話題時多帶點料、多分享一個真實的亮點或小知識。"
         "但這是參考不是劇本——他想聊別的就跟著他走，別硬拉回來、別一次全部聊完。）"
     ) if _ints else ""
@@ -3388,9 +3413,11 @@ def reply_context_instruction(context):
         "**不要為了問而問**：他沒問到跟地方有關的事，就不要主動問他住哪。）"
     ) if not _loc else ""
     culture_line = (
-        "（聊到影劇/戲劇/歌曲/新聞這類會隨時間變的話題：**你查不到現在在紅什麼**——"
-        "只有「今日簡報」的本週話題是真的、可以講。**不要憑印象講可能過時或根本不存在的劇名歌名**"
-        "（你記得的多半是舊的、甚至是編的）。簡報裡沒有就老實說「這我就不知道了欸，最近都在看什麼？」——"
+        # 2026-08-01：閒聊素材預設已停產（見 refresh_daily_briefing），這裡不再指向它；
+        # 而且不准講出內部叫法。會變的東西只有兩條路：他問了你去查，或老實說不知道。
+        "（聊到影劇/戲劇/歌曲/新聞這類會隨時間變的話題：**你查不到現在在紅什麼**，"
+        "也**沒有「今天的新聞」可以報**。**不要憑印象講可能過時或根本不存在的劇名歌名**"
+        "（你記得的多半是舊的、甚至是編的）。就老實說「這我就不知道了欸，最近都在看什麼？」——"
         "把話丟回給他、聽他講，比你硬掰一個劇名好一百倍。）"
     )
     return "\n".join([

@@ -454,6 +454,7 @@
   "voice.call.firstWarmup": "Warming things up. The first call may take about 30 seconds…",
   "voice.call.openingWarmup": "Preparing audio and video…",
   "voice.call.idleEnded": "I ended the call for now. Come back whenever you'd like to chat.",
+  "voice.call.idleWarning": "Still there? If it stays quiet a little longer, I'll end the call for now.",
   "voice.call.goodbye": "I really enjoyed our chat. Talk again soon!",
   "voice.call.connectedCaption": "You're connected. Just start talking.",
   "voice.call.listeningPrompt": "Say whatever is on your mind. I'm listening.",

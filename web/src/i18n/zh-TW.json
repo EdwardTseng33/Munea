@@ -454,6 +454,7 @@
   "voice.call.firstWarmup": "新引擎暖身中，首次約需半分鐘…",
   "voice.call.openingWarmup": "聲音與畫面暖機中…",
   "voice.call.idleEnded": "先幫你把通話收起來囉，想聊再找我",
+  "voice.call.idleWarning": "還在嗎？再一下下沒聲音，我就先幫你收線",
   "voice.call.goodbye": "今天聊得真開心，下次見！",
   "voice.call.connectedCaption": "接通了，直接說話就可以",
   "voice.call.listeningPrompt": "想到什麼就說，我在聽",
