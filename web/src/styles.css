@@ -24,7 +24,10 @@
      舊深字 #A8611E 有 4.78 但 Edward 嫌暗。#B0651B 在白卡 4.45（AA 門檻 4.5，差 0.05）、
      米色底 3.91——比舊深字暖一階、又不至於糊掉。只用在「粗體小標籤」這種短詞
     （隨時／寧寧幫你留意／區塊標題），不用在整段內文，內文仍走 --ink／--muted。 */
-  --coral-text: #B0651B;
+  /* 2026-07-31：Edward「整個畫面都是綠的」→ 小字改暖橘點綴。原訂 #B0651B 對白底
+     只有 4.45、差一點點沒過 AA 小字門檻（4.5）——我們的用戶是長輩，讀得清楚比
+     好看更優先。壓深到 #AB6119＝4.71，肉眼幾乎看不出差別，暖色點綴照樣成立。 */
+  --coral-text: #AB6119;
   --gold: #E0B354; --gold-soft: #F6EAD0;
   --line: #EAE3D6;          /* 官網線色 */
   --deep: #36423E; --deep-2: #3F4C47; --deep-card: #485751;      /* 石墨綠模板色（官網深色塊 · 7/4 提亮一階） */
@@ -1842,6 +1845,14 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 設計稿：訊息＝純文字（無泡泡）、13.5px/--ink-2、行高 1.5 */
 .bc-msg { margin-top: 2px; background: none; padding: 0; font-size: 14px; line-height: 1.5; color: #5A5349; } /* 設計稿訊息暖灰 */
 .bc-msg-t { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 64px; }
+/* 家人帶話時放到 4 行（Edward 2026-07-31 指定）：平常的問候一句話就夠，
+   但轉達家人的話要看得完整——被切一半的叮嚀等於沒傳到。
+   真的超過 4 行就給「看全部」，寧可多一次點擊也不能默默吃掉後半句。 */
+.butler-card.has-relay .bc-msg-t { -webkit-line-clamp: 4; max-height: 86px; }
+.butler-card.has-relay.relay-open .bc-msg-t { -webkit-line-clamp: unset; max-height: none; }
+.bc-relay-more { border: none; background: none; padding: 0; margin-top: 4px; color: var(--teal-dd); font-family: var(--display); font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: underline; }
+/* 傳話的字跟平常的問候同一款（Edward 2026-07-31）：這是寧寧在講話，不是通知橫幅。
+   加粗放大會讓整張卡變得像在喊人——長輩要的是讀起來舒服，行數夠讀完就好。 */
 /* ③ 首頁進場節奏：卡片一張張輕輕浮上（總長 <0.5 秒） */
 #home.screen.active .pad > * { animation: viewIn .3s cubic-bezier(.22,.9,.32,1) both; }
 #home.screen.active .pad > *:nth-child(2) { animation-delay: .05s; }

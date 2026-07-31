@@ -144,10 +144,22 @@ class TcmAndCrossTopicTest(unittest.TestCase):
         self.assertTrue(any(s["solutionType"] == "中醫調理" for s in r["solutions"]))
 
     def test_herbal_medicine_is_never_pushed(self):
-        """中藥要中醫師把脈開方——屬處方級，任何情況都不主動推。"""
-        for text in ("我睡不好，想吃中藥", "我睡不好", "中醫可以調嗎"):
+        """中藥要中醫師把脈開方——屬處方級，我們絕不主動推。
+
+        2026-07-31 這條的量法改過：原本寫「任何情況都不出現」，但那把「他自己說
+        想吃中藥」也一起擋掉了——他問了，我們卻拿三個別的建議打發他，而那張卡上
+        寫著「中西藥隔一兩小時吃也算併用」這個他最需要知道的事。守的東西沒變
+        （不主動推），改的是量法：沒提到就不出現，提到了就要老實回、而且不當第一句。
+        """
+        for text in ("我睡不好", "中醫可以調嗎"):
             r = hs.pick("TW-EDU-01", text, WORKER, 22)
-            self.assertNotIn("sleep-tcm-herbs", ids(r))
+            self.assertNotIn("sleep-tcm-herbs", ids(r), text)
+
+        r = hs.pick("TW-EDU-01", "我睡不好，想吃中藥", WORKER, 22)
+        self.assertIn("sleep-tcm-herbs", ids(r), "他自己說想吃中藥，我們卻不回答")
+        self.assertNotEqual(ids(r)[0], "sleep-tcm-herbs", "不能建議的事不該當第一句")
+        herb = next(s for s in r["solutions"] if s["id"] == "sleep-tcm-herbs")
+        self.assertTrue(herb.get("blocked"), "這張永遠是『不建議』卡，不是推薦")
 
     def test_herbal_entry_carries_the_real_safety_fact(self):
         """關鍵安全事實：中西藥隔一兩小時仍算併用，不是錯開時間就沒事。"""
@@ -250,9 +262,20 @@ class MigratedTopicsTest(unittest.TestCase):
         self.assertIn("心", ref["say"])
 
     def test_blood_pressure_never_touches_medication(self):
+        """他問「是不是要加藥」，我們不判斷——但要親口說不判斷。
+
+        2026-07-31 量法改過：原本是「輸出裡不准出現 L4」，那等於連
+        「換藥加藥停藥只有醫師能決定」這句誠實回話也一起擋掉，結果他問了調藥、
+        我們端三個養生建議給他。現在守的是真正的紅線——凡是端出去的用藥級卡片，
+        必須是「不建議」那種；一句真的在教他怎麼調藥的，永遠不准出現。
+        """
         for prof in (ELDER, CAREGIVER, WORKER):
-            for s in hs.pick("TW-EDU-03", "我血壓高，是不是要加藥", prof, 9)["solutions"]:
-                self.assertNotEqual(s.get("riskLevel"), "L4", "把調藥端上桌了")
+            picked = hs.pick("TW-EDU-03", "我血壓高，是不是要加藥", prof, 9)["solutions"]
+            for s in picked:
+                if s.get("riskLevel") == "L4":
+                    self.assertTrue(s.get("blocked"), "把調藥端上桌了")
+            self.assertIn("bp-med-change-blocked", [s["id"] for s in picked],
+                          "他問調藥，我們連『這個我不判斷』都沒講")
 
     def test_red_yeast_interaction_surfaces_when_he_mentions_it(self):
         ids = [s["id"] for s in hs.pick("TW-EDU-16", "我在吃紅麴", ELDER, 14)["solutions"]]

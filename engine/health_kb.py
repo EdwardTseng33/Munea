@@ -63,7 +63,7 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None, locale=None):
         _kws = t["keywords"]
         if _ov_locale != _i18n.DEFAULT_LOCALE:
             _kws = _i18n.keywords_for(t["id"], _ov_locale) or []
-        hit_len = sum(len(k) for k in _kws if k.lower() in _hay)
+        hit_len = sum(len(k) for k in _kws if health_selector.mentions(k, text))
         if hit_len:
             # 具體處境要壓過一般症狀（2026-07-29 加女性題時抓到）：
             # 「最近一直熱潮紅、晚上睡不好」原本被當成一般失眠——更年期的題才是

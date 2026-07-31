@@ -167,6 +167,34 @@ class TranslationQualityTest(unittest.TestCase):
                 self.assertIn(tid, health_kb.match_topics(kws[0].upper(), locale=loc),
                               f"{loc}/{tid}：全大寫就叫不出來")
 
+    def test_a_latin_keyword_must_start_at_a_word(self):
+        """拉丁語系的觸發字要從詞頭開始比。
+
+        西班牙版回報：「tos（咳嗽）」被「hidra*tos*（醣類）」叫起來，問醣類的人
+        會收到感冒衛教。中文沒有詞的空隙、必須用純包含比對，這個坑出國才踩到。
+        只綁詞頭、不綁詞尾——「aliment」還是要命中「alimentación」，
+        那正是我們要求觸發字寫詞根的原因。
+        """
+        self.assertNotIn("TW-EDU-19",
+                         health_kb.match_topics("los hidratos de carbono", locale="es"))
+        self.assertIn("TW-EDU-19", health_kb.match_topics("tengo mucha tos", locale="es"))
+        self.assertIn("TW-EDU-19", health_kb.match_topics("TOS SECA", locale="es"))
+        # 中文與日文不受影響：句中任何位置都要叫得出來
+        self.assertIn("TW-EDU-01", health_kb.match_topics("我最近都睡不好"))
+        self.assertIn("TW-EDU-01", health_kb.match_topics("最近よく眠れないんです", locale="ja"))
+
+    def test_spanish_red_yeast_carries_the_eu_age_warning(self):
+        """歐盟規定紅麴標示必須寫「逾 70 歲不得食用」——我們的用戶正好就是那群人。
+
+        寫死句子這件事只用在這種反向守門：這句掉了，就是我們比包裝上的字還不謹慎。
+        """
+        es = i18n.overlay("es")
+        if not es or "TW-EDU-16" not in es:
+            self.skipTest("西班牙版還沒有保健品題")
+        card = es["TW-EDU-16"]["solutions"]["supp-red-yeast"]
+        self.assertIn("70", card["say"])
+        self.assertIn("70", card.get("dailyCap", ""))
+
     def test_every_translated_topic_actually_fires(self):
         """有疊層就要叫得出來——翻了卻觸發不到等於沒做。"""
         for loc in locales_with_overlay():
@@ -225,6 +253,66 @@ class SelectionParityTest(unittest.TestCase):
         for loc in locales_with_overlay():
             ids = [s["id"] for s in hs.pick("TW-EDU-01", "", prof, 23, locale=loc)["solutions"]]
             self.assertNotIn("sleep-magnesium-supplement", ids, f"{loc}：腎功能異常還端出鎂")
+
+
+class HonestRefusalsWorkAbroadTest(unittest.TestCase):
+    """「他點名了就要答」這件事，不能只有中文那條線做得到。
+
+    2026-07-31 抓到的是同一個病的兩層：主庫 31 張誠實回話卡（褪黑激素、換藥、
+    瘦瘦針、排毒、IgG 檢測…）在挑選層被當成整條剔除，一次都沒講出來過；
+    修好之後才發現**外語那邊還是死的**——疊層的點名字是敗向安全的（沒給就清空，
+    免得中文字跑進外語對話），所以三國各有 29 張叫不出來。
+    日本用戶問「メラトニンって飲んでもいいの？」，我們有稿卻拿不到。
+    """
+
+    @staticmethod
+    def _blocked_ids():
+        import json
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "health_solutions.json"), encoding="utf-8") as f:
+            topics = json.load(f)["topics"]
+        return {s["id"]: tid for tid, t in topics.items()
+                for s in t["solutions"] if s.get("blocked")}
+
+    def test_every_blocked_card_can_be_named_in_every_locale(self):
+        for loc in locales_with_overlay():
+            ov = i18n.overlay(loc)
+            for sid, tid in self._blocked_ids().items():
+                sol = ((ov.get(tid) or {}).get("solutions") or {}).get(sid)
+                if sol is None:
+                    continue                  # 那一國略過了整張＝敗向安全，不算漏
+                self.assertTrue(sol.get("askedFor"),
+                                f"{loc}/{tid}/{sid} 沒有點名字＝這張卡在那一國是死的")
+
+    def test_naming_it_serves_it_and_never_first(self):
+        prof = {"audience": "elder", "audiences": ["elder"]}
+        for loc in locales_with_overlay():
+            ov = i18n.overlay(loc)
+            for sid, tid in self._blocked_ids().items():
+                sol = ((ov.get(tid) or {}).get("solutions") or {}).get(sid)
+                if not (sol and sol.get("askedFor")):
+                    continue
+                said = sol["askedFor"][0]
+                got = [s["id"] for s in hs.pick(tid, said, prof, 15, locale=loc)["solutions"]]
+                self.assertIn(sid, got, f"{loc}/{tid}：他講了「{said}」還是沒回答")
+                if len(got) > 1:
+                    self.assertNotEqual(got[0], sid, f"{loc}/{tid}/{sid} 當了第一句")
+
+    def test_capitalisation_never_loses_the_answer(self):
+        """語音辨識會寫成「Plavix」「Ventolín」，我們的字典是小寫——比對必須忽略大小寫。"""
+        for loc in locales_with_overlay():
+            if loc == "ja":
+                continue
+            ov = i18n.overlay(loc)
+            for sid, tid in self._blocked_ids().items():
+                sol = ((ov.get(tid) or {}).get("solutions") or {}).get(sid)
+                if not (sol and sol.get("askedFor")):
+                    continue
+                word = sol["askedFor"][0]
+                if not word[:1].isalpha():
+                    continue
+                self.assertTrue(hs.mentions(word, word.upper()),
+                                f"{loc}/{sid}：使用者用大寫講「{word}」就比不到了")
 
 
 class WiringTest(unittest.TestCase):

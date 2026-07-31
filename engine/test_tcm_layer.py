@@ -151,8 +151,19 @@ class AskedForIsGeneralTest(unittest.TestCase):
         self.assertEqual(first["id"], "knee-glucosamine")
 
     def test_the_bonus_lives_in_the_scorer_not_just_the_demotion_lift(self):
-        src = open(os.path.join(HERE, "health_selector.py"), encoding="utf-8").read()
-        self.assertIn('if any(w and w in text for w in (sol.get("askedFor") or [])):', src)
+        """點名加分要真的加在分數上，不能只是「把陪襯層放行」。
+
+        （2026-07-31 量法改過：原本是去 health_selector.py 裡比對一行程式碼長什麼樣，
+        改一行寫法就紅——這種守門守的是「這一版怎麼寫」、不是「要守什麼」，
+        7 月已經被咬過五次。改成看行為：一張**沒有被降級**的卡，他點名之後
+        要真的往前排；如果加分只長在解除降級那邊，這條就會紅。）
+        """
+        sol = next(s for s in hs.TOPICS["TW-EDU-02"]["solutions"] if s["id"] == "knee-glucosamine")
+        self.assertTrue(sol.get("secondLine"), "這題的前提是它本來是陪襯層")
+        flags = hs._profile_flags(real(1950))
+        plain = hs._score(sol, flags, False, "膝蓋痛怎麼辦")
+        named = hs._score(sol, flags, False, "葡萄糖胺有效嗎")
+        self.assertGreater(named, plain + 3.0, "點名沒有在分數上加到東西")
 
     def test_safety_still_wins_over_being_asked_by_name(self):
         """他點名問，也翻不了禁忌——安全永遠在最上面。"""
