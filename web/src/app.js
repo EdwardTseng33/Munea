@@ -5302,10 +5302,10 @@ function _muneaDayOfYear(d) {
   return Math.floor((d - start) / 86400000);
 }
 function _muneaAskByHour(h) {
-  if (h >= 18 || h < 5) return '睡前跟我聊聊今天？';
-  if (h >= 5 && h < 11) return '走走回來，說給我聽？';
-  if (h >= 11 && h < 14) return '來跟我聊聊今天？';
-  return '傍晚散個步，回來跟我聊？';
+  if (h >= 18 || h < 5) return muneaT('greet.askNight', '睡前跟我聊聊今天？');
+  if (h >= 5 && h < 11) return muneaT('greet.askMorning', '走走回來，說給我聽？');
+  if (h >= 11 && h < 14) return muneaT('greet.askNoon', '來跟我聊聊今天？');
+  return muneaT('greet.askAfternoon', '傍晚散個步，回來跟我聊？');
 }
 // 順位 0：只取家人動態最上面一則，格式要真的是「XX要我提醒你：YYY」，內容再過一次乾淨中文守門
 // ——這裡是全家人都看得到的位置，比首頁話題本身更危險（Edward 2026-07-14）
@@ -5364,45 +5364,50 @@ function _muneaNotChattedTodayLine(now, ask) {
     const lastAt = +(localStorage.getItem('munea.lastChatAt') || 0);
     const gapDays = lastAt ? _muneaDaysBetween(now, new Date(lastAt)) : null;
     if (gapDays !== null && gapDays >= 3) {
+      const v = { days: gapDays, ask };
       const leads = [
-        gapDays + '天沒聊了，', '有' + gapDays + '天沒聽你說話了，', '隔了' + gapDays + '天沒聊，',
-        gapDays + '天沒你的消息了，', gapDays + '天沒說到話了，', '好些天沒聊了，都' + gapDays + '天了，'
+        muneaT('greet.gap1', '{days}天沒聊了，{ask}', v), muneaT('greet.gap2', '有{days}天沒聽你說話了，{ask}', v), muneaT('greet.gap3', '隔了{days}天沒聊，{ask}', v),
+        muneaT('greet.gap4', '{days}天沒你的消息了，{ask}', v), muneaT('greet.gap5', '{days}天沒說到話了，{ask}', v), muneaT('greet.gap6', '好些天沒聊了，都{days}天了，{ask}', v)
       ];
-      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+      return leads[_muneaDayOfYear(now) % leads.length];
     }
     const visit = _muneaVisitWithinDays(3);
     if (visit) {
       const vt = muneaSafeDisplayText(visit.title, '') || muneaSafeDisplayText(visit.label, '') || '回診';   // 招呼卡引用看診標題前守門（Edward 2026-07-15 事故）
-      const leads = [vt + '快到了，', '別忘了' + vt + '，', vt + '的事，記得，', '要回診了，', vt + '要記得，'];
-      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+      const v = { visit: vt, ask };
+      const leads = [muneaT('greet.visit1', '{visit}快到了，{ask}', v), muneaT('greet.visit2', '別忘了{visit}，{ask}', v), muneaT('greet.visit3', '{visit}的事，記得，{ask}', v), muneaT('greet.visit4', '要回診了，{ask}', v), muneaT('greet.visit5', '{visit}要記得，{ask}', v)];
+      return leads[_muneaDayOfYear(now) % leads.length];
     }
     const pill = _muneaPillStatusToday();
     if (pill) {
+      const v = { slot: medSlotLabel(pill.next.slot), ask };
       const leads = [
-        medSlotLabel(pill.next.slot) + '的藥吃了嗎，', '記得吃' + medSlotLabel(pill.next.slot) + '的藥，', '別忘了' + medSlotLabel(pill.next.slot) + '的藥，',
-        medSlotLabel(pill.next.slot) + '該吃藥囉，', '藥還沒吃完，'
+        muneaT('greet.pill1', '{slot}的藥吃了嗎，{ask}', v), muneaT('greet.pill2', '記得吃{slot}的藥，{ask}', v), muneaT('greet.pill3', '別忘了{slot}的藥，{ask}', v),
+        muneaT('greet.pill4', '{slot}該吃藥囉，{ask}', v), muneaT('greet.pill5', '藥還沒吃完，{ask}', v)
       ];
-      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+      return leads[_muneaDayOfYear(now) % leads.length];
     }
     let wxText = '';
     try { const c = JSON.parse(localStorage.getItem('munea.wxCache') || 'null'); if (c && c.text) wxText = c.text; } catch (e3) {}
     if (wxText) {
-      const leads = ['今天' + wxText + '，', wxText + '，出門記得看天氣，'];
-      return leads[_muneaDayOfYear(now) % leads.length] + ask;
+      const v = { wx: wxText, ask };
+      const leads = [muneaT('greet.wx1', '今天{wx}，{ask}', v), muneaT('greet.wx2', '{wx}，出門記得看天氣，{ask}', v)];
+      return leads[_muneaDayOfYear(now) % leads.length];
     }
+    const v = { ask };
     const chat = [
-      '上次聊得很開心，我都記得你——', '今天有什麼新鮮事嗎，', '想到什麼都可以跟我說，',
-      '我在這裡，', '今天過得還好嗎，', '有空的話，', '我一直都在，'
+      muneaT('greet.chat1', '上次聊得很開心，我都記得你——{ask}', v), muneaT('greet.chat2', '今天有什麼新鮮事嗎，{ask}', v), muneaT('greet.chat3', '想到什麼都可以跟我說，{ask}', v),
+      muneaT('greet.chat4', '我在這裡，{ask}', v), muneaT('greet.chat5', '今天過得還好嗎，{ask}', v), muneaT('greet.chat6', '有空的話，{ask}', v), muneaT('greet.chat7', '我一直都在，{ask}', v)
     ];
-    return chat[_muneaDayOfYear(now) % chat.length] + ask;
+    return chat[_muneaDayOfYear(now) % chat.length];
   } catch (e) { return ask; }
 }
 // 順位 3「今天已經聊過」的收尾句：不帶逼問、不再重複問「要不要聊」
 function _muneaChattedTodayLine(now) {
   const lines = [
-    '今天聊得很開心，我都記得。', '有你陪我聊聊，今天很好。', '想到什麼都可以再找我。',
-    '今天說的話我都記著了。', '先歇著吧，我一直都在。', '謝謝你今天陪我聊天。',
-    '今天先到這裡，想聊隨時找我。', '有你在，今天特別好。'
+    muneaT('greet.done1', '今天聊得很開心，我都記得。'), muneaT('greet.done2', '有你陪我聊聊，今天很好。'), muneaT('greet.done3', '想到什麼都可以再找我。'),
+    muneaT('greet.done4', '今天說的話我都記著了。'), muneaT('greet.done5', '先歇著吧，我一直都在。'), muneaT('greet.done6', '謝謝你今天陪我聊天。'),
+    muneaT('greet.done7', '今天先到這裡，想聊隨時找我。'), muneaT('greet.done8', '有你在，今天特別好。')
   ];
   return lines[_muneaDayOfYear(now) % lines.length];
 }
@@ -5887,8 +5892,13 @@ const MED_SLOT_DEF = [
 // 藥該飯前還飯後吃是醫生決定的，App 不該替使用者預設）。
 // 內部值維持「早餐後」等舊字串不動：那是用藥資料、推播、語音腦共用的代號，
 // 改掉會對不上使用者既有的藥單。所有給人看的地方一律走 medSlotLabel()。
-const MED_SLOT_LABEL = { '早餐後': '早餐', '午餐後': '中餐', '晚餐後': '晚餐', '睡前': '睡前' };
-function medSlotLabel(slot) { return MED_SLOT_LABEL[slot] || slot; }
+const MED_SLOT_LABEL = {
+  '早餐後': () => muneaT('medication.slot.afterBreakfast', '早餐'),
+  '午餐後': () => muneaT('medication.slot.afterLunch', '中餐'),
+  '晚餐後': () => muneaT('medication.slot.afterDinner', '晚餐'),
+  '睡前': () => muneaT('medication.slot.bedtime', '睡前'),
+};
+function medSlotLabel(slot) { return MED_SLOT_LABEL[slot] ? MED_SLOT_LABEL[slot]() : slot; }
 function medSlotTime(rtKey, offset) {
   let rt = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
   try { rt = Object.assign(rt, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) {}
