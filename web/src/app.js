@@ -1145,7 +1145,7 @@ function setCompanionTemplate(avatarId) {
   saveCompanionProfileToBackend();
   syncAccountBootstrap('create', { reason: 'companion_template_updated' });
   const cap = $('#chatCaption');
-  if (cap) cap.textContent = '直接說，我在這裡';
+  if (cap) cap.textContent = muneaT('chat.captionHint', '直接說，我在這裡');
 }
 
 function playB64(b64) {
@@ -2450,7 +2450,7 @@ async function handleVoiceAction(action, args) {
   }
   if (action === 'set_clinic_reminder') {
     const r = await aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
-    if (typeof toast === 'function') toast(r.ok ? ('看診提醒設好了：' + r.title + ' · ' + r.label) : '看診日期我沒抓到，你再說一次日期好嗎');
+    if (typeof toast === 'function') toast(r.ok ? muneaT('visit.reminderSetToast', '看診提醒設好了：{title} · {label}', { title: r.title, label: r.label }) : muneaT('visit.reminderDateUnclear', '看診日期我沒抓到，你再說一次日期好嗎'));
     return r;
   }
   if (action === 'add_care_question') {
@@ -2488,7 +2488,7 @@ async function handleVoiceAction(action, args) {
     // 約會/聚餐/出遊 → 揪一攤活動帳本（7/16 Edward：這類事不准再進看診/用藥）
     const fn = window.__muneaAddPersonalEvent;
     const r = fn ? await fn({ title: args.title, dateISO: args.date, time: args.time, place: args.place }) : { ok: false, error: 'unsupported_action' };
-    if (typeof toast === 'function') toast(r.ok ? ('行程記好了：' + r.title + ' · ' + r.label) : '日期時間我沒抓到，你再說一次好嗎');
+    if (typeof toast === 'function') toast(r.ok ? muneaT('schedule.savedToast', '行程記好了：{title} · {label}', { title: r.title, label: r.label }) : muneaT('schedule.dateUnclear', '日期時間我沒抓到，你再說一次好嗎'));
     return r;
   }
   if (action === 'send_family_relay') {
@@ -4896,7 +4896,7 @@ function showView(id) {
       segBtns.forEach(x => x.classList.toggle('on', x.dataset.v === 'today'));
       const m = { today: $('#statusToday'), week: $('#statusWeek'), month: $('#statusMonth') };
       Object.entries(m).forEach(([k, el]) => { if (el) el.style.display = k === 'today' ? '' : 'none'; });
-      if ($('#statusTitle')) $('#statusTitle').textContent = '今天的狀態';
+      if ($('#statusTitle')) $('#statusTitle').textContent = muneaT('status.todayTitle', '今天的狀態');
     }
   }
   if (id === 'family') {
@@ -5215,10 +5215,10 @@ async function signInWithAuthProvider(provider) {
 }
 async function signInDeveloperMode() {
   const auth = window.MuneaAuth;
-  if (!auth) return setAuthMessage('開發者模式尚未啟用', 'error');
+  if (!auth) return setAuthMessage(muneaT('auth.devNotEnabled', '開發者模式尚未啟用'), 'error');
   // --gateway profile：真帳號真登入拿真 JWT、過總機驗證——不是造假證（Build 43 安全洞已補死，永不重開）。
   if (isGatewayDeveloperProfile()) {
-    if (typeof auth.signInWithTestAccount !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
+    if (typeof auth.signInWithTestAccount !== 'function') return setAuthMessage(muneaT('auth.devNotEnabled', '開發者模式尚未啟用'), 'error');
     const result = await auth.signInWithTestAccount({ reason: 'settings_auth_sheet_gateway' });
     if (result && result.ok) {
       trackProductEvent('auth_developer_signed_in', { provider: 'test-account' });
@@ -5228,12 +5228,12 @@ async function signInDeveloperMode() {
     }
     const code = String((result && result.error && result.error.code) || 'unknown');
     setAuthMessage(
-      code === 'test_account_credentials_missing' ? '測試帳號憑證未設定' : `測試帳號登入失敗（${code}）`,
+      code === 'test_account_credentials_missing' ? muneaT('auth.devTestMissing', '測試帳號憑證未設定') : muneaT('auth.devTestFailed', '測試帳號登入失敗（{code}）', { code }),
       'error',
     );
     return;
   }
-  if (typeof auth.signInAsDeveloper !== 'function') return setAuthMessage('開發者模式尚未啟用', 'error');
+  if (typeof auth.signInAsDeveloper !== 'function') return setAuthMessage(muneaT('auth.devNotEnabled', '開發者模式尚未啟用'), 'error');
   const result = await auth.signInAsDeveloper({ reason: 'settings_auth_sheet' });
   if (result && result.ok) {
     trackProductEvent('auth_developer_signed_in', { provider: 'dev-bypass' });
@@ -5241,7 +5241,7 @@ async function signInDeveloperMode() {
     closeAuthSheet();
     return;
   }
-  setAuthMessage('此環境不可使用開發者模式', 'error');
+  setAuthMessage(muneaT('auth.devNotAllowed', '此環境不可使用開發者模式'), 'error');
 }
 async function signOutAuth() {
   const auth = window.MuneaAuth;
@@ -5330,7 +5330,7 @@ function _muneaFamilyRelayGreeting() {
     if (!m) return '';
     const fromWho = m[1].trim(), body = m[2].trim();
     if (!fromWho || !body || !muneaIsCleanZhText(body)) return '';
-    return fromWho + '要我提醒你：' + body;
+    return muneaT('familyCircle.relayLine', '{name}要我提醒你：{body}', { name: fromWho, body });
   } catch (e) { return ''; }
 }
 // 用藥有沒打勾（順位 2-b）：跟 renderPillTask() 同一套算法（今天還沒吃的下一項 / 完成數 / 總數）
