@@ -59,11 +59,27 @@
     },
     "sleep-melatonin-blocked": {
      "label": "Melatonina (consúltelo antes)",
-     "say": "En España la melatonina de hasta 1,9 mg se vende como complemento alimenticio, y a partir de 2 mg ya es un medicamento con receta. Yo no puedo decirle si le conviene ni cuánto tomar — coméntelo con su médico o con el farmacéutico, sobre todo si ya toma algo para dormir."
+     "say": "En España la melatonina de hasta 1,9 mg se vende como complemento alimenticio, y a partir de 2 mg ya es un medicamento con receta. Yo no puedo decirle si le conviene ni cuánto tomar — coméntelo con su médico o con el farmacéutico, sobre todo si ya toma algo para dormir.",
+     "askedFor": [
+      "melatonina",
+      "somnífero",
+      "pastillas para dormir",
+      "orfidal",
+      "lorazepam",
+      "dormidina"
+     ]
     },
     "sleep-tcm-herbs": {
      "label": "Plantas para dormir (valeriana, tila…)",
-     "say": "La valeriana, la tila o la pasiflora no son inofensivas solo por ser naturales: pueden mezclarse mal con sus medicamentos, y el efecto no desaparece por tomarlas a otra hora. Yo no le voy a decir cuál tomar ni cuánto — si quiere probar alguna, dígaselo a su médico y a su farmacéutico, sobre todo si ya toma medicación."
+     "say": "La valeriana, la tila o la pasiflora no son inofensivas solo por ser naturales: pueden mezclarse mal con sus medicamentos, y el efecto no desaparece por tomarlas a otra hora. Yo no le voy a decir cuál tomar ni cuánto — si quiere probar alguna, dígaselo a su médico y a su farmacéutico, sobre todo si ya toma medicación.",
+     "askedFor": [
+      "valerian",
+      "tila",
+      "pasiflor",
+      "melisa",
+      "hierbas para dormir",
+      "infusión para dormir"
+     ]
     },
     "sleep-refer-doctor": {
      "label": "Cuándo ir al médico",
@@ -121,7 +137,15 @@
     },
     "knee-surgery-blocked": {
      "label": "Operarse o infiltraciones",
-     "say": "Si le conviene operarse, o ponerse infiltraciones de ácido hialurónico o de corticoide, eso lo decide el traumatólogo. Yo no voy a tomar esa decisión por usted."
+     "say": "Si le conviene operarse, o ponerse infiltraciones de ácido hialurónico o de corticoide, eso lo decide el traumatólogo. Yo no voy a tomar esa decisión por usted.",
+     "askedFor": [
+      "operar",
+      "operación",
+      "infiltra",
+      "prótesis de rodilla",
+      "hialurónico",
+      "artroscopia"
+     ]
     },
     "knee-refer": {
      "label": "Cuándo ir al médico",
@@ -138,7 +162,13 @@
     "tomarme la tensión",
     "tensiómetro",
     "me ha subido la tensión",
-    "tensión descontrolada"
+    "tensión descontrolada",
+    "sal light",
+    "sal liger",
+    "sal de régimen",
+    "sustituto de la sal",
+    "sodio",
+    "sal con potasio"
    ],
    "solutions": {
     "bp-take-meds-on-time": {
@@ -171,11 +201,31 @@
     },
     "bp-med-change-blocked": {
      "label": "Cambiar o dejar la medicación",
-     "say": "Cambiar la pastilla, subirla o dejarla solo lo puede decidir su médico. Yo no voy a tomar esa decisión por usted, y los números de la tensión tampoco se los voy a interpretar."
+     "say": "Cambiar la pastilla, subirla o dejarla solo lo puede decidir su médico. Yo no voy a tomar esa decisión por usted, y los números de la tensión tampoco se los voy a interpretar.",
+     "askedFor": [
+      "dejar la pastilla",
+      "cambiar la pastilla",
+      "quitarme la pastilla",
+      "dosis",
+      "enalapril",
+      "amlodipino"
+     ]
     },
     "bp-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "Si se mide más de 180 de máxima, o nota la cara torcida, un brazo flojo o que no le salen las palabras (aviso de ictus), o presión en el pecho con sudor frío (aviso del corazón) — llame al 112 inmediatamente, no espere a la próxima consulta."
+    },
+    "bp-salt-substitute-caution": {
+     "label": "La sal «light» no le vale a todo el mundo",
+     "askedFor": [
+      "sal light",
+      "sal ligera",
+      "sal de régimen",
+      "sustituto de la sal",
+      "sal baja en sodio",
+      "menos sodio"
+     ],
+     "say": "La sal light, la «ligera» y las de «60% menos de sodio» sí le quitan buena parte del sodio, y para la mayoría de la gente son una buena opción. Pero conviene saber qué hacen: **cambian el sodio por potasio**. A quien tiene el riñón regular ese potasio se le acumula — da flojera por todo el cuerpo y, si la cosa se va de la mano, puede alterarle el ritmo del corazón. Y hay otro detalle: **varias pastillas de la tensión ya suben el potasio de por sí** (las que acaban en «-pril» o en «-sartán», y algunos diuréticos). Así que si tiene algo de riñón o toma medicación para la tensión, **pregúntele a su médico o a su farmacéutico antes de cambiar de sal** — es una pregunta de un minuto. Y para comer menos salado, lo más seguro sigue siendo dar sabor con ajo, cebolla, limón, pimentón y pimienta negra."
     }
    }
   },
@@ -220,7 +270,14 @@
     },
     "dm-med-blocked": {
      "label": "Ajustar medicación o interpretar números",
-     "say": "Los números del azúcar no se los voy a interpretar, y ajustar la medicación solo lo puede hacer su médico. Y si un suplemento se lleva bien o mal con su medicación, eso se lo dice el farmacéutico."
+     "say": "Los números del azúcar no se los voy a interpretar, y ajustar la medicación solo lo puede hacer su médico. Y si un suplemento se lleva bien o mal con su medicación, eso se lo dice el farmacéutico.",
+     "askedFor": [
+      "metformina",
+      "insulina",
+      "ozempic",
+      "ajustar",
+      "glicosilada"
+     ]
     },
     "dm-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -268,7 +325,15 @@
     },
     "gout-med-blocked": {
      "label": "Antiinflamatorios y pastillas del úrico",
-     "say": "Las cantidades de los antiinflamatorios o de la medicación para bajar el úrico no se las voy a decir yo. Y si toma diuréticos, si tienen algo que ver con sus ataques lo tiene que valorar su médico."
+     "say": "Las cantidades de los antiinflamatorios o de la medicación para bajar el úrico no se las voy a decir yo. Y si toma diuréticos, si tienen algo que ver con sus ataques lo tiene que valorar su médico.",
+     "askedFor": [
+      "alopurinol",
+      "zyloric",
+      "colchicina",
+      "febuxostat",
+      "adenuric",
+      "antiinflamatorio"
+     ]
     },
     "gout-refer": {
      "label": "Cuándo ir al médico",
@@ -322,7 +387,15 @@
     },
     "consti-laxative-blocked": {
      "label": "Laxantes y supositorios",
-     "say": "Qué laxante, qué supositorio o qué enema y en qué cantidad, no se lo puedo decir yo. Y tirar de laxantes durante mucho tiempo deja el intestino todavía más vago — eso lo tiene que valorar su médico."
+     "say": "Qué laxante, qué supositorio o qué enema y en qué cantidad, no se lo puedo decir yo. Y tirar de laxantes durante mucho tiempo deja el intestino todavía más vago — eso lo tiene que valorar su médico.",
+     "askedFor": [
+      "laxante",
+      "supositorio",
+      "enema",
+      "duphalac",
+      "micralax",
+      "glicerina"
+     ]
     },
     "consti-refer": {
      "label": "Cuándo ir al médico",
@@ -411,7 +484,14 @@
     },
     "eye-surgery-blocked": {
      "label": "Operarse de cataratas",
-     "say": "Si hay que operarse de cataratas y cuándo, eso es una decisión médica del oftalmólogo. Yo no la voy a tomar por usted."
+     "say": "Si hay que operarse de cataratas y cuándo, eso es una decisión médica del oftalmólogo. Yo no la voy a tomar por usted.",
+     "askedFor": [
+      "operar",
+      "operación",
+      "quirófano",
+      "lente intraocular",
+      "láser"
+     ]
     },
     "eye-refer": {
      "label": "Cuándo ir al médico",
@@ -455,7 +535,13 @@
     },
     "itch-steroid-blocked": {
      "label": "Las pomadas",
-     "say": "La potencia de una pomada de corticoide y cómo aplicarla no se la voy a decir yo: depende de la zona y de lo fuerte que sea la cosa — eso se pregunta al médico o al farmacéutico."
+     "say": "La potencia de una pomada de corticoide y cómo aplicarla no se la voy a decir yo: depende de la zona y de lo fuerte que sea la cosa — eso se pregunta al médico o al farmacéutico.",
+     "askedFor": [
+      "pomada",
+      "corticoid",
+      "cortisona",
+      "hidrocortisona"
+     ]
     },
     "itch-refer": {
      "label": "Cuándo ir al médico",
@@ -506,7 +592,15 @@
     },
     "noct-dx-blocked": {
      "label": "Si es benigno o es otra cosa",
-     "say": "Si es un crecimiento benigno de la próstata o es otra cosa, yo no lo voy a juzgar — eso se ve con las pruebas del urólogo."
+     "say": "Si es un crecimiento benigno de la próstata o es otra cosa, yo no lo voy a juzgar — eso se ve con las pruebas del urólogo.",
+     "askedFor": [
+      "es grave",
+      "es cáncer",
+      "benigno",
+      "psa",
+      "biopsia",
+      "es malo"
+     ]
     },
     "noct-refer": {
      "label": "Cuándo ir al médico",
@@ -552,7 +646,15 @@
     },
     "reflux-meds-blocked": {
      "label": "El omeprazol y compañía",
-     "say": "Qué protector de estómago tomar y cómo, no se lo puedo decir yo — y el omeprazol no es un caramelo para tomarlo por libre. Si lleva tiempo tomándolo, tampoco lo deje de golpe por su cuenta: eso lo tiene que valorar su médico."
+     "say": "Qué protector de estómago tomar y cómo, no se lo puedo decir yo — y el omeprazol no es un caramelo para tomarlo por libre. Si lleva tiempo tomándolo, tampoco lo deje de golpe por su cuenta: eso lo tiene que valorar su médico.",
+     "askedFor": [
+      "omeprazol",
+      "protector de estómago",
+      "pantoprazol",
+      "almax",
+      "antiácido",
+      "gaviscon"
+     ]
     },
     "reflux-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -588,7 +690,14 @@
     },
     "vax-eligibility-blocked": {
      "label": "Si a usted le conviene ponérsela",
-     "say": "Si en su situación concreta le conviene vacunarse hoy — si tiene fiebre, si toma algo que le baje las defensas, si es alérgico a algún componente — eso lo tiene que decir el médico o la enfermera. Pregúntelo antes de que se la pongan."
+     "say": "Si en su situación concreta le conviene vacunarse hoy — si tiene fiebre, si toma algo que le baje las defensas, si es alérgico a algún componente — eso lo tiene que decir el médico o la enfermera. Pregúntelo antes de que se la pongan.",
+     "askedFor": [
+      "me la puedo poner",
+      "puedo vacunarme",
+      "me conviene",
+      "es compatible",
+      "soy alérgico"
+     ]
     },
     "vax-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -632,7 +741,14 @@
     },
     "swallow-dental-blocked": {
      "label": "Dentadura postiza o implantes",
-     "say": "Si le conviene una dentadura postiza o un implante, y de qué tipo, eso lo decide el dentista. Yo no voy a tomar esa decisión por usted."
+     "say": "Si le conviene una dentadura postiza o un implante, y de qué tipo, eso lo decide el dentista. Yo no voy a tomar esa decisión por usted.",
+     "askedFor": [
+      "dentadura postiza",
+      "implante",
+      "prótesis dental",
+      "puente",
+      "dentadura nueva"
+     ]
     },
     "swallow-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -693,7 +809,15 @@
     },
     "mci-dementia-drug-blocked": {
      "label": "Medicación para la demencia",
-     "say": "Si hay que tomar medicación para la demencia y cuál, lo decide el médico después de valorarle. Yo no voy a juzgar eso por usted."
+     "say": "Si hay que tomar medicación para la demencia y cuál, lo decide el médico después de valorarle. Yo no voy a juzgar eso por usted.",
+     "askedFor": [
+      "hay pastillas",
+      "hay tratamiento",
+      "hay algún medicamento",
+      "donepezilo",
+      "memantina",
+      "pastillas para la memoria"
+     ]
     },
     "mci-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -750,7 +874,13 @@
     },
     "cramp-quinine-blocked": {
      "label": "Pastillas para los calambres",
-     "say": "Los medicamentos que se han usado para los calambres (la quinina y parecidos) tienen efectos adversos serios y ya no se recomiendan para esto — no le voy a decir que se haga con ellos."
+     "say": "Los medicamentos que se han usado para los calambres (la quinina y parecidos) tienen efectos adversos serios y ya no se recomiendan para esto — no le voy a decir que se haga con ellos.",
+     "askedFor": [
+      "quinina",
+      "tónica",
+      "pastillas para los calambres",
+      "medicamento para los calambres"
+     ]
     },
     "cramp-refer": {
      "label": "Cuándo ir al médico",
@@ -804,7 +934,15 @@
     },
     "supp-no-brand-blocked": {
      "label": "Marcas y dosis, no",
-     "say": "No le voy a recomendar marcas ni ingredientes concretos, no doy cantidades, y tampoco le voy a asegurar que algo «se lleva bien con su medicación» — eso solo vale si lo mira un farmacéutico."
+     "say": "No le voy a recomendar marcas ni ingredientes concretos, no doy cantidades, y tampoco le voy a asegurar que algo «se lleva bien con su medicación» — eso solo vale si lo mira un farmacéutico.",
+     "askedFor": [
+      "qué marca",
+      "cuál me compro",
+      "qué me compro",
+      "cuántas pastillas",
+      "cuántos miligramos",
+      "qué dosis"
+     ]
     },
     "supp-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -865,7 +1003,15 @@
     },
     "osteo-meds-blocked": {
      "label": "Los medicamentos para el hueso",
-     "say": "Si hay que tomar medicación para la osteoporosis (en pastillas o en inyección) y cuál, lo decide el médico según su densitometría y su riesgo de fractura. Yo no voy a juzgar eso por usted."
+     "say": "Si hay que tomar medicación para la osteoporosis (en pastillas o en inyección) y cuál, lo decide el médico según su densitometría y su riesgo de fractura. Yo no voy a juzgar eso por usted.",
+     "askedFor": [
+      "alendronato",
+      "fosamax",
+      "bifosfonato",
+      "prolia",
+      "denosumab",
+      "inyección para el hueso"
+     ]
     },
     "osteo-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -915,7 +1061,15 @@
     },
     "mood-antidep-blocked": {
      "label": "Medicación para el ánimo",
-     "say": "Si conviene tomar medicación para la depresión, y cuál, eso lo decide el médico. Y si ya la está tomando, no la deje por su cuenta: la retirada de golpe es un trago muy malo."
+     "say": "Si conviene tomar medicación para la depresión, y cuál, eso lo decide el médico. Y si ya la está tomando, no la deje por su cuenta: la retirada de golpe es un trago muy malo.",
+     "askedFor": [
+      "antidepresivo",
+      "pastillas para la depresión",
+      "sertralina",
+      "escitalopram",
+      "prozac",
+      "ansiolítico"
+     ]
     },
     "mood-refer": {
      "label": "Cuándo pedir ayuda",
@@ -962,7 +1116,15 @@
     },
     "cold-otc-blocked": {
      "label": "Marcas y cantidades",
-     "say": "No le voy a recomendar ninguna marca de antigripal ni ninguna cantidad, y tampoco voy a decidir si esto es un catarro, una gripe o una neumonía — eso lo tiene que ver el médico."
+     "say": "No le voy a recomendar ninguna marca de antigripal ni ninguna cantidad, y tampoco voy a decidir si esto es un catarro, una gripe o una neumonía — eso lo tiene que ver el médico.",
+     "askedFor": [
+      "frenadol",
+      "couldina",
+      "antigripal",
+      "paracetamol",
+      "gelocatil",
+      "qué me tomo"
+     ]
     },
     "cold-refer": {
      "label": "Cuándo ir al médico",
@@ -1005,7 +1167,14 @@
     },
     "palp-dx-blocked": {
      "label": "Si es benigna o peligrosa",
-     "say": "Si su arritmia es benigna o peligrosa, eso no lo puedo juzgar de ninguna manera: es un diagnóstico médico. Lo que sí puedo es ayudarle a apuntarlo y acompañarle a que se lo miren."
+     "say": "Si su arritmia es benigna o peligrosa, eso no lo puedo juzgar de ninguna manera: es un diagnóstico médico. Lo que sí puedo es ayudarle a apuntarlo y acompañarle a que se lo miren.",
+     "askedFor": [
+      "es grave",
+      "es peligroso",
+      "es preocupante",
+      "me va a dar algo",
+      "es del corazón"
+     ]
     },
     "palp-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -1198,7 +1367,15 @@
     },
     "meno-hrt-blocked": {
      "label": "Terapia hormonal",
-     "say": "La terapia hormonal es un tratamiento con receta: si le conviene y por cuánto tiempo, lo tiene que valorar el ginecólogo con su historial. Yo no se la voy a recomendar — pero si esto le está amargando el día a día, es una puerta a la que se puede llamar; no hay que aguantarse sin más."
+     "say": "La terapia hormonal es un tratamiento con receta: si le conviene y por cuánto tiempo, lo tiene que valorar el ginecólogo con su historial. Yo no se la voy a recomendar — pero si esto le está amargando el día a día, es una puerta a la que se puede llamar; no hay que aguantarse sin más.",
+     "askedFor": [
+      "terapia hormonal",
+      "tratamiento hormonal",
+      "hormonas",
+      "estrógenos",
+      "parches",
+      "sustitutiva"
+     ]
     },
     "meno-refer": {
      "label": "Cuándo ir al médico",
@@ -1242,7 +1419,15 @@
     },
     "period-painkiller-blocked": {
      "label": "Los calmantes",
-     "say": "Qué calmante tomar y cómo no se lo puedo decir yo: eso es del médico o del farmacéutico. Pero sí quiero decirle una cosa: **tomar algo para el dolor de regla no es «falta de aguante»** — si le está estropeando la vida, hay que ponerle remedio."
+     "say": "Qué calmante tomar y cómo no se lo puedo decir yo: eso es del médico o del farmacéutico. Pero sí quiero decirle una cosa: **tomar algo para el dolor de regla no es «falta de aguante»** — si le está estropeando la vida, hay que ponerle remedio.",
+     "askedFor": [
+      "nolotil",
+      "enantyum",
+      "ibuprofeno",
+      "calmante",
+      "analgésico",
+      "qué me tomo"
+     ]
     },
     "period-refer": {
      "label": "Cuándo ir al médico",
@@ -1291,7 +1476,14 @@
     },
     "iron-cause-blocked": {
      "label": "Por qué le falta hierro",
-     "say": "Por qué le falta hierro no lo voy a juzgar yo — puede ser por reglas abundantes, por un sangrado digestivo o porque no lo absorbe bien. Eso lo tiene que investigar el médico."
+     "say": "Por qué le falta hierro no lo voy a juzgar yo — puede ser por reglas abundantes, por un sangrado digestivo o porque no lo absorbe bien. Eso lo tiene que investigar el médico.",
+     "askedFor": [
+      "por qué me falta",
+      "por qué tengo anemia",
+      "a qué se debe",
+      "de qué me viene",
+      "por qué me pasa"
+     ]
     },
     "iron-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -1339,7 +1531,15 @@
     },
     "preg-med-blocked": {
      "label": "Qué medicamentos puede tomar",
-     "say": "Qué medicamentos se pueden tomar en el embarazo y la lactancia no lo voy a juzgar en absoluto — ni siquiera un antigripal o un calmante: eso se pregunta al médico o al farmacéutico. Y la medicación crónica que ya tomaba, no la deje por su cuenta: el que la ajusta es su médico."
+     "say": "Qué medicamentos se pueden tomar en el embarazo y la lactancia no lo voy a juzgar en absoluto — ni siquiera un antigripal o un calmante: eso se pregunta al médico o al farmacéutico. Y la medicación crónica que ya tomaba, no la deje por su cuenta: el que la ajusta es su médico.",
+     "askedFor": [
+      "medicamento",
+      "medicación",
+      "antigripal",
+      "paracetamol",
+      "ibuprofeno",
+      "calmante"
+     ]
     },
     "preg-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -1418,7 +1618,14 @@
     },
     "tcm-prescribe-blocked": {
      "label": "Recetar plantas o dosis, no",
-     "say": "No le voy a decir qué planta tomar, ni cuánta, ni le voy a hacer un diagnóstico por lo que me cuente. Y hay una cosa que no haré jamás: decirle que deje sus medicamentos para sustituirlos por un remedio natural."
+     "say": "No le voy a decir qué planta tomar, ni cuánta, ni le voy a hacer un diagnóstico por lo que me cuente. Y hay una cosa que no haré jamás: decirle que deje sus medicamentos para sustituirlos por un remedio natural.",
+     "askedFor": [
+      "qué planta",
+      "qué hierba",
+      "qué cantidad",
+      "cuánta me tomo",
+      "me lo puede recetar"
+     ]
     },
     "tcm-refer": {
      "label": "Cuándo ir al médico",
@@ -1585,7 +1792,15 @@
    "solutions": {
     "lipid-numbers-blocked": {
      "label": "Interpretar la analítica o ajustar la medicación",
-     "say": "Qué significan sus números del colesterol, si le toca tomar pastillas o si hay que cambiar la dosis — eso lo decide el médico mirando el riesgo entero: la edad, la tensión, si hay azúcar, si fuma. Yo no le voy a interpretar la analítica. Lo que sí puedo es acompañarle en la parte de la vida diaria, que también cuenta."
+     "say": "Qué significan sus números del colesterol, si le toca tomar pastillas o si hay que cambiar la dosis — eso lo decide el médico mirando el riesgo entero: la edad, la tensión, si hay azúcar, si fuma. Yo no le voy a interpretar la analítica. Lo que sí puedo es acompañarle en la parte de la vida diaria, que también cuenta.",
+     "askedFor": [
+      "es alto",
+      "está alto",
+      "es normal",
+      "qué significa",
+      "tengo que tomar pastillas",
+      "hay que subir la dosis"
+     ]
     },
     "lipid-statin-dont-stop": {
      "label": "La pastilla del colesterol no se deja por cuenta propia",
@@ -1690,7 +1905,15 @@
     },
     "wt-diet-pills-blocked": {
      "label": "Pastillas y pinchazos para adelgazar",
-     "say": "Si le conviene o no un tratamiento para adelgazar, de pastillas o de esos pinchazos que están tan de moda, eso lo valora su médico: yo ni se lo recomiendo ni le doy pautas. Y una cosa se la digo clara: **lo que se compra por internet sin receta, ni tocarlo** — con eso ha habido sustos muy serios."
+     "say": "Si le conviene o no un tratamiento para adelgazar, de pastillas o de esos pinchazos que están tan de moda, eso lo valora su médico: yo ni se lo recomiendo ni le doy pautas. Y una cosa se la digo clara: **lo que se compra por internet sin receta, ni tocarlo** — con eso ha habido sustos muy serios.",
+     "askedFor": [
+      "ozempic",
+      "wegovy",
+      "saxenda",
+      "mounjaro",
+      "pinchazo para adelgazar",
+      "pastillas para adelgazar"
+     ]
     },
     "wt-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -1753,7 +1976,15 @@
     },
     "diet-detox-blocked": {
      "label": "Detox, depurativos y curas de zumos",
-     "say": "Eso de «depurar» o «desintoxicar» no existe en medicina — de eso ya se encargan el hígado y el riñón todos los días. Las curas extremas y los días a base de zumos pueden descolocarle las sales del cuerpo, y si toma medicación, más todavía. No se lo voy a recomendar."
+     "say": "Eso de «depurar» o «desintoxicar» no existe en medicina — de eso ya se encargan el hígado y el riñón todos los días. Las curas extremas y los días a base de zumos pueden descolocarle las sales del cuerpo, y si toma medicación, más todavía. No se lo voy a recomendar.",
+     "askedFor": [
+      "detox",
+      "depur",
+      "desintoxic",
+      "cura de zumos",
+      "batidos detox",
+      "limpieza de colon"
+     ]
     },
     "diet-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -1803,7 +2034,14 @@
     },
     "allergy-test-blocked": {
      "label": "Tests de intolerancias alimentarias (IgG)",
-     "say": "Hay sitios que venden un «test de intolerancias alimentarias» por IgG que promete decirle qué no puede comer — **las sociedades de alergia no lo respaldan para decidir qué dejar de comer**, y con eso mucha gente acaba retirando comida sin ninguna necesidad. Si quiere salir de dudas, lo suyo es el alergólogo: él decide qué prueba toca."
+     "say": "Hay sitios que venden un «test de intolerancias alimentarias» por IgG que promete decirle qué no puede comer — **las sociedades de alergia no lo respaldan para decidir qué dejar de comer**, y con eso mucha gente acaba retirando comida sin ninguna necesidad. Si quiere salir de dudas, lo suyo es el alergólogo: él decide qué prueba toca.",
+     "askedFor": [
+      "test de intolerancias",
+      "prueba de intolerancias",
+      "igg",
+      "test alimentario",
+      "test de alimentos"
+     ]
     },
     "allergy-refer": {
      "label": "Cuándo pedir ayuda médica",
@@ -1857,6 +2095,295 @@
     "sarco-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "Si en medio año ha adelgazado bastante **sin haberlo buscado**, eso hay que estudiarlo con el médico: no se queda en «es que voy perdiendo músculo». Y si se ha caído hace poco, o de repente anda más inseguro, que le hagan una valoración cuanto antes — una caída, a cierta edad, cambia mucho las cosas, y se puede prevenir."
+    }
+   }
+  },
+  "TW-EDU-38": {
+   "keywords": [
+    "riñón",
+    "renal",
+    "creatinina",
+    "diálisis",
+    "hemodiálisis",
+    "peritoneal",
+    "nefrólog",
+    "glomerular",
+    "proteinuria",
+    "albuminuria",
+    "potasio",
+    "fósforo",
+    "fístula"
+   ],
+   "solutions": {
+    "ckd-stage-decides-everything": {
+     "label": "Cada etapa se come de una manera, y a veces al revés",
+     "say": "Con el riñón, la alimentación cambia según el estadio, y en algunas cosas es justo al contrario: **antes de la diálisis lo habitual es controlar la proteína, y una vez que se empieza a dializar hay que comer suficiente**. Por eso lo que se lee por ahí se contradice tanto — nadie dice en qué estadio está. Lo que vale para usted es su última analítica y lo que le haya dicho su nefrólogo, no lo que le funcionó al vecino."
+    },
+    "ckd-salt-substitute-danger": {
+     "label": "La sal «light» a usted no le conviene",
+     "askedFor": [
+      "sal light",
+      "sal ligera",
+      "sal de régimen",
+      "sustituto de la sal",
+      "menos sodio",
+      "sal baja en sodio"
+     ],
+     "say": "Esto mucha gente no lo sabe: la sal light, la «sal ligera» y las de «60% menos de sodio» que hay en cualquier supermercado no quitan la sal — **cambian el sodio por potasio**. A quien tiene el riñón bien no le pasa nada, pero un riñón que ya no filtra bien no elimina ese potasio, y eso se nota en **flojera por todo el cuerpo y puede alterarle el ritmo del corazón**. Además se junta con otra cosa: varias pastillas de la tensión (las que acaban en «-pril» o en «-sartán», y algunos diuréticos) también suben el potasio de por sí. Para que la comida sepa a algo tire de ajo, cebolla, limón, pimentón, laurel, perejil y un poco de vinagre — es mucho más seguro que cambiar de sal."
+    },
+    "ckd-potassium-cooking": {
+     "label": "La verdura, en remojo y de doble cocción; el caldo, poco",
+     "say": "El potasio se marcha al agua, y por eso aquí se enseña un truco de toda la vida: **la verdura y la patata, peladas y troceadas, unas horas en remojo cambiando el agua; y después doble cocción** — se ponen a cocer, se tira esa agua y se termina en agua limpia. Con eso se va buena parte del potasio (al vapor o al horno, en cambio, apenas se quita nada, así que ahí el remojo es imprescindible). Y al revés: **el caldo del cocido y el agua de la sopa se lo llevan todo dentro** — la verdura y la carne se pueden comer, el caldo mejor poco. Lo estricto que tenga que ser depende de su analítica; pregúntelo en la consulta de nefrología."
+    },
+    "ckd-phosphorus-is-hidden": {
+     "label": "El fósforo está escondido en los preparados, no solo en la carne",
+     "say": "El fósforo no está solo en la carne y en las legumbres. El que más guerra da es **el que le añaden a los productos preparados**: fiambres y embutidos, quesitos y quesos fundidos, refrescos de cola, bollería, precocinados, algunos panes de molde. Ese fósforo añadido **el cuerpo lo absorbe muchísimo mejor** que el de la comida de verdad, y encima casi nunca aparece en las tablas de composición. Truco para la etiqueta: si en la lista de ingredientes ve «fosfato», «difosfato» o «polifosfato», o los números **E-450, E-451 y E-452**, ahí está."
+    },
+    "ckd-painkillers": {
+     "label": "El ibuprofeno de andar por casa es el daño silencioso más común",
+     "askedFor": [
+      "ibuprofeno",
+      "antiinflamatorio",
+      "analgésico",
+      "para el dolor",
+      "voltaren",
+      "enantyum"
+     ],
+     "say": "Pasa constantemente: duele la espalda o la rodilla y uno tira del ibuprofeno que hay en casa. **El ibuprofeno y los de su familia — naproxeno, diclofenaco, dexketoprofeno — son justo los que peor le sientan al riñón**, y encima también le suben el potasio. No hace falta que usted distinga cuál es cuál: lleve la frase preparada para el mostrador de la farmacia — **«tengo el riñón regular, ¿esto lo puedo tomar?»**. Con eso el farmacéutico ya le busca otra cosa. Dígalo igual en el dentista y en cualquier consulta nueva."
+    },
+    "ckd-unknown-herbs": {
+     "label": "Lo de herbolario sin garantía y lo comprado por internet",
+     "askedFor": [
+      "hierbas",
+      "plantas para adelgazar",
+      "detox",
+      "por internet",
+      "cápsulas",
+      "remedio"
+     ],
+     "say": "Aquí el peligro no son las plantas en sí: **es no saber qué lleva el bote**. La AEMPS ha tenido que retirar del mercado productos «naturales» para adelgazar y tés «detox» porque llevaban dentro medicamentos sin declarar, y hay casos descritos de fallo del riñón por plantas mal identificadas en preparados adelgazantes. Lo que más sustos da es lo comprado por internet, lo que trae un conocido de fuera y lo que no lleva etiqueta en español. **Una planta con su registro, comprada en farmacia o en un herbolario serio y contada a su médico, es otra cosa distinta.** La diferencia está en saber de dónde viene, no en que sea natural."
+    },
+    "ckd-protein-ask-dietitian": {
+     "label": "Menos proteína no es «nada de proteína»",
+     "say": "Mucha gente oye «con el riñón hay que comer menos proteína» y deja de comer carne, pescado y huevo del todo — y acaba perdiendo peso, sin fuerza y cayéndose. Eso al riñón no le hace ningún favor. Lo correcto es **la cantidad justa y de buena calidad**, y esa cantidad cambia según su estadio, y vuelve a cambiar si algún día entra en diálisis. En la consulta de nefrología pida que le vea un **dietista-nutricionista**: pedirlo usted funciona muchísimo mejor que ir adivinando en casa."
+    },
+    "ckd-bp-sugar-is-the-kidney": {
+     "label": "Cuidar la tensión y el azúcar es cuidar el riñón",
+     "say": "Lo que más gente acaba llevando a diálisis son dos cosas de siempre: la diabetes y la tensión alta. Así que tomarse las pastillas de la tensión y del azúcar a su hora, medirse en casa y llevar los números apuntados a la consulta — que parece que no tiene nada que ver con el riñón — **es lo más eficaz que puede hacer usted por su riñón**."
+    },
+    "ckd-anemia-is-different": {
+     "label": "Su anemia no siempre se arregla con hierro",
+     "askedFor": [
+      "anemia",
+      "hierro",
+      "pastillas de hierro",
+      "estoy pálido",
+      "estoy pálida"
+     ],
+     "say": "Cuando el riñón va mal es fácil quedarse anémico, pero muchas veces **no es por falta de hierro**: el riñón es quien fabrica la hormona que manda a la médula hacer sangre (la eritropoyetina), y si falta esa, por mucho hierro que tome usted no levanta. Comprarse hierro por su cuenta puede no servirle de nada y, de paso, sentarle mal al estómago. Esta anemia tiene su propio tratamiento — en la consulta dígalo con todas las letras: «me canso mucho y me ven muy pálido»."
+    },
+    "ckd-dialysis-not-the-end": {
+     "label": "La diálisis no es el final, y prepararla con tiempo se lleva mejor",
+     "askedFor": [
+      "diálisis",
+      "hemodiálisis",
+      "diálisis peritoneal",
+      "fístula",
+      "catéter"
+     ],
+     "say": "Mucha gente no quiere ni oír la palabra diálisis y lo va dejando, hasta que un día llega ahogándose a urgencias y hay que ponerle un catéter de urgencia — **ese es el peor camino de todos y el que más complicaciones trae**. Hablándolo con meses de antelación se hacen las cosas con calma: **la fístula del brazo hay que prepararla bastante antes** (la guía española habla de unos seis meses, para que tenga tiempo de madurar), y existe la **diálisis peritoneal, que se hace en casa** y deja mucha más vida propia. Cuándo empezar y de qué manera se habla sentados en la consulta de enfermedad renal avanzada. No es una sentencia: es una decisión en la que usted pinta mucho."
+    },
+    "ckd-kidney-supplements-blocked": {
+     "label": "No hay complemento que le devuelva riñón",
+     "askedFor": [
+      "depurativo",
+      "para el riñón",
+      "limpiar el riñón",
+      "desintoxicar",
+      "complementos",
+      "suplementos"
+     ],
+     "say": "Se lo digo claro: **no hay ningún complemento que le devuelva la función de riñón que ya se ha perdido**. Y los que se venden como «depurativos» o «para el riñón» suelen ser precisamente los peores para usted — no se sabe bien qué llevan ni cuánto, y un riñón que no filtra no puede deshacerse de lo que sobra. El dinero y las ganas rinden muchísimo más puestos en la tensión, en el azúcar y en no meterse nada raro."
+    },
+    "ckd-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Estas cosas no esperan a la próxima revisión, vaya a que le vean cuanto antes: **si de repente orina mucho menos, si se le hinchan las piernas o los párpados en pocos días o coge varios kilos de golpe, o si se queda sin fuerzas en todo el cuerpo y además nota el corazón raro**. Y si ya se ahoga estando tumbado y solo puede dormir sentado, o se le ve confuso y no del todo presente — **eso es llamar al 112 directamente**."
+    }
+   }
+  },
+  "TW-EDU-39": {
+   "keywords": [
+    "asma",
+    "asmátic",
+    "epoc",
+    "bronqui",
+    "inhalad",
+    "ventol",
+    "me falta el aire",
+    "ahog",
+    "pitos en el pecho",
+    "sibilanc",
+    "flema",
+    "enfisema",
+    "fum",
+    "oxígeno"
+   ],
+   "solutions": {
+    "lung-controller-vs-reliever": {
+     "label": "Los dos inhaladores no hacen lo mismo",
+     "say": "Si le han mandado dos inhaladores, hacen trabajos distintos: **uno es el de mantenimiento, que se usa todos los días aunque se encuentre bien; el otro es el de rescate, el que se coge cuando falta el aire** — el que aquí mucha gente llama el Ventolín. Y lo que pasa casi siempre es justo lo contrario de lo que tocaría: el de rescate va en el bolsillo a todas partes y el de mantenimiento se queda en el cajón «porque hoy estoy bien». **Precisamente eso es lo que hace que la enfermedad vaya a peor con los años.** El de mantenimiento, aunque hoy respire de maravilla, se usa igual."
+    },
+    "lung-reliever-frequency-warning": {
+     "label": "Usar más el de rescate es una señal, no una suerte",
+     "say": "Si nota que echa mano del inhalador de rescate más que antes, eso no es «menos mal que lo llevo encima»: es la señal de que la cosa no está bien controlada. Una regla fácil de recordar: **si lo necesita dos veces por semana o más — y las noches en que se despierta ahogado cuentan también —, llévelo a la consulta, porque hay que revisar el tratamiento.**"
+    },
+    "lung-inhaler-technique": {
+     "label": "Pida que le vean cómo lo hace",
+     "askedFor": [
+      "inhalador",
+      "inhaladores",
+      "cámara",
+      "ventolín",
+      "spray"
+     ],
+     "say": "Si la técnica no es buena, el medicamento se queda en la boca y no llega al pulmón — y eso es facilísimo que pase, sobre todo con los años. Lo más práctico: **métase los inhaladores en la bolsa y pida que le miren cómo lo hace** — en la farmacia se lo revisan y la enfermera de su centro de salud también; son dos minutos y se ve enseguida. Los fallos de siempre: no agitarlo, apretar y coger aire cada uno por su lado, y soltar el aire enseguida en vez de aguantarlo unos segundos. Y uno que se olvida mucho: **si el inhalador lleva corticoide, hay que enjuagarse la boca al terminar**, o salen hongos."
+    },
+    "lung-dont-stop-controller": {
+     "label": "Dejar el de mantenimiento porque «ya estoy bien»",
+     "say": "El inhalador de mantenimiento es «estoy bien **porque** lo uso», no «ya estoy bien, así que lo dejo». Cuando se deja por cuenta propia se aguanta una temporada y luego vuelve — y la vuelta suele costar más de tapar que la vez anterior. Bajarlo o quitarlo se hace poco a poco y con el médico mirando."
+    },
+    "lung-quit-smoking": {
+     "label": "Dejar de fumar es lo único que frena la caída",
+     "askedFor": [
+      "fumar",
+      "tabaco",
+      "cigarro",
+      "dejar de fumar",
+      "vapear"
+     ],
+     "say": "Se lo digo aunque no apetezca oírlo: en la EPOC los inhaladores le harán respirar mejor, pero **lo único que ha demostrado frenar la caída del pulmón es dejar de fumar**. Y sirve a cualquier edad, también a los ochenta. No hace falta hacerlo a pulso: en el centro de salud hay consulta de deshabituación tabáquica, y **el Sistema Nacional de Salud financia medicamentos para dejarlo — bupropión, vareniclina y citisiniclina — para quien entra en un programa de apoyo y cumple los requisitos (va con receta y se financia un intento al año)**. Pregunte en su centro de salud si a usted le toca: con alguien al lado se consigue mucho más que apretando los dientes."
+    },
+    "lung-exacerbation-three-signs": {
+     "label": "Más flemas, de otro color y más ahogo: con dos de tres, no espere",
+     "askedFor": [
+      "flemas",
+      "esputo",
+      "moco verde",
+      "toso más",
+      "escupo"
+     ],
+     "say": "Hay tres cambios que se miran juntos: **más flemas de lo habitual, que cambien de color (amarillas o verdosas) y ahogarse más que de costumbre. Si aparecen dos de los tres, normalmente es una reagudización** — e ir a que le vean unos días antes es muchísimo más llevadero que acabar ingresado. Los mayores suelen quitarle importancia («si no es nada»), así que si en casa ven que las flemas no tienen buena pinta, pueden avisar ellos."
+    },
+    "lung-breathing-and-moving": {
+     "label": "El círculo de no moverse por miedo a ahogarse",
+     "say": "Como uno se ahoga deja de moverse, y como no se mueve pierde músculo, y con menos músculo a los dos pasos se ahoga más. **Ese círculo desgasta más que la propia enfermedad.** Andar despacio, parando cuando haga falta, ya cuenta: lo importante es que sea a diario. Y cuando le falte el aire, pruebe a **soltarlo con los labios fruncidos, como quien apaga una vela**: coja aire por la nariz contando uno y suéltelo despacio contando dos o tres; a mucha gente el simple hecho de alargar la salida le quita el agobio. Pregunte también por la **rehabilitación respiratoria**: son programas de unas semanas y quien peor anda es justo quien más gana con ellos."
+    },
+    "lung-air-triggers": {
+     "label": "Localice los suyos, que son pocos",
+     "say": "Cada uno tiene los suyos, pero suelen repetirse: **el aire frío de golpe al salir a la calle, el humo de la sartén y de la freidora, el tabaco de al lado, la lejía y los limpiadores fuertes, los días de mucho polen o de calima, y el olor a pintura de una obra reciente**. Le renta más localizar los suyos que vivir a la defensiva con todo: mire la calidad del aire antes de salir y, si el día viene malo, deje el paseo para dentro de casa."
+    },
+    "lung-vaccines": {
+     "label": "Con el pulmón tocado, vacunarse compensa el doble",
+     "say": "Con un pulmón que ya no va fino, una gripe o una neumonía acaban en ingreso con mucha más facilidad. **La de la gripe, todos los otoños**; la del neumococo y la del herpes zóster van por edad y por su situación, y cada comunidad organiza su campaña a su manera. La forma más rápida de saberlo es preguntarlo en la próxima consulta tal cual: «con lo mío del pulmón, ¿cuáles me tocan a mí?»."
+    },
+    "lung-comfort-remedies": {
+     "label": "El vaho, la miel y las infusiones: dónde encajan",
+     "askedFor": [
+      "vaho",
+      "eucalipto",
+      "tomillo",
+      "miel",
+      "caramelos para la garganta",
+      "vaporub"
+     ],
+     "say": "Los caramelos de miel, el vaho, las infusiones de tomillo o de eucalipto — que la garganta se quede a gusto es verdad, y como compañía no tienen nada de malo. Pero conviene tener clara la diferencia: **eso no abre un bronquio que se ha cerrado**. Se pueden tomar, pero **no sustituyen al inhalador**, y sobre todo que el ratito de alivio no le lleve a ir retrasando la medicación que sí toca."
+    },
+    "lung-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "Estas no admiten espera: **que no le llegue el aire ni para terminar una frase, que se le pongan morados los labios o las uñas, ahogarse estando sentado y quieto, o que el inhalador de rescate no le haga nada — eso es llamar al 112 ya.** Y si tiene fiebre con más ahogo y las flemas espesas y abundantes, que le vean ese mismo día; no lo deje para mañana."
+    }
+   }
+  },
+  "TW-EDU-40": {
+   "keywords": [
+    "ictus",
+    "derrame cerebral",
+    "embolia",
+    "trombo",
+    "hemiplej",
+    "sintrom",
+    "adiro",
+    "anticoagul",
+    "antiagreg",
+    "afasia",
+    "logoped",
+    "medio cuerpo",
+    "para la circulación"
+   ],
+   "solutions": {
+    "stroke-fast-recognize": {
+     "label": "Reconocer el siguiente y mirar la hora",
+     "say": "Quien ya ha tenido un ictus tiene más papeletas de tener otro, así que esto conviene que se lo sepa toda la casa. Aquí se enseña con tres palabras: **CARA, BRAZO, HABLA** — se le tuerce la cara al sonreír, un brazo se le cae al levantar los dos, o no le salen las palabras o no se le entiende. Con cualquiera de las tres: **mire el reloj, quédese con la hora en que empezó y llame al 112 diciendo que cree que es un ictus** — así activan el Código Ictus. La hora de inicio no es un detalle: **de ella depende que puedan darle el tratamiento que deshace el coágulo**, porque solo se puede en las primeras horas. Y si se ha despertado ya así, lo que vale es la hora en que se le vio bien por última vez."
+    },
+    "stroke-dont-stop-antiplatelet": {
+     "label": "El antiagregante no se deja por cuenta propia",
+     "askedFor": [
+      "adiro",
+      "aspirina",
+      "sintrom",
+      "clopidogrel",
+      "anticoagulante",
+      "para la sangre"
+     ],
+     "say": "Lo que toma desde el ictus — el Adiro, el clopidogrel, el Sintrom o alguno de los nuevos — está ahí para frenar el siguiente, y casi siempre es para largo. **Dejarlo por su cuenta**, sea por miedo al estómago o porque ya se encuentra bien, **sube claramente el riesgo de volver a tener otro**. Y hay algo que hay que decir siempre: **antes de una extracción en el dentista, de cualquier operación o de una endoscopia, avise de que toma esto** — ya decidirá ese médico si se para y cuántos días. Esa decisión no le toca a usted."
+    },
+    "stroke-three-highs-are-the-cause": {
+     "label": "La tensión, el azúcar y el colesterol son el grueso de la prevención",
+     "say": "La pastilla frena una parte; el resto se juega en **la tensión, el azúcar y el colesterol**. Tenerlos controlados es, hoy por hoy, lo que mejor ha demostrado que evita un segundo ictus — más que cualquier producto que le puedan ofrecer. Y la cosa pequeña que más rinde de todas: **tomarse la tensión en casa y llevar los números apuntados a la consulta**."
+    },
+    "stroke-rehab-window": {
+     "label": "Los primeros meses cunden más, pero después no da igual",
+     "say": "La rehabilitación suele avanzar más deprisa en los primeros meses, así que ese tiempo merece la pena apretarlo. Pero **que luego vaya más despacio no quiere decir que ya no sirva** — si se para del todo, se pierde lo que se había ganado. Lo que de verdad funciona es meterla en el día a día: **que coja él el vaso, que se vista él, que vaya al baño apoyado pero andando**. Todo eso junto suma más que la hora que pasa en la sala."
+    },
+    "stroke-swallow-and-pneumonia": {
+     "label": "Toser al comer no es una tontería",
+     "askedFor": [
+      "se atraganta",
+      "atragantarse",
+      "tose al comer",
+      "espesante",
+      "tragar"
+     ],
+     "say": "La complicación que más se lleva por delante después de un ictus es **la neumonía por atragantarse**, y empieza con algo tan pequeño como toser un poco al comer o al beber agua. No lo dejen pasar: sentado recto, bocados pequeños, no hablar con comida en la boca y no beber tumbado ya evita bastante. Si se atraganta a menudo, **pidan en la consulta que le valoren la deglución**: el logopeda enseña a espesar los líquidos y a ajustar las texturas."
+    },
+    "stroke-depression-is-part-of-it": {
+     "label": "El bajón después del ictus es parte de la enfermedad",
+     "say": "Estar de bajón después de un ictus es de lo más frecuente, y **no es que se haya vuelto flojo ni que le haya cambiado el carácter**: la propia lesión del cerebro lo provoca. Lo malo es que quita las ganas de rehabilitar, y entonces la cosa se muerde la cola. Esto se trata — dígalo en la consulta sin quitarle importancia; y a la familia, no hace falta animarle a toda prisa: escucharle un rato ya hace muchísimo. Y si en algún momento le pasan por la cabeza ideas de no querer seguir viviendo, eso no espera: **el 024 es gratuito, confidencial y atiende las 24 horas**."
+    },
+    "stroke-caregiver-support": {
+     "label": "Quien cuida también necesita que le releven",
+     "say": "Cuidar a alguien después de un ictus no cansa por un día suelto: cansa porque no se le ve el final. **En los servicios sociales de su ayuntamiento se pide la valoración de la Ley de Dependencia**, y por ahí entran la ayuda a domicilio, la fisioterapia, los productos de apoyo, las obras para quitar barreras en casa y **los programas de respiro familiar** — que es justo eso: que alguien le releve unos días para que usted descanse. Cada comunidad lo organiza a su manera y suele haber espera, así que cuanto antes se empiece el trámite, mejor. Y no hay que llegar hundido para tener derecho: se pide antes."
+    },
+    "stroke-fall-and-home": {
+     "label": "Con medio cuerpo flojo, la casa hay que recolocarla",
+     "say": "Con un lado más flojo las caídas se multiplican, y **una fractura de cadera puede tirar por tierra de golpe todo lo que se había ganado con la rehabilitación**. Asideros en la ducha y al lado del váter, alfombrilla antideslizante, una lucecita encendida por la noche, y fuera del pasillo los cables y las alfombras sueltas. Buena parte de esto entra en las ayudas para adaptar la vivienda — pregúntelo en servicios sociales cuando haga el trámite de dependencia."
+    },
+    "stroke-blocked-remedies": {
+     "label": "Los sueros «para la circulación», el ginkgo y la nattokinasa",
+     "askedFor": [
+      "para la circulación",
+      "ginkgo",
+      "nattokinasa",
+      "natokinasa",
+      "suero",
+      "vitaminas en vena",
+      "limpiar la sangre"
+     ],
+     "say": "A casi todo el mundo le acaban ofreciendo algo **«para la circulación»: un suero o unas vitaminas puestas en vena, ginkgo, nattokinasa, ajo en cápsulas, «limpiezas de la sangre»**. Se lo digo tal cual: **no hay pruebas de que nada de eso sustituya a su medicación**, y además **el ginkgo y la nattokinasa aumentan el riesgo de sangrado cuando se juntan con el Adiro, el clopidogrel o el Sintrom** — y en alguien que ya ha tenido un ictus, un sangrado no es cosa menor. Si le tienta alguno, llévese el bote a su médico o a la farmacia antes de tomar la primera."
+    },
+    "stroke-refer": {
+     "label": "Cuándo pedir ayuda médica",
+     "say": "**Cara torcida, un brazo que no se levanta o que no le salgan las palabras: llame al 112 inmediatamente y diga a qué hora empezó.** Y estas tampoco esperan: perder de repente la vista de un ojo o ver doble, un mareo brusco con todo dando vueltas y sin poder mantenerse en pie, o **el peor dolor de cabeza de su vida, de golpe**. Prefiera ir para nada antes que quedarse en casa a ver si se pasa. Y no se vaya conduciendo usted: llame."
     }
    }
   }

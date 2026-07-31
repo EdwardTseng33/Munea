@@ -13,7 +13,6 @@ docs/research/衛教題庫-21題完整劇本v1-2026-07-24.md，紅旗逐條回�
 """
 import json
 import os
-import re
 
 import health_followup
 import health_selector
@@ -45,29 +44,6 @@ def resident_rules(locale="zh-TW"):
     return _DOC.get(key) or _DOC["resident"]
 
 
-_CJK = re.compile(r"[぀-ヿ㐀-鿿豈-﫿]")
-_WORD_START = {}
-
-
-def _hit(keyword, haystack):
-    """觸發字有沒有出現在這句話裡。
-
-    中文日文用純包含比對（本來就沒有詞的空隙，「睡不好」要能在句中任何位置命中）。
-    **拉丁語系要從詞頭開始比**——西班牙版回報「tos（咳嗽）」被「hidra*tos*」叫起來，
-    問醣類的人被端感冒衛教。只綁詞頭、不綁詞尾，是為了留住詞根：
-    「aliment」還是要能命中「alimentación」，那正是我們要求用詞根的原因。
-    """
-    k = (keyword or "").lower()
-    if not k:
-        return False
-    if _CJK.search(k) or not k[0].isalpha():
-        return k in haystack
-    rx = _WORD_START.get(k)
-    if rx is None:
-        rx = _WORD_START[k] = re.compile(r"\b" + re.escape(k))
-    return rx.search(haystack) is not None
-
-
 def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None, locale=None):
     """關鍵字比對：回傳命中的 topic id 清單（命中字愈長愈優先＝愈specific愈可信）。
     純字串包含比對——ASR 字幕沒有標點、打字有錯字都吃得下最大公約數；不做模型呼叫。"""
@@ -87,7 +63,7 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None, locale=None):
         _kws = t["keywords"]
         if _ov_locale != _i18n.DEFAULT_LOCALE:
             _kws = _i18n.keywords_for(t["id"], _ov_locale) or []
-        hit_len = sum(len(k) for k in _kws if _hit(k, _hay))
+        hit_len = sum(len(k) for k in _kws if health_selector.mentions(k, text))
         if hit_len:
             # 具體處境要壓過一般症狀（2026-07-29 加女性題時抓到）：
             # 「最近一直熱潮紅、晚上睡不好」原本被當成一般失眠——更年期的題才是
