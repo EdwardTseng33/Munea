@@ -256,6 +256,7 @@
   "home.profilePromptBody": "Add your preferred name, birthday, and location for more natural greetings and accurate weather.",
   "home.profilePromptAction": "Update",
   "home.care.familyRelayTitle": "Your family left you a message",
+  "home.care.familyFeedTitle": "From your family",
   "home.relayMore": "Show all",
   "home.care.familyRelayFrom": "{name} asked me to remind you",
   "home.care.acknowledge": "Got it",

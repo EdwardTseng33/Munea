@@ -256,6 +256,7 @@
   "home.profilePromptBody": "Añade tu nombre preferido, fecha de nacimiento y ubicación para que te llamemos con naturalidad y darte un pronóstico más preciso.",
   "home.profilePromptAction": "Completar",
   "home.care.familyRelayTitle": "Tu familia te dejó un mensaje",
+  "home.care.familyFeedTitle": "Novedades de tu familia",
   "home.relayMore": "Ver todo",
   "home.care.familyRelayFrom": "{name} me pidió que te lo recordara",
   "home.care.acknowledge": "Entendido",

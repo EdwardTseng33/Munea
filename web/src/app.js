@@ -6670,35 +6670,25 @@ function buildCareItems() {
   const careLabels = localizedCareLabels(rendererCopy);
   let feed = [];
   try { feed = JSON.parse(localStorage.getItem('munea.familyFeed2')) || []; } catch (e) {}
-  const relayMsg = feed.find(x => /要我提醒你|帶話/.test(String(x)));
-  // 留意卡是首頁會轉動輪播的位置、比招呼卡更容易被看到——family feed 原文一律要過守門才能顯示（Edward 2026-07-15 事故：這裡漏接、招呼卡另一條路徑已守）
-  let _rTitle = rendererCopy
-    ? rendererCopy.familyRelay({ companion: cname() }).title
-    : muneaT('home.care.familyRelayTitle', 'Your family left you a message');
+  // 這格顯示家人動態最新的一則，不再去猜「哪一則是傳話」（Edward 2026-07-31）。
+  //
+  // 舊寫法先用 /要我提醒你|帶話/ 撈出疑似傳話的那則，再拆成「誰」跟「說了什麼」——
+  // 那是拿畫面上的中文句子反推資料：文案改一個字就撈不到，換成英日西整條認不出來。
+  // 真的傳話現在由上面那張卡直接跟雲端拿、也不走這裡了，這格回歸它本來的工作：
+  // 就是把動態牆最新的一則好好唸出來。少一套猜法，就少一個會在四語上線後爆掉的地方。
+  const feedTop = feed.length ? feed[0] : null;
+  // 標題用中性的「家人的動態」，不再寫「家人帶話給你」——這格唸的可能是按讚、走路活動、
+  // 家庭記錄簿結算，寫「帶話」會讓人以為有留言沒看到。真的帶話在上面那張卡。
+  let _rTitle = muneaT('home.care.familyFeedTitle', 'From your family');
   let _rSub = '', _relayClean = false;
-  if (relayMsg) {
-    const _p = plain(relayMsg);
-    const _m = _p.match(/^(.+?)要我提醒你[：:]?\s*(.*)$/);
-    if (_m) {
-      const _whoSafe = muneaSafeDisplayText(_m[1].trim(), '');
-      const _bodySafe = muneaSafeDisplayText(_m[2].trim(), '');
-      if (_whoSafe && _bodySafe) {
-        const localized = rendererCopy
-          ? rendererCopy.familyRelay({ body: _bodySafe, companion: cname(), from: _whoSafe })
-          : null;
-        _rTitle = localized
-          ? localized.title
-          : muneaT('home.care.familyRelayFrom', '{name} asked me to remind you', { name: _whoSafe });
-        _rSub = localized ? localized.body : _bodySafe;
-        _relayClean = true;
-      }
-    } else {
-      const _safeP = muneaSafeDisplayText(_p, '');
-      if (_safeP) { _rSub = _safeP; _relayClean = true; }
-    }
+  if (feedTop) {
+    // 留意卡是首頁會轉動輪播的位置、比招呼卡更容易被看到——原文一律要過守門才能顯示
+    // （Edward 2026-07-15 事故：這裡漏接、招呼卡另一條路徑已守）
+    const _safe = muneaSafeDisplayText(plain(feedTop), '');
+    if (_safe) { _rSub = _safe; _relayClean = true; }
   }
   // 蘋果 UGC 審核要求（7/9）：這則若真的來自家人 feed（傳話/愛心/塗鴉…），記下它在陣列裡的位置，卡片才能掛「移除／檢舉」；示範文案（feed 是空的）不算數
-  const _feedIdx = relayMsg ? feed.indexOf(relayMsg) : (feed.length ? 0 : -1);
+  const _feedIdx = feed.length ? 0 : -1;
   const _feed0Safe = feed[0] ? muneaSafeDisplayText(plain(feed[0]), '') : '';
   const defaultRelay = rendererCopy
     ? rendererCopy.familyRelay({ body: _feed0Safe, companion: cname() })
@@ -6712,9 +6702,7 @@ function buildCareItems() {
       k: 'family',
       tone: '',
       icon: 'msg',
-      title: defaultRelay
-        ? defaultRelay.title
-        : muneaT('home.care.familyRelayTitle', 'Your family left you a message'),
+      title: _rTitle,
       sub: defaultRelay
         ? defaultRelay.body
         : (_feed0Safe || muneaT(

@@ -929,7 +929,15 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "（你可以「直接幫他把提醒設進 App」：他說要設看診／回診提醒，就呼叫 set_clinic_reminder；"
             "他說要設吃藥／用藥提醒，就呼叫 set_medication_reminder。呼叫前若日期、時間、藥名或科別沒聽清楚，"
             "先用一句話問清楚再設，不要自己亂猜。只有工具回覆 status=ok 才能說設好了；若回覆 error，誠實說沒有設成功並請他重試。"
-            "他要傳話給家庭圈成員時，先用一句話複誦收件人與完整內容，得到確認後才呼叫 send_family_relay；不要自行添加、刪改或猜測內容。"
+            # 傳話要「整理過再確認」而不是原句照送（Edward 2026-07-31）：
+            # 他對你說的是「幫我跟他說他晚餐的藥忘記吃了」——那是講給你聽的第三人稱。
+            # 原封不動送出去，收到的人會看到一句在講別人的話，很怪。
+            # 但整理只能動說法、不能動意思，所以一定要唸回去讓他點頭，這是防走鐘的保險。
+            "他要傳話給家庭圈成員時，先把那句話整理成「直接對收件人說」的口氣："
+            "換成第二人稱、去掉贅字與口頭禪、把時間地點講清楚，讓對方一聽就懂。"
+            "整理只能改說法，「絕對不可以」改變意思——不補他沒說的事、不刪他交代的細節、不猜他的用意、不加自己的評論。"
+            "整理完先用一句話唸回去給他聽並問可不可以（例如「我跟他說『晚餐的藥還沒吃，記得去吃』，這樣可以嗎？」），"
+            "他明確說可以才呼叫 send_family_relay；他說不對或要改，就照他的意思重整理、再唸一次確認，沒得到同意就不要送。"
             "設好之後用一句溫暖口語的話跟他確認你設了什麼"
             "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。"
             "「分類鐵律」：看診提醒只能用在真的要去醫院、診所看醫生；用藥提醒只能用在吃藥。"
@@ -1045,12 +1053,19 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
     ),
     types.FunctionDeclaration(
         name="send_family_relay",
-        description="使用者明確確認要把一句話轉達給家庭圈中的指定成員後呼叫。必須保留原意，不可自行加油添醋。",
+        description=(
+            "把一句話轉達給家庭圈中的指定成員。**只有在你已經把整理過的內容唸給使用者聽、"
+            "而且他明確說可以之後**才呼叫；他還沒點頭、或說要改，就不要呼叫。"
+            "整理只能改說法不能改意思：不補他沒說的、不刪他交代的、不加自己的評論。"
+        ),
         parameters=types.Schema(
             type=types.Type.OBJECT,
             properties={
                 "recipientName": types.Schema(type=types.Type.STRING, description="家庭圈收件人的名稱或稱呼，例如「小宇」"),
-                "message": types.Schema(type=types.Type.STRING, description="已向使用者複誦並確認的完整傳話內容，最多 240 字"),
+                "message": types.Schema(type=types.Type.STRING, description=(
+                    "整理成「直接對收件人說」的口氣、並且已經唸給使用者聽過、他也同意的內容，最多 240 字。"
+                    "例：他說「跟他說他晚餐的藥忘記吃了」→「晚餐的藥還沒吃，記得去吃喔」。"
+                )),
             },
             required=["recipientName", "message"],
         ),
