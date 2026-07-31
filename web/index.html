@@ -108,7 +108,7 @@
       </div>
       <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff">今天</span>
     </div>
-    <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)"><span data-i18n="status.todayDataHint">今天的數據會即時整理在這裡。 </span><span style="color:#8FD4CC;font-weight:700">接上 Apple 健康或跟我聊聊</span>，我就開始幫你看著。</div>
+    <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)"><span data-i18n="status.todayDataHint">今天的數據會即時整理在這裡。 </span><span style="color:#8FD4CC;font-weight:700" data-i18n="demo.status.healthEmptyAction">接上 Apple 健康或跟我聊聊</span><span data-i18n="demo.status.healthEmptyTail">，我就開始幫你看著。</span></div>
   </div>
 
   <!-- 情緒監測（產品核心 · 互動 hero）-->
@@ -118,7 +118,7 @@
         <svg width="19" height="19" viewBox="0 0 24 24" style="flex-shrink:0" fill="none" stroke="var(--teal-dd)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 14.5c1.2 1.5 5.8 1.5 7 0"/><circle cx="9" cy="10" r=".85" fill="var(--coral)" stroke="none"/><circle cx="15" cy="10" r=".85" fill="var(--coral)" stroke="none"/></svg>
         <div class="serif" style="font-size:19px;font-weight:900" data-i18n="status.moodMonitoring">情緒監測</div>
       </div>
-      <span class="chip" id="moodChip" style="background:#fff;color:var(--teal-dd)">過去7天 ↗ 平穩</span>
+      <span class="chip" id="moodChip" style="background:#fff;color:var(--teal-dd)" data-i18n="demo.status.trendWeekSteady">過去7天 ↗ 平穩</span>
     </div>
     <div id="moodBody"><div class="row" style="gap:13px;margin-bottom:14px">
       <div id="moodOrb" style="flex:0 0 52px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.42),rgba(255,255,255,0) 62%),#236C66;box-shadow:0 8px 18px -6px rgba(35,108,102,.5)"></div>
@@ -183,7 +183,7 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--coral-d)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
         <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.medicationRecords">用藥紀錄</span>
       </div>
-      <span class="chip" id="medTrendChip" style="background:var(--coral-soft);color:var(--ink)">7 天準時 6/7</span>
+      <span class="chip" id="medTrendChip" style="background:var(--coral-soft);color:var(--ink)" data-i18n="demo.status.medAdherence">7 天準時 6/7</span>
     </div>
     <div id="medTrendChart"></div>
   </div>
@@ -193,7 +193,7 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A6410" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
         <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.sleepQuality">睡眠品質</span>
       </div>
-      <span class="chip" id="sleepTrendChip" style="background:var(--gold-soft);color:#8A6410">日均 7.2 時</span>
+      <span class="chip" id="sleepTrendChip" style="background:var(--gold-soft);color:#8A6410" data-i18n="demo.status.sleepAvg">日均 7.2 時</span>
     </div>
     <div id="sleepTrendChart"></div>
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-top:8px"><i style="display:inline-block;width:12px;border-top:1.5px dashed rgba(90,105,99,.55)"></i><span data-i18n="status.sleepGoal">目標 7.5 小時</span></div>
@@ -204,7 +204,7 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/></svg>
         <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.activity">活動量</span>
       </div>
-      <span class="chip" id="actChip" style="background:var(--mint);color:var(--teal-dd)">日均 6,800 步</span>
+      <span class="chip" id="actChip" style="background:var(--mint);color:var(--teal-dd)" data-i18n="demo.status.stepsAvg">日均 6,800 步</span>
     </div>
     <div id="actChart"></div>
     <div id="actLegend" style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px">
@@ -225,9 +225,9 @@
 
       <div class="hscroll-wrap"><div class="fam-switch" id="famSwitch">
         <button class="fam-switch-item active" data-person="all"><span class="fs-av all"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="fs-name" data-i18n="family.all">全家</span></button>
-        <button class="fam-switch-item" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei"><span class="fs-av"><span class="init-ava p-mei">華</span></span><span class="fs-name">美華</span></button>
-        <button class="fam-switch-item" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi"><span class="fs-av"><span class="init-ava p-zhi">明</span></span><span class="fs-name">志明</span></button>
-        <button class="fam-switch-item" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao"><span class="fs-av"><span class="init-ava p-bao">寶</span></span><span class="fs-name">小寶</span></button>
+        <button class="fam-switch-item" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei"><span class="fs-av"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span><span class="fs-name" data-i18n="demo.family.d1Name">美華</span></button>
+        <button class="fam-switch-item" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi"><span class="fs-av"><span class="init-ava p-zhi" data-i18n="demo.family.s1Init">明</span></span><span class="fs-name" data-i18n="demo.family.s1Name">志明</span></button>
+        <button class="fam-switch-item" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao"><span class="fs-av"><span class="init-ava p-bao" data-i18n="demo.family.g1Init">寶</span></span><span class="fs-name" data-i18n="demo.family.g1Name">小寶</span></button>
         <button class="fam-switch-item invite" data-person="invite"><span class="fs-av plus"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="fs-name" data-i18n="family.invite">邀請</span></button>
       </div><span class="hscroll-more" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></div>
 
@@ -244,18 +244,18 @@
         <div class="sec-head"><div><h2 data-i18n="legacyUi.familyAllStatus">全家狀態</h2></div></div>
         <div class="health-list" id="healthList">
           <div class="health-row" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei">
-            <span class="hr-av"><span class="init-ava p-mei">華</span></span>
-            <div class="hr-info"><div class="hr-name">美華</div><div class="hr-state"><em class="mood-pill tired">有點累</em>活動量達標 · 睡眠偏少</div></div>
-            <div class="hr-status watch"><span class="hr-dot"></span><span class="hr-slabel">留意</span></div>
+            <span class="hr-av"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span>
+            <div class="hr-info"><div class="hr-name" data-i18n="demo.family.d1Name">美華</div><div class="hr-state"><em class="mood-pill tired" data-i18n="demo.family.d1Mood">有點累</em><span data-i18n="demo.family.d1State">活動量達標 · 睡眠偏少</span></div></div>
+            <div class="hr-status watch"><span class="hr-dot"></span><span class="hr-slabel" data-i18n="demo.family.watchChip">留意</span></div>
           </div>
           <div class="health-row" data-person="志明" data-rel="兒子 · 42 歲" data-init="明" data-tint="p-zhi">
-            <span class="hr-av"><span class="init-ava p-zhi">明</span></span>
-            <div class="hr-info"><div class="hr-name">志明</div><div class="hr-state"><em class="mood-pill calm">平穩</em>作息這週很規律</div></div>
+            <span class="hr-av"><span class="init-ava p-zhi" data-i18n="demo.family.s1Init">明</span></span>
+            <div class="hr-info"><div class="hr-name" data-i18n="demo.family.s1Name">志明</div><div class="hr-state"><em class="mood-pill calm">平穩</em><span data-i18n="demo.family.s1State">作息這週很規律</span></div></div>
             <div class="hr-status ok"><span class="hr-dot"></span><span class="hr-slabel">安好</span></div>
           </div>
           <div class="health-row" data-person="小寶" data-rel="孫子 · 12 歲" data-init="寶" data-tint="p-bao">
-            <span class="hr-av"><span class="init-ava p-bao">寶</span></span>
-            <div class="hr-info"><div class="hr-name">小寶</div><div class="hr-state"><em class="mood-pill happy">開心</em>活蹦亂跳</div></div>
+            <span class="hr-av"><span class="init-ava p-bao" data-i18n="demo.family.g1Init">寶</span></span>
+            <div class="hr-info"><div class="hr-name" data-i18n="demo.family.g1Name">小寶</div><div class="hr-state"><em class="mood-pill happy">開心</em><span data-i18n="demo.family.g1State">活蹦亂跳</span></div></div>
             <div class="hr-status ok"><span class="hr-dot"></span><span class="hr-slabel">安好</span></div>
           </div>
         </div>
@@ -266,7 +266,7 @@
         <!-- 單列頭：返回＋頭像＋名字只出現一次＋右側左右換人；頁點/重複標題移除（Edward 7/9）-->
         <div class="person-top">
           <button class="pt-nav" id="personBack" type="button" aria-label="回全家" data-i18n-aria-label="accessibility.backToFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv">嬤</span></span><div style="flex:1;min-width:0"><div class="pt-name" id="ptName">—</div></div>
+          <span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv" data-i18n="demo.family.gmInit">嬤</span></span><div style="flex:1;min-width:0"><div class="pt-name" id="ptName">—</div></div>
           <button class="pt-nav" id="ptPrev" type="button" aria-label="看上一位家人" data-i18n-aria-label="accessibility.previousFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
           <button class="pt-nav" id="ptNext" type="button" aria-label="看下一位家人" data-i18n-aria-label="accessibility.nextFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
         </div>
@@ -277,12 +277,12 @@
           <div class="mc-head">
             <span class="mc-face" id="mcFace"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8 14s1.5 2.5 4 2.5 4-2.5 4-2.5"/></svg><i class="mc-dot" id="mcDot"></i></span>
             <div>
-              <div class="mc-title" id="mcTitle">今天聊得很開心</div>
+              <div class="mc-title" id="mcTitle" data-i18n="demo.family.chatTitle">今天聊得很開心</div>
               <div class="mc-sub" id="mcSub">和<span class="cname" data-i18n="companion.nening.name">寧寧</span>聊了 2 次 · 有一小段有點火氣</div>
             </div>
           </div>
-          <div class="mc-obs" id="mcObs"><span>聲音</span> 有精神　<span>聊天</span> 話匣子全開</div>
-          <div class="mc-topics" id="mcTopics"><i>孫子畢業</i><i>推銷電話</i></div>
+          <div class="mc-obs" id="mcObs"><span data-i18n="demo.family.voiceLabel">聲音</span><span data-i18n="demo.family.voiceState"> 有精神　</span><span data-i18n="demo.family.chatLabel">聊天</span><span data-i18n="demo.family.chatState"> 話匣子全開</span></div>
+          <div class="mc-topics" id="mcTopics"><i data-i18n="demo.family.topicGraduation">孫子畢業</i><i data-i18n="demo.family.topicSalesCall">推銷電話</i></div>
           <!-- 心情週/月直接切換、不用點進去（Edward 7/9）-->
           <div class="mc-range"><div class="trend-tabs" id="mcRangeTabs"><button class="active" data-r="week" data-i18n="family.rangeWeek">過去7天</button><button data-r="month" data-i18n="family.rangeMonth">過去30天</button></div></div>
           <div class="mc-range-body" id="mcRangeBody"></div>
@@ -322,15 +322,15 @@
         <div class="book-demo-note" data-i18n="activity.sampleHint">以下為範例——開始你們的第一個活動，就會記在這裡。</div>
         <div class="book-timeline">
         <div class="book-entry">
-          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg></span>一起走路 30,000 步</div><div class="be-date">6/19</div></div>
-          <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>達成！全家慶祝</span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama">嬤</span></span><span class="be-mem"><span class="init-ava p-mei">華</span></span><span class="be-mem"><span class="init-ava p-bao">寶</span></span></div></div>
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg></span><span data-i18n="demo.activity.walkTitle">一起走路 30,000 步</span></div><div class="be-date">6/19</div></div>
+          <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="demo.activity.walkResult">達成！全家慶祝</span></span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama" data-i18n="demo.family.gmInit">嬤</span></span><span class="be-mem"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span><span class="be-mem"><span class="init-ava p-bao" data-i18n="demo.family.g1Init">寶</span></span></div></div>
         </div>
         <div class="book-entry">
-          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>早睡一週</div><div class="be-date">6/12</div></div>
-          <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>達成！</span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama">嬤</span></span><span class="be-mem"><span class="init-ava p-mei">華</span></span><span class="be-mem"><span class="init-ava p-zhi">明</span></span></div></div>
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><span data-i18n="demo.activity.sleepTitle">早睡一週</span></div><div class="be-date">6/12</div></div>
+          <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="demo.activity.doneShort">達成！</span></span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama" data-i18n="demo.family.gmInit">嬤</span></span><span class="be-mem"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span><span class="be-mem"><span class="init-ava p-zhi" data-i18n="demo.family.s1Init">明</span></span></div></div>
         </div>
         <div class="book-entry">
-          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2.7s6.5 7.2 6.5 11.8a6.5 6.5 0 0 1-13 0C5.5 9.9 12 2.7 12 2.7z"/></svg></span>每天喝水</div><div class="be-date">6/5</div></div>
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2.7s6.5 7.2 6.5 11.8a6.5 6.5 0 0 1-13 0C5.5 9.9 12 2.7 12 2.7z"/></svg></span><span data-i18n="demo.activity.waterTitle">每天喝水</span></div><div class="be-date">6/5</div></div>
           <div class="be-foot"><span class="be-result">參加過 · 差一點點，下次再來</span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama">嬤</span></span><span class="be-mem"><span class="init-ava p-mei">華</span></span></div></div>
         </div>
         </div>

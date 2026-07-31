@@ -15,6 +15,7 @@ const SOURCE_LOCALE = 'zh-TW';
 const JA_SHARED_SOURCE_KEYS = Object.freeze([
   'activity.vote',
   'common.confirm',
+  'demo.activity.doneShort',
   'common.listSeparator',
   'familyCircle.you',
   'font.standard',
