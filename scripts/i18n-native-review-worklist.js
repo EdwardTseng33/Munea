@@ -13,6 +13,7 @@ const SOURCE_LOCALE = 'zh-TW';
 // Chinese. Keeping the allowlist explicit means a newly copied Chinese string
 // cannot silently pass as Japanese.
 const JA_SHARED_SOURCE_KEYS = Object.freeze([
+  'activity.kickerTitle',
   'activity.vote',
   'common.confirm',
   'demo.activity.doneShort',

@@ -9660,50 +9660,50 @@ function init() {
     card.className = 'quest-card pending';
     let chip, goal, note;
     if (act.status === 'done') {
-      chip = '已結束';
+      chip = muneaT('activity.endedChip', '已結束');
       if (act.kind === 'quiz' && act.answers && Object.keys(act.answers).length) {
         act._rankHtml = buildRankList(act);
         goal = '';
         note = '';
       } else {
-        goal = act.kind === 'quiz' ? ('你答對 ' + act.score + ' / ' + (act.q || 5) + ' 題') : (act.title + ' 結束了');
-        note = '等大家都看過就收進記錄簿 · 最多留 3 天，還沒看的，寧寧會親口告訴';
+        goal = act.kind === 'quiz' ? muneaT('activity.quizScoreGoal', '你答對 {score} / {total} 題', { score: act.score, total: act.q || 5 }) : muneaT('activity.endedGoal', '{title} 結束了', { title: act.title });
+        note = muneaT('activity.endedNote', '等大家都看過就收進記錄簿 · 最多留 3 天，還沒看的，{companion}會親口告訴', { companion: cname() });
       }
     } else if (act.kind === 'walk') {
-      chip = act.days + ' 天內';
-      goal = '大家一起走 ' + (+act.goal).toLocaleString() + ' 步';
-      note = cname() + '會親口問不方便滑手機的家人要不要一起；開始後每個人走多少都看得到';
+      chip = muneaT('activity.daysChip', '{days} 天內', { days: act.days });
+      goal = muneaT('activity.walkGoal', '大家一起走 {steps} 步', { steps: (+act.goal).toLocaleString() });
+      note = muneaT('activity.walkNote', '{companion}會親口問不方便滑手機的家人要不要一起；開始後每個人走多少都看得到', { companion: cname() });
     } else if (act.kind === 'quiz') {
-      chip = act.q + ' 題';
+      chip = muneaT('activity.questionsChip', '{count} 題', { count: act.q });
       if (act.myDone && act.answers && act.answers['你'] !== undefined) {
-        goal = '你答對 ' + act.answers['你'] + ' / ' + act.q + ' 題';
-        note = '等 ' + act.names.join('、') + ' 作答完看排名，' + cname() + '會去找他們玩';
+        goal = muneaT('activity.quizScoreGoal', '你答對 {score} / {total} 題', { score: act.answers['你'], total: act.q });
+        note = muneaT('activity.quizWaitNote', '等 {names} 作答完看排名，{companion}會去找他們玩', { names: act.names.join(muneaT('common.listSeparator', '、')), companion: cname() });
       } else {
-        goal = '你的 ' + act.q + ' 題準備好了';
-        note = '點這張卡先作答；' + cname() + '會找其他人玩，都答完看排名';
+        goal = muneaT('activity.quizReadyGoal', '你的 {count} 題準備好了', { count: act.q });
+        note = muneaT('activity.quizReadyNote', '點這張卡先作答；{companion}會找其他人玩，都答完看排名', { companion: cname() });
       }
     } else if (act.kind === 'vote') {
-      chip = act.names.length + 1 + ' 人';
+      chip = muneaT('activity.peopleChip', '{count} 人', { count: act.names.length + 1 });
       goal = '';
       note = '';
     } else if (act.kind === 'draw') {
-      chip = act.when + '開獎';
+      chip = muneaT('activity.drawChip', '{when}開獎', { when: act.when });
       goal = '';
       note = '';
     } else {
-      chip = act.dateLabel || act.dueLabel || '進行中';
-      goal = (act.title || '家庭活動') + (act.place ? ' · ' + act.place : '') + '，誰能到？';
-      note = cname() + '會親口問不方便滑手機的家人、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿';
+      chip = act.dateLabel || act.dueLabel || muneaT('activity.inProgress', '進行中');
+      goal = muneaT('activity.eventGoal', '{title}，誰能到？', { title: (act.title || muneaT('activity.defaultEventTitle', '家庭活動')) + (act.place ? ' · ' + act.place : '') });
+      note = muneaT('activity.eventNote', '{companion}會親口問不方便滑手機的家人、幫大家收「去 / 沒空」；過了那天卡片會自動收進記錄簿', { companion: cname() });
     }
     const rwLine = act.rewards && act.rewards.some(Boolean)
-      ? '<div class="qc-prize"><span class="qp-ico">🏅</span><div class="qp-txt">' + act.rewards.map((r, i2) => r ? '第 ' + (i2 + 1) + ' 名 ' + r : '').filter(Boolean).join('、') + '<small>獎品提供：' + (act.owner || '你') + '</small></div></div>'
+      ? '<div class="qc-prize"><span class="qp-ico">🏅</span><div class="qp-txt">' + act.rewards.map((r, i2) => r ? muneaT('activity.prizeRankItem', '第 {rank} 名 {prize}', { rank: i2 + 1, prize: r }) : '').filter(Boolean).join(muneaT('common.listSeparator', '、')) + '<small>' + muneaT('activity.prizeGiver', '獎品提供：{owner}', { owner: act.owner || muneaT('common.you', '你') }) + '</small></div></div>'
       : '';
     if (act._rankHtml) {
-      card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg>機智問答 · 排名出來了<span class="qc-days">' + (act.q || 5) + ' 題</span></div>' + act._rankHtml + rwLine;
+      card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg>' + muneaT('activity.rankKicker', '機智問答 · 排名出來了') + '<span class="qc-days">' + muneaT('activity.questionsChip', '{count} 題', { count: act.q || 5 }) + '</span></div>' + act._rankHtml + rwLine;
       delete act._rankHtml;
     } else {
       card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
-        (act.kind === 'event' ? '揪一攤 · ' + (act.title || '家庭活動') : act.kind === 'vote' ? '投票 · ' + (act.title || '家庭投票') : act.kind === 'draw' ? '抽獎 · ' + (act.prize || '家庭抽獎') : '邀請已送出 · ' + (act.title || '家庭活動')) +
+        (act.kind === 'event' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.event', '揪一攤'), title: act.title || muneaT('activity.defaultEventTitle', '家庭活動') }) : act.kind === 'vote' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.vote', '投票'), title: act.title || muneaT('activity.defaultVoteTitle', '家庭投票') }) : act.kind === 'draw' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.draw', '抽獎'), title: act.prize || muneaT('activity.defaultDrawTitle', '家庭抽獎') }) : muneaT('activity.kickerInvited', '邀請已送出 · {title}', { title: act.title || muneaT('activity.defaultEventTitle', '家庭活動') })) +
         '<span class="qc-days">' + chip + '</span></div>' +
         (goal ? '<div class="qc-goal">' + goal + '</div>' : '') +
         (note ? '<div class="qc-num">' + note + '</div>' : '') + rwLine;
@@ -9724,27 +9724,27 @@ function init() {
     const sheet = $('#actDetailModal'), body = $('#actDetailBody');
     if (!sheet || !body) return;
     const done = act.status === 'done';
-    const chip = done ? '已結束'
-      : act.kind === 'walk' ? '進行中 · ' + (act.dueLabel || act.days + ' 天內')
-      : act.kind === 'quiz' ? (act.q + ' 題' + (act.dueLabel ? ' · ' + act.dueLabel : ''))
-      : act.kind === 'draw' ? (act.when + '開獎')
-      : act.kind === 'event' ? (act.dateLabel || '進行中')
-      : act.kind === 'vote' ? (act.dueLabel || '進行中') : '進行中';
+    const chip = done ? muneaT('activity.endedChip', '已結束')
+      : act.kind === 'walk' ? muneaT('activity.walkChipActive', '進行中 · {due}', { due: act.dueLabel || muneaT('activity.daysChip', '{days} 天內', { days: act.days }) })
+      : act.kind === 'quiz' ? (muneaT('activity.questionsChip', '{count} 題', { count: act.q }) + (act.dueLabel ? ' · ' + act.dueLabel : ''))
+      : act.kind === 'draw' ? muneaT('activity.drawChip', '{when}開獎', { when: act.when })
+      : act.kind === 'event' ? (act.dateLabel || muneaT('activity.inProgress', '進行中'))
+      : act.kind === 'vote' ? (act.dueLabel || muneaT('activity.inProgress', '進行中')) : muneaT('activity.inProgress', '進行中');
     const kindName = act.kind === 'walk' ? muneaT('activity.exercise', '一起運動') : act.kind === 'quiz' ? muneaT('activity.quiz', '機智問答') : act.kind === 'vote' ? muneaT('activity.vote', '投票') : act.kind === 'draw' ? muneaT('activity.draw', '抽獎') : muneaT('activity.event', '揪一攤');
     const title = act.kind === 'draw' ? act.prize : (act.title || kindName);
     body.innerHTML =
       '<div class="ad-kind">' + kindName + '</div>' +
       '<div class="ad-title">' + title + '</div>' +
       '<div><span class="ad-chip">' + chip + '</span></div>' +
-      '<div class="ad-sec"><div class="ad-lbl">一起的人（' + actParts(act).length + ' 人）</div><div class="ad-avs">' + avatarsHtml(actParts(act)) + '</div></div>' +
+      '<div class="ad-sec"><div class="ad-lbl">' + muneaT('activity.participantsLabel', '一起的人（{count} 人）', { count: actParts(act).length }) + '</div><div class="ad-avs">' + avatarsHtml(actParts(act)) + '</div></div>' +
       '<div class="ad-interact"></div>';
     const box = body.querySelector('.ad-interact');
     if (act.kind === 'vote') { renderVoteBody(act, box); }
     else if (act.kind === 'draw') { renderDrawBody(act, box); }
     else if (act.kind === 'quiz') {
-      if (act.myDone && act.answers && act.answers['你'] !== undefined) { box.innerHTML = '<div class="ad-note">你答對 ' + act.answers['你'] + ' / ' + act.q + ' 題，等 ' + (act.names || []).join('、') + ' 答完看排名。</div>'; }
+      if (act.myDone && act.answers && act.answers['你'] !== undefined) { box.innerHTML = '<div class="ad-note">' + muneaT('activity.quizWaitDetail', '你答對 {score} / {total} 題，等 {names} 答完看排名。', { score: act.answers['你'], total: act.q, names: (act.names || []).join(muneaT('common.listSeparator', '、')) }) + '</div>'; }
       else {
-        box.innerHTML = '<div class="ad-note">你的 ' + act.q + ' 題準備好了，點下面開始作答；' + cname() + '會找其他人玩，都答完看排名。</div>';
+        box.innerHTML = '<div class="ad-note">' + muneaT('activity.quizReadyDetail', '你的 {count} 題準備好了，點下面開始作答；{companion}會找其他人玩，都答完看排名。', { count: act.q, companion: cname() }) + '</div>';
         const qb = document.createElement('button'); qb.className = 'modal-btn'; qb.style.marginTop = '14px'; qb.textContent = muneaT('activity.quizStart', '開始作答');
         qb.addEventListener('click', () => { sheet.classList.remove('show'); startQuiz(act, card || document.querySelector('[data-act-id="' + act.id + '"]')); });
         box.appendChild(qb);
@@ -9753,13 +9753,13 @@ function init() {
     else if (act.kind === 'walk') { renderWalkBody(act, box); }
     else if (act.kind === 'event') { renderEventBody(act, box); }
     if (act.rewards && act.rewards.some(Boolean)) {
-      box.insertAdjacentHTML('beforeend', '<div class="ad-sec"><div class="ad-lbl">小獎勵</div><div class="ad-rewards">' + act.rewards.map((r, i) => r ? '<div>第 ' + (i + 1) + ' 名 · ' + r + '</div>' : '').filter(Boolean).join('') + '</div></div>');
+      box.insertAdjacentHTML('beforeend', '<div class="ad-sec"><div class="ad-lbl">' + muneaT('activity.rewardsLabel', '小獎勵') + '</div><div class="ad-rewards">' + act.rewards.map((r, i) => r ? '<div>' + muneaT('activity.rewardRankItem', '第 {rank} 名 · {prize}', { rank: i + 1, prize: r }) + '</div>' : '').filter(Boolean).join('') + '</div></div>');
     }
     const del = document.createElement('button');
     del.className = 'ad-del'; del.type = 'button';
-    del.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg><span>刪除這個活動</span>';
+    del.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg><span>' + muneaT('activity.deleteButton', '刪除這個活動') + '</span>';
     del.addEventListener('click', () => {
-      if (del.dataset.arm !== '1') { del.dataset.arm = '1'; del.classList.add('arm'); del.querySelector('span').textContent = '確定刪除？再點一下'; setTimeout(() => { del.dataset.arm = ''; del.classList.remove('arm'); const s = del.querySelector('span'); if (s) s.textContent = '刪除這個活動'; }, 3200); return; }
+      if (del.dataset.arm !== '1') { del.dataset.arm = '1'; del.classList.add('arm'); del.querySelector('span').textContent = muneaT('activity.deleteConfirm', '確定刪除？再點一下'); setTimeout(() => { del.dataset.arm = ''; del.classList.remove('arm'); const s = del.querySelector('span'); if (s) s.textContent = muneaT('activity.deleteButton', '刪除這個活動'); }, 3200); return; }
       const acts = loadActs().filter(a => a.id !== act.id); saveActs(acts);
       const c = card || document.querySelector('[data-act-id="' + act.id + '"]'); if (c) c.remove();
       updateActEmpty();
@@ -9802,12 +9802,12 @@ function init() {
     const GIFT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9"/><path d="M7.5 8a2.5 2.5 0 1 1 0-5C10 3 12 5.5 12 8c0-2.5 2-5 4.5-5a2.5 2.5 0 1 1 0 5"/></svg>';
     function winCardHtml(pop) {
       const giver = muneaSafeDisplayText(act.owner, '你');   // 出獎人守門；真用戶開的抽獎多半沒填 owner → 退回「你」
-      const claim = act.winner === '你' ? '獎品就是你的了，跟家人說一聲' : (giver !== '你' ? '獎品請找' + giver + '領' : '獎品由你提供，記得拿給' + muneaSafeDisplayText(act.winner, '中獎的家人'));
+      const claim = act.winner === '你' ? muneaT('activity.claimSelf', '獎品就是你的了，跟家人說一聲') : (giver !== '你' ? muneaT('activity.claimFromGiver', '獎品請找{giver}領', { giver }) : muneaT('activity.claimYouGive', '獎品由你提供，記得拿給{winner}', { winner: muneaSafeDisplayText(act.winner, muneaT('familyCircle.member', '中獎的家人')) }));
       return '<div class="draw-stage"><div class="draw-confetti"></div><div class="draw-win-card' + (pop ? '' : ' nopop') + '">' +
         '<span class="dw-ico">' + AWARD + '</span>' +
-        '<div class="dw-name">' + act.winner + ' 抽中了</div>' +
+        '<div class="dw-name">' + muneaT('activity.winnerLine', '{winner} 抽中了', { winner: act.winner }) + '</div>' +
         '<div class="dw-prize">「' + act.prize + '」</div>' +
-        '<div class="dw-claim">' + claim + '；' + cname() + '已經去恭喜' + (act.winner === '你' ? '你' : '他') + '了，記錄收進家庭記錄簿。</div>' +
+        '<div class="dw-claim">' + claim + (act.winner === '你' ? muneaT('activity.winnerFollowupSelf', '；{companion}已經去恭喜你了，記錄收進家庭記錄簿。', { companion: cname() }) : muneaT('activity.winnerFollowupOther', '；{companion}已經去恭喜他了，記錄收進家庭記錄簿。', { companion: cname() })) + '</div>' +
         '</div></div>';
     }
     function throwConfetti() {
