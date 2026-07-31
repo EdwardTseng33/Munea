@@ -388,8 +388,11 @@ assert(/if \(!_relayOnButlerCard\) items\.push\(familyItem\)/.test(app),
 assert(/\.butler-card\.has-relay \.bc-msg-t \{[^}]*-webkit-line-clamp: 4/s.test(css)
   && /\.butler-card\.has-relay\.relay-open \.bc-msg-t \{[^}]*-webkit-line-clamp: unset/s.test(css),
   'Relay text must show up to four lines and stay fully readable via the show-all control');
-['home.relayTag', 'home.relayAck', 'home.relayMore', 'familyCircle.someoneInFamily'].forEach(key =>
+['home.relayAck', 'home.relayMore', 'familyCircle.someoneInFamily'].forEach(key =>
   assert(zhCatalog[key], `Relay surface catalog key missing for: ${key}`));
+// 送出提示不能再說「下次聊聊時轉達」——傳話現在一開 App 就看得到，那句話已經不是事實
+assert(!/下次聊聊/.test(zhCatalog['familyCircle.relayQueuedToast'] || ''),
+  'The relay-sent confirmation must match the new behaviour: the message shows on home, not only during the next call');
 // 方案標籤跟著頭像走、右欄只留按鍵並垂直置中（同日）——右欄再塞回標籤就會重心偏頭重腳輕。
 assert(/<div class="auth-id">[\s\S]{0,400}?id="authAvatar"[\s\S]{0,600}?id="memBadge"[\s\S]{0,80}?<\/div>/.test(html),
   'The plan badge must sit under the avatar inside .auth-id, not in the action column');

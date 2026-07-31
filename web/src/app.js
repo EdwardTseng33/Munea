@@ -5511,9 +5511,8 @@ function renderCompanionGreeting(now = new Date()) {
   msg.textContent = line;
   // 有家人帶話時整張卡換一個樣子：標上「家人帶話」、字放大到 4 行、給一顆「我知道了」。
   // 沒有帶話就回到平常的問候，一顆多餘的按鍵都不留。
-  const card = $('#butlerCard'), tag = $('#bcRelayTag'), acts = $('#bcRelayActions'), more = $('#bcRelayMore');
+  const card = $('#butlerCard'), acts = $('#bcRelayActions'), more = $('#bcRelayMore');
   if (card) { card.classList.toggle('has-relay', !!relayLine); if (!relayLine) card.classList.remove('relay-open'); }
-  if (tag) tag.hidden = !relayLine;
   if (acts) acts.hidden = !relayLine;
   // 話太長被切掉時才給「看全部」——切掉的後半可能正是重點（幾點回診、東西放哪）
   if (more) {

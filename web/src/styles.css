@@ -1849,7 +1849,6 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .butler-card.has-relay.relay-open .bc-msg-t { -webkit-line-clamp: unset; max-height: none; }
 .bc-relay-more { border: none; background: none; padding: 0; margin-top: 4px; color: var(--teal-dd); font-family: var(--display); font-weight: 800; font-size: 13px; cursor: pointer; text-decoration: underline; }
 .butler-card.has-relay .bc-msg { color: var(--ink); font-size: 15px; font-weight: 600; }
-.bc-relay-tag { background: var(--coral-soft); color: var(--coral-text); }
 /* 「我知道了」是回條、不是這頁的主要行動——用實心綠會跟下面的「開始聊聊」搶。
    走跟輪播「去看看」同一款的白底綠框，份量剛好夠按又不搶戲。 */
 .bc-relay-actions { display: flex; justify-content: flex-end; margin-top: 10px; }

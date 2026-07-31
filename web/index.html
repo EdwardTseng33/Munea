@@ -28,7 +28,9 @@
         <div class="bc-row">
           <div class="bc-avatar"><img class="ava-img" src="avatars/nening-hero.jpg" alt="寧寧" data-i18n-alt="companion.nening.name"></div>
           <div class="bc-info">
-            <div class="bc-name"><span id="companionHomeName" data-i18n="companion.nening.name">寧寧</span><span class="bc-tag bc-relay-tag" id="bcRelayTag" hidden data-i18n="home.relayTag">家人帶話</span></div>
+            <!-- 刻意不加「家人帶話」標籤（Edward 2026-07-31）：訊息開頭就是「太太要我提醒你」，
+                 誰帶的話已經講清楚了，再掛一個標籤只是把同一件事說兩遍。 -->
+            <div class="bc-name"><span id="companionHomeName" data-i18n="companion.nening.name">寧寧</span></div>
             <div class="bc-msg"><span class="bc-msg-t" id="bcMsg"></span></div>
             <button class="bc-relay-more" id="bcRelayMore" type="button" hidden data-i18n="home.relayMore">看全部</button>
           </div>
