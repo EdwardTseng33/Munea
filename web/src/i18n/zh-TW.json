@@ -1035,5 +1035,22 @@
   "common.sampleTag": "範例",
   "common.cloudRetryToast": "現在連不上雲端，等網路好一點再試一次。",
   "health.reconnectHelp": "沐寧目前讀不到資料。授權畫面只會跳一次，所以按「連接」我會帶你到「健康」App，在那裡把沐寧的項目打開就好。",
-  "health.connectedToast": "好，連上了，之後健康資料我會自動留意。"
+  "health.connectedToast": "好，連上了，之後健康資料我會自動留意。",
+  "health.obsMetricBp": "血壓 {value}",
+  "health.obsMetricHr": "心率 {value}",
+  "health.obsMetricSleep": "睡眠 {value}",
+  "health.obsSteadyWithWorry": "今天{metrics}，大致都穩，不過{worries}，我幫你多留意，先別擔心。",
+  "health.obsAllGood": "今天{metrics}，整體狀態不錯。{cheer}，想出門走走我陪你。",
+  "health.obsKeepItUp": "保持這個節奏就很好",
+  "health.worryBpHigh": "血壓比平常高一點",
+  "health.worryBpLow": "血壓偏低",
+  "health.worryHrFast": "心跳偏快",
+  "health.worryHrSlow": "心跳偏慢",
+  "health.worrySpo2": "血氧有點低",
+  "health.worrySleepShort": "昨晚睡得少",
+  "health.worryFewSteps": "今天走得比較少",
+  "health.bpHighHint": "比平常高一點，多留意",
+  "health.bpLowHint": "偏低一些，起身動作放慢",
+  "health.bpNormalHint": "正常範圍內",
+  "health.restingHrHint": "靜息心率"
 }

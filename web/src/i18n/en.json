@@ -1035,5 +1035,22 @@
   "common.sampleTag": "Sample",
   "common.cloudRetryToast": "Can't reach the cloud right now — try again when the connection is better.",
   "health.reconnectHelp": "Munea can’t read any data right now. The permission screen only appears once, so tapping Connect takes you to the Health app — turn Munea’s items on there.",
-  "health.connectedToast": "Connected! I'll keep an eye on your health data from now on."
+  "health.connectedToast": "Connected! I'll keep an eye on your health data from now on.",
+  "health.obsMetricBp": "BP {value}",
+  "health.obsMetricHr": "Heart rate {value}",
+  "health.obsMetricSleep": "Sleep {value}",
+  "health.obsSteadyWithWorry": "Today: {metrics} — mostly steady, though {worries}. I’ll keep a closer eye on it; no need to worry yet.",
+  "health.obsAllGood": "Today: {metrics} — everything looks good. {cheer}, and if you feel like a walk, I’ll keep you company.",
+  "health.obsKeepItUp": "Keeping this rhythm is just right",
+  "health.worryBpHigh": "blood pressure a little higher than usual",
+  "health.worryBpLow": "blood pressure on the low side",
+  "health.worryHrFast": "heart rate a bit fast",
+  "health.worryHrSlow": "heart rate a bit slow",
+  "health.worrySpo2": "blood oxygen a little low",
+  "health.worrySleepShort": "not much sleep last night",
+  "health.worryFewSteps": "fewer steps than usual today",
+  "health.bpHighHint": "A little higher than usual — keep an eye on it",
+  "health.bpLowHint": "On the low side — stand up slowly",
+  "health.bpNormalHint": "Within the normal range",
+  "health.restingHrHint": "Resting heart rate"
 }
