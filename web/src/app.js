@@ -9627,8 +9627,8 @@ function init() {
       '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + (act.dateLabel ? '<br>' + act.dateLabel : '') + '</div>' +
       '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go"' + (locked ? ' disabled' : '') + '>我要去</button>' +
       '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no"' + (locked ? ' disabled' : '') + '>我沒空</button></div>' +
-      '<div class="qc-num">' + (going.length ? '要去的：' + going.join('、') : '還沒有人回「要去」') + (no.length ? '　·　沒空：' + no.join('、') : '') +
-      '；' + (locked ? '活動時間到了，不能再改。' : (my ? '想改隨時再點另一個就好；' : '點一下回覆；') + cname() + '會幫你問不方便滑手機的家人跟其他人。') + '</div>';
+      '<div class="qc-num">' + (going.length ? muneaT('activity.rsvpGoing', '要去的：{names}', { names: going.join(muneaT('common.listSeparator', '、')) }) : muneaT('activity.rsvpNoneYet', '還沒有人回「要去」')) + (no.length ? '　·　' + muneaT('activity.rsvpBusy', '沒空：{names}', { names: no.join(muneaT('common.listSeparator', '、')) }) : '') +
+      '；' + (locked ? muneaT('activity.rsvpLocked', '活動時間到了，不能再改。') : (my ? muneaT('activity.rsvpTailMine', '想改隨時再點另一個就好；{companion}會幫你問不方便滑手機的家人跟其他人。', { companion: cname() }) : muneaT('activity.rsvpTailAsk', '點一下回覆；{companion}會幫你問不方便滑手機的家人跟其他人。', { companion: cname() }))) + '</div>';
     if (!locked) box.querySelector('.rsvp-btns').addEventListener('click', e => {
       const b = e.target.closest('.rsvp-btn'); if (!b || b.disabled) return;
       act.rsvp = act.rsvp || {}; act.rsvp['你'] = b.dataset.r;
@@ -9657,13 +9657,13 @@ function init() {
     const gap = Math.max(0, goal - sum);
     box.innerHTML =
       '<div class="walk-bar"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="walk-sum"><b>' + sum.toLocaleString() + '</b> / ' + goal.toLocaleString() + ' 步 · ' + (gap > 0 ? '還差 ' + gap.toLocaleString() + ' 步' : '達標了！') + '</div>' +
+      '<div class="walk-sum">' + (gap > 0 ? muneaT('activity.walkSumGap', '{sumBold} / {goal} 步 · 還差 {gap} 步', { sumBold: '<b>' + sum.toLocaleString() + '</b>', goal: goal.toLocaleString(), gap: gap.toLocaleString() }) : muneaT('activity.walkSumMet', '{sumBold} / {goal} 步 · 達標了！', { sumBold: '<b>' + sum.toLocaleString() + '</b>', goal: goal.toLocaleString() })) + '</div>' +
       '<div class="walk-people">' + parts.map(n => {
         const av = FAM_AVA[n] || [(n || '')[0] || '', 'p-me'];
         const avInit = typeof av[0] === 'function' ? av[0]() : av[0];
         return '<div class="walk-p"><span class="init-ava ' + av[1] + '">' + avInit + '</span><b>' + n + '</b><span>' + (+steps[n] || 0).toLocaleString() + ' ' + muneaT('health.unit.steps', '步') + '</span></div>';
       }).join('') + '</div>' +
-      '<div class="qc-num">你的步數自動從 Apple 健康帶入；' + cname() + '會問其他人今天走多少，' + (act.dueLabel || (act.days + ' 天內')) + '結算。</div>';
+      '<div class="qc-num">' + muneaT('activity.walkAutoNote', '你的步數自動從 Apple 健康帶入；{companion}會問其他人今天走多少，{due}結算。', { companion: cname(), due: act.dueLabel || muneaT('activity.daysChip', '{days} 天內', { days: act.days }) }) + '</div>';
   }
   // 活動結束時，依種類公布結果進記錄簿（不再只是「結束了」）
   function announceActEnd(a) {
@@ -9819,14 +9819,14 @@ function init() {
       return '<button type="button" class="vote-opt' + (my === o ? ' mine' : '') + (my ? ' voted' : '') + '" data-o="' + o + '">' +
         '<i style="width:' + (my ? pct : 0) + '%"></i><span class="vo-txt">' + o + '</span>' +
         (my ? '<span class="vo-n">' + n + ' 票</span>' : '') + (my === o ? '<span class="vo-check">✓</span>' : '') + '</button>';
-    }).join('') + '<div class="qc-num">' + (my ? cname() + '去問其他人了，誰投了什麼會直接亮在這裡' : '點一個選項投下你的票') + '</div>';
+    }).join('') + '<div class="qc-num">' + (my ? muneaT('activity.voteMineNote', '{companion}去問其他人了，誰投了什麼會直接亮在這裡', { companion: cname() }) : muneaT('activity.votePickNote', '點一個選項投下你的票')) + '</div>';
     if (!my) wrap.addEventListener('click', e => {
       const b = e.target.closest('.vote-opt');
       if (!b) return;
       act.votes = act.votes || {}; act.votes['你'] = b.dataset.o;
       const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.votes = act.votes; saveActs(acts);
       wrap.remove(); renderVoteBody(act, card);
-      toast('投好了，' + cname() + '去收其他人的票');
+      toast(muneaT('activity.votedToast', '投好了，{companion}去收其他人的票', { companion: cname() }));
     });
     card.appendChild(wrap);
   }
@@ -9862,7 +9862,7 @@ function init() {
     if (act.winner) {
       wrap.innerHTML = winCardHtml(false);
     } else {
-      wrap.innerHTML = '<div class="qc-num">' + all.join('、') + ' 都有份，' + act.when + '由' + cname() + '開獎</div>' +
+      wrap.innerHTML = '<div class="qc-num">' + muneaT('activity.drawAllIn', '{names} 都有份，{when}由{companion}開獎', { names: all.join(muneaT('common.listSeparator', '、')), when: act.when, companion: cname() }) + '</div>' +
         '<button type="button" class="draw-now">現在開獎</button>';
       wrap.querySelector('.draw-now').addEventListener('click', () => {
         const winner = all[Math.floor(Math.random() * all.length)];
@@ -9895,7 +9895,7 @@ function init() {
     const kind = type ? (type.dataset.kind || 'walk') : 'walk';
     const ons = $$('#inviteList .iv.on');
     const names = ons.map(x => x.dataset.name).filter(Boolean);
-    if (!names.length) { toast(loadCircle().some(m => !m.self) ? '先選至少一位家人一起' : '圈裡還沒有家人，先到家人頁邀請家人加入'); return; }
+    if (!names.length) { toast(loadCircle().some(m => !m.self) ? muneaT('activity.pickFamilyFirst', '先選至少一位家人一起') : muneaT('activity.noFamilyYet', '圈裡還沒有家人，先到家人頁邀請家人加入')); return; }
     const act = { id: Date.now(), kind, names };
     if (kind === 'walk') {
       act.goal = +(($('#walkGoal') && $('#walkGoal').value) || 30000);
@@ -10050,7 +10050,7 @@ function init() {
   }
   if (inviteList) inviteList.addEventListener('click', e => { const it = e.target.closest('.iv'); if (it) { it.classList.toggle('on'); recalcWalk(true); } });
   // 挑戰類型選擇
-  const INVITE_NOTES = () => ({ walk: '不方便滑手機的家人，' + cname() + '會親口問', quiz: '不方便滑手機的家人，用說的就能玩；其他人手機作答', event: cname() + '親口問不方便滑手機的家人；其他人回「去／沒空」', vote: cname() + '會唸選項給不方便滑手機的家人聽，幫忙投', draw: '人人有機會；開獎時' + cname() + '會告訴每個人' });
+  const INVITE_NOTES = () => ({ walk: muneaT('activity.inviteNoteWalk', '不方便滑手機的家人，{companion}會親口問', { companion: cname() }), quiz: muneaT('activity.inviteNoteQuiz', '不方便滑手機的家人，用說的就能玩；其他人手機作答'), event: muneaT('activity.inviteNoteEvent', '{companion}親口問不方便滑手機的家人；其他人回「去／沒空」', { companion: cname() }), vote: muneaT('activity.inviteNoteVote', '{companion}會唸選項給不方便滑手機的家人聽，幫忙投', { companion: cname() }), draw: muneaT('activity.inviteNoteDraw', '人人有機會；開獎時{companion}會告訴每個人', { companion: cname() }) });
   function applyChalKind(kind) {
     if ($('#inviteNote')) $('#inviteNote').textContent = INVITE_NOTES()[kind] || '';
     if ($('#walkFields')) $('#walkFields').style.display = kind === 'walk' ? '' : 'none';
@@ -10085,13 +10085,13 @@ function init() {
   if ($('#walkDue')) $('#walkDue').addEventListener('change', syncWalkDays);
   if ($('#quizN')) $('#quizN').addEventListener('input', () => {
     paintRange($('#quizN'));
-    if ($('#quizNVal')) $('#quizNVal').textContent = $('#quizN').value + ' 題';
+    if ($('#quizNVal')) $('#quizNVal').textContent = muneaT('activity.questionsChip', '{count} 題', { count: $('#quizN').value });
   });
   // 狀態頁三檔切換（今天/本週/本月）
   const statusSeg = $('#statusSeg');
   if (statusSeg) {
     const sviews = { today: $('#statusToday'), week: $('#statusWeek'), month: $('#statusMonth') };
-    const stitles = { today: '今天的狀態', week: '這週的狀態', month: '這個月的狀態' };
+    const stitles = { today: muneaT('status.todayTitle', '今天的狀態'), week: muneaT('status.weekTitle', '這週的狀態'), month: muneaT('status.monthTitle', '這個月的狀態') };
     statusSeg.addEventListener('click', e => {
       const b = e.target.closest('.seg-btn');
       if (!b) return;
@@ -10113,7 +10113,7 @@ function init() {
   function nextVisit() { const today = isoOf(new Date()); const arr = loadVisits(); return arr.filter(v => v.dateISO >= today)[0] || arr[0] || null; }
   function fmtVisitTime(tv) {  // "14:30" → "下午 2:30"
     const p = String(tv || '09:00').split(':'); const hh = +p[0] || 9, mm = +p[1] || 0;
-    const ap = hh < 12 ? '上午' : '下午'; const h12 = ((hh + 11) % 12) + 1;
+    const ap = hh < 12 ? muneaT('common.am', '上午') : muneaT('common.pm', '下午'); const h12 = ((hh + 11) % 12) + 1;
     return ap + ' ' + h12 + ':' + String(mm).padStart(2, '0');
   }
   function renderVisitRow() {
@@ -10159,7 +10159,7 @@ function init() {
   if ($('#visitSaveBtn')) $('#visitSaveBtn').addEventListener('click', () => {
     const on = document.querySelector('#visitDatePick .cal-cell.on');
     if (!on) { toast(muneaT('visit.pickDayFirst', '先選一天')); return; }
-    const title = ((($('#visitTitle') && $('#visitTitle').value) || '').trim()) || '回診';
+    const title = ((($('#visitTitle') && $('#visitTitle').value) || '').trim()) || muneaT('visit.defaultTitle', '回診');
     const tv = ($('#visitTime') && $('#visitTime').value) || '09:00';
     const d = new Date(on.dataset.iso + 'T00:00');
     const label = fmtDay(d) + ' ' + fmtVisitTime(tv);
@@ -10170,7 +10170,7 @@ function init() {
     renderVisitList(); renderVisitRow();
     if ($('#visitTitle')) $('#visitTitle').value = '';
     document.querySelectorAll('#visitDatePick .cal-cell.on').forEach(x => x.classList.remove('on'));
-    toast('好，「' + title + '」' + label + '記下了，' + cname() + '前一天會提醒你');
+    toast(muneaT('visit.savedToast', '好，「{title}」{label}記下了，{companion}前一天會提醒你', { title, label, companion: cname() }));
   });
   renderVisitRow();
   refreshRoutineRemindersFromBackend();
@@ -10433,9 +10433,9 @@ function init() {
   if ($('#dataExportBtn')) $('#dataExportBtn').addEventListener('click', async () => {
     const b = $('#dataExportBtn');
     if (authState().status !== 'signed-in') { toast(muneaT('profile.exportLoginFirst', "請先登入，才能安全匯出只屬於你的資料")); return; }
-    setBtnBusy(b, '正在整理資料');
+    setBtnBusy(b, muneaT('profile.exportPreparing', '正在整理資料'));
     const result = await brainPost('/privacy-export', { action: 'request' });
-    clearBtnBusy(b, '匯出一份給我');
+    clearBtnBusy(b, muneaT('report.exportButton', '匯出一份給我'));
     if (!(result && result.ok && result.status === 'completed' && result.exportPackage)) {
       toast(muneaT('profile.exportFailedToast', "資料副本沒有建立，請確認登入與網路後再試一次"));
       return;
@@ -10445,7 +10445,7 @@ function init() {
     const file = new File([json], filename, { type: 'application/json' });
     try {
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ title: '沐寧個人資料副本', files: [file] });
+        await navigator.share({ title: muneaT('profile.exportShareTitle', '沐寧個人資料副本'), files: [file] });
       } else {
         const url = URL.createObjectURL(file);
         const a = document.createElement('a');
@@ -10473,7 +10473,7 @@ function init() {
     b.dataset.arm = ''; b.textContent = '刪除我的資料';
     (async () => {
       b.disabled = true;
-      b.textContent = signedIn ? '正在永久刪除' : '正在清除';
+      b.textContent = signedIn ? muneaT('data.deletingAccount', '正在永久刪除') : muneaT('data.clearingLocal', '正在清除');
       let deletion = null;
       if (signedIn) {
         deletion = await brainPost('/account-deletion', { action: 'request', reason: 'user_requested_in_app' });
@@ -10514,7 +10514,7 @@ function init() {
     rcYear = now.getFullYear(); rcMonth = now.getMonth();
     rcStart = null; rcEnd = null;
     if ($('#rcResult')) { $('#rcResult').style.display = 'none'; }
-    if ($('#rcHint')) $('#rcHint').textContent = '點開始那天，再點結束那天';
+    if ($('#rcHint')) $('#rcHint').textContent = muneaT('visit.rangePickHint', '點開始那天，再點結束那天');
     renderRangeCal();
   }
   function renderRangeCal() {
@@ -10547,7 +10547,7 @@ function init() {
     const med = Math.max(1, Math.round(days * 0.86));
     const act = Math.max(1, Math.round(days * 0.55));
     const box = $('#rcResult');
-    box.innerHTML = '<div class="rpt-row"><span class="rpt-k">期間</span><div><b>' + fmtDay(a) + ' 到 ' + fmtDay(b2) + '</b><span>共 ' + days + ' 天（示範數據）</span></div></div>' +
+    box.innerHTML = '<div class="rpt-row"><span class="rpt-k">' + muneaT('report.periodLabel', '期間') + '</span><div><b>' + muneaT('report.periodRange', '{from} 到 {to}', { from: fmtDay(a), to: fmtDay(b2) }) + '</b><span>' + muneaT('report.periodDaysDemo', '共 {days} 天（示範數據）', { days }) + '</span></div></div>' +
       '<div class="rpt-row"><span class="rpt-k">用藥</span><div><b>準時 ' + med + ' / ' + days + ' 天</b></div></div>' +
       '<div class="rpt-row"><span class="rpt-k">活動</span><div><b>達標 ' + act + ' 天</b></div></div>' +
       '<div class="rpt-row"><span class="rpt-k">睡眠</span><div><b>平均 7.2 小時</b></div></div>';
@@ -10558,8 +10558,8 @@ function init() {
     const cell = e.target.closest('.rc-cell');
     if (!cell || cell.classList.contains('off') || cell.classList.contains('pad')) return;
     const iso = cell.dataset.iso;
-    if (!rcStart || (rcStart && rcEnd)) { rcStart = iso; rcEnd = null; if ($('#rcResult')) $('#rcResult').style.display = 'none'; if ($('#rcHint')) $('#rcHint').textContent = '再點結束那天'; }
-    else if (iso < rcStart) { rcStart = iso; if ($('#rcHint')) $('#rcHint').textContent = '再點結束那天'; }
+    if (!rcStart || (rcStart && rcEnd)) { rcStart = iso; rcEnd = null; if ($('#rcResult')) $('#rcResult').style.display = 'none'; if ($('#rcHint')) $('#rcHint').textContent = muneaT('report.pickEndDay', '再點結束那天'); }
+    else if (iso < rcStart) { rcStart = iso; if ($('#rcHint')) $('#rcHint').textContent = muneaT('report.pickEndDay', '再點結束那天'); }
     else { rcEnd = iso; rcShowResult(); }
     renderRangeCal();
   });
@@ -10579,7 +10579,7 @@ function init() {
   if ($('#historyModal')) $('#historyModal').addEventListener('click', e => {
     if (e.target === $('#historyModal')) { $('#historyModal').classList.remove('show'); return; }
     const row = e.target.closest('.hist-row');
-    if (row) toast(row.classList.contains('dim') ? '正式版點開就是當月整理，示範先看 6 月這行' : '6 月整理好了，完整月報之後接引擎');
+    if (row) toast(row.classList.contains('dim') ? muneaT('demo.history.demoRowToast', '正式版點開就是當月整理，示範先看 6 月這行') : muneaT('demo.history.juneReadyToast', '6 月整理好了，完整月報之後接引擎'));
   });
 
   // B1 提醒排程：app 開著就到點響（打包後升級推播）
@@ -10699,7 +10699,7 @@ function init() {
     const st = quizState;
     if (!st) return;
     const item = QUIZ_BANK[st.i];
-    $('#quizProgress').textContent = '第 ' + (st.i + 1) + ' 題／共 ' + st.n + ' 題';
+    $('#quizProgress').textContent = muneaT('activity.quizProgress', '第 {current} 題／共 {total} 題', { current: st.i + 1, total: st.n });
     $('#quizQ').textContent = item.q;
     const order = item.opts.map((_, k) => k).sort((a2, b2) => ((a2 * 7 + st.i * 3) % 4) - ((b2 * 7 + st.i * 3) % 4));
     st.map = order;
