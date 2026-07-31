@@ -2,7 +2,7 @@
  "locale": "en",
  "region": "US",
  "verifiedAt": "2026-07-31",
- "verifiedBy": "US health content pass, batches 1+2 (kb-i18n-20260731 / kb-rest-20260731); emergency numbers per docs/qa/i18n/emergency-numbers-verification-2026-07-31.md",
+ "verifiedBy": "US health content pass, batches 1+2+3 (kb-i18n-20260731 / kb-rest-20260731 / metab-i18n-20260731); emergency numbers per docs/qa/i18n/emergency-numbers-verification-2026-07-31.md",
  "emergency": {
   "all": {
    "number": "911",
@@ -213,6 +213,123 @@
   },
   "taiwanPrevalenceStatsDropped": {
    "note": "Rule: never swap a Taiwan prevalence figure for an invented US one. These master cards carried Taiwan numbers and were rewritten as reassurance with no figure at all: eye-normalize (cataracts 90% of 70+), noct-normalize (BPH ~50% of men 50+, >70% of 70+), swallow-normalize (two-thirds of institutionalised elders with oral frailty), palp-normalize (arrhythmia in 65+). The two US figures that ARE quoted elsewhere in this overlay (hypertension, diabetes, supplement use) come from CDC/NHANES and are listed under statsUsed."
+  },
+  "metabolicSyndromeUS": {
+   "claim": "US criteria (NCEP ATP III as updated by the 2005 AHA/NHLBI scientific statement): any 3 of 5 — waist over 40 inches (102 cm) in men or 35 inches (88 cm) in women; triglycerides 150 mg/dL or higher (or on drug treatment); HDL under 40 mg/dL in men or under 50 mg/dL in women (or on treatment); blood pressure 130/85 mmHg or higher (or on treatment); fasting glucose 100 mg/dL or higher (or on treatment).",
+   "waistWarning": "THE EASIEST THING TO COPY WRONG. The zh master uses Taiwan's HPA thresholds — 90 cm men / 80 cm women. Those were replaced, not converted: en says 40 inches / 35 inches. Never carry the Taiwan waist numbers into en.",
+   "asianAmericanNote": "AHA/NHLBI explicitly allows a lower waist threshold for people prone to insulin resistance, 'particularly Asian Americans' — wt-waist-first tells those users to ask their doctor rather than quoting a second number, because the exact cut-point varies by source.",
+   "usedIn": "wt-waist-first, wt-metabolic-syndrome",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ahajournals.org/doi/10.1161/CIRCULATIONAHA.105.169405",
+    "https://www.ahajournals.org/doi/10.1161/01.ATV.0000189155.75833.c7",
+    "https://www.ahajournals.org/doi/10.1161/CIRCULATIONAHA.109.192644"
+   ]
+  },
+  "statinMuscleSymptoms": {
+   "claim": "US statin labeling (e.g. Lipitor, Crestor) instructs patients to promptly report unexplained muscle pain, tenderness or weakness, particularly with malaise or fever; myopathy can progress to rhabdomyolysis with acute kidney injury from myoglobinuria, and rare fatalities have been reported. Dark (tea/cola-coloured) urine is the lay sign of myoglobinuria.",
+   "howItIsSaid": "lipid-refer keeps the master's instruction to stop the statin and get seen right away, and names it explicitly as the ONE exception to lipid-statin-dont-stop — otherwise the two cards contradict each other.",
+   "usedIn": "lipid-refer, lipid-statin-dont-stop, lipid-red-yeast-caution",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/020702s081lbl.pdf",
+    "https://www.accessdata.fda.gov/drugsatfda_docs/label/2023/021366s043s044lbl.pdf"
+   ]
+  },
+  "solubleFiberHealthClaim": {
+   "note": "FDA authorised health claim (21 CFR 101.81): beta-glucan soluble fiber from whole oats, barley and psyllium reduces the risk of coronary heart disease; the supporting intake is 3 g/day of oat/barley beta-glucan. This is why lipid-fiber can honestly say 'the FDA lets oat boxes say so' — no dose is stated in the say text.",
+   "usedIn": "lipid-fiber",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-E/section-101.81"
+   ]
+  },
+  "majorFoodAllergensUS": {
+   "claim": "Nine major food allergens must be declared on US packaged food: milk, eggs, fish, crustacean shellfish, tree nuts, peanuts, wheat, soybeans, and sesame. Sesame became the ninth under the FASTER Act, effective 1 January 2023. Declaration appears either in parentheses in the ingredient list or in a 'Contains' statement.",
+   "differsFromTaiwan": "The zh master lists Taiwan's mandatory allergens, which include mango and sulfites and do not single out sesame. The en card was rewritten to the US nine — a straight translation would have told an American to look for mango labelling that does not exist and would have omitted sesame.",
+   "usedIn": "allergy-label",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.fda.gov/food/food-allergies/faster-act-sesame-ninth-major-food-allergen",
+    "https://www.fda.gov/consumers/consumer-updates/allergic-sesame-food-labels-now-must-list-sesame-allergen"
+   ]
+  },
+  "igGFoodSensitivityPanels": {
+   "claim": "Food-specific IgG/IgG4 testing is not a test for allergy — IgG reflects food exposure, not reaction. AAAAI's Choosing Wisely guidance advises against ordering food IgE panels without a consistent history, and IgG panels are not FDA-cleared for diagnosing food allergy; in practice they drive unnecessary elimination and nutritional deficiency. Real diagnosis belongs to a board-certified allergist.",
+   "usedIn": "allergy-test-blocked",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.aaaai.org/aaaai/media/medialibrary/pdf%20documents/media/choosing-wiselyt.pdf",
+    "https://education.aaaai.org/pipro/choosingwisely_fa"
+   ]
+  },
+  "anaphylaxisEscalation": {
+   "claim": "Anaphylaxis is an airway emergency: epinephrine first, then emergency care. allergy-refer carries 911 because the zh master itself says 立刻打119.",
+   "nuanceFlaggedForHumanReview": "The 2023 US anaphylaxis practice parameter update allows selected patients who respond promptly and completely, carry a second auto-injector, and have someone with them to avoid activating EMS. Munea's card deliberately does NOT offer that option to a senior user talking to an AI companion — under-escalating an airway emergency was judged the larger safety defect, the same call already made for vax-refer.",
+   "usedIn": "allergy-refer",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.aaaai.org/Aaaai/media/Media-Library-PDFs/Allergist%20Resources/Statements%20and%20Practice%20Parameters/Anaphylaxis-Practice-Paramaters-2023.pdf",
+    "https://acaai.org/resource/if-i-use-epinephrine-for-an-allergic-reaction-do-i-have-to-call-911/"
+   ]
+  },
+  "glp1WeightLossDrugs": {
+   "policy": "wt-diet-pills-blocked stays blocked: no candidacy judgement ('is it right for you'), no doses, no brand steering. What was added for the US, where these drugs are everywhere: an honest acknowledgement that this is a real prescription route worth raising with a clinician, plus a warning about compounded and online-sourced versions.",
+   "facts": [
+    "FDA has alerted providers and patients to dosing errors with compounded injectable semaglutide, some requiring hospitalization — patients and prescribers miscalculating doses drawn from vials.",
+    "FDA has flagged counterfeit products labelled as compounded tirzepatide and issued 2025-2026 warning letters to online sellers claiming equivalence to Ozempic/Wegovy/Mounjaro/Zepbound.",
+    "The zh master's warning about unidentified diet pills bought online localises cleanly onto this."
+   ],
+   "usedIn": "wt-diet-pills-blocked",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.fda.gov/drugs/drug-alerts-and-statements/fdas-concerns-unapproved-glp-1-drugs-used-weight-loss",
+    "https://www.fda.gov/drugs/human-drug-compounding/fda-alerts-health-care-providers-compounders-and-patients-dosing-errors-associated-compounded"
+   ]
+  },
+  "fattyLiverMASLD": {
+   "claim": "Fatty liver disease was renamed in 2023: NAFLD -> MASLD, NASH -> MASH. Lifestyle remains first-line, with guideline targets of 5-10% body weight loss; 3-5% reduces liver fat and ~7% also improves inflammation.",
+   "usUpdateToTheMaster": "The zh master says there is no drug for it. That is no longer true in the US: resmetirom was FDA-approved in March 2024 for the advanced form (MASH with fibrosis). The en card keeps the master's message (weight is the treatment) but adds one clause saying a prescription exists for the advanced form and is a liver specialist's decision — asserting 'there is no drug' to a US user would be false.",
+   "usedIn": "wt-fatty-liver",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.niddk.nih.gov/health-information/liver-disease/nafld-nash/treatment",
+    "https://www.aasld.org/liver-fellow-network/core-series/back-basics/steatotic-liver-disease-cutting-through-fat",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC12174658/"
+   ]
+  },
+  "unintentionalWeightLoss": {
+   "claim": "Unintentional weight loss in adults over 65 — more than 5% of body weight over 6 to 12 months — carries increased morbidity and mortality; malignancy accounts for up to a third of cases, with non-malignant causes (GI disease, thyroid, dementia, depression, medications) more common overall.",
+   "redLine": "Lead card wt-unintended-loss asks 'did you mean to?' and explicitly refuses to congratulate. wt-refer and sarco-refer both keep the phrase 'unexplained weight loss' / 'lost weight without trying'. Never treat a senior's weight loss as good news.",
+   "usedIn": "wt-unintended-loss, wt-refer, sarco-refer",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.aafp.org/pubs/afp/issues/2021/0700/p34.html"
+   ]
+  },
+  "proteinForOlderAdults": {
+   "claim": "PROT-AGE / ESPEN-type guidance for people over 65 is 1.0-1.2 g protein per kg body weight per day (above the 0.8 g/kg RDA), more with illness or active training, spread across meals rather than loaded into one — roughly 25-30 g per meal.",
+   "kidneyCaveat": "Low-protein diets of 0.6-0.8 g/kg are used to slow chronic kidney disease progression, and CKD is common and often undiagnosed in people over 70. So the kidney caveat sits in the plain food card (sarco-protein-每餐) as well as the supplement card — the master only puts contraindications on the supplement card, and the overlay cannot add contraindications, so the caveat has to live in the say text.",
+   "howItIsSaid": "en states 25-30 g per meal rather than g/kg — a US senior does not weigh in kilograms — and hands the personal number to a doctor or dietitian.",
+   "usedIn": "sarco-protein-每餐, sarco-protein-supp",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://pubmed.ncbi.nlm.nih.gov/23867520/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10272976/"
+   ]
+  },
+  "dietComparisonHonesty": {
+   "note": "The master's two honest lines were kept verbatim in meaning, not softened. Low-carb: DIETFITS (JAMA 2018, n=609) found no significant 12-month difference between healthy low-fat and healthy low-carb — en says 'a year or two out it comes out about the same as the other approaches'. Intermittent fasting: systematic reviews of isocaloric trials find effects comparable to daily calorie restriction, with weight loss explained by reduced intake — en says 'it works about the same as simply eating that much less'.",
+   "usedIn": "diet-low-carb-honest, diet-fasting-honest",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://jamanetwork.com/journals/jama/fullarticle/2673150",
+    "https://pubmed.ncbi.nlm.nih.gov/36126910/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC11930668/"
+   ]
+  },
+  "unitConversionsThisBatch": {
+   "note": "Metric figures in the zh master were converted, not re-invented: 1-2 kg per month of weight loss -> 'two to four pounds a month'; waist 90/80 cm -> the US 40/35 inch criterion (a replacement, see metabolicSyndromeUS). Aerobic target stated as 'half an hour, five days a week' to match the existing bp-walk card rather than introducing a second phrasing of 150 minutes."
   }
  },
  "skippedAsCulturallyUntranslatable": {
@@ -235,7 +352,8 @@
   "policy": "Fail-safe: solutions with no honest US localization are omitted from the overlay, so the layer never serves them in en. Every topic's L5 refer card is translated, so all 29 topics stay live. Acupressure-point cards (P6/HT7 etc.) are skipped consistently across TW-EDU-01, 25 and 30 — the point-location instructions do not survive translation for a US audience; the acupuncture card in TW-EDU-30 is kept because licensed acupuncture is an established US care lane.",
   "TW-EDU-25": [
    "stress-acupressure"
-  ]
+  ],
+  "batch3Note": "TW-EDU-33 to 37 (metabolic set): nothing skipped — all 39 solutions localised, including every L5 referral card. Red yeast rice, DASH, Mediterranean, lactose and protein cards all have honest US equivalents, and no master contraindication failed to hold in the US."
  },
  "escalationPolicy": {
   "rule": "A US emergency number appears only where the zh master itself escalates to an emergency. Master says 打119 / 叫救護車 -> 911. Master says 1925 -> 988 (call or text). Master says only 'see a doctor promptly' -> no number at all, because over-escalating ordinary discomfort conflicts with the crisis rules.",
@@ -246,7 +364,9 @@
    "teen-refer": "988 — master says 1925 安心專線",
    "stress-refer": "988 — master says 1925 安心專線",
    "preg-refer": "988 — master says 安心專線 1925 for postpartum depression",
-   "vax-refer": "911 — JUDGMENT CALL, flagged for human review. Master says 立刻就醫，不要等 rather than 119, but the trigger list is anaphylaxis (breathing difficulty, facial swelling, whole-body rash) and the US standard answer is 911. Under-escalating anaphylaxis was judged the larger safety defect."
+   "vax-refer": "911 — JUDGMENT CALL, flagged for human review. Master says 立刻就醫，不要等 rather than 119, but the trigger list is anaphylaxis (breathing difficulty, facial swelling, whole-body rash) and the US standard answer is 911. Under-escalating anaphylaxis was judged the larger safety defect.",
+   "lipid-refer": "911 — master says 立刻就醫或打 119 for chest pain with cold sweat. The statin/rhabdomyolysis half deliberately carries no number: the master says 儘快就醫, so en says stop the statin and get seen right away.",
+   "allergy-refer": "911 — master says 立刻打 119 或衝急診 for anaphylaxis. Airway emergency; epinephrine first if prescribed, then call."
   },
   "deliberatelyNoNumber": [
    "knee-refer",
@@ -261,7 +381,10 @@
    "neck-refer",
    "period-refer",
    "iron-refer",
-   "preg-refer (the obstetric half — 'call your OB or go to labor and delivery')"
+   "preg-refer (the obstetric half — 'call your OB or go to labor and delivery')",
+   "wt-refer",
+   "diet-refer",
+   "sarco-refer"
   ],
   "erWithoutANumber": "eye-refer, noct-refer and mci-refer say 'the emergency room' / 'get seen today' without a phone number. The master escalates those (儘速就醫 / 急症，立刻就醫 / 立刻就醫) but does not dial 119, so neither do we."
  }
