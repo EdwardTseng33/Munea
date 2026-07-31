@@ -1229,7 +1229,7 @@ function renderSubscriptionEndDate(subscription) {
 
 function subscriptionSuccessMessage(plan, subscription) {
   const rendererCopy = muneaRendererCopy();
-  const planLabel = rendererCopy ? rendererCopy.planLabel(plan) : (({ plus: 'Plus', pro: 'Pro' })[plan] || '你的');
+  const planLabel = rendererCopy ? rendererCopy.planLabel(plan) : (({ plus: 'Plus', pro: 'Pro' })[plan] || muneaT('purchase.planFallbackYours', '你的'));
   const expires = subscription && subscription.expiresAt ? new Date(subscription.expiresAt) : null;
   if (subscription && subscription.status === 'active' && expires && !Number.isNaN(expires.getTime())) {
     const date = new Intl.DateTimeFormat(muneaLocale(), {
@@ -1410,7 +1410,7 @@ async function refreshFamilyRelayMembers() {
   const old = localFamilyRelayMembers();
   const mine = muneaCloudPersonId();
   const members = remote.map((m, index) => {
-    const name = String(m.displayName || m.name || '').trim() || '家人';
+    const name = String(m.displayName || m.name || '').trim() || muneaT('familyCircle.memberFallback', '家人');
     const previous = old.find(x => x.personId === m.personId || x.name === name) || {};
     return {
       name,
@@ -5958,12 +5958,11 @@ function renderMedSlots() {
           + '<button type="button" class="ms-del" data-slot="' + muneaEscapeHtml(slot) + '" data-name="' + muneaEscapeHtml(m.name) + '" aria-label="' + muneaEscapeHtml(removeLabel) + '">✕</button></div>';
       }).join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
       : '<div class="ms-empty">' + muneaEscapeHtml(muneaT('medicationManager.emptySlot', '這個時段沒有藥')) + '</div>';
-    const countKey = inSlot.length === 1
-      ? 'medicationManager.medicineCountOne'
-      : 'medicationManager.medicineCountOther';
     const count = new Intl.NumberFormat(muneaLocale()).format(inSlot.length);
     const countCopy = inSlot.length
-      ? muneaT(countKey, '{count} 種', { count })
+      ? (inSlot.length === 1
+        ? muneaT('medicationManager.medicineCountOne', '{count} 種', { count })
+        : muneaT('medicationManager.medicineCountOther', '{count} 種', { count }))
       : '';
     const reminderTimeLabel = muneaT(
       'medicationManager.reminderTime',
@@ -8269,8 +8268,8 @@ function init() {
   });
   if ($('#fcLeaveBtn')) $('#fcLeaveBtn').addEventListener('click', () => {
     const b = $('#fcLeaveBtn');
-    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.add('arm'); b.textContent = muneaT('familyCircle.leaveConfirm', '再按一次確認退出'); setTimeout(() => { b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈'; }, 4000); return; }
-    b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈';
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.add('arm'); b.textContent = muneaT('familyCircle.leaveConfirm', '再按一次確認退出'); setTimeout(() => { b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = muneaT('familyCircle.leaveAction', '退出這個健康圈'); }, 4000); return; }
+    b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = muneaT('familyCircle.leaveAction', '退出這個健康圈');
     $('#famCircleModal').classList.remove('show');
     toast(muneaT('familyCircle.leftToast', '已退出這個健康圈。想再回來，請家人重新邀請你。'));
   });
@@ -10756,7 +10755,7 @@ function init() {
   let chatRec = null, chatOn = false;
   const CHAT_RULES = [
     [/(藥.*(怎麼吃|幾顆|[0-9一二兩三四五]顆|停|加量|減量|可以吃|能不能吃))|劑量|(可以吃.*藥)/, '藥怎麼吃、吃幾顆，我不能幫你決定，這要聽醫生或藥師的喔。要不要我幫你記下來，回診時問醫生？'],
-    [/痛|痠|不舒服|頭暈/, '聽到你不太舒服，我有點擔心。先坐下歇會兒，需要的話我幫你通知美華。'],
+    [/痛|痠|不舒服|頭暈/, '聽到你不太舒服，我有點擔心。先坐下歇會兒，需要的話我幫你通知家人。'],
     [/累|睡不|失眠/, '辛苦了，累了就休息、不要硬撐，我在這裡陪你。'],
     [/孫|想.*他|想.*她|寂寞|一個人/, '想家人了是吧？要不要我提醒他們今晚打給你？'],
     [/吃|飯|餓|藥/, '好，吃飯吃藥都別忘了，到時間我會叫你。'],
@@ -11083,7 +11082,7 @@ function init() {
       syncCompanionUI();
       saveCompanionProfileToBackend();
       syncAccountBootstrap('create', { reason: 'companion_name_updated' });
-      toast('名字改好了：以後叫「' + companionDisplayName.trim() + '」');
+      toast(muneaT('companion.renamedToast', '名字改好了：以後叫「{name}」', { name: companionDisplayName.trim() }));
     });
   }
   const avatarPick = $('#avatarPick');
@@ -11093,7 +11092,7 @@ function init() {
     setCompanionTemplate(o.dataset.ava);
     if (!wasOn) {
       const label = o.querySelector('.avl b');
-      toast('已換成 ' + (label ? label.textContent : '新的陪伴'));
+      toast(muneaT('companion.switchedToast', '已換成 {name}', { name: label ? label.textContent : muneaT('companion.newDefault', '新的陪伴') }));
     }
   });
 
@@ -11119,8 +11118,15 @@ function refreshLocalizedDynamicUi() {
     }
   } catch (e) {}
   try {
+    const cnameSpan = '<span class="cname">' + muneaT('companion.nening.name', '寧寧') + '</span>';
     const sf1 = $('#sfStep1Text');
-    if (sf1) sf1.innerHTML = muneaT('legacyUi.safetyStep1', '異常發生，{companion}先關心你一句、確認你還好嗎', { companion: '<span class="cname">' + muneaT('companion.nening.name', '寧寧') + '</span>' });
+    if (sf1) sf1.innerHTML = muneaT('legacyUi.safetyStep1', '異常發生，{companion}先關心你一句、確認你還好嗎', { companion: cnameSpan });
+    const mcSubEl = $('#mcSub');
+    if (mcSubEl && !mcSubEl.textContent.trim()) mcSubEl.innerHTML = muneaT('demo.family.chatSubSample', '和{companion}聊了 2 次 · 有一小段有點火氣', { companion: cnameSpan });
+    const cnNoData = $('#cnNoDataText');
+    if (cnNoData) cnNoData.innerHTML = '<b>' + muneaT('legacyUi.connectNoDataTitle', '沒有這些也沒關係。') + '</b>' + muneaT('legacyUi.connectNoDataBody', '{companion}也能從每天聊天陪你留意生活狀態，健康數據是加分，陪伴和提醒不受影響。', { companion: cnameSpan });
+    const rptFootEl = $('#rptFoot');
+    if (rptFootEl) rptFootEl.innerHTML = muneaT('report.footerLine', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion: cnameSpan });
   } catch (e) {}
   try { renderCareCarousel(); } catch (e) {}
   try { syncCompanionUI(); } catch (e) {}
