@@ -1437,7 +1437,7 @@
   "health.readOkAt": "{time} 讀到：{items}",
   "health.readNothingAt": "{time} 讀過了，一項都沒有",
   "health.hintAskedOnce": "這個授權視窗只會跳一次，之後要改都在「健康」App 裡。按上面那顆鍵我帶你過去。",
-  "health.hintEmpty": "連上了，但我還讀不到資料。按上面那顆鍵去「健康」App 把項目打開就好。",
+  "health.hintEmpty": "連上了，但我還讀不到資料。按上面那顆鍵過去，在清單裡點「沐寧」，把項目打開就好。",
   "health.hintConnected": "好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。",
   "visit.questionsFull": "已經記滿 {n} 題了，先刪掉一題再加",
   "visit.questionsFullHint": "已經記滿 {n} 題了。想再加的話，先刪掉一題。",

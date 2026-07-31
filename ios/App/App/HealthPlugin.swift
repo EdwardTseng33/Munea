@@ -62,19 +62,26 @@ public class HealthPlugin: CAPPlugin, CAPBridgedPlugin {
     /// 而且視窗裡的項目**預設全是關的**——很多人直接按「允許」等於一項都沒開。
     /// 之後要補開，唯一的路就是「健康」App →個人照片→「App 與服務」→沐寧。
     /// App 不能代替使用者打開項目（蘋果不給），只能把他送到門口。
+    /// 帶使用者去健康 App 開項目。原本只開首頁（x-apple-health://），落地後還要自己找
+    /// 「右上頭像 → App 和服務 → 沐寧」三層——長輩幾乎走不完（Edward 2026-07-31 質疑）。
+    /// 改成先試 Sources 那一頁（iOS 16 起可用），落地就是來源清單、點一下沐寧就到，少兩層。
+    /// 再深一層（直接進沐寧的權限頁）蘋果沒開放，x-apple-health://Sources/<App> 只會停在清單，
+    /// 所以最深就到這裡；開不了就退回首頁，絕不讓按鍵變成沒反應。
     @objc func openHealthApp(_ call: CAPPluginCall) {
-        guard let url = URL(string: "x-apple-health://") else {
-            call.resolve(["opened": false])
-            return
-        }
+        let candidates = ["x-apple-health://Sources/", "x-apple-health://"]
         DispatchQueue.main.async {
-            guard UIApplication.shared.canOpenURL(url) else {
-                call.resolve(["opened": false])
+            for raw in candidates {
+                guard let url = URL(string: raw), UIApplication.shared.canOpenURL(url) else { continue }
+                UIApplication.shared.open(url, options: [:]) { ok in
+                    if ok {
+                        call.resolve(["opened": true, "target": raw])
+                    } else if raw == candidates.last {
+                        call.resolve(["opened": false])
+                    }
+                }
                 return
             }
-            UIApplication.shared.open(url, options: [:]) { ok in
-                call.resolve(["opened": ok])
-            }
+            call.resolve(["opened": false])
         }
     }
 
