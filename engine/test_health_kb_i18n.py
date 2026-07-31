@@ -186,12 +186,38 @@ class SelectionParityTest(unittest.TestCase):
     """
 
     def test_same_person_same_hour_picks_the_same_solutions(self):
+        """沒略過任何卡的題目，四國挑出來的必須一字不差。
+
+        有略過卡的題目（例如穴位按摩在美西沒有文化錨點）本來就會少一張、
+        第三格由下一名遞補——那是敗向安全的正常結果，不是排序被動了手腳。
+        所以這裡只對「完整翻譯」的題目要求嚴格一致，那才抓得到真的重排。
+        """
+        import json
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "health_solutions.json"), encoding="utf-8") as f:
+            master = json.load(f)["topics"]
         prof = {"audience": "elder"}
-        for tid in ("TW-EDU-01", "TW-EDU-18", "TW-EDU-16", "TW-EDU-03"):
-            zh = [s["id"] for s in hs.pick(tid, "", prof, 22)["solutions"]]
-            for loc in locales_with_overlay():
+        checked = 0
+        for loc in locales_with_overlay():
+            for tid, entry in i18n.overlay(loc).items():
+                have = set((entry.get("solutions") or {}).keys())
+                all_ids = {s["id"] for s in (master.get(tid) or {}).get("solutions", [])}
+                if all_ids - have:
+                    continue                      # 這一國略過了幾張，不適用嚴格比對
+                zh = [s["id"] for s in hs.pick(tid, "", prof, 22)["solutions"]]
                 got = [s["id"] for s in hs.pick(tid, "", prof, 22, locale=loc)["solutions"]]
-                self.assertEqual(got, zh, f"{loc}/{tid} 挑的方案跟中文不一樣")
+                self.assertEqual(got, zh, f"{loc}/{tid} 挑的方案跟中文不一樣＝排序被動了")
+                checked += 1
+        self.assertGreater(checked, 20, "完整翻譯的題目太少，這條守門等於沒在守")
+
+    def test_every_served_card_is_a_translated_one(self):
+        """略過的卡不准偷偷用中文補位——那是敗向安全的底線。"""
+        prof = {"audience": "elder"}
+        for loc in locales_with_overlay():
+            for tid, entry in i18n.overlay(loc).items():
+                have = set((entry.get("solutions") or {}).keys())
+                for s in hs.pick(tid, "", prof, 22, locale=loc)["solutions"]:
+                    self.assertIn(s["id"], have, f"{loc}/{tid} 端出了沒翻的 {s['id']}")
 
     def test_safety_removal_still_works_in_every_locale(self):
         """禁忌是硬剔除——出國之後也一樣，不能只有中文那條線在守。"""
