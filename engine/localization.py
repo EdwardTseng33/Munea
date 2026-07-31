@@ -96,16 +96,25 @@ _JAPAN_EMERGENCY_GUIDANCE = {
     "es": "Si alguien está en peligro inmediato en Japón, llama al 119 (bomberos y ambulancia); el 110 es para la policía. Si dudas si llamar a una ambulancia, el #7119 orienta en muchas zonas. Para apoyo psicológico, llama al 0120-279-338 y pide ayuda a una persona de confianza cercana.",
 }
 
+_UNITED_STATES_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在美國有立即危險，請立刻撥打 911（醫療、消防、警察共用）；想不開時可撥打或傳簡訊到 988，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in the United States, call 911 (medical, fire and police). For thoughts of suicide, call or text 988, and ask a trusted person nearby to help.",
+    "ja": "アメリカで差し迫った危険がある場合は911番（救急・消防・警察）へ。死にたい気持ちのときは988に電話またはテキストで連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Estados Unidos, llama al 911 (sanitario, bomberos y policía). Ante ideas de suicidio, llama o envía un mensaje al 988, y pide ayuda a una persona de confianza cercana.",
+}
+
 _REGIONAL_EMERGENCY_GUIDANCE = {
     "TW": _TAIWAN_EMERGENCY_GUIDANCE,
     "ES": _SPAIN_EMERGENCY_GUIDANCE,
     "MX": _MEXICO_EMERGENCY_GUIDANCE,
     "JP": _JAPAN_EMERGENCY_GUIDANCE,
+    "US": _UNITED_STATES_EMERGENCY_GUIDANCE,
 }
 REGIONAL_SAFETY_POLICY_SOURCES = {
     "ES": "https://www.interior.gob.es/opencms/en/contacta-con-nosotros/contacto-prueba-3-hide/index.html",
     "MX": "https://www.gob.mx/911/articulos/que-es-el-911emergencias?idiom=es",
     "JP": "https://www.fdma.go.jp/mission/enrichment/appropriate/appropriate003.html",
+    "US": "https://988lifeline.org/",
 }
 
 # Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current

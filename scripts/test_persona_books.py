@@ -124,5 +124,46 @@ class PersonaBookContractTests(unittest.TestCase):
                 self.assertIn(marker, core, f"{locale}：②-B 就醫不對稱規則沒寫進去")
 
 
+
+# 每一國「有人設書」就必須「有安全區」——2026-07-31 實測抓到的真洞：
+# 英文書裡寫了 911，但通話時的急難句沒設 US，於是美國長輩出事時她只會說
+# 「請聯絡當地緊急服務」，不會講 911。書寫對了不等於接上了。
+LOCALE_TO_MARKET = {"zh-TW": "TW", "ja": "JP", "en": "US", "es": "ES"}
+MARKET_MUST_SAY = {"TW": "119", "JP": "119", "US": "911", "ES": "112"}
+
+
+class SafetyRegionWiringTests(unittest.TestCase):
+    """授了一國的書，那一國的急難句也要真的設好（不然落到沒有號碼的通用句）。"""
+
+    def test_every_shipped_locale_has_a_wired_safety_region(self):
+        import localization
+
+        for locale in eng.persona_locales():
+            market = LOCALE_TO_MARKET.get(locale)
+            if not market:
+                continue
+            self.assertIn(
+                market, localization._REGIONAL_EMERGENCY_GUIDANCE,
+                f"{locale} 有人設書、但 {market} 沒有設急難句——"
+                f"那一國的長輩出事時只會聽到「聯絡當地緊急服務」，沒有號碼",
+            )
+
+    def test_the_wired_region_actually_says_the_number(self):
+        import localization
+
+        for locale in eng.persona_locales():
+            market = LOCALE_TO_MARKET.get(locale)
+            expected = MARKET_MUST_SAY.get(market)
+            if not expected:
+                continue
+            # 四種語言都要講得出那個號碼——介面英文的人在日本，也要聽到 119
+            for language in ("zh-TW", "en", "ja", "es"):
+                instruction = localization.regional_safety_instruction(language, market)
+                self.assertIn(
+                    expected, instruction,
+                    f"{market} 的急難句（{language}）裡沒有 {expected}",
+                )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

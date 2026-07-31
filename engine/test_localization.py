@@ -564,7 +564,9 @@ class LocalizationTests(unittest.TestCase):
     def test_regional_safety_policy_sources_are_explicit_and_official(self):
         self.assertEqual(
             set(localization.REGIONAL_SAFETY_POLICY_SOURCES),
-            {"ES", "MX", "JP"},   # 2026-07-31 日本上架籌備：補日本安全區與官方出處
+            # 2026-07-31 四語上架籌備：日本與美國安全區補上（實測抓到英文書寫了 911、
+            # 但通話的急難句沒設 US，美國長輩會只聽到「聯絡當地緊急服務」）
+            {"ES", "MX", "JP", "US"},
         )
         self.assertIn(
             "interior.gob.es",
