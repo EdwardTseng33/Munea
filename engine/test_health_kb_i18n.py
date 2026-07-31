@@ -95,6 +95,11 @@ class ArchitectureTest(unittest.TestCase):
 class NoForeignNumbersTest(unittest.TestCase):
     """別國的號碼絕不准串門——美國人在低潮時聽到 1925 是最壞的一種錯。"""
 
+    @staticmethod
+    def _mentions_number(text, number):
+        """號碼要當成獨立的一串數字比對——「2024年」裡面有「024」不算西班牙的專線。"""
+        return re.search(r"(?<!\d)" + re.escape(number) + r"(?!\d)", text or "") is not None
+
     def test_each_locale_only_carries_its_own_numbers(self):
         for loc in locales_with_overlay():
             blob = "\n".join(
@@ -102,7 +107,8 @@ class NoForeignNumbersTest(unittest.TestCase):
                 for entry in i18n.overlay(loc).values()
                 for sol in (entry.get("solutions") or {}).values())
             for bad in FOREIGN[loc]:
-                self.assertNotIn(bad, blob, f"{loc} 的內容出現了別國的號碼 {bad}")
+                self.assertFalse(self._mentions_number(blob, bad),
+                                 f"{loc} 的內容出現了別國的號碼 {bad}")
 
     def test_escalation_is_never_lost_in_translation(self):
         """**翻譯不准把急救指示弄丟。**
@@ -121,7 +127,8 @@ class NoForeignNumbersTest(unittest.TestCase):
                 for sid, sol in (entry.get("solutions") or {}).items():
                     if "119" not in (zh.get(sid, {}).get("say") or ""):
                         continue                      # 主庫沒有急救指示＝不必有
-                    self.assertTrue(any(n in sol.get("say", "") for n in OWN[loc]),
+                    self.assertTrue(any(self._mentions_number(sol.get("say", ""), n)
+                                        for n in OWN[loc]),
                                     f"{loc}/{tid}/{sid}：主庫叫人打119，翻出來卻沒有當地急難號碼")
 
 
@@ -167,6 +174,29 @@ class TranslationQualityTest(unittest.TestCase):
                     continue
                 hit = health_kb.match_topics(kws[0], locale=loc)
                 self.assertIn(tid, hit, f"{loc}/{tid} 用自己的觸發字卻叫不出來")
+
+
+class SelectionParityTest(unittest.TestCase):
+    """疊層只准換「說法」，不准換「挑哪幾個」。
+
+    同一個人、同一個時間，各國挑出來的方案必須一模一樣——打分欄位（風險級／時效／
+    禁忌／專屬度）本來就是語言中立的。哪天各國分歧了，代表有人在疊層裡動了不該動的。
+    """
+
+    def test_same_person_same_hour_picks_the_same_solutions(self):
+        prof = {"audience": "elder"}
+        for tid in ("TW-EDU-01", "TW-EDU-18", "TW-EDU-16", "TW-EDU-03"):
+            zh = [s["id"] for s in hs.pick(tid, "", prof, 22)["solutions"]]
+            for loc in locales_with_overlay():
+                got = [s["id"] for s in hs.pick(tid, "", prof, 22, locale=loc)["solutions"]]
+                self.assertEqual(got, zh, f"{loc}/{tid} 挑的方案跟中文不一樣")
+
+    def test_safety_removal_still_works_in_every_locale(self):
+        """禁忌是硬剔除——出國之後也一樣，不能只有中文那條線在守。"""
+        prof = {"audience": "elder", "conditions": ["腎功能異常"]}
+        for loc in locales_with_overlay():
+            ids = [s["id"] for s in hs.pick("TW-EDU-01", "", prof, 23, locale=loc)["solutions"]]
+            self.assertNotIn("sleep-magnesium-supplement", ids, f"{loc}：腎功能異常還端出鎂")
 
 
 class WiringTest(unittest.TestCase):
