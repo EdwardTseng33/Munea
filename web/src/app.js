@@ -6863,16 +6863,16 @@ const METRIC_ICON = {
   med:    '<path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/>',
 };
 const HEALTH_METRICS = {
-  bp:     { name: '血壓', val: '128', unit: '/82', status: 'ok',   read: '這週血壓都很穩，維持得很好。', trend: [126,130,128,124,128,127,128] },
-  hr:     { name: '心率', val: '72',  unit: ' 次', status: 'ok',   read: '心跳平穩，沒有不規則的狀況。', trend: [70,72,71,73,72,70,72] },
-  spo2:   { name: '血氧', val: '97',  unit: '%',   status: 'ok',   read: '血氧很足，呼吸順順的。', trend: [97,98,97,96,97,97,97] },
-  steady: { name: '走路穩定度', val: '偏低', unit: '', status: 'warn', read: '這週走路穩定度有點降，走慢些、扶著點。要不要我提醒美華多留意？', trend: [3,3,2,2,2,2,2] },
-  sleep:  { name: '睡眠', val: '7.5', unit: ' 時', status: 'ok',   read: '睡得不錯，這週平均 7.4 小時。', trend: [7.2,7.5,6.8,7.6,7.4,7.5,7.5] },
-  act:    { name: '活動', val: '20',  unit: ' 分', status: 'ok',   read: '今天有出門走走，很好；回來記得喝口水。', trend: [12,18,9,20,15,22,20] },
-  med:    { name: '用藥', val: '2',   unit: '/3',  status: 'warn', read: '今天還剩 1 次沒吃，到時間我會叫你。', trend: [1,1,1,0,1,1,1] },
+  bp:     { name: () => muneaT('health.bloodPressure', '血壓'), val: () => '128', unit: () => '/82', status: 'ok',   read: () => muneaT('demo.status.readBp', '這週血壓都很穩，維持得很好。'), trend: [126,130,128,124,128,127,128] },
+  hr:     { name: () => muneaT('health.heartRate', '心率'), val: () => '72',  unit: () => ' ' + muneaT('health.unit.times', '次'), status: 'ok',   read: () => muneaT('demo.status.readHr', '心跳平穩，沒有不規則的狀況。'), trend: [70,72,71,73,72,70,72] },
+  spo2:   { name: () => muneaT('health.bloodOxygen', '血氧'), val: () => '97',  unit: () => '%',   status: 'ok',   read: () => muneaT('demo.status.readSpo2', '血氧很足，呼吸順順的。'), trend: [97,98,97,96,97,97,97] },
+  steady: { name: () => muneaT('health.walkSteadiness', '走路穩定度'), val: () => muneaT('health.low', '偏低'), unit: () => '', status: 'warn', read: () => muneaT('demo.status.readSteady', '這週走路穩定度有點降，走慢些、扶著點。要不要我提醒家人多留意？'), trend: [3,3,2,2,2,2,2] },
+  sleep:  { name: () => muneaT('health.sleep', '睡眠'), val: () => '7.5', unit: () => ' ' + muneaT('health.unit.hours', '時'), status: 'ok',   read: () => muneaT('demo.status.readSleep', '睡得不錯，這週平均 7.4 小時。'), trend: [7.2,7.5,6.8,7.6,7.4,7.5,7.5] },
+  act:    { name: () => muneaT('health.activity', '活動'), val: () => '20',  unit: () => ' ' + muneaT('health.unit.minutes', '分'), status: 'ok',   read: () => muneaT('demo.status.readAct', '今天有出門走走，很好；回來記得喝口水。'), trend: [12,18,9,20,15,22,20] },
+  med:    { name: () => muneaT('medication.title', '用藥'), val: () => '2',   unit: () => '/3',  status: 'warn', read: () => muneaT('demo.status.readMed', '今天還剩 1 次沒吃，到時間我會叫你。'), trend: [1,1,1,0,1,1,1] },
 };
 const METRIC_ORDER = ['bp', 'hr', 'spo2', 'steady', 'sleep', 'act', 'med'];
-const STATUS_WORD = { ok: '穩', warn: '注意', alert: '要小心' };
+const STATUS_WORD = { ok: () => muneaT('health.statusSteady', '穩'), warn: () => muneaT('health.attention', '注意'), alert: () => muneaT('health.statusCareful', '要小心') };
 function metricSvg(key) { return '<svg class="ic" viewBox="0 0 24 24">' + (METRIC_ICON[key] || '') + '</svg>'; }
 function renderHealthDashboard() {
   const dots = document.getElementById('heroDots'), focus = document.getElementById('focusList'), calm = document.getElementById('calmStrip');
@@ -6883,9 +6883,9 @@ function renderHealthDashboard() {
   const head = document.getElementById('thHead'), sub = document.getElementById('thSub');
   if (head && sub) {
     const h = new Date().getHours();
-    const part = h < 11 ? '早安，昨晚睡得不錯。' : h < 17 ? '午後了，記得起來走走。' : '今天辛苦了，早點歇著。';
-    if (!warns.length) { head.textContent = '今天一切都好'; sub.textContent = part + '每一項我都看著，放心。'; }
-    else { head.textContent = '今天大致都穩'; sub.textContent = part + '有 ' + warns.length + ' 件事我幫你盯著。'; }
+    const part = h < 11 ? muneaT('health.dashMorning', '早安，昨晚睡得不錯。') : h < 17 ? muneaT('health.dashAfternoon', '午後了，記得起來走走。') : muneaT('health.dashEvening', '今天辛苦了，早點歇著。');
+    if (!warns.length) { head.textContent = muneaT('health.dashAllGoodTitle', '今天一切都好'); sub.textContent = muneaT('health.dashAllGoodSub', '{part}每一項我都看著，放心。', { part }); }
+    else { head.textContent = muneaT('health.dashSteadyTitle', '今天大致都穩'); sub.textContent = muneaT('health.dashWatchSub', '{part}有 {count} 件事我幫你盯著。', { part, count: warns.length }); }
   }
   // HERO 燈號：短橫條（綠=穩會呼吸、珊瑚=注意恆亮）
   dots.innerHTML = METRIC_ORDER.map(k => '<i class="' + HEALTH_METRICS[k].status + '"></i>').join('');
@@ -6894,8 +6894,8 @@ function renderHealthDashboard() {
     const m = HEALTH_METRICS[k];
     return '<button class="focus-card ' + m.status + '" type="button" data-metric="' + k + '">' +
       '<span class="fc-ico">' + metricSvg(k) + '</span>' +
-      '<div class="fc-body"><div class="fc-top"><b>' + m.name + '</b><span class="fc-val">' + m.val + '<small>' + m.unit + '</small></span></div>' +
-      '<div class="fc-read">' + m.read + '</div></div>' +
+      '<div class="fc-body"><div class="fc-top"><b>' + m.name() + '</b><span class="fc-val">' + m.val() + '<small>' + m.unit() + '</small></span></div>' +
+      '<div class="fc-read">' + m.read() + '</div></div>' +
       '<span class="fc-chev"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>';
   }).join('');
   // 其他都很穩：安靜清單列
@@ -6903,8 +6903,8 @@ function renderHealthDashboard() {
     const m = HEALTH_METRICS[k];
     return '<button class="calm-row" type="button" data-metric="' + k + '">' +
       '<span class="cr-ico">' + metricSvg(k) + '</span>' +
-      '<span class="cr-name">' + m.name + '</span>' +
-      '<span class="cr-val">' + m.val + '<small>' + m.unit + '</small></span>' +
+      '<span class="cr-name">' + m.name() + '</span>' +
+      '<span class="cr-val">' + m.val() + '<small>' + m.unit() + '</small></span>' +
       '<span class="cr-dot"></span></button>';
   }).join('');
 }
@@ -6920,12 +6920,12 @@ function renderMetricDetail(key) {
     const h = max === min ? 60 : 22 + Math.round((v - min) / (max - min) * 58);
     return `<i style="height:${h}%" class="${i === m.trend.length - 1 ? 'now' : ''}"></i>`;
   }).join('');
-  const days = ['一', '二', '三', '四', '五', '六', '日'];
+  const days = [muneaT('mood.weekdayShortMon', '一'), muneaT('mood.weekdayShortTue', '二'), muneaT('mood.weekdayShortWed', '三'), muneaT('mood.weekdayShortThu', '四'), muneaT('mood.weekdayShortFri', '五'), muneaT('mood.weekdayShortSat', '六'), muneaT('mood.weekdayShortSun', '日')];
   box.innerHTML =
-    `<div class="md-head"><b>${m.name} · 這週</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]}</span></div>` +
+    `<div class="md-head"><b>${muneaT('health.metricWeekTitle', '{name} · 這週', { name: m.name() })}</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]()}</span></div>` +
     `<div class="md-chart">${bars}</div>` +
     `<div class="md-days">${days.map(d => '<span>' + d + '</span>').join('')}</div>` +
-    `<div class="md-read"><span class="md-face"><img src="avatars/nening-v2-face.png" alt=""></span><span>${m.read}</span></div>`;
+    `<div class="md-read"><span class="md-face"><img src="avatars/nening-v2-face.png" alt=""></span><span>${m.read()}</span></div>`;
   box.hidden = false; box.dataset.open = key;
   try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }
@@ -7071,15 +7071,15 @@ const MOODS = {
   upset:  { label: () => muneaT('mood.upset', '煩躁'), bg: '#ECE1F0', fg: '#6E4488', face: 'M8.5 9.5l2 1M15.5 9.5l-2 1M8.5 15.5s1.2-1.5 3.5-1.5 3.5 1.5 3.5 1.5' },
 };
 const MOOD_WEEK_DEMO = [
-  { d: '五', mood: 'happy', chats: [{ m: 'happy', t: '聊到孫子回來，笑聲不斷' }] },
-  { d: '六', mood: 'glad',  chats: [{ m: 'glad', t: '天氣好，去公園走了一圈回來心情不錯' }] },
-  { d: '日', mood: 'calm',  chats: [{ m: 'calm', t: '平常的一天，聊了午餐吃什麼' }] },
-  { d: '一', mood: 'down',  chats: [{ m: 'down', t: '翻到老伴的照片，聊著聊著有點想念' }] },
-  { d: '二', mood: 'tired', chats: [{ m: 'tired', t: '昨晚沒睡好，講話比較沒力氣' }] },
-  { d: '三', mood: 'glad',  chats: [{ m: 'glad', t: '韓劇大結局，聊得很起勁' }] },
+  { d: '五', mood: 'happy', chats: [{ m: 'happy', t: () => muneaT('demo.mood.fri', '聊到孫子回來，笑聲不斷') }] },
+  { d: '六', mood: 'glad',  chats: [{ m: 'glad', t: () => muneaT('demo.mood.sat', '天氣好，去公園走了一圈回來心情不錯') }] },
+  { d: '日', mood: 'calm',  chats: [{ m: 'calm', t: () => muneaT('demo.mood.sun', '平常的一天，聊了午餐吃什麼') }] },
+  { d: '一', mood: 'down',  chats: [{ m: 'down', t: () => muneaT('demo.mood.mon', '翻到老伴的照片，聊著聊著有點想念') }] },
+  { d: '二', mood: 'tired', chats: [{ m: 'tired', t: () => muneaT('demo.mood.tue', '昨晚沒睡好，講話比較沒力氣') }] },
+  { d: '三', mood: 'glad',  chats: [{ m: 'glad', t: () => muneaT('demo.mood.wed', '韓劇大結局，聊得很起勁') }] },
   { d: '今天', mood: 'happy', mixed: true, chats: [
-    { m: 'upset', t: '早上：推銷電話一直來，有點火氣，寧寧陪她抱怨了一會兒' },
-    { m: 'happy', t: '傍晚：小寶來電話說畢業了，笑得合不攏嘴' } ] },
+    { m: 'upset', t: () => muneaT('demo.mood.todayAm', '早上：推銷電話一直來，有點火氣，寧寧陪她抱怨了一會兒') },
+    { m: 'happy', t: () => muneaT('demo.mood.todayPm', '傍晚：小寶來電話說畢業了，笑得合不攏嘴') } ] },
 ];
 let MOOD_WEEK = MOOD_WEEK_DEMO;
 const MOOD_ZH2KEY = { '開心': 'happy', '愉快': 'glad', '平穩': 'calm', '疲累': 'tired', '低落': 'down', '煩躁': 'upset' };
@@ -7138,7 +7138,7 @@ function renderMoodWeek() {
     return '<button class="md' + (today ? ' today' : '') + '" data-i="' + i + '">' +
       '<span class="mcirc" style="background:' + m.bg + '">' + moodFaceSvg(day.mood, 22) +
       (day.mixed ? '<span class="mixdot"></span>' : '') + '</span>' +
-      '<span class="mday">' + day.d + '</span></button>';
+      '<span class="mday">' + moodDayShort(day.d) + '</span></button>';
   }).join('');
   wrap.querySelectorAll('.md').forEach(b => b.addEventListener('click', () => showMoodDay(+b.dataset.i)));
   showMoodDay(MOOD_WEEK.length - 1);
@@ -7146,20 +7146,29 @@ function renderMoodWeek() {
     if (real && real.length >= 3 && MOOD_WEEK !== real) { MOOD_WEEK = real; renderMoodWeek(); }
   });
 }
+const MOOD_WEEKDAY_KEYS = { '一': 'mood.weekdayShortMon', '二': 'mood.weekdayShortTue', '三': 'mood.weekdayShortWed', '四': 'mood.weekdayShortThu', '五': 'mood.weekdayShortFri', '六': 'mood.weekdayShortSat', '日': 'mood.weekdayShortSun' };
+function moodDayShort(d) {
+  if (d === '今天') return muneaT('common.today', '今天');
+  return MOOD_WEEKDAY_KEYS[d] ? muneaT(MOOD_WEEKDAY_KEYS[d], d) : d;
+}
+function moodDayLabel(d) {
+  if (d === '今天') return muneaT('common.today', '今天');
+  return MOOD_WEEKDAY_KEYS[d] ? muneaT('mood.weekdayLabel', '週{day}', { day: muneaT(MOOD_WEEKDAY_KEYS[d], d) }) : d;
+}
 function showMoodDay(i) {
   const day = MOOD_WEEK[i];
   const box = $('#moodDayDetail');
   if (!box || !day) return;
-  box.innerHTML = '<div class="dd-date">' + (day.d === '今天' ? '今天' : '週' + day.d) + ' · 聊了 ' + day.chats.length + ' 次</div>' +
-    day.chats.map(c => '<div class="dd-row">' + moodFaceSvg(c.m, 19) + '<span>' + c.t + '</span></div>').join('');
+  box.innerHTML = '<div class="dd-date">' + muneaT('mood.dayChatsCount', '{day} · 聊了 {count} 次', { day: moodDayLabel(day.d), count: day.chats.length }) + '</div>' +
+    day.chats.map(c => '<div class="dd-row">' + moodFaceSvg(c.m, 19) + '<span>' + (typeof c.t === 'function' ? c.t() : c.t) + '</span></div>').join('');
 }
 const MOOD_DAY_LINES = {
-  happy: '那天聊得很開心，聲音都亮亮的',
-  glad: '心情不錯，話匣子開著',
-  calm: '平平穩穩的一天',
-  tired: '有點累，講話比較小聲',
-  down: '悶悶的，寧寧多陪了一會兒',
-  upset: '有點火氣，抱怨完就好多了',
+  happy: () => muneaT('mood.dayHappy', '那天聊得很開心，聲音都亮亮的'),
+  glad: () => muneaT('mood.dayGlad', '心情不錯，話匣子開著'),
+  calm: () => muneaT('mood.dayCalm', '平平穩穩的一天'),
+  tired: () => muneaT('mood.dayTired', '有點累，講話比較小聲'),
+  down: () => muneaT('mood.dayDown', '悶悶的，寧寧多陪了一會兒'),
+  upset: () => muneaT('mood.dayUpset', '有點火氣，抱怨完就好多了'),
 };
 function renderMoodMonth() {
   const wrap = $('#moodMonth');
@@ -7183,7 +7192,7 @@ function renderMoodMonth() {
     c.classList.add('on');
     const box = $('#moodDayDetail');
     if (box) box.innerHTML = '<div class="dd-date">' + (now.getMonth() + 1) + '/' + c.dataset.d + ' · ' + MOODS[c.dataset.k].label() + '</div>' +
-      '<div class="dd-row">' + moodFaceSvg(c.dataset.k, 19) + '<span>' + (MOOD_DAY_LINES[c.dataset.k] || '') + '</span></div>';
+      '<div class="dd-row">' + moodFaceSvg(c.dataset.k, 19) + '<span>' + (MOOD_DAY_LINES[c.dataset.k] ? MOOD_DAY_LINES[c.dataset.k]() : '') + '</span></div>';
     $('#moodDayDetail').style.display = '';
   });
 }

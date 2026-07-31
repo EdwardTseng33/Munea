@@ -23,6 +23,7 @@ const JA_SHARED_SOURCE_KEYS = Object.freeze([
   'familyCircle.you',
   'font.standard',
   'health.normal',
+  'health.unit.minutes',
   'health.sleep',
   'health.title',
   'medication.duration.longTerm',
