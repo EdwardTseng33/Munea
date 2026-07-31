@@ -1437,7 +1437,7 @@
   "health.readOkAt": "{time} leído: {items}",
   "health.readNothingAt": "{time} comprobado: no hay nada todavía",
   "health.hintAskedOnce": "Esa pantalla de permisos solo aparece una vez; los cambios se hacen en la app Salud. Toca el botón de arriba y te llevo.",
-  "health.hintEmpty": "Conectado, pero aún no puedo leer nada. Usa el botón de arriba para abrir Salud y activar los datos.",
+  "health.hintEmpty": "Conectado, pero aún no puedo leer nada. Toca el botón de arriba, elige Munea en la lista y activa los datos.",
   "health.hintConnected": "Conectado a Salud. Estaré pendiente de tus pasos y tus datos.",
   "visit.questionsFull": "Ya tienes {n} preguntas guardadas. Elimina una primero.",
   "visit.questionsFullHint": "Tienes {n} preguntas guardadas. Para añadir otra, elimina una.",

@@ -1437,7 +1437,7 @@
   "health.readOkAt": "{time} 読み取り：{items}",
   "health.readNothingAt": "{time} 確認しましたが、まだ何もありません",
   "health.hintAskedOnce": "あの許可画面は一度しか出ません。以後の変更はヘルスケアで行います。上のボタンからご案内します。",
-  "health.hintEmpty": "つながりましたが、まだ読み取れません。上のボタンからヘルスケアで項目をオンにしてください。",
+  "health.hintEmpty": "つながりましたが、まだ読み取れません。上のボタンを押して、一覧から「Munea」を選び、項目をオンにしてください。",
   "health.hintConnected": "ヘルスケアとつながりました。歩数や身体のデータは私が見ておきます。",
   "visit.questionsFull": "すでに {n} 件記録しています。1件削除してから追加してください。",
   "visit.questionsFullHint": "{n} 件記録済みです。追加するには1件削除してください。",
