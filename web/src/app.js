@@ -7610,7 +7610,7 @@ async function openInAppReader(kind, options) {
   const body = $('#readerBody');
   if (!reader || !body) return;
   const titleKey = kind === 'terms' ? 'reader.termsTitle' : 'reader.privacyTitle';
-  const titleFallback = kind === 'terms' ? '使用條款' : '隱私權政策';
+  const titleFallback = kind === 'terms' ? muneaT('auth.termsLinkTerms', '使用條款') : muneaT('auth.termsLinkPrivacy', '隱私權政策');
   $('#readerTitle').textContent = muneaT(titleKey, titleFallback);
   reader.dataset.returnToConsent = options && options.returnToConsent ? '1' : '';
   setReaderStatus(body, muneaT('reader.loading', '內容載入中…'));
@@ -7890,7 +7890,6 @@ function init() {
   if ($('#quizCloseX')) $('#quizCloseX').addEventListener('click', () => $('#quizModal').classList.remove('show'));
   if ($('#companionSheet')) $('#companionSheet').addEventListener('click', e => { if (e.target === $('#companionSheet')) $('#companionSheet').classList.remove('show'); });
   const RT_DEF = { b: '07:30', l: '12:00', d: '18:00', s: '22:00' };
-  const RT_LABEL = { b: '早餐', l: '午餐', d: '晚餐', s: '就寢' };
   function loadRoutine() { try { return Object.assign({}, RT_DEF, JSON.parse(localStorage.getItem('munea.routine') || '{}')); } catch (e) { return Object.assign({}, RT_DEF); } }
   function saveRoutine(rt) { try { localStorage.setItem('munea.routine', JSON.stringify(rt)); } catch (e) {} syncPush('routine', rt); if (window.MuneaNotify) window.MuneaNotify.sync(); }
   function shiftTime(t, mins) {
@@ -8089,7 +8088,7 @@ function init() {
     storageSet(PERSON_PROFILE_PROMPT_KEY, 'true');
     syncProfileNudge();
     $('#profileModal').classList.remove('show');
-    toast(p.name ? ('存好了，' + p.name + '，資料我記著。') : '存好了，資料我記著。');
+    toast(p.name ? muneaT('profile.savedWithName', '存好了，{name}，資料我記著。', { name: p.name }) : muneaT('profile.savedToast', '存好了，資料我記著。'));
   });
   if ($('#pfSkipBtn')) $('#pfSkipBtn').addEventListener('click', () => {
     closeProfileFirstRunUi();
@@ -8140,7 +8139,7 @@ function init() {
   applyUserAvatar();
   // 全家健康圈
   const CIRCLE_LIMITS = { free: 1, plus: 4, pro: 12 };                       // 免費只含本人；Plus 4 人、Pro 12 人
-  const CIRCLE_PLAN_LABEL = { free: '免費', plus: 'Plus', pro: 'Pro' };
+  const circlePlanLabel = plan => plan === 'free' ? muneaT('subscription.planFree', '免費') : plan === 'pro' ? 'Pro' : 'Plus';
   const PLAN_POINTS = { free: 0, plus: 100, pro: 200 };                       // 每月贈點（2026-07-17 Edward 拍板：每分鐘 6 元錨）
   function circlePlan() { try { return localStorage.getItem('munea.plan') || 'free'; } catch (e) { return 'free'; } }
   // 全家健康圈：就是一個家庭、大家平等（不分發起人/付款人/照護對象）；本人只標「本人」、其他人可移除
@@ -8183,7 +8182,7 @@ function init() {
   function renderFcRoster() {
     const box = $('#fcRoster'); if (!box) return;
     const members = loadCircle(); const plan = circlePlan(); const limit = CIRCLE_LIMITS[plan] || 4;
-    const cnt = $('#fcCount'); if (cnt) cnt.textContent = members.length + '/' + limit + ' · ' + CIRCLE_PLAN_LABEL[plan];
+    const cnt = $('#fcCount'); if (cnt) cnt.textContent = members.length + '/' + limit + ' · ' + circlePlanLabel(plan);
     box.innerHTML = members.map(m => {
       const action = m.self
         ? `<span class="fc-you">${muneaT('familyCircle.you', '本人')}</span>`
@@ -8201,7 +8200,7 @@ function init() {
       const full = members.length >= limit;
       inv.textContent = full
         ? muneaT('familyCircle.limitReached', '{plan} 已達上限 · 升級可加更多', {
-          plan: CIRCLE_PLAN_LABEL[plan],
+          plan: circlePlanLabel(plan),
         })
         : muneaT('familyCircle.invite', '邀請家人加入');
       inv.dataset.full = full ? '1' : '';
@@ -8210,7 +8209,7 @@ function init() {
     if (note) note.textContent = muneaT(
       'invite.planLimit',
       '目前 {plan} 方案 · 家庭健康圈最多 {limit} 人',
-      { plan: CIRCLE_PLAN_LABEL[plan], limit },
+      { plan: circlePlanLabel(plan), limit },
     );
   }
   // 移除家人：點一下「移除」→變紅「確定移除」、再點才移（App 內確認、不用系統醜彈窗）
@@ -8235,12 +8234,12 @@ function init() {
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
   if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
   if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', async () => {
-    if (!requireLoginForFamily('要加入家人的健康圈，先登入一下')) return;   // 雙保險：訪客不能入別人的圈
+    if (!requireLoginForFamily(muneaT('familyCircle.loginToJoin', '要加入家人的健康圈，先登入一下'))) return;   // 雙保險：訪客不能入別人的圈
     if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; }   // 雙保險：免費不能入別人的圈
     const code = ($('#joinCodeInput').value || '').trim();
     if (!code || code.replace(/\D/g, '').length < 4) { toast(muneaT('familyCircle.invitePlaceholderHint', "把家人給你的邀請碼打進去（例：MUNEA-284753）")); return; }
     const btn = $('#joinCircleBtn');
-    if (typeof setBtnBusy === 'function') setBtnBusy(btn, '加入中');
+    if (typeof setBtnBusy === 'function') setBtnBusy(btn, muneaT('familyCircle.joining', '加入中'));
     try {
       const p = loadPersonProfile();
       // Use the common API helper so the verified bearer token is sent.  A
@@ -8266,11 +8265,11 @@ function init() {
     } catch (e) {
       toast(muneaT('common.cloudRetryToast', '現在連不上雲端，等網路好一點再試一次。'));
     }
-    if (typeof clearBtnBusy === 'function') clearBtnBusy(btn); else if (btn) btn.textContent = '加入全家健康圈';
+    if (typeof clearBtnBusy === 'function') clearBtnBusy(btn); else if (btn) btn.textContent = muneaT('familyCircle.joinCircleButton', '加入全家健康圈');
   });
   if ($('#fcLeaveBtn')) $('#fcLeaveBtn').addEventListener('click', () => {
     const b = $('#fcLeaveBtn');
-    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.add('arm'); b.textContent = '再按一次確認退出'; setTimeout(() => { b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈'; }, 4000); return; }
+    if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.add('arm'); b.textContent = muneaT('familyCircle.leaveConfirm', '再按一次確認退出'); setTimeout(() => { b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈'; }, 4000); return; }
     b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = '退出這個健康圈';
     $('#famCircleModal').classList.remove('show');
     toast(muneaT('familyCircle.leftToast', '已退出這個健康圈。想再回來，請家人重新邀請你。'));
@@ -8305,18 +8304,18 @@ function init() {
   }
   // 雲端拒絕理由 → 給用戶看的人話（2026-07-17 Edward 指示：說法要照理由講、不能一句混）
   const INVITE_FAIL_TEXT = {
-    auth_required: '先登入帳號，才能邀請家人。',
-    family_cloud_identity_required: '先登入帳號，才能邀請家人。',
-    family_owner_required: '只有家庭健康圈的圈主能建立邀請碼。',
-    family_plan_required: '邀請家人是付費方案的功能，升級後就能建立邀請碼。',
-    network: '網路不通，請檢查連線後再試一次。',
+    auth_required: () => muneaT('familyCircle.failAuth', '先登入帳號，才能邀請家人。'),
+    family_cloud_identity_required: () => muneaT('familyCircle.failAuth', '先登入帳號，才能邀請家人。'),
+    family_owner_required: () => muneaT('familyCircle.failOwner', '只有家庭健康圈的圈主能建立邀請碼。'),
+    family_plan_required: () => muneaT('familyCircle.failPlan', '邀請家人是付費方案的功能，升級後就能建立邀請碼。'),
+    network: () => muneaT('familyCircle.failNetwork', '網路不通，請檢查連線後再試一次。'),
   };
   function fillInvCode(withCloud) {
     const el = $('#invCode'); if (!el) return;
     const note = $('#invTempNote');
     // There is no offline invitation mode: a locally generated code cannot
     // carry verified identity, entitlement or membership provisioning.
-    el.textContent = withCloud ? '建立中…' : '—';
+    el.textContent = withCloud ? muneaT('common.creating', '建立中…') : '—';
     if (note) note.style.display = 'none';
     if (!withCloud) return;
     ensureCloudInvite().then(r => {
@@ -8339,7 +8338,7 @@ function init() {
   }
   if ($('#invShareBtn')) $('#invShareBtn').addEventListener('click', () => {
     if (!shownInvCode()) { toast(muneaT('familyCircle.inviteCodeNotReady', '邀請碼還沒建立好，先看畫面上寫的原因處理一下。')); return; }
-    const text = '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 ' + shownInvCode() + '，在沐寧的「家人 → 加入全家健康圈」輸入，我們就連上了！';
+    const text = muneaT('familyCircle.shareText', '我在用「沐寧 Munea」，AI 健康管家陪全家顧健康。我的家庭圈邀請碼是 {code}，在沐寧的「家人 → 加入全家健康圈」輸入，我們就連上了！', { code: shownInvCode() });
     if (navigator.share) { navigator.share({ text }).catch(() => {}); }
     else { location.href = 'sms:?&body=' + encodeURIComponent(text); }
   });
@@ -8348,7 +8347,7 @@ function init() {
     if (!code) { toast(muneaT('familyCircle.inviteCodeNotReady', '邀請碼還沒建立好，先看畫面上寫的原因處理一下。')); return; }
     (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(code) : Promise.reject()).then(
       () => toast(muneaT('familyCircle.inviteCopiedToast', "邀請碼複製好了，貼給家人")),
-      () => toast('你的邀請碼：' + code)
+      () => toast(muneaT('familyCircle.yourCodeToast', '你的邀請碼：{code}', { code }))
     );
   });
   fillInvCode(false);
@@ -8356,7 +8355,7 @@ function init() {
   $$('#connect .cn-btn').forEach(b => b.addEventListener('click', async () => {
     // Apple 健康：在 App 裡就真的去要 iPhone 授權；網頁預覽則走原本示範切換
     if (b.id === 'cnHealthBtn' && window.MuneaHealth && window.MuneaHealth.available()) {
-      setBtnBusy(b, '連接中');
+      setBtnBusy(b, muneaT('health.connecting', '連接中'));
       const r = await window.MuneaHealth.connect();
       if (r && r.ok) {
         clearBtnBusy(b);
@@ -8374,13 +8373,13 @@ function init() {
             : muneaT('health.hintEmpty', '連上了，但我還讀不到資料。按上面那顆鍵去「健康」App 把項目打開就好。'))
           : muneaT('health.hintConnected', '好，連上 Apple 健康了，步數和身體數據我會自動幫你留意。'));
       } else {
-        clearBtnBusy(b, b.dataset.label || '連接');
-        hint(r && r.reason === 'unavailable' ? '這台裝置沒有健康資料可讀。' : '沒有連上，晚點在「連接裝置」再試一次也可以。');
+        clearBtnBusy(b, b.dataset.label || muneaT('health.connect', '連接'));
+        hint(r && r.reason === 'unavailable' ? muneaT('health.noDeviceData', '這台裝置沒有健康資料可讀。') : muneaT('health.connectRetryHint', '沒有連上，晚點在「連接裝置」再試一次也可以。'));
       }
       return;
     }
     const on = b.classList.toggle('done');
-    b.textContent = on ? '✓ 已連接' : (b.dataset.label || '連接');
+    b.textContent = on ? ('✓ ' + muneaT('health.connectedShort', '已連接')) : (b.dataset.label || muneaT('health.connect', '連接'));
     if (on) { hint(muneaT('health.connectedToast', "好，連上了，之後健康資料我會自動留意。")); try { localStorage.setItem('munea.devicesOn', '1'); } catch (e2) {} }
   }));
 
@@ -8394,7 +8393,7 @@ function init() {
     if (!b || b.classList.contains('sent')) return;
     reactRow.querySelectorAll('.react-btn.sent').forEach(x => x.classList.remove('sent'));
     b.classList.add('sent');
-    hint(`送出去了，${cname()}會在家人動態幫你帶到。`);
+    hint(muneaT('familyCircle.relaySentHint', '送出去了，{companion}會在家人動態幫你帶到。', { companion: cname() }));
     const who = document.getElementById('ptName')?.textContent || '家人';
     pushFamilyFeed(`<b>你</b>給${who}${b.dataset.react || '送上心意'}，${cname()}會在下次聊天時帶到`);
   });
@@ -8455,9 +8454,9 @@ function init() {
     const grid = $('#personGrid');
     if (!grid) return;
     const d = vitalsToDisplay(famVitalsFor(p));   // 只認真數據；沒有＝老實說還沒有
-    if (!d) { grid.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">等' + (p || '家人') + '連上沐寧，健康數據就會出現在這裡</div>'; return; }
-    if (!d.bp) d.bp = { n: '—', u: '', chip: '未提供', warn: 0, sub: '他的裝置還沒帶到血壓' };
-    if (!d.hr) d.hr = { n: '—', chip: '未提供', warn: 0, sub: '他的裝置還沒帶到心率' };
+    if (!d) { grid.innerHTML = '<div class="card" style="padding:16px;margin-bottom:16px;font-size:14.5px;color:var(--muted);text-align:center;line-height:1.7">' + muneaT('health.famEmptyHint', '等{name}連上沐寧，健康數據就會出現在這裡', { name: p || muneaT('familyCircle.memberFallback', '家人') }) + '</div>'; return; }
+    if (!d.bp) d.bp = { n: '—', u: '', chip: muneaT('health.notProvided', '未提供'), warn: 0, sub: muneaT('health.noBpFromDevice', '他的裝置還沒帶到血壓') };
+    if (!d.hr) d.hr = { n: '—', chip: muneaT('health.notProvided', '未提供'), warn: 0, sub: muneaT('health.noHrFromDevice', '他的裝置還沒帶到心率') };
     if (!d.spo2) d.spo2 = '—';
     if (!d.sleep) d.sleep = '—';
     if (!d.steps) d.steps = '—';
@@ -8492,10 +8491,10 @@ function init() {
   function renderPersonMood(p) {
     // 7/16 心情真串接：家庭帳本帶回來的「當天粗心情標籤」可以顯示；聊天觀察細節仍留在本人手機、這裡誠實不編
     const mood = famMoodFor(famVitalsFor(p));
-    if ($('#mcTitle')) $('#mcTitle').textContent = mood ? '今天心情看起來「' + mood.label + '」' : '還沒有觀察';
+    if ($('#mcTitle')) $('#mcTitle').textContent = mood ? muneaT('mood.todayLooks', '今天心情看起來「{label}」', { label: mood.label }) : muneaT('mood.noObservation', '還沒有觀察');
     if ($('#mcSub')) $('#mcSub').textContent = mood
-      ? '這是' + (p || '家人') + '的沐寧從聊天觀察到的大致心情；聊了什麼只留在他自己的手機'
-      : '等' + (p || '家人') + '開始用沐寧聊天，觀察會出現在這裡';
+      ? muneaT('mood.familyObsHint', '這是{name}的沐寧從聊天觀察到的大致心情；聊了什麼只留在他自己的手機', { name: p || muneaT('familyCircle.memberFallback', '家人') })
+      : muneaT('mood.familyObsEmpty', '等{name}開始用沐寧聊天，觀察會出現在這裡', { name: p || muneaT('familyCircle.memberFallback', '家人') });
     if ($('#mcObs')) $('#mcObs').innerHTML = '';
     if ($('#mcTopics')) $('#mcTopics').innerHTML = '';
   }
@@ -8957,7 +8956,7 @@ function init() {
           ? rendererCopy.subscriptionCta(ctaValues)
           : (_subPlan === cur
             ? muneaT('subscription.currentPlanCta', 'You are currently on {plan}', {
-              plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+              plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, circlePlanLabel(_subPlan)),
             })
             : muneaT(
               PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? 'subscription.upgradeTo' : 'subscription.changeTo',
@@ -8965,7 +8964,7 @@ function init() {
                 ? 'Upgrade to {plan} · {price}'
                 : 'Switch to {plan} · {price}',
               {
-                plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+                plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, circlePlanLabel(_subPlan)),
                 price: ctaValues.price,
               },
             ));
@@ -9170,7 +9169,7 @@ function init() {
     const cur = circlePlan();
     if (_subPlan === cur) {
       toast(muneaT('subscription.currentPlanCta', 'You are currently on {plan}', {
-        plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[_subPlan]),
+        plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, circlePlanLabel(_subPlan)),
       }));
       return;
     }
