@@ -1220,6 +1220,13 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-price { white-space: nowrap; color: var(--teal-dd); font-weight: 700; font-size: 20px; }
 .plan-price small { font-size: 13px; font-weight: 600; color: var(--muted); }
 .plan-actions { display: flex; gap: 10px; margin-top: 14px; }
+/* 訂閱卡底下的兩個次要入口：管理訂閱／恢復購買（Edward 2026-07-31 從訂閱方案頁搬來）。
+   刻意做成文字連結而不是按鈕——它們是「出事才會用」的東西，不該跟上面兩顆主按鈕搶眼。
+   但觸控高度仍給滿 44px（長輩手指不準），視覺份量低不等於難按。 */
+.plan-links { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; }
+.plan-link { border: none; background: none; padding: 12px 4px; min-height: 44px; cursor: pointer;
+  font-family: inherit; font-size: 14px; font-weight: 600; color: var(--teal-d); text-decoration: underline; text-underline-offset: 3px; }
+.plan-link-sep { color: var(--muted); font-size: 13px; }
 .plan-actions .plan-btn { flex: 1 1 0; min-width: 0; white-space: normal; min-height: 48px; padding-inline: 12px; }
 #topUpBtn.plan-btn { background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); }
 
