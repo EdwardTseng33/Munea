@@ -18,7 +18,13 @@
   --mint: #E8F2EE; --mint-2: #D9EFE8;
   --cream: #F4F0E8; --cream-2: #FFFFFF; --surface: #FFFFFF;
   --ink: #3A352E; --ink-2: #4A5651; --muted: #5A6963;   /* 石墨黑（官網同款） */
-  --coral: #F4A261; --coral-d: #E08B45; --coral-soft: #F8E9D8;   /* Logo 橘（-d＝圖示/圖形深階·非文字色；舊深字 #A8611E 退場） */
+  --coral: #F4A261; --coral-d: #E08B45; --coral-soft: #F8E9D8;   /* Logo 橘（-d＝圖示/圖形深階·非文字色） */
+  /* 小字點綴專用的暖橘（Edward 2026-07-31：「整個畫面都綠色會單調失衡，橘色要暖一點不要太暗」）。
+     取捨是量出來的，不是憑感覺挑：白卡上 --coral 只有 2.06、--coral-d 2.64，小字看不清；
+     舊深字 #A8611E 有 4.78 但 Edward 嫌暗。#B0651B 在白卡 4.45（AA 門檻 4.5，差 0.05）、
+     米色底 3.91——比舊深字暖一階、又不至於糊掉。只用在「粗體小標籤」這種短詞
+    （隨時／寧寧幫你留意／區塊標題），不用在整段內文，內文仍走 --ink／--muted。 */
+  --coral-text: #B0651B;
   --gold: #E0B354; --gold-soft: #F6EAD0;
   --line: #EAE3D6;          /* 官網線色 */
   --deep: #36423E; --deep-2: #3F4C47; --deep-card: #485751;      /* 石墨綠模板色（官網深色塊 · 7/4 提亮一階） */
@@ -120,7 +126,9 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .bc-avatar .av-stripes { position: absolute; inset: 0; background: none; }
 .bc-avatar .online { position: absolute; right: 4px; bottom: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); border: 3px solid #fff; }
 .bc-info { flex: 1; min-width: 0; }
-.bc-eyebrow { display: inline-flex; align-items: center; color: var(--teal-dd); font-size: 13px; font-weight: 600; letter-spacing: .03em; margin-bottom: 7px; }
+/* 「寧寧幫你留意」這行小標改暖橘（Edward 2026-07-31）——卡片內容已經有綠色圖示，
+   小標再用綠就整張卡同一個調子；橘色小標配綠圖示，冷暖各站一邊才有層次。 */
+.bc-eyebrow { display: inline-flex; align-items: center; color: var(--coral-text); font-size: 13px; font-weight: 600; letter-spacing: .03em; margin-bottom: 7px; }
 .bc-name { font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; line-height: 1.1; position: relative; z-index: 1; }
 .bc-name .bc-tag { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--teal-dd); background: var(--mint); padding: 3px 9px; border-radius: 999px; }
 .bc-status { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 15px; font-weight: 700; margin-bottom: 12px; }
@@ -150,8 +158,10 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .task-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; color: transparent; transition: .2s; }
 .task-item.done .task-check { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.05); }
 .task-item.done .task-title { color: var(--muted); text-decoration: line-through; }
-.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--teal-dd); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
-.task-time.coral { color: var(--teal-dd); }
+/* 「隨時／達標」這欄回到暖橘（Edward 2026-07-31）：之前統一成深綠，整個畫面只剩一個色調。
+   .coral 這個 class 名字本來就是橘的意思，值卻被改成 teal-dd——名字跟顏色打架，一併收回來。 */
+.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral-text); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
+.task-time.coral { color: var(--coral-text); }
 html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 
 .fam-peek { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); margin-top: 14px; }
@@ -373,10 +383,15 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .auth-title { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 17px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
 .auth-email { font-size: 13px; color: var(--teal-dd); font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 185px; }
 .auth-email:empty { display: none; }
-.auth-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+/* 頭像＋方案標籤直排（Edward 2026-07-31）：標籤講的是「這個人是什麼會員」，跟著人走才對。 */
+.auth-id { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+/* 右欄只剩一顆按鍵之後改置中，卡片左右兩邊的重心才對得起來。 */
+.auth-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 8px; flex-shrink: 0; }
 .auth-primary, .auth-secondary, .auth-dev-btn { border: none; font-family: var(--display); font-weight: 800; cursor: pointer; }
 .auth-primary { min-width: 72px; height: 40px; border-radius: 13px; color: #fff; background: var(--btn-green); font-size: var(--fs-action-primary); font-weight: var(--fw-action-primary); }
-.auth-secondary { min-width: 72px; height: 40px; border-radius: 13px; color: var(--teal-dd); background: var(--mint); border: 1px solid var(--teal-d); font-family: var(--display); font-weight: 800; font-size: var(--fs-action-primary); padding: 0 14px; }
+/* 登出要跟登入一眼分得出來（Edward 2026-07-31）：登入是要人往前走的動作、給實心綠；
+   登出是離開，做成白底灰框的次要鍵——顏色不同之外，份量也不同，才不會誤按。 */
+.auth-secondary { min-width: 72px; height: 40px; border-radius: 13px; color: var(--muted); background: #fff; border: 1px solid var(--line); font-family: var(--display); font-weight: 800; font-size: var(--fs-action-primary); padding: 0 14px; }
 /* 會員身份標籤（帳號卡 · FREE/PLUS/PRO · Edward 7/8） */
 .mem-badge { font-family: var(--display); font-size: 12.5px; font-weight: 800; letter-spacing: .06em; border-radius: 999px; padding: 3px 10px; line-height: 1.4; flex-shrink: 0; }
 .mem-badge.free { background: var(--mint); color: var(--teal-dd); }
@@ -1590,7 +1605,10 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 /* 規範 v1.1 · 女巫把關修正 */
 .tab-btn { font-size: 13px; }
 .set-row .sr-main small { color: var(--ink-2); }
-.set-section { color: var(--teal-dd); }
+/* 設定頁的區塊標題（帳號／訂閱與點數／帳號與家庭…）改暖橘（Edward 2026-07-31）。
+   這裡是米色底、對比 3.91 比白卡低一階，但它是 13px 粗體的分段標籤、短詞、旁邊沒有競爭文字，
+   看得清；真正要讀的內容（列標題與說明）仍是 --ink／--ink-2 的高對比色，沒有被動到。 */
+.set-section { color: var(--coral-text); }
 .plan-payer { color: var(--ink-2); }
 .tu-card span { font-size: 15px; color: var(--ink-2); }
 .plan-cancel { color: var(--ink-2); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
@@ -1728,6 +1746,11 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 
 /* ===== 智慧照護提示輪播（首頁綜合資訊入口） ===== */
 .care-card { position: relative; background: linear-gradient(180deg,#fff,#FCFAF5); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 16px 18px; margin: 14px 0 20px; box-shadow: var(--shadow-sm); overflow: hidden; }
+/* 「寧寧幫你留意」這行小標改暖橘（Edward 2026-07-31）——卡片裡的活動圖示已經有顏色，
+   小標再用綠就整張卡同一個調子；橘小標配內容區的綠，冷暖各站一邊才有層次。
+   眼睛圖示跟著文字走（用 currentColor），不然會變成橘字配綠圖、更亂。 */
+/* 「寧寧幫你留意」用深綠（Edward 2026-07-31 定案，中間試過橘與石墨黑）：
+   它是一塊區域的名字、下面接待辦清單，染橘會跟卡片裡的內容搶戲；深綠是品牌色又夠沉。 */
 .care-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--teal-dd); font-weight: 800; }
 .care-head .ic { width: 16px; height: 16px; }
 .care-dots { margin-left: auto; display: inline-flex; gap: 5px; }
