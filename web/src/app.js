@@ -10478,7 +10478,7 @@ function init() {
         deletion = await brainPost('/account-deletion', { action: 'request', reason: 'user_requested_in_app' });
         if (!(deletion && deletion.ok && deletion.accountDeleted)) {
           b.disabled = false;
-          b.textContent = '刪除我的資料';
+          b.textContent = muneaT('data.delete', '刪除我的資料');
           toast(muneaT('profile.deleteFailedToast', "帳號與雲端資料尚未刪除，請確認網路後再試一次"));
           return;
         }
@@ -11127,6 +11127,10 @@ function refreshLocalizedDynamicUi() {
     if (cnNoData) cnNoData.innerHTML = '<b>' + muneaT('legacyUi.connectNoDataTitle', '沒有這些也沒關係。') + '</b>' + muneaT('legacyUi.connectNoDataBody', '{companion}也能從每天聊天陪你留意生活狀態，健康數據是加分，陪伴和提醒不受影響。', { companion: cnameSpan });
     const rptFootEl = $('#rptFoot');
     if (rptFootEl) rptFootEl.innerHTML = muneaT('report.footerLine', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion: cnameSpan });
+    const cnIntro = $('#cnHealthIntro');
+    if (cnIntro) cnIntro.innerHTML = muneaT('settings.connectIntro', '連上 {appleHealth}，每次開啟沐寧時會同步步數、心跳、睡眠等資料；同步到需要留意的變化時會提醒你。這不是即時或醫療級監測。', { appleHealth: '<b>' + muneaT('settings.appleHealth', 'Apple 健康') + '</b>' });
+    const interestsHint = $('#interestsPickHint');
+    if (interestsHint) interestsHint.innerHTML = muneaT('interests.pickHint', '挑幾個有興趣的（最多 5 個），{companion}會幫你留意這些話題的新鮮事，聊起來更對味。之後隨時可以回來改。', { companion: cnameSpan });
   } catch (e) {}
   try { renderCareCarousel(); } catch (e) {}
   try { syncCompanionUI(); } catch (e) {}
