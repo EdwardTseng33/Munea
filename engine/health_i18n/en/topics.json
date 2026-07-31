@@ -59,10 +59,26 @@
     },
     "sleep-melatonin-blocked": {
      "label": "Melatonin — the honest picture",
+     "askedFor": [
+      "melatonin",
+      "sleeping pill",
+      "sleep aid",
+      "ambien",
+      "zolpidem",
+      "unisom"
+     ],
      "say": "Melatonin is sold over the counter here, but let me give you the honest picture: it works best for jet lag and a body clock that's off schedule. For plain chronic insomnia, the sleep doctors' own association actually recommends against it — the evidence just isn't there. And the bottles are messy: when researchers lab-tested store-bought melatonin, most had far more or less in them than the label said. I can't tell you to take it or how much — if you want to try it, talk to your pharmacist first, especially if you're on blood thinners or other medicines."
     },
     "sleep-tcm-herbs": {
      "label": "Herbal sleep remedies",
+     "askedFor": [
+      "herbal",
+      "valerian",
+      "chamomile",
+      "kava",
+      "cbd",
+      "natural sleep"
+     ],
      "say": "Herbal sleep remedies aren't something I can pick out for you. One thing I do want you to know: 'natural' doesn't mean it can't clash with your medications — herbs can interact with prescriptions even if you take them hours apart, because both stay in your body for days. If you use anything herbal, make sure your doctor and your pharmacist both know about it."
     },
     "sleep-refer-doctor": {
@@ -125,6 +141,14 @@
     },
     "knee-surgery-blocked": {
      "label": "Surgery and injections",
+     "askedFor": [
+      "surgery",
+      "knee replacement",
+      "cortisone",
+      "steroid shot",
+      "hyaluronic",
+      "arthroscop"
+     ],
      "say": "Whether to have surgery, and whether to get a cortisone or hyaluronic acid injection, is the orthopedist's judgment. I won't make that decision for you."
     },
     "knee-refer": {
@@ -144,7 +168,9 @@
     "my pressure is up",
     "systolic",
     "top number",
-    "blood pressure reading"
+    "blood pressure reading",
+    "salt substitute",
+    "lite salt"
    ],
    "solutions": {
     "bp-take-meds-on-time": {
@@ -177,11 +203,35 @@
     },
     "bp-med-change-blocked": {
      "label": "Changing your medication",
+     "askedFor": [
+      "change my medication",
+      "stop taking",
+      "adjust the dose",
+      "lower the dose",
+      "lisinopril",
+      "amlodipine"
+     ],
      "say": "Switching, adding, or stopping blood pressure medicine is your doctor's call, not mine — and I don't interpret your readings either. What I can do is help you keep track of them to show your doctor."
     },
     "bp-refer": {
      "label": "When it's an emergency",
      "say": "If your top number reads over 180, or you notice a drooping face, a weak arm, or slurred speech (signs of stroke), or chest pressure with a cold sweat (signs of a heart attack) — call 911 right away. Don't wait for your next appointment."
+    },
+    "bp-salt-substitute-caution": {
+     "label": "Salt substitutes aren't for everyone",
+     "askedFor": [
+      "salt substitute",
+      "lite salt",
+      "Lite Salt",
+      "light salt",
+      "no salt",
+      "No Salt",
+      "nu-salt",
+      "Nu-Salt",
+      "potassium chloride",
+      "salt-free"
+     ],
+     "say": "Salt substitutes do cut the sodium roughly in half, and for most people that's a sensible trade. **But they work by swapping in potassium — and kidneys that aren't in good shape can't clear it. Too much potassium leaves you weak all over and can throw the heart rhythm off.** Some blood pressure medicines raise potassium on their own too: the -pril and -sartan ones, and spironolactone. **So if you have any kidney trouble, or you're on blood pressure pills, ask your doctor or pharmacist before you switch shakers.** The safest way to cut back on salt isn't a different shaker anyway — it's garlic, onion, lemon, vinegar, black pepper and the salt-free herb blends."
     }
    }
   },
@@ -225,6 +275,14 @@
     },
     "dm-med-blocked": {
      "label": "Adjusting doses or reading your numbers",
+     "askedFor": [
+      "insulin",
+      "metformin",
+      "ozempic",
+      "jardiance",
+      "adjust my dose",
+      "change my dose"
+     ],
      "say": "I don't interpret blood sugar readings, and adjusting your medicine is strictly your doctor's call. Whether a supplement is safe alongside your diabetes medicine — that's a question for your pharmacist."
     },
     "dm-refer": {
@@ -275,6 +333,14 @@
     },
     "gout-med-blocked": {
      "label": "Uric acid pills and painkillers",
+     "askedFor": [
+      "allopurinol",
+      "colchicine",
+      "uloric",
+      "gout pill",
+      "water pill",
+      "diuretic"
+     ],
      "say": "I can't tell you doses for uric acid medicine or anti-inflammatory painkillers. And if you take a water pill, whether it's feeding your gout is a question for your doctor — those two are connected more often than people realize."
     },
     "gout-refer": {
@@ -332,6 +398,14 @@
     },
     "consti-laxative-blocked": {
      "label": "Laxatives and enemas",
+     "askedFor": [
+      "laxative",
+      "miralax",
+      "dulcolax",
+      "senna",
+      "stool softener",
+      "enema"
+     ],
      "say": "I won't pick a laxative, a stool softener, or an enema for you, or tell you how much to use. And leaning on a laxative long term makes the bowel lazier still — that's a conversation for your doctor, not something to sort out at the drugstore shelf."
     },
     "consti-refer": {
@@ -425,6 +499,13 @@
     },
     "eye-surgery-blocked": {
      "label": "Cataract surgery",
+     "askedFor": [
+      "cataract surgery",
+      "surgery",
+      "lens implant",
+      "laser",
+      "operation"
+     ],
      "say": "Whether to have cataract surgery, and when, is a medical judgment for the eye doctor. I won't make that call for you."
     },
     "eye-refer": {
@@ -470,6 +551,13 @@
     },
     "itch-steroid-blocked": {
      "label": "Steroid creams",
+     "askedFor": [
+      "steroid cream",
+      "hydrocortisone",
+      "cortisone",
+      "triamcinolone",
+      "prescription cream"
+     ],
      "say": "I can't tell you which steroid cream to use or how to put it on — that depends on where it is and how bad it is, and it's a question for your doctor or pharmacist."
     },
     "itch-refer": {
@@ -523,6 +611,14 @@
     },
     "noct-dx-blocked": {
      "label": "Is it harmless or is it something else",
+     "askedFor": [
+      "is it serious",
+      "prostate cancer",
+      "psa",
+      "biopsy",
+      "should i worry",
+      "is it dangerous"
+     ],
      "say": "Whether this is a harmless enlargement or something else, I won't judge — that takes a urologist and an actual examination."
     },
     "noct-refer": {
@@ -569,6 +665,14 @@
     },
     "reflux-meds-blocked": {
      "label": "Heartburn medicines",
+     "askedFor": [
+      "prilosec",
+      "omeprazole",
+      "nexium",
+      "pepcid",
+      "antacid",
+      "tums"
+     ],
      "say": "I can't tell you which heartburn medicine to take — and the over-the-counter acid reducers on every drugstore shelf aren't meant to be a long-term habit without a doctor involved. If you've been taking one for a long while, don't just quit on your own either; let your doctor decide."
     },
     "reflux-refer": {
@@ -606,6 +710,14 @@
     },
     "vax-eligibility-blocked": {
      "label": "Whether you're in shape for it today",
+     "askedFor": [
+      "is it safe for me",
+      "can i still get",
+      "allergic",
+      "running a fever",
+      "immune system",
+      "on antibiotics"
+     ],
      "say": "Whether you're in shape for a shot right now — running a fever, immune problems, an allergy to something in it — is the doctor's or the pharmacist's judgment, not mine. Mention anything like that before they draw it up."
     },
     "vax-refer": {
@@ -651,6 +763,13 @@
     },
     "swallow-dental-blocked": {
      "label": "Dentures and implants",
+     "askedFor": [
+      "denture",
+      "implant",
+      "partial",
+      "bridge",
+      "new teeth"
+     ],
      "say": "Whether to get dentures or implants, and which kind, is the dentist's judgment. I won't decide that one for you."
     },
     "swallow-refer": {
@@ -714,6 +833,14 @@
     },
     "mci-dementia-drug-blocked": {
      "label": "Dementia medications",
+     "askedFor": [
+      "aricept",
+      "donepezil",
+      "namenda",
+      "memantine",
+      "memory medicine",
+      "is there a pill"
+     ],
      "say": "Whether to use a dementia medication, and which one, comes after a doctor's evaluation. That isn't a judgment I'll make."
     },
     "mci-refer": {
@@ -773,6 +900,13 @@
     },
     "cramp-quinine-blocked": {
      "label": "Quinine for cramps",
+     "askedFor": [
+      "quinine",
+      "tonic water",
+      "qualaquin",
+      "cramp pill",
+      "muscle relaxer"
+     ],
      "say": "There's an old remedy for cramps — quinine — that I won't help you get hold of. **The FDA has warned more than once that using it for leg cramps isn't worth the risk: the serious reactions include a dangerous drop in platelets and kidney damage, and deaths have been reported.** It's approved for malaria, not for this. Tonic water gets suggested for the same reason, and that isn't a plan either."
     },
     "cramp-refer": {
@@ -827,6 +961,14 @@
     },
     "supp-no-brand-blocked": {
      "label": "Brands, doses, and 'is it safe with my meds'",
+     "askedFor": [
+      "which brand",
+      "what brand",
+      "best brand",
+      "how many should i take",
+      "how much should i take",
+      "milligram"
+     ],
      "say": "I won't recommend specific brands or ingredients, I don't give doses, and I won't be the one to tell you 'that's fine with your medications' — that judgment belongs to your pharmacist, who can actually see the whole picture."
     },
     "supp-refer": {
@@ -888,6 +1030,14 @@
     },
     "osteo-meds-blocked": {
      "label": "Osteoporosis medications",
+     "askedFor": [
+      "fosamax",
+      "alendronate",
+      "prolia",
+      "reclast",
+      "boniva",
+      "bone medicine"
+     ],
      "say": "Whether to be on an osteoporosis medicine — the pills or the injections — and which one, is the doctor's decision based on your bone density and your fracture risk. I won't judge that for you."
     },
     "osteo-refer": {
@@ -938,6 +1088,14 @@
     },
     "mood-antidep-blocked": {
      "label": "Antidepressants",
+     "askedFor": [
+      "antidepressant",
+      "zoloft",
+      "lexapro",
+      "prozac",
+      "sertraline",
+      "stop my medication"
+     ],
      "say": "Whether to take an antidepressant, and which one, is a decision for a doctor — and if you're already on one, never stop it cold on your own; coming off suddenly can feel terrible. That's a conversation with your prescriber."
     },
     "mood-refer": {
@@ -980,6 +1138,14 @@
     },
     "cold-otc-blocked": {
      "label": "Brands and doses",
+     "askedFor": [
+      "tylenol",
+      "nyquil",
+      "dayquil",
+      "mucinex",
+      "robitussin",
+      "sudafed"
+     ],
      "say": "I won't name a brand or tell you how much to take, and I won't be the one to say whether this is a cold, the flu, or pneumonia — that needs a doctor."
     },
     "cold-refer": {
@@ -1025,6 +1191,13 @@
     },
     "palp-dx-blocked": {
      "label": "Harmless or dangerous",
+     "askedFor": [
+      "is it serious",
+      "is it dangerous",
+      "should i worry",
+      "is it my heart",
+      "is this normal"
+     ],
      "say": "Whether this is a harmless rhythm or a dangerous one, I can't judge at all — that's a medical diagnosis. What I can do is help you keep the record, and go with you to the appointment."
     },
     "palp-refer": {
@@ -1214,6 +1387,14 @@
     },
     "meno-hrt-blocked": {
      "label": "Hormone therapy",
+     "askedFor": [
+      "hormone therapy",
+      "hormone replacement",
+      "hrt",
+      "estrogen",
+      "premarin",
+      "bioidentical"
+     ],
      "say": "Hormone therapy is a prescription decision — whether it's right for you and for how long depends on your personal history, and that's for your gynecologist or primary care doctor to weigh with you. I won't recommend it — but I will say this: if symptoms are wrecking your daily life, asking about it is a perfectly legitimate road. You don't have to just endure."
     },
     "meno-refer": {
@@ -1263,6 +1444,14 @@
     },
     "period-painkiller-blocked": {
      "label": "Which painkiller, and how much",
+     "askedFor": [
+      "advil",
+      "midol",
+      "ibuprofen",
+      "aleve",
+      "tylenol",
+      "pain reliever"
+     ],
      "say": "Which painkiller and how to take it is a question for your doctor or pharmacist, not for me. But one thing I do want to say plainly: **taking something for period pain is not a failure of willpower.** If it's interfering with your life, it deserves to be dealt with."
     },
     "period-refer": {
@@ -1316,6 +1505,13 @@
     },
     "iron-cause-blocked": {
      "label": "Why you're low",
+     "askedFor": [
+      "why am i",
+      "what's causing",
+      "what is causing",
+      "what causes",
+      "is it bleeding"
+     ],
      "say": "Why you're low on iron isn't mine to judge — heavy periods, bleeding in the digestive tract, trouble absorbing it, all possible. That's what the doctor works out."
     },
     "iron-refer": {
@@ -1367,6 +1563,14 @@
     },
     "preg-med-blocked": {
      "label": "Which medicines are safe",
+     "askedFor": [
+      "medicine",
+      "medication",
+      "prescription",
+      "tylenol",
+      "antibiotic",
+      "pain reliever"
+     ],
      "say": "Which medicines are safe in pregnancy and nursing is something I make no judgment on at all — right down to cold medicine and pain relievers, ask the doctor or the pharmacist. And a long-term medication you were already on: **do not stop it on your own.** That's for the doctor to adjust."
     },
     "preg-refer": {
@@ -1428,6 +1632,14 @@
     },
     "tcm-prescribe-blocked": {
      "label": "Diagnosing and dosing herbs",
+     "askedFor": [
+      "which herb",
+      "what herb",
+      "prescribe",
+      "how much of it",
+      "formula",
+      "dosage"
+     ],
      "say": "I can't diagnose you in traditional-medicine terms, pick herbs for you, or tell you how much of one to take — that's for licensed professionals who can actually examine you. And one thing I will never do is tell you to drop a prescription in favor of an herb."
     },
     "tcm-refer": {
@@ -1604,6 +1816,13 @@
    "solutions": {
     "lipid-numbers-blocked": {
      "label": "Reading your numbers, and changing the dose",
+     "askedFor": [
+      "is that high",
+      "what does that mean",
+      "is it normal",
+      "do i need medication",
+      "do i need a statin"
+     ],
      "say": "What your cholesterol numbers mean, whether you need medicine, and whether a dose should change — that's the doctor's call, made against your whole risk picture: your age, your blood pressure, whether you have diabetes, whether you smoke. I don't read numbers and I don't touch doses. What I can do is help you hold up the living end of it."
     },
     "lipid-statin-dont-stop": {
@@ -1712,6 +1931,14 @@
     },
     "wt-diet-pills-blocked": {
      "label": "Weight-loss pills and the shots",
+     "askedFor": [
+      "ozempic",
+      "wegovy",
+      "mounjaro",
+      "zepbound",
+      "diet pill",
+      "weight loss shot"
+     ],
      "say": "Whether a weight-loss medication — including the shots everybody's talking about — is right for you is a conversation between you and a doctor who knows your history. I won't tell you whether you're a candidate, and I don't discuss doses. Two honest things I will say: this is a real prescription route, so it's worth raising at your next appointment instead of wondering about it; and **stay away from compounded or online-sourced versions.** The FDA has logged people hospitalized after measuring the wrong amount out of those vials, and counterfeits are circulating. If you go this way, go through a licensed prescriber and a real pharmacy."
     },
     "wt-refer": {
@@ -1777,6 +2004,13 @@
     },
     "diet-detox-blocked": {
      "label": "Detoxes, cleanses and juice fasts",
+     "askedFor": [
+      "detox",
+      "cleanse",
+      "juice fast",
+      "juicing",
+      "colon cleanse"
+     ],
      "say": "'Detox' isn't a real thing in medicine — your liver and kidneys do that work around the clock, and a cleanse doesn't help them do it. The extreme versions, days of nothing but juice, can throw your electrolytes off, which is genuinely risky if you take heart or blood pressure medicine. I won't recommend them."
     },
     "diet-refer": {
@@ -1830,6 +2064,13 @@
     },
     "allergy-test-blocked": {
      "label": "'Food sensitivity' panels (IgG testing)",
+     "askedFor": [
+      "igg",
+      "food sensitivity",
+      "sensitivity test",
+      "allergy test",
+      "get tested"
+     ],
      "say": "You'll see clinics and websites selling 'food sensitivity' panels — usually IgG testing — promising a list of everything you can't eat. **Allergy specialists advise against using those to decide what to avoid**: IgG mostly reflects what you've been eating, not what you react to, and the lists they hand back send people off a dozen foods for no good reason. If you want a real answer, see a board-certified allergist and let them choose the test that fits your story. I won't recommend a lab or interpret a panel for you."
     },
     "allergy-refer": {
@@ -1889,6 +2130,325 @@
     "sarco-refer": {
      "label": "When it isn't just muscle",
      "say": "If someone has **lost a noticeable amount of weight over the past six months without trying to**, that needs a doctor to find the reason — don't file it under muscle loss and leave it there. And a recent fall, or walking that's turned suddenly unsteady, should be looked at soon. A fall is the event that changes everything for an older person, and this is the part where you can still get ahead of it."
+    }
+   }
+  },
+  "TW-EDU-38": {
+   "keywords": [
+    "kidney",
+    "dialysis",
+    "creatinine",
+    "eGFR",
+    "GFR",
+    "protein in my urine",
+    "foamy",
+    "nephrologist",
+    "renal",
+    "high potassium",
+    "fistula"
+   ],
+   "solutions": {
+    "ckd-stage-decides-everything": {
+     "label": "What stage you're at changes the answer",
+     "say": "Kidney advice sounds like it argues with itself, and that's because **it does — the eating changes at every stage, and in a couple of places it flips over completely.** Before dialysis, most people are asked to go easy on protein. Once dialysis starts, that reverses and the job becomes getting enough of it. The reason what you read online contradicts what your neighbor tells you is that nobody says which stage they're talking about. **Your last lab report — your eGFR — and the stage your doctor put you at are the only honest place to start.** If you're not sure which stage you're at, make that the first question at your next visit."
+    },
+    "ckd-salt-substitute-danger": {
+     "label": "Salt substitutes are dangerous for kidney patients",
+     "askedFor": [
+      "salt substitute",
+      "lite salt",
+      "Lite Salt",
+      "light salt",
+      "no salt",
+      "No Salt",
+      "nu-salt",
+      "Nu-Salt",
+      "potassium chloride",
+      "salt-free"
+     ],
+     "say": "Here's the one most people have never been told: **those 'lite salt' and 'salt substitute' shakers — Lite Salt, No Salt, Nu-Salt — are mostly potassium chloride.** For healthy kidneys that's usually a good trade. **But kidneys that aren't working well can't clear potassium, and too much of it leaves you weak all over and can throw your heart rhythm off. That's the kind that lands people in the hospital.** Worth knowing too: several common blood pressure medicines push potassium up on their own — the -pril and -sartan ones, and spironolactone. **So if your kidneys aren't in good shape, ask your doctor or pharmacist before you switch shakers.** To cut back on salt safely, lean on garlic, onion, lemon, vinegar, black pepper and the salt-free herb blends instead — that's far safer than swapping one shaker for another."
+    },
+    "ckd-potassium-cooking": {
+     "label": "Boil the vegetables, go easy on the broth",
+     "say": "Potassium dissolves into water, so **boiling vegetables in plenty of water and pouring that water off takes a fair amount of it out** — it works best on potatoes, and better still if you cut them small and soak them first. The other side of that coin: soups, stews, chili and the liquid at the bottom of the pot are exactly where the potassium ended up. Eat the solids, go easy on the broth. **Whether you need to be strict about any of this depends on what your blood work says — that's a question for your doctor or a kidney dietitian, not something to guess at.**"
+    },
+    "ckd-phosphorus-is-hidden": {
+     "label": "The phosphorus that causes trouble is added, not natural",
+     "say": "Phosphorus isn't just in meat and beans. **The troublesome kind is what gets added at the factory — and your body takes up nearly all of it, where the phosphorus in real food comes in around half.** It's in deli meat and 'enhanced' chicken (the package says something about a solution added), colas and other dark sodas, processed cheese, non-dairy creamer, instant puddings, and plenty of packaged baked goods. **Read the ingredient list and look for the letters PHOS** — phosphoric acid, sodium phosphate, calcium phosphate. Manufacturers aren't required to put the amount on the Nutrition Facts panel, so the ingredient list is the only place it shows at all."
+    },
+    "ckd-painkillers": {
+     "label": "The drugstore pain aisle is the quiet one",
+     "askedFor": [
+      "pain reliever",
+      "painkiller",
+      "ibuprofen",
+      "Advil",
+      "Motrin",
+      "naproxen",
+      "Aleve",
+      "anti-inflammatory",
+      "for my back",
+      "aches"
+     ],
+     "say": "Reaching for whatever's in the cabinet when the back or the knees ache is the most common hidden hit the kidneys take. **The ones to watch are the anti-inflammatories — ibuprofen (Advil, Motrin) and naproxen (Aleve) — and they hide inside a lot of combination cold, sinus and 'PM' products, so people take them without knowing.** You don't have to sort out which is which. **Say this at the pharmacy counter: 'I have kidney disease — is this okay for my kidneys?'** Say the same sentence to your dentist and to any doctor who's new to you. The pharmacist will hand you something else, and it costs you nothing to ask."
+    },
+    "ckd-unknown-herbs": {
+     "label": "The danger is not knowing what's in it",
+     "askedFor": [
+      "herbal",
+      "herbs",
+      "herbal medicine",
+      "home remedy",
+      "powder",
+      "imported",
+      "someone gave me",
+      "from overseas",
+      "natural remedy"
+     ],
+     "say": "This isn't about herbal medicine as such — **it's about not knowing what's actually in the jar.** In this country, supplements and herbal products don't get reviewed by the FDA before they go on the shelf; no one checks the label is true. **And it isn't a theoretical worry: the FDA has had to warn people off botanical products found to contain aristolochic acid, which does permanent kidney damage — some of those people ended up on dialysis.** A licensed practitioner and a sealed product from a reputable maker is one thing. A bag of powder from a market stall, something a relative brought back from a trip, or pills off a website with no ingredient list is another thing entirely. **Look for a USP or NSF seal, and take the actual bottle to your kidney doctor** — they would far rather look at it now than find out later."
+    },
+    "ckd-protein-ask-dietitian": {
+     "label": "Protein isn't a case of the less the better",
+     "say": "People hear 'go easy on protein' and quit meat altogether — then the weight comes off, the strength goes, and they end up falling. **That does the kidneys no good whatsoever.** What you want is the right amount of good-quality protein, and that number is something a person has to work out for you. **Here's the part most people don't know: Medicare pays for that. It's called Medical Nutrition Therapy — three hours with a registered dietitian in your first year and two hours a year after that, at no cost to you, for kidney disease that isn't on dialysis yet. It takes a referral from your doctor, so ask for it by name.** If you're already on dialysis, there's a dietitian on the team at your center — that's what they're there for."
+    },
+    "ckd-bp-sugar-is-the-kidney": {
+     "label": "Blood pressure and blood sugar are kidney care",
+     "say": "**Diabetes and high blood pressure are the two leading causes of kidney failure in this country** — between them they account for most of it. So taking those pills on schedule, checking your numbers at home and writing them down sounds like it has nothing to do with kidneys. It is, in fact, the most useful kidney care there is. **And if you're on one of the -pril or -sartan blood pressure medicines, it's doing double duty — part of the reason it was picked is to protect the kidneys, not just the pressure.** That's worth remembering on the days you feel fine and wonder why you're still taking anything."
+    },
+    "ckd-anemia-is-different": {
+     "label": "Kidney anemia doesn't usually answer to iron pills",
+     "askedFor": [
+      "anemia",
+      "anemic",
+      "iron pills",
+      "iron supplement",
+      "low blood count",
+      "tired all the time",
+      "pale"
+     ],
+     "say": "Anemia is common when kidneys are struggling, but **the usual reason isn't low iron — it's that the kidneys make a hormone that tells the marrow to produce blood, and damaged kidneys make less of it.** So a bottle of iron off the shelf often doesn't lift it, and iron you don't need isn't harmless. This kind of anemia has its own treatments: iron given by IV, and shots that do the job that hormone used to do. **Say it plainly at your next appointment — 'I'm tired all the time and people tell me I look pale' — and ask them to check the blood count and your iron.**"
+    },
+    "ckd-dialysis-not-the-end": {
+     "label": "If dialysis is coming, planning early changes everything",
+     "askedFor": [
+      "dialysis",
+      "fistula",
+      "catheter",
+      "peritoneal",
+      "home dialysis",
+      "transplant",
+      "port"
+     ],
+     "say": "Nobody wants to hear the word, so the conversation gets pushed off until someone can't breathe, ends up in the ER, and starts that same night through a catheter in the neck. **That is the hardest possible way to begin, and it's the route that carries the most infections.** With a few months' notice instead, a fistula can be made in your arm and given time to mature, or you can look at peritoneal dialysis, which is done at home and often runs overnight while you sleep. Some people get evaluated for a transplant before dialysis ever starts. **Medicare covers six kidney-disease education sessions once you're at stage 4 — that is precisely what they're for.** Whether to start, and when, is a conversation you sit down and have. It isn't a sentence handed down to you."
+    },
+    "ckd-kidney-supplements-blocked": {
+     "label": "Nothing on a supplement shelf repairs kidneys",
+     "askedFor": [
+      "kidney cleanse",
+      "kidney detox",
+      "detox",
+      "kidney supplement",
+      "supplement for my kidneys",
+      "kidney support",
+      "protect my kidneys",
+      "cleanse"
+     ],
+     "say": "Straight answer: **nothing sold as a supplement brings back kidney function that's already been lost.** The products advertised as a 'kidney cleanse' or 'kidney detox' are the ones I'd steer you away from hardest — nobody checks what's in them before they're sold, the amounts aren't reliable, and **damaged kidneys are exactly the ones that can't clear whatever extra is in there.** Some of them are heavy on potassium or phosphorus, which is the last thing you need. Your money and your effort go a great deal further aimed at blood pressure, blood sugar, and staying out of the drugstore anti-inflammatories."
+    },
+    "ckd-refer": {
+     "label": "What not to wait on",
+     "say": "Don't hold these until the next appointment: **passing much less urine than usual, swelling that comes on fast or weight jumping several pounds in a few days, or feeling weak all over with your heartbeat feeling wrong** — that last one can be potassium, and it needs same-day blood work. **And if you're short of breath lying down and can only sleep sitting up, or someone becomes confused, call 911.** That's fluid backing up, and it isn't something to sleep on and see about in the morning."
+    }
+   }
+  },
+  "TW-EDU-39": {
+   "keywords": [
+    "inhaler",
+    "asthma",
+    "COPD",
+    "emphysema",
+    "wheez",
+    "short of breath",
+    "out of breath",
+    "can't catch my breath",
+    "phlegm",
+    "mucus",
+    "nebulizer",
+    "chronic bronchitis",
+    "smoker's cough",
+    "pulmonary rehab"
+   ],
+   "solutions": {
+    "lung-controller-vs-reliever": {
+     "label": "Two inhalers, two completely different jobs",
+     "say": "If the doctor sent you home with two inhalers, **they are not two versions of the same thing.** One is the daily maintenance inhaler — the controller — and it works slowly, calming the swelling inside the airways over weeks. The other is the rescue inhaler, for the moments you can't get your breath. **Nearly everybody makes the same mistake: the rescue inhaler lives in the pocket, and the controller ends up in a drawer as soon as things feel better.** That's exactly backwards. **The controller is the one keeping you out of the hospital, and it only works if you take it on the good days too** — the day you feel fine is the day it's doing its job."
+    },
+    "lung-reliever-frequency-warning": {
+     "label": "Reaching for the rescue inhaler more often is a warning",
+     "say": "When the rescue inhaler starts getting used more than it used to, that isn't 'good thing I had it on me' — **it's the signal that the underlying problem isn't controlled.** An easy measure to keep in your head: **needing it more than a couple of times a week, and waking up at night needing it counts, means it's time to have the medicines looked at** — not time to pick up another canister. One more thing worth knowing for asthma: the guidelines changed a few years back, and **a plain albuterol rescue inhaler on its own is no longer considered adequate treatment** — something that settles the inflammation has to be in there too. If albuterol is the only inhaler you own, bring exactly that up at your next visit."
+    },
+    "lung-inhaler-technique": {
+     "label": "Have somebody watch you take it",
+     "askedFor": [
+      "inhaler",
+      "spacer",
+      "nebulizer",
+      "puffer",
+      "how do I use",
+      "technique"
+     ],
+     "say": "When the technique is off, the medicine coats the inside of your mouth and never reaches the lungs — and **study after study finds most people are making at least one mistake, usually without any idea of it.** The fix is free and quick: **take your inhalers to the pharmacy, or to your next appointment, and ask them to watch you use one.** Pharmacists and respiratory therapists do this every day; it takes two minutes. The usual culprits are not shaking it, pressing and breathing in at slightly different moments, and not holding your breath afterwards. **Ask about a spacer** — the chamber that snaps onto the end makes the timing much more forgiving. And **with any inhaler that has a steroid in it, rinse your mouth and spit afterwards**, or you'll end up with thrush."
+    },
+    "lung-dont-stop-controller": {
+     "label": "Feeling better is the medicine working, not permission to stop",
+     "say": "The maintenance inhaler is the reason things are going well — not proof you've finished with it. **People stop it, coast a few weeks, and then it comes back, and the flare that follows is usually harder to settle than the last one was.** If it's been good for a long stretch and you'd like to be on less, that's a perfectly fair conversation to have. **Just let the doctor step it down with somebody watching, rather than quietly stopping on your own.**"
+    },
+    "lung-quit-smoking": {
+     "label": "Quitting is the only thing that slows it down",
+     "askedFor": [
+      "smoking",
+      "smoke",
+      "cigarettes",
+      "quit",
+      "vaping",
+      "patch",
+      "nicotine"
+     ],
+     "say": "This part isn't comfortable to hear, so I'll say it straight: **for COPD, the inhalers make you feel better, but quitting smoking is the only thing shown to slow how fast lung function drops off.** And it pays back at any age — there's no point where it stops being worth doing. You also don't have to run on willpower, which has the worst odds of any method there is. **Medicare Part B covers up to eight counseling visits a year at no cost to you, Part D covers the prescription quit medicines, and 1-800-QUIT-NOW puts a free coach on the phone — most state lines will mail you patches or gum for nothing.** Ask your doctor to set it up. People who quit with help do it far more often than people who tough it out alone."
+    },
+    "lung-exacerbation-three-signs": {
+     "label": "More phlegm, darker phlegm, more breathless — two out of three",
+     "askedFor": [
+      "phlegm",
+      "mucus",
+      "yellow",
+      "green",
+      "coughing more",
+      "thicker"
+     ],
+     "say": "Three changes belong together: **more phlegm than usual, phlegm turning yellow or green, and being more short of breath than your own normal.** Any two of those and a flare-up is most likely starting — being seen a few days early is far easier than being seen from a hospital bed. **Ask your doctor for a written action plan** so you already know what to do and when to call; plenty of people with COPD have one taped inside a cabinet door. And older folks tend to shrug and say they're fine — **if you're the family member and the phlegm doesn't look right, you're allowed to be the one who says something.**"
+    },
+    "lung-breathing-and-moving": {
+     "label": "The less you move, the more breathless you get",
+     "say": "Being short of breath makes people stop moving, then the muscles weaken, then a few steps leave you more breathless than before. **That spiral wears people down worse than the disease itself does.** Walking slowly and stopping when you need to still counts — most days matters far more than distance. **When the breath gets tight, try pursed-lip breathing: in through the nose for a count, then out slowly through pursed lips like you're blowing out a candle, about twice as long as you took in.** Making the out-breath longer settles the panic for a lot of people. And ask about **pulmonary rehab — Medicare Part B covers it for moderate to severe COPD with your doctor's referral.** The people who feel too breathless to exercise are exactly who it was built for."
+    },
+    "lung-air-triggers": {
+     "label": "Know your own few triggers",
+     "say": "Everybody's list is a little different, but the usual suspects are short: **a sudden lungful of cold air, cooking smoke and frying, secondhand smoke, wood stoves and fireplaces, wildfire smoke, strong fragrances and cleaning sprays, and fresh paint or renovation dust.** Working out which two or three actually get you is more useful than trying to guard against everything at once. **Check the air quality before you head out** — the weather app carries it — and on the bad days simply move the walk indoors. A mall or a big store works fine, and plenty of people do exactly that."
+    },
+    "lung-vaccines": {
+     "label": "For lungs like yours, the shots pay off more",
+     "say": "When the lungs are already compromised, a bout of flu or pneumonia is often the thing that turns into a hospital stay. **On Medicare, the flu shot, the pneumonia shots and COVID are covered under Part B with no cost-sharing, and RSV runs through your Part D plan at $0 as long as you stay in network.** Your regular pharmacy can look up what you're due for — **tell them you have COPD or asthma**, because that changes what's recommended for you and when."
+    },
+    "lung-comfort-remedies": {
+     "label": "Honey, steam and cough drops — where they fit",
+     "askedFor": [
+      "honey",
+      "steam",
+      "humidifier",
+      "cough drop",
+      "lozenge",
+      "menthol",
+      "Vicks",
+      "essential oil",
+      "cough syrup",
+      "hot tea"
+     ],
+     "say": "Honey in hot tea, a steamy shower, a humidifier, menthol rub, cough drops — **they do genuinely make a raw throat feel better, and there's nothing wrong with the comfort of them.** Just keep the line clear: **not one of them opens an airway that has tightened up.** So use them if they help, but never in place of the inhaler, and **don't let feeling a bit better be the reason the medicine gets put off** — that's how a rough night turns into an emergency room. Strong menthol and essential oils set some people's airways off, so if you cough more afterwards, that's your answer about those."
+    },
+    "lung-refer": {
+     "label": "The ones that can't wait",
+     "say": "**Call 911 right now for any of these: only getting a few words out before you have to stop and breathe, lips or fingernails turning blue or gray, breathless while sitting completely still, or using the rescue inhaler and it isn't helping.** Confusion or unusual sleepiness while working hard to breathe is the same call. **And a fever along with more, thicker phlegm needs to be seen that same day** — don't push it to tomorrow and hope."
+    }
+   }
+  },
+  "TW-EDU-40": {
+   "keywords": [
+    "stroke",
+    "TIA",
+    "blood thinner",
+    "Plavix",
+    "clot",
+    "slurr",
+    "droop",
+    "weak on one side",
+    "side is weak",
+    "paraly",
+    "aphasia",
+    "brain bleed",
+    "chelation"
+   ],
+   "solutions": {
+    "stroke-fast-recognize": {
+     "label": "Know the signs, and write down the time",
+     "say": "Having had one stroke makes another more likely, so the whole household should know what it looks like. Hospitals here teach **BE-FAST: Balance suddenly off, Eyes — vision lost or doubled, Face drooping on one side, Arm that can't stay up, Speech slurred or jumbled, and Time.** Time is the part people get wrong. **Note the time they were last known to be normal, then call 911** — and say that time out loud when help arrives. Whether the clot-busting medicine or the procedure to pull the clot out is still on the table hangs entirely on that clock. **Call the ambulance instead of driving them in yourself**: the crew starts working in the driveway and calls ahead so the hospital is ready when you get there."
+    },
+    "stroke-dont-stop-antiplatelet": {
+     "label": "Never stop the blood thinner on your own",
+     "askedFor": [
+      "aspirin",
+      "Plavix",
+      "clopidogrel",
+      "blood thinner",
+      "Eliquis",
+      "Xarelto",
+      "warfarin",
+      "Coumadin",
+      "apixaban"
+     ],
+     "say": "The aspirin, Plavix or blood thinner you came home with is there to stop the next one, and for most people it's long-term. **Stopping it on your own — because it bothers your stomach, because you bruise, or because you feel completely fine now — measurably raises the odds of another stroke.** If it's causing you trouble, say so and let the doctor change it rather than quitting quietly. **And before a tooth extraction, any surgery, a colonoscopy or an endoscopy, tell that dentist or that doctor you're on it.** Whether to hold it, and for how many days, is their call — not something you should ever have to work out yourself. Bruising more easily is expected; **black or tarry stools, blood in the urine, or a bad headache after a fall need a call the same day.**"
+    },
+    "stroke-three-highs-are-the-cause": {
+     "label": "Blood pressure, sugar and cholesterol do the heavy lifting",
+     "say": "The medicine blocks part of the risk. The rest of it sits with blood pressure, blood sugar and cholesterol. **Keeping those three in line is the best-proven way there is to stop a second stroke — better than anything sold in a bottle.** And the single most useful small thing: **take your blood pressure at home, write the numbers down, and hand the list over at the appointment.** One reading in the office tells the doctor much less than two weeks of your own."
+    },
+    "stroke-rehab-window": {
+     "label": "The first six months are fastest — and it doesn't stop there",
+     "say": "Progress usually comes quickest in the first six months, so that stretch is worth pushing on. **But it isn't a door that shuts.** What actually happens is that people stop, and what they gained slides backwards. The gains that stick come from folding rehab into ordinary life: **reaching for your own cup, doing your own buttons, walking to the bathroom with a hand nearby.** That adds up to more than the hour in the therapy room does. **And if you're ever told the therapy is ending because you've 'plateaued,' know this: Medicare covers skilled therapy to keep function or slow decline. You do not have to be improving to qualify** — lack of improvement, on its own, isn't a valid reason to be cut off. Ask for a re-evaluation."
+    },
+    "stroke-swallow-and-pneumonia": {
+     "label": "Coughing at meals is worth acting on",
+     "askedFor": [
+      "choking",
+      "coughing when he eats",
+      "swallow",
+      "thickened",
+      "feeding tube",
+      "food goes down wrong"
+     ],
+     "say": "**The complication that most often turns serious after a stroke is pneumonia from food or drink going down the wrong way** — and it usually starts as nothing more than a small cough at meals. Don't file that under normal. Sitting fully upright, small bites, no talking with food in the mouth, and **staying upright for half an hour after eating** all help right away. If it keeps happening, **ask for a swallow evaluation — a speech-language pathologist does it**, and they'll work out the right texture of food and thickness of liquid. Thin liquids like plain water are often the hardest of all, which surprises most families."
+    },
+    "stroke-depression-is-part-of-it": {
+     "label": "Low mood afterwards is part of the injury",
+     "say": "Feeling low after a stroke is very common — **around a third of survivors** — and it isn't weakness or a change in someone's character. **The injury to the brain itself brings it on**, and it feeds a loop: the person doesn't feel like doing rehab, so recovery slows, so they feel worse. **It's treatable, and treating it tends to help the recovery along too.** Say it out loud at the next appointment; doctors are supposed to be screening for this and often don't get to it. And if you're the family member — you don't have to talk anybody out of it. Sitting and listening does more good than cheering up does."
+    },
+    "stroke-caregiver-support": {
+     "label": "You're allowed to hand it over for a while",
+     "say": "Caring for someone after a stroke isn't hard on any one day — it's hard because there's no end in sight. **Call the Eldercare Locator at 1-800-677-1116 (weekdays, not around the clock) and they'll connect you to your Area Agency on Aging.** That's the door to respite care — somebody covering so you can sleep or take a few days — plus adult day programs, home health aides, equipment, and caregiver support groups. **If money is tight, ask specifically about your state's Medicaid home and community-based programs; most states now have a self-directed option, and in many of them a family member can be paid for the hours.** And you don't have to be at breaking point to qualify. This is meant to be used before you get there."
+    },
+    "stroke-fall-and-home": {
+     "label": "One weak side means the house has to change",
+     "say": "When one side is weaker, falls are far likelier — and **one broken hip can undo months of rehab in an afternoon.** The list is short: **grab bars in the bathroom, a non-slip mat in the tub, a night light between the bed and the toilet, cords out of the walkway, and the throw rugs gone** — those are the worst offender in the house. One honest note about money: **Original Medicare doesn't pay for grab bars or bathroom modifications.** Some Medicare Advantage plans do, state Medicaid programs often do, and your Area Agency on Aging may run a home-repair program worth asking about. **What Medicare does cover is an occupational therapist walking the house with you** when home health has been ordered — ask for that while it's available."
+    },
+    "stroke-blocked-remedies": {
+     "label": "Chelation drips, ginkgo and 'circulation' remedies",
+     "askedFor": [
+      "chelation",
+      "IV drip",
+      "vitamin drip",
+      "circulation",
+      "ginkgo",
+      "nattokinase",
+      "natto",
+      "fish oil",
+      "clear the arteries",
+      "cleanse"
+     ],
+     "say": "People get offered chelation drips, IV 'circulation' or vitamin infusions, ginkgo, nattokinase — all sold as clearing out the blood vessels. **Honestly: none of it has evidence behind it as a substitute for the medicine you're on, and the FDA has never approved any over-the-counter chelation product — the harms on record for those include kidney failure and death.** There's a second problem that matters more in your case specifically: **ginkgo, nattokinase and high-dose fish oil all nudge bleeding risk upward, and stacked on top of a blood thinner that is not a small thing.** If you want to try something anyway, **take the actual bottle to your doctor first** and let them read the label."
+    },
+    "stroke-refer": {
+     "label": "Call 911, and note the time",
+     "say": "**Face drooping, an arm that won't stay up, speech slurred or not making sense — call 911 immediately, and write down the time it started.** These belong on the same list: **sudden loss of vision in one eye or seeing double, sudden violent dizziness where you can't stand up, or the worst headache of your life.** Don't wait to see if it passes, and don't drive yourself. **And a stroke that clears up on its own in a few minutes still needs the emergency room that same day** — a warning stroke is often followed by the real one within days, and that's the one chance to head it off. Far better to go and be told it was nothing."
     }
    }
   }
