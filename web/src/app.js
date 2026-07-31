@@ -9047,7 +9047,7 @@ function init() {
   window.__muneaRenderCreditRow = renderCreditRow;
   function renderPlanState() {
     const plan = circlePlan();
-    const label = CIRCLE_PLAN_LABEL[plan] || 'Plus';
+    const label = circlePlanLabel(plan);
     const pts = Object.prototype.hasOwnProperty.call(PLAN_POINTS, plan) ? PLAN_POINTS[plan] : PLAN_POINTS.plus;
     const rendererCopy = muneaRendererCopy();
     const localizedPlan = rendererCopy
@@ -9120,7 +9120,7 @@ function init() {
           'subscription.confirmTitle',
           'Confirm {plan} · {price}',
           {
-            plan: muneaT(`subscription.plan${plan === 'pro' ? 'Pro' : 'Plus'}`, CIRCLE_PLAN_LABEL[plan]),
+            plan: muneaT(`subscription.plan${plan === 'pro' ? 'Pro' : 'Plus'}`, circlePlanLabel(plan)),
             price: values.price,
           },
         ),
