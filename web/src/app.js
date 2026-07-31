@@ -5425,7 +5425,7 @@ function _muneaChattedTodayLine(now) {
 function renderCompanionGreeting(now = new Date()) {
   const msg = $('#bcMsg');
   if (!msg) return;
-  const nm = (typeof cname === 'function' ? cname() : '寧寧');
+  const nm = (typeof cname === 'function' ? cname() : muneaT('companion.nening.name', '寧寧'));
   const ask = _muneaAskByHour(now.getHours());
   let line = '';
   try {
@@ -5542,7 +5542,7 @@ function localizedMedicationDuration(duration) {
 }
 function canonicalMedicationDuration(duration) {
   const raw = String(duration || '').trim();
-  if (!raw) return '長期';
+  if (!raw) return muneaT('medication.duration.longTerm', '長期');
   return window.MuneaMedicationScheduleI18n?.normalizeDuration(raw) || raw;
 }
 function pillDateKey() {
@@ -5827,7 +5827,7 @@ window.__muneaSetHealth = function (s) {
     put('bpNum', String(Math.round(sys)));
     put('bpUnit', '/' + Math.round(dia) + ' mmHg');
     chip('bpChip', hi ? muneaT('health.high', '偏高') : lo ? muneaT('health.low', '偏低') : muneaT('health.stable', '穩定'), hi || lo);
-    put('bpSub', hi ? '比平常高一點，晚點再量一次' : lo ? '偏低一些，起身動作放慢' : '正常範圍內');
+    put('bpSub', hi ? muneaT('health.bpHighRetryHint', '比平常高一點，晚點再量一次') : lo ? muneaT('health.bpLowHint', '偏低一些，起身動作放慢') : muneaT('health.bpNormalHint', '正常範圍內'));
     if (hi) worry.push(muneaT('health.worryBpHigh', '血壓比平常高一點')); if (lo) worry.push(muneaT('health.worryBpLow', '血壓偏低'));
   }
   if (hr) {
@@ -6951,7 +6951,7 @@ function initHealthDashboard() {
 
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function cname() {
-  try { return (companionDisplayName || '寧寧').trim() || '寧寧'; } catch (e) { return '寧寧'; }
+  try { return (companionDisplayName || muneaT('companion.nening.name', '寧寧')).trim() || muneaT('companion.nening.name', '寧寧'); } catch (e) { return muneaT('companion.nening.name', '寧寧'); }
 }
 function hint(text) {
   // 聊聊以外不出聲（只出文字提示，禁止在此接語音）（2026-07-03 Edward 拍板）：只顯示提示
@@ -6997,7 +6997,7 @@ function refreshTaskProgress() {
   if (tp) tp.classList.toggle('full', done === items.length && items.length > 0);
   if (done === items.length && items.length && !window.__celebrated) {
     window.__celebrated = true;
-    setTimeout(() => toast('今天' + items.length + '件都完成了，我跟家人說一聲'), 250);
+    setTimeout(() => toast(muneaT('home.allTasksDoneToast', '今天{count}件都完成了，我跟家人說一聲', { count: items.length })), 250);
     if (typeof pushFamilyFeed === 'function') pushFamilyFeed('<b>' + myFeedName() + '</b>今天把該做的都完成了，給他一個讚');
   }
   const pillTask = document.querySelector('.task-item[data-task="pill"]');
@@ -7010,7 +7010,7 @@ function refreshTaskProgress() {
   const dots = document.querySelectorAll('#pillDots i');
   if (dots.length) dots.forEach((d2, i2) => d2.classList.toggle('f', i2 < medTaken));
   const hint = $('#statPillHint');
-  if (hint) { const remaining = Math.max(0, medExpected - medTaken); hint.textContent = remaining ? ('剩 ' + remaining + ' 次') : '都吃了'; hint.className = 'st-trend ' + (remaining ? 'warn' : 'ok'); }
+  if (hint) { const remaining = Math.max(0, medExpected - medTaken); hint.textContent = remaining ? muneaT('medication.remainingCount', '剩 {count} 次', { count: remaining }) : muneaT('medication.allTaken', '都吃了'); hint.className = 'st-trend ' + (remaining ? 'warn' : 'ok'); }
   const prog = $('.task-progress');
   if (!prog) return;
   const label = prog.childNodes[prog.childNodes.length - 1];

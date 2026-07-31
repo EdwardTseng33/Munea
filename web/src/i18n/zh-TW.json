@@ -378,6 +378,7 @@
   "home.cheer.walk": "出去走走最好了，回來記得喝口水。",
   "home.cheer.chat": "謝謝你跟我說這些，我都記下來了。",
   "home.cheer.mood": "今天的心情記好了，謝謝你願意照顧自己的感受。",
+  "home.allTasksDoneToast": "今天{count}件都完成了，我跟家人說一聲",
   "common.today": "今天",
   "common.yesterday": "昨天",
   "common.recently": "近日",
@@ -699,6 +700,8 @@
   "medication.undoLastDose": "好，已取消最後一筆服藥紀錄。",
   "medication.cancelDoseToast": "好，先取消這筆，等等再完成也可以。",
   "medication.allDoneUndoHint": "今天的藥已完成，再按一次才會取消最後一筆。",
+  "medication.remainingCount": "剩 {count} 次",
+  "medication.allTaken": "都吃了",
   "health.connect": "連接",
   "health.disconnect": "解除連接",
   "health.connected": "已連接",
@@ -1323,5 +1326,6 @@
   "health.dashAllGoodTitle": "今天一切都好",
   "health.dashSteadyTitle": "今天大致都穩",
   "health.dashAllGoodSub": "{part}每一項我都看著，放心。",
-  "health.dashWatchSub": "{part}有 {count} 件事我幫你盯著。"
+  "health.dashWatchSub": "{part}有 {count} 件事我幫你盯著。",
+  "health.bpHighRetryHint": "比平常高一點，晚點再量一次"
 }
