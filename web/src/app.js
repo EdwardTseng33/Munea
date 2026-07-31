@@ -1523,7 +1523,7 @@ async function finishFamilyRelayClaim(relay, action) {
 }
 window.__muneaFamilyRelays = { create: createFamilyRelay, claim: claimNextFamilyRelay, finish: finishFamilyRelayClaim, refreshMembers: refreshFamilyRelayMembers };
 // 首頁那張卡的重繪入口掛出來：驗收時要能在不打真電話的情況下看到「家人帶話」長什麼樣
-window.__muneaHomeRelayView = { sync: () => syncHomeFamilyRelay(), ack: () => ackHomeFamilyRelay(), preview: relay => { _muneaHomeRelay = relay || null; renderCompanionGreeting(); } };
+window.__muneaHomeRelayView = { sync: () => syncHomeFamilyRelay(), load: () => loadHomeRelay(), preview: relay => { _muneaHomeRelay = relay || null; renderCompanionGreeting(); } };
 
 // ===== 聊聊 AI 幫你把提醒設進 App（跟手動新增走同一份清單 + 同一套雲端/手機通知）· 2026-07-09 Edward =====
 const INTEREST_TOPIC_KEYS = { '旅遊景點': 'legacyUi.topic.travel', '美食餐廳': 'legacyUi.topic.food', '影劇戲劇': 'legacyUi.topic.tv', '新聞時事': 'legacyUi.topic.news', '健康養生': 'legacyUi.topic.health', '運動': 'legacyUi.topic.sports', '懷舊老歌': 'legacyUi.topic.music', '園藝花草': 'legacyUi.topic.gardening', '歷史故事': 'legacyUi.topic.history', '寵物': 'legacyUi.topic.pets', '棋牌麻將': 'legacyUi.topic.games', '天氣節氣': 'legacyUi.topic.weather' };
@@ -5364,8 +5364,14 @@ function _muneaAskByHour(h) {
 // 而且動態牆是 App 自己產的句子，真正的傳話根本不在裡面——長輩只有在「開始聊聊」時
 // 才聽得到寧寧唸，首頁完全看不到。現在直接跟雲端拿真的那一則。
 //
-// 用 claim 不用 list：claim 會把這則鎖住並給回條，按了「我知道了」才算送達；
-// 沒按就離開的話 10 分鐘後自動退回待傳，下次再出現——訊息不會因為滑過去就消失。
+// 沒有「我知道了」這種確認鍵（Edward 2026-07-31）：長輩不必為了讓話消失而學按什麼。
+// 話送到眼前就算送到了，接著自然被日子蓋過去——
+//   ① 去聊過天：那件事已經在對話裡談過了，卡片回到平常的問候
+//   ② 有新的一則帶話：新的蓋掉舊的，一次只講一件事
+//   ③ 放到隔天：昨天的叮嚀今天再貼一次只會變成噪音
+// 顯示當下就回報送達，所以要自己在手機裡留一份——雲端不會再給同一則。
+const HOME_RELAY_KEY = 'munea.homeRelay';
+const HOME_RELAY_TTL_MS = 24 * 60 * 60 * 1000;
 let _muneaHomeRelay = null;
 function homeRelayText(relay) {
   if (!relay) return '';
@@ -5374,26 +5380,43 @@ function homeRelayText(relay) {
   const who = muneaSafeDisplayText(relay.senderLabel, '') || muneaT('familyCircle.someoneInFamily', '家人');
   return muneaT('familyCircle.relayLine', '{name}要我提醒你：{body}', { name: who, body });
 }
+function loadHomeRelay() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HOME_RELAY_KEY) || 'null');
+    if (!saved || !saved.at || !homeRelayText(saved)) return null;
+    if (Date.now() - saved.at > HOME_RELAY_TTL_MS) return null;          // ③ 隔天就不再貼
+    if (+(localStorage.getItem('munea.lastChatAt') || 0) > saved.at) return null;  // ① 聊過了
+    return saved;
+  } catch (e) { return null; }
+}
+function saveHomeRelay(relay) {
+  try {
+    if (!relay) localStorage.removeItem(HOME_RELAY_KEY);
+    else localStorage.setItem(HOME_RELAY_KEY, JSON.stringify({
+      id: relay.id, senderLabel: relay.senderLabel, content: relay.content, at: Date.now(),
+    }));
+  } catch (e) {}
+}
 async function syncHomeFamilyRelay() {
   const had = !!_muneaHomeRelay;
   if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
     _muneaHomeRelay = null;
+    saveHomeRelay(null);
     if (had) renderCompanionGreeting();
     return;
   }
+  _muneaHomeRelay = loadHomeRelay();          // 先貼上手機裡留著的那則，畫面不會空一拍
+  if (had !== !!_muneaHomeRelay) renderCompanionGreeting();
   let relay = null;
   try { relay = await claimNextFamilyRelay(); } catch (e) { relay = null; }
-  _muneaHomeRelay = homeRelayText(relay) ? relay : null;
-  if (had || _muneaHomeRelay) renderCompanionGreeting();
-}
-async function ackHomeFamilyRelay() {
-  const relay = _muneaHomeRelay;
-  if (!relay) return;
-  _muneaHomeRelay = null;          // 先收起來，讓按下去立刻有反應；雲端回報失敗也不會把話再貼回臉上
+  if (!homeRelayText(relay)) return;
+  _muneaHomeRelay = relay;                    // ② 新的蓋掉舊的
+  saveHomeRelay(relay);
   renderCompanionGreeting();
+  // 話已經在他眼前了＝送到了。回報放在畫面之後，網路慢也不會讓卡片晚一步出現。
   try {
     await finishFamilyRelayClaim(relay, 'ack');
-    rememberSpokenFamilyRelay(relay);   // 記下這則已經到了，通話時不必再唸一次
+    rememberSpokenFamilyRelay(relay);         // 記下這則已經到了，通話時不必再唸一次
   } catch (e) {}
 }
 // 用藥有沒打勾（順位 2-b）：跟 renderPillTask() 同一套算法（今天還沒吃的下一項 / 完成數 / 總數）
@@ -5511,12 +5534,11 @@ function renderCompanionGreeting(now = new Date()) {
   msg.textContent = line;
   // 有家人帶話時整張卡換一個樣子：標上「家人帶話」、字放大到 4 行、給一顆「我知道了」。
   // 沒有帶話就回到平常的問候，一顆多餘的按鍵都不留。
-  const card = $('#butlerCard'), acts = $('#bcRelayActions'), more = $('#bcRelayMore');
+  const card = $('#butlerCard'), more = $('#bcRelayMore');
   if (card) { card.classList.toggle('has-relay', !!relayLine); if (!relayLine) card.classList.remove('relay-open'); }
-  if (acts) acts.hidden = !relayLine;
   // 話太長被切掉時才給「看全部」——切掉的後半可能正是重點（幾點回診、東西放哪）
   if (more) {
-    const clipped = !!relayLine && !card.classList.contains('relay-open') && msg.scrollHeight > msg.clientHeight + 1;
+    const clipped = !!relayLine && card && !card.classList.contains('relay-open') && msg.scrollHeight > msg.clientHeight + 1;
     more.hidden = !clipped;
   }
   // 聊聊頁人物畫面上的那顆字泡（faceIdleHi）已整個拿掉（Edward 2026-07-16）——首頁卡片這行照舊
@@ -5545,11 +5567,9 @@ function renderHomeGreeting() {
   if (big) big.textContent = k;
 }
 renderHomeGreeting();
-// 「我知道了」＝家人的話真的送到了；綁一次就好，卡片本身不重建、只切換樣子
+// 話太長時的「看全部」；綁一次就好，卡片本身不重建、只切換樣子
 document.addEventListener('click', e => {
-  const el = e.target && e.target.closest;
-  if (!el) return;
-  if (e.target.closest('#bcRelayAck')) { ackHomeFamilyRelay(); return; }
+  if (!(e.target && e.target.closest)) return;
   if (e.target.closest('#bcRelayMore')) {
     const card = $('#butlerCard');
     if (card) card.classList.add('relay-open');

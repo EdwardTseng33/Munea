@@ -381,14 +381,20 @@ assert(/async function syncHomeFamilyRelay\(\)[\s\S]{0,800}?claimNextFamilyRelay
 assert(/if \(id === 'home'\) \{[^}]*syncHomeFamilyRelay\(\)/.test(app)
   && /syncProfileNudge\(\);[\s\S]{0,200}?syncHomeFamilyRelay\(\)/.test(app),
   'Relays must be fetched when the user lands on home and right after sign-in, not only during a call');
-assert(/async function ackHomeFamilyRelay\(\)[\s\S]{0,600}?finishFamilyRelayClaim\(relay, 'ack'\)/.test(app),
-  'Acknowledging a relay must report delivery back to the cloud, not just hide the card');
+// 沒有確認鍵（Edward 2026-07-31）：話送到眼前就算送到，長輩不必為了讓它消失而學按什麼。
+// 消失靠的是日子往前走——聊過天、有新的一則、或放到隔天。
+assert(!app.includes('ackHomeFamilyRelay') && !html.includes('bcRelayAck'),
+  'The relay card must not ask the reader to tap a confirmation button');
+assert(/async function syncHomeFamilyRelay\(\)[\s\S]{0,1200}?finishFamilyRelayClaim\(relay, 'ack'\)/.test(app),
+  'Showing the relay must report delivery back to the cloud, otherwise it will be re-sent forever');
+assert(/function loadHomeRelay\(\)[\s\S]{0,600}?HOME_RELAY_TTL_MS[\s\S]{0,300}?munea\.lastChatAt/.test(app),
+  'A shown relay must fade on its own: superseded by a chat, by a newer message, or by the next day');
 assert(/if \(!_relayOnButlerCard\) items\.push\(familyItem\)/.test(app),
   'The care carousel must not repeat a relay that the butler card is already delivering');
 assert(/\.butler-card\.has-relay \.bc-msg-t \{[^}]*-webkit-line-clamp: 4/s.test(css)
   && /\.butler-card\.has-relay\.relay-open \.bc-msg-t \{[^}]*-webkit-line-clamp: unset/s.test(css),
   'Relay text must show up to four lines and stay fully readable via the show-all control');
-['home.relayAck', 'home.relayMore', 'familyCircle.someoneInFamily'].forEach(key =>
+['home.relayMore', 'familyCircle.someoneInFamily'].forEach(key =>
   assert(zhCatalog[key], `Relay surface catalog key missing for: ${key}`));
 // 送出提示不能再說「下次聊聊時轉達」——傳話現在一開 App 就看得到，那句話已經不是事實
 assert(!/下次聊聊/.test(zhCatalog['familyCircle.relayQueuedToast'] || ''),
