@@ -73,7 +73,7 @@
   },
   "magnesiumSupplementCap": {
    "status": "補充劑來源的鎂每日 250 mg 上限（EFSA 對 supplemental magnesium 的可容忍上限；食物來源不計入）",
-   "note": "與主庫台灣營養師建議數字一致；EFSA 意見書屬既有共識、本次未線上重查——建議人審抽查",
+   "note": "與主庫台灣營養師建議數字一致；EFSA 意見書屬既有共識、本次未線上重查——建議人審抽查；TW-EDU-15（夜間抽筋）的 dailyCap 也照此寫 250 mg，刻意不沿用主庫的 350 mg（那是美國 UL、非歐盟數字）",
    "verifiedAt": "沿用主庫 2026-07-29 查證＋EFSA 共識"
   },
   "redYeastRice": {
@@ -83,6 +83,11 @@
   "anticoagulantNaming": {
    "status": "疊層內抗凝血藥一律舉 Sintrom（acenocumarol）為例",
    "note": "西班牙最常用的口服抗凝血藥是 acenocumarol（商品名 Sintrom），不是台灣主庫寫的 warfarin（華法林）；長輩聽得懂的是「el Sintrom」。交互作用機轉（魚油／Q10／銀杏／蔓越莓 vs 香豆素類抗凝血藥）兩者通用"
+  },
+  "calciumUpperLimit": {
+   "status": "TW-EDU-17 沿用主庫的成人每日鈣總攝取上限 2000-2500 mg（含食物），話術明寫「是安全上限、不是目標」",
+   "note": "此數字為既有國際共識、本次未針對西班牙線上重查——建議人審抽查",
+   "verifiedAt": "沿用主庫 2026-07-29"
   }
  },
  "styleNotes": [
@@ -90,6 +95,52 @@
   "TW-EDU-30 由中醫層改編為「remedios tradicionales」輕量版：manzanilla／tila 草藥茶文化＋herbolario＋藥局諮詢文化；中醫證型、穴位、冬令進補不硬翻",
   "TW-EDU-31 只保留西班牙人真的在吃的品項；雞精、牛樟芝、納豆激酶、苦瓜胜肽、GABA、靈芝略過不寫（敗向安全：沒翻的方案引擎自動不端出）",
   "統計數字在地化原則：台灣盛行率數字不搬運——能以西班牙事實支撐的改寫（65 歲以上過半有高血壓），無把握的改為不帶數字的常態化話術",
-  "絕不出現台灣或他國號碼（119／1925／1966／911／988）；急難一律 112、心理危機一律 024、長照喘息一律 servicios sociales del ayuntamiento"
- ]
+  "絕不出現台灣或他國號碼（119／1925／1966／911／988）；急難一律 112、心理危機一律 024、長照喘息一律 servicios sociales del ayuntamiento",
+  "TW-EDU-25 的 stress-acupressure（內關穴）與 TW-EDU-27 的 period-tcm（中醫調理／四物湯）整張略過不寫——西班牙沒有對應的文化錨點與合格中醫師轉介路徑，硬翻＝憑空造制度（敗向安全：沒翻的方案引擎自動不端出）",
+  "台灣盛行率數字改寫實例：白內障 70 歲以上九成、攝護腺肥大五成／七成、口腔衰弱三分之二——三處全部拆掉數字、改成「muy común／la mayoría de los hombres／muy frecuente」，保留安心效果、不搬運也不另編西班牙數字",
+  "急難號碼分級：主庫寫「打 119」的卡（吞嚥哽塞、心悸胸痛、跌倒爬不起來）一律換 112；主庫只寫「儘快就醫」的卡（膝蓋、痛風、便秘、皮膚癢、頸肩）不補號碼，改寫 urgencias／médico de cabecera；主庫寫 1925 的卡（青少年、工作壓力、產後憂鬱）一律換 024",
+  "抗凝血藥舉例在新增 6 張卡（葡萄糖胺／葉黃素／銀杏／鈣＋D／鎂／鐵劑）延用 Sintrom，與第一批一致"
+ ],
+ "vaccination": {
+  "calendar": {
+   "term": "Calendario común de vacunación e inmunización a lo largo de toda la vida",
+   "note": "西班牙的疫苗表涵蓋全生命期、不是只有兒童；由 CISNS（跨自治區衛生委員會）核定、各自治區各自執行。TW-EDU-12 全題照此改寫，取代主庫的「公費疫苗／衛生所」說法",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/calendario/docs/CalendarioVacunacion_Todalavida.pdf",
+    "https://www.saludcastillayleon.es/profesionales/en/vacunaciones/calendario-comun-vacunacion-inmunizacion-largo-toda-vida-re"
+   ]
+  },
+  "gripe": {
+   "status": "每年秋季開打；建議對象含 60 歲以上；對建議對象免費，於 centro de salud 施打",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/gripe_covid19/gripe.htm",
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/gripe_covid19/docs/recomendacionesVacunacionGripe_2025_2026.pdf"
+   ]
+  },
+  "neumococo": {
+   "status": "官方原文：「Se recomienda la vacunación frente a neumococo a partir de los 65 años de edad.」另有各年齡風險族群",
+   "note": "使用的結合型疫苗價數（VNC20／VNC21）各自治區不同、且逐年換版——疊層話術刻意不寫廠牌與價數，只寫「65 歲起有建議、去 centro de salud 問」",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/vacunas/ciudadanos/enfNeumococicaInvasiva.htm"
+   ]
+  },
+  "herpesZoster": {
+   "status": "65 歲起建議接種（2 劑、間隔至少 8 週）；2026-01-01 起建議擴及 80 歲以上、安養機構住民、60 歲以上身心障礙者，並補齊 65-80 歲全部世代",
+   "note": "西班牙長輩口語叫 culebrilla——疊層 keywords 兩種講法都收",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/vacunas/ciudadanos/zoster.htm",
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/programasDeVacunacion/docs/HerpesZoster_RecomendacionesVacunacion.pdf"
+   ]
+  },
+  "regionalVariation": {
+   "status": "接種活動的日期、預約方式、實際採用的疫苗版本由各自治區決定，差異明顯",
+   "note": "因此 TW-EDU-12 一律以「pregunte en su centro de salud cuáles le tocan a usted」收尾——只指路、不承諾任何一區的具體給付或日期（同 seguridadSocial 的既有立場）",
+   "verifiedAt": "2026-07-31"
+  }
+ }
 }

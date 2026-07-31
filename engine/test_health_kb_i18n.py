@@ -125,7 +125,9 @@ class NoForeignNumbersTest(unittest.TestCase):
             for tid, entry in i18n.overlay(loc).items():
                 zh = {s["id"]: s for s in (master.get(tid) or {}).get("solutions", [])}
                 for sid, sol in (entry.get("solutions") or {}).items():
-                    if "119" not in (zh.get(sid, {}).get("say") or ""):
+                    zh_say = zh.get(sid, {}).get("say") or ""
+                    # 「叫救護車」跟「打119」是同一件事——只認數字會漏掉半數的急救卡
+                    if "119" not in zh_say and "救護車" not in zh_say:
                         continue                      # 主庫沒有急救指示＝不必有
                     self.assertTrue(any(self._mentions_number(sol.get("say", ""), n)
                                         for n in OWN[loc]),
