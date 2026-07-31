@@ -2571,6 +2571,19 @@ def proactive_opening_response(data):
     if today_care_items(person_id):
         score += 0.12
         reasons.append("今天有重要日子（回診/紀念日）")
+    # 會看變化的主動關心（2026-07-31 · 調研排第一：真實部署有效的那一項）。
+    # 身體數據「跟自己比」跑掉時，她該多關心一點——但**只調頻率與語氣、不講原因、
+    # 不報數字**，跟心情訊號完全同一個做法。這樣才守得住 7/17「檔位2 知道但不多嘴」
+    # 的拍板：身體數據異常是家人在看的，不是她拿來嚇長輩的。
+    # ⚠ 要讓她「講出為什麼多打來」是另一件事，需要 Edward 重新定調，不在這裡。
+    try:
+        _notable = (load_health_context(person_id=person_id) or {}).get("notable") or []
+        if _notable:
+            style = "gentle"
+            score += 0.14
+            reasons.append("身體數據跟平常不太一樣 → 多關心一點（語氣放輕、不點破原因）")
+    except Exception as e:
+        log_fallback_exception("attach health notable to proactive score", e)
     score = round(max(0.0, min(1.0, score)), 2)
     should = score >= 0.5
     opener = ""
