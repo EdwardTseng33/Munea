@@ -73,10 +73,13 @@ assert(css.includes('--teal: #3AA8A0;') && css.includes('--btn-green: #37A099;')
 // 這一階，而且要暖不要暗（試過的 #A8611E 4.78 被嫌太暗）。--coral-d 維持圖形專用、
 // 不得當文字色，7/30 那道防線原封不動。
 assert(css.includes('--coral-d: #E08B45;'), 'The orange deep step must stay the graphic-only #E08B45, not a text brown');
-assert(css.includes('--coral-text: #B0651B;'), 'Small-text orange accents must come from the pinned --coral-text step');
-// 4.45 在白卡上差 AA 小字 0.05——這是拍板取捨，跟主按鈕薄荷綠（3.16，只守大字級）同一種：
-// 再深一階的 #A8611E 有 4.78 卻被 Edward 嫌太暗。門檻釘 4.4 是防它往更淺走，不是宣稱它過 AA。
-assert(contrastRatio('#B0651B', '#FFFFFF') >= 4.4, 'The orange text step must not drift lighter than the 2026-07-31 ruling');
+// 2026-07-31 Edward 改口：「整個畫面都是綠的、色調單調失衡」→ 小字改暖橘點綴（#463）。
+// 7/30 那條「橘不做文字色」的禁令因此退場，但**當初禁它的理由（長輩讀不清楚）沒有退場**——
+// 所以守門從「不准用橘」改成「用橘可以，但必須讀得清楚」：對白底至少 AA 小字 4.5。
+assert(css.includes('--coral-text: #AB6119;'),
+  'The warm text orange must stay the AA-passing step, not drift back to a low-contrast tint');
+assert(contrastRatio('#AB6119', '#FFFFFF') >= 4.5,
+  'Warm orange text must keep WCAG AA small-text contrast on white — our readers are seniors');
 assert(/\.task-time \{[^}]*color: var\(--coral-text\)/s.test(css) && /\.set-section \{ color: var\(--coral-text\); \}/.test(css),
   'Task time labels and settings section kickers must use the pinned orange text step (Edward 2026-07-31 ruling)');
 // 「寧寧幫你留意」是區塊名、下面接待辦清單，染橘會跟卡片內容搶戲——同日拍板留深綠。
@@ -356,16 +359,15 @@ assert(/\.auth-ava-img\[hidden\]\s*\{\s*display:\s*none(?:\s*!important)?;\s*\}/
 assert((html.match(/id="memBadge"/g) || []).length === 1 && !html.includes('authDevBadge'), 'Account card must render exactly one plan or TEST badge');
 assert(app.includes('function authDisplayName(state)') && /name:\s*userMetadata\.name/.test(auth), 'Signed-in account card must receive and display the Google or Apple name');
 assert(/\.auth-title\s*\{[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s.test(css), 'Long account names and translated guest labels must wrap instead of truncating');
-// 登出跟登入必須一眼分得出來（Edward 2026-07-31）：原本兩顆都是綠色系（一實心一淡底），
-// 份量看起來一樣重、容易誤按。登入是往前走的動作留實心綠，登出走中性外框。
-// 這裡守的是「不准再回到綠底」，不是釘死某個灰值——換別的中性色仍可過。
-{
-  const authSecondary = (css.match(/\.auth-secondary\s*\{[^}]*\}/s) || [''])[0];
-  assert(/height:\s*40px/.test(authSecondary)
-    && /border:\s*1px solid/.test(authSecondary)
-    && !/background:\s*var\(--(?:mint|btn-green|teal)\b[^)]*\)/.test(authSecondary),
-    'Sign-out must stay visually distinct from the mint sign-in button, not share the green family');
-}
+// 2026-07-31 #463 Edward「登出改次要鍵」：從薄荷填色改成白底細框，比原本更不搶眼——
+// 那正是次要鍵該有的樣子。所以守門改成守**意圖**而不是守某一版的顏色：
+// ①仍是 40px 的實體按鍵 ②不得使用主要動作的填色（不能長得像主要按鈕）③字要讀得清楚。
+assert(/\.auth-secondary\s*\{[^}]*height:\s*40px;[^}]*border:\s*1px solid var\(--line\);/s.test(css),
+  'Sign-out must stay a real 40px secondary button with a hairline border');
+assert(!/\.auth-secondary\s*\{[^}]*background:\s*var\(--btn-green\)/s.test(css),
+  'Sign-out must never take the primary action fill — it is a secondary action');
+assert(contrastRatio('#5A6963', '#FFFFFF') >= 4.5,
+  'Sign-out label must keep AA small-text contrast — our readers are seniors');
 /* 首頁那張卡要轉達「真的家人帶話」（Edward 2026-07-31）
  *
  * 原本這裡是撈家人動態牆的第一則、用比對句子的方式猜哪句是傳話——中文改一個字就失靈、
