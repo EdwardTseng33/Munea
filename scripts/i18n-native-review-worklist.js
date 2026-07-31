@@ -37,6 +37,7 @@ const JA_SHARED_SOURCE_KEYS = Object.freeze([
   'subscription.planPro',
   'tab.settings',
   'version.subtitle',
+  'weather.thunder',
   'voice.caption.label',
 ]);
 
