@@ -71,8 +71,13 @@ assert(css.includes('--teal: #3AA8A0;') && css.includes('--btn-green: #37A099;')
 // 同日晚間補訓：橘不做文字色（達標/隨時/設定頁的深橘字被 Edward 抓＝規範外）。
 // --coral-d 只剩圖示/圖形深階（#E08B45＝官網同款）；文字一律白/石墨黑，功能性小標薄荷綠深階。
 assert(css.includes('--coral-d: #E08B45;'), 'The orange deep step must stay the graphic-only #E08B45, not a text brown');
-assert(/\.task-time \{[^}]*color: var\(--teal-dd\)/s.test(css) && /\.set-section \{ color: var\(--teal-dd\); \}/.test(css),
-  'Task time labels and settings section kickers must use the mint deep text tier, never orange text');
+// 2026-07-31 Edward 改口：「整個畫面都是綠的、色調單調失衡」→ 小字改暖橘點綴（#463）。
+// 7/30 那條「橘不做文字色」的禁令因此退場，但**當初禁它的理由（長輩讀不清楚）沒有退場**——
+// 所以守門從「不准用橘」改成「用橘可以，但必須讀得清楚」：對白底至少 AA 小字 4.5。
+assert(css.includes('--coral-text: #AB6119;'),
+  'The warm text orange must stay the AA-passing step, not drift back to a low-contrast tint');
+assert(contrastRatio('#AB6119', '#FFFFFF') >= 4.5,
+  'Warm orange text must keep WCAG AA small-text contrast on white — our readers are seniors');
 assert(!/\.(?:task-time|set-section|tier-tag|mem-badge|md-status|low-strip)[^{]*\{[^}]*color:\s*var\(--coral-d\)/s.test(css),
   'Status labels and badges must not use orange as a text color (Edward 2026-07-30 evening ruling)');
 assert(css.includes('--danger-d: #B0392D;'), 'Accessible danger color token must stay pinned');
@@ -343,7 +348,15 @@ assert(/\.auth-ava-img\[hidden\]\s*\{\s*display:\s*none(?:\s*!important)?;\s*\}/
 assert((html.match(/id="memBadge"/g) || []).length === 1 && !html.includes('authDevBadge'), 'Account card must render exactly one plan or TEST badge');
 assert(app.includes('function authDisplayName(state)') && /name:\s*userMetadata\.name/.test(auth), 'Signed-in account card must receive and display the Google or Apple name');
 assert(/\.auth-title\s*\{[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/s.test(css), 'Long account names and translated guest labels must wrap instead of truncating');
-assert(/\.auth-secondary\s*\{[^}]*height:\s*40px;[^}]*background:\s*var\(--mint\);[^}]*border:\s*1px solid var\(--teal-d\);/s.test(css), 'Sign-out must keep the latest secondary-button design');
+// 2026-07-31 #463 Edward「登出改次要鍵」：從薄荷填色改成白底細框，比原本更不搶眼——
+// 那正是次要鍵該有的樣子。所以守門改成守**意圖**而不是守某一版的顏色：
+// ①仍是 40px 的實體按鍵 ②不得使用主要動作的填色（不能長得像主要按鈕）③字要讀得清楚。
+assert(/\.auth-secondary\s*\{[^}]*height:\s*40px;[^}]*border:\s*1px solid var\(--line\);/s.test(css),
+  'Sign-out must stay a real 40px secondary button with a hairline border');
+assert(!/\.auth-secondary\s*\{[^}]*background:\s*var\(--btn-green\)/s.test(css),
+  'Sign-out must never take the primary action fill — it is a secondary action');
+assert(contrastRatio('#5A6963', '#FFFFFF') >= 4.5,
+  'Sign-out label must keep AA small-text contrast — our readers are seniors');
 assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:\s*var\(--ink\);/s.test(css), 'Development account must use the single TEST badge design (soft orange chip, ink text — orange is not a text color)');
 
 const authSheet = html.match(/<div class="modal-mask auth-sheet" id="authSheet"[\s\S]*?<\/div>\s*<!-- ===== 底部 5 分頁 ===== -->/)?.[0] || '';
