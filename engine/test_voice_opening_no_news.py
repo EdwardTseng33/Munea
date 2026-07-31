@@ -32,18 +32,31 @@ def test_every_opening_route_forbids_news():
         assert "只講一句招呼" in text, f"route {idx} 沒給「編不出來就只招呼」這條退路"
 
 
-def test_interest_route_may_only_ask_not_tell():
-    """用他喜歡的主題開場時，只能用問的——講內容就是憑空生近況的入口。"""
+def test_every_route_greets_by_time_of_day():
+    """Edward 8/1 拍板：開頭只要打招呼——每條路線都要照當下時間問候（早安／午安／晚安）。"""
+    for idx in range(8):
+        text = localization.voice_opening_instruction(familiarity=idx)
+        assert ("照現在的時間自然問候" in text) or ("照時間問候" in text), f"route {idx} 沒有時段問候"
+
+
+def test_interests_are_not_opening_material():
+    """興趣只當「他先聊到才接」的方向，不准拿來當開場話題（8/1 拍板）。"""
     text = localization.voice_opening_instruction(familiarity=1, topics=["種花"])
     assert "種花" in text
-    assert "只能問、不能講內容" in text
+    assert "不是開場素材" in text
 
 
-def test_without_interests_it_does_not_ask_her_to_find_a_topic():
-    """沒有興趣資料時，退路是「只講一句招呼」，不是「自己找個生活小題目」。"""
-    text = localization.voice_opening_instruction(familiarity=1, topics=None)
-    assert "不要自己找話題" in text
-    assert "生活小題目" not in text
+def test_memory_route_only_uses_what_is_actually_written():
+    """用記憶開場可以，但只准用上面真的寫著的事；沒有就退回純問候。"""
+    text = localization.voice_opening_instruction(familiarity=2)
+    assert "上面真的寫著" in text
+    assert "上面沒寫的一律不准提" in text
+
+
+def test_warmth_route_does_not_let_her_claim_an_experience():
+    """給情緒價值可以，但不准宣稱自己做了什麼、等了多久——她沒有那些事。"""
+    text = localization.voice_opening_instruction(familiarity=1)
+    assert "不要宣稱你做了什麼" in text
 
 
 def test_daily_facts_never_leak_the_internal_name():
