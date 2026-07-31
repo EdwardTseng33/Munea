@@ -37,9 +37,9 @@ REQUIRED_RED_SECTIONS = ("①", "②", "③", "④", "⑤", "⑥")
 # 一本書至少要帶得出該語系主要市場的急救號碼，否則那一國的急難引導是空的。
 REQUIRED_EMERGENCY_NUMBERS = {
     "zh-TW": ("119", "1925"),
-    "ja": ("119", "0120-279-338"),
-    "en": ("911",),
-    "es": ("112",),
+    "ja": ("119", "0120-279-338"),      # 消防救急／よりそいホットライン
+    "en": ("911", "988"),               # 美國：緊急／Suicide & Crisis Lifeline
+    "es": ("112", "024", "016"),        # 西班牙：緊急／自殺防治／性別暴力
 }
 
 # 別國專屬內容不得殘留（授書時整段複製貼上最容易犯）
@@ -112,6 +112,8 @@ class PersonaBookContractTests(unittest.TestCase):
         markers = {
             "zh-TW": ("119", "②-B"),
             "ja": ("119", "②-B"),
+            "en": ("911", "②-B"),
+            "es": ("112", "②-B"),
         }
         for locale in self.locales:
             expected = markers.get(locale)
