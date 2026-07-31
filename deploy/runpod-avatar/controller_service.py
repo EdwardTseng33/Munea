@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
+from collections import deque
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, Response
@@ -21,6 +24,27 @@ STATUS: dict[str, Any] = {
     "last_error": "",
     "cycles": 0,
 }
+
+# 開卡/收卡帳本（2026-07-31 · Edward 早上問「為什麼開了一張 5090」、
+# 我們只能靠 pod 命名反推——因為 run_once 的決定只存 last_result 一格、
+# 下一輪 no_change 就蓋掉，雲端日誌從來沒有這一筆）。
+# 兩路並行：①每筆非 no_change 動作立刻 print 進 Cloud Run 日誌（永久帳）
+# ②記憶體環形帳本供 /events 直接查（重啟會清空、日誌才是正本）。
+EVENTS: deque[dict[str, Any]] = deque(maxlen=100)
+
+
+def _record_event(result: dict[str, Any]) -> None:
+    action = str(result.get("action") or "")
+    if action in ("", "no_change"):
+        return
+    event = {
+        "at": time.time(),
+        "at_iso": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        **result,
+    }
+    EVENTS.append(event)
+    print("[runpod-controller] event: " + json.dumps(event, ensure_ascii=False),
+          flush=True)
 
 
 def _validated_config() -> Config:
@@ -84,6 +108,7 @@ async def _controller_loop(stop: asyncio.Event) -> None:
                 "last_error": "",
                 "cycles": int(STATUS["cycles"]) + 1,
             })
+            _record_event(result)
         except Exception as exc:
             STATUS.update({
                 "last_error": f"{type(exc).__name__}: {str(exc)[:300]}",
@@ -168,3 +193,10 @@ def health(response: Response) -> dict[str, Any]:
 @app.get("/")
 def root(response: Response) -> dict[str, Any]:
     return health(response)
+
+
+@app.get("/events")
+def events() -> dict[str, Any]:
+    """最近的開卡/收卡動作（新到舊）。重啟會清空；完整歷史看 Cloud Run 日誌
+    的 "[runpod-controller] event:" 行。"""
+    return {"events": list(reversed(EVENTS)), "count": len(EVENTS)}
