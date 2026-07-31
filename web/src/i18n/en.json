@@ -696,7 +696,7 @@
   "subscription.proFeature3": "Advanced video companionship",
   "subscription.proFeature4": "Priority service capacity",
   "subscription.proFeature5": "Complete family insights",
-  "subscription.monthlyVoiceCredits": "{credits} voice-companion credits each month. Unused monthly credits do not roll over.",
+  "subscription.monthlyVoiceCredits": "{credits} voice-companion credits each month",
   "subscription.healthTrendAccess": "Full 7-day and 30-day health trends",
   "subscription.familyMemberLimit": "Up to {members} people in the family health circle",
   "subscription.creditsUsageIntro": "Conversations use credits. Add more credits to keep talking when they run out.",
