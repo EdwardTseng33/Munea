@@ -83,8 +83,13 @@ def apply_manifest(manifest, locales, enable):
             if entry.get("binaryLocalizationEnabled") != enable:
                 entry["binaryLocalizationEnabled"] = enable
                 changed.append(f"{entry['locale']}.binaryLocalizationEnabled={enable}")
-            # 開了就不再是「開發中」
-            want_status = "production" if enable else "development"
+            # 開了就不再是「開發中」，但也還不是「可對外」——
+            # 這支工具只負責把語系放進 App 包裡（讓人打包、實機測），
+            # 那是 release-candidate。要升成 production 得等八道關卡全綠，
+            # 那是人看過證據後手動改 catalog-manifest.json 的事，不該由一支指令代勞。
+            # （2026-08-01：原本這裡直接寫 production，等於一個指令就把「還沒驗」
+            #  講成「可對外」，守門那關才會卡成死循環。）
+            want_status = "release-candidate" if enable else "development"
             if entry.get("status") != want_status and entry["locale"] != "zh-TW":
                 entry["status"] = want_status
                 changed.append(f"{entry['locale']}.status={want_status}")

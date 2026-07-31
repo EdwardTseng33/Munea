@@ -37,13 +37,31 @@ assert.deepEqual(
 assert.deepEqual(devicePreferredLanguages({ language: 'es-MX' }), ['es-MX']);
 assert.deepEqual(devicePreferredLanguages({}), []);
 
+// 開了哪些語系要跟著開關表走，不要在測試裡寫死清單——
+// 寫死的話，語系一開這裡就紅，而紅的原因跟「程式對不對」無關，只是清單過期。
+// （2026-08-01：原本寫死 ['zh-TW']，Edward 拍板開三語當晚就卡在這裡。）
+const runtimeEnabledLocales = manifest.locales
+  .filter((entry) => entry.runtimeEnabled)
+  .map((entry) => entry.locale);
+
 const productionRuntime = createCatalogRuntime({ manifest, catalogs });
-assert.deepEqual(productionRuntime.enabledLocales, ['zh-TW']);
-assert.equal(productionRuntime.currentFromDevice({ languages: ['ja-JP'] }), 'zh-TW');
-assert.equal(productionRuntime.currentFromDevice({ languages: ['en-US'] }), 'zh-TW');
-assert.equal(productionRuntime.currentFromDevice({ languages: ['es-MX'] }), 'zh-TW');
+assert.deepEqual(productionRuntime.enabledLocales, runtimeEnabledLocales);
+
+// 真正要守的是行為：開著的語系照自己的走，沒開的一律退回繁中。
+for (const [tag, locale] of [['ja-JP', 'ja'], ['en-US', 'en'], ['es-MX', 'es']]) {
+  const expected = runtimeEnabledLocales.includes(locale) ? locale : 'zh-TW';
+  assert.equal(
+    productionRuntime.currentFromDevice({ languages: [tag] }),
+    expected,
+    `${tag} 應該落在 ${expected}`,
+  );
+}
+// 沒收錄的語言（德文）永遠退回繁中，這條跟開關無關、任何時候都要成立
 assert.equal(productionRuntime.currentFromDevice({ languages: ['de-DE'] }), 'zh-TW');
-assert.equal(productionRuntime.localeMetadata('ja-JP').htmlLang, 'zh-Hant-TW');
+assert.equal(
+  productionRuntime.localeMetadata('ja-JP').htmlLang,
+  runtimeEnabledLocales.includes('ja') ? 'ja' : 'zh-Hant-TW',
+);
 
 const previewRuntime = createCatalogRuntime({
   manifest,

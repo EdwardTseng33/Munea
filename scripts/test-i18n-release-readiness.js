@@ -185,14 +185,27 @@ for (const locale of requiredLocales) {
   );
 }
 
+// 語系開關那兩關（runtimeLocalization／binaryLocalization）要跟著開關表走，不寫死。
+// 2026-08-01 Edward 拍板把三語放進 App 包（release-candidate）讓 8/2 實機走查做得起來，
+// 這兩關就轉綠了；其餘關卡照舊擋著，那才是真正還沒驗的部分。
+const catalogManifestForGates = JSON.parse(
+  fs.readFileSync('web/src/i18n/catalog-manifest.json', 'utf8'),
+);
+const localeSwitch = Object.fromEntries(
+  catalogManifestForGates.locales.map((entry) => [entry.locale, entry]),
+);
+
 for (const locale of ['en', 'ja', 'es']) {
   const entry = report.locales[locale];
-  assert.equal(entry.gates.runtimeLocalization.passed, false);
+  assert.equal(entry.gates.runtimeLocalization.passed, Boolean(localeSwitch[locale].runtimeEnabled));
   assert.equal(entry.gates.appUiIntegration.passed, true);
-  // 2026-07-31 歸零後：搬遷關對三語一樣轉綠（其餘關卡照舊擋著、語系開關仍未開）
+  // 2026-07-31 歸零後：搬遷關對三語一樣轉綠
   assert.equal(entry.gates.sourceCopyMigration.passed, true);
   assert.equal(entry.gates.voiceIntegration.passed, false);
-  assert.equal(entry.gates.binaryLocalization.passed, false);
+  assert.equal(
+    entry.gates.binaryLocalization.passed,
+    Boolean(localeSwitch[locale].binaryLocalizationEnabled),
+  );
   assert.equal(entry.gates.appStoreScreenshots.passed, false);
   assert.equal(entry.gates.inAppPurchaseLocalization.passed, false);
   assert.equal(entry.gates.marketAvailability.passed, false);
