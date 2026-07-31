@@ -25,11 +25,17 @@
         "US"
       ],
       "metadataReview": "draft",
-      "publicUrlStatus": "pending-deployment",
+      "publicUrlStatus": "verified-live-2026-07-31",
       "screenshotStatus": "missing",
       "screenshotDirectory": null,
       "expectedScreenshotCount": 5,
-      "promotionAuthorized": false
+      "promotionAuthorized": false,
+      "publicUrlVerification": {
+        "checkedOn": "2026-07-31",
+        "method": "直接請求該網址，確認回得了頁面、而且是該語言的隱私權政策（不是 404、也不是退回中文頁）",
+        "url": "https://app.munea.net/legal/en/privacy.html",
+        "note": "審查員會點的就是這個網址。狀態原本是「還沒部署」——實測發現頁面早就上線了，若沿用舊狀態，8/2 會白擔心一次「審查員點到 404 被退件」。"
+      }
     },
     "ja": {
       "catalogLocale": "ja",
@@ -39,11 +45,17 @@
         "JP"
       ],
       "metadataReview": "draft",
-      "publicUrlStatus": "pending-deployment",
+      "publicUrlStatus": "verified-live-2026-07-31",
       "screenshotStatus": "missing",
       "screenshotDirectory": null,
       "expectedScreenshotCount": 5,
-      "promotionAuthorized": false
+      "promotionAuthorized": false,
+      "publicUrlVerification": {
+        "checkedOn": "2026-07-31",
+        "method": "直接請求該網址，確認回得了頁面、而且是該語言的隱私權政策（不是 404、也不是退回中文頁）",
+        "url": "https://app.munea.net/legal/ja/privacy.html",
+        "note": "審查員會點的就是這個網址。狀態原本是「還沒部署」——實測發現頁面早就上線了，若沿用舊狀態，8/2 會白擔心一次「審查員點到 404 被退件」。"
+      }
     },
     "es": {
       "catalogLocale": "es",
@@ -90,11 +102,17 @@
       "marketDecision": "Select one or both prepared variants only after regional legal, safety, screenshot, price, and App E2E review.",
       "marketDecisionSource": "https://developer.apple.com/help/app-store-connect/reference/app-information/app-store-localizations/",
       "metadataReview": "draft",
-      "publicUrlStatus": "pending-deployment",
+      "publicUrlStatus": "verified-live-2026-07-31",
       "screenshotStatus": "missing",
       "screenshotDirectory": null,
       "expectedScreenshotCount": 5,
-      "promotionAuthorized": false
+      "promotionAuthorized": false,
+      "publicUrlVerification": {
+        "checkedOn": "2026-07-31",
+        "method": "直接請求該網址，確認回得了頁面、而且是該語言的隱私權政策（不是 404、也不是退回中文頁）",
+        "url": "https://app.munea.net/legal/es/privacy.html",
+        "note": "審查員會點的就是這個網址。狀態原本是「還沒部署」——實測發現頁面早就上線了，若沿用舊狀態，8/2 會白擔心一次「審查員點到 404 被退件」。"
+      }
     }
   },
   "appAvailability": {
