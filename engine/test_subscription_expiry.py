@@ -37,14 +37,18 @@ class SubscriptionExpiryTests(unittest.TestCase):
         future = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         self.assertIsNone(server.subscription_expiry_reason(paid_store(future)))
 
-    def test_expired_subscription_becomes_free_and_loses_family_permissions(self):
+    def test_expired_subscription_falls_back_to_the_free_family_quota(self):
         past = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
         expired = server.expire_billing_store(paid_store(past), "expired")
         self.assertEqual(expired["activePlan"], "free")
         self.assertEqual(expired["subscription"]["status"], "expired")
-        self.assertFalse(expired["entitlements"]["familyCircleInvite"])
-        self.assertFalse(expired["entitlements"]["familyCircleJoin"])
-        self.assertEqual(expired["entitlements"]["familyMembersMax"], 1)
+        # 2026-07-31 #458：免費版本來就能邀 1 位家人，所以**到期之後不是關掉邀請、
+        # 是退回免費版的額度**。真正該守的是「付費的多人名額收回去」——
+        # 那才是到期的意義；邀請權本身現在人人都有。
+        self.assertTrue(expired["entitlements"]["familyCircleInvite"])
+        self.assertTrue(expired["entitlements"]["familyCircleJoin"])
+        self.assertEqual(expired["entitlements"]["familyMembersMax"], 2,
+                         "到期要退回免費版的本人＋1，不是保留付費的多人名額")
 
     def test_reconciliation_removes_external_family_memberships(self):
         past = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()

@@ -55,7 +55,9 @@ expect(app.includes('result.exportPackage') && app.includes("navigator.share") &
 expect(app.includes('deletion && deletion.ok && deletion.accountDeleted'), 'local data can be cleared before cloud deletion succeeds');
 expect(app.includes('const POINTS = { total: 0, used: 0'), 'point wallet still starts with a stale paid-plan allowance');
 expect(app.includes('plus: 100, pro: 200'), 'current subscription grants are missing from the app');
-expect(app.includes('free: 1, plus: 4, pro: 12'), 'current family limits are missing from the app');
+// 2026-07-31 #458 Edward 拍板：免費也能有 1 位家人（含本人＝2）。守的意圖沒變
+// ——App 手上的名額必須是現行方案——只是數字跟著改。
+expect(app.includes('free: 2, plus: 4, pro: 12'), 'current family limits are missing from the app');
 // 價格自 b30b3672（訂閱四語系化）起不再寫死在 index.html：正常路徑讀 StoreKit displayPrice，讀不到才用 app.js 的 SUB_PRICE 兜底。
 // 守的意圖沒變——App 手上的價格必須是核准價——但要去現在真的存價格的地方守，不是繼續 grep 已經拆掉的 markup。
 expect(app.includes('plus: { month: 599,') && app.includes('pro: { month: 1199,'), 'current subscription prices are missing from the app');

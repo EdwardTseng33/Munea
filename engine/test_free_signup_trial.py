@@ -50,7 +50,10 @@ class FreeSignupTrialTests(unittest.TestCase):
         self.assertTrue(entitlements["realtimeAvatar"])
         self.assertEqual(entitlements["signupTrialCredits"], 5)
         self.assertEqual(entitlements["creditMinutes"], 1)
-        self.assertEqual(entitlements["familyMembersMax"], 1)
+        # 2026-07-31 #458：免費版開放 1 位家人（本人＋1＝2）。
+        # 程式改對了、守門沒跟上，main 的出貨閘門紅著——今天第七次同一個病。
+        self.assertEqual(entitlements["familyMembersMax"], 2,
+                         "免費版現在是本人＋1 位家人＝2；改這個數字要連動邀請與加入的開關")
 
 
 if __name__ == "__main__":
