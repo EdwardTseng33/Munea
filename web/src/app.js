@@ -8332,7 +8332,15 @@ function init() {
         window.MMPLAN.upsell('family-invite');
         return;
       }
-      if (note) { note.textContent = INVITE_FAIL_TEXT[r.error] || INVITE_FAIL_TEXT.network; note.style.display = ''; }
+      // INVITE_FAIL_TEXT 的每個值都是「函式」（四語化後改成用時才取翻譯），這裡少了呼叫的括號，
+      // 等於把整段程式碼當文字塞進畫面——Edward 2026-07-31 在邀請視窗上看到
+      // "() => muneaT('familyCircle.failNetwork', '網路不通…')" 印在那裡。
+      // 加上 () 才會拿到真正的句子；再加型別判斷，之後若有人把某個值改回純字串也不會再壞一次。
+      if (note) {
+        const pick = INVITE_FAIL_TEXT[r.error] || INVITE_FAIL_TEXT.network;
+        note.textContent = typeof pick === 'function' ? pick() : String(pick);
+        note.style.display = '';
+      }
     });
   }
   if ($('#inviteFamModal')) $('#inviteFamModal').addEventListener('click', e => { if (e.target === $('#inviteFamModal')) $('#inviteFamModal').classList.remove('show'); });
