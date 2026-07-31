@@ -196,5 +196,18 @@ vm.runInThisContext(fs.readFileSync('web/src/health.js', 'utf8'), { filename: 'h
   assert.strictEqual(MuneaHealth.uiState(), 'off', '沒讀到過又讀失敗，必須是未連接');
   summaryThrows = '';
 
-  console.log('Apple Health connection state: ALL PASS');
+  // 2026-07-31 Edward 實測回報：健康 App 顯示已授權、沐寧卻說未連結。
+// 根因＝「已連結」看的是我們自己存在手機裡的旗子，重裝就被清掉；
+// 但蘋果的授權還在（那個視窗一輩子只跳一次、補不回來）。
+// 這幾條守住「自動接回」的三個分寸。
+const healthSrc = fs.readFileSync('web/src/health.js', 'utf8');
+assert.match(healthSrc, /relinkIfAlreadyAuthorized/, '缺少重裝後自動接回');
+assert.match(healthSrc, /if \(connected\(\) \|\| relinkTried\) return false;/,
+  '自動接回可能在已連線時、或同一次啟動裡重複執行');
+assert.match(healthSrc, /munea\.health\.disconnectedAt[\s\S]{0,120}return false/,
+  '他自己按過解除連接卻被自動接回——那是他的決定、不是重裝造成的失憶');
+assert.match(healthSrc, /if \(!hasAnyValue\(s\)\) return false;/,
+  '沒真的讀到值就把人標成已連線');
+
+console.log('Apple Health connection state: ALL PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });
