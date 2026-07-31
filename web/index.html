@@ -845,10 +845,8 @@
           <div class="pf-birth"><select class="chal-input" id="pfBirthY"></select><select class="chal-input" id="pfBirthM"></select></div>
         </div>
         <div class="pf-field"><span class="pf-label" data-i18n="profile.location">所在地</span>
-          <select class="chal-input" id="pfCountry" hidden style="margin-bottom:8px"></select>
-          <div class="pf-birth"><select class="chal-input" id="pfCounty"></select><select class="chal-input" id="pfDistrict"></select></div>
-          <input class="chal-input" id="pfCityFree" hidden style="margin-top:8px" maxlength="40" />
-          <span class="pf-hint" data-i18n="legacyUi.profileLocationHint">選到「區」——天氣、附近餐廳與在地話題會更準</span></div>
+          <input class="chal-input" id="pfCityFree" maxlength="40" data-i18n-placeholder="profile.locationPlaceholder" placeholder="例：台北市南港區" />
+          <span class="pf-hint" id="pfLocationHint"></span></div>
       </div>
       <p class="pf-first-run-disclosure" id="pfFirstRunDisclosure" hidden data-i18n="profile.firstRunDisclosure">你填的稱呼、出生年月、所在縣市會安全同步到雲端（主機在國外），換手機登入也找得到；隨時能在這裡修改或清空。照片只留在這支手機、不會上傳。</p>
       <button class="modal-btn" id="pfSaveBtn" style="margin-top:14px" data-i18n="profile.saveButton">存好</button>

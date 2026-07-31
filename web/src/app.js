@@ -7899,133 +7899,36 @@ function init() {
   let _pfPendingAvatar = '';
   const PF_DEF = { name: '', nick: '', birth: '', city: '', country: '', updatedAt: '' };   // 7/9 正式化：不再預設示範身分（陳秀英/阿嬤）——空欄位＋提示字自己填；updatedAt 給雲端合併判斷「較新者勝」用（2026-07-24）
   function loadPersonProfile() { try { return Object.assign({}, PF_DEF, JSON.parse(localStorage.getItem('munea.personProfile') || '{}')); } catch (e) { return Object.assign({}, PF_DEF); } }
-  // 所在地＝國家 → 一級行政區 → 二級（2026-07-09 Edward 改用選單；2026-07-31 Edward 拍板各國掛自己的清單）
-  // 台灣用戶看到的還是「縣市→區」兩層、跟以前一模一樣；其他國家的人才多一層國家選單。
-  // 清單資料在 web/src/regions/<國碼>.js，用到才載（不預先塞進每個人的手機）。
-  const PF_COUNTRY_BY_LANG = { 'zh-TW': 'TW', ja: 'JP', es: 'ES', en: 'US' };
-  const PF_COUNTRY_ORDER = ['TW', 'JP', 'ES', 'US', 'GB'];
-  const PF_COUNTRY_LABEL = {
-    TW: () => muneaT('profile.countryTW', '台灣'),
-    JP: () => muneaT('profile.countryJP', '日本'),
-    ES: () => muneaT('profile.countryES', '西班牙'),
-    US: () => muneaT('profile.countryUS', '美國'),
-    GB: () => muneaT('profile.countryGB', '英國'),
-  };
-  const PF_OTHER = '__other__';
-  let _pfCountry = '';
-  const _pfLoaded = {};
-  function pfRegionBook(cc) { return (window.MUNEA_REGIONS && window.MUNEA_REGIONS[cc]) || null; }
-  function pfLoadRegionBook(cc) {   // 用到才載；台灣的已經跟著 App 一起載好
-    if (!cc || pfRegionBook(cc)) return Promise.resolve(pfRegionBook(cc));
-    if (_pfLoaded[cc]) return _pfLoaded[cc];
-    _pfLoaded[cc] = new Promise(resolve => {
-      const s = document.createElement('script');
-      s.src = 'src/regions/' + cc.toLowerCase() + '.js?v=20260731-regions';
-      s.onload = () => resolve(pfRegionBook(cc));
-      s.onerror = () => resolve(null);
-      document.head.appendChild(s);
-    });
-    return _pfLoaded[cc];
-  }
-  function pfDefaultCountry() {
-    const saved = (loadPersonProfile().country || '').toUpperCase();
-    if (saved && PF_COUNTRY_ORDER.indexOf(saved) >= 0) return saved;
-    const acct = ((window.MuneaAccount && window.MuneaAccount.countryCode) || '').toUpperCase();
-    if (acct && PF_COUNTRY_ORDER.indexOf(acct) >= 0) return acct;
-    return PF_COUNTRY_BY_LANG[muneaLocale()] || 'TW';
-  }
-  function pfCountyList(cc) {
-    const book = pfRegionBook(cc || _pfCountry);
-    return book ? Object.keys(book.regions) : [];
-  }
-  function pfTierLabel(which) {
-    const book = pfRegionBook(_pfCountry);
-    if (!book) return which === 1 ? muneaT('profile.regionCityPlaceholder', '（縣市）') : muneaT('profile.regionDistrictPlaceholder', '（區）');
-    return which === 1
-      ? muneaT(book.tier1Key, muneaT('profile.regionCityPlaceholder', '（縣市）'))
-      : muneaT(book.tier2Key, muneaT('profile.regionDistrictPlaceholder', '（區）'));
-  }
-  function fillPfDistricts(county, selDist) {
-    const ds = $('#pfDistrict'); const free = $('#pfCityFree'); if (!ds) return;
-    const book = pfRegionBook(_pfCountry);
-    const list = (book && book.regions[county] && book.regions[county].cities) || [];
-    let h = '<option value="">' + muneaEscapeHtml(pfTierLabel(2)) + '</option>';
-    for (const d of list) h += '<option value="' + muneaEscapeHtml(d) + '">' + muneaEscapeHtml(d) + '</option>';
-    h += '<option value="' + PF_OTHER + '">' + muneaEscapeHtml(muneaT('profile.regionOther', '其他（自己填）')) + '</option>';
-    ds.innerHTML = h;
-    ds.disabled = !county;
-    if (selDist && list.indexOf(selDist) >= 0) ds.value = selDist;
-    else if (selDist) { ds.value = PF_OTHER; if (free) free.value = selDist; }
-    pfSyncFreeInput();
-  }
-  function pfSyncFreeInput() {
-    const ds = $('#pfDistrict'); const free = $('#pfCityFree'); if (!free) return;
-    const on = !!(ds && ds.value === PF_OTHER);
-    free.hidden = !on;
-    free.placeholder = pfTierLabel(2);
-  }
-  function parsePfCity(city, cc) {   // 舊資料/自由輸入相容：把「台北市大安區」拆回 一級＋二級
-    city = (city || '').trim();
-    const book = pfRegionBook(cc || _pfCountry);
-    if (!book) return { county: '', district: '' };
-    for (const c of Object.keys(book.regions)) {
-      if (city.indexOf(c) === 0) {
-        const rest = city.slice(c.length).replace(/^[,\s]+/, '');
-        const list = book.regions[c].cities || [];
-        return { county: c, district: (list.indexOf(rest) >= 0 ? rest : rest) };
-      }
-    }
-    return { county: '', district: '' };
-  }
-  function fillPfCountyOptions(selCounty) {
-    const cs = $('#pfCounty'); if (!cs) return;
-    let h = '<option value="">' + muneaEscapeHtml(pfTierLabel(1)) + '</option>';
-    for (const c of pfCountyList()) h += '<option value="' + muneaEscapeHtml(c) + '">' + muneaEscapeHtml(c) + '</option>';
-    cs.innerHTML = h;
-    if (selCounty) cs.value = selCounty;
-    if (!cs.dataset.wired) {
-      cs.dataset.wired = '1';
-      cs.addEventListener('change', () => fillPfDistricts(cs.value, ''));
-    }
-  }
+  // 所在地：不叫長輩填表——聊天講過一次她就記起來（2026-07-31 Edward 拍板）。
+  // 這裡只做兩件事：把她記得的顯示出來、讓他改得掉（個資法：用戶有權查看與更正）。
+  // 各國行政區清單沒有消失，只是換了用途——從「給用戶挑」變成引擎那側
+  // 「聽到的地名對回哪個縣市」的對照（世田谷区→東京都才報得出天氣）。
   function fillPfLocation(city) {
-    const cs = $('#pfCounty'); if (!cs) return;
-    _pfCountry = _pfCountry || pfDefaultCountry();
-    const sel = $('#pfCountry');
-    // 台灣＋中文介面＝維持原本兩層，不多一個國家選單給長輩按
-    const showCountry = !(_pfCountry === 'TW' && muneaLocale() === 'zh-TW');
-    if (sel) {
-      sel.hidden = !showCountry;
-      if (showCountry) {
-        let h = '';
-        for (const cc of PF_COUNTRY_ORDER) h += '<option value="' + cc + '">' + muneaEscapeHtml(PF_COUNTRY_LABEL[cc]()) + '</option>';
-        sel.innerHTML = h;
-        sel.value = _pfCountry;
-        if (!sel.dataset.wired) {
-          sel.dataset.wired = '1';
-          sel.addEventListener('change', () => {
-            _pfCountry = sel.value;
-            pfLoadRegionBook(_pfCountry).then(() => { fillPfCountyOptions(''); fillPfDistricts('', ''); });
-          });
-        }
+    const box = $('#pfCityFree');
+    if (box) box.value = (city || '').trim();
+    const hint = $('#pfLocationHint');
+    if (hint) {
+      hint.textContent = (city || '').trim()
+        ? muneaT('profile.locationEditHint', '打錯或搬家了，在這裡改就好')
+        : muneaT('profile.locationNotYet', '還沒聊到——聊天時說一次就好，她會記起來');
+    }
+  }
+  function pfLocationValue() { return (($('#pfCityFree') && $('#pfCityFree').value) || '').trim(); }
+  function pfCountryValue() { return (loadPersonProfile().country || '').toUpperCase(); }
+  // 舊資料相容：以前存的是「台北市大安區」這種合成字串，拆回縣市＋區給雲端欄位用。
+  // 拆不出來也沒關係——整串原文照樣送上去，引擎那側自己會對照。
+  function parsePfCity(city) {
+    const text = (city || '').trim();
+    const book = (window.MUNEA_REGIONS && window.MUNEA_REGIONS.TW) || null;
+    if (!text || !book) return { county: '', district: text };
+    for (const county of Object.keys(book.regions)) {
+      if (text.indexOf(county) === 0) {
+        return { county, district: text.slice(county.length).replace(/^[,\s]+/, '') };
       }
     }
-    pfLoadRegionBook(_pfCountry).then(() => {
-      const parsed = parsePfCity(city);
-      fillPfCountyOptions(parsed.county);
-      fillPfDistricts(parsed.county, parsed.district);
-    });
+    return { county: '', district: text };
   }
-  function pfLocationValue() {   // 存檔：一級＋二級 合成一個字串（只選一級也可、有二級更準）
-    const c = ($('#pfCounty') && $('#pfCounty').value) || '';
-    let d = ($('#pfDistrict') && $('#pfDistrict').value) || '';
-    if (d === PF_OTHER) d = (($('#pfCityFree') && $('#pfCityFree').value) || '').trim();
-    if (!c) return '';
-    // 中日用地名直接相連（台北市大安區）；西文英文中間要空白（Madrid Alcalá de Henares 讀起來才對）
-    const join = (_pfCountry === 'TW' || _pfCountry === 'JP') ? '' : ' ';
-    return d ? (c + join + d) : c;
-  }
-  function pfCountryValue() { return _pfCountry || pfDefaultCountry(); }
+
   function fillPersonProfile() {
     const p = loadPersonProfile();
     if ($('#pfName')) $('#pfName').value = p.name;
