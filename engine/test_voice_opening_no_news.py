@@ -32,11 +32,27 @@ def test_every_opening_route_forbids_news():
         assert "只講一句招呼" in text, f"route {idx} 沒給「編不出來就只招呼」這條退路"
 
 
-def test_every_route_greets_by_time_of_day():
-    """Edward 8/1 拍板：開頭只要打招呼——每條路線都要照當下時間問候（早安／午安／晚安）。"""
+def test_every_route_is_name_plus_time_greeting():
+    """Edward 8/1 定版：開場＝暱稱／稱呼 ＋ 照當下時間的招呼（早安／午安／晚安）。"""
     for idx in range(8):
         text = localization.voice_opening_instruction(familiarity=idx)
-        assert ("照現在的時間自然問候" in text) or ("照時間問候" in text), f"route {idx} 沒有時段問候"
+        assert "用他的稱呼開頭" in text, f"route {idx} 沒有先叫稱呼"
+        assert "照現在時間的招呼" in text, f"route {idx} 沒有時段招呼"
+
+
+def test_robot_style_presence_announcements_are_banned():
+    """「我在喔」「我在這裡」是機器人式的存在宣告——真人接電話不會先報告自己存在。"""
+    for idx in range(4):
+        text = localization.voice_opening_instruction(familiarity=idx)
+        assert "「我在喔」「我在這裡」" in text and "禁止使用" in text
+
+
+def test_tone_varies_across_the_rotation():
+    """Edward 8/1：「有時輕鬆一點、有時有溫度一點」——四條輪流不能長一樣。"""
+    texts = [localization.voice_opening_instruction(familiarity=i) for i in range(4)]
+    assert len(set(texts)) >= 3, "四條開場路線幾乎一樣，每通會變得很像複製貼上"
+    assert any("俏皮" in t for t in texts), "少了輕鬆那一款"
+    assert any("此刻成立" in t for t in texts), "少了溫度那一款"
 
 
 def test_interests_are_not_opening_material():
@@ -46,11 +62,12 @@ def test_interests_are_not_opening_material():
     assert "不是開場素材" in text
 
 
-def test_memory_route_only_uses_what_is_actually_written():
-    """用記憶開場可以，但只准用上面真的寫著的事；沒有就退回純問候。"""
-    text = localization.voice_opening_instruction(familiarity=2)
+def test_memory_route_asks_only_about_what_is_actually_written():
+    """記憶那條是「要不要問一句」——問的內容只准來自上面真的寫著的事。"""
+    text = localization.voice_opening_instruction(familiarity=1)
     assert "上面真的寫著" in text
-    assert "上面沒寫的一律不准提" in text
+    assert "上面沒寫的一律不准問" in text
+    assert "想不到可問的就只招呼" in text
 
 
 def test_warmth_route_only_allows_what_is_true_right_now():
@@ -59,7 +76,7 @@ def test_warmth_route_only_allows_what_is_true_right_now():
     「今天想到你」聽起來很暖，卻是在宣稱她這段時間有在想他——她沒有兩通之間的日子，
     那跟我們正在修的編新聞是同一家族（憑空生一個聽起來合理的內容）。
     """
-    text = localization.voice_opening_instruction(familiarity=1)
+    text = localization.voice_opening_instruction(familiarity=3)   # 溫度那一款
     assert "此刻成立" in text
     assert "今天想到你" in text and "不准說" in text, "要明列這句是禁例，不是示範"
     assert "沒有兩通之間的日子" in text
