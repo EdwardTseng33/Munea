@@ -378,6 +378,7 @@
   "home.cheer.walk": "A walk outside is wonderful — remember to drink some water when you're back.",
   "home.cheer.chat": "Thank you for sharing that with me — I've written it all down.",
   "home.cheer.mood": "Today's mood is saved — thank you for taking care of your feelings.",
+  "home.allTasksDoneToast": "All {count} of today’s tasks are done — I’ll let the family know",
   "common.today": "Today",
   "common.yesterday": "Yesterday",
   "common.recently": "Recently",
@@ -699,6 +700,8 @@
   "medication.undoLastDose": "Okay — the last dose record has been removed.",
   "medication.cancelDoseToast": "Okay, cancelled for now — you can finish it later.",
   "medication.allDoneUndoHint": "Today's medicines are all done — press again to undo the last record.",
+  "medication.remainingCount": "{count} left",
+  "medication.allTaken": "All taken",
   "health.connect": "Connect",
   "health.disconnect": "Disconnect",
   "health.connected": "Connected",
@@ -1323,5 +1326,6 @@
   "health.dashAllGoodTitle": "All is well today",
   "health.dashSteadyTitle": "Mostly steady today",
   "health.dashAllGoodSub": "{part} I’m watching every one of them — rest easy.",
-  "health.dashWatchSub": "{part} There are {count} things I’m keeping an eye on for you."
+  "health.dashWatchSub": "{part} There are {count} things I’m keeping an eye on for you.",
+  "health.bpHighRetryHint": "A little higher than usual — measure again later"
 }

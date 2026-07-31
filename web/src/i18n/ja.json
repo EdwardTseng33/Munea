@@ -378,6 +378,7 @@
   "home.cheer.walk": "お散歩はいいですね。帰ったらお水をひとくちどうぞ。",
   "home.cheer.chat": "お話ししてくれてありがとうございます。ぜんぶ書きとめました。",
   "home.cheer.mood": "今日の気分を記録しました。ご自分の気持ちを大切にできて、すてきです。",
+  "home.allTasksDoneToast": "今日の{count}件、すべて完了。ご家族に伝えておきますね",
   "common.today": "今日",
   "common.yesterday": "昨日",
   "common.recently": "最近",
@@ -699,6 +700,8 @@
   "medication.undoLastDose": "はい、直前の服用記録を取り消しました。",
   "medication.cancelDoseToast": "はい、いったん取り消しました。あとで済ませても大丈夫です。",
   "medication.allDoneUndoHint": "今日のお薬は完了しています。もう一度押すと直前の記録を取り消します。",
+  "medication.remainingCount": "あと{count}回",
+  "medication.allTaken": "ぜんぶ飲めました",
   "health.connect": "接続",
   "health.disconnect": "接続を解除",
   "health.connected": "接続済み",
@@ -1323,5 +1326,6 @@
   "health.dashAllGoodTitle": "今日はすべて順調",
   "health.dashSteadyTitle": "今日はおおむね安定",
   "health.dashAllGoodSub": "{part}どの項目も私が見ています。ご安心を。",
-  "health.dashWatchSub": "{part}{count}件、私が見守っています。"
+  "health.dashWatchSub": "{part}{count}件、私が見守っています。",
+  "health.bpHighRetryHint": "いつもより少し高め。あとでもう一度測りましょう"
 }
