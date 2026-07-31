@@ -89,14 +89,23 @@ _MEXICO_EMERGENCY_GUIDANCE = {
     "ja": "メキシコで差し迫った危険がある場合は911へ連絡し、近くの信頼できる人にも助けを求めてください。",
     "es": "Si alguien está en peligro inmediato en México, llama al 911 y pide ayuda a una persona de confianza cercana.",
 }
+_JAPAN_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在日本有立即危險，請立刻撥打 119（消防／救護）；報警是 110。要不要叫救護車拿不定主意時可撥 #7119（部分地區未開通）。心理支持可撥 0120-279-338，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Japan, call 119 for fire and ambulance (110 for police). If unsure whether to call an ambulance, #7119 offers guidance in many areas. For mental-health support, call 0120-279-338, and ask a trusted person nearby to help.",
+    "ja": "日本で差し迫った危険がある場合は、119番（消防・救急）へ。警察は110番です。救急車を呼ぶか迷うときは#7119（地域により未対応）。こころの相談はよりそいホットライン0120-279-338（24時間・無料）へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Japón, llama al 119 (bomberos y ambulancia); el 110 es para la policía. Si dudas si llamar a una ambulancia, el #7119 orienta en muchas zonas. Para apoyo psicológico, llama al 0120-279-338 y pide ayuda a una persona de confianza cercana.",
+}
+
 _REGIONAL_EMERGENCY_GUIDANCE = {
     "TW": _TAIWAN_EMERGENCY_GUIDANCE,
     "ES": _SPAIN_EMERGENCY_GUIDANCE,
     "MX": _MEXICO_EMERGENCY_GUIDANCE,
+    "JP": _JAPAN_EMERGENCY_GUIDANCE,
 }
 REGIONAL_SAFETY_POLICY_SOURCES = {
     "ES": "https://www.interior.gob.es/opencms/en/contacta-con-nosotros/contacto-prueba-3-hide/index.html",
     "MX": "https://www.gob.mx/911/articulos/que-es-el-911emergencias?idiom=es",
+    "JP": "https://www.fdma.go.jp/mission/enrichment/appropriate/appropriate003.html",
 }
 
 # Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current
