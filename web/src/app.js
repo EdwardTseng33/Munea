@@ -8230,7 +8230,7 @@ function init() {
     renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
     toast(muneaT('familyCircle.removedToast', '已把 {name} 移出全家健康圈。', { name: rm.dataset.name }));
   });
-  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (!requireLoginForFamily('要加入家人的健康圈，先登入一下（換手機也找得回來）')) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
+  if ($('#fcJoinBtn')) $('#fcJoinBtn').addEventListener('click', () => { if (!requireLoginForFamily(muneaT('familyCircle.joinLoginPrompt', '要加入家人的健康圈，先登入一下（換手機也找得回來）'))) return; if (window.MMPLAN && window.MMPLAN.isFree()) { window.MMPLAN.upsell('join-circle'); return; } $('#famCircleModal').classList.remove('show'); if ($('#joinCircleModal')) $('#joinCircleModal').classList.add('show'); });
   if ($('#joinCircleClose')) $('#joinCircleClose').addEventListener('click', () => $('#joinCircleModal').classList.remove('show'));
   if ($('#joinCircleModal')) $('#joinCircleModal').addEventListener('click', e => { if (e.target === $('#joinCircleModal')) $('#joinCircleModal').classList.remove('show'); });
   if ($('#joinCircleBtn')) $('#joinCircleBtn').addEventListener('click', async () => {
@@ -10470,7 +10470,7 @@ function init() {
       setTimeout(() => { b.dataset.arm = ''; b.textContent = muneaT('data.delete', '刪除我的資料'); }, 6000);
       return;
     }
-    b.dataset.arm = ''; b.textContent = '刪除我的資料';
+    b.dataset.arm = ''; b.textContent = muneaT('data.delete', '刪除我的資料');
     (async () => {
       b.disabled = true;
       b.textContent = signedIn ? muneaT('data.deletingAccount', '正在永久刪除') : muneaT('data.clearingLocal', '正在清除');
@@ -10763,7 +10763,7 @@ function init() {
     [/天氣|冷|熱|下雨/, '記得隨天氣加減衣服，別著涼了。'],
     [/謝|你真好|感謝/, '不用謝，陪著你是我最想做的事。'],
   ];
-  function chatReply(t) { for (const [re, r] of CHAT_RULES) if (re.test(t.toLowerCase())) return r; return '我聽見了，你慢慢說，我都在。'; }
+  function chatReply(t) { for (const [re, r] of CHAT_RULES) if (re.test(t.toLowerCase())) return r; return muneaT('chat.defaultListening', '我聽見了，你慢慢說，我都在。'); }
   // 中文時間／日期解析（聊聊自動建提醒用 · Edward 7/7）
   function zhDigit(s) {
     if (s == null) return NaN;
@@ -11117,6 +11117,10 @@ function refreshLocalizedDynamicUi() {
           talkline: zhSafety ? '<b>1925</b>' : '',
         });
     }
+  } catch (e) {}
+  try {
+    const sf1 = $('#sfStep1Text');
+    if (sf1) sf1.innerHTML = muneaT('legacyUi.safetyStep1', '異常發生，{companion}先關心你一句、確認你還好嗎', { companion: '<span class="cname">' + muneaT('companion.nening.name', '寧寧') + '</span>' });
   } catch (e) {}
   try { renderCareCarousel(); } catch (e) {}
   try { syncCompanionUI(); } catch (e) {}

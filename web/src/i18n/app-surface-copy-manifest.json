@@ -29,7 +29,7 @@
     {"state": "modal:family-circle", "keyPrefixes": ["familyCircle.", "legacyUi.family"], "requiredKeys": ["familyCircle.title", "familyCircle.invite", "familyCircle.leave"]},
     {"state": "modal:invite-family", "keyPrefixes": ["invite.", "legacyUi.invite"], "requiredKeys": ["invite.title", "invite.share", "invite.expires"]},
     {"state": "modal:join-circle", "keyPrefixes": ["join.", "legacyUi.join"], "requiredKeys": ["join.title", "join.join", "join.invalid"]},
-    {"state": "modal:top-up", "keyPrefixes": ["purchase.", "credits.", "legacyUi.topUp"], "requiredKeys": ["purchase.topUpTitle", "purchase.buyCredits", "purchase.restore", "credits.exhaustedTitle", "credits.exhaustedBody", "settings.topUpCredits", "common.notNow"]},
+    {"state": "modal:top-up", "keyPrefixes": ["purchase.", "credits.", "paywall.", "legacyUi.topUp"], "requiredKeys": ["purchase.topUpTitle", "purchase.buyCredits", "purchase.restore", "credits.exhaustedTitle", "credits.exhaustedBody", "settings.topUpCredits", "common.notNow"]},
     {"state": "reader:subscription", "keyPrefixes": ["subscription."], "requiredKeys": ["subscription.title", "subscription.currentPlanCta", "subscription.confirmFacts", "subscription.monthlyCreditsNote", "subscription.freeCreditsLeft", "subscription.freePlanNote", "subscription.creditRulesTitle", "subscription.manageInAppStore"]},
     {"state": "modal:appointment", "keyPrefixes": ["appointment.", "legacyUi.appointment"], "requiredKeys": ["appointment.title", "appointment.add", "appointment.empty"]},
     {"state": "modal:history", "keyPrefixes": ["history."], "requiredKeys": ["history.title", "history.saved", "history.empty"]},

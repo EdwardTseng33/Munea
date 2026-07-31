@@ -374,10 +374,10 @@
         <div class="plan-divider"></div>
         <div class="pts-label">點數 <b id="ptsLeft">240</b> 點 <span class="pts-used">每月送 <i id="setPlanGrant" style="font-style:normal">200</i> · 已用 <i id="ptsUsed" style="font-style:normal">160</i></span></div>
         <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
-        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>點數快用完了——用完聊天會先停，到這裡加值就能繼續</div>
-        <div class="pts-note">點數用來聊天；用完會先停，補一下就能繼續</div>
+        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="settings.lowPtsStrip">點數快用完了——用完聊天會先停，到這裡加值就能繼續</span></div>
+        <div class="pts-note" data-i18n="settings.ptsNote">點數用來聊天；用完會先停，補一下就能繼續</div>
         <div class="plan-actions">
-          <button class="plan-btn ghost" id="managePlanBtn">訂閱方案</button>
+          <button class="plan-btn ghost" id="managePlanBtn" data-i18n="settings.managePlanButton">訂閱方案</button>
           <button class="plan-btn" id="topUpBtn" data-i18n="legacyUi.topUpTitle">加值點數</button>
         </div>
         <!-- 「管理訂閱／恢復購買」從訂閱方案頁搬來這裡（Edward 2026-07-31）。
@@ -546,7 +546,7 @@
       <div class="cn-row">
         <span class="cn-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span>
         <div class="cn-mid"><div class="cn-name" data-i18n="settings.appleHealth">Apple 健康</div><div class="cn-desc" id="cnHealthDetail">自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧</div></div>
-        <button class="cn-btn" id="cnHealthBtn" type="button" data-label="連接" aria-pressed="false">連接</button>
+        <button class="cn-btn" id="cnHealthBtn" type="button" aria-pressed="false" data-i18n="health.connect">連接</button>
       </div>
       <p class="cn-health-help" id="cnHealthHelp" aria-live="polite">目前未同步。重新連接後才會讀取新的健康資料。</p>
       <!-- 讀取實況：讓人能確定「到底讀到了沒」，不用看著一片空白自己猜。
@@ -564,8 +564,8 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close" id="quizCloseX" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>機智問答</h2>
-      <p class="modal-sub" id="quizProgress">第 1 題／共 5 題</p>
+      <h2 data-i18n="activity.quiz">機智問答</h2>
+      <p class="modal-sub" id="quizProgress" data-i18n="activity.quizProgressInitial">第 1 題／共 5 題</p>
       <div class="quiz-q" id="quizQ">—</div>
       <div class="quiz-opts" id="quizOpts"></div>
     </div>
@@ -598,7 +598,7 @@
       </div>
       <div id="quizFields" style="display:none">
         <div class="field-label">要玩幾題</div>
-        <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" aria-label="調整題目數量" data-i18n-aria-label="activity.quizQuestionCountAria" /><b id="quizNVal">10 題</b></div>
+        <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" aria-label="調整題目數量" data-i18n-aria-label="activity.quizQuestionCountAria" /><b id="quizNVal" data-i18n="activity.questionsChipDefault">10 題</b></div>
         <div class="field-label">答題截止（到期自動結算排名）</div>
         <div class="dt-row">
           <input class="chal-input" type="date" id="quizDue" aria-label="答題截止日期" data-i18n-aria-label="activity.quizDeadlineDate" />
@@ -608,7 +608,7 @@
       <div id="eventFields" style="display:none">
         <div class="field-label">要揪什麼</div>
         <input class="chal-input" id="eventName" placeholder="例：阿嬤生日聚餐" data-i18n-placeholder="activity.eventNamePlaceholder" />
-        <div class="field-label">在哪裡</div>
+        <div class="field-label" data-i18n="activity.eventPlaceLabel">在哪裡</div>
         <input class="chal-input" id="eventPlace" placeholder="例：老王海鮮餐廳、阿嬤家" data-i18n-placeholder="activity.eventPlacePlaceholder" />
         <div class="field-label">哪一天・幾點（點一下直接選）</div>
         <div class="dt-row">
@@ -695,7 +695,7 @@
         <div class="nps-bar">
           <div class="nps-readout"><b id="npsVal">—</b><span id="npsWord">拉一下或點一下</span></div>
           <input type="range" class="nps-slider" id="npsSlider" min="0" max="10" step="1" value="8" aria-label="推薦分數 0 到 10" data-i18n-aria-label="feedback.npsAria" />
-          <div class="nps-hint"><span>0 完全不會</span><span>10 非常願意</span></div>
+          <div class="nps-hint"><span data-i18n="feedback.npsMin">0 完全不會</span><span data-i18n="feedback.npsMax">10 非常願意</span></div>
         </div>
       </div>
       <div class="field-label" id="fbTextLabel" data-i18n="legacyUi.feedbackDetailLabel">想說的話（越具體我們修得越快）</div>
@@ -726,7 +726,7 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>安全通知</h2>
+      <h2 data-i18n="legacyUi.safetyTitle">安全通知</h2>
       <p class="modal-sub" data-i18n="legacyUi.safetyDescription">當你開啟沐寧並同步到超出留意範圍的健康數據時，事件會保留在通知中心，並通知你選定的家人。這不是即時或醫療級監測。</p>
       <div class="field-label" data-i18n="legacyUi.safetyContacts">誰來當緊急聯絡人（最多 3 位）</div>
       <div class="safety-picks" id="safetyPicks"></div>
@@ -737,7 +737,7 @@
         <li><span class="st-ic ox"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg></span><span data-i18n="safety.triggerBloodOxygen">血氧偏低（低於 90%）</span></li>
       </ul>
       <div class="safety-flow">
-        <div class="sf-step"><b>1</b><span>異常發生，<span class="cname" data-i18n="companion.nening.name">寧寧</span>先關心你一句、確認你還好嗎</span></div>
+        <div class="sf-step"><b>1</b><span id="sfStep1Text"></span></div>
         <div class="sf-step"><b>2</b><span data-i18n="legacyUi.safetyLog">記進通知中心，並通知你選定的家人</span></div>
         <div class="sf-step"><b>3</b><span data-i18n="legacyUi.safetyEmergency">聯絡人打電話或趕來確認；真的危急請直接撥 119</span></div>
       </div>
@@ -749,8 +749,8 @@
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close" id="companionCloseBtn" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2>陪伴角色</h2>
-      <p class="modal-sub">先選角色、再取名字，個性、外觀、聲音由角色決定，名字由你決定。<br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換角色不會忘記你們聊過的事</b>，記憶跟著你，不跟角色走。</p>
+      <h2 data-i18n="companion.modalTitle">陪伴角色</h2>
+      <p class="modal-sub"><span data-i18n="companion.pickIntro">先選角色、再取名字，個性、外觀、聲音由角色決定，名字由你決定。</span><br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換角色不會忘記你們聊過的事</b><span data-i18n="companion.memoryTail">，記憶跟著你，不跟角色走。</span></p>
       <label class="companion-name-label" for="companionNameInput" data-i18n="companion.nameLabel">幫角色取名稱</label>
       <input class="companion-name-input" id="companionNameInput" value="寧寧" data-i18n-value="companion.nening.name" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿福" data-i18n-placeholder="companion.namePlaceholder" />
       <div class="field-label" data-i18n="legacyUi.companionRole">選擇互動 AI 角色</div>
@@ -1107,9 +1107,9 @@
       <div class="med-pill-card">
         <div class="mpc-row">
           <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
-          <div><div class="mpc-name" id="medDueName">脈優</div><div class="mpc-desc" id="medDueDesc" data-i18n="medicationReminder.instructionHint">照你設定的提醒 · 配溫開水就可以</div></div>
+          <div><div class="mpc-name" id="medDueName" data-i18n="demo.medDueSampleName">脈優</div><div class="mpc-desc" id="medDueDesc" data-i18n="medicationReminder.instructionHint">照你設定的提醒 · 配溫開水就可以</div></div>
         </div>
-        <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>已連續服藥 6 天，做得很好！</div>
+        <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
       </div>
       <div class="med-actions" style="margin-top:14px">
         <button class="taken" id="medTaken"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="medicationReminder.taken">我吃過了</span></button>
@@ -1172,7 +1172,7 @@
         <button class="auth-provider" id="authGoogleBtn" type="button"><svg class="ic" viewBox="0 0 24 24"><path d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.2z"/><path d="M12 22c2.7 0 5-0.9 6.6-2.5l-3.2-2.5c-.9.6-2 .9-3.4.9-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path d="M6.4 13.8a6 6 0 0 1 0-3.6V7.6H3.1a10 10 0 0 0 0 8.8l3.3-2.6z"/><path d="M12 6.1c1.5 0 2.8.5 3.8 1.5l2.9-2.9A9.7 9.7 0 0 0 12 2 10 10 0 0 0 3.1 7.6l3.3 2.6C7.2 7.9 9.4 6.1 12 6.1z"/></svg><span data-i18n="auth.google">使用 Google 登入</span></button>
       </div>
       <p class="auth-terms"><a href="terms.html" target="_blank" rel="noopener"></a><a href="privacy.html" target="_blank" rel="noopener"></a></p>
-      <button class="auth-dev-btn" id="authDeveloperBtn" type="button" data-label-default="使用開發者模式" data-label-gateway="使用測試帳號登入" hidden>使用開發者模式</button>
+      <button class="auth-dev-btn" id="authDeveloperBtn" type="button" data-label-default="使用開發者模式" data-label-gateway="使用測試帳號登入" hidden></button>
       <p class="auth-message" id="authMessage"></p>
     </div>
   </div>
@@ -1232,15 +1232,15 @@
     function chatUsedToday(){ try{ return parseInt(localStorage.getItem(ck())||'0',10)||0; }catch(e){ return 0; } }
     function chatTick(){ try{ localStorage.setItem(ck(), String(chatUsedToday()+1)); }catch(e){} }
     function chatRemainSec(){ return Math.max(0, CHAT_FREE_SEC - chatUsedToday()); }
-    var MSG={
-      'family-invite':{t:'邀請家人，升級就解鎖',m:'免費方案可以一起看家人的狀態；想邀請家人進全家健康圈、大家互相照應，升級 Plus 就可以囉。'},
-      'status-history':{t:'看更久的變化，升級解鎖',m:'免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。'},
-      'chat-daily':{t:'免費的 5 點體驗用完了',m:'免費帳號會收到一次性 5 點，約可聊 5 分鐘；不會每天重置。想繼續聊，升級 Plus／Pro 每月會固定送點。'},
-      'join-circle':{t:'加入家人的健康圈，升級解鎖',m:'免費方案可以自己用沐寧、記自己的提醒；想加入家人的健康圈、大家一起看著長輩，升級 Plus 就可以囉。'}
-    };
+    var MSG=function(){ return {
+      'family-invite':{t:window.muneaUiT('paywall.familyInviteTitle','邀請家人，升級就解鎖'),m:window.muneaUiT('paywall.familyInviteBody','免費方案可以一起看家人的狀態；想邀請家人進全家健康圈、大家互相照應，升級 Plus 就可以囉。')},
+      'status-history':{t:window.muneaUiT('paywall.statusHistoryTitle','看更久的變化，升級解鎖'),m:window.muneaUiT('paywall.statusHistoryBody','免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。')},
+      'chat-daily':{t:window.muneaUiT('paywall.chatDailyTitle','免費的 5 點體驗用完了'),m:window.muneaUiT('paywall.chatDailyBody','免費帳號會收到一次性 5 點，約可聊 5 分鐘；不會每天重置。想繼續聊，升級 Plus／Pro 每月會固定送點。')},
+      'join-circle':{t:window.muneaUiT('paywall.joinCircleTitle','加入家人的健康圈，升級解鎖'),m:window.muneaUiT('paywall.joinCircleBody','免費方案可以自己用沐寧、記自己的提醒；想加入家人的健康圈、大家一起看著長輩，升級 Plus 就可以囉。')}
+    }; };
     function upsell(feature){
       try{ if(typeof trackProductEvent==='function') trackProductEvent('paywall_shown',{feature:feature||''}); }catch(e){}
-      var d=MSG[feature]||{t:'升級解鎖更多',m:'升級方案就能使用這個功能。'};
+      var d=MSG()[feature]||{t:window.muneaUiT('paywall.fallbackTitle','升級解鎖更多'),m:window.muneaUiT('paywall.fallbackBody','升級方案就能使用這個功能。')};
       var old=document.getElementById('mm-upsell'); if(old) old.remove();
       var m=document.createElement('div'); m.id='mm-upsell';
       m.style.cssText='position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
@@ -1248,8 +1248,8 @@
         +'<div style="width:54px;height:54px;border-radius:16px;margin:0 auto 16px;background:linear-gradient(135deg,#3AA8A0,#2E8A83);display:grid;place-items:center"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg></div>'
         +'<div style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px">'+d.t+'</div>'
         +'<div style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px">'+d.m+'</div>'
-        +'<button id="mm-upsell-go" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px">看看方案</button>'
-        +'<button id="mm-upsell-no" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer">先不用</button>'
+        +'<button id="mm-upsell-go" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px">'+window.muneaUiT('paywall.seePlans','看看方案')+'</button>'
+        +'<button id="mm-upsell-no" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer">'+window.muneaUiT('paywall.notNow','先不用')+'</button>'
         +'</div>';
       document.body.appendChild(m);
       m.addEventListener('click',function(e){ if(e.target===m||e.target.id==='mm-upsell-no') m.remove(); });
@@ -1302,7 +1302,7 @@
   function hasSelfReportToday(){ var today=keyOf(Date.now()); return entries().some(function(x){ return x.src==='self' && keyOf(x.t)===today; }); }
   // 規則④：當天主色 = 出現最多；平手取最近（自我回報優先）
   function dominant(key){ var a=entries().filter(function(r){return keyOf(r.t)===key;}); if(!a.length) return null; var c={}; a.forEach(function(r){c[r.i]=(c[r.i]||0)+1;}); var mx=0,k; for(k in c){ if(c[k]>mx) mx=c[k]; } for(var j=a.length-1;j>=0;j--){ if(c[a[j].i]===mx) return a[j].i; } return null; }
-  function weekdayLabel(date){ try{ return new Intl.DateTimeFormat(window.muneaUiLocale(),{weekday:'narrow'}).format(date); }catch(e){ return ['日','一','二','三','四','五','六'][date.getDay()]; } }
+  function weekdayLabel(date){ try{ return new Intl.DateTimeFormat(window.muneaUiLocale(),{weekday:'narrow'}).format(date); }catch(e){ return [window.muneaUiT('mood.weekdayShortSun','日'),window.muneaUiT('mood.weekdayShortMon','一'),window.muneaUiT('mood.weekdayShortTue','二'),window.muneaUiT('mood.weekdayShortWed','三'),window.muneaUiT('mood.weekdayShortThu','四'),window.muneaUiT('mood.weekdayShortFri','五'),window.muneaUiT('mood.weekdayShortSat','六')][date.getDay()]; } }
 
   // ===== 後端帳本（點的寫進去、聊聊記的讀回來，同一本）=====
   var _logTimer=null,_logMood=null;
@@ -1436,12 +1436,12 @@ window.MMDEV = function(){
   function vitalsOf(){
     var t=mmTodayLog()||{};
     function n(v,f){ return (v||v===0)?String(f?f(v):v):'—'; }
-    function unit(key,fallback){ var locale=window.muneaUiLocale(); return ((locale==='en'||locale==='es')?' ':'')+window.muneaUiT(key,fallback); }
+    function unit(s){ var locale=window.muneaUiLocale(); return ((locale==='en'||locale==='es')?' ':'')+s; }
     return {
       bp:{num:n(t.bpSys), unit:(t.bpDia?'/'+t.bpDia+' mmHg':''), chip:'', sub:(t.bpSys?window.muneaUiT('status.normalRange','正常範圍內'):window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入'))},
       hr:{num:n(t.hr), unit:(t.hr?' bpm':''), chip:'', sub:(t.hr?window.muneaUiT('status.restingHeartRate','靜息心率'):window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入'))},
-      spo2:{num:n(t.spo2), unit:(t.spo2?' %':'')}, sleep:{num:n(t.sleepHours), unit:(t.sleepHours?unit('health.unit.hoursShort','小時'):'')},
-      steps:{num:n(t.steps,function(v){return (+v).toLocaleString(window.muneaUiLocale());}), unit:(t.steps?unit('health.unit.steps','步'):'')}
+      spo2:{num:n(t.spo2), unit:(t.spo2?' %':'')}, sleep:{num:n(t.sleepHours), unit:(t.sleepHours?unit(window.muneaUiT('health.unit.hoursShort','小時')):'')},
+      steps:{num:n(t.steps,function(v){return (+v).toLocaleString(window.muneaUiLocale());}), unit:(t.steps?unit(window.muneaUiT('health.unit.steps','步')):'')}
     };
   }
   function dataFor(period){
@@ -1521,7 +1521,7 @@ window.MMDEV = function(){
     // 7/9 Edward：只有登入會員才記每天的數據→之後才有趨勢；訪客講清楚要登入
     if(mmIsGuest()){ el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">'+window.muneaUiT('status.signInTrendPrompt','登入後，我會開始幫你記錄每天的數據。之後這裡就會長出過去 7 天與 30 天的趨勢。')+'</div>'; return; }
     el.innerHTML='<div style="padding:16px 2px;font-size:13.5px;color:var(--muted);text-align:center;line-height:1.7">'+window.muneaUiT('status.accumulatingTrend','數據累積中（第 {days} 天）。每天的數據會自動記下來，這裡會長出趨勢。',{days:Math.max(n,1)})+'</div>'; }
-  function shortWeekday(date){ try{ return new Intl.DateTimeFormat(window.muneaUiLocale(),{weekday:'narrow'}).format(date); }catch(e){ return ['日','一','二','三','四','五','六'][date.getDay()]; } }
+  function shortWeekday(date){ try{ return new Intl.DateTimeFormat(window.muneaUiLocale(),{weekday:'narrow'}).format(date); }catch(e){ return [window.muneaUiT('mood.weekdayShortSun','日'),window.muneaUiT('mood.weekdayShortMon','一'),window.muneaUiT('mood.weekdayShortTue','二'),window.muneaUiT('mood.weekdayShortWed','三'),window.muneaUiT('mood.weekdayShortThu','四'),window.muneaUiT('mood.weekdayShortFri','五'),window.muneaUiT('mood.weekdayShortSat','六')][date.getDay()]; } }
   function mmRealTrends(period){
     var n = (period==='week')?7:30;
     var agg = mmAgg(n);
