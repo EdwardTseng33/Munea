@@ -484,18 +484,21 @@ assert(/#subPlans \.credit-rules \.cr-row[^']*#subPoints \.credit-rules \.cr-row
 assertCatalogSays('subscription.monthlyCreditsBody', { 'zh-TW': /不會累積|不留到下/, en: /do not roll over/i }, '每月方案點數必須說明不會留到下一期');
 assertCatalogSays('subscription.purchasedCreditsBody', { 'zh-TW': /不會到期/, en: /do not expire/i }, '加購點數必須說明不會過期');
 assertCatalogSays('subscription.deductionOrderBody', { 'zh-TW': /每月點數[\s\S]*加購點數/, en: /before purchased credits/i }, '扣點順序必須說明先扣月點數、再扣加購');
-// 每張付費方案卡的點數那一行都要自己標「當月點數不遞延」。
+// 每張付費方案卡的點數那一行都要講清楚「這個方案每月給幾點」。
 // 原本寫死 .length === 2，方案一增減就會誤紅；改成從畫面上真的有幾張方案卡推出來。
 const planCards = [...plansPane.matchAll(/<button class="ppk[^"]*" data-t="([a-z]+)" type="button">([\s\S]*?)<\/button>/g)]
   .map(([, plan, body]) => ({ plan, body }));
 assert(planCards.length >= 2, '付費方案卡片必須留在畫面上（至少 Plus 與 Pro）');
-const rolloverLabelled = planCards.filter(({ body }) => /do not roll over/i.test(body.match(/<li>([\s\S]*?)<\/li>/)?.[1] || ''));
+const creditsStated = planCards.filter(({ body }) => /\d+\s*(?:voice-companion\s*)?credits/i.test(body.match(/<li>([\s\S]*?)<\/li>/)?.[1] || ''));
 assert(
-  rolloverLabelled.length === planCards.length,
-  `每張付費方案卡的點數那行都要標不遞延：方案 ${planCards.length} 張、標到的 ${rolloverLabelled.length} 張`,
+  creditsStated.length === planCards.length,
+  `每張付費方案卡的第一行都要寫明每月給幾點：方案 ${planCards.length} 張、寫到的 ${creditsStated.length} 張`,
 );
 assert(app.includes("'subscription.monthlyVoiceCredits'"), '方案卡的點數那行必須由 subscription.monthlyVoiceCredits 餵');
-assertCatalogSays('subscription.monthlyVoiceCredits', { 'zh-TW': /不會累積|不留到下/, en: /do not roll over/i }, '方案卡的每月點數必須說明不會留到下一期');
+// 「當月點數不遞延」的揭露改成只守上面那排規則（subscription.monthlyCreditsBody，見前面那條）。
+// 原本卡片這一行也要再講一次，同一個畫面上同一句話講兩遍——Edward 2026-08-01：
+// 「上面已經有寫了，不用一直重複」。揭露沒有變少（規則那排仍被守著），只是不重複、也不會折行。
+assertCatalogSays('subscription.monthlyVoiceCredits', { 'zh-TW': /\{credits\} 點/, en: /\{credits\} voice-companion credits/i }, '方案卡的每月點數必須寫明點數，且由文案表帶入數字');
 assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {'), 'Credit rule explanation must have dedicated readable styling');
 // 資料匯出說明（2026-07-30 改寫）：這段已經是 data-i18n="data.description" 的翻譯節點，
 // index.html 裡那句中文只是還沒換掉的底稿，跟 zh-TW.json 的正本已經對不起來（正本沒有「立即」兩字）。
