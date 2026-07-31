@@ -1221,12 +1221,16 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-price small { font-size: 13px; font-weight: 600; color: var(--muted); }
 .plan-actions { display: flex; gap: 10px; margin-top: 14px; }
 /* 訂閱卡底下的兩個次要入口：管理訂閱／恢復購買（Edward 2026-07-31 從訂閱方案頁搬來）。
-   刻意做成文字連結而不是按鈕——它們是「出事才會用」的東西，不該跟上面兩顆主按鈕搶眼。
-   但觸控高度仍給滿 44px（長輩手指不準），視覺份量低不等於難按。 */
-.plan-links { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; }
-.plan-link { border: none; background: none; padding: 12px 4px; min-height: 44px; cursor: pointer;
-  font-family: inherit; font-size: 14px; font-weight: 600; color: var(--teal-d); text-decoration: underline; text-underline-offset: 3px; }
-.plan-link-sep { color: var(--muted); font-size: 13px; }
+   第一版做成加底線的文字連結＋中間一個分隔點，Edward 看了說醜——確實：底線是網頁的語言，
+   跟這張卡上圓潤的膠囊按鈕不同調，中間那個點又多一個雜訊。
+   改成跟上面「訂閱方案／加值點數」同一套膠囊，只是把份量整個收下來：
+   底色比主按鈕更淡、字更小、圓角略小、不用邊框——一看就知道是次要，但仍是同一個家族。
+   觸控高度維持 44px（長輩手指不準，視覺份量低不等於難按）。 */
+.plan-links { display: flex; gap: 10px; margin-top: 10px; }   /* gap 跟上面 .plan-actions 對齊，兩排才像同一組 */
+.plan-link { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 10px; border: none; border-radius: 13px;
+  background: var(--mint); color: var(--teal-d); cursor: pointer;
+  font-family: inherit; font-size: 14px; font-weight: 600; opacity: .85; }
+.plan-link:active { opacity: 1; }
 .plan-actions .plan-btn { flex: 1 1 0; min-width: 0; white-space: normal; min-height: 48px; padding-inline: 12px; }
 #topUpBtn.plan-btn { background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); }
 
