@@ -7194,7 +7194,7 @@ function renderMoodMonth() {
     const k = seq[i % seq.length];
     html += '<button class="mm-cell" data-k="' + k + '" data-d="' + day + '" style="background:' + MOODS[k].bg + ';color:' + MOODS[k].fg + '">' + day + '</button>';
   }
-  wrap.innerHTML = html + '<div class="mm-note">記到今天（' + (now.getMonth() + 1) + '/' + todayD + '）為止</div>';
+  wrap.innerHTML = html + '<div class="mm-note">' + muneaT('mood.mapUpTo', '記到今天（{date}）為止', { date: (now.getMonth() + 1) + '/' + todayD }) + '</div>';
   wrap.addEventListener('click', e => {
     const c = e.target.closest('.mm-cell');
     if (!c) return;
@@ -7904,7 +7904,7 @@ function init() {
   function fillPfDistricts(county, selDist) {
     const ds = $('#pfDistrict'); if (!ds) return;
     const list = (window.TW_DISTRICTS && window.TW_DISTRICTS[county]) || [];
-    let h = '<option value="">（區）</option>';
+    let h = '<option value="">' + muneaT('profile.regionDistrictPlaceholder', '（區）') + '</option>';
     for (const d of list) h += '<option value="' + d + '">' + d + '</option>';
     ds.innerHTML = h;
     ds.disabled = !county;
@@ -7924,7 +7924,7 @@ function init() {
   function fillPfLocation(city) {
     const cs = $('#pfCounty'); if (!cs) return;
     if (!cs.options.length) {
-      let h = '<option value="">（縣市）</option>';
+      let h = '<option value="">' + muneaT('profile.regionCityPlaceholder', '（縣市）') + '</option>';
       for (const c of pfCountyList()) h += '<option value="' + c + '">' + c + '</option>';
       cs.innerHTML = h;
       cs.addEventListener('change', () => fillPfDistricts(cs.value, ''));
@@ -7946,10 +7946,10 @@ function init() {
     if (ys && !ys.options.length) {
       const nowY = new Date().getFullYear();
       let yh = '';
-      for (let y = nowY - 5; y >= 1920; y--) yh += '<option value="' + y + '">' + y + ' 年</option>';
+      for (let y = nowY - 5; y >= 1920; y--) yh += '<option value="' + y + '">' + muneaT('profile.yearOption', '{year} 年', { year: y }) + '</option>';
       ys.innerHTML = yh;
       let mh = '';
-      for (let m = 1; m <= 12; m++) mh += '<option value="' + m + '">' + m + ' 月</option>';
+      for (let m = 1; m <= 12; m++) mh += '<option value="' + m + '">' + muneaT('profile.monthOption', '{month} 月', { month: m }) + '</option>';
       ms.innerHTML = mh;
     }
     const mt = String(p.birth || '').match(/(19|20)(\d{2}).*?(\d{1,2})/);
@@ -8464,27 +8464,27 @@ function init() {
     const medCard = d.med
       ? '<div class="card" style="padding:14px 15px;margin-bottom:11px"><div class="row" style="justify-content:space-between;gap:10px">' +
         '<div class="row" style="gap:11px;min-width:0"><span style="flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:' + (d.med.warn ? 'var(--coral)' : 'var(--teal)') + ';display:grid;place-items:center;color:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>' +
-        '<div style="min-width:0"><div style="font-weight:700;font-size:14.5px">用藥狀態</div><div style="font-size:14px;color:var(--muted);margin-top:1px">' + d.med.sub + '</div></div></div>' + chip(d.med.chip, d.med.warn) + '</div></div>'
+        '<div style="min-width:0"><div style="font-weight:700;font-size:14.5px">' + muneaT('health.medStatusTitle', '用藥狀態') + '</div><div style="font-size:14px;color:var(--muted);margin-top:1px">' + d.med.sub + '</div></div></div>' + chip(d.med.chip, d.med.warn) + '</div></div>'
       : '';
     grid.innerHTML = medCard +
       '<div class="row" style="gap:11px;margin-bottom:11px;align-items:stretch">' +
         '<div class="card" style="padding:15px;flex:1">' +
           '<div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>' + chip(d.bp.chip, d.bp.warn) + '</div>' +
-          '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">血壓</div>' +
+          '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">' + muneaT('health.bloodPressure', '血壓') + '</div>' +
           '<div><span class="mnum" style="font-size:26px;color:var(--teal-dd)">' + d.bp.n + '</span><span style="font-size:14px;color:var(--muted)">' + d.bp.u + '</span></div>' +
           '<div style="font-size:14px;color:var(--muted);margin-top:6px">' + d.bp.sub + '</div></div>' +
         '<div class="card" style="padding:15px;flex:1">' +
           '<div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span>' + chip(d.hr.chip, d.hr.warn, 'coral') + '</div>' +
-          '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">心率</div>' +
+          '<div style="font-size:14px;color:var(--muted);margin-bottom:3px">' + muneaT('health.heartRate', '心率') + '</div>' +
           '<div><span class="mnum" style="font-size:26px;color:var(--ink)">' + d.hr.n + '</span><span style="font-size:14px;color:var(--muted)"> bpm</span></div>' +
           '<div style="font-size:14px;color:var(--muted);margin-top:6px">' + d.hr.sub + '</div></div>' +
       '</div>' +
       '<div class="card" style="display:flex;align-items:stretch;padding:0;overflow:hidden;margin-bottom:16px">' +
-        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/></svg><span style="font-size:14px;color:var(--muted)">血氧</span></div><div><span class="mnum" style="font-size:21px;color:var(--teal-dd)">' + d.spo2 + '</span><span style="font-size:14px;color:var(--muted)"> %</span></div></div>' +
+        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z"/></svg><span style="font-size:14px;color:var(--muted)">' + muneaT('health.bloodOxygen', '血氧') + '</span></div><div><span class="mnum" style="font-size:21px;color:var(--teal-dd)">' + d.spo2 + '</span><span style="font-size:14px;color:var(--muted)"> %</span></div></div>' +
         '<div style="width:1px;background:var(--line);margin:12px 0"></div>' +
-        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C79A3B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span style="font-size:14px;color:var(--muted)">昨晚睡眠</span></div><div><span class="mnum" style="font-size:21px;color:#8A6410">' + d.sleep + '</span><span style="font-size:14px;color:var(--muted)"> 時</span></div></div>' +
+        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C79A3B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span style="font-size:14px;color:var(--muted)">' + muneaT('health.lastNightSleep', '昨晚睡眠') + '</span></div><div><span class="mnum" style="font-size:21px;color:#8A6410">' + d.sleep + '</span><span style="font-size:14px;color:var(--muted)"> ' + muneaT('health.unit.hourNarrow', '時') + '</span></div></div>' +
         '<div style="width:1px;background:var(--line);margin:12px 0"></div>' +
-        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg><span style="font-size:14px;color:var(--muted)">運動量</span></div><div><span class="mnum" style="font-size:21px;color:var(--teal-dd)">' + d.steps + '</span><span style="font-size:14px;color:var(--muted)"> 步</span></div></div>' +
+        '<div style="flex:1;padding:13px 14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg><span style="font-size:14px;color:var(--muted)">' + muneaT('health.activityAmount', '運動量') + '</span></div><div><span class="mnum" style="font-size:21px;color:var(--teal-dd)">' + d.steps + '</span><span style="font-size:14px;color:var(--muted)"> ' + muneaT('health.unit.steps', '步') + '</span></div></div>' +
       '</div>';
   }
   function renderPersonMood(p) {
@@ -8542,7 +8542,7 @@ function init() {
         '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
         '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
         '<div class="hr-status ' + st.cls + '"><span class="hr-dot"></span><span class="hr-slabel">' + st.label + '</span></div></div>';
-    }).join('') : '<div class="fam-empty">圈裡還沒有家人<br>點上面「邀請」把家人拉進來，就看得到大家的狀態</div>';
+    }).join('') : '<div class="fam-empty">' + muneaT('familyCircle.emptyRosterTitle', '圈裡還沒有家人') + '<br>' + muneaT('familyCircle.emptyRosterBody', '點上面「邀請」把家人拉進來，就看得到大家的狀態') + '</div>';
     // 空的時候讓掉白卡外觀，改用跟上面「還沒有進行中的活動」同一套虛線框（Edward 2026-07-29）
     if (hl) hl.classList.toggle('is-empty', !mem.length);
     if (currentPerson && !FAM_ORDER.includes(currentPerson)) { currentPerson = FAM_ORDER[0] || ''; if ($('#viewPerson') && $('#viewPerson').classList.contains('active')) showFamAll(); }
@@ -9434,7 +9434,7 @@ function init() {
         '<div class="mm-day"><div class="mm-dot" style="background:' + FAM_MOOD_COLS[mi] + '"></div><div class="mm-lab">' + FAM_WD[i] + '</div></div>').join('') + '</div>';
       const cnt = {}; seq.forEach(x => cnt[x] = (cnt[x] || 0) + 1);
       const main = (FAM_MOOD_NAME[+Object.keys(cnt).sort((a, b) => cnt[a] - cnt[b]).pop()] || (() => ''))();
-      if (note) note.innerHTML = '過去 7 天多在<b>' + main + '</b>；顏色跟狀態頁的情緒球同一套。';
+      if (note) note.innerHTML = muneaT('mood.weekMostly', '過去 7 天多在{moodBold}；顏色跟狀態頁的情緒球同一套。', { moodBold: '<b>' + main + '</b>' });
     } else {
       const cells = Array.from({ length: 30 }, (_, i) => seq[i % seq.length]);
       if (box) box.innerHTML = '<div class="mood-grid">' + cells.map(mi => '<i style="background:' + FAM_MOOD_COLS[mi] + '"></i>').join('') + '</div>';
@@ -9516,7 +9516,7 @@ function init() {
     const box = $('#inviteList'); if (!box) return;
     const mem = loadCircle().filter(m => !m.self);
     if (!mem.length) {
-      box.innerHTML = '<div class="iv-empty">圈裡還沒有家人。先到家人頁「邀請家人加入」，之後就能在這裡找他們一起。</div>';
+      box.innerHTML = '<div class="iv-empty">' + muneaT('familyCircle.emptyInvitePick', '圈裡還沒有家人。先到家人頁「邀請家人加入」，之後就能在這裡找他們一起。') + '</div>';
       return;
     }
     box.innerHTML = mem.map(m =>
@@ -9624,8 +9624,8 @@ function init() {
     try { if (act.dateISO) { const dt = new Date(act.dateISO + 'T' + (act.time || '23:59')); if (!isNaN(dt) && dt < new Date()) locked = true; } } catch (e) {}
     box.innerHTML =
       '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + (act.dateLabel ? '<br>' + act.dateLabel : '') + '</div>' +
-      '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go"' + (locked ? ' disabled' : '') + '>我要去</button>' +
-      '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no"' + (locked ? ' disabled' : '') + '>我沒空</button></div>' +
+      '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go"' + (locked ? ' disabled' : '') + '>' + muneaT('activity.rsvpGo', '我要去') + '</button>' +
+      '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no"' + (locked ? ' disabled' : '') + '>' + muneaT('activity.rsvpNo', '我沒空') + '</button></div>' +
       '<div class="qc-num">' + (going.length ? muneaT('activity.rsvpGoing', '要去的：{names}', { names: going.join(muneaT('common.listSeparator', '、')) }) : muneaT('activity.rsvpNoneYet', '還沒有人回「要去」')) + (no.length ? '　·　' + muneaT('activity.rsvpBusy', '沒空：{names}', { names: no.join(muneaT('common.listSeparator', '、')) }) : '') +
       '；' + (locked ? muneaT('activity.rsvpLocked', '活動時間到了，不能再改。') : (my ? muneaT('activity.rsvpTailMine', '想改隨時再點另一個就好；{companion}會幫你問不方便滑手機的家人跟其他人。', { companion: cname() }) : muneaT('activity.rsvpTailAsk', '點一下回覆；{companion}會幫你問不方便滑手機的家人跟其他人。', { companion: cname() }))) + '</div>';
     if (!locked) box.querySelector('.rsvp-btns').addEventListener('click', e => {
@@ -9862,13 +9862,13 @@ function init() {
       wrap.innerHTML = winCardHtml(false);
     } else {
       wrap.innerHTML = '<div class="qc-num">' + muneaT('activity.drawAllIn', '{names} 都有份，{when}由{companion}開獎', { names: all.join(muneaT('common.listSeparator', '、')), when: act.when, companion: cname() }) + '</div>' +
-        '<button type="button" class="draw-now">現在開獎</button>';
+        '<button type="button" class="draw-now">' + muneaT('activity.drawNowButton', '現在開獎') + '</button>';
       wrap.querySelector('.draw-now').addEventListener('click', () => {
         const winner = all[Math.floor(Math.random() * all.length)];
         act.winner = winner;
         const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.winner = winner; saveActs(acts);
         // 儀式①：禮物盒搖＋名字輪盤（轉快轉慢）
-        wrap.innerHTML = '<div class="draw-stage"><div class="ds-gift">' + GIFT + '</div><div class="draw-roll"><span class="dr-name">…</span><small>看看是誰…</small></div></div>';
+        wrap.innerHTML = '<div class="draw-stage"><div class="ds-gift">' + GIFT + '</div><div class="draw-roll"><span class="dr-name">…</span><small>' + muneaT('activity.drawRolling', '看看是誰…') + '</small></div></div>';
         const nameEl = wrap.querySelector('.dr-name');
         let i = 0, delay = 70;
         const spin = () => {
@@ -10229,7 +10229,7 @@ function init() {
       '<button type="button" class="safety-pick' + (sel.includes(m.name) ? ' on' : '') + '" data-name="' + m.name + '">' +
       '<span class="init-ava ' + (m.tint || '') + '">' + (m.init || (m.name || '')[0] || '') + '</span><span class="sp-name">' + m.name + '</span>' +
       '<span class="sp-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></button>').join('')
-      : '<p class="modal-sub" style="margin:4px 0 0">圈裡還沒有家人。先到「家人」頁邀請家人加入，就能選緊急聯絡人。</p>';
+      : '<p class="modal-sub" style="margin:4px 0 0">' + muneaT('familyCircle.emptyContactPick', '圈裡還沒有家人。先到「家人」頁邀請家人加入，就能選緊急聯絡人。') + '</p>';
     updateSafetyCount();
   }
   if ($('#safetyPicks')) $('#safetyPicks').addEventListener('click', e => {
@@ -10256,7 +10256,7 @@ function init() {
     const box = $('#interestPicks');
     if (box) box.innerHTML = INTEREST_TOPICS.map(t => '<button type="button" class="topic-chip' + (_intSel.includes(t) ? ' on' : '') + '" data-t="' + t + '">' + interestTopicLabel(t) + '</button>').join('');
     const now = $('#interestsNow');
-    if (now) now.innerHTML = _intSel.length ? ('<b>已挑 ' + _intSel.length + ' 個</b> ›') : '›';
+    if (now) now.innerHTML = _intSel.length ? ('<b>' + muneaT('interests.pickedCount', '已挑 {count} 個', { count: _intSel.length }) + '</b> ›') : '›';
   }
   window.__muneaOpenInterests = function (fromCall) {
     _intSel = loadInterests(); _intFromCall = !!fromCall;
@@ -10547,9 +10547,9 @@ function init() {
     const act = Math.max(1, Math.round(days * 0.55));
     const box = $('#rcResult');
     box.innerHTML = '<div class="rpt-row"><span class="rpt-k">' + muneaT('report.periodLabel', '期間') + '</span><div><b>' + muneaT('report.periodRange', '{from} 到 {to}', { from: fmtDay(a), to: fmtDay(b2) }) + '</b><span>' + muneaT('report.periodDaysDemo', '共 {days} 天（示範數據）', { days }) + '</span></div></div>' +
-      '<div class="rpt-row"><span class="rpt-k">用藥</span><div><b>準時 ' + med + ' / ' + days + ' 天</b></div></div>' +
-      '<div class="rpt-row"><span class="rpt-k">活動</span><div><b>達標 ' + act + ' 天</b></div></div>' +
-      '<div class="rpt-row"><span class="rpt-k">睡眠</span><div><b>平均 7.2 小時</b></div></div>';
+      '<div class="rpt-row"><span class="rpt-k">' + muneaT('report.kMed', '用藥') + '</span><div><b>' + muneaT('report.medOnTime', '準時 {met} / {days} 天', { met: med, days }) + '</b></div></div>' +
+      '<div class="rpt-row"><span class="rpt-k">' + muneaT('report.kActivity', '活動') + '</span><div><b>' + muneaT('report.actMet', '達標 {days} 天', { days: act }) + '</b></div></div>' +
+      '<div class="rpt-row"><span class="rpt-k">' + muneaT('report.kSleep', '睡眠') + '</span><div><b>' + muneaT('report.sleepAvgDemo', '平均 7.2 小時') + '</b></div></div>';
     box.style.display = '';
     if ($('#rcHint')) $('#rcHint').textContent = muneaT('report.pickAnotherStart', '要看別段，再點一次新的開始日');
   }
@@ -10708,13 +10708,13 @@ function init() {
     const st = quizState;
     $('#quizProgress').textContent = muneaT('activity.quizDone', '完成！');
     $('#quizQ').textContent = '';
-    $('#quizOpts').innerHTML = '<div class="quiz-score">答對 ' + st.score + ' / ' + st.n + ' 題</div>' +
-      '<p class="modal-sub" style="text-align:center">寧寧會找 ' + st.act.names.join('、') + ' 來作答，都答完就看排名</p>' +
-      '<button class="modal-btn quiz-close-btn" type="button">好</button>';
+    $('#quizOpts').innerHTML = '<div class="quiz-score">' + muneaT('activity.quizScoreLine', '答對 {score} / {total} 題', { score: st.score, total: st.n }) + '</div>' +
+      '<p class="modal-sub" style="text-align:center">' + muneaT('activity.quizAskOthers', '{companion}會找 {names} 來作答，都答完就看排名', { companion: cname(), names: st.act.names.join(muneaT('common.listSeparator', '、')) }) + '</p>' +
+      '<button class="modal-btn quiz-close-btn" type="button">' + muneaT('common.ok', '好') + '</button>';
     const closeBtn = $('#quizOpts .quiz-close-btn');
     if (closeBtn) closeBtn.addEventListener('click', () => $('#quizModal').classList.remove('show'));
     const note = st.card && st.card.querySelector('.qc-num');
-    if (note) note.textContent = '你答對 ' + st.score + '/' + st.n + '，等 ' + st.act.names.join('、') + ' 作答完看排名';
+    if (note) note.textContent = muneaT('activity.quizWaitOthers', '你答對 {score}/{total}，等 {names} 作答完看排名', { score: st.score, total: st.n, names: st.act.names.join(muneaT('common.listSeparator', '、')) });
     const acts2 = loadActs();
     const rec = acts2.find(a => a.id === st.act.id);
     if (rec) {
