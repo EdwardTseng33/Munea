@@ -1388,7 +1388,7 @@
   "health.openHealthApp": "ヘルスケアへ",
   "notification.centerStateOn": "オン",
   "notification.centerStateOff": "オフ",
-  "settings.visitSummary": "通院メモ",
+  "settings.visitSummary": "受診サマリー",
   "settings.visitSummarySubtitle": "医師に見せる1ページのまとめ",
   "settings.managePlanButton": "プランを見る",
   "settings.ptsNote": "ポイントはおしゃべりに使います。なくなると一旦止まり、チャージすれば続けられます",
