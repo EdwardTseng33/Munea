@@ -1225,6 +1225,10 @@ _EVENT_TOOLS = types.Tool(function_declarations=[
                     items=types.Schema(type=types.Type.STRING),
                     description="抽獎的獎品，至少一個、最多三個。只有 kind=draw 要填。",
                 ),
+                "stepGoal": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="一起運動要走幾步（全家合計），1000 到 200000 之間，沒講就不要填（App 會用 30000 步）。只有 kind=walk 要填。",
+                ),
                 "questionCount": types.Schema(
                     type=types.Type.INTEGER,
                     description="機智問答要出幾題，5 到 20 之間，沒講就不要填（App 會用 10 題）。只有 kind=quiz 要填。",
