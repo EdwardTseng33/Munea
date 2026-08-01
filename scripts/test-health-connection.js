@@ -209,5 +209,39 @@ assert.match(healthSrc, /munea\.health\.disconnectedAt[\s\S]{0,120}return false/
 assert.match(healthSrc, /if \(!hasAnyValue\(s\)\) return false;/,
   '沒真的讀到值就把人標成已連線');
 
+/* 2026-08-01 Edward 實機回報的三件事，各留一道門 */
+
+const html = fs.readFileSync('web/index.html', 'utf8');
+
+// ① 那行說明的文字是程式依狀態算出來的（四種說法）。掛了 data-i18n 之後，語言每次重新套用
+//    就把它蓋回「目前未同步」——不管連沒連、讀到沒讀到，畫面永遠寫著同一句假話。
+assert.match(html, /id="cnHealthHelp"(?![^>]*data-i18n)/,
+  '健康說明那行不可以掛 data-i18n——翻譯層會把程式算出來的真話蓋成寫死的預設句');
+assert.ok(!/data-i18n="health\.helpNotSynced"/.test(html),
+  'health.helpNotSynced 是程式從來不用的死文案，不可以綁回畫面上');
+
+// ② 使用者常常是自己從桌面開健康 App 改設定再切回來，那條路以前沒人在聽，
+//    畫面就停在改之前的狀態，看起來像「我明明開了它還說沒連」。
+assert.match(healthSrc, /visibilitychange[\s\S]{0,420}?refresh\(\{ force: true \}\)/,
+  '切回 App 就要重讀一次，不能只在「從沐寧按連接跳出去」那一次才聽');
+// 前景重讀不可以先擋 connected()：解除過或重裝過的人旗子是關的、但 iPhone 的授權還在，
+// refresh() 開頭本來就會探一次。在這裡擋掉，他們在健康 App 開什麼都不會被讀到。
+assert.ok(!/visibilitychange[\s\S]{0,300}?!connected\(\)[\s\S]{0,24}?return;/.test(healthSrc),
+  '前景重讀不可以用 connected() 當前提——那會把「權限還在但旗子關著」的人永遠鎖在沒資料');
+// 「幾點讀的、讀到哪幾項」是他自己判斷「是我沒開對還是 App 沒讀」的唯一線索，
+// 綁在 connected() 上會剛好在讀不到的時候整行消失。
+assert.ok(!/function readEvidence\(\)\s*\{\s*if \(!connected\(\)/.test(healthSrc),
+  '讀取實況那行不可以綁 connected()——最需要它的時候它會不見');
+
+// ③ 蘋果沒有任何一條路能直接開到「健康 → App 與服務 → 沐寧」，所以路要用文字寫清楚
+//    （Strava／MyFitnessPal 都是這個做法）。只在讀不到、而且授權視窗不會再跳時出現。
+assert.match(healthSrc, /function renderHealthSteps\(on, firstTime, view\)[\s\S]{0,200}?const show = !on && !firstTime && view !== 'checking'/,
+  '找不到「接下來點這幾下」的指示卡，或它的出現條件不對');
+['health.stepsTitle', 'health.step1', 'health.step2', 'health.step3', 'health.step4', 'health.stepsAlt']
+  .forEach(key => assert.ok(
+    JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'))[key],
+    `健康指示卡缺文案：${key}`,
+  ));
+
 console.log('Apple Health connection state: ALL PASS');
 })().catch(error => { console.error(error); process.exitCode = 1; });

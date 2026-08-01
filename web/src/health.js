@@ -137,7 +137,11 @@ window.MuneaHealth = (function () {
 
   // 讀取實況：讓人能確定「到底讀到了沒」，而不是只看到一片空白自己猜。
   function readEvidence() {
-    if (!connected() || !lastReadAt) return '';
+    // 只要真的讀過就把結果說出來，不再要求「連接旗子是開的」（Edward 2026-08-01）——
+    // 「我在健康 App 開了，這裡還是說沒資料」最需要看到的就是這一行：
+    // 是 14:20 讀過了一項都沒有（＝項目沒開對），還是根本沒讀（＝App 沒去讀）。
+    // 之前綁在 connected() 上，剛好在讀不到的時候整行消失，等於把唯一的線索藏起來。
+    if (!lastReadAt) return '';
     const at = new Date(lastReadAt);
     const clock = String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0');
     if (lastReadError) return fill(t('health.readFailedAt', '{time} 讀取失敗：{reason}', { time: clock, reason: lastReadError }), { time: clock, reason: lastReadError });
@@ -207,6 +211,43 @@ window.MuneaHealth = (function () {
       evidence.textContent = line;
       evidence.hidden = !line;
     }
+    renderHealthSteps(on, firstTime, view);
+  }
+
+  // 「接下來要點哪幾下」——只在讀不到資料、而且授權視窗已經跳過（不會再跳）時出現。
+  //
+  // 為什麼用文字不用連結：蘋果沒有開放任何一條路能直接跳到「健康 →App 與服務 →沐寧」。
+  // x-apple-health://Sources/ 不是官方的、各版行為不一（Edward 的機器上就退回摘要頁），
+  // 帶 App 名字的那種蘋果明確不支援。Strava 與 MyFitnessPal 的說明文件都是同一個做法：
+  // 不靠連結，把路徑一步一步寫出來。連結照舊送他過去，但畫面上先讓他知道要找什麼。
+  function renderHealthSteps(on, firstTime, view) {
+    const box = document.getElementById('cnHealthSteps');
+    if (!box) return;
+    const show = !on && !firstTime && view !== 'checking';
+    box.hidden = !show;
+    if (!show) return;
+    const title = document.getElementById('cnHealthStepsTitle');
+    if (title) title.textContent = t('health.stepsTitle', '到「健康」App 之後，這樣打開：');
+    const list = document.getElementById('cnHealthStepsList');
+    if (list) {
+      const steps = [
+        t('health.step1', '右上角自己的照片（或名字縮寫）'),
+        t('health.step2', '往下找到「App 與服務」'),
+        t('health.step3', '點「沐寧」'),
+        t('health.step4', '把要給沐寧看的項目一項一項打開（預設是關的）'),
+      ];
+      list.textContent = '';
+      steps.forEach(text => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        list.appendChild(li);
+      });
+    }
+    const alt = document.getElementById('cnHealthStepsAlt');
+    if (alt) alt.textContent = t(
+      'health.stepsAlt',
+      '也可以從手機的「設定」→「健康」→「資料取用與裝置」→「沐寧」進去，是同一個地方。開好之後切回沐寧就會自動重讀。',
+    );
   }
 
   function emitConnectionState() {
@@ -343,15 +384,25 @@ window.MuneaHealth = (function () {
 
   // 去「健康」App，回來自動重讀一次，剛打開的項目直接長出來、不用再按一次
   async function goHealthAppAndReread() {
-    const onBack = () => {
-      if (document.visibilityState === 'visible') {
-        document.removeEventListener('visibilitychange', onBack);
-        refresh({ force: true });
-      }
-    };
-    document.addEventListener('visibilitychange', onBack);
     await openHealthApp();
   }
+
+  // 每次切回沐寧就重讀一次（Edward 2026-08-01）
+  //
+  // 舊寫法只在「從沐寧按連接跳去健康 App」那一次掛監聽。可是很多人是自己從桌面打開健康
+  // App 改設定、再切回來——那條路沒人在聽，畫面就停在改之前的狀態，看起來像「我明明開了
+  // 它還說沒連」。改成只要回到前景就重讀，不管他是怎麼去的。
+  //
+  // 冷卻期照舊（不加 force），所以連續切換不會一直去打擾系統；真的剛改過權限時，
+  // 冷卻期內第一次讀不到會由下一次切回來補上。
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!available()) return;
+    // 刻意不檢查 connected()：他可能按過解除、或重裝過，我們的旗子是關的，但 iPhone 給的
+    // 授權其實還在——refresh() 開頭會先探一次（relinkIfAlreadyAuthorized）。在這裡先擋掉，
+    // 那些人不管在健康 App 開了什麼，切回來都不會重讀，畫面永遠說沒資料。
+    refresh({ force: true });
+  });
 
   // 整頁只有一顆按鍵。它做什麼由狀態決定（uiState），不再有第二顆做類似事情的鍵。
   function bindConnectionUi() {

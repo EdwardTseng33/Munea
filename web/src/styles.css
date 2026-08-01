@@ -746,6 +746,13 @@ html[lang="es"] #connect .cn-row .cn-btn {
 /* 讀取實況（幾點讀的、讀到哪幾項／失敗原因）——讓人能確定到底讀到了沒 */
 .cn-health-read { margin: -10px 4px 18px; color: var(--teal-dd); font-size: 12.5px; line-height: 1.5; }
 .cn-health-read[hidden] { display: none; }
+/* 「接下來點這幾下」——蘋果不給直達的路，只能把路寫清楚（Strava／MyFitnessPal 同樣做法） */
+.cn-health-steps { margin: -6px 4px 18px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.cn-health-steps[hidden] { display: none; }
+.chs-title { margin: 0 0 8px; font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--ink); }
+.chs-list { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 13.5px; line-height: 1.75; }
+.chs-list li::marker { color: var(--teal-dd); font-weight: 800; }
+.chs-alt { margin: 10px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
 .sr-on.off { color: var(--muted); }
 .sr-on.off .d { background: var(--muted); }
 .cn-note { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 15px 16px; margin-top: 18px; }
