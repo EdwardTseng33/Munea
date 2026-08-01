@@ -123,13 +123,17 @@
         <svg width="19" height="19" viewBox="0 0 24 24" style="flex-shrink:0" fill="none" stroke="var(--teal-dd)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 14.5c1.2 1.5 5.8 1.5 7 0"/><circle cx="9" cy="10" r=".85" fill="var(--coral)" stroke="none"/><circle cx="15" cy="10" r=".85" fill="var(--coral)" stroke="none"/></svg>
         <div class="serif" style="font-size:19px;font-weight:900" data-i18n="status.moodMonitoring">情緒監測</div>
       </div>
-      <span class="chip" id="moodChip" style="background:#fff;color:var(--teal-dd)" data-i18n="demo.status.trendWeekSteady">過去7天 ↗ 平穩</span>
+      <!-- ⚠ 這三個（moodChip／moodLabel／moodNote）都不可以掛 data-i18n（Edward 2026-08-01 抓到）：
+           它們的文字由 decorate() 依「他今天記了什麼心情」算出來，翻譯走程式裡的 muneaUiT()。
+           掛了標籤之後，畫面上那個一直在巡邏的翻譯層（MutationObserver）會在卡片重畫時把它們
+           蓋回寫死的那一組——點「愉悅」上面永遠停在「平靜」，跟 8/1 早上蘋果健康那行是同一個病。 -->
+      <span class="chip" id="moodChip" style="background:#fff;color:var(--teal-dd)">過去7天 ↗ 平穩</span>
     </div>
     <div id="moodBody"><div class="row" style="gap:13px;margin-bottom:14px">
       <div id="moodOrb" style="flex:0 0 52px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.42),rgba(255,255,255,0) 62%),#236C66;box-shadow:0 8px 18px -6px rgba(35,108,102,.5)"></div>
       <div style="flex:1">
-        <div style="display:flex;align-items:baseline;gap:7px"><span id="moodLabel" class="serif" style="font-size:22px;font-weight:900;color:#236C66" data-i18n="mood.calm">平靜</span><span id="moodPeriodLabel" style="font-size:11.5px;color:var(--muted)" data-i18n="common.today">今天</span></div>
-        <div id="moodNote" style="font-size:12.5px;color:var(--ink2);line-height:1.5;margin-top:3px" data-i18n="mood.note.calm">今天心情平穩，膝蓋的痠有記著。</div>
+        <div style="display:flex;align-items:baseline;gap:7px"><span id="moodLabel" class="serif" style="font-size:22px;font-weight:900;color:#236C66">平靜</span><span id="moodPeriodLabel" style="font-size:11.5px;color:var(--muted)">今天</span></div>
+        <div id="moodNote" style="font-size:12.5px;color:var(--ink2);line-height:1.5;margin-top:3px">今天心情平穩，膝蓋的痠有記著。</div>
       </div>
     </div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:9px" data-i18n="status.recordMood">記錄當下的心情</div>
