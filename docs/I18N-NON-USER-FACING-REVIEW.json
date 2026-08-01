@@ -458,24 +458,6 @@
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
-      "id": "b39-legacy-cbe4f611",
-      "path": "web/index.html",
-      "text": "愉快",
-      "kind": "inline-string",
-      "expectedOccurrences": 1,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-legacy-dec63d5a",
-      "path": "web/index.html",
-      "text": "愉悅",
-      "kind": "inline-string",
-      "expectedOccurrences": 2,
-      "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
       "id": "b39-legacy-e18c89e9",
       "path": "web/index.html",
       "text": "憤怒",
@@ -1725,6 +1707,168 @@
       "expectedOccurrences": 1,
       "reasonCode": "zh-intent-matcher",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
+    },
+    {
+      "id": "b40-placeholder-9f53a144",
+      "path": "web/index.html",
+      "text": "訪客模式",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-placeholder-b82b73ae",
+      "path": "web/index.html",
+      "text": "過去7天 ↗ 平穩",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-placeholder-21eb704f",
+      "path": "web/index.html",
+      "text": "隨時",
+      "kind": "text",
+      "expectedOccurrences": 2,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-placeholder-4ec1c842",
+      "path": "web/index.html",
+      "text": "記錄今天的心情",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-placeholder-6115c406",
+      "path": "web/index.html",
+      "text": "今天走 500 步",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-moodmap-ece2b607",
+      "path": "web/src/app.js",
+      "text": "憤怒",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-mood-pipeline.js"
+    },
+    {
+      "id": "b40-placeholder-caf3e135",
+      "path": "web/index.html",
+      "text": "今天心情平穩，膝蓋的痠有記著。",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-placeholder-24fd43e6",
+      "path": "web/index.html",
+      "text": "愉悅",
+      "kind": "inline-string",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-moodmap-77de4410",
+      "path": "web/src/app.js",
+      "text": "愉悅",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-mood-pipeline.js"
+    },
+    {
+      "id": "b40-moodmap-62878874",
+      "path": "web/src/app.js",
+      "text": "緊張",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-mood-pipeline.js"
+    },
+    {
+      "id": "b40-placeholder-3c65fd30",
+      "path": "web/index.html",
+      "text": "愉快",
+      "kind": "inline-string",
+      "expectedOccurrences": 2,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-placeholder-25232db6",
+      "path": "web/index.html",
+      "text": "今天",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-placeholder-3e3b8b13",
+      "path": "web/index.html",
+      "text": "尚未服用",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-moodmap-2b94a3af",
+      "path": "web/src/app.js",
+      "text": "生氣",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-mood-pipeline.js"
+    },
+    {
+      "id": "b40-moodmap-d81acd85",
+      "path": "web/src/app.js",
+      "text": "焦慮",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-mood-pipeline.js"
+    },
+    {
+      "id": "b40-placeholder-137f24d2",
+      "path": "web/index.html",
+      "text": "平靜",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-moodmap-c12c9b35",
+      "path": "web/src/app.js",
+      "text": "平靜",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "legacy-storage-identity",
+      "evidence": "scripts/test-mood-pipeline.js"
+    },
+    {
+      "id": "b40-placeholder-1c333ff6",
+      "path": "web/index.html",
+      "text": "開始通話",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     }
   ]
 }
