@@ -282,10 +282,10 @@
   "status.today": "今日",
   "status.past7Days": "7 日間",
   "status.past30Days": "30 日間",
-  "status.moodMonitoring": "気分",
+  "status.moodMonitoring": "気分の記録",
   "status.healthData": "健康データ",
   "status.medication": "服薬状況",
-  "status.recordMood": "今の気分を記録",
+  "status.recordMood": "いまの気分は？ わたしが覚えておきます",
   "status.period7Title": "過去 7 日間の様子",
   "status.period30Title": "過去 30 日間の様子",
   "status.companionObservation": "{companion}の見守りメモ",
@@ -1537,5 +1537,6 @@
   "health.medStatusTitle": "服薬のようす",
   "health.lastNightSleep": "昨夜の睡眠",
   "health.activityAmount": "運動量",
-  "health.unit.hourNarrow": "時間"
+  "health.unit.hourNarrow": "時間",
+  "mood.weekAccumulating": "まだ記録が足りません。{companion}と何度か話すか、下から気分を選ぶと、あなた自身の一週間がここに現れます。"
 }
