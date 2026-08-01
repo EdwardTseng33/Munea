@@ -1310,6 +1310,7 @@
 <script>
   /* ===== Munea 情緒球引擎（Edward 7/7 拍板：主色A / 5秒可改 / 手動優先 / 空狀態） ===== */
   window.MM = (function(){
+  window.MOOD_NOTE_KEYS = ['happy','pleasant','calm','low','anxious','angry'];
   var MOODS=[
     {k:'開心',c:'#F4B63A',label:function(){return window.muneaUiT('mood.happy','開心');},note:function(){return window.muneaUiT('mood.note.happy','今天特別開心，還主動說想出去走走。',{companion:window.muneaUiCompanionName()});}},
     {k:'愉快',c:'#2FB7A8',label:function(){return window.muneaUiT('mood.pleasant','愉悅');},note:function(){return window.muneaUiT('mood.note.pleasant','心情很好，剛剛還哼了首歌呢。',{companion:window.muneaUiCompanionName()});}},
@@ -1319,7 +1320,29 @@
     {k:'生氣',c:'#E95B4F',label:function(){return window.muneaUiT('mood.angry','生氣');},note:function(){return window.muneaUiT('mood.note.angry','好像有點不開心，深呼吸一下，{companion}在。',{companion:window.muneaUiCompanionName()});}}
   ];
   function moodLabel(i){ return MOODS[i].label(); }
-  function moodNote(i){ return MOODS[i].note(); }
+  // 每個心情備了四句，點一次隨機出一句——不重複「上一次出過的那句」，
+  // 所以明天再點同一個心情，看到的話會不一樣（Edward 2026-08-01）。
+  // 為什麼用固定文案而不是讓 AI 現寫：這一格是點下去就要出現的即時回饋，
+  // 讓 AI 生就得等網路。Edward 試過之後拍板：不要等。
+  // 四語不是直譯——日文含蓄不打擾、英文直接肯定、西班牙文熱一點且不分性別。
+  var _moodNoteLast = {};
+  function moodNote(i){
+    var m = MOODS[i]; if(!m) return '';
+    var key = (window.MOOD_NOTE_KEYS && window.MOOD_NOTE_KEYS[i]) || '';
+    var pool = [m.note()];
+    if(key){
+      for(var v=2; v<=4; v++){
+        var t = window.muneaUiT('mood.note.'+key+'.'+v, '');
+        if(t && t !== 'mood.note.'+key+'.'+v) pool.push(t);
+      }
+    }
+    if(pool.length < 2) return pool[0];
+    var pick, guard = 0;
+    do { pick = pool[Math.floor(Math.random()*pool.length)]; guard++; }
+    while(pick === _moodNoteLast[i] && guard < 8);
+    _moodNoteLast[i] = pick;
+    return pick;
+  }
   var LEVELS=[5,4,3,2,2,1];
   // 聊聊觀察的心情詞 → 情緒球六色（球顯示時對齊）
   var BMAP={'開心':0,'愉快':1,'愉悅':1,'平穩':2,'平靜':2,'疲累':3,'低落':3,'煩躁':4,'焦慮':4,'緊張':4,'生氣':5,'憤怒':5};
