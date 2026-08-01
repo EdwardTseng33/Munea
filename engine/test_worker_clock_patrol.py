@@ -133,3 +133,35 @@ class WorkerClockPatrolTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BrainKnowsTheGatewayTests(unittest.TestCase):
+    """大腦要巡工作卡的時鐘，就得知道總機在哪。
+
+    2026-08-01 首次掛巡邏時踩到：這個變數原本只設在語音那台，大腦沒有，
+    接口回 gateway_or_key_missing——鬧鐘準時響、巡邏卻什麼都沒巡。
+
+    ⚠ 一定要寫在部署腳本的清單裡，不能只在雲端手動加：下次部署會把手動加的清掉
+    （2026-07-12 staging 全掛、07-29 租卡管家少三格，都是這個坑）。
+    """
+
+    def _deploy_script(self, name):
+        path = os.path.join(os.path.dirname(__file__), "..", "deploy", "cloudrun", name)
+        with open(path, encoding="utf-8") as source:
+            return source.read()
+
+    def test_both_deploy_scripts_give_the_brain_the_gateway_url(self):
+        for name, env_marker in (
+            ("canary-deploy.sh", "MUNEA_ENV_NAME=staging"),
+            ("prod-deploy.sh", "MUNEA_ENV_NAME=production"),
+        ):
+            text = self._deploy_script(name)
+            brain_line = next(
+                (line for line in text.splitlines() if env_marker in line and "MUNEA_APP_KEY" in line),
+                "",
+            )
+            self.assertTrue(brain_line, "%s 找不到大腦的環境變數那一行" % name)
+            self.assertIn(
+                "MUNEA_CALL_CONTROL_URL=", brain_line,
+                "%s 的大腦沒帶總機網址——時鐘巡邏會變成啞的" % name,
+            )
