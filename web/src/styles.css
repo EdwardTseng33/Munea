@@ -2803,3 +2803,6 @@ html:lang(ja) {
 #medCard #medSub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden; line-height: 1.4; }
 #medCard #medChip { font-size: 11.5px; font-weight: 600; padding: 5px 10px; white-space: nowrap; }
+
+/* 心情週還沒有紀錄時的說明——跟健康數據的空狀態同一種語氣與份量 */
+.mood-week-empty { padding: 16px 2px; font-size: 13.5px; line-height: 1.7; color: var(--muted); text-align: center; }

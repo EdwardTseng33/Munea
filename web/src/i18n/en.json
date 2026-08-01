@@ -282,10 +282,10 @@
   "status.today": "Today",
   "status.past7Days": "7 days",
   "status.past30Days": "30 days",
-  "status.moodMonitoring": "Mood",
+  "status.moodMonitoring": "Mood notes",
   "status.healthData": "Health data",
   "status.medication": "Medication",
-  "status.recordMood": "Record how you feel",
+  "status.recordMood": "How are you feeling? I'll keep it for you",
   "status.period7Title": "Status for the past 7 days",
   "status.period30Title": "Status for the past 30 days",
   "status.companionObservation": "{companion}'s notes",
@@ -1537,5 +1537,6 @@
   "health.medStatusTitle": "Medication status",
   "health.lastNightSleep": "Last night’s sleep",
   "health.activityAmount": "Activity",
-  "health.unit.hourNarrow": "h"
+  "health.unit.hourNarrow": "h",
+  "mood.weekAccumulating": "Not enough records yet. Talk with {companion} a few times, or tap a mood below, and your own week will appear here."
 }

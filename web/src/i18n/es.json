@@ -282,10 +282,10 @@
   "status.today": "Hoy",
   "status.past7Days": "7 días",
   "status.past30Days": "30 días",
-  "status.moodMonitoring": "Ánimo",
+  "status.moodMonitoring": "Registro de ánimo",
   "status.healthData": "Datos de salud",
   "status.medication": "Medicación",
-  "status.recordMood": "Anota cómo te sientes",
+  "status.recordMood": "¿Cómo te sientes? Lo guardo por ti",
   "status.period7Title": "Estado de los últimos 7 días",
   "status.period30Title": "Estado de los últimos 30 días",
   "status.companionObservation": "Notas de {companion}",
@@ -1537,5 +1537,6 @@
   "health.medStatusTitle": "Estado de medicación",
   "health.lastNightSleep": "Sueño de anoche",
   "health.activityAmount": "Ejercicio",
-  "health.unit.hourNarrow": "h"
+  "health.unit.hourNarrow": "h",
+  "mood.weekAccumulating": "Aún no hay suficientes registros. Habla con {companion} unas cuantas veces, o toca un ánimo abajo, y aparecerá tu propia semana."
 }

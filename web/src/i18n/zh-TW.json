@@ -282,10 +282,10 @@
   "status.today": "今天",
   "status.past7Days": "7 天",
   "status.past30Days": "30 天",
-  "status.moodMonitoring": "情緒監測",
+  "status.moodMonitoring": "心情紀錄",
   "status.healthData": "健康數據",
   "status.medication": "用藥狀態",
-  "status.recordMood": "記錄當下的心情",
+  "status.recordMood": "現在心情怎麼樣？我幫你記著",
   "status.period7Title": "過去 7 天的狀態",
   "status.period30Title": "過去 30 天的狀態",
   "status.companionObservation": "{companion}的觀察",
@@ -1537,5 +1537,6 @@
   "health.medStatusTitle": "用藥狀態",
   "health.lastNightSleep": "昨晚睡眠",
   "health.activityAmount": "運動量",
-  "health.unit.hourNarrow": "時"
+  "health.unit.hourNarrow": "時",
+  "mood.weekAccumulating": "還沒有足夠的紀錄。跟{companion}聊幾次、或在下面點個心情，這裡就會長出你自己的一週。"
 }
