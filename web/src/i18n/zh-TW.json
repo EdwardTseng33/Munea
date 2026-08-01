@@ -1636,5 +1636,15 @@
   "activity.drawSoldOutTitle": "獎都被抽完了",
   "activity.drawSoldOutSub": "這場來晚了一步，下次早點來",
   "activity.prizeMoreThanPeople": "獎有 {seats} 個、人只有 {people} 位，會發不完。要這樣就再按一次送出",
-  "activity.drawDueInPast": "截止時間已經過了，改一個晚一點的"
+  "activity.drawDueInPast": "截止時間已經過了，改一個晚一點的",
+  "activity.drawLockedGot": "恭喜！是你的了",
+  "activity.drawLockedMiss": "這次沒中，下次再來",
+  "activity.voteChangeNote": "想改隨時再點另一個，{when}截止",
+  "activity.voteClosedNote": "投票結束了，這是最後的結果",
+  "activity.voteClosedMissed": "投票結束了，這次你沒趕上",
+  "activity.voteChangedToast": "改成「{opt}」了",
+  "activity.walkCardProgress": "已經走了 {sum} 步（{pct}%）· 你走了 {mine} 步",
+  "activity.walkStateMine": "你走了 {mine} 步",
+  "activity.walkStateZero": "你還沒開始走",
+  "activity.walkSinceStart": "從發起那一刻開始算，之前走的不算進來"
 }

@@ -2445,9 +2445,18 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 @keyframes miss-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 .draw-got.miss .dg-txt b { color: var(--ink-2); font-size: 15px; }
 .draw-got.miss .dg-txt small { color: var(--muted); }
-/* 翻牌定格的「咚」：轉完最後一下放大再回來，讓結果落地有重量 */
-.draw-roll .dr-prize.locked { animation: prize-lock .42s cubic-bezier(.2, 1.6, .35, 1); }
+/* 翻牌定格的「咚」：轉完最後一下放大再回來，讓結果落地有重量。
+   定格之後那幾秒不能是死畫面——獎項名持續發著金光呼吸，禮物盒也停下來不再亂搖。 */
+.draw-roll .dr-prize.locked { animation: prize-lock .42s cubic-bezier(.2, 1.6, .35, 1), prize-hold 1.9s .42s ease-in-out infinite; }
 @keyframes prize-lock { 0% { transform: scale(1.35); filter: brightness(1.6); } 60% { transform: scale(.97); } 100% { transform: scale(1); filter: none; } }
+@keyframes prize-hold { 0%, 100% { text-shadow: 0 0 0 rgba(224, 179, 84, 0); } 50% { text-shadow: 0 0 20px rgba(224, 179, 84, .6); } }
+/* 定格後禮物盒改成輕輕浮動，不再左右晃——晃是「還在抽」的訊號，抽完就該停 */
+.draw-stage:has(.dr-prize.locked) .ds-gift { animation: gift-float 2.2s ease-in-out infinite; }
+@keyframes gift-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) {
+  .draw-roll .dr-prize.locked { animation: none !important; }
+  .draw-stage:has(.dr-prize.locked) .ds-gift { animation: none !important; }
+}
 /* 獎項板一列一列滑進來（最多四列，錯開得很短、不拖時間） */
 .prize-board .pb-row { animation: pb-in .34s ease-out both; }
 .prize-board .pb-row:nth-child(2) { animation-delay: .05s; }

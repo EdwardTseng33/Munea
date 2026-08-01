@@ -831,7 +831,7 @@
       "path": "web/src/app.js",
       "text": "你",
       "kind": "string",
-      "expectedOccurrences": 21,
+      "expectedOccurrences": 23,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
