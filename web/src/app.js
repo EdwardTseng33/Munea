@@ -66,6 +66,8 @@ function localizeCanonicalLegacyPanels() {
   const setDirectText = (selector, key, fallback, values = null) => {
     const element = document.querySelector(selector);
     if (!element) return;
+    // 同上：底下已經有翻譯標記就別再補，否則外語版會印兩次。
+    if (element.querySelector('[data-i18n]')) return;
     [...element.childNodes]
       .filter((node) => node.nodeType === Node.TEXT_NODE)
       .forEach((node) => node.remove());
@@ -140,14 +142,13 @@ function localizeCanonicalLegacyPanels() {
 
   setText('#feedbackModal h2', 'feedback.title', 'Feedback');
   setText('#feedbackModal > .modal > .modal-sub', 'legacyUi.feedbackSubtitle', 'We read every message. Choose a topic and tell us what you think.');
-  [
-    ['bug', 'feedback.categoryBug', 'Report a problem'],
-    ['idea', 'feedback.categoryIdea', 'Suggest a feature'],
-    ['praise', 'feedback.categoryPraise', 'Share praise'],
-    ['nps', 'feedback.categoryNps', 'Rate Munea'],
-  ].forEach(([type, key, fallback]) => {
-    setDirectText(`#fbTypes [data-t="${type}"]`, key, fallback);
-  });
+  // 意見分類那四顆按鈕不必在這裡補翻譯——它們的 index.html 裡已經有
+  // <span data-i18n="feedback.categoryXxx">，翻譯層會處理。
+  // 這段是改版殘骸：按鈕本來是純文字，後來改成包在 span 裡，這個迴圈忘了拿掉，
+  // 於是 setDirectText 又在 span 後面補一段文字節點，外語版每顆按鈕的字都印兩次
+  // （「Informar de un problemaInformar de un problema」，Edward 2026-08-01 抓到）。
+  // 中文版不受影響——localizeCanonicalLegacyPanels 開頭就對 zh-TW 直接 return，
+  // 所以這個 bug 只有外語看得到，中文走查永遠測不出來。
   const feedbackPhotoLabel = $('#fbPhotoLabel');
   if (feedbackPhotoLabel) {
     [...feedbackPhotoLabel.childNodes]
@@ -1138,13 +1139,28 @@ function syncCompanionUI() {
   const thumbSrc = t.thumbAsset || src;
   const homeSrc = thumbSrc;   // 首頁頭像＝選角色同一張臉、同一種取景（Edward 7/9：不再用另一張 hero 照）
   const fullSrc = t.fullAsset || homeSrc;
-  const homeName = $('#companionHomeName'); if (homeName) homeName.textContent = display;
-  const chatName = $('#chatName'); if (chatName) chatName.textContent = display;
-  const settingName = $('#settingsCompanionName'); if (settingName) settingName.textContent = display;
+  // 這些位置顯示的是「你選的那個角色」的名字，會跟著換角色變。
+  // index.html 把它們釘在女生角色的翻譯標記上（companion.nening.name），
+  // 翻譯層每次重掃就蓋回寧寧／Lucía——於是換成男生後照片換了、名字沒換，
+  // 甚至出現「Lucía」配男生照片、旁邊卻寫「Soy Mateo」的錯亂畫面
+  // （Edward 2026-08-01 兩次抓到；中文版也一樣壞，不是外語才有的問題）。
+  // 跟同日心情記錄、蘋果健康那兩個是同一個病：
+  // **程式算出來的字不能同時掛翻譯標籤。**
+  // 集中在這裡一次拔掉，之後新增顯示角色名的地方也只要加進這個清單。
+  // .cname 那顆（用藥提醒說明裡的角色名）原本沒有任何程式在更新它，
+  // 永遠停在女生角色的名字——用 $$ 一起收，新增的也自動涵蓋。
+  const NAME_SLOTS = ['#companionHomeName', '#chatName', '#settingsCompanionName', '.cname'];
+  NAME_SLOTS.forEach((sel) => {
+    $$(sel).forEach((el) => {
+      el.removeAttribute('data-i18n');
+      el.textContent = display;
+    });
+  });
   const careHeading = $('#careHeading'); if (careHeading) careHeading.textContent = muneaT('home.careHeading', '{companion}幫你留意', { companion: display });
   const chatTaskTitle = $('#chatTaskTitle'); if (chatTaskTitle) chatTaskTitle.textContent = muneaT('home.taskChatTitle', '和{companion}聊聊', { companion: display });
   const interestsSubtitle = $('#interestsSubtitle'); if (interestsSubtitle) interestsSubtitle.textContent = muneaT('settings.interestsSubtitle', '挑幾個興趣，{companion}會多留意', { companion: display });
-  const settingLabel = $('#settingsTemplateLabel'); if (settingLabel) settingLabel.textContent = t.templateLabel;
+  const settingLabel = $('#settingsTemplateLabel');
+  if (settingLabel) { settingLabel.removeAttribute('data-i18n'); settingLabel.textContent = t.templateLabel; }
   const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = thumbSrc;
   const nameInput = $('#companionNameInput');
   if (nameInput && document.activeElement !== nameInput && nameInput.value !== display) nameInput.value = display;
@@ -6133,6 +6149,12 @@ function renderMedSlots() {
 
 function setElementOwnText(element, text) {
   if (!element) return;
+  // 這個元素裡若已經有掛翻譯標記的子節點，那段字翻譯層會自己處理——
+  // 這裡再補一次就會變成同一句印兩次（外語版才看得到，中文版永遠測不出來）。
+  // 2026-08-01 Edward 在西班牙文版看到「Informar de un problemaInformar de un problema」，
+  // 追下去是四處都犯：意見分類四顆鈕、選圖片、三條健康警訊、我吃過了。
+  // 與其一處一處刪，在這裡擋住整類——之後誰再呼叫都不會重複。
+  if (element.querySelector && element.querySelector('[data-i18n]')) return;
   const textNodes = [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE);
   if (textNodes.length) {
     textNodes[0].textContent = text;
@@ -8991,7 +9013,13 @@ function init() {
   function hasNativeStore() {
     return !!(window.MuneaStore && window.MuneaStore.available());
   }
+  // 拿不到蘋果價格時的退路。台幣金額只對台灣使用者成立——
+  // 對西班牙／美國／日本的使用者顯示「1199 TWD」是錯的價格加錯的幣別
+  // （Edward 2026-08-01 在西班牙文版看到）。真機幾乎都拿得到蘋果的當地價，
+  // 但網路一慢就會走到這裡，蘋果審查若看到會當成誤導定價。
+  // 所以：只有中文版才退回台幣，其他語言一律顯示破折號——不知道就不要編一個。
   function fallbackTwdPrice(amount) {
+    if (muneaLocale() !== 'zh-TW') return '—';
     return new Intl.NumberFormat(muneaLocale(), {
       currency: 'TWD',
       currencyDisplay: 'code',
@@ -9747,11 +9775,15 @@ function init() {
       // 星期名走 Intl，四語系自動正確——不要為了七個星期硬刻 28 把 key，
       // 也不要留寫死的中文（這一格捕捉工具掃不到：harness 用 showModal() 直接開面板，
       // 不會觸發 buildCalGrid，所以這裡漏中文不會有任何測試發現）。
+      // 日期格子是等寬的七欄，一格只放得下四、五個字元。中文「今天／明天」剛好，
+      // 但英文的 Tomorrow 有八個字元、西班牙文 Mañana 六個，硬塞會擠爆或縮到看不清。
+      // 判準用長度、不用語言：塞得下就用「明天」這種好懂的字，塞不下就退回星期幾
+      // （那一格的日期數字仍在，看得出來是哪一天）。「今天」四語都夠短、一律保留。
+      const weekday = new Intl.DateTimeFormat(muneaLocale(), { weekday: 'short' }).format(d);
+      const tomorrowWord = muneaT('common.tomorrow', '明天');
       const wdName = i === 0
         ? muneaT('common.today', '今天')
-        : (i === 1
-          ? muneaT('common.tomorrow', '明天')
-          : new Intl.DateTimeFormat(muneaLocale(), { weekday: 'short' }).format(d));
+        : (i === 1 && [...tomorrowWord].length <= 4 ? tomorrowWord : weekday);
       html += '<button type="button" class="cal-cell" data-iso="' + isoOf(d) + '"><small>' + wdName + '</small><b>' + (d.getDate() === 1 ? (d.getMonth() + 1) + '/1' : d.getDate()) + '</b></button>';
     }
     box.innerHTML = html;

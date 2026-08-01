@@ -1251,10 +1251,16 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
    改成跟上面「訂閱方案／加值點數」同一套膠囊，只是把份量整個收下來：
    底色比主按鈕更淡、字更小、圓角略小、不用邊框——一看就知道是次要，但仍是同一個家族。
    觸控高度維持 44px（長輩手指不準，視覺份量低不等於難按）。 */
-.plan-links { display: flex; gap: 10px; margin-top: 10px; }   /* gap 跟上面 .plan-actions 對齊，兩排才像同一組 */
-.plan-link { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 10px; border: none; border-radius: 13px;
+/* 這一排是次要動作（管理訂閱／恢復購買）。原本跟上面的主要動作一樣滿版、一樣高，
+ * 四顆看起來一樣重，眼睛不知道該先看哪個（Edward 2026-08-01：「按鈕欄位要設計好」）。
+ * 改成置中、寬度跟著字走、比上面矮一截也小一號——主次一眼分得出來，四語都適用。 */
+/* 兩顆丸子按鈕：flex 預設會壓縮，字比按鈕寬時就滿出右邊，看起來像靠左
+ * （Edward 2026-08-01：「文字在欄位內置中，現在看都靠左了」）。
+ * 改成不壓縮、按鈕跟著字長，真的排不下就換行——字永遠在按鈕正中央。 */
+.plan-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.plan-link { flex: 0 0 auto; min-width: 0; min-height: 38px; padding: 0 15px; border: none; border-radius: 11px;
   background: var(--mint); color: var(--teal-d); cursor: pointer;
-  font-family: inherit; font-size: 14px; font-weight: 600; opacity: .85; }
+  font-family: inherit; font-size: 12.5px; font-weight: 600; opacity: .8; white-space: nowrap; }
 .plan-link:active { opacity: 1; }
 .plan-actions .plan-btn { flex: 1 1 0; min-width: 0; white-space: normal; min-height: 48px; padding-inline: 12px; }
 #topUpBtn.plan-btn { background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); }
@@ -1380,7 +1386,9 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .home-date { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
 
 /* 揪一攤 · 14 天快選月曆（自家設計、不用瀏覽器原生格） */
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 2px 0 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 2px 0 8px; }
+/* minmax(0,1fr)：1fr 的下限是「內容多寬就多寬」，所以「Tomorrow」這種長字會把自己那格撐大、
+   整排寬度就參差不齊（Edward 2026-08-01 指出）。中文版也有這個毛病，只是字短看不出來。 */
 .cal-cell { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 0 8px; text-align: center; cursor: pointer; line-height: 1.15; }
 .cal-cell small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
 .cal-cell b { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--display); }
@@ -2254,7 +2262,14 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 /* ===== 狀態頁 V1-Status 設計檔移植（Edward 7/7 · 完全比照 handoff · scope #status 不污染別頁） ===== */
 #status { --mint2: var(--mint-2); --ink2: var(--ink-2); }
 #status .serif { font-family: var(--serif); }
-#status .h1 { font-size: 27px; font-weight: 900; letter-spacing: .5px; }
+/* 狀態頁的標題原本自己一套（27px/900、位置也比別頁高 14px），四頁看起來不齊。
+ * 2026-08-01 Edward 問「每個頁面都有統一了嗎」——查出來就是這一頁沒有。
+ * 改成跟 .page-title 同一組規格（24px/800、上下留白一致）。 */
+#status .h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; line-height: 1.2;
+  min-height: 44px; display: flex; align-items: center; margin: 6px 0 16px; }
+/* 2026-08-01 二修：上次補的 8px 補反了——我量的是「框」的位置（四頁都一樣），
+ * 但真正看得到的是「字形」的位置，那個差 8px。Edward 一眼看出來、我的量測法沒有。
+ * 這裡改回 6px，並用字形位置驗證（見下一條註解）。 */
 #status .card, #family .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
 #status .row, #family .row { display: flex; align-items: center; }
 #status .chip, #family .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }  /* 7/9 Edward：家人頁標籤與狀態頁同規範（原只掛 #status、家人頁變螢光方塊） */
@@ -2531,3 +2546,260 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .walk-p span:last-child { color: var(--teal-dd); font-weight: 700; }
 .rsvp-btn:disabled { opacity: .5; cursor: default; }
 .inv-temp-note { font-size: 13px; line-height: 1.55; color: var(--ink); background: var(--coral-soft); border-radius: 12px; padding: 9px 12px; margin: -4px 0 12px; }
+
+/* ===== 拉丁語系版型修正（Edward 2026-08-01 走查英文版後立）=====
+ * 中文一個字一格、英文與西班牙文一個詞好幾格——同一個字級，中文排得剛好的地方
+ * 換成英文就爆框或折行。Edward 現場點出四處：通話控制鈕的字跑出圓圈、
+ * 家庭活動兩顆鈕的字折成兩行、頁面大標「Family health circle」折行、
+ * 設定頁列表的標題折行把右邊的值擠掉。
+ *
+ * 原則：只調「版面會被撐破」的地方——大標題、固定寬度的控制項、有右欄的列表。
+ * 內文不調。英文內文比中文多一行是正常的，把內文縮小反而害長輩看不清，
+ * 那是為了版面犧牲可讀性、方向錯了。
+ *
+ * 只掛 en / es。中文與日文都是一字一格、本來就排得下，不受影響。 */
+
+/* 頁面大標：四語同一個字級與粗細（Edward 2026-08-01：「標題的字體大小與字粗
+ * 不同語系的所有頁面都要統一」「位置也要一致」）。
+ * 原本中日 28px、英西 23px——那是我為了塞下英文才分開調的，結果同一個 App
+ * 換個語言標題就變大變小，看起來像兩個產品。
+ * 24px 是「四語每一頁都放得下一行」的最大值（量過首頁／家人／設定／裝置四頁）。
+ * 西班牙文的家人頁原本是 Círculo de salud familiar，太長，一併收短成 Salud familiar。 */
+.page-title, .greeting-big { font-size: 24px; }
+html:lang(en) .greeting-big, html:lang(es) .greeting-big { max-width: none; }
+
+/* 通話控制鈕：英文與西班牙文只留圖示，不放字（Edward 2026-08-01 拍板）。
+ * Microphone / Subtitulos 這種長度不管怎麼縮都會頂到圓圈邊，縮到塞得下又小到看不清；
+ * 麥克風與字幕的圖示本來就通用、看圖就懂。念螢幕的人不受影響——按鈕上的
+ * aria-label 仍在（見 index.html 的 data-i18n-aria-label），只是畫面上不再印出來。
+ * 中文「字幕／麥克風」與日文「字幕／マイク」都短、放得下，維持原樣。 */
+html:lang(en) .ctl-btn > span,
+html:lang(es) .ctl-btn > span { display: none; }
+html:lang(en) .ctl-btn .ic,
+html:lang(es) .ctl-btn .ic { width: 26px; height: 26px; }
+
+/* 家庭活動兩顆並排鈕：字放一行 */
+html:lang(en) .chal-act,
+html:lang(es) .chal-act { font-size: 13px; }
+html:lang(en) .chal-act span,
+html:lang(es) .chal-act span { white-space: nowrap; }
+html:lang(en) .chal-act .ic,
+html:lang(es) .chal-act .ic { width: 16px; height: 16px; }
+
+/* 設定頁列表：標題折行會把右邊的值擠掉 */
+html:lang(en) .set-row,
+html:lang(es) .set-row { font-size: 15.5px; }
+
+/* 有右欄的列：左邊標題被右邊的值擠到折行。
+ * 「Apple Health」被擠成「Apple / Health」兩行、待辦列的「Salir a caminar」也一樣。
+ * 修法：標題不准斷詞、右邊的值縮一級並自己顧好寬度——先保住左邊的標題完整。 */
+html:lang(en) .set-row .sr-main > span:first-child,
+html:lang(es) .set-row .sr-main > span:first-child { white-space: nowrap; }
+html:lang(en) .set-row .sr-on,
+html:lang(es) .set-row .sr-on { font-size: 13px; text-align: right; }
+html:lang(en) .set-row .sr-main small,
+html:lang(es) .set-row .sr-main small { font-size: 12.5px; }
+
+html:lang(en) .task-title,
+html:lang(es) .task-title { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html:lang(en) .task-sub,
+html:lang(es) .task-sub { font-size: 13px; }
+html:lang(en) .task-time,
+html:lang(es) .task-time { font-size: 12.5px; white-space: nowrap; }
+html:lang(en) .task-body,
+html:lang(es) .task-body { min-width: 0; }
+
+/* 被框住的小按鈕與籤條：字一長就被切掉或折成好幾行。
+ * 「14 days」「Monthly summaries」在英文直接被切；日文的「写真を変更」「お薬の写真を追加」
+ * 折成 5-8 行；西班牙文的意見分類籤條全部折兩行。
+ * 日文也要顧——片假名詞（サブスクリプション…）比中文長很多，不能當成跟中文一樣。 */
+html:lang(en) .seg-btn, html:lang(es) .seg-btn, html:lang(ja) .seg-btn {
+  font-size: 12px; padding-left: 4px; padding-right: 4px; }
+html:lang(en) .topic-chip, html:lang(es) .topic-chip, html:lang(ja) .topic-chip {
+  font-size: 13px; }
+html:lang(en) .pf-avatar-btn, html:lang(es) .pf-avatar-btn, html:lang(ja) .pf-avatar-btn {
+  font-size: 13px; padding-left: 14px; padding-right: 14px; white-space: nowrap; }
+html:lang(en) .med-photo-btn, html:lang(es) .med-photo-btn, html:lang(ja) .med-photo-btn {
+  font-size: 13px; white-space: nowrap; }
+html:lang(en) .taken, html:lang(es) .taken, html:lang(ja) .taken {
+  font-size: 15px; white-space: nowrap; }
+
+/* 待辦列的時間籤：沒有指定時間時不要占位。
+ * 原本永遠掛一個「隨時／Anytime」，中文兩個字還好，英文與西班牙文一長就把左邊的
+ * 標題與副標擠到折行（Edward 2026-08-01：「anytime 的設計不好要改」）。
+ * 「隨時」本來就不是資訊——沒有時間限制就不必說。有真時間時 app.js 會把 data-i18n
+ * 拿掉再寫入（見 renderWalkTask/renderMoodTask），所以這條只命中沒被動過的預設值。 */
+.task-time[data-i18n="home.taskAnytime"] { display: none; }
+
+/* 並排按鈕要留呼吸的邊，不能讓字頂到左右兩側（Edward 2026-08-01 指出）。 */
+.chal-act { padding: 0 16px; }
+/* 外語只調內距與不換行，字級交給上面的按鈕規範統一管。 */
+html:lang(en) .chal-act, html:lang(es) .chal-act, html:lang(ja) .chal-act {
+  gap: 8px; padding: 0 16px; }
+
+/* 底部分頁的字：英文與西班牙文是整個單字，用粗體會顯得又擠又重
+ * （Edward 2026-08-01：「這裡在英文上改為用細體」）。
+ * 中文兩個字、日文也短，維持原本的粗體不動。 */
+html:lang(en) .tab-btn > span,
+html:lang(es) .tab-btn > span { font-weight: 500; letter-spacing: .01em; font-size: 11.5px; }
+html:lang(en) .tab-btn.active > span,
+html:lang(es) .tab-btn.active > span { font-weight: 700; }
+
+/* 兩端對齊只適合中文與日文（一字一格、拉開來很整齊）。
+ * 英文與西班牙文是不等寬的單字，硬拉兩端會在字與字之間扯出一格一格的白洞，
+ * 讀起來很吃力（Edward 2026-08-01：「排版 UX 閱讀體驗不舒服」）。拉丁語系一律靠左。 */
+html:lang(en) .reader-card p, html:lang(es) .reader-card p {
+  text-align: left; overflow-wrap: normal; word-break: normal; hyphens: auto; }
+/* 訂閱條款那小段改置中（Edward 2026-08-01 拍板）：它是頁尾的註記、不是要細讀的內文，
+ * 置中之後最後一行不會孤零零掛在左邊，整塊看起來收得住。四語一致。 */
+.sub-legal { text-align: center; }
+html:lang(en) .sub-legal, html:lang(es) .sub-legal {
+  overflow-wrap: normal; word-break: normal; hyphens: auto; }
+
+/* 寧寧觀察卡的標題：原本寫在行內（font-size:15.5px），行內樣式贏過所有選擇器，
+ * 外語就沒辦法覆寫、「Ningning's observations」只能折成兩行。改成 class 才調得動。 */
+.obs-heading { font-size: 15.5px; font-weight: 900; }
+html:lang(en) .obs-heading, html:lang(es) .obs-heading { font-size: 14.5px; white-space: nowrap; }
+
+/* 月繳／年繳切換：西班牙文的「Anual + Ahorra un 20%」擠成三行。
+ * 折行的是徽章那一小塊，讓它跟著文字同一行、字再小一點就收得回來。 */
+html:lang(en) .scyc-btn, html:lang(es) .scyc-btn { font-size: 13px; padding: 8px 4px; white-space: nowrap; }
+html:lang(en) .scyc-badge, html:lang(es) .scyc-badge { font-size: 10px; padding: 1px 5px; margin-left: 4px; }
+
+/* 兩顆鈕不必五五分——「發起活動」的字本來就比「記錄簿」長。
+ * 硬切一半會讓左邊那顆頂到邊、右邊那顆空一大塊。按比例分，兩邊的呼吸距離才平均。 */
+html:lang(en) .chal-actions, html:lang(es) .chal-actions {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+
+/* 「管理訂閱／恢復購買」兩顆並排：英文與西班牙文兩個單字會折成兩行。
+ * Edward 2026-08-01：「單行，按鈕文字可以小一點」——字縮一級、不換行。 */
+/* 主要動作（看方案／加值點數）維持原本的 15px——這是使用者最常按的兩顆，
+ * 文案收短之後放得下，不必為了塞而縮小（Edward 2026-08-01：「訂閱方案文字要大一點」）。
+ * 底下那排是次要動作（管理訂閱／恢復購買），縮一級剛好拉開主次。 */
+html:lang(en) .plan-actions .plan-btn, html:lang(es) .plan-actions .plan-btn {
+  white-space: nowrap; }
+
+/* 活動種類的六張卡：有的字折行、有的不折，整排就高矮不齊，看起來很毛躁
+ * （Edward 2026-08-01：「有大有小設計看起來閱讀不是很舒服」）。
+ * 兩手一起做：文案收短（見文案表），再讓同一列的卡強制等高、字一律一行。 */
+.chal-types { grid-auto-rows: 1fr; }
+.chal-type { justify-content: center; min-height: 74px; }
+.chal-type span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+html:lang(en) .chal-type, html:lang(es) .chal-type, html:lang(ja) .chal-type {
+  font-size: 12.5px; padding-inline: 6px; }
+
+/* ===== 按鈕設計規範（Edward 2026-08-01：「按鈕的設計規範要制定好」）=====
+ *
+ * 之前是一顆一顆調，同樣是「主要動作」卻有 600／700／800 三種粗細、
+ * 14／15／15.5／16px 四種字級，掃過去會覺得亂。這裡收成三級，全站照這個走。
+ * 基準取首頁「開始聊聊」——它是全 App 最重要的一顆，其他的不該比它重。
+ *
+ *   ① 主要（primary）  這一頁最想讓人按的那一顆。實心底色、滿版。
+ *                      例：開始聊聊／升級方案／登入
+ *   ② 次要（secondary）同一區的其他選擇，跟主要並排。淡底或白底框。
+ *                      例：加值點數／發起活動／家庭記錄簿
+ *   ③ 輔助（tertiary） 少數人才需要、但必須找得到。小丸子、置中。
+ *                      例：管理訂閱／恢復購買
+ *
+ * 三級的差別只在「字級 × 粗細 × 高度」，顏色與圓角各自沿用原本的設計。
+ * 加新按鈕時挑一級套用，不要再自己寫字級——這就是這組變數存在的意義。 */
+:root {
+  --btn-1-size: 15.5px; --btn-1-weight: 700; --btn-1-height: 50px;
+  --btn-2-size: 15px;   --btn-2-weight: 700; --btn-2-height: 48px;
+  --btn-3-size: 12.5px; --btn-3-weight: 600; --btn-3-height: 38px;
+}
+/* ① 主要 */
+.video-btn, .sub-cta, .auth-primary {
+  font-family: var(--display); font-size: var(--btn-1-size); font-weight: var(--btn-1-weight); }
+.auth-primary { height: auto; min-height: 40px; }
+/* ② 次要 */
+.plan-actions .plan-btn, .chal-act, .auth-secondary {
+  font-family: var(--display); font-size: var(--btn-2-size); font-weight: var(--btn-2-weight); }
+.plan-actions .plan-btn, .chal-act { min-height: var(--btn-2-height); }
+/* ③ 輔助 */
+.plan-link {
+  font-size: var(--btn-3-size); font-weight: var(--btn-3-weight); min-height: var(--btn-3-height); }
+
+/* 心情那排六張臉：原本用 space-between，每顆的寬度跟著自己的標籤走，
+ * 標籤一長一短，圓圈就被推得歪七扭八（日文「落ち込んでいる」六個字最明顯）。
+ * 改成六等分格子——不管標籤多長，圓圈永遠對齊。標籤太長就自己收成兩行、不推擠鄰居。 */
+#moodFaces { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+#status .moodface { width: 100%; }
+/* 標籤一律一行——折行會讓六張臉的底部高低不齊（Edward 2026-08-01：「變得有上有下」）。 */
+#status .moodface > span:last-child { font-size: 10.5px; text-align: center; line-height: 1.25; white-space: nowrap; }
+
+
+/* 日文版的字型：繁中字型（Noto Sans TC）沒有日文寫法的漢字，缺字會逐字掉到系統字型，
+ * 同一句話就出現兩種粗細與兩種字面（Edward 2026-08-01：「文字有粗有細」）。
+ * iOS 內建的 Hiragino 是最好的日文字型，排第一；非 Apple 裝置退到 Noto Sans JP。
+ * 只換字型、不動字級與粗細——版面完全不受影響。 */
+html:lang(ja) {
+  --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", -apple-system, sans-serif;
+  --display: "Poppins", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --serif: "Hiragino Mincho ProN", "Noto Serif JP", Georgia, serif;
+}
+
+/* 標題的位置四頁一致（Edward 2026-08-01：「位置也要一致」）。
+ * 家人頁的標題旁邊多一顆管理鍵，那顆比文字高，把整行往下推了幾 px；
+ * 各頁的標題基線因此對不齊，切換分頁時標題會上下跳。
+ * 讓標題與旁邊的按鈕都以同一條中線對齊，行高固定，四頁就不再跳。 */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; margin: 6px 0 16px; }
+.page-title { line-height: 1.2; margin: 0; }
+.page-head > .pt-nav { flex: 0 0 auto; }
+
+/* 帳號那一列：西班牙文「Modo invitado」折成兩行、「Iniciar sesión」還頂出卡片外
+ * （Edward 2026-08-01）。原因是標題設了 overflow-wrap:anywhere（可以從單字中間斷），
+ * 而右邊的按鈕沒有寬度上限，兩邊互相擠。
+ * 改成：左邊佔滿剩下的空間、太長就用刪節號；右邊按鈕不縮但也不許超過四成寬。 */
+.auth-card-main { flex: 1 1 auto; }
+.auth-title { overflow-wrap: normal; word-break: normal; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.auth-actions { max-width: 42%; }
+.auth-actions > button { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* 心情卡：說明文字長短不一，卡片高度就跟著變，切換語言或換一天位置就跳
+ * （Edward 2026-08-01：「副標文字太多會導致板位上下位移」「間距也不同」）。
+ * 標題一行、說明固定兩行的高度——不管字多字少，這張卡永遠一樣高。 */
+#status .mood-card-title, [data-i18n="status.moodMonitoring"] { white-space: nowrap; }
+#moodNote { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: 38px; margin-top: 3px; }
+#moodLabel { white-space: nowrap; }
+
+/* 六張心情臉底下的名字拿掉（Edward 2026-08-01：「文字可以優化或簡寫或就不要文字，
+ * 因為點了上面會寫」）。點下去之後上面那行大字就是它的名字，底下再寫一次是重複；
+ * 而且各語言的名字長短不一，會把圓圈推得歪七扭八——拿掉之後間距永遠齊。
+ * 用「看不見但唸得到」的作法，不是 display:none——念螢幕給視障者聽時仍會報出名字。 */
+#status .moodface > span:last-child {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+#status .moodface { position: relative; gap: 0; }
+#moodFaces { gap: 8px; }
+
+/* 設定頁的列：右邊的狀態文字拿掉，標題才有完整一行的空間
+ * （Edward 2026-08-01：「拿掉右邊的狀態說明，讓標題可以完整單行顯示」）。
+ * 那顆小圓點留著——一眼就看得出開或關，而且只佔 7px。
+ * 文字改成「看不見但唸得到」，念螢幕給視障者聽時仍會報「未連接／已連接」。
+ * 數字（例如用藥幾種）留著，但跟左邊拉開距離，不要黏在一起。 */
+.set-row .sr-on > span:not(.d) {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.set-row .sr-on { position: relative; }
+.set-row .sr-main { padding-right: 12px; }
+
+/* 右邊的狀態字有兩種放法：有的在 .sr-on、有的塞在箭頭那格 .sr-arrow 裡。
+ * 兩種都要收（Edward 2026-08-01：「拿掉右邊的狀態說明」——指了兩次都還在，
+ * 就是因為第一次只收了 .sr-on 那種）。箭頭本身留著，它是「可以點進去」的提示。 */
+.set-row .sr-arrow > b {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.set-row .sr-arrow { position: relative; }
+
+
+/* 用藥卡：說明文字在西班牙文長到五行，把卡片撐得比別張高一倍；
+ * 右邊那顆狀態籤又做得跟主要按鈕一樣大，兩邊搶版面
+ * （Edward 2026-08-01：「副標有問題太多了、按鈕太大了」）。
+ * 說明限兩行、狀態籤降成第③級的份量——它只是狀態，不是要人按的東西。 */
+#medCard #medSub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.4; }
+#medCard #medChip { font-size: 11.5px; font-weight: 600; padding: 5px 10px; white-space: nowrap; }
