@@ -954,7 +954,7 @@
   "activity.noParticipants": "No one has joined yet",
   "activity.deadline": "Deadline",
   "activity.location": "Location",
-  "activity.emptyHint": "Tap \"Start an activity\" above to get the family walking, quizzing, voting, or dining together",
+  "activity.emptyHint": "Tap \"New activity\" above to get the family walking, quizzing, voting or eating together",
   "activity.sampleHint": "These are samples — once you start your first activity, it will be recorded here.",
   "activity.rsvpGoToast": "Great — you're marked as going.",
   "activity.rsvpSkipToast": "Okay — noted that you can't make it this time.",

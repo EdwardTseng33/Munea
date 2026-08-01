@@ -954,7 +954,7 @@
   "activity.noParticipants": "Todavía no se ha unido nadie",
   "activity.deadline": "Fecha límite",
   "activity.location": "Lugar",
-  "activity.emptyHint": "Toca «Crear actividad» arriba para caminar, jugar, votar o comer en familia",
+  "activity.emptyHint": "Toca «Nueva actividad» arriba para caminar, jugar, votar o comer en familia",
   "activity.sampleHint": "Esto es un ejemplo: cuando empiecen su primera actividad, quedará registrada aquí.",
   "activity.rsvpGoToast": "Listo: anotado que irás.",
   "activity.rsvpSkipToast": "Bien: anotado que esta vez no puedes.",
