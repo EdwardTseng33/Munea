@@ -1056,6 +1056,13 @@ function currentAuthUserId() {
   const user = auth.user || auth.currentUser || {};
   return auth.userId || auth.authUserId || user.id || user.userId || null;
 }
+function muneaDeviceTimeZone() {
+  try {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').trim();
+    if (tz) return tz;
+  } catch (e) {}
+  return 'Asia/Taipei';
+}
 function accountBootstrapPayload(action = 'create', extra = {}) {
   const authUserId = currentAuthUserId();
   const payload = {
@@ -1063,7 +1070,11 @@ function accountBootstrapPayload(action = 'create', extra = {}) {
     displayName: companionDisplayName.trim() || templateFor().defaultName,
     companionProfile: savedCompanionProfile,
     locale: muneaLocale(),
-    timezone: 'Asia/Taipei',
+    // 手機真正的時區——不再寫死台北。這是後端唯一能知道「這個人在哪一國」的訊號，
+    // 急難號碼靠它決定（2026-08-01：寫死台北會讓西班牙／美國／日本使用者被叫去打
+    // 台灣的 119 跟 1925）。App 內其他地方（吃藥提醒、推播）本來就是這樣讀的，
+    // 只有帳號建立這裡漏了。讀不到就退回台北，跟那些地方一致。
+    timezone: muneaDeviceTimeZone(),
     preferredLanguages: muneaPreferredLanguages(),
     source: 'web-prototype',
     ...extra,
