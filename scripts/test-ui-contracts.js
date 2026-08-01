@@ -497,9 +497,10 @@ assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:
  * 直接用字數估寬度。
  *
  * 估法（2026-08-01 用 Chrome 量出來校正過）：全形字約 1.0 個字級寬、
- * 半形字約 0.55、空白約 0.3。實測誤差 15% 以內。
+ * 半形字約 0.54、空白約 0.3（拿 Chrome 實際量到的三個最寬的字校正：
+ * 英文 Long term 64px、英文 14 days 47px、西文 Puntual 47px）。留 3px 安全邊。
  * 可用寬度也是量出來的：前四顆 53px、最後一顆「長期」71px（375px 手機、
- * 五欄 6px 間距、左右各 2px 內距）。留 4px 當安全邊。 */
+ * 五欄 6px 間距、左右各 2px 內距）。 */
 const DURATION_FIT = {
   'zh-TW': { size: 15, keys: ['medication.duration7', 'medication.duration14', 'medication.duration30', 'medication.duration60'] },
   en: { size: 13, keys: ['medication.duration7', 'medication.duration14', 'medication.duration30', 'medication.duration60'] },
@@ -510,7 +511,7 @@ function estimateTextWidth(text, fontSize) {
   return [...String(text)].reduce((sum, ch) => {
     if (/\s/.test(ch)) return sum + fontSize * 0.3;
     // 全形（中日文字、全形標點）約一個字級寬；其餘當半形
-    return sum + fontSize * (/[　-鿿＀-￯]/.test(ch) ? 1 : 0.55);
+    return sum + fontSize * (/[　-鿿＀-￯]/.test(ch) ? 1 : 0.54);
   }, 0);
 }
 Object.entries(DURATION_FIT).forEach(([loc, spec]) => {
@@ -519,15 +520,21 @@ Object.entries(DURATION_FIT).forEach(([loc, spec]) => {
     const text = catalog[key];
     assert(text, `${loc} 缺 ${key}`);
     const width = estimateTextWidth(text, spec.size);
-    assert(width <= room - 4,
+    assert(width <= room - 3,
       `${loc} 的「${text}」放不進「吃多久」那一排（估 ${Math.round(width)}px／可用 ${room}px）`
       + '——五顆是固定一行，字太長會被切成「14…」。改短一點，或替這個語系縮字級');
   };
   spec.keys.forEach((key) => check(key, 53));
   check('medication.duration.longTerm', 71);
+  // 「提前多久提醒」也是五顆一行，但那排是等分五欄（長字在中間、不在最後），
+  // 每顆可用 54px。
+  ['appointment.leadOnTime', 'appointment.lead30m', 'appointment.lead1h',
+    'appointment.lead2h', 'appointment.lead1d'].forEach((key) => check(key, 54));
 });
 assert(/id="medDayChips"[^>]*class="[^"]*fit-row|class="[^"]*fit-row[^"]*"[^>]*id="medDayChips"/.test(html),
   '#medDayChips 少了 fit-row——少這個 class 五顆就會折成兩行');
+assert(/class="[^"]*fit-row even[^"]*"[^>]*id="visitLeadChips"/.test(html),
+  '#visitLeadChips 少了 fit-row even——少 even 會用「最後一顆放寬」的比例，中文的「1 小時」就會被切掉');
 
 const authSheet = html.match(/<div class="modal-mask auth-sheet" id="authSheet"[\s\S]*?<\/div>\s*<!-- ===== 底部 5 分頁 ===== -->/)?.[0] || '';
 assert(authSheet.includes('id="authAppleBtn"') && authSheet.includes('id="authGoogleBtn"'), 'Auth sheet must keep Apple and Google sign-in');

@@ -1404,6 +1404,9 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
    給「長期」——英文 Long term／西文 A largo plazo 比數字長，等分會擠爆。 */
 .med-chips.fit-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.32fr); gap: 6px; flex-wrap: nowrap; }
 .med-chips.fit-row .mchip { padding: 10px 2px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 「提前多久提醒」也是五顆一行，但長字在中間不在最後——用等分五欄，
+   不要吃多久那排「最後一顆放寬」的比例。 */
+.med-chips.fit-row.even { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 /* 日文也要縮：「14日分」是兩個全形字＋數字，比中文的「14 天」寬，
    用中文的字級會被切成「14…」（2026-08-01 正式機實拍才看見——加了省略號之後
    元素寬度相等，靠比對寬度的檢查永遠不會報）。 */

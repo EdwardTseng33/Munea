@@ -1376,6 +1376,7 @@ function syncVisitReminder(visit) {
         date: visit.dateISO,
         time: visit.time || '',
         label: visit.label || '',
+        remindBefore: Number.isFinite(Number(visit.remindBefore)) ? Number(visit.remindBefore) : 120,
         source: 'munea-web'
       }
     }
@@ -9874,6 +9875,30 @@ function init() {
     input.value = iso;
     syncVisitDateField();
   }
+  // 提前多久提醒（分鐘）。舊資料沒有這個欄位 → 一律當成 120，維持既有行為。
+  var VISIT_LEAD_DEFAULT = 120;
+  function visitLeadMinutes() {
+    const on = document.querySelector('#visitLeadChips .mchip.on');
+    const raw = on ? Number(on.dataset.m) : NaN;
+    return Number.isFinite(raw) ? raw : VISIT_LEAD_DEFAULT;
+  }
+  function wireVisitLeadChips() {
+    const box = $('#visitLeadChips');
+    if (!box || box.dataset.wired) return;
+    box.dataset.wired = '1';
+    box.addEventListener('click', (e) => {
+      const chip = e.target.closest('.mchip');
+      if (!chip) return;
+      box.querySelectorAll('.mchip').forEach(x => x.classList.remove('on'));
+      chip.classList.add('on');
+    });
+  }
+  function resetVisitLead() {
+    const box = $('#visitLeadChips');
+    if (!box) return;
+    box.querySelectorAll('.mchip').forEach(x =>
+      x.classList.toggle('on', Number(x.dataset.m) === VISIT_LEAD_DEFAULT));
+  }
   function resetVisitDate() {
     const input = $('#visitDate');
     if (!input) return;
@@ -10736,7 +10761,9 @@ function init() {
   });
   if ($('#visitEntry')) $('#visitEntry').addEventListener('click', () => {
     wireVisitDateField();
+    wireVisitLeadChips();
     resetVisitDate();
+    resetVisitLead();
     if ($('#visitTitle')) $('#visitTitle').value = '';
     if ($('#visitTime')) $('#visitTime').value = '09:00';
     renderVisitList();
@@ -10751,13 +10778,14 @@ function init() {
     const tv = ($('#visitTime') && $('#visitTime').value) || '09:00';
     const d = new Date(pickedISO + 'T00:00');
     const label = fmtDay(d) + ' ' + fmtVisitTime(tv);
-    const visit = { id: Date.now(), title, dateISO: pickedISO, time: tv, label };
+    const visit = { id: Date.now(), title, dateISO: pickedISO, time: tv, label, remindBefore: visitLeadMinutes() };
     const arr = loadVisits(); arr.push(visit);
     saveVisits(arr);
     syncVisitReminder(visit);
     renderVisitList(); renderVisitRow();
     if ($('#visitTitle')) $('#visitTitle').value = '';
     resetVisitDate();
+    resetVisitLead();
     toast(muneaT('visit.savedToast', '好，「{title}」{label}記下了，{companion}前一天會提醒你', { title, label, companion: cname() }));
   });
   renderVisitRow();
