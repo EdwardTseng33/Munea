@@ -6532,6 +6532,16 @@ function localizeChatControls() {
   const microphoneLabel = microphone && microphone.querySelector('span');
   if (microphoneLabel) microphoneLabel.textContent = muneaT('voice.microphone.label', '麥克風');
   if (microphone) microphone.setAttribute('aria-label', muneaT('accessibility.toggleMicrophone', '麥克風開關'));
+
+  // 通話鍵的字（2026-08-01）：它原本掛 data-i18n="voice.call.start"，於是通話中程式改成
+  // 「掛斷」之後，巡邏的翻譯層會把它打回「開始通話」——正在通話的人看到一顆寫著
+  // 「開始通話」的鍵。標籤拿掉了，換語言就由這裡重畫，並且要照當下是不是在通話講對的字。
+  const callLabel = document.getElementById('callToggleLabel');
+  if (callLabel && typeof callDialing !== 'undefined' && !callDialing) {
+    callLabel.textContent = (typeof callConnected !== 'undefined' && callConnected)
+      ? muneaT('voice.call.end', '掛斷')
+      : muneaT('voice.call.start', '開始通話');
+  }
 }
 function setCaption(text, hint) {
   if (!captionsOn) return;                 // 字幕關閉時不顯示逐字稿
@@ -7234,9 +7244,11 @@ const MOODS = {
   tired:  { label: () => muneaT('mood.tired', '疲累'), bg: '#EEEFEA', fg: '#5F6A61', face: 'M9 10h.01M15 10h.01M9.5 15.5h5' },
   down:   { label: () => muneaT('mood.low', '低落'), bg: '#E4EBF3', fg: '#3F5F80', face: 'M9 10h.01M15 10h.01M8.5 15.5s1.2-1.8 3.5-1.8 3.5 1.8 3.5 1.8' },
   upset:  { label: () => muneaT('mood.upset', '煩躁'), bg: '#ECE1F0', fg: '#6E4488', face: 'M8.5 9.5l2 1M15.5 9.5l-2 1M8.5 15.5s1.2-1.5 3.5-1.5 3.5 1.5 3.5 1.5' },
-  // 「焦慮」以前沒有自己的位置，於是被 || 'calm' 掃進「平穩」——他明明點了焦慮，
-  // 家人看到的卻是一切安好（Edward 2026-08-01 抓到）。這是最不能錯的方向。
+  // 家人要看得到他點的完整六種，不是被歸納成三四類（Edward 2026-08-01）。
+  // 「焦慮」以前根本沒有位置、被 || 'calm' 掃進「平穩」——他明明點了焦慮，家人看到一切安好。
+  // 「生氣」以前併進「煩躁」——被惹毛跟悶著氣不是同一件事，想關心他的家人需要分得出來。
   anxious: { label: () => muneaT('mood.anxious', '焦慮'), bg: '#FAECD8', fg: '#A9691B', face: 'M8.6 9.1l2 .9M15.4 9.1l-2 .9M9 11h.01M15 11h.01M9.2 15.6q1.4-1.2 2.8 0t2.8 0' },
+  angry:  { label: () => muneaT('mood.angry', '生氣'), bg: '#F7DEDB', fg: '#B0392D', face: 'M8.4 8.9l2.2 1.2M15.6 8.9l-2.2 1.2M9.2 11.4h.01M14.8 11.4h.01M8.8 16.4c1.7-1.9 4.7-1.9 6.4 0' },
 };
 const MOOD_WEEK_DEMO = [
   { d: '五', mood: 'happy', chats: [{ m: 'happy', t: () => muneaT('demo.mood.fri', '聊到孫子回來，笑聲不斷') }] },
@@ -7265,7 +7277,8 @@ const MOOD_ZH2KEY = {
   '疲累': 'tired',
   '低落': 'down',
   '焦慮': 'anxious', '緊張': 'anxious',
-  '煩躁': 'upset', '生氣': 'upset', '憤怒': 'upset',
+  '生氣': 'angry', '憤怒': 'angry',
+  '煩躁': 'upset',
 };
 async function loadMoodWeekReal() {
   try {
@@ -8632,7 +8645,8 @@ function init() {
       tired: 'mood.tired',
       down: 'mood.low',
       anxious: 'mood.anxious',
-      upset: 'mood.angry',
+      angry: 'mood.angry',
+      upset: 'mood.upset',
     }[m.key];
     return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label()) };
   }

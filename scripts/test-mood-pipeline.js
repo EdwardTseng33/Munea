@@ -34,6 +34,19 @@ orbWords.forEach(w => {
   console.log((ok ? 'OK   ' : '✗    ') + w + ' → ' + (key || '(對不上，會被當成 calm＝平穩)'));
 });
 console.log('');
-// 焦慮與生氣不可以掉進同一格
-console.log((map['焦慮'] !== map['生氣'] ? 'OK   ' : '✗    ') + '焦慮(' + map['焦慮'] + ') 與 生氣(' + map['生氣'] + ') 分得開');
+/* 真正要守的是「家人看到的字」＝「他點的字」。
+ * 只檢查桶不同是不夠的：把「生氣」丟進 upset 桶，桶還是不同，但家人看到的是「煩躁」。
+ * 所以一路走到 famMoodFor 的標籤鍵，再回頭比對繁中文案表。 */
+const famLabelBlock = src.match(/const moodKey = \{[\s\S]*?\}\[m\.key\];/)[0];
+const famLabel = {};
+[...famLabelBlock.matchAll(/(\w+):\s*'([^']+)'/g)].forEach(m => { famLabel[m[1]] = m[2]; });
+const zh = JSON.parse(fs.readFileSync('web/src/i18n/zh-TW.json', 'utf8'));
+
+orbWords.forEach(w => {
+  const key = famLabel[map[w]];
+  const shown = key ? zh[key] : undefined;
+  const ok = shown === w;
+  if (!ok) bad++;
+  console.log((ok ? 'OK   ' : '✗    ') + '他點「' + w + '」→ 家人看到「' + (shown || '(對不上)') + '」');
+});
 process.exit(bad ? 1 : 0);
