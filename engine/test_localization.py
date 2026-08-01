@@ -710,5 +710,56 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("never changes country", instruction)
 
 
+
+class SafetyRegionFromTimeZoneTests(unittest.TestCase):
+    """急難號碼只能由地理決定，而且「不知道」必須表現成不知道。
+
+    2026-08-01：App 建立帳號時把時區寫死 Asia/Taipei、也從來沒送過國家，
+    後端於是預設 safetyRegion=TW——西班牙／美國／日本的使用者會被用自己的
+    語言叫去打台灣的 119 與 1925（1925 在國外根本不存在）。
+    """
+
+    def test_device_time_zone_selects_the_market(self):
+        for time_zone, expected in (
+            ("Asia/Taipei", "TW"),
+            ("Asia/Tokyo", "JP"),
+            ("Europe/Madrid", "ES"),
+            ("America/New_York", "US"),
+            ("America/Mexico_City", "MX"),
+        ):
+            context = localization.build_locale_context({"timeZone": time_zone})
+            self.assertEqual(context["safetyRegion"], expected, time_zone)
+
+    def test_unknown_time_zone_never_claims_taiwan(self):
+        # 人在德國、手機是西班牙文——我們沒核定德國，就不准假裝知道。
+        context = localization.build_locale_context(
+            {"conversationLocale": "es", "timeZone": "Europe/Berlin"},
+        )
+        self.assertEqual(context["safetyRegion"], "")
+        guidance = localization.regional_safety_instruction("es", context["safetyRegion"])
+        self.assertNotIn("119", guidance)
+        self.assertNotIn("1925", guidance)
+        self.assertIn("servicio local de emergencias", guidance)
+
+    def test_language_never_selects_the_hotline(self):
+        # 同一支英文手機，人在美國跟人在台灣，拿到的號碼必須不一樣。
+        in_us = localization.build_locale_context(
+            {"conversationLocale": "en", "timeZone": "America/Chicago"},
+        )
+        in_tw = localization.build_locale_context(
+            {"conversationLocale": "en", "timeZone": "Asia/Taipei"},
+        )
+        self.assertEqual(in_us["safetyRegion"], "US")
+        self.assertEqual(in_tw["safetyRegion"], "TW")
+        self.assertIn("911", localization.regional_safety_instruction("en", in_us["safetyRegion"]))
+        self.assertIn("1925", localization.regional_safety_instruction("en", in_tw["safetyRegion"]))
+
+    def test_explicit_trusted_region_still_wins(self):
+        # 閘道給的可信 safetyRegion 優先於時區推測，行為不變。
+        context = localization.build_locale_context(
+            {"timeZone": "Asia/Taipei", "safetyRegion": "JP"},
+        )
+        self.assertEqual(context["safetyRegion"], "JP")
+
 if __name__ == "__main__":
     unittest.main()

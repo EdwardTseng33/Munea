@@ -268,9 +268,16 @@ def build_locale_context(values=None):
         context["currency"],
         _CURRENCY_CODE_RE,
     )
+    # 沒人告訴我們使用者在哪一國時，用「手機的時區」推——時區是真的地理訊號，
+    # 不是語言。原本這裡直接吃預設值 TW，等於在沒有任何根據的情況下宣稱
+    # 「這個人在台灣」，於是西班牙／美國／日本的使用者會被用他自己的語言叫去打
+    # 台灣的 119 與 1925（2026-08-01 實測三國全中）。1925 在國外根本不存在。
+    # 時區也推不出來的（例如人在德國、手機是西班牙文）→ 留空，
+    # regional_safety_instruction 會改用通用建議「請聯絡所在地的緊急服務」——
+    # 那句話在哪裡都成立，永遠不會是錯的。
     context["safetyRegion"] = _normalize_code(
         values.get("safetyRegion"),
-        context["safetyRegion"],
+        _region_from_time_zone(context["timeZone"]),
         _REGION_CODE_RE,
     )
     context["legalRegion"] = _normalize_code(
@@ -613,6 +620,43 @@ def _normalize_code(value, fallback, pattern):
     if not pattern.fullmatch(normalized):
         raise ValueError(f"Invalid LocaleContext value: {value!r}")
     return normalized
+
+
+# 時區 → 國家。只列我們真的核定過急難指引的市場（見 REGIONAL_SAFETY_POLICY_SOURCES）。
+# 這是地理推地理，不是語言推地理——LocaleContext 的原則沒有被打破。
+# 沒列到的時區一律推不出來（回空字串），使用者就會拿到通用的「聯絡所在地緊急服務」。
+_TIME_ZONE_REGIONS = {
+    "Asia/Taipei": "TW",
+    "Asia/Tokyo": "JP",
+    "Europe/Madrid": "ES",
+    "Atlantic/Canary": "ES",
+    "Africa/Ceuta": "ES",
+    "America/Mexico_City": "MX",
+    "America/Cancun": "MX",
+    "America/Monterrey": "MX",
+    "America/Tijuana": "MX",
+}
+_US_TIME_ZONES = {
+    "America/New_York", "America/Chicago", "America/Denver", "America/Phoenix",
+    "America/Los_Angeles", "America/Anchorage", "America/Detroit",
+    "America/Indiana/Indianapolis", "America/Kentucky/Louisville",
+    "America/Boise", "Pacific/Honolulu",
+}
+
+
+def _region_from_time_zone(time_zone):
+    """Return the market code a device time zone points at, or "" when unknown.
+
+    Only geography selects a safety region. A language tag never does — an
+    English phone can be in the UK (999), a Spanish phone can be in Mexico
+    (911), so the reply language must not pick the hotline.
+    """
+    key = str(time_zone or "").strip()
+    if not key:
+        return ""
+    if key in _US_TIME_ZONES:
+        return "US"
+    return _TIME_ZONE_REGIONS.get(key, "")
 
 
 def _normalize_text(value, fallback, pattern, lowercase=False):
