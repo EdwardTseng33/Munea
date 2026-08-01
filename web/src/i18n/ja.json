@@ -637,7 +637,7 @@
   "purchase.accountMismatch": "この購入は別のMuneaアカウントに属しています。元のアカウントに戻して復元してください。",
   "purchase.serverVerificationFailed": "お支払いの確認を一時的に行えません。再購入せず、後ほど「購入を復元」をお試しください。",
   "purchase.networkError": "通信が不安定です。接続を確認してもう一度お試しください。",
-  "purchase.manageSubscription": "サブスクリプションを管理",
+  "purchase.manageSubscription": "サブスクを管理",
   "purchase.manageSubscriptionUnavailable": "サブスクリプション管理を開けませんでした。iPhoneの「設定 → Apple Account → サブスクリプション」から操作してください。",
   "purchase.manageSubscriptionInstructions": "iPhoneの「設定 → Apple Account → サブスクリプション」から管理または解約してください。",
   "purchase.restore": "購入を復元",

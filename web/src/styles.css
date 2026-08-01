@@ -1254,8 +1254,11 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 /* 這一排是次要動作（管理訂閱／恢復購買）。原本跟上面的主要動作一樣滿版、一樣高，
  * 四顆看起來一樣重，眼睛不知道該先看哪個（Edward 2026-08-01：「按鈕欄位要設計好」）。
  * 改成置中、寬度跟著字走、比上面矮一截也小一號——主次一眼分得出來，四語都適用。 */
-.plan-links { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
-.plan-link { flex: 0 1 auto; min-width: 0; min-height: 38px; padding: 0 15px; border: none; border-radius: 11px;
+/* 兩顆丸子按鈕：flex 預設會壓縮，字比按鈕寬時就滿出右邊，看起來像靠左
+ * （Edward 2026-08-01：「文字在欄位內置中，現在看都靠左了」）。
+ * 改成不壓縮、按鈕跟著字長，真的排不下就換行——字永遠在按鈕正中央。 */
+.plan-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.plan-link { flex: 0 0 auto; min-width: 0; min-height: 38px; padding: 0 15px; border: none; border-radius: 11px;
   background: var(--mint); color: var(--teal-d); cursor: pointer;
   font-family: inherit; font-size: 12.5px; font-weight: 600; opacity: .8; white-space: nowrap; }
 .plan-link:active { opacity: 1; }
