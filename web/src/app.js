@@ -7280,7 +7280,7 @@ const MOODS = {
   // 家人要看得到他點的完整六種，不是被歸納成三四類（Edward 2026-08-01）。
   // 「焦慮」以前根本沒有位置、被 || 'calm' 掃進「平穩」——他明明點了焦慮，家人看到一切安好。
   // 「生氣」以前併進「煩躁」——被惹毛跟悶著氣不是同一件事，想關心他的家人需要分得出來。
-  anxious: { label: () => muneaT('mood.anxious', '焦慮'), bg: '#FAECD8', fg: '#A9691B', face: 'M8.6 9.1l2 .9M15.4 9.1l-2 .9M9 11h.01M15 11h.01M9.2 15.6q1.4-1.2 2.8 0t2.8 0' },
+  anxious: { label: () => muneaT('mood.anxious', '焦慮'), bg: '#FAECD8', fg: '#985C15', face: 'M8.6 9.1l2 .9M15.4 9.1l-2 .9M9 11h.01M15 11h.01M9.2 15.6q1.4-1.2 2.8 0t2.8 0' },
   angry:  { label: () => muneaT('mood.angry', '生氣'), bg: '#F7DEDB', fg: '#B0392D', face: 'M8.4 8.9l2.2 1.2M15.6 8.9l-2.2 1.2M9.2 11.4h.01M14.8 11.4h.01M8.8 16.4c1.7-1.9 4.7-1.9 6.4 0' },
 };
 const MOOD_WEEK_DEMO = [
@@ -8743,8 +8743,11 @@ function init() {
     // 7/16 心情真串接：家庭帳本帶回來的「當天粗心情標籤」可以顯示；聊天觀察細節仍留在本人手機、這裡誠實不編
     const mood = famMoodFor(famVitalsFor(p));
     if ($('#mcTitle')) $('#mcTitle').textContent = mood ? muneaT('mood.todayLooks', '今天心情看起來「{label}」', { label: mood.label }) : muneaT('mood.noObservation', '還沒有觀察');
+    // 有心情時不再多一句說明（Edward 2026-08-01）：上面那行「今天心情看起來『焦慮』」
+    // 本身就講完了，底下再解釋一次「這是從聊天觀察到的、聊什麼留在他手機」只是變長。
+    // 沒有心情的空狀態仍要留一句——不然畫面空白，看的人不知道是壞了還是還沒開始用。
     if ($('#mcSub')) $('#mcSub').textContent = mood
-      ? muneaT('mood.familyObsHint', '這是{name}的沐寧從聊天觀察到的大致心情；聊了什麼只留在他自己的手機', { name: p || muneaT('familyCircle.memberFallback', '家人') })
+      ? ''
       : muneaT('mood.familyObsEmpty', '等{name}開始用沐寧聊天，觀察會出現在這裡', { name: p || muneaT('familyCircle.memberFallback', '家人') });
     if ($('#mcObs')) $('#mcObs').innerHTML = '';
     if ($('#mcTopics')) $('#mcTopics').innerHTML = '';
@@ -9925,21 +9928,52 @@ function init() {
       }).join('') + '</div>' +
       '<div class="qc-num">' + muneaT('activity.walkAutoNote', '你的步數自動從 Apple 健康帶入；{companion}會問其他人今天走多少，{due}結算。', { companion: cname(), due: act.dueLabel || muneaT('activity.daysChip', '{days} 天內', { days: act.days }) }) + '</div>';
   }
+  // 家庭記錄簿（Edward 2026-08-01）
+  //
+  // 以前這頁是三張寫死在畫面上的範例卡，沒有任何程式在讀真的活動——而活動到期時
+  // announceActEnd() 說「收進家庭記錄簿」、saveActs() 卻把它從清單刪掉，資料就沒了。
+  // App 對使用者說了一件沒發生的事。現在到期的活動真的存進這本簿子。
+  const FAMILY_BOOK_KEY = 'munea.familyBook';
+  const FAMILY_BOOK_MAX = 30;          // 留最近 30 筆就夠翻，不必無限長
+  function loadFamilyBook() {
+    try { const a = JSON.parse(localStorage.getItem(FAMILY_BOOK_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+    catch (e) { return []; }
+  }
+  function recordInFamilyBook(a, resultText, people) {
+    try {
+      const book = loadFamilyBook();
+      if (book.some(x => x && String(x.id) === String(a.id))) return;   // 同一場只記一次
+      book.unshift({
+        id: a.id,
+        kind: a.kind || 'custom',
+        title: String(a.title || '').slice(0, 40),
+        endedAt: Date.now(),
+        result: String(resultText || '').slice(0, 60),
+        people: (people || []).filter(Boolean).slice(0, 6).map(n => String(n).slice(0, 8)),
+      });
+      localStorage.setItem(FAMILY_BOOK_KEY, JSON.stringify(book.slice(0, FAMILY_BOOK_MAX)));
+      syncPush('familyBook', book.slice(0, FAMILY_BOOK_MAX));
+    } catch (e) {}
+  }
   // 活動結束時，依種類公布結果進記錄簿（不再只是「結束了」）
   function announceActEnd(a) {
     try {
       if (a.kind === 'quiz' && a.answers && Object.keys(a.answers).length) {
         const top = Object.entries(a.answers).sort((x, y) => y[1] - x[1])[0];
         pushFamilyFeed('「' + a.title + '」結算了——<b>' + top[0] + '</b> 答對最多（' + top[1] + ' 題），收進<b>家庭記錄簿</b>');
+        recordInFamilyBook(a, muneaT('book.quizWinner', '{name} 答對最多（{n} 題）', { name: top[0], n: top[1] }), Object.keys(a.answers));
       } else if (a.kind === 'vote' && a.votes && Object.keys(a.votes).length) {
         const tally = {}; Object.values(a.votes).forEach(o => tally[o] = (tally[o] || 0) + 1);
         const win = Object.entries(tally).sort((x, y) => y[1] - x[1])[0];
         pushFamilyFeed('「' + a.title + '」投票結束——<b>' + win[0] + '</b> 最多票，收進<b>家庭記錄簿</b>');
+        recordInFamilyBook(a, muneaT('book.voteWinner', '{name} 最多票', { name: win[0] }), Object.keys(a.votes));
       } else if (a.kind === 'event' && a.rsvp) {
         const going = Object.entries(a.rsvp).filter(([, v]) => v === 'go').map(([n]) => n);
         pushFamilyFeed('「' + a.title + '」結束了' + (going.length ? '（' + going.join('、') + ' 有去）' : '') + '，收進<b>家庭記錄簿</b>');
+        recordInFamilyBook(a, going.length ? muneaT('book.eventWent', '{names} 有去', { names: going.join(muneaT('common.listSeparator', '、')) }) : muneaT('book.eventEnded', '結束了'), going);
       } else {
         pushFamilyFeed('「' + a.title + '」結束了，收進<b>家庭記錄簿</b>');
+        recordInFamilyBook(a, muneaT('book.eventEnded', '結束了'), a.names || []);
       }
     } catch (e) { pushFamilyFeed('「' + (a.title || '活動') + '」結束了，收進<b>家庭記錄簿</b>'); }
   }
@@ -10311,9 +10345,7 @@ function init() {
   }
   if (inviteList) inviteList.addEventListener('click', e => { const it = e.target.closest('.iv'); if (it) { it.classList.toggle('on'); recalcWalk(true); } });
   // 挑戰類型選擇
-  const INVITE_NOTES = () => ({ walk: muneaT('activity.inviteNoteWalk', '不方便滑手機的家人，{companion}會親口問', { companion: cname() }), quiz: muneaT('activity.inviteNoteQuiz', '不方便滑手機的家人，用說的就能玩；其他人手機作答'), event: muneaT('activity.inviteNoteEvent', '{companion}親口問不方便滑手機的家人；其他人回「去／沒空」', { companion: cname() }), vote: muneaT('activity.inviteNoteVote', '{companion}會唸選項給不方便滑手機的家人聽，幫忙投', { companion: cname() }), draw: muneaT('activity.inviteNoteDraw', '人人有機會；開獎時{companion}會告訴每個人', { companion: cname() }) });
   function applyChalKind(kind) {
-    if ($('#inviteNote')) $('#inviteNote').textContent = INVITE_NOTES()[kind] || '';
     if ($('#walkFields')) $('#walkFields').style.display = kind === 'walk' ? '' : 'none';
     if ($('#quizFields')) $('#quizFields').style.display = kind === 'quiz' ? '' : 'none';
     if ($('#eventFields')) $('#eventFields').style.display = kind === 'event' ? '' : 'none';
@@ -11044,7 +11076,52 @@ function init() {
   if ($('#quizModal')) $('#quizModal').addEventListener('click', e => { if (e.target === $('#quizModal')) $('#quizModal').classList.remove('show'); });
 
   // 家庭記錄簿
-  function openBook() { showView('family'); $$('#family .fam-view').forEach(v => v.classList.remove('active')); $('#viewBook').classList.add('active'); }
+  // 有真的活動記錄就畫真的、把「範例」整組收起來；一場都還沒辦過才留範例讓人知道這頁長什麼樣
+  function renderFamilyBook() {
+    const box = $('#bookTimeline');
+    const tag = $('#bookSampleTag');
+    const note = $('#bookSampleNote');
+    if (!box) return;
+    const book = loadFamilyBook();
+    const demo = $('#bookDemoEntries');
+    if (!book.length) {
+      if (tag) tag.hidden = false;
+      if (note) note.hidden = false;
+      if (demo) demo.hidden = false;
+      const real = $('#bookRealEntries');
+      if (real) real.innerHTML = '';
+      return;
+    }
+    if (tag) tag.hidden = true;
+    if (note) note.hidden = true;
+    if (demo) demo.hidden = true;
+    const real = $('#bookRealEntries');
+    if (!real) return;
+    const icon = '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M8.2 13.5 7 22l5-3 5 3-1.2-8.5"/></svg>';
+    real.innerHTML = book.map(item => {
+      const when = new Date(item.endedAt || Date.now());
+      const day = (when.getMonth() + 1) + '/' + when.getDate();
+      const faces = (item.people || []).map(n => {
+        const av = FAM_AVA[n] || [(n || '')[0] || '', 'p-me'];
+        const init = typeof av[0] === 'function' ? av[0]() : av[0];
+        return '<span class="init-ava ' + av[1] + '">' + muneaEscapeHtml(init) + '</span>';
+      }).join('');
+      return '<div class="book-entry">'
+        + '<div class="be-head"><div class="be-title"><span class="be-medal">' + icon + '</span>'
+        + muneaEscapeHtml(item.title || muneaT('activity.defaultTitle', '活動')) + '</div>'
+        + '<span class="be-date">' + day + '</span></div>'
+        + '<div class="be-foot"><span class="be-result">'
+        + muneaEscapeHtml(item.result || '') + '</span>'
+        + (faces ? '<div class="be-faces">' + faces + '</div>' : '') + '</div>'
+        + '</div>';
+    }).join('');
+  }
+  function openBook() {
+    showView('family');
+    $$('#family .fam-view').forEach(v => v.classList.remove('active'));
+    $('#viewBook').classList.add('active');
+    try { renderFamilyBook(); } catch (e) {}
+  }
   if ($('#bookBtn')) $('#bookBtn').addEventListener('click', openBook);
   const peekCard = document.querySelector('.fam-peek');
   if (peekCard) { peekCard.style.cursor = 'pointer'; peekCard.addEventListener('click', openBook); }

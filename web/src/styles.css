@@ -1977,12 +1977,29 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 全家狀態：心情做成有顏色的小藥丸、一眼分辨 */
 .mood-pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-right: 4px; display: inline-flex; align-items: center; gap: 3px; vertical-align: -3px; }
 .mood-pill .ic { width: 13px; height: 13px; }
+/* 家人頁的心情標籤＝情緒球那六顆的淡化版（Edward 2026-08-01）
+ *
+ * 他點的球是黃／青綠／深綠／灰藍／橘／紅，標籤本來卻是米底黑字（開心）跟土黃字（愉快）——
+ * 同一個心情在兩個畫面長得不像同一件事。改成「同色系淡底＋同色系深字」：
+ * 底色一眼認得出是哪顆球，字色壓到對白底 4.5 以上，六顆同一個閱讀重量。
+ *   開心 #F4B63A → 底 #FBF0D5 字 #8A6410（4.74）
+ *   愉快 #2FB7A8 → 底 #DCF3F0 字 #1A7268（4.96）
+ *   平靜 #236C66 → 底 #D9EFE8 字 #236C66（5.39，原本就對）
+ *   低落 #6D7F91 → 底 #E4EAF0 字 #46566A（6.19，原本就對）
+ *   焦慮 #D98A32 → 底 #FAECD8 字 #985C15（4.66）
+ *   生氣 #E95B4F → 底 #F7DEDB 字 #B0392D（4.73）
+ * tired／upset 是聊聊觀察才會出現的詞（情緒球沒有），沿用原本的配色。 */
 .mood-pill.calm { background: var(--mint-2); color: var(--teal-dd); }
-.mood-pill.happy { background: var(--coral-soft); color: var(--ink); }
-.mood-pill.glad { background: #F6ECD4; color: #9A6E14; }
-.mood-pill.tired { background: #F6E7C8; color: #8A6410; }
+.mood-pill.happy { background: #FBF0D5; color: #8A6410; }
+.mood-pill.glad { background: #DCF3F0; color: #1A7268; }
+.mood-pill.tired { background: #F6E7C8; color: #7E5B0E; }
 .mood-pill.down { background: #E4EAF0; color: #46566A; }
 .mood-pill.upset { background: #ECE1F0; color: #6E4488; }
+/* 焦慮與生氣（2026-08-01 補）：這兩格是同日新開的，樣式漏了 → 家人頁上那顆標籤
+   沒有底色、跟旁邊六顆長得不一樣（Edward 一眼看出來）。底色與字色沿用同一組配法：
+   淡底＋同色系深字，深字對淡底都在 4.5 以上，跟其他五顆同一個閱讀重量。 */
+.mood-pill.anxious { background: #FAECD8; color: #985C15; }
+.mood-pill.angry { background: #F7DEDB; color: #B0392D; }
 /* 成員列按下去的小彈跳（活著的感覺） */
 .health-row:active { transform: scale(.985); }
 .health-row { transition: transform .12s ease; }

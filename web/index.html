@@ -120,12 +120,12 @@
     <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)"><span data-i18n="status.todayDataHint">今天的數據會即時整理在這裡。 </span><span style="color:#8FD4CC;font-weight:700" data-i18n="demo.status.healthEmptyAction">接上 Apple 健康或跟我聊聊</span><span data-i18n="demo.status.healthEmptyTail">，我就開始幫你看著。</span></div>
   </div>
 
-  <!-- 情緒監測（產品核心 · 互動 hero）-->
+  <!-- 心情紀錄（產品核心 · 互動 hero）-->
   <div id="moodCheckinCard" style="position:relative;overflow:hidden;border-radius:22px;padding:18px;margin-bottom:16px;background:var(--mint2);border:1px solid var(--line)">
     <div class="row" style="justify-content:space-between;margin-bottom:15px">
       <div style="display:flex;align-items:center;gap:8px">
         <svg width="19" height="19" viewBox="0 0 24 24" style="flex-shrink:0" fill="none" stroke="var(--teal-dd)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 14.5c1.2 1.5 5.8 1.5 7 0"/><circle cx="9" cy="10" r=".85" fill="var(--coral)" stroke="none"/><circle cx="15" cy="10" r=".85" fill="var(--coral)" stroke="none"/></svg>
-        <div class="serif" style="font-size:19px;font-weight:900" data-i18n="status.moodMonitoring">情緒監測</div>
+        <div class="serif" style="font-size:19px;font-weight:900" data-i18n="status.moodMonitoring">心情紀錄</div>
       </div>
       <!-- ⚠ 這三個（moodChip／moodLabel／moodNote）都不可以掛 data-i18n（Edward 2026-08-01 抓到）：
            它們的文字由 decorate() 依「他今天記了什麼心情」算出來，翻譯走程式裡的 muneaUiT()。
@@ -331,20 +331,24 @@
       </div>
       <div class="fam-view" id="viewBook">
         <div class="nav-head"><button class="nav-back" id="bookBack" aria-label="回全家" data-i18n-aria-label="accessibility.backToFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" data-i18n="family.journal">家庭記錄簿</span><span></span></div>
-        <div class="book-month" data-i18n="common.sampleTag">範例</div>
-        <div class="book-demo-note" data-i18n="activity.sampleHint">以下為範例——開始你們的第一個活動，就會記在這裡。</div>
-        <div class="book-timeline">
+        <!-- 一場活動都還沒辦過時才顯示這兩行與下面的範例卡；辦過就換成真的記錄（renderFamilyBook） -->
+        <div class="book-month" id="bookSampleTag" data-i18n="common.sampleTag">範例</div>
+        <div class="book-demo-note" id="bookSampleNote" data-i18n="activity.sampleHint">以下為範例——開始你們的第一個活動，就會記在這裡。</div>
+        <div class="book-timeline" id="bookTimeline">
+        <div id="bookRealEntries"></div>
+        <div id="bookDemoEntries">
         <div class="book-entry">
           <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.5 12.9 17 22l-5-3-5 3 1.5-9.1"/></svg></span><span data-i18n="demo.activity.walkTitle">一起走路 30,000 步</span></div><div class="be-date">6/19</div></div>
           <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="demo.activity.walkResult">達成！全家慶祝</span></span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama" data-i18n="demo.family.gmInit">嬤</span></span><span class="be-mem"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span><span class="be-mem"><span class="init-ava p-bao" data-i18n="demo.family.g1Init">寶</span></span></div></div>
         </div>
         <div class="book-entry">
-          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span><span data-i18n="demo.activity.sleepTitle">早睡一週</span></div><div class="be-date">6/12</div></div>
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg></span><span data-i18n="demo.activity.sleepTitle">早睡一週</span></div><div class="be-date">6/12</div></div>
           <div class="be-foot"><span class="be-result"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="demo.activity.doneShort">達成！</span></span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama" data-i18n="demo.family.gmInit">嬤</span></span><span class="be-mem"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span><span class="be-mem"><span class="init-ava p-zhi" data-i18n="demo.family.s1Init">明</span></span></div></div>
         </div>
         <div class="book-entry">
-          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2.7s6.5 7.2 6.5 11.8a6.5 6.5 0 0 1-13 0C5.5 9.9 12 2.7 12 2.7z"/></svg></span><span data-i18n="demo.activity.waterTitle">每天喝水</span></div><div class="be-date">6/5</div></div>
+          <div class="be-head"><div class="be-title"><span class="be-medal"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11h18M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M6 11v8M18 11v8M9 15h6"/></svg></span><span data-i18n="demo.activity.waterTitle">每天喝水</span></div><div class="be-date">6/5</div></div>
           <div class="be-foot"><span class="be-result" data-i18n="demo.activity.missedResult">參加過 · 差一點點，下次再來</span><div class="be-members"><span class="be-mem"><span class="init-ava p-ama" data-i18n="demo.family.gmInit">嬤</span></span><span class="be-mem"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span></div></div>
+        </div>
         </div>
         </div>
       </div>
@@ -603,7 +607,7 @@
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="activity.startTitle">發起活動</h2>
-      <p class="modal-sub" data-i18n="legacyUi.activitySubtitle">選一種活動，找想一起的人，不勉強誰</p>
+      <p class="modal-sub" data-i18n="legacyUi.activitySubtitle">找一件事，全家一起做做看。</p>
       <div class="field-label" data-i18n="activity.type">活動類型</div>
       <div class="chal-types">
         <button class="chal-type active" data-kind="walk"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16v-2.4c0-2.1-1-3.1-1-5.6 0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0Z"/></svg><span data-i18n="activity.exercise">一起運動</span></button>
@@ -671,7 +675,6 @@
       <!-- 注意：Edward 2026-07-02 拍板「運動邀請不顯示份額」；份額只是內部能力分配，改 applyChalKind 前必查 -->
       <!-- 名單由 app.js renderInviteList() 依全家健康圈真實成員產生（開窗時重畫；圈空時顯示邀請引導）-->
       <div class="invite-row" id="inviteList"></div>
-      <div class="invite-note" id="inviteNote" data-i18n="legacyUi.activityInviteNote">不方便滑手機的家人，寧寧會親口問</div>
       <div id="rewardFields">
       <div class="field-label" data-i18n="legacyUi.activityReward">設個小獎勵（想到就填，不填也行）</div>
       <div class="rw-list">
