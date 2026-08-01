@@ -1149,7 +1149,11 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 /* ===== 家庭挑戰 · 全家走在進度上（巧思層） ===== */
 .qc-kicker .ic { width: 17px; height: 17px; color: var(--coral-d); }
 .qc-kicker.night .ic { color: #5E7FB6; }
-.qc-days { margin-left: auto; font-size: 13px; color: var(--muted); font-weight: 600; background: var(--cream); border-radius: 100px; padding: 3px 10px; }
+/* 右上角那顆日期／狀態標籤不可以折行（Edward 2026-08-01 指出）——
+   英文「Within 10 days」西文「12 preguntas」都會被擠成兩行、看起來像壞掉。
+   標籤短、優先給它空間；長的是左邊的標題，讓標題去折行才對。 */
+.qc-days { margin-left: auto; flex: 0 0 auto; white-space: nowrap; font-size: 13px; color: var(--muted); font-weight: 600; background: var(--cream); border-radius: 100px; padding: 3px 10px; }
+.quest-card .qc-kicker > :first-child { min-width: 0; }
 .qc-track > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--teal); border-radius: 100px; }
 
 /* 早睡挑戰：五個月亮點 */

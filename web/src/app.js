@@ -1788,7 +1788,7 @@ function visitPartialNames(partial) {
     medication: muneaT('visit.partialMedication', '用藥紀錄'),
     symptoms: muneaT('visit.partialSymptoms', '聊天中提到的狀況'),
   };
-  return (partial || []).map(k => label[k] || k).join(muneaT('common.listSeparator', '、'));
+  return (partial || []).map(k => label[k] || k).join(muneaListSeparator());
 }
 
 /* ── 本機先組一份（Edward 2026-07-29：「不要顯示整理中」）─────────────
@@ -5910,13 +5910,24 @@ function visitToday() {
   const today = _todayISO();
   return arr.filter(v => v && v.dateISO === today).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')))[0] || null;
 }
+// 串清單的寫法各國不一樣：中文日文用「、」不留空格，英文西班牙文要「逗號＋一個空格」。
+// 文案表不准存前後有空白的值（守門擋著、避免文案末尾藏看不見的空格），
+// 所以空格在這裡補——英文西文原本被串成「Riverside;Park;Market」（2026-08-01 截圖看見）。
+function muneaListSeparator() {
+  const locale = muneaLocale();
+  const sep = muneaT('common.listSeparator', '、');
+  return (locale === 'en' || locale === 'es') ? sep + ' ' : sep;
+}
 function _clock12(tv) {
   const p = String(tv || '').split(':'); const hh = +p[0], mm = +p[1] || 0;
   if (isNaN(hh)) return '';
   const date = new Date(2024, 0, 1, hh, mm);
+  // 整點原本會省略分鐘，四個語系印出來差很多：
+  //   中文「下午8時」／英文「8 PM」／日文「20時」／西班牙文只剩一個「20」。
+  // 西班牙文那個看起來像壞掉（2026-08-01 Edward 指出）。一律帶分鐘就四語一致。
   return new Intl.DateTimeFormat(muneaLocale(), {
     hour: 'numeric',
-    minute: mm ? '2-digit' : undefined,
+    minute: '2-digit',
   }).format(date);
 }
 // 24 小時制，跟用藥任務的「14:00」一致（Edward 2026-07-14）
@@ -6119,9 +6130,9 @@ window.__muneaSetHealth = function (s) {
     if (sys && dia) bits.push(muneaT('health.obsMetricBp', '血壓 {value}', { value: B(Math.round(sys) + '/' + Math.round(dia)) }));
     if (hr) bits.push(muneaT('health.obsMetricHr', '心率 {value}', { value: B(Math.round(hr)) }));
     if (sleep) bits.push(muneaT('health.obsMetricSleep', '睡眠 {value}', { value: B((Math.round(sleep * 10) / 10) + ' ' + muneaT('health.unit.hoursShort', '小時')) }));
-    const metricsLine = bits.join(muneaT('common.listSeparator', '、'));
+    const metricsLine = bits.join(muneaListSeparator());
     obs.innerHTML = worry.length
-      ? muneaT('health.obsSteadyWithWorry', '今天{metrics}，大致都穩，不過{worries}，我幫你多留意，先別擔心。', { metrics: metricsLine, worries: B(worry.join(muneaT('common.listSeparator', '、'))) })
+      ? muneaT('health.obsSteadyWithWorry', '今天{metrics}，大致都穩，不過{worries}，我幫你多留意，先別擔心。', { metrics: metricsLine, worries: B(worry.join(muneaListSeparator())) })
       : muneaT('health.obsAllGood', '今天{metrics}，整體狀態不錯。{cheer}，想出門走走我陪你。', { metrics: metricsLine, cheer: '<span style="color:#8FD4CC;font-weight:700">' + muneaT('health.obsKeepItUp', '保持這個節奏就很好') + '</span>' });
     window.__muneaObsReal = obs.innerHTML;   // 真觀察已寫：分頁切換不得用預設蓋掉
   }
@@ -10059,7 +10070,7 @@ function init() {
       if (!prizes.length) return { ok: false, error: 'draw_prize_required' };
       act.prizes = prizes.map(name => ({ name, n: 1 }));
       act.prize = prizes[0];        // 舊欄位留著：通知、記錄簿、家人動態都還在讀它
-      act.dateISO = dateISO;
+      act.dateISO = dateISO; act.dueTime = time;   // 小標籤要印時間，靠這格
       act.when = fmtDay(day) + ' ' + _clock12(time);
       act.title = muneaT('activity.luckyDrawTitle', '幸運抽獎');
     }
@@ -10093,7 +10104,7 @@ function init() {
       '<div class="ad-note"><b>' + act.title + '</b>' + (act.place ? ' · ' + act.place : '') + (act.dateLabel ? '<br>' + act.dateLabel : '') + '</div>' +
       '<div class="rsvp-btns"><button type="button" class="rsvp-btn go' + (my === 'go' ? ' on' : '') + '" data-r="go"' + (locked ? ' disabled' : '') + '>' + muneaT('activity.rsvpGo', '我要去') + '</button>' +
       '<button type="button" class="rsvp-btn no' + (my === 'no' ? ' on' : '') + '" data-r="no"' + (locked ? ' disabled' : '') + '>' + muneaT('activity.rsvpNo', '我沒空') + '</button></div>' +
-      '<div class="qc-num">' + (going.length ? muneaT('activity.rsvpGoing', '要去的：{names}', { names: going.map(actDisplayName).join(muneaT('common.listSeparator', '、')) }) : muneaT('activity.rsvpNoneYet', '還沒有人回「要去」')) + (no.length ? '　·　' + muneaT('activity.rsvpBusy', '沒空：{names}', { names: no.map(actDisplayName).join(muneaT('common.listSeparator', '、')) }) : '') +
+      '<div class="qc-num">' + (going.length ? muneaT('activity.rsvpGoing', '要去的：{names}', { names: going.map(actDisplayName).join(muneaListSeparator()) }) : muneaT('activity.rsvpNoneYet', '還沒有人回「要去」')) + (no.length ? '　·　' + muneaT('activity.rsvpBusy', '沒空：{names}', { names: no.map(actDisplayName).join(muneaListSeparator()) }) : '') +
       '；' + (locked ? muneaT('activity.rsvpLocked', '活動時間到了，不能再改。') : (my ? muneaT('activity.rsvpTailMine', '想改隨時再點另一個就好；其他家人打開 App 也會看到。', { companion: cname() }) : muneaT('activity.rsvpTailAsk', '點一下回覆；其他家人打開 App 也會看到。', { companion: cname() }))) + '</div>';
     if (!locked) box.querySelector('.rsvp-btns').addEventListener('click', e => {
       const b = e.target.closest('.rsvp-btn'); if (!b || b.disabled) return;
@@ -10240,9 +10251,9 @@ function init() {
           a.winners = got.map(n => ({ prize: a.picks[n], name: n }));
           a.winner = got[0];
           pushFamilyFeed(muneaT('feed.drawWinnersMulti', '開獎了——{list}！', {
-            list: got.map(n => '<b>' + muneaEscapeHtml(n) + '</b> ' + muneaEscapeHtml(a.picks[n])).join(muneaT('common.listSeparator', '、')),
+            list: got.map(n => '<b>' + muneaEscapeHtml(n) + '</b> ' + muneaEscapeHtml(a.picks[n])).join(muneaListSeparator()),
           }));
-          recordInFamilyBook(a, got.map(n => muneaT('book.drawWinnerItem', '{prize} {name}', { prize: a.picks[n], name: n })).join(muneaT('common.listSeparator', '、')), Object.keys(a.picks));
+          recordInFamilyBook(a, got.map(n => muneaT('book.drawWinnerItem', '{prize} {name}', { prize: a.picks[n], name: n })).join(muneaListSeparator()), Object.keys(a.picks));
         } else {
           pushFamilyFeed(muneaT('feed.drawNobody', '「{prize}」結束了，這次沒有人抽', { prize: a.prize || a.title }));
           recordInFamilyBook(a, muneaT('book.drawNobody', '沒有人抽'), []);
@@ -10258,9 +10269,9 @@ function init() {
         a.winner = results[0].name;
         if (results.length > 1) {
           pushFamilyFeed(muneaT('feed.drawWinnersMulti', '開獎了——{list}！', {
-            list: results.map(w => muneaEscapeHtml(w.prize) + ' <b>' + muneaEscapeHtml(w.name) + '</b>').join(muneaT('common.listSeparator', '、')),
+            list: results.map(w => muneaEscapeHtml(w.prize) + ' <b>' + muneaEscapeHtml(w.name) + '</b>').join(muneaListSeparator()),
           }));
-          recordInFamilyBook(a, results.map(w => muneaT('book.drawWinnerItem', '{prize} {name}', { prize: w.prize, name: w.name })).join(muneaT('common.listSeparator', '、')), pool);
+          recordInFamilyBook(a, results.map(w => muneaT('book.drawWinnerItem', '{prize} {name}', { prize: w.prize, name: w.name })).join(muneaListSeparator()), pool);
         } else {
           const no = String(a.tickets[results[0].name]).padStart(2, '0');
           pushFamilyFeed(muneaT('feed.drawWinner', '「{prize}」開獎了——{name} 抽中（{no} 號）！', { prize: results[0].prize || a.title, name: '<b>' + muneaEscapeHtml(results[0].name) + '</b>', no }));
@@ -10273,7 +10284,7 @@ function init() {
       } else if (a.kind === 'event' && a.rsvp) {
         const going = Object.entries(a.rsvp).filter(([, v]) => v === 'go').map(([n]) => n);
         pushFamilyFeed('「' + a.title + '」結束了' + (going.length ? '（' + going.join('、') + ' 有去）' : '') + '，收進<b>家庭記錄簿</b>');
-        recordInFamilyBook(a, going.length ? muneaT('book.eventWent', '{names} 有去', { names: going.join(muneaT('common.listSeparator', '、')) }) : muneaT('book.eventEnded', '結束了'), going);
+        recordInFamilyBook(a, going.length ? muneaT('book.eventWent', '{names} 有去', { names: going.join(muneaListSeparator()) }) : muneaT('book.eventEnded', '結束了'), going);
       } else {
         pushFamilyFeed('「' + a.title + '」結束了，收進<b>家庭記錄簿</b>');
         recordInFamilyBook(a, muneaT('book.eventEnded', '結束了'), a.names || []);
@@ -10305,7 +10316,10 @@ function init() {
         note = muneaT('activity.endedNote', '等大家都看過就收進記錄簿 · 最多留 3 天', { companion: cname() });
       }
     } else if (act.kind === 'walk') {
-      chip = muneaT('activity.daysChip', '{days} 天內', { days: act.days });
+      // 鍵不可以寫成三元運算式——搬遷掃描器只認得寫死的鍵，看不到就把中文當成沒綁
+      chip = act.days === 1
+        ? muneaT('activity.daysChipOne', '{days} 天內', { days: act.days })
+        : muneaT('activity.daysChip', '{days} 天內', { days: act.days });
       goal = muneaT('activity.walkGoal', '大家一起走 {steps} 步', { steps: (+act.goal).toLocaleString() });
       note = muneaT('activity.walkNote', '家人打開 App 就會看到；開始後每個人走多少都看得到', { companion: cname() });
       // 外層也要看得到進度跟自己走了多少——不然要點進去才知道（跟抽獎同一個道理）
@@ -10322,10 +10336,12 @@ function init() {
           : { cls: 'todo', text: muneaT('activity.walkStateZero', '你還沒開始走') };
       } catch (e) {}
     } else if (act.kind === 'quiz') {
-      chip = muneaT('activity.questionsChip', '{count} 題', { count: act.q });
+      chip = act.q === 1
+        ? muneaT('activity.questionsChipOne', '{count} 題', { count: act.q })
+        : muneaT('activity.questionsChip', '{count} 題', { count: act.q });
       if (act.myDone && act.answers && act.answers['你'] !== undefined) {
         goal = muneaT('activity.quizScoreGoal', '你答對 {score} / {total} 題', { score: act.answers['你'], total: act.q });
-        note = muneaT('activity.quizWaitNote', '等 {names} 作答完看排名', { names: act.names.join(muneaT('common.listSeparator', '、')), companion: cname() });
+        note = muneaT('activity.quizWaitNote', '等 {names} 作答完看排名', { names: act.names.join(muneaListSeparator()), companion: cname() });
       } else {
         goal = muneaT('activity.quizReadyGoal', '你的 {count} 題準備好了', { count: act.q });
         note = muneaT('activity.quizReadyNote', '點這張卡先作答；其他人打開 App 也能玩，都答完看排名', { companion: cname() });
@@ -10333,8 +10349,11 @@ function init() {
     } else if (act.kind === 'vote') {
       // 這張卡也一樣是空的（跟抽獎同一個毛病）：選項、誰領先、我投了沒，
       // 全都要點進去才知道。外層就該答完這三件事。
-      chip = muneaT('activity.peopleChip', '{count} 人', { count: act.names.length + 1 });
-      goal = (act.opts || []).join(muneaT('common.listSeparator', '、'));
+      const voters = act.names.length + 1;
+      chip = voters === 1
+        ? muneaT('activity.peopleChipOne', '{count} 人', { count: voters })
+        : muneaT('activity.peopleChip', '{count} 人', { count: voters });
+      goal = (act.opts || []).join(muneaListSeparator());
       const vVotes = act.votes || {};
       const vCount = Object.keys(vVotes).length;
       const vMine = vVotes['你'];
@@ -10355,9 +10374,9 @@ function init() {
       // 以前這張卡只有一行標題跟時間，中間整片空白（Edward 2026-08-01 一眼看出來）。
       // 抽獎最該讓人看到的是「有什麼獎」跟「我抽了沒」——前者決定他想不想點進去，
       // 後者是他每次打開 App 最想確認的一件事。
-      chip = (actLegacyDraw(act) ? muneaT('activity.drawChip', '{when}開獎', { when: drawWhen(act) }) : muneaT('activity.drawChipDue', '{when}截止', { when: drawWhen(act) }));
+      chip = (actLegacyDraw(act) ? muneaT('activity.drawChip', '{when}開獎', { when: chipWhen(act) }) : muneaT('activity.drawChipDue', '{when}截止', { when: chipWhen(act) }));
       const dPrizes = actPrizes(act);
-      goal = dPrizes.map(p => p.name).join(muneaT('common.listSeparator', '、'));
+      goal = dPrizes.map(p => p.name).join(muneaListSeparator());
       const dPicks = act.picks || {};
       const dPicked = Object.keys(dPicks).length;
       const total = (act.names || []).length + 1;
@@ -10382,7 +10401,7 @@ function init() {
       note = muneaT('activity.eventNote', '家人打開 App 就會看到，回「去 / 沒空」；過了那天卡片會自動收進記錄簿', { companion: cname() });
     }
     const rwLine = act.rewards && act.rewards.some(Boolean)
-      ? '<div class="qc-prize"><span class="qp-ico">🏅</span><div class="qp-txt">' + act.rewards.map((r, i2) => r ? muneaT('activity.prizeRankItem', '第 {rank} 名 {prize}', { rank: i2 + 1, prize: r }) : '').filter(Boolean).join(muneaT('common.listSeparator', '、')) + '<small>' + muneaT('activity.prizeGiver', '獎品提供：{owner}', { owner: act.owner || muneaT('common.you', '你') }) + '</small></div></div>'
+      ? '<div class="qc-prize"><span class="qp-ico">🏅</span><div class="qp-txt">' + act.rewards.map((r, i2) => r ? muneaT('activity.prizeRankItem', '第 {rank} 名 {prize}', { rank: i2 + 1, prize: r }) : '').filter(Boolean).join(muneaListSeparator()) + '<small>' + muneaT('activity.prizeGiver', '獎品提供：{owner}', { owner: act.owner || muneaT('common.you', '你') }) + '</small></div></div>'
       : '';
     if (act._rankHtml) {
       card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M17 5H7v5a5 5 0 0 0 10 0V5z"/><path d="M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-3.5 3.8M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 3.5 3.8"/></svg>' + muneaT('activity.rankKicker', '機智問答 · 排名出來了') + '<span class="qc-days">' + muneaT('activity.questionsChip', '{count} 題', { count: act.q || 5 }) + '</span></div>' + act._rankHtml + rwLine;
@@ -10473,6 +10492,19 @@ function init() {
   // 不要讓畫面印出 undefined（2026-08-01 逐一掃五種活動詳情頁時抓到）
   function drawWhen(act) {
     return (act && (act.when || act.dueLabel || act.dateLabel)) || muneaT('activity.drawWhenUnknown', '稍後');
+  }
+  // 卡片右上角那顆小標籤塞不下「日期＋星期＋時間＋截止」——中文英文西班牙文
+  // 都會折成兩行（2026-08-01 Edward 指出）。小標籤只留日期和時間，
+  // 星期在點進去的詳情頁看得到。
+  // 舊卡片可能沒有 dateISO（只存了組好的字串），那就照舊用長的、至少不會空白。
+  function chipWhen(act) {
+    const iso = String((act && (act.dueISO || act.dateISO)) || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return drawWhen(act);
+    const day = new Date(iso + 'T00:00');
+    if (Number.isNaN(day.getTime())) return drawWhen(act);
+    const short = new Intl.DateTimeFormat(muneaLocale(), { month: 'numeric', day: 'numeric' }).format(day);
+    const time = String((act && (act.dueTime || act.time)) || '');
+    return time ? short + ' ' + _clock12(time) : short;
   }
   // 獎項與得主（Edward 2026-08-01 加了多獎項）。
   // 這兩個函式同時讀得懂新舊兩種資料：舊的抽獎只有一個 prize 字串、一個 winner 名字，
@@ -10575,7 +10607,7 @@ function init() {
     if (act.kind === 'vote') { renderVoteBody(act, box); }
     else if (act.kind === 'draw') { renderDrawBody(act, box); }
     else if (act.kind === 'quiz') {
-      if (act.myDone && act.answers && act.answers['你'] !== undefined) { box.innerHTML = '<div class="ad-note">' + muneaT('activity.quizWaitDetail', '你答對 {score} / {total} 題，等 {names} 答完看排名。', { score: act.answers['你'], total: act.q, names: (act.names || []).join(muneaT('common.listSeparator', '、')) }) + '</div>'; }
+      if (act.myDone && act.answers && act.answers['你'] !== undefined) { box.innerHTML = '<div class="ad-note">' + muneaT('activity.quizWaitDetail', '你答對 {score} / {total} 題，等 {names} 答完看排名。', { score: act.answers['你'], total: act.q, names: (act.names || []).join(muneaListSeparator()) }) + '</div>'; }
       else {
         box.innerHTML = '<div class="ad-note">' + muneaT('activity.quizReadyDetail', '你的 {count} 題準備好了，點下面開始作答；其他人打開 App 也能玩，都答完看排名。', { count: act.q, companion: cname() }) + '</div>';
         const qb = document.createElement('button'); qb.className = 'modal-btn'; qb.style.marginTop = '14px'; qb.textContent = muneaT('activity.quizStart', '開始作答');
@@ -10775,7 +10807,7 @@ function init() {
     const tickets = act.tickets || {};
     const myTicket = tickets['你'];
     const drawnLine = () => '<div class="qc-num">' + (waiting.length
-      ? muneaT('activity.drawWaitingOn', '已經抽了 {n} 個人；還沒抽的：{names}', { n: pickedNames.length, names: waiting.map(actDisplayName).join(muneaT('common.listSeparator', '、')) })
+      ? muneaT('activity.drawWaitingOn', '已經抽了 {n} 個人；還沒抽的：{names}', { n: pickedNames.length, names: waiting.map(actDisplayName).join(muneaListSeparator()) })
       : muneaT('activity.drawEveryoneDone', '{n} 個人都抽完了', { n: pickedNames.length })) + '</div>';
     // 開獎：只從抽過的人裡面開。動畫沿用原本的輪盤，轉的是號碼＋名字。
     function revealWinner() {
@@ -10801,7 +10833,7 @@ function init() {
             throwConfetti();
             pushFamilyFeed(results.length > 1
               ? muneaT('feed.drawWinnersMulti', '開獎了——{list}！', {
-                list: results.map(w => muneaEscapeHtml(w.prize) + ' <b>' + muneaEscapeHtml(w.name) + '</b>').join(muneaT('common.listSeparator', '、')),
+                list: results.map(w => muneaEscapeHtml(w.prize) + ' <b>' + muneaEscapeHtml(w.name) + '</b>').join(muneaListSeparator()),
               })
               : muneaT('feed.drawWinner', '「{prize}」開獎了——{name} 抽中（{no} 號）！', { prize: results[0].prize || act.prize, name: '<b>' + muneaEscapeHtml(winner) + '</b>', no: pad(act.tickets[winner]) }));
           }, 620);
@@ -11006,6 +11038,7 @@ function init() {
         return;
       }
       act.dateISO = isoOf(dd);
+      act.dueTime = dtv;   // 小標籤要印時間，靠這格
       act.when = fmtDay(dd) + ' ' + _clock12(dtv);
       act.title = muneaT('activity.luckyDrawTitle', '幸運抽獎');
       resetPrizeRows();
@@ -11415,7 +11448,7 @@ function init() {
   if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
     $('#safetyModal').classList.remove('show');
     const sel = loadSafety();
-    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。異常時我會第一時間讓家人知道。', { names: sel.join(muneaT('common.listSeparator', '、')) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
+    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。異常時我會第一時間讓家人知道。', { names: sel.join(muneaListSeparator()) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();
@@ -11917,12 +11950,12 @@ function init() {
     $('#quizProgress').textContent = muneaT('activity.quizDone', '完成！');
     $('#quizQ').textContent = '';
     $('#quizOpts').innerHTML = '<div class="quiz-score">' + muneaT('activity.quizScoreLine', '答對 {score} / {total} 題', { score: st.score, total: st.n }) + '</div>' +
-      '<p class="modal-sub" style="text-align:center">' + muneaT('activity.quizAskOthers', '{names} 打開 App 也能玩，都答完就看排名', { companion: cname(), names: st.act.names.join(muneaT('common.listSeparator', '、')) }) + '</p>' +
+      '<p class="modal-sub" style="text-align:center">' + muneaT('activity.quizAskOthers', '{names} 打開 App 也能玩，都答完就看排名', { companion: cname(), names: st.act.names.join(muneaListSeparator()) }) + '</p>' +
       '<button class="modal-btn quiz-close-btn" type="button">' + muneaT('common.ok', '好') + '</button>';
     const closeBtn = $('#quizOpts .quiz-close-btn');
     if (closeBtn) closeBtn.addEventListener('click', () => $('#quizModal').classList.remove('show'));
     const note = st.card && st.card.querySelector('.qc-num');
-    if (note) note.textContent = muneaT('activity.quizWaitOthers', '你答對 {score}/{total}，等 {names} 作答完看排名', { score: st.score, total: st.n, names: st.act.names.join(muneaT('common.listSeparator', '、')) });
+    if (note) note.textContent = muneaT('activity.quizWaitOthers', '你答對 {score}/{total}，等 {names} 作答完看排名', { score: st.score, total: st.n, names: st.act.names.join(muneaListSeparator()) });
     const acts2 = loadActs();
     const rec = acts2.find(a => a.id === st.act.id);
     if (rec) {
