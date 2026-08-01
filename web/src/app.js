@@ -1141,11 +1141,18 @@ function syncCompanionUI() {
   const fullSrc = t.fullAsset || homeSrc;
   const homeName = $('#companionHomeName'); if (homeName) homeName.textContent = display;
   const chatName = $('#chatName'); if (chatName) chatName.textContent = display;
-  const settingName = $('#settingsCompanionName'); if (settingName) settingName.textContent = display;
+  // 這兩行的字是「你選的那個角色」的名字與描述，會跟著換角色變——
+  // 但 index.html 把它們釘在女生角色的翻譯標記上（companion.nening.*），
+  // 翻譯層每次重掃就蓋回寧寧／Nina。於是換成男生後照片換了、名字沒換
+  // （Edward 2026-08-01 抓到；中文版也一樣壞，不是外語才有的問題）。
+  // 跟同日心情記錄那個是同一個病：程式算出來的字不能同時掛翻譯標籤。
+  const settingName = $('#settingsCompanionName');
+  if (settingName) { settingName.removeAttribute('data-i18n'); settingName.textContent = display; }
   const careHeading = $('#careHeading'); if (careHeading) careHeading.textContent = muneaT('home.careHeading', '{companion}幫你留意', { companion: display });
   const chatTaskTitle = $('#chatTaskTitle'); if (chatTaskTitle) chatTaskTitle.textContent = muneaT('home.taskChatTitle', '和{companion}聊聊', { companion: display });
   const interestsSubtitle = $('#interestsSubtitle'); if (interestsSubtitle) interestsSubtitle.textContent = muneaT('settings.interestsSubtitle', '挑幾個興趣，{companion}會多留意', { companion: display });
-  const settingLabel = $('#settingsTemplateLabel'); if (settingLabel) settingLabel.textContent = t.templateLabel;
+  const settingLabel = $('#settingsTemplateLabel');
+  if (settingLabel) { settingLabel.removeAttribute('data-i18n'); settingLabel.textContent = t.templateLabel; }
   const settingImg = $('#settingsCompanionImg'); if (settingImg) settingImg.src = thumbSrc;
   const nameInput = $('#companionNameInput');
   if (nameInput && document.activeElement !== nameInput && nameInput.value !== display) nameInput.value = display;

@@ -2266,8 +2266,10 @@ textarea.chal-input { resize: none; line-height: 1.7; }
  * 2026-08-01 Edward 問「每個頁面都有統一了嗎」——查出來就是這一頁沒有。
  * 改成跟 .page-title 同一組規格（24px/800、上下留白一致）。 */
 #status .h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; line-height: 1.2;
-  min-height: 44px; display: flex; align-items: center; margin: 14px 0 16px; }
-/* 上緣多 8px：狀態頁的外層比其他頁少 8px 內距，補回來四頁的標題才在同一條線上。 */
+  min-height: 44px; display: flex; align-items: center; margin: 6px 0 16px; }
+/* 2026-08-01 二修：上次補的 8px 補反了——我量的是「框」的位置（四頁都一樣），
+ * 但真正看得到的是「字形」的位置，那個差 8px。Edward 一眼看出來、我的量測法沒有。
+ * 這裡改回 6px，並用字形位置驗證（見下一條註解）。 */
 #status .card, #family .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
 #status .row, #family .row { display: flex; align-items: center; }
 #status .chip, #family .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }  /* 7/9 Edward：家人頁標籤與狀態頁同規範（原只掛 #status、家人頁變螢光方塊） */

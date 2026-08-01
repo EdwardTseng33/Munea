@@ -1319,7 +1319,7 @@
   "legacyUi.activityGoal": "目標步數（大家一起累積）",
   "legacyUi.activityDeadline": "挑戰截止（到期自動結算）",
   "legacyUi.activityInvite": "找誰一起（可以不選全部）",
-  "legacyUi.activityInviteNote": "不方便滑手機的家人，寧寧會親口問",
+  "legacyUi.activityInviteNote": "不方便滑手機的家人，{companion}會親口問",
   "legacyUi.activityReward": "設個小獎勵（不填也行）",
   "legacyUi.feedbackSubtitle": "你的每一句話我們都會看。挑一種，說給我們聽。",
   "legacyUi.feedbackCategoryLabel": "是哪一區的問題？",
