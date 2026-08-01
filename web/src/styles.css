@@ -2620,8 +2620,9 @@ html:lang(en) .taken, html:lang(es) .taken, html:lang(ja) .taken {
 
 /* 並排按鈕要留呼吸的邊，不能讓字頂到左右兩側（Edward 2026-08-01 指出）。 */
 .chal-act { padding: 0 16px; }
+/* 外語只調內距與不換行，字級交給上面的按鈕規範統一管。 */
 html:lang(en) .chal-act, html:lang(es) .chal-act, html:lang(ja) .chal-act {
-  font-size: 12.5px; gap: 6px; padding: 0 14px; }
+  gap: 8px; padding: 0 16px; }
 
 /* 底部分頁的字：英文與西班牙文是整個單字，用粗體會顯得又擠又重
  * （Edward 2026-08-01：「這裡在英文上改為用細體」）。
@@ -2634,9 +2635,13 @@ html:lang(es) .tab-btn.active > span { font-weight: 700; }
 /* 兩端對齊只適合中文與日文（一字一格、拉開來很整齊）。
  * 英文與西班牙文是不等寬的單字，硬拉兩端會在字與字之間扯出一格一格的白洞，
  * 讀起來很吃力（Edward 2026-08-01：「排版 UX 閱讀體驗不舒服」）。拉丁語系一律靠左。 */
-html:lang(en) .reader-card p, html:lang(es) .reader-card p,
-html:lang(en) .sub-legal,    html:lang(es) .sub-legal {
+html:lang(en) .reader-card p, html:lang(es) .reader-card p {
   text-align: left; overflow-wrap: normal; word-break: normal; hyphens: auto; }
+/* 訂閱條款那小段改置中（Edward 2026-08-01 拍板）：它是頁尾的註記、不是要細讀的內文，
+ * 置中之後最後一行不會孤零零掛在左邊，整塊看起來收得住。四語一致。 */
+.sub-legal { text-align: center; }
+html:lang(en) .sub-legal, html:lang(es) .sub-legal {
+  overflow-wrap: normal; word-break: normal; hyphens: auto; }
 
 /* 寧寧觀察卡的標題：原本寫在行內（font-size:15.5px），行內樣式贏過所有選擇器，
  * 外語就沒辦法覆寫、「Ningning's observations」只能折成兩行。改成 class 才調得動。 */
@@ -2660,3 +2665,44 @@ html:lang(en) .chal-actions, html:lang(es) .chal-actions {
  * 底下那排是次要動作（管理訂閱／恢復購買），縮一級剛好拉開主次。 */
 html:lang(en) .plan-actions .plan-btn, html:lang(es) .plan-actions .plan-btn {
   white-space: nowrap; }
+
+/* 活動種類的六張卡：有的字折行、有的不折，整排就高矮不齊，看起來很毛躁
+ * （Edward 2026-08-01：「有大有小設計看起來閱讀不是很舒服」）。
+ * 兩手一起做：文案收短（見文案表），再讓同一列的卡強制等高、字一律一行。 */
+.chal-types { grid-auto-rows: 1fr; }
+.chal-type { justify-content: center; min-height: 74px; }
+.chal-type span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+html:lang(en) .chal-type, html:lang(es) .chal-type, html:lang(ja) .chal-type {
+  font-size: 12.5px; padding-inline: 6px; }
+
+/* ===== 按鈕設計規範（Edward 2026-08-01：「按鈕的設計規範要制定好」）=====
+ *
+ * 之前是一顆一顆調，同樣是「主要動作」卻有 600／700／800 三種粗細、
+ * 14／15／15.5／16px 四種字級，掃過去會覺得亂。這裡收成三級，全站照這個走。
+ * 基準取首頁「開始聊聊」——它是全 App 最重要的一顆，其他的不該比它重。
+ *
+ *   ① 主要（primary）  這一頁最想讓人按的那一顆。實心底色、滿版。
+ *                      例：開始聊聊／升級方案／登入
+ *   ② 次要（secondary）同一區的其他選擇，跟主要並排。淡底或白底框。
+ *                      例：加值點數／發起活動／家庭記錄簿
+ *   ③ 輔助（tertiary） 少數人才需要、但必須找得到。小丸子、置中。
+ *                      例：管理訂閱／恢復購買
+ *
+ * 三級的差別只在「字級 × 粗細 × 高度」，顏色與圓角各自沿用原本的設計。
+ * 加新按鈕時挑一級套用，不要再自己寫字級——這就是這組變數存在的意義。 */
+:root {
+  --btn-1-size: 15.5px; --btn-1-weight: 700; --btn-1-height: 50px;
+  --btn-2-size: 15px;   --btn-2-weight: 700; --btn-2-height: 48px;
+  --btn-3-size: 12.5px; --btn-3-weight: 600; --btn-3-height: 38px;
+}
+/* ① 主要 */
+.video-btn, .sub-cta, .auth-primary {
+  font-family: var(--display); font-size: var(--btn-1-size); font-weight: var(--btn-1-weight); }
+.auth-primary { height: auto; min-height: 40px; }
+/* ② 次要 */
+.plan-actions .plan-btn, .chal-act, .auth-secondary {
+  font-family: var(--display); font-size: var(--btn-2-size); font-weight: var(--btn-2-weight); }
+.plan-actions .plan-btn, .chal-act { min-height: var(--btn-2-height); }
+/* ③ 輔助 */
+.plan-link {
+  font-size: var(--btn-3-size); font-weight: var(--btn-3-weight); min-height: var(--btn-3-height); }
