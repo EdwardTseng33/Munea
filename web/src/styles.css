@@ -1402,9 +1402,13 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .med-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 2px; }
 /* 「吃多久」五顆要排成一行不折行（Edward 2026-08-01）。等分五欄、最後一欄留寬一點
    給「長期」——英文 Long term／西文 A largo plazo 比數字長，等分會擠爆。 */
-.med-chips.fit-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.32fr); gap: 8px; flex-wrap: nowrap; }
-.med-chips.fit-row .mchip { padding: 10px 4px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-html:lang(en) .med-chips.fit-row .mchip, html:lang(es) .med-chips.fit-row .mchip { font-size: 13px; letter-spacing: -.2px; }
+.med-chips.fit-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.32fr); gap: 6px; flex-wrap: nowrap; }
+.med-chips.fit-row .mchip { padding: 10px 2px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 日文也要縮：「14日分」是兩個全形字＋數字，比中文的「14 天」寬，
+   用中文的字級會被切成「14…」（2026-08-01 正式機實拍才看見——加了省略號之後
+   元素寬度相等，靠比對寬度的檢查永遠不會報）。 */
+html:lang(en) .med-chips.fit-row .mchip, html:lang(es) .med-chips.fit-row .mchip,
+html:lang(ja) .med-chips.fit-row .mchip { font-size: 13px; letter-spacing: -.2px; }
 .mchip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-family: var(--sans); font-size: 15px; font-weight: 600; padding: 10px 16px; border-radius: 100px; min-height: 44px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .mchip.on { background: var(--teal-d); border-color: var(--teal-d); color: #FFF; }
 
