@@ -825,8 +825,27 @@ assert(!/class="draw-now"/.test(drawBody.split('actIsMine(act)')[0] || ''),
 // 抽獎要有「自己抽一張」的動作（Edward 2026-08-01：「應該是用戶能有抽的體驗流程，
 // 抽完後才是等待活動結束」）。以前發起人按一下就直接公布得主，其他人全程沒有動作。
 assert(/class="draw-pick"/.test(drawBody), '抽獎必須讓每個人自己抽一張，不能只有發起人按一下就公布結果');
-assert(/act\.tickets = Object\.assign\(\{\}, act\.tickets \|\| \{\}, \{ 你: n \}\)/.test(drawBody),
-  '抽到的號碼要記在活動上，不然重開 App 就忘了他抽過');
+assert(/act\.picks = Object\.assign\(\{\}, act\.picks \|\| \{\}, \{ 你: got \}\)/.test(drawBody),
+  '抽到的獎項要記在活動上，不然重開 App 就忘了他抽過');
+// 抽到的是使用者設定的獎項本身，不是一個沒意義的號碼（Edward 2026-08-01
+// 「抽獎不用抽號碼吧？而是直接顯示用戶設定的獎項」）
+assert(/function pickPrizeNow\(\) \{[\s\S]*?prizeLeft\(\)\.forEach\(p => \{ for \(let i = 0; i < p\.left; i \+= 1\) pool\.push\(p\.name\); \}\);/.test(drawBody),
+  '抽到的必須是還有名額的獎項本身');
+assert(/if \(!pool\.length\) return '';/.test(drawBody),
+  '獎項發完了要誠實說沒抽到，不能硬塞一個沒名額的獎給他');
+// 獎項要看得見（Edward「抽獎畫面應該要顯示獎項」）
+assert(/const prizeBoard = prizeRows\.length/.test(drawBody), '抽獎畫面一律要顯示獎項，不能只在多獎項時才畫');
+// 中了獎的下面要接一句找誰領（Edward）
+assert(/function claimLine\(\)/.test(drawBody) && /muneaT\('activity\.drawIGot'/.test(drawBody) && drawBody.indexOf("activity.drawIGot") < drawBody.indexOf('claimLine()', drawBody.indexOf("activity.drawIGot")),
+  '抽中的人下面要接一句獎品找誰領');
+// 等級是系統給的、使用者只填內容（Edward「大獎那些是預設，用戶應該填的是獎項內容」）
+assert(/function prizeTierFor\(i, total\) \{[\s\S]*?activity\.tier1[\s\S]*?activity\.tier4/.test(app),
+  '大獎／二獎／三獎／安慰獎是系統給的等級，不該叫使用者自己打字');
+assert(/return filled\.map\(\(p, i\) => Object\.assign\(\{ tier: prizeTierFor\(i, filled\.length\) \}, p\)\)/.test(app),
+  '等級要照真的填了幾行重算，中間留空才不會跳號');
+// 換版前開著的抽獎不能一夜之間變成另一個遊戲
+assert(/const legacyTicketRound = !!act\.tickets && !act\.picks;/.test(drawBody),
+  '舊玩法（已經發過號碼）的抽獎要維持原本的流程');
 // 抽了才有份：開獎只能從抽過的人裡開，否則「抽」這個動作等於沒意義
 const revealBody = drawBody.match(/function revealWinner\(\) \{[\s\S]*?\n    \}/)?.[0] || '';
 assert(revealBody, 'revealWinner 必須維持成一個讀得懂的函式');

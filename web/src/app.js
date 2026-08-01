@@ -10078,6 +10078,20 @@ function init() {
         const win = Object.entries(tally).sort((x, y) => y[1] - x[1])[0];
         pushFamilyFeed('「' + a.title + '」投票結束——<b>' + win[0] + '</b> 最多票，收進<b>家庭記錄簿</b>');
         recordInFamilyBook(a, muneaT('book.voteWinner', '{name} 最多票', { name: win[0] }), Object.keys(a.votes));
+      } else if (a.kind === 'draw' && a.picks && Object.keys(a.picks).length) {
+        // 新玩法：大家早就各自抽完了，到期只是把結果收攏進記錄簿，不再重抽一次
+        const got = Object.keys(a.picks).filter(n => a.picks[n]);
+        if (got.length) {
+          a.winners = got.map(n => ({ prize: a.picks[n], name: n }));
+          a.winner = got[0];
+          pushFamilyFeed(muneaT('feed.drawWinnersMulti', '開獎了——{list}！', {
+            list: got.map(n => '<b>' + muneaEscapeHtml(n) + '</b> ' + muneaEscapeHtml(a.picks[n])).join(muneaT('common.listSeparator', '、')),
+          }));
+          recordInFamilyBook(a, got.map(n => muneaT('book.drawWinnerItem', '{prize} {name}', { prize: a.picks[n], name: n })).join(muneaT('common.listSeparator', '、')), Object.keys(a.picks));
+        } else {
+          pushFamilyFeed(muneaT('feed.drawNobody', '「{prize}」結束了，這次沒有人抽', { prize: a.prize || a.title }));
+          recordInFamilyBook(a, muneaT('book.drawNobody', '沒有人抽'), []);
+        }
       } else if (a.kind === 'draw' && !a.winner && a.tickets && Object.keys(a.tickets).length) {
         // 卡片上寫著「8/3 20:00 開獎」，時間到就真的要開（Edward 2026-08-01）。
         // 以前到期只會說一句「結束了」，抽獎等於沒有結果——那是對使用者說了一件沒發生的事。
@@ -10153,7 +10167,7 @@ function init() {
       goal = '';
       note = '';
     } else if (act.kind === 'draw') {
-      chip = muneaT('activity.drawChip', '{when}開獎', { when: drawWhen(act) });
+      chip = (actLegacyDraw(act) ? muneaT('activity.drawChip', '{when}開獎', { when: drawWhen(act) }) : muneaT('activity.drawChipDue', '{when}截止', { when: drawWhen(act) }));
       goal = '';
       note = '';
     } else {
@@ -10255,13 +10269,19 @@ function init() {
   // 獎項與得主（Edward 2026-08-01 加了多獎項）。
   // 這兩個函式同時讀得懂新舊兩種資料：舊的抽獎只有一個 prize 字串、一個 winner 名字，
   // 換版之後那些卡片還在使用者手機裡，不能因為讀不到新欄位就變成空白。
+  // 換版前開著的抽獎才有「集中開獎」這件事；新的是各自抽、時間到只是截止
+  function actLegacyDraw(act) { return !!(act && act.tickets) && !(act && act.picks); }
   function actPrizes(act) {
     const list = (act && Array.isArray(act.prizes) ? act.prizes : [])
-      .map(p => ({ name: String((p && p.name) || '').trim(), count: Math.max(1, +((p && p.count) || 1)) }))
+      .map(p => ({
+        tier: String((p && p.tier) || '').trim(),
+        name: String((p && p.name) || '').trim(),
+        count: Math.max(1, +((p && p.count) || 1)),
+      }))
       .filter(p => p.name);
     if (list.length) return list;
     const single = String((act && act.prize) || '').trim();
-    return single ? [{ name: single, count: 1 }] : [];
+    return single ? [{ tier: '', name: single, count: 1 }] : [];
   }
   function actWinners(act) {
     if (act && Array.isArray(act.winners) && act.winners.length) {
@@ -10323,7 +10343,7 @@ function init() {
     const chip = done ? muneaT('activity.endedChip', '已結束')
       : act.kind === 'walk' ? muneaT('activity.walkChipActive', '進行中 · {due}', { due: act.dueLabel || muneaT('activity.daysChip', '{days} 天內', { days: act.days }) })
       : act.kind === 'quiz' ? (muneaT('activity.questionsChip', '{count} 題', { count: act.q }) + (act.dueLabel ? ' · ' + act.dueLabel : ''))
-      : act.kind === 'draw' ? muneaT('activity.drawChip', '{when}開獎', { when: drawWhen(act) })
+      : act.kind === 'draw' ? (actLegacyDraw(act) ? muneaT('activity.drawChip', '{when}開獎', { when: drawWhen(act) }) : muneaT('activity.drawChipDue', '{when}截止', { when: drawWhen(act) }))
       : act.kind === 'event' ? (act.dateLabel || muneaT('activity.inProgress', '進行中'))
       : act.kind === 'vote' ? (act.dueLabel || muneaT('activity.inProgress', '進行中')) : muneaT('activity.inProgress', '進行中');
     const kindName = act.kind === 'walk' ? muneaT('activity.exercise', '一起運動') : act.kind === 'quiz' ? muneaT('activity.quiz', '機智問答') : act.kind === 'vote' ? muneaT('activity.vote', '投票') : act.kind === 'draw' ? muneaT('activity.draw', '抽獎') : muneaT('activity.event', '揪一攤');
@@ -10481,29 +10501,48 @@ function init() {
         conf.appendChild(p);
       }
     }
-    // 抽獎流程（Edward 2026-08-01 改）：以前是發起人按一下、系統直接抽出得主，
-    // 其他人從頭到尾沒有任何動作——那不叫抽獎，那叫公布結果。
-    // 現在每個人自己抽一張、拿到自己的號碼，然後一起等開獎。
-    // 抽了才有份：沒抽的人不列入開獎，這樣「抽」這個動作才是真的有意義。
-    const tickets = act.tickets || {};
-    const drawn = Object.keys(tickets);
-    const myTicket = tickets['你'];
-    const waiting = all.filter(n => !tickets[n]);
-    const drawnLine = () => '<div class="qc-num">' + (waiting.length
-      ? muneaT('activity.drawWaitingOn', '已經抽了 {n} 個人；還沒抽的：{names}', { n: drawn.length, names: waiting.map(actDisplayName).join(muneaT('common.listSeparator', '、')) })
-      : muneaT('activity.drawAllDrawn', '{n} 個人都抽好了，{when}開獎', { n: drawn.length, when: drawWhen(act) })) + '</div>';
-    // 發一個沒人拿過的號碼。1-99 對七八個人綽綽有餘，撞號就往下找，不會發到重複的。
-    function issueTicket() {
-      const used = new Set(Object.values(tickets).map(Number));
-      let n = 1 + Math.floor(Math.random() * 99);
-      for (let k = 0; k < 99 && used.has(n); k += 1) n = (n % 99) + 1;
-      return n;
+    // 抽獎流程（Edward 2026-08-01 兩次修正後定案）
+    //
+    // 一開始是發起人按一下、系統直接公布得主，其他人全程沒有動作——那不叫抽獎。
+    // 中間我改成每人抽一個號碼、時間到再開獎，Edward 指出號碼是多餘的：
+    // 「抽獎不用抽號碼吧？而是直接顯示用戶設定的獎項」——他說得對，
+    // 使用者設定的是獎項（大獎／二獎／安慰獎），抽到的就該是獎項本身。
+    //
+    // 現在：點下去當場翻出你抽到什麼，先搶先有；獎發完了就誠實說沒抽到。
+    // 「等待」留給最後——等大家都抽完，才知道全家誰中了什麼。
+    const picks = act.picks || {};
+    const legacyTicketRound = !!act.tickets && !act.picks;   // 換版前就開著的舊抽獎，維持原本的玩法
+    const myPick = picks['你'];
+    const pickedNames = Object.keys(picks);
+    const waiting = all.filter(n => !(n in picks));
+    // 每個獎項還剩幾個名額
+    function prizeLeft() {
+      const taken = {};
+      Object.values(picks).forEach(p => { if (p) taken[p] = (taken[p] || 0) + 1; });
+      return actPrizes(act).map(p => ({ tier: p.tier, name: p.name, count: p.count, left: Math.max(0, p.count - (taken[p.name] || 0)) }));
+    }
+    // 抽一個：把還有名額的獎項攤成一個池子隨機挑。全發完就回空字串＝這次沒抽到，
+    // 不硬塞一個已經沒名額的獎給他（那等於騙人）。
+    function pickPrizeNow() {
+      const pool = [];
+      prizeLeft().forEach(p => { for (let i = 0; i < p.left; i += 1) pool.push(p.name); });
+      if (!pool.length) return '';
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    function savePicks() {
+      const acts = loadActs(); const t = acts.find(a => a.id === act.id);
+      if (t) { t.picks = act.picks; saveActs(acts); }
     }
     const pad = (n) => String(n).padStart(2, '0');
     function saveTickets() {
       const acts = loadActs(); const t = acts.find(a => a.id === act.id);
       if (t) { t.tickets = act.tickets; saveActs(acts); }
     }
+    const tickets = act.tickets || {};
+    const myTicket = tickets['你'];
+    const drawnLine = () => '<div class="qc-num">' + (waiting.length
+      ? muneaT('activity.drawWaitingOn', '已經抽了 {n} 個人；還沒抽的：{names}', { n: pickedNames.length, names: waiting.map(actDisplayName).join(muneaT('common.listSeparator', '、')) })
+      : muneaT('activity.drawEveryoneDone', '{n} 個人都抽完了', { n: pickedNames.length })) + '</div>';
     // 開獎：只從抽過的人裡面開。動畫沿用原本的輪盤，轉的是號碼＋名字。
     function revealWinner() {
       const pool = Object.keys(act.tickets || {});
@@ -10536,61 +10575,93 @@ function init() {
       };
       spin();
     }
-    // 有分等級的時候把獎項攤開來（大獎 1 位、二獎 2 位…），讓人知道自己在抽什麼。
-    // 只有一個獎就不畫——那份資訊已經在卡片標題上了，再列一次是雜訊。
-    const prizeList = actPrizes(act);
-    const prizeBoard = prizeList.length > 1
-      ? '<div class="prize-board">' + prizeList.map(p =>
-        '<div class="pb-row"><span class="pb-name">' + muneaEscapeHtml(p.name) + '</span>' +
-        '<span class="pb-count">' + muneaT('activity.prizeCountOption', '{n} 位', { n: p.count }) + '</span></div>').join('') +
+    // 獎項板一律顯示（Edward 2026-08-01「抽獎畫面應該要顯示獎項」）。
+    // 就算只有一個獎也畫——使用者要先看得到自己在抽什麼，才知道值不值得按下去。
+    // 抽到一半的時候順便標「還剩幾個」，先搶先有這件事要看得見。
+    const prizeRows = prizeLeft();
+    const anyPicked = pickedNames.length > 0;
+    const prizeBoard = prizeRows.length
+      ? '<div class="prize-board">' + prizeRows.map(p =>
+        '<div class="pb-row' + (p.left ? '' : ' gone') + '">' +
+        (p.tier ? '<span class="pb-tier">' + muneaEscapeHtml(p.tier) + '</span>' : '') +
+        '<span class="pb-name">' + muneaEscapeHtml(p.name) + '</span>' +
+        '<span class="pb-count">' + (anyPicked && !legacyTicketRound
+          ? (p.left
+            ? muneaT('activity.prizeLeftCount', '還剩 {n} 個', { n: p.left })
+            : muneaT('activity.prizeGone', '已經抽走'))
+          : muneaT('activity.prizeCountOption', '{n} 位', { n: p.count })) + '</span></div>').join('') +
       '</div>'
       : '';
+    // 抽到的獎項對應的等級（顯示「大獎 · 一頓火鍋」用）
+    function tierOf(prizeName) {
+      const hit = actPrizes(act).find(p => p.name === prizeName);
+      return (hit && hit.tier) || '';
+    }
+    // 中了什麼獎的下面接一句「找誰領」（Edward 2026-08-01）
+    function claimLine() {
+      if (actIsMine(act)) return muneaT('activity.claimYouGiveSelf', '獎品是你自己出的，記得留著');
+      const giver = muneaSafeDisplayText(act.owner, '');
+      return giver
+        ? muneaT('activity.claimFromGiver', '獎品請找{giver}領', { giver })
+        : muneaT('activity.claimFromHost', '獎品請找發起的人領');
+    }
     if (act.winner) {
       wrap.innerHTML = winCardHtml(false);
-    } else if (myTicket === undefined) {
-      // 還沒抽：這是每個人自己的動作，不分發起人或參加者
-      wrap.innerHTML = prizeBoard + '<div class="qc-num">' + muneaT('activity.drawPickHint', '每個人抽一張，{when}開獎', { when: drawWhen(act) }) + '</div>' +
-        '<button type="button" class="draw-pick"><span class="dp-card">' + TICKET + '</span><span>' + muneaT('activity.drawPickButton', '抽獎') + '</span></button>';
-      wrap.querySelector('.draw-pick').addEventListener('click', () => {
-        const n = issueTicket();
-        act.tickets = Object.assign({}, act.tickets || {}, { 你: n });
-        saveTickets();
-        // 翻牌：號碼快速跳動後定格，讓「抽到了」有一下實感
-        wrap.innerHTML = '<div class="draw-stage"><div class="draw-roll"><span class="dr-name dr-num">--</span><small>' + muneaT('activity.drawPicking', '抽一張…') + '</small></div></div>';
-        const el = wrap.querySelector('.dr-num');
-        let delay = 60;
-        const flip = () => {
-          el.textContent = pad(1 + Math.floor(Math.random() * 99));
-          if (delay < 300) { delay *= 1.16; setTimeout(flip, delay); }
-          else {
-            el.textContent = pad(n);
-            setTimeout(() => { renderDrawBody(Object.assign(act, { tickets: act.tickets }), card); wrap.remove(); }, 700);
-          }
-        };
-        flip();
-      });
-    } else {
-      // 抽好了：看得到自己的號碼，然後一起等開獎
-      wrap.innerHTML = prizeBoard + '<div class="draw-mine"><span class="dm-no">' + pad(myTicket) + '</span>' +
-        '<div class="dm-txt"><b>' + muneaT('activity.drawMyTicket', '你抽到 {no} 號', { no: pad(myTicket) }) + '</b>' +
-        '<small>' + muneaT('activity.drawMyTicketSub', '{when}開獎，中了會告訴你', { when: drawWhen(act) }) + '</small></div></div>' +
-        drawnLine() +
+    } else if (legacyTicketRound) {
+      // 換版前就開著的抽獎：那些人已經拿了號碼，維持原本「等發起人開獎」的玩法，
+      // 不要讓他們的卡片一夜之間變成另一個遊戲。
+      wrap.innerHTML = prizeBoard + (myTicket === undefined
+        ? '<div class="qc-num">' + muneaT('activity.drawLegacyWait', '這場抽獎用的是舊的玩法，{when}由發起的人開獎', { when: drawWhen(act) }) + '</div>'
+        : '<div class="draw-mine"><span class="dm-no">' + pad(myTicket) + '</span><div class="dm-txt"><b>' +
+          muneaT('activity.drawMyTicket', '你抽到 {no} 號', { no: pad(myTicket) }) + '</b><small>' +
+          muneaT('activity.drawMyTicketSub', '{when}開獎，中了會告訴你', { when: drawWhen(act) }) + '</small></div></div>') +
         (actIsMine(act)
           ? '<button type="button" class="draw-now">' + muneaT('activity.drawNowButton', '現在開獎') + '</button>'
           : '<div class="draw-wait">' + (muneaSafeDisplayText(act.owner, '')
             ? muneaT('activity.drawWaitOwner', '等{owner}開獎', { owner: muneaSafeDisplayText(act.owner, '') })
             : muneaT('activity.drawWaitHost', '等發起的人開獎')) + '</div>');
       const now = wrap.querySelector('.draw-now');
-      if (now) now.addEventListener('click', () => {
-        if (now.dataset.arm !== '1' && waiting.length) {
-          // 還有人沒抽，提前開等於把他們排除掉——先講清楚再讓他按第二下
-          now.dataset.arm = '1';
-          now.textContent = muneaT('activity.drawNowConfirm', '還有 {n} 個人沒抽，現在開？再點一下', { n: waiting.length });
-          setTimeout(() => { now.dataset.arm = ''; now.textContent = muneaT('activity.drawNowButton', '現在開獎'); }, 3200);
-          return;
-        }
-        revealWinner();
+      if (now) now.addEventListener('click', () => revealWinner());
+    } else if (myPick === undefined) {
+      // 還沒抽：這是每個人自己的動作，不分發起人或參加者
+      wrap.innerHTML = prizeBoard + '<div class="qc-num">' + muneaT('activity.drawPickHint2', '點一下就知道自己抽到什麼，{when}截止', { when: drawWhen(act) }) + '</div>' +
+        '<button type="button" class="draw-pick"><span class="dp-card">' + TICKET + '</span><span>' + muneaT('activity.drawPickButton', '抽獎') + '</span></button>';
+      wrap.querySelector('.draw-pick').addEventListener('click', () => {
+        const got = pickPrizeNow();
+        act.picks = Object.assign({}, act.picks || {}, { 你: got });
+        savePicks();
+        // 翻牌：獎項名快速跳動後定格在自己抽到的那個
+        const names = actPrizes(act).map(p => p.name);
+        wrap.innerHTML = '<div class="draw-stage"><div class="ds-gift">' + GIFT + '</div><div class="draw-roll"><span class="dr-name dr-prize">…</span><small>' + muneaT('activity.drawPicking2', '看看抽到什麼…') + '</small></div></div>';
+        const el = wrap.querySelector('.dr-prize');
+        let i = 0, delay = 65;
+        const flip = () => {
+          el.textContent = names[i % names.length] || ''; i += 1;
+          if (delay < 310) { delay *= 1.15; setTimeout(flip, delay); }
+          else {
+            el.textContent = got || muneaT('activity.drawMissShort', '沒抽到');
+            if (got) throwConfetti();
+            setTimeout(() => { renderDrawBody(act, card); wrap.remove(); }, 820);
+          }
+        };
+        flip();
       });
+    } else {
+      // 抽完了：直接看到自己抽到什麼；中了就接一句找誰領
+      wrap.innerHTML = prizeBoard +
+        (myPick
+          ? '<div class="draw-got"><span class="dg-ico">' + AWARD + '</span><div class="dg-txt">' +
+            (tierOf(myPick) ? '<span class="dg-tier">' + muneaEscapeHtml(tierOf(myPick)) + '</span>' : '') + '<b>' +
+            muneaT('activity.drawIGot', '你抽到「{prize}」', { prize: muneaEscapeHtml(myPick) }) + '</b><small>' + claimLine() + '</small></div></div>'
+          : '<div class="draw-got miss"><div class="dg-txt"><b>' + muneaT('activity.drawIMissed', '這次沒抽到') + '</b><small>' +
+            muneaT('activity.drawIMissedSub', '獎項被抽完了，下次再一起玩') + '</small></div></div>') +
+        drawnLine() +
+        (pickedNames.length > 1
+          ? '<div class="pick-list">' + pickedNames.filter(n => n !== '你').map(n =>
+            '<div class="pk-row"><span class="pk-name">' + muneaEscapeHtml(actDisplayName(n)) + '</span>' +
+            '<span class="pk-got' + (picks[n] ? '' : ' miss') + '">' + (picks[n] ? muneaEscapeHtml(picks[n]) : muneaT('activity.drawMissShort', '沒抽到')) + '</span></div>').join('') +
+          '</div>'
+          : '');
     }
     card.appendChild(wrap);
   }
@@ -10784,6 +10855,17 @@ function init() {
     sel.value = String(value || 1);
     sel.dataset.filled = '1';
   }
+  // 等級是系統給的、跟著行數走（Edward 2026-08-01：「大獎那些是預設，用戶應該填的是獎項內容」）。
+  // 只有一行時不標等級——只有一個獎，沒有「大」可以對比。
+  function prizeTierFor(i, total) {
+    if (total <= 1) return '';
+    return [
+      muneaT('activity.tier1', '大獎'),
+      muneaT('activity.tier2', '二獎'),
+      muneaT('activity.tier3', '三獎'),
+      muneaT('activity.tier4', '安慰獎'),
+    ][i] || muneaT('activity.tierN', '第 {n} 獎', { n: i + 1 });
+  }
   function refreshPrizeRows() {
     const list = $('#drawPrizeList');
     const add = $('#drawPrizeAdd');
@@ -10791,8 +10873,10 @@ function init() {
     const rows = [].slice.call(list.querySelectorAll('.prize-row'));
     rows.forEach((row, i) => {
       fillPrizeCount(row.querySelector('.pz-count'), 1);
+      const tier = row.querySelector('.pz-tier');
+      if (tier) { tier.textContent = prizeTierFor(i, rows.length); tier.style.display = rows.length > 1 ? '' : 'none'; }
       const name = row.querySelector('.pz-name');
-      if (name && i > 0) name.placeholder = muneaT('activity.prizeMorePlaceholder', '例：二獎、安慰獎');
+      if (name && i > 0) name.placeholder = muneaT('activity.prizeMorePlaceholder', '例：一杯手搖、洗碗一次');
       let del = row.querySelector('.pz-del');
       if (i === 0) { if (del) del.remove(); return; }   // 第一行是必填的主獎，不給移除
       if (!del) {
@@ -10811,7 +10895,7 @@ function init() {
     if (!list || list.querySelectorAll('.prize-row').length >= PRIZE_MAX_ROWS) return;
     const row = document.createElement('div');
     row.className = 'prize-row';
-    row.innerHTML = '<input class="chal-input pz-name" maxlength="14" /><select class="pz-count" aria-label="' +
+    row.innerHTML = '<span class="pz-tier"></span><input class="chal-input pz-name" maxlength="14" /><select class="pz-count" aria-label="' +
       muneaEscapeHtml(muneaT('activity.prizeCountAria', '幾位')) + '"></select>';
     list.appendChild(row);
     refreshPrizeRows();
@@ -10820,11 +10904,13 @@ function init() {
   function readPrizeRows() {
     const list = $('#drawPrizeList');
     if (!list) return [];
-    return [].slice.call(list.querySelectorAll('.prize-row')).map(row => {
-      const name = ((row.querySelector('.pz-name') || {}).value || '').trim();
-      const count = Math.max(1, Math.min(PRIZE_MAX_COUNT, +((row.querySelector('.pz-count') || {}).value || 1)));
-      return name ? { name, count } : null;
-    }).filter(Boolean);
+    const rows = [].slice.call(list.querySelectorAll('.prize-row'));
+    const filled = rows.map(row => ({
+      name: ((row.querySelector('.pz-name') || {}).value || '').trim(),
+      count: Math.max(1, Math.min(PRIZE_MAX_COUNT, +((row.querySelector('.pz-count') || {}).value || 1))),
+    })).filter(p => p.name);
+    // 等級照最後真的填了幾個重算：中間留空的那行不算，等級才不會跳號
+    return filled.map((p, i) => Object.assign({ tier: prizeTierFor(i, filled.length) }, p));
   }
   function resetPrizeRows() {
     const list = $('#drawPrizeList');
