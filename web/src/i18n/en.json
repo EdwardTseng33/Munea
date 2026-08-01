@@ -242,7 +242,7 @@
   "home.introFirst": "I'm {companion}, here to talk with you—tap below so we can get to know each other.",
   "home.careHeading": "{companion} is looking out for you",
   "home.taskWalkTitle": "Take a walk",
-  "home.taskWalkBody": "Walk 500 steps today",
+  "home.taskWalkBody": "Walk 500 steps",
   "home.taskMoodTitle": "Mood note",
   "home.taskMoodBody": "Record how you feel today",
   "home.taskMoodDone": "Today's mood is recorded",

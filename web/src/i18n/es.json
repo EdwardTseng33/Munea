@@ -242,7 +242,7 @@
   "home.introFirst": "Soy {companion} y estoy aquí para conversar contigo. Toca abajo para que nos conozcamos.",
   "home.careHeading": "{companion} está pendiente de ti",
   "home.taskWalkTitle": "Salir a caminar",
-  "home.taskWalkBody": "Camina 500 pasos hoy",
+  "home.taskWalkBody": "Camina 500 pasos",
   "home.taskMoodTitle": "Nota de ánimo",
   "home.taskMoodBody": "Anota cómo te sientes hoy",
   "home.taskMoodDone": "Ya anotaste cómo te sientes hoy",

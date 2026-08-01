@@ -2531,3 +2531,93 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .walk-p span:last-child { color: var(--teal-dd); font-weight: 700; }
 .rsvp-btn:disabled { opacity: .5; cursor: default; }
 .inv-temp-note { font-size: 13px; line-height: 1.55; color: var(--ink); background: var(--coral-soft); border-radius: 12px; padding: 9px 12px; margin: -4px 0 12px; }
+
+/* ===== 拉丁語系版型修正（Edward 2026-08-01 走查英文版後立）=====
+ * 中文一個字一格、英文與西班牙文一個詞好幾格——同一個字級，中文排得剛好的地方
+ * 換成英文就爆框或折行。Edward 現場點出四處：通話控制鈕的字跑出圓圈、
+ * 家庭活動兩顆鈕的字折成兩行、頁面大標「Family health circle」折行、
+ * 設定頁列表的標題折行把右邊的值擠掉。
+ *
+ * 原則：只調「版面會被撐破」的地方——大標題、固定寬度的控制項、有右欄的列表。
+ * 內文不調。英文內文比中文多一行是正常的，把內文縮小反而害長輩看不清，
+ * 那是為了版面犧牲可讀性、方向錯了。
+ *
+ * 只掛 en / es。中文與日文都是一字一格、本來就排得下，不受影響。 */
+
+/* 大標題：Serif 大字最容易折行，也最顯眼 */
+html:lang(en) .page-title,
+html:lang(es) .page-title { font-size: 23px; }
+html:lang(en) .greeting-big,
+html:lang(es) .greeting-big { font-size: 23px; max-width: none; }
+
+/* 通話控制鈕：字必須待在圓圈裡、不准換行 */
+html:lang(en) .ctl-btn,
+html:lang(es) .ctl-btn { width: 66px; height: 66px; font-size: 9.5px; }
+html:lang(en) .ctl-btn span,
+html:lang(es) .ctl-btn span { white-space: nowrap; }
+
+/* 家庭活動兩顆並排鈕：字放一行 */
+html:lang(en) .chal-act,
+html:lang(es) .chal-act { font-size: 13px; }
+html:lang(en) .chal-act span,
+html:lang(es) .chal-act span { white-space: nowrap; }
+html:lang(en) .chal-act .ic,
+html:lang(es) .chal-act .ic { width: 16px; height: 16px; }
+
+/* 設定頁列表：標題折行會把右邊的值擠掉 */
+html:lang(en) .set-row,
+html:lang(es) .set-row { font-size: 15.5px; }
+
+/* 有右欄的列：左邊標題被右邊的值擠到折行。
+ * 「Apple Health」被擠成「Apple / Health」兩行、待辦列的「Salir a caminar」也一樣。
+ * 修法：標題不准斷詞、右邊的值縮一級並自己顧好寬度——先保住左邊的標題完整。 */
+html:lang(en) .set-row .sr-main > span:first-child,
+html:lang(es) .set-row .sr-main > span:first-child { white-space: nowrap; }
+html:lang(en) .set-row .sr-on,
+html:lang(es) .set-row .sr-on { font-size: 13px; text-align: right; }
+html:lang(en) .set-row .sr-main small,
+html:lang(es) .set-row .sr-main small { font-size: 12.5px; }
+
+html:lang(en) .task-title,
+html:lang(es) .task-title { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html:lang(en) .task-sub,
+html:lang(es) .task-sub { font-size: 13px; }
+html:lang(en) .task-time,
+html:lang(es) .task-time { font-size: 12.5px; white-space: nowrap; }
+html:lang(en) .task-body,
+html:lang(es) .task-body { min-width: 0; }
+
+/* 被框住的小按鈕與籤條：字一長就被切掉或折成好幾行。
+ * 「14 days」「Monthly summaries」在英文直接被切；日文的「写真を変更」「お薬の写真を追加」
+ * 折成 5-8 行；西班牙文的意見分類籤條全部折兩行。
+ * 日文也要顧——片假名詞（サブスクリプション…）比中文長很多，不能當成跟中文一樣。 */
+html:lang(en) .seg-btn, html:lang(es) .seg-btn, html:lang(ja) .seg-btn {
+  font-size: 12px; padding-left: 4px; padding-right: 4px; }
+html:lang(en) .topic-chip, html:lang(es) .topic-chip, html:lang(ja) .topic-chip {
+  font-size: 13px; }
+html:lang(en) .pf-avatar-btn, html:lang(es) .pf-avatar-btn, html:lang(ja) .pf-avatar-btn {
+  font-size: 13px; padding-left: 14px; padding-right: 14px; white-space: nowrap; }
+html:lang(en) .med-photo-btn, html:lang(es) .med-photo-btn, html:lang(ja) .med-photo-btn {
+  font-size: 13px; white-space: nowrap; }
+html:lang(en) .taken, html:lang(es) .taken, html:lang(ja) .taken {
+  font-size: 15px; white-space: nowrap; }
+
+/* 待辦列的時間籤：沒有指定時間時不要占位。
+ * 原本永遠掛一個「隨時／Anytime」，中文兩個字還好，英文與西班牙文一長就把左邊的
+ * 標題與副標擠到折行（Edward 2026-08-01：「anytime 的設計不好要改」）。
+ * 「隨時」本來就不是資訊——沒有時間限制就不必說。有真時間時 app.js 會把 data-i18n
+ * 拿掉再寫入（見 renderWalkTask/renderMoodTask），所以這條只命中沒被動過的預設值。 */
+.task-time[data-i18n="home.taskAnytime"] { display: none; }
+
+/* 並排按鈕要留呼吸的邊，不能讓字頂到左右兩側（Edward 2026-08-01 指出）。 */
+.chal-act { padding: 0 16px; }
+html:lang(en) .chal-act, html:lang(es) .chal-act, html:lang(ja) .chal-act {
+  font-size: 12.5px; gap: 6px; padding: 0 14px; }
+
+/* 底部分頁的字：英文與西班牙文是整個單字，用粗體會顯得又擠又重
+ * （Edward 2026-08-01：「這裡在英文上改為用細體」）。
+ * 中文兩個字、日文也短，維持原本的粗體不動。 */
+html:lang(en) .tab-btn > span,
+html:lang(es) .tab-btn > span { font-weight: 500; letter-spacing: .01em; font-size: 11.5px; }
+html:lang(en) .tab-btn.active > span,
+html:lang(es) .tab-btn.active > span { font-weight: 700; }
