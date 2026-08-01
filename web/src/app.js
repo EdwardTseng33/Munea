@@ -7360,8 +7360,7 @@ function renderMoodWeek() {
     wrap.innerHTML = '<div class="mood-week-empty">'
       + muneaEscapeHtml(muneaT(
         'mood.weekAccumulating',
-        '還沒有足夠的紀錄。跟{companion}聊幾次、或在下面點個心情，這裡就會長出你自己的一週。',
-        { companion: typeof cname === 'function' ? cname() : muneaT('app.shortName', '沐寧') },
+        '還沒有足夠的紀錄。多聊幾次、或在下面點個心情，這裡就會長出你自己的一週。',
       ))
       + '</div>';
     return;
