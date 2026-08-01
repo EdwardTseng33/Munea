@@ -11115,10 +11115,13 @@ function init() {
     real.innerHTML = book.map(item => {
       const when = new Date(item.endedAt || Date.now());
       const day = (when.getMonth() + 1) + '/' + when.getDate();
+      // 頭像要照範例卡那層包裝（.be-members > .be-mem > .init-ava）——少包一層 .be-mem，
+      // 那排頭像就會被擠成直的一條（Edward 2026-08-01 一眼看出來）
       const faces = (item.people || []).map(n => {
         const av = FAM_AVA[n] || [(n || '')[0] || '', 'p-me'];
         const init = typeof av[0] === 'function' ? av[0]() : av[0];
-        return '<span class="init-ava ' + av[1] + '">' + muneaEscapeHtml(init) + '</span>';
+        return '<span class="be-mem"><span class="init-ava ' + av[1] + '">'
+          + muneaEscapeHtml(init) + '</span></span>';
       }).join('');
       return '<div class="book-entry">'
         + '<div class="be-head"><div class="be-title"><span class="be-medal">' + icon + '</span>'
@@ -11126,7 +11129,7 @@ function init() {
         + '<span class="be-date">' + day + '</span></div>'
         + '<div class="be-foot"><span class="be-result">'
         + muneaEscapeHtml(item.result || '') + '</span>'
-        + (faces ? '<div class="be-faces">' + faces + '</div>' : '') + '</div>'
+        + (faces ? '<div class="be-members">' + faces + '</div>' : '') + '</div>'
         + '</div>';
     }).join('');
   }
