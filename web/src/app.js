@@ -66,6 +66,8 @@ function localizeCanonicalLegacyPanels() {
   const setDirectText = (selector, key, fallback, values = null) => {
     const element = document.querySelector(selector);
     if (!element) return;
+    // 同上：底下已經有翻譯標記就別再補，否則外語版會印兩次。
+    if (element.querySelector('[data-i18n]')) return;
     [...element.childNodes]
       .filter((node) => node.nodeType === Node.TEXT_NODE)
       .forEach((node) => node.remove());
@@ -140,14 +142,13 @@ function localizeCanonicalLegacyPanels() {
 
   setText('#feedbackModal h2', 'feedback.title', 'Feedback');
   setText('#feedbackModal > .modal > .modal-sub', 'legacyUi.feedbackSubtitle', 'We read every message. Choose a topic and tell us what you think.');
-  [
-    ['bug', 'feedback.categoryBug', 'Report a problem'],
-    ['idea', 'feedback.categoryIdea', 'Suggest a feature'],
-    ['praise', 'feedback.categoryPraise', 'Share praise'],
-    ['nps', 'feedback.categoryNps', 'Rate Munea'],
-  ].forEach(([type, key, fallback]) => {
-    setDirectText(`#fbTypes [data-t="${type}"]`, key, fallback);
-  });
+  // 意見分類那四顆按鈕不必在這裡補翻譯——它們的 index.html 裡已經有
+  // <span data-i18n="feedback.categoryXxx">，翻譯層會處理。
+  // 這段是改版殘骸：按鈕本來是純文字，後來改成包在 span 裡，這個迴圈忘了拿掉，
+  // 於是 setDirectText 又在 span 後面補一段文字節點，外語版每顆按鈕的字都印兩次
+  // （「Informar de un problemaInformar de un problema」，Edward 2026-08-01 抓到）。
+  // 中文版不受影響——localizeCanonicalLegacyPanels 開頭就對 zh-TW 直接 return，
+  // 所以這個 bug 只有外語看得到，中文走查永遠測不出來。
   const feedbackPhotoLabel = $('#fbPhotoLabel');
   if (feedbackPhotoLabel) {
     [...feedbackPhotoLabel.childNodes]
@@ -6133,6 +6134,12 @@ function renderMedSlots() {
 
 function setElementOwnText(element, text) {
   if (!element) return;
+  // 這個元素裡若已經有掛翻譯標記的子節點，那段字翻譯層會自己處理——
+  // 這裡再補一次就會變成同一句印兩次（外語版才看得到，中文版永遠測不出來）。
+  // 2026-08-01 Edward 在西班牙文版看到「Informar de un problemaInformar de un problema」，
+  // 追下去是四處都犯：意見分類四顆鈕、選圖片、三條健康警訊、我吃過了。
+  // 與其一處一處刪，在這裡擋住整類——之後誰再呼叫都不會重複。
+  if (element.querySelector && element.querySelector('[data-i18n]')) return;
   const textNodes = [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE);
   if (textNodes.length) {
     textNodes[0].textContent = text;

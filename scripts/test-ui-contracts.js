@@ -499,6 +499,20 @@ assert(app.includes("'subscription.monthlyVoiceCredits'"), '方案卡的點數�
 // 原本卡片這一行也要再講一次，同一個畫面上同一句話講兩遍——Edward 2026-08-01：
 // 「上面已經有寫了，不用一直重複」。揭露沒有變少（規則那排仍被守著），只是不重複、也不會折行。
 assertCatalogSays('subscription.monthlyVoiceCredits', { 'zh-TW': /\{credits\} 點/, en: /\{credits\} voice-companion credits/i }, '方案卡的每月點數必須寫明點數，且由文案表帶入數字');
+
+// 同一段字不可以印兩次：元素底下已經有 data-i18n 的子節點時，
+// 補字的小工具必須直接放棄，否則外語版會出現「Report a problemReport a problem」。
+// 2026-08-01 Edward 在西班牙文版抓到，四處都犯（意見分類四顆鈕／選圖片／三條健康警訊／我吃過了）。
+// 中文版永遠測不出來——localizeCanonicalLegacyPanels 開頭就對 zh-TW 直接 return。
+assert(
+  /function setElementOwnText[\s\S]{0,600}?querySelector\('\[data-i18n\]'\)\)\s*return;/.test(app),
+  'setElementOwnText 必須在元素底下已有 data-i18n 時放棄，否則外語版會把同一句印兩次',
+);
+assert(
+  /const setDirectText[\s\S]{0,400}?querySelector\('\[data-i18n\]'\)\)\s*return;/.test(app),
+  'setDirectText 必須在元素底下已有 data-i18n 時放棄，否則外語版會把同一句印兩次',
+);
+
 assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {'), 'Credit rule explanation must have dedicated readable styling');
 // 資料匯出說明（2026-07-30 改寫）：這段已經是 data-i18n="data.description" 的翻譯節點，
 // index.html 裡那句中文只是還沒換掉的底稿，跟 zh-TW.json 的正本已經對不起來（正本沒有「立即」兩字）。
