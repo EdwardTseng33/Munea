@@ -1380,7 +1380,9 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .home-date { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
 
 /* 揪一攤 · 14 天快選月曆（自家設計、不用瀏覽器原生格） */
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 2px 0 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 2px 0 8px; }
+/* minmax(0,1fr)：1fr 的下限是「內容多寬就多寬」，所以「Tomorrow」這種長字會把自己那格撐大、
+   整排寬度就參差不齊（Edward 2026-08-01 指出）。中文版也有這個毛病，只是字短看不出來。 */
 .cal-cell { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 0 8px; text-align: center; cursor: pointer; line-height: 1.15; }
 .cal-cell small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
 .cal-cell b { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--display); }
@@ -2550,11 +2552,15 @@ html:lang(es) .page-title { font-size: 23px; }
 html:lang(en) .greeting-big,
 html:lang(es) .greeting-big { font-size: 23px; max-width: none; }
 
-/* 通話控制鈕：字必須待在圓圈裡、不准換行 */
-html:lang(en) .ctl-btn,
-html:lang(es) .ctl-btn { width: 66px; height: 66px; font-size: 9.5px; }
-html:lang(en) .ctl-btn span,
-html:lang(es) .ctl-btn span { white-space: nowrap; }
+/* 通話控制鈕：英文與西班牙文只留圖示，不放字（Edward 2026-08-01 拍板）。
+ * Microphone / Subtitulos 這種長度不管怎麼縮都會頂到圓圈邊，縮到塞得下又小到看不清；
+ * 麥克風與字幕的圖示本來就通用、看圖就懂。念螢幕的人不受影響——按鈕上的
+ * aria-label 仍在（見 index.html 的 data-i18n-aria-label），只是畫面上不再印出來。
+ * 中文「字幕／麥克風」與日文「字幕／マイク」都短、放得下，維持原樣。 */
+html:lang(en) .ctl-btn > span,
+html:lang(es) .ctl-btn > span { display: none; }
+html:lang(en) .ctl-btn .ic,
+html:lang(es) .ctl-btn .ic { width: 26px; height: 26px; }
 
 /* 家庭活動兩顆並排鈕：字放一行 */
 html:lang(en) .chal-act,
@@ -2621,3 +2627,31 @@ html:lang(en) .tab-btn > span,
 html:lang(es) .tab-btn > span { font-weight: 500; letter-spacing: .01em; font-size: 11.5px; }
 html:lang(en) .tab-btn.active > span,
 html:lang(es) .tab-btn.active > span { font-weight: 700; }
+
+/* 兩端對齊只適合中文與日文（一字一格、拉開來很整齊）。
+ * 英文與西班牙文是不等寬的單字，硬拉兩端會在字與字之間扯出一格一格的白洞，
+ * 讀起來很吃力（Edward 2026-08-01：「排版 UX 閱讀體驗不舒服」）。拉丁語系一律靠左。 */
+html:lang(en) .reader-card p, html:lang(es) .reader-card p,
+html:lang(en) .sub-legal,    html:lang(es) .sub-legal {
+  text-align: left; overflow-wrap: normal; word-break: normal; hyphens: auto; }
+
+/* 寧寧觀察卡的標題：原本寫在行內（font-size:15.5px），行內樣式贏過所有選擇器，
+ * 外語就沒辦法覆寫、「Ningning's observations」只能折成兩行。改成 class 才調得動。 */
+.obs-heading { font-size: 15.5px; font-weight: 900; }
+html:lang(en) .obs-heading, html:lang(es) .obs-heading { font-size: 14.5px; white-space: nowrap; }
+
+/* 月繳／年繳切換：西班牙文的「Anual + Ahorra un 20%」擠成三行。
+ * 折行的是徽章那一小塊，讓它跟著文字同一行、字再小一點就收得回來。 */
+html:lang(en) .scyc-btn, html:lang(es) .scyc-btn { font-size: 13px; padding: 8px 4px; white-space: nowrap; }
+html:lang(en) .scyc-badge, html:lang(es) .scyc-badge { font-size: 10px; padding: 1px 5px; margin-left: 4px; }
+
+/* 兩顆鈕不必五五分——「發起活動」的字本來就比「記錄簿」長。
+ * 硬切一半會讓左邊那顆頂到邊、右邊那顆空一大塊。按比例分，兩邊的呼吸距離才平均。 */
+html:lang(en) .chal-actions, html:lang(es) .chal-actions {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+
+/* 「管理訂閱／恢復購買」兩顆並排：英文與西班牙文兩個單字會折成兩行。
+ * Edward 2026-08-01：「單行，按鈕文字可以小一點」——字縮一級、不換行。 */
+html:lang(en) .plan-link, html:lang(es) .plan-link,
+html:lang(en) .plan-actions .plan-btn, html:lang(es) .plan-actions .plan-btn {
+  font-size: 13px; white-space: nowrap; padding-inline: 10px; }

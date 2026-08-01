@@ -9747,11 +9747,15 @@ function init() {
       // 星期名走 Intl，四語系自動正確——不要為了七個星期硬刻 28 把 key，
       // 也不要留寫死的中文（這一格捕捉工具掃不到：harness 用 showModal() 直接開面板，
       // 不會觸發 buildCalGrid，所以這裡漏中文不會有任何測試發現）。
+      // 日期格子是等寬的七欄，一格只放得下四、五個字元。中文「今天／明天」剛好，
+      // 但英文的 Tomorrow 有八個字元、西班牙文 Mañana 六個，硬塞會擠爆或縮到看不清。
+      // 判準用長度、不用語言：塞得下就用「明天」這種好懂的字，塞不下就退回星期幾
+      // （那一格的日期數字仍在，看得出來是哪一天）。「今天」四語都夠短、一律保留。
+      const weekday = new Intl.DateTimeFormat(muneaLocale(), { weekday: 'short' }).format(d);
+      const tomorrowWord = muneaT('common.tomorrow', '明天');
       const wdName = i === 0
         ? muneaT('common.today', '今天')
-        : (i === 1
-          ? muneaT('common.tomorrow', '明天')
-          : new Intl.DateTimeFormat(muneaLocale(), { weekday: 'short' }).format(d));
+        : (i === 1 && [...tomorrowWord].length <= 4 ? tomorrowWord : weekday);
       html += '<button type="button" class="cal-cell" data-iso="' + isoOf(d) + '"><small>' + wdName + '</small><b>' + (d.getDate() === 1 ? (d.getMonth() + 1) + '/1' : d.getDate()) + '</b></button>';
     }
     box.innerHTML = html;
