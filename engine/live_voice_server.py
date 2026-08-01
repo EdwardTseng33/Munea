@@ -978,8 +978,15 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "整理只能改說法，「絕對不可以」改變意思——不補他沒說的事、不刪他交代的細節、不猜他的用意、不加自己的評論。"
             "整理完先用一句話唸回去給他聽並問可不可以（例如「我跟他說『晚餐的藥還沒吃，記得去吃』，這樣可以嗎？」），"
             "他明確說可以才呼叫 send_family_relay；他說不對或要改，就照他的意思重整理、再唸一次確認，沒得到同意就不要送。"
+            # 提前多久提醒（Edward 2026-08-01）：App 畫面上可以選，用講的也要能設。
+            # 「沒講就問一下」是他要的，但問法要像人——問一次、給常用選項、
+            # 他含糊帶過就用預設，不要追問到底。
+            "設看診提醒時，他若沒說要提前多久提醒，用一句話問一下"
+            "（例如「要我提前多久叫你？前一天、還是當天提早兩個小時？」）。"
+            "他有講就填進 remindBefore；他說「都可以」「隨便」或答得含糊，就不要再追問，"
+            "直接照預設的兩小時前設好，並在確認那句話裡告訴他（例如「那我提前兩個小時叫你」）。"
             "設好之後用一句溫暖口語的話跟他確認你設了什麼"
-            "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。"
+            "（例如「好，我幫你記下明天下午四點台大骨科回診，提前兩個小時叫你」），讓他安心、也方便他去 App 裡的提醒清單看或改。"
             "「分類鐵律」：看診提醒只能用在真的要去醫院、診所看醫生；用藥提醒只能用在吃藥。"
             "約會、聚餐、出遊、家人來訪這類行程「絕對不可以」設成看診或用藥提醒——分類錯了會讓 App 講出很奇怪的話。）"
         )
@@ -989,7 +996,13 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "時間換算成 24 小時制要用常識：吃飯、晚餐、約會講「7點」通常是晚上 19:00、不是早上；"
             "聽不出上午或晚上，就先用一句話問清楚再設。"
             "現在若是深夜或凌晨，他說「明天」時先跟他確認是「等天亮的那個白天」還是「再隔一天」，確認完再換算日期。"
-            "呼叫前用一句話跟他確認日期、時間、名目；工具回 status=ok 才能說記好了。）"
+            "呼叫前用一句話跟他確認日期、時間、名目；工具回 status=ok 才能說記好了。"
+            # 家庭圈另外四種活動（Edward 2026-08-01）
+            "他若說要「揪大家一起走路比賽／出題考大家／讓大家投票決定／辦抽獎」，"
+            "改呼叫 create_family_activity，kind 分別填 walk／quiz／vote／draw。"
+            "投票一定要先問到問題和至少兩個選項、抽獎一定要先問到獎品、"
+            "運動和問答一定要先問到截止那天，缺了就用一句話問，不要自己編。"
+            "工具若回 error，照它說的原因誠實告訴他還缺什麼，不要說已經發出去了。）"
         )
     elif allow_reminders:
         base += (
@@ -1077,6 +1090,16 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
                 "title": types.Schema(type=types.Type.STRING, description="看診名稱，例如「台大骨科回診」"),
                 "date": types.Schema(type=types.Type.STRING, description="日期，格式 YYYY-MM-DD（把「明天」等相對日期換算成實際日期）"),
                 "time": types.Schema(type=types.Type.STRING, description="時間，24 小時制 HH:MM，例如下午四點=16:00"),
+                "remindBefore": types.Schema(
+                    type=types.Type.INTEGER,
+                    description=(
+                        "提前幾分鐘提醒。只能填這五個數字之一："
+                        "0（看診時間到才提醒）、30、60（一小時前）、120（兩小時前）、1440（前一天）。"
+                        "他講的時間若不在這五個裡面（例如「提前三小時」），選最接近的一個，"
+                        "並且說出你實際設的是哪一個，不要說成他講的那個。"
+                        "他沒提到就不要填——App 會用兩小時前。"
+                    ),
+                ),
             },
             required=["title", "date", "time"],
         ),
@@ -1158,6 +1181,56 @@ _EVENT_TOOLS = types.Tool(function_declarations=[
                 "place": types.Schema(type=types.Type.STRING, description="地點，沒講就留空"),
             },
             required=["title", "date", "time"],
+        ),
+    ),
+    # 家庭圈的另外四種活動（Edward 2026-08-01：所有家庭圈活動都要能用講的設）。
+    # 「揪一攤」留給上面的 set_personal_event（已驗過的路，不動它）；
+    # 這支負責一起運動／機智問答／投票／抽獎。
+    types.FunctionDeclaration(
+        name="create_family_activity",
+        description=(
+            "使用者要「揪家人一起」做這四件事時呼叫，發到家庭圈：一起運動、機智問答、投票、抽獎。"
+            "純聚餐、出遊、家人來訪這類單純的行程用 set_personal_event，不要用這支。"
+            "看診用 set_clinic_reminder、吃藥用 set_medication_reminder，都不可混用。"
+            "每一種需要的東西不一樣，缺了就先用一句話問清楚再呼叫，不要自己編："
+            "投票一定要問題本身和至少兩個選項；抽獎一定要至少一個獎品；"
+            "一起運動和機智問答一定要截止的日期。"
+        ),
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "kind": types.Schema(
+                    type=types.Type.STRING,
+                    description=(
+                        "活動種類，只能填這四個之一："
+                        "walk（一起運動、比走路）、quiz（機智問答）、vote（投票、讓大家選）、draw（抽獎）。"
+                    ),
+                ),
+                "title": types.Schema(
+                    type=types.Type.STRING,
+                    description="投票就填「問題本身」（例如「中秋節去哪裡吃？」）；其他種類可以留空，App 會用預設名稱。",
+                ),
+                "date": types.Schema(
+                    type=types.Type.STRING,
+                    description="日期，格式 YYYY-MM-DD。運動／問答／投票＝截止那天；抽獎＝開獎那天。相對日期要換算成實際日期。",
+                ),
+                "time": types.Schema(type=types.Type.STRING, description="時間，24 小時制 HH:MM。沒講就填 20:00。"),
+                "options": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(type=types.Type.STRING),
+                    description="投票的選項，至少兩個、最多三個。只有 kind=vote 要填。",
+                ),
+                "prizes": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(type=types.Type.STRING),
+                    description="抽獎的獎品，至少一個、最多三個。只有 kind=draw 要填。",
+                ),
+                "questionCount": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="機智問答要出幾題，5 到 20 之間，沒講就不要填（App 會用 10 題）。只有 kind=quiz 要填。",
+                ),
+            },
+            required=["kind", "date"],
         ),
     ),
 ])
