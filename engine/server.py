@@ -143,6 +143,7 @@ AI_RATE_LIMITED_PATHS = {
     "/perception/snapshot",
     "/proactive/opening",
     "/quiz-questions",   # 一次出 10 題＝一次 LLM 呼叫，沒閘的話有人狂建活動就狂燒
+    "/mood-line",        # 點一次心情呼叫一次 LLM，連點就會連燒——一定要有閘
 }
 AI_RATE_WINDOW = 60            # 滑動視窗秒數
 AI_RATE_DEFAULT_LIMIT = 60     # 視窗內同一 actor 對同一端點的次數上限
@@ -9309,6 +9310,136 @@ def quiz_question_ok(item):
     return True
 
 
+# ===== 心情陪伴語（Edward 2026-08-01 拍板由 AI 生）=====
+#
+# 使用者點一個表情，這裡回一句短短的陪伴語。
+# 為什麼要防到這種程度：同一天稍早的舊文案寫死成「今天心情平穩，膝蓋的痠有記著」——
+# 使用者根本沒說過膝蓋痛。那是憑空替他記了一件事，長輩看到會以為 App 在亂記他的事。
+# Edward 的兩條線：**不准提 AI 的名字**（角色是他自己選的、名字會變）、
+# **不准編他沒做過的事**。
+#
+# 三層防線，由強到弱：
+#   ① 不餵資料——提示裡完全不給使用者的任何資訊，它只知道點了哪個心情，編不出細節
+#   ② 提示裡明講規則
+#   ③ 回來之後逐條用程式檢查，沒過就當作沒生成
+# 檢查沒過回空的，App 會留著原本的固定句，使用者不會看到破圖或空白。
+
+MOOD_LINE_MOODS = ("happy", "pleasant", "calm", "low", "anxious", "angry")
+MOOD_LINE_MAX_CHARS = {"zh-TW": 26, "ja": 26, "en": 64, "es": 64}
+
+# 「替他宣稱做過什麼」的字眼。四語各列——這類詞一出現就退回。
+MOOD_LINE_FORBIDDEN = (
+    "說", "講", "聊", "提到", "去了", "回來", "吃", "喝", "睡", "走", "哼", "笑得",
+    "剛剛", "昨天", "早上", "傍晚", "膝蓋", "腰", "肩",
+    "you said", "you told", "you went", "you ate", "you slept", "you walked",
+    "you mentioned", "humming", "earlier you", "yesterday you", "knee",
+    "話しました", "行きました", "食べ", "寝", "散歩", "鼻歌", "さっき", "昨日", "膝",
+    "dijiste", "fuiste", "comiste", "dormiste", "caminaste", "tarareabas",
+    "mencionaste", "ayer", "rodilla",
+)
+
+_MOOD_LINE_RULES = {
+    "zh-TW": [
+        "使用者剛剛在 App 裡點了一個表情，表示現在的心情是「{word}」。",
+        "請寫一句陪伴他的話，繁體中文，26 個字以內。",
+        "規則：",
+        "1. 句子裡要出現「{word}」。",
+        "2. 只能回應這個心情本身。不可以說他做過、講過、去過任何事——你完全不知道他做了什麼。",
+        "3. 不可以出現任何人名或 AI 的名字。",
+        "4. 語氣像家人，不要像客服，不要說教，不要給醫療建議。",
+        "5. 只輸出那一句話，不要引號、不要解釋。",
+    ],
+    "en": [
+        'The person just tapped a face in the app to say they feel "{word}" right now.',
+        "Write one short line to keep them company, in English, 64 characters or fewer.",
+        "Rules:",
+        '1. The line must contain the word "{word}".',
+        "2. Respond only to the feeling itself. Never say they did, said or went anywhere — you know nothing about what they did.",
+        "3. No names of any kind, including the assistant's own name.",
+        "4. Warm like family, not like customer service. No lecturing, no medical advice.",
+        "5. Output only that one line — no quotes, no explanation.",
+    ],
+    "ja": [
+        "利用者がアプリで表情をタップし、いまの気分が「{word}」だと伝えました。",
+        "寄り添う一言を、日本語で 26 文字以内で書いてください。",
+        "ルール：",
+        "1. 文中に「{word}」を必ず入れる。",
+        "2. 気分そのものにだけ応じる。本人が何をした・言った・行ったとは絶対に書かない（あなたは何も知りません）。",
+        "3. 人名やアシスタントの名前は入れない。",
+        "4. 家族のような温かさで。説教や医療的な助言はしない。",
+        "5. その一言だけを出力（引用符や説明は不要）。",
+    ],
+    "es": [
+        'La persona acaba de tocar una cara en la app para decir que ahora se siente "{word}".',
+        "Escribe una frase breve para acompañarla, en español, 64 caracteres o menos.",
+        "Reglas:",
+        '1. La frase debe contener "{word}".',
+        "2. Responde solo al estado de ánimo. Nunca digas que hizo, dijo o fue a algo — no sabes nada de lo que hizo.",
+        "3. Sin nombres de ningún tipo, incluido el nombre del acompañante.",
+        "4. Cálida como la familia, no como atención al cliente. Sin sermones ni consejos médicos.",
+        "5. Devuelve solo esa frase, sin comillas ni explicación.",
+    ],
+}
+
+
+def mood_line_instruction(locale, mood_word):
+    """一句話的提示。刻意不給 AI 任何使用者資料——它只知道他點了哪個心情。
+
+    不給資料就編不出細節：這是比事後檢查更強的一道防線。
+    """
+    lines = _MOOD_LINE_RULES.get(locale) or _MOOD_LINE_RULES["zh-TW"]
+    return "\n".join(line.replace("{word}", mood_word) for line in lines)
+
+
+def mood_line_is_safe(text, locale, mood_word, companion_names):
+    """回來之後逐條檢查。任何一條不過就當作沒生成——App 會留著原本的固定句。"""
+    line = (text or "").strip().strip('"').strip("「").strip("」").strip()
+    if not line:
+        return None
+    if "\n" in line:                                   # 只要一句，多行就是沒照做
+        return None
+    cap = MOOD_LINE_MAX_CHARS.get(locale, 26)
+    if len(line) > cap:
+        return None
+    low = line.lower()
+    if mood_word and mood_word.lower() not in low:     # 沒複述他點的那個詞
+        return None
+    for name in companion_names:                       # 提到任何角色名字
+        if name and name.lower() in low:
+            return None
+    for bad in MOOD_LINE_FORBIDDEN:                    # 替他宣稱做過什麼
+        if bad.lower() in low:
+            return None
+    return line
+
+
+def mood_line_response(data):
+    data = data or {}
+    mood = str(data.get("mood") or "").strip()
+    mood_word = str(data.get("moodWord") or "").strip()[:24]
+    locale_context = localization.locale_context_from_request(data)
+    locale = locale_context["uiLocale"]
+    if mood not in MOOD_LINE_MOODS or not mood_word:
+        return {"ok": False, "reason": "bad_request"}
+    names = [str(x).strip() for x in (data.get("companionNames") or []) if str(x or "").strip()][:8]
+
+    instruction = mood_line_instruction(locale, mood_word)
+    for model in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        try:
+            r = eng.client.models.generate_content(
+                model=model,
+                contents=instruction,
+                config=types.GenerateContentConfig(temperature=1.0),
+            )
+            line = mood_line_is_safe(getattr(r, "text", "") or "", locale, mood_word, names)
+            if line:
+                return {"ok": True, "line": line, "locale": locale}
+        except Exception as exc:
+            print(f"[diag] mood_line model={model} err={type(exc).__name__}:{str(exc)[:60]}", flush=True)
+    # 生不出來或沒過檢查都走這裡——App 留著固定句，使用者不會發現有東西壞掉
+    return {"ok": False, "reason": "unavailable"}
+
+
 def quiz_questions_response(data):
     data = data or {}
     try:
@@ -10150,6 +10281,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(chat_response(data, char))
             elif self.path == "/quiz-questions":
                 self._json(quiz_questions_response(data))
+            elif self.path == "/mood-line":
+                self._json(mood_line_response(data))
             elif self.path == "/voice-session":
                 self._json(voice_session(data))
             elif self.path == "/voice-note":
