@@ -676,7 +676,16 @@
       </div>
       <div id="drawFields" style="display:none">
         <div class="field-label" data-i18n="activity.drawPrizeLabel">獎品是什麼</div>
-        <input class="chal-input" id="drawPrize" maxlength="14" placeholder="例：一支冰淇淋、免洗碗一次" data-i18n-placeholder="activity.drawPrizePlaceholder" />
+        <!-- 多個獎項（Edward 2026-08-01「大獎、二獎、安慰獎，可以設數量」）。
+             預設只有一行，跟以前一樣簡單；要分等級才點「再加一個獎項」，最多四個。
+             第一行的輸入框保留 id="drawPrize"，舊的程式與測試都還認得它。 -->
+        <div class="prize-list" id="drawPrizeList">
+          <div class="prize-row">
+            <input class="chal-input pz-name" id="drawPrize" maxlength="14" placeholder="例：一支冰淇淋、免洗碗一次" data-i18n-placeholder="activity.drawPrizePlaceholder" />
+            <select class="pz-count" aria-label="幾位" data-i18n-aria-label="activity.prizeCountAria"></select>
+          </div>
+        </div>
+        <button type="button" class="pz-add" id="drawPrizeAdd" data-i18n="activity.prizeAdd">＋ 再加一個獎項</button>
         <div class="field-label" data-i18n="activity.drawWhenLabel">什麼時候開獎</div>
         <div class="dt-row">
           <input class="chal-input" type="date" id="drawDate" aria-label="開獎日期" data-i18n-aria-label="activity.drawDate" />

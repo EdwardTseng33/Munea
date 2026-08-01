@@ -1578,7 +1578,7 @@
   "activity.hideConfirm": "¿Ocultarla de tu pantalla? Toca otra vez",
   "activity.hiddenToast": "Ocultada. Tu familia la sigue viendo",
   "activity.drawPickHint": "Cada uno saca un boleto. Sorteo el {when}",
-  "activity.drawPickButton": "Sacar un boleto",
+  "activity.drawPickButton": "Sortear",
   "activity.drawPicking": "Sacando...",
   "activity.drawMyTicket": "Te tocó el número {no}",
   "activity.drawMyTicketSub": "Sorteo el {when}. Te avisamos si ganas",
@@ -1588,5 +1588,15 @@
   "book.drawWinner": "{name} ganó (número {no})",
   "book.drawNobody": "Nadie sacó boleto",
   "feed.drawWinner": "«{prize}» ya se sorteó: ¡{name} ganó (número {no})!",
-  "feed.drawNobody": "«{prize}» terminó: nadie sacó boleto"
+  "feed.drawNobody": "«{prize}» terminó: nadie sacó boleto",
+  "activity.prizeAdd": "+ Añadir otro premio",
+  "activity.prizeCountOption": "{n}",
+  "activity.prizeCountAria": "Cuántos ganadores",
+  "activity.prizeMorePlaceholder": "ej.: 2º premio, consolación",
+  "activity.prizeRemoveAria": "Quitar este premio",
+  "activity.winnersTitle": "Resultados",
+  "activity.claimYouGiveAll": "Tú pones los premios: acuérdate de entregarlos",
+  "activity.claimFromHost": "Pide el premio a quien organizó el sorteo",
+  "feed.drawWinnersMulti": "Ya hay resultados: ¡{list}!",
+  "book.drawWinnerItem": "{prize} {name}"
 }

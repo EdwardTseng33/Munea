@@ -16,6 +16,8 @@ const JA_SHARED_SOURCE_KEYS = Object.freeze([
   'activity.kickerTitle',
   'activity.vote',
   'common.confirm',
+  // 純變數的組合（「{獎項} {人名}」），四語系都一樣、沒有字可以翻
+  'book.drawWinnerItem',
   'visit.weekdaySun',
   'health.obsMetricSleep',
   'common.listSeparator',
