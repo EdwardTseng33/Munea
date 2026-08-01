@@ -7083,7 +7083,18 @@ function initHealthDashboard() {
 
 // [ENGINE] 原型用瀏覽器內建語音；正式版換中文（台灣）/英文語音接點
 function cname() {
-  try { return (companionDisplayName || muneaT('companion.nening.name', '寧寧')).trim() || muneaT('companion.nening.name', '寧寧'); } catch (e) { return muneaT('companion.nening.name', '寧寧'); }
+  try {
+    // 使用者沒自己取過名字時，一律現查當下語言的預設名——不能用開頁那一刻存下來的。
+    // 2026-08-01：companionDisplayName 是在載入時就定住的，那一刻語言檔往往還沒讀完，
+    // 於是英文／西班牙文使用者會看到中文的「寧寧」夾在句子中間
+    // （例：「Your family says they'll visit this weekend. 寧寧 saved the message for you.」）。
+    // 自己取過名字的人不受影響——那是他選的字，不該被語言蓋掉。
+    if (!companionNameTouched) {
+      const live = String((CompanionProfile.templateFor(currentAvatarId) || {}).defaultName || '').trim();
+      if (live) return live;
+    }
+    return (companionDisplayName || muneaT('companion.nening.name', '寧寧')).trim() || muneaT('companion.nening.name', '寧寧');
+  } catch (e) { return muneaT('companion.nening.name', '寧寧'); }
 }
 function hint(text) {
   // 聊聊以外不出聲（只出文字提示，禁止在此接語音）（2026-07-03 Edward 拍板）：只顯示提示
