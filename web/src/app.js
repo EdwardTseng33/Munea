@@ -2603,7 +2603,12 @@ function developerFixtureVitals(name, offset) {
   }
   const latest = log[developerFixtureDate(0)];
   // 開發示範也帶今日心情標籤（跟正式資料同格式），讓家人頁左「心情」右「平安燈」的分工看得出來
-  const fixtureMoods = [['開心', 'happy'], ['平穩', 'calm'], ['疲累', 'tired']];
+  // 六種心情各給一個人，家人頁一次看得完（Edward 2026-08-01 要檢查六種都顯示得出來）。
+  // 原本只有開心／平穩／疲累三種輪流——焦慮與生氣根本沒機會出現在示範畫面上。
+  const fixtureMoods = [
+    ['開心', 'happy'], ['愉快', 'glad'], ['平靜', 'calm'],
+    ['低落', 'down'], ['焦慮', 'anxious'], ['生氣', 'angry'],
+  ];
   const mm = fixtureMoods[((offset / 2) | 0) % fixtureMoods.length];
   return { name, nick: name, day: '今天', updatedAt: Date.now(), mood: { label: mm[0], key: mm[1], date: developerFixtureDate(0) }, ...latest, log };
 }
@@ -2617,6 +2622,9 @@ function seedDeveloperFixtures(cfg) {
     { name: '媽媽', init: '媽', tint: 'p-ama', self: false },
     { name: '爸爸', init: '爸', tint: 'p-zhi', self: false },
     { name: '姊姊', init: '姊', tint: 'p-mei', self: false },
+    { name: '哥哥', init: '哥', tint: 'p-zhi', self: false },
+    { name: '阿姨', init: '姨', tint: 'p-ama', self: false },
+    { name: '舅舅', init: '舅', tint: 'p-mei', self: false },
   ];
   storageSet('munea.personProfile', JSON.stringify({ name: profileName, nick: profileName, birth: '1990 年 3 月', city: '台北市中山區', avatar: '' }));
   storageSet('munea.plan', cfg.plan || 'pro');
@@ -2628,6 +2636,9 @@ function seedDeveloperFixtures(cfg) {
     'dev-family-mother': developerFixtureVitals('媽媽', 0),
     'dev-family-father': developerFixtureVitals('爸爸', 2),
     'dev-family-sister': developerFixtureVitals('姊姊', 4),
+    'dev-family-brother': developerFixtureVitals('哥哥', 6),
+    'dev-family-aunt': developerFixtureVitals('阿姨', 8),
+    'dev-family-uncle': developerFixtureVitals('舅舅', 10),
   }));
   storageSet('munea.familyFeed2', JSON.stringify([
     '<b>媽媽</b>要我提醒你：週末回家一起吃飯',

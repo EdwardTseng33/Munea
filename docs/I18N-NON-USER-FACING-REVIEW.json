@@ -840,7 +840,7 @@
       "path": "web/src/app.js",
       "text": "低落",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
@@ -1083,7 +1083,7 @@
       "path": "web/src/app.js",
       "text": "平穩",
       "kind": "string",
-      "expectedOccurrences": 2,
+      "expectedOccurrences": 1,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
@@ -1146,7 +1146,7 @@
       "path": "web/src/app.js",
       "text": "愉快",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
@@ -1389,7 +1389,7 @@
       "path": "web/src/app.js",
       "text": "疲累",
       "kind": "string",
-      "expectedOccurrences": 2,
+      "expectedOccurrences": 1,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
@@ -1709,7 +1709,7 @@
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
-      "id": "b40-placeholder-9f53a144",
+      "id": "b40-9f53a1445e",
       "path": "web/index.html",
       "text": "訪客模式",
       "kind": "text",
@@ -1718,7 +1718,16 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-placeholder-b82b73ae",
+      "id": "b40-9bc424b0d8",
+      "path": "web/index.html",
+      "text": "今天聊得很開心",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "b40-b82b73ae5c",
       "path": "web/index.html",
       "text": "過去7天 ↗ 平穩",
       "kind": "text",
@@ -1727,7 +1736,7 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-placeholder-21eb704f",
+      "id": "b40-21eb704f62",
       "path": "web/index.html",
       "text": "隨時",
       "kind": "text",
@@ -1736,7 +1745,7 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-placeholder-4ec1c842",
+      "id": "b40-4ec1c84287",
       "path": "web/index.html",
       "text": "記錄今天的心情",
       "kind": "text",
@@ -1745,7 +1754,7 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-placeholder-6115c406",
+      "id": "b40-6115c4060a",
       "path": "web/index.html",
       "text": "今天走 500 步",
       "kind": "text",
@@ -1754,7 +1763,25 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-moodmap-ece2b607",
+      "id": "b40-12ac0ec420",
+      "path": "web/src/app.js",
+      "text": "哥",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-ui-contracts.js"
+    },
+    {
+      "id": "b40-266e4ffdf9",
+      "path": "web/src/app.js",
+      "text": "阿姨",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-ui-contracts.js"
+    },
+    {
+      "id": "b40-ece2b60786",
       "path": "web/src/app.js",
       "text": "憤怒",
       "kind": "string",
@@ -1763,7 +1790,34 @@
       "evidence": "scripts/test-mood-pipeline.js"
     },
     {
-      "id": "b40-placeholder-caf3e135",
+      "id": "b40-138378974e",
+      "path": "web/src/app.js",
+      "text": "舅",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-ui-contracts.js"
+    },
+    {
+      "id": "b40-87e42e354b",
+      "path": "web/src/app.js",
+      "text": "姨",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-ui-contracts.js"
+    },
+    {
+      "id": "b40-86a585853d",
+      "path": "web/src/app.js",
+      "text": "哥哥",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-ui-contracts.js"
+    },
+    {
+      "id": "b40-caf3e13504",
       "path": "web/index.html",
       "text": "今天心情平穩，膝蓋的痠有記著。",
       "kind": "text",
@@ -1772,7 +1826,7 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-placeholder-24fd43e6",
+      "id": "b40-24fd43e621",
       "path": "web/index.html",
       "text": "愉悅",
       "kind": "inline-string",
@@ -1781,7 +1835,7 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-moodmap-77de4410",
+      "id": "b40-77de441068",
       "path": "web/src/app.js",
       "text": "愉悅",
       "kind": "string",
@@ -1790,7 +1844,7 @@
       "evidence": "scripts/test-mood-pipeline.js"
     },
     {
-      "id": "b40-moodmap-62878874",
+      "id": "b40-6287887466",
       "path": "web/src/app.js",
       "text": "緊張",
       "kind": "string",
@@ -1799,7 +1853,7 @@
       "evidence": "scripts/test-mood-pipeline.js"
     },
     {
-      "id": "b40-placeholder-3c65fd30",
+      "id": "b40-3c65fd3060",
       "path": "web/index.html",
       "text": "愉快",
       "kind": "inline-string",
@@ -1808,7 +1862,16 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-placeholder-25232db6",
+      "id": "b40-5c9812fb58",
+      "path": "web/src/app.js",
+      "text": "舅舅",
+      "kind": "string",
+      "expectedOccurrences": 2,
+      "reasonCode": "developer-fixture",
+      "evidence": "scripts/test-ui-contracts.js"
+    },
+    {
+      "id": "b40-25232db6d4",
       "path": "web/index.html",
       "text": "今天",
       "kind": "text",
@@ -1817,7 +1880,7 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-placeholder-3e3b8b13",
+      "id": "b40-3e3b8b1356",
       "path": "web/index.html",
       "text": "尚未服用",
       "kind": "text",
@@ -1826,25 +1889,25 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-moodmap-2b94a3af",
+      "id": "b40-2b94a3aff7",
       "path": "web/src/app.js",
       "text": "生氣",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-mood-pipeline.js"
     },
     {
-      "id": "b40-moodmap-d81acd85",
+      "id": "b40-d81acd8552",
       "path": "web/src/app.js",
       "text": "焦慮",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-mood-pipeline.js"
     },
     {
-      "id": "b40-placeholder-137f24d2",
+      "id": "b40-137f24d2a5",
       "path": "web/index.html",
       "text": "平靜",
       "kind": "text",
@@ -1853,16 +1916,16 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
-      "id": "b40-moodmap-c12c9b35",
+      "id": "b40-c12c9b35d3",
       "path": "web/src/app.js",
       "text": "平靜",
       "kind": "string",
-      "expectedOccurrences": 1,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-mood-pipeline.js"
     },
     {
-      "id": "b40-placeholder-1c333ff6",
+      "id": "b40-1c333ff670",
       "path": "web/index.html",
       "text": "開始通話",
       "kind": "text",

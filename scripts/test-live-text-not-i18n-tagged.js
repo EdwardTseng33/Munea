@@ -73,7 +73,7 @@ const KNOWN_SUSPECTS = new Set([
   'actChip', 'bpChip', 'bpSub', 'busyCardTitle', 'chatCaption', 'chatName',
   'companionHomeName', 'dataDeleteBtn', 'dataExportBtn', 'eventTaskTitle', 'fbTextLabel',
   'fcInviteBtn', 'fcLeaveBtn', 'goalHint', 'hrChip', 'hrSub', 'invLimitNote', 'inviteNote',
-  'joinCircleBtn', 'managePlanBtn', 'mcTitle', 'medDueDesc', 'medDueName', 'medDueSay',
+  'joinCircleBtn', 'managePlanBtn', 'medDueDesc', 'medDueName', 'medDueSay',
   'medTrendChip', 'moodTitle', 'npsWord', 'obsPeriod', 'pageTitle', 'pillTitle',
   'planCancelBtn', 'ptAv', 'quizNVal', 'quizProgress', 'rcHint', 'rcTitle', 'readerTitle',
   'restoreBtn', 'settingsCompanionName', 'settingsTemplateLabel', 'sleepTrendChip',
