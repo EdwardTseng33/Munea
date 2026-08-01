@@ -10331,9 +10331,26 @@ function init() {
         note = muneaT('activity.quizReadyNote', '點這張卡先作答；其他人打開 App 也能玩，都答完看排名', { companion: cname() });
       }
     } else if (act.kind === 'vote') {
+      // 這張卡也一樣是空的（跟抽獎同一個毛病）：選項、誰領先、我投了沒，
+      // 全都要點進去才知道。外層就該答完這三件事。
       chip = muneaT('activity.peopleChip', '{count} 人', { count: act.names.length + 1 });
-      goal = '';
-      note = '';
+      goal = (act.opts || []).join(muneaT('common.listSeparator', '、'));
+      const vVotes = act.votes || {};
+      const vCount = Object.keys(vVotes).length;
+      const vMine = vVotes['你'];
+      const vTally = {};
+      Object.values(vVotes).forEach(o => { vTally[o] = (vTally[o] || 0) + 1; });
+      const vTop = Object.entries(vTally).sort((a, b) => b[1] - a[1])[0];
+      // 平手就不說誰領先——宣布一個其實沒領先的選項是錯的
+      const vTied = vTop && Object.values(vTally).filter(n => n === vTop[1]).length > 1;
+      note = vCount
+        ? (vTop && !vTied
+          ? muneaT('activity.voteCardLeading', '{n} 個人投了 · 「{opt}」{count} 票領先', { n: vCount, opt: vTop[0], count: vTop[1] })
+          : muneaT('activity.voteCardTied', '{n} 個人投了 · 目前平手', { n: vCount }))
+        : muneaT('activity.voteCardEmpty', '還沒有人投');
+      act._stateTag = vMine
+        ? { cls: 'got', text: muneaT('activity.voteStateMine', '你投了 {opt}', { opt: vMine }) }
+        : { cls: 'todo', text: muneaT('activity.voteStateTodo', '還沒投') };
     } else if (act.kind === 'draw') {
       // 以前這張卡只有一行標題跟時間，中間整片空白（Edward 2026-08-01 一眼看出來）。
       // 抽獎最該讓人看到的是「有什麼獎」跟「我抽了沒」——前者決定他想不想點進去，

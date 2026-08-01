@@ -1646,5 +1646,10 @@
   "activity.walkCardProgress": "已經走了 {sum} 步（{pct}%）· 你走了 {mine} 步",
   "activity.walkStateMine": "你走了 {mine} 步",
   "activity.walkStateZero": "你還沒開始走",
-  "activity.walkSinceStart": "從發起那一刻開始算，之前走的不算進來"
+  "activity.walkSinceStart": "從發起那一刻開始算，之前走的不算進來",
+  "activity.voteCardLeading": "{n} 個人投了 · 「{opt}」{count} 票領先",
+  "activity.voteCardTied": "{n} 個人投了 · 目前平手",
+  "activity.voteCardEmpty": "還沒有人投",
+  "activity.voteStateMine": "你投了 {opt}",
+  "activity.voteStateTodo": "還沒投"
 }

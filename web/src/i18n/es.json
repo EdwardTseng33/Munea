@@ -1646,5 +1646,10 @@
   "activity.walkCardProgress": "{sum} pasos hasta ahora ({pct}%) - tú {mine}",
   "activity.walkStateMine": "Llevas {mine} pasos",
   "activity.walkStateZero": "Aún no empezaste",
-  "activity.walkSinceStart": "Se cuenta desde que empezó; los pasos anteriores no suman"
+  "activity.walkSinceStart": "Se cuenta desde que empezó; los pasos anteriores no suman",
+  "activity.voteCardLeading": "{n} votaron - «{opt}» lidera con {count}",
+  "activity.voteCardTied": "{n} votaron - hay empate",
+  "activity.voteCardEmpty": "Aún nadie votó",
+  "activity.voteStateMine": "Votaste {opt}",
+  "activity.voteStateTodo": "Aún no votaste"
 }
