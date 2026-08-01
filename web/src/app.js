@@ -9841,10 +9841,14 @@ function init() {
     const parts = new Intl.DateTimeFormat(muneaLocale(), {
       year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
     }).formatToParts(d);
+    // 判斷「要不要補空格」不能看前一段是不是分隔符號——中文的「日」本身就是分隔符號，
+    // 看類型會誤判成不用補（第一版就錯在這裡）。改看前一段的最後一個字：
+    // 已經是空白或左括號（日文的「(土)」）就不補，其餘才補。
     return parts.map((part, i) => {
       const prev = parts[i - 1];
-      const needsGap = part.type === 'weekday' && prev && prev.type !== 'literal';
-      return (needsGap ? ' ' : '') + part.value;
+      const tail = prev ? prev.value.slice(-1) : '';
+      const alreadySeparated = !prev || /[\s([（]/.test(tail);
+      return (part.type === 'weekday' && !alreadySeparated ? ' ' : '') + part.value;
     }).join('').trim();
   }
   function syncVisitDateField() {
