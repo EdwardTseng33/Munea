@@ -2706,3 +2706,21 @@ html:lang(en) .chal-type, html:lang(es) .chal-type, html:lang(ja) .chal-type {
 /* ③ 輔助 */
 .plan-link {
   font-size: var(--btn-3-size); font-weight: var(--btn-3-weight); min-height: var(--btn-3-height); }
+
+/* 心情那排六張臉：原本用 space-between，每顆的寬度跟著自己的標籤走，
+ * 標籤一長一短，圓圈就被推得歪七扭八（日文「落ち込んでいる」六個字最明顯）。
+ * 改成六等分格子——不管標籤多長，圓圈永遠對齊。標籤太長就自己收成兩行、不推擠鄰居。 */
+#moodFaces { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+#status .moodface { width: 100%; }
+#status .moodface > span:last-child { font-size: 11.5px; text-align: center; line-height: 1.25; max-width: 100%; }
+
+
+/* 日文版的字型：繁中字型（Noto Sans TC）沒有日文寫法的漢字，缺字會逐字掉到系統字型，
+ * 同一句話就出現兩種粗細與兩種字面（Edward 2026-08-01：「文字有粗有細」）。
+ * iOS 內建的 Hiragino 是最好的日文字型，排第一；非 Apple 裝置退到 Noto Sans JP。
+ * 只換字型、不動字級與粗細——版面完全不受影響。 */
+html:lang(ja) {
+  --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", -apple-system, sans-serif;
+  --display: "Poppins", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --serif: "Hiragino Mincho ProN", "Noto Serif JP", Georgia, serif;
+}
