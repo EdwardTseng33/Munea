@@ -1463,7 +1463,6 @@ html:lang(ja) .med-chips.fit-row .mchip { font-size: 13px; letter-spacing: -.2px
    日期欄一律自己佔滿一行——四個語系的日期長度差很多（「2026年8月3日 週一」vs
    「Mon, August 3, 2026」），排在快捷旁邊只有中日文塞得下。 */
 .visit-when { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 8px; }
-.visit-when .mchip { padding: 9px 18px; min-height: 42px; }
 .visit-datefield { flex: 1 1 100%; position: relative; display: flex; align-items: center; justify-content: center;
   min-height: 50px; padding: 0 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer; }
 .visit-datefield:focus-within { border-color: var(--teal-d); outline: 2px solid var(--teal-d); outline-offset: 2px; }
