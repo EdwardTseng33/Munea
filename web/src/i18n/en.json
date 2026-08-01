@@ -1636,5 +1636,15 @@
   "activity.drawSoldOutTitle": "All prizes taken",
   "activity.drawSoldOutSub": "A bit late this time - catch the next one",
   "activity.prizeMoreThanPeople": "{seats} prizes but only {people} people - some will go unclaimed. Tap send again to keep it",
-  "activity.drawDueInPast": "That closing time has already passed - pick a later one"
+  "activity.drawDueInPast": "That closing time has already passed - pick a later one",
+  "activity.drawLockedGot": "It is yours!",
+  "activity.drawLockedMiss": "Not this time - try the next one",
+  "activity.voteChangeNote": "Change it anytime by tapping another - closes {when}",
+  "activity.voteClosedNote": "Voting is closed; this is the final result",
+  "activity.voteClosedMissed": "Voting is closed - you missed this one",
+  "activity.voteChangedToast": "Changed to “{opt}”",
+  "activity.walkCardProgress": "{sum} steps so far ({pct}%) - you walked {mine}",
+  "activity.walkStateMine": "You walked {mine} steps",
+  "activity.walkStateZero": "You have not started yet",
+  "activity.walkSinceStart": "Counted from the moment it started - earlier steps do not count"
 }

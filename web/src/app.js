@@ -10111,20 +10111,53 @@ function init() {
     });
     return rows;
   }
+  // 某個人在這場活動裡真正走了多少（Edward 2026-08-01）
+  //
+  // 以前直接抓「今天的總步數」——早上十點發起，那八千步是活動開始前走的，
+  // 卻整份灌進大家一起完成的目標裡，數字一開始就是假的。
+  //
+  // 現在：發起當天只算超出基準線的部分，之後每天算整天。跨天的資料從
+  // 雲端的每日紀錄拿；拿不到就只認今天的增量，寧可少算也不要憑空多加。
+  // 舊活動沒有 baseline，維持原本算法——進行中的活動數字不該一夜之間變小。
+  function walkStepsFor(act, name) {
+    let latest = 0, log = null;
+    try {
+      if (name === '你') {
+        const h = JSON.parse(localStorage.getItem('munea.health.last') || 'null');
+        if (h && h.s && typeof h.s.steps === 'number') latest = h.s.steps;
+        const hist = JSON.parse(localStorage.getItem('munea.health.history') || 'null');
+        if (hist && typeof hist === 'object') log = hist;
+      } else {
+        const v = famVitalsFor(name);
+        if (v && v.steps) latest = +v.steps;
+        if (v && v.log && typeof v.log === 'object') log = v.log;
+      }
+    } catch (e) {}
+    latest = Math.max(0, +latest || 0);
+    if (!act.baseline || !act.startISO) return latest || +((act._steps || {})[name]) || 0;   // 舊活動：照舊
+    const base = Math.max(0, +act.baseline[name] || 0);
+    const start = act.startISO;
+    const today = isoOf(new Date());
+    if (!log) {
+      // 只拿得到最新的數字：唯一能誠實計算的就是「今天比基準多走的」
+      return today === start ? Math.max(0, latest - base) : Math.max(0, latest - base);
+    }
+    let sum = 0;
+    const d = new Date(start + 'T00:00');
+    const end = new Date(today + 'T00:00');
+    for (let guard = 0; d <= end && guard < 400; guard += 1, d.setDate(d.getDate() + 1)) {
+      const key = isoOf(d);
+      const day = log[key];
+      const s = Math.max(0, +((day && (day.steps !== undefined ? day.steps : day.s)) || (key === today ? latest : 0)) || 0);
+      sum += (key === start) ? Math.max(0, s - base) : s;
+    }
+    return sum;
+  }
   function renderWalkBody(act, box) {
     const goal = +act.goal || 30000;
     const parts = actParts(act);
     const steps = {};
-    parts.forEach(n => {
-      if (n === '你') {
-        let mine = 0;
-        try { const h = JSON.parse(localStorage.getItem('munea.health.last') || 'null'); if (h && h.s && typeof h.s.steps === 'number') mine = h.s.steps; } catch (e) {}
-        steps[n] = mine || +(act._steps && act._steps['你']) || 0;
-      } else {
-        let s = 0; try { const v = famVitalsFor(n); if (v && v.steps) s = +v.steps; } catch (e) {}
-        steps[n] = s;
-      }
-    });
+    parts.forEach(n => { steps[n] = walkStepsFor(act, n); });
     const sum = parts.reduce((s, n) => s + (+steps[n] || 0), 0);
     const pct = Math.min(100, goal ? Math.round(sum / goal * 100) : 0);
     const gap = Math.max(0, goal - sum);
@@ -10267,6 +10300,19 @@ function init() {
       chip = muneaT('activity.daysChip', '{days} 天內', { days: act.days });
       goal = muneaT('activity.walkGoal', '大家一起走 {steps} 步', { steps: (+act.goal).toLocaleString() });
       note = muneaT('activity.walkNote', '家人打開 App 就會看到；開始後每個人走多少都看得到', { companion: cname() });
+      // 外層也要看得到進度跟自己走了多少——不然要點進去才知道（跟抽獎同一個道理）
+      try {
+        const wParts = actParts(act);
+        const wSum = wParts.reduce((s, n) => s + walkStepsFor(act, n), 0);
+        const wMine = walkStepsFor(act, '你');
+        const wPct = act.goal ? Math.min(100, Math.round(wSum / +act.goal * 100)) : 0;
+        note = muneaT('activity.walkCardProgress', '已經走了 {sum} 步（{pct}%）· 你走了 {mine} 步', {
+          sum: wSum.toLocaleString(), pct: wPct, mine: wMine.toLocaleString(),
+        });
+        act._stateTag = wMine > 0
+          ? { cls: 'got', text: muneaT('activity.walkStateMine', '你走了 {mine} 步', { mine: wMine.toLocaleString() }) }
+          : { cls: 'todo', text: muneaT('activity.walkStateZero', '你還沒開始走') };
+      } catch (e) {}
     } else if (act.kind === 'quiz') {
       chip = muneaT('activity.questionsChip', '{count} 題', { count: act.q });
       if (act.myDone && act.answers && act.answers['你'] !== undefined) {
@@ -10557,6 +10603,15 @@ function init() {
     const LETTERS = 'ABCDEFGH';
     const counts = act.opts.map(o => Object.values(act.votes || {}).filter(v => v === o).length);
     const topN = Math.max.apply(null, counts.concat([0]));
+    // 還開著嗎——截止時間過了就只能看，不能再改
+    const voteOpen = (() => {
+      try {
+        const iso = act.dueISO || act.dateISO;
+        if (!iso) return true;
+        const end = new Date(iso + 'T' + (act.dueTime || '23:59') + ':00');
+        return Number.isNaN(end.getTime()) ? true : Date.now() < end.getTime();
+      } catch (e) { return true; }
+    })();
     // 跟上面那排小頭像共用同一份配色，同一個人在同一頁不會換顏色
     const voteTints = avaTintMap(actParts(act).concat(Object.keys(act.votes || {})));
     wrap.innerHTML = act.opts.map((o, i) => {
@@ -10576,14 +10631,26 @@ function init() {
         (my && voters.length ? '<span class="vo-faces">' + faces + '</span>' : '') +
         (my ? '<span class="vo-n">' + muneaT('activity.voteCount', '{count} 票', { count: n }) + '</span>' : '') +
         (my === o ? '<span class="vo-check">✓</span>' : '') + '</button>';
-    }).join('') + '<div class="qc-num">' + (my ? muneaT('activity.voteMineNote', '誰投了什麼會直接亮在這裡') : muneaT('activity.votePickNote', '點一個選項投下你的票')) + '</div>';
-    if (!my) wrap.addEventListener('click', e => {
+    }).join('') + '<div class="qc-num">' + (my
+      ? (voteOpen
+        ? muneaT('activity.voteChangeNote', '想改隨時再點另一個，{when}截止', { when: act.dueLabel || drawWhen(act) })
+        : muneaT('activity.voteClosedNote', '投票結束了，這是最後的結果'))
+      : (voteOpen
+        ? muneaT('activity.votePickNote', '點一個選項投下你的票')
+        : muneaT('activity.voteClosedMissed', '投票結束了，這次你沒趕上'))) + '</div>';
+    // 截止前可以改主意（Edward 2026-08-01「在截止日前用戶都能夠反悔選別的選項」）。
+    // 以前投完就鎖死——家裡討論到一半改變想法是常有的事，鎖住只會逼他找人幫忙改資料。
+    if (voteOpen) wrap.addEventListener('click', e => {
       const b = e.target.closest('.vote-opt');
       if (!b) return;
-      act.votes = act.votes || {}; act.votes['你'] = b.dataset.o;
+      const picked = b.dataset.o;
+      if (my === picked) return;   // 點自己已經投的那個＝沒事發生，不要洗成「又投了一次」
+      act.votes = act.votes || {}; act.votes['你'] = picked;
       const acts = loadActs(); const t = acts.find(a => a.id === act.id); if (t) t.votes = act.votes; saveActs(acts);
       wrap.remove(); renderVoteBody(act, card);
-      toast(muneaT('activity.votedToast', '投好了，等其他人的票', { companion: cname() }));
+      toast(my
+        ? muneaT('activity.voteChangedToast', '改成「{opt}」了', { opt: picked })
+        : muneaT('activity.votedToast', '投好了，等其他人的票'));
     });
     card.appendChild(wrap);
   }
@@ -10739,6 +10806,17 @@ function init() {
       const hit = actPrizes(act).find(p => p.name === prizeName);
       return (hit && hit.tier) || '';
     }
+    // 誰抽到什麼（Edward 2026-08-01「owner 或家人點開能看到誰抽到什麼嗎？」）
+    // 本來只有自己抽完才看得到——但這是一家人一起玩的東西，還沒抽的人、
+    // 發起人想看進度，都該看得到。所以只要有人抽過就列出來。
+    function pickListHtml() {
+      const others = pickedNames.filter(n => n !== '你');
+      if (!others.length) return '';
+      return '<div class="pick-list">' + others.map(n =>
+        '<div class="pk-row"><span class="pk-name">' + muneaEscapeHtml(actDisplayName(n)) + '</span>' +
+        '<span class="pk-got' + (picks[n] ? '' : ' miss') + '">' + (picks[n] ? muneaEscapeHtml(picks[n]) : muneaT('activity.drawMissShort', '沒抽到')) + '</span></div>').join('') +
+        '</div>';
+    }
     // 中了什麼獎的下面接一句「找誰領」（Edward 2026-08-01）
     function claimLine() {
       if (actIsMine(act)) return muneaT('activity.claimYouGiveSelf', '獎品是你自己出的，記得留著');
@@ -10769,11 +10847,12 @@ function init() {
       wrap.innerHTML = prizeBoard +
         '<div class="draw-got miss"><div class="dg-txt"><b>' + muneaT('activity.drawSoldOutTitle', '獎都被抽完了') + '</b>' +
         '<small>' + muneaT('activity.drawSoldOutSub', '這場來晚了一步，下次早點來') + '</small></div></div>' +
-        drawnLine();
+        drawnLine() + pickListHtml();
     } else if (myPick === undefined) {
       // 還沒抽：這是每個人自己的動作，不分發起人或參加者
       wrap.innerHTML = prizeBoard + '<div class="qc-num">' + muneaT('activity.drawPickHint2', '點一下就知道自己抽到什麼，{when}截止', { when: drawWhen(act) }) + '</div>' +
-        '<button type="button" class="draw-pick"><span class="dp-card">' + TICKET + '</span><span>' + muneaT('activity.drawPickButton', '抽獎') + '</span></button>';
+        '<button type="button" class="draw-pick"><span class="dp-card">' + TICKET + '</span><span>' + muneaT('activity.drawPickButton', '抽獎') + '</span></button>' +
+        (pickedNames.length ? drawnLine() + pickListHtml() : '');
       wrap.querySelector('.draw-pick').addEventListener('click', () => {
         const got = pickPrizeNow();
         act.picks = Object.assign({}, act.picks || {}, { 你: got });
@@ -10791,8 +10870,22 @@ function init() {
           else {
             el.textContent = got || muneaT('activity.drawMissShort', '沒抽到');
             el.classList.add('locked');   // 定格「咚」一下，讓結果落地有重量
-            if (got) throwConfetti();
-            setTimeout(() => { renderDrawBody(act, card); wrap.remove(); }, 900);
+            // 下面那句還停在「看看抽到什麼…」——都抽到了還在問，要一起換掉
+            const capEl = wrap.querySelector('.draw-roll small');
+            if (capEl) capEl.textContent = got
+              ? muneaT('activity.drawLockedGot', '恭喜！是你的了')
+              : muneaT('activity.drawLockedMiss', '這次沒中，下次再來');
+            if (got) {
+              throwConfetti();
+              // 抽中的那一刻要停得住（Edward 2026-08-01「太快切換了，至少停 4.6 秒」）：
+              // 中了獎的人想看清楚自己抽到什麼，畫面一秒就跳走等於沒讓他享受到。
+              // 中段再灑一次彩帶，這 4.6 秒才不是靜止的。
+              setTimeout(() => { try { throwConfetti(); } catch (e) {} }, 1700);
+              setTimeout(() => { renderDrawBody(act, card); wrap.remove(); }, 4600);
+            } else {
+              // 沒抽到就不要讓他盯著看——短一點過去比較體貼
+              setTimeout(() => { renderDrawBody(act, card); wrap.remove(); }, 1900);
+            }
           }
         };
         flip();
@@ -10807,12 +10900,7 @@ function init() {
           : '<div class="draw-got miss"><div class="dg-txt"><b>' + muneaT('activity.drawIMissed', '這次沒抽到') + '</b><small>' +
             muneaT('activity.drawIMissedSub', '獎項被抽完了，下次再一起玩') + '</small></div></div>') +
         drawnLine() +
-        (pickedNames.length > 1
-          ? '<div class="pick-list">' + pickedNames.filter(n => n !== '你').map(n =>
-            '<div class="pk-row"><span class="pk-name">' + muneaEscapeHtml(actDisplayName(n)) + '</span>' +
-            '<span class="pk-got' + (picks[n] ? '' : ' miss') + '">' + (picks[n] ? muneaEscapeHtml(picks[n]) : muneaT('activity.drawMissShort', '沒抽到')) + '</span></div>').join('') +
-          '</div>'
-          : '');
+        pickListHtml();
     }
     card.appendChild(wrap);
   }
@@ -10834,6 +10922,18 @@ function init() {
       const wt = ($('#walkDueTime') && $('#walkDueTime').value) || '20:00';
       const start = new Date();
       act.startISO = isoOf(start);
+      // 發起當下，每個人「今天已經走了多少」——之後只算超出這條線的部分
+      // （Edward 2026-08-01：「發起時才正式開始記錄，而不是已經累積今天的步數直接灌進來」）。
+      // 早上十點發起，那八千步是活動開始前走的，不該算進大家一起完成的目標裡。
+      act.baseline = {};
+      names.concat(['你']).forEach(n => {
+        let s = 0;
+        try {
+          if (n === '你') { const h = JSON.parse(localStorage.getItem('munea.health.last') || 'null'); if (h && h.s && typeof h.s.steps === 'number') s = h.s.steps; }
+          else { const v = famVitalsFor(n); if (v && v.steps) s = +v.steps; }
+        } catch (e) {}
+        act.baseline[n] = Math.max(0, s || 0);
+      });
       const day0 = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       act.days = Math.max(1, Math.round((wd0 - day0) / 86400000));
       act.dateISO = isoOf(wd0);

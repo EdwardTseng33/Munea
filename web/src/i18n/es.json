@@ -1636,5 +1636,15 @@
   "activity.drawSoldOutTitle": "Ya no quedan premios",
   "activity.drawSoldOutSub": "Llegaste un poco tarde; a la próxima",
   "activity.prizeMoreThanPeople": "{seats} premios y solo {people} personas: sobrarán. Toca enviar otra vez para dejarlo así",
-  "activity.drawDueInPast": "Esa hora de cierre ya pasó: elige una más tarde"
+  "activity.drawDueInPast": "Esa hora de cierre ya pasó: elige una más tarde",
+  "activity.drawLockedGot": "¡Es tuyo!",
+  "activity.drawLockedMiss": "Esta vez no; a la próxima",
+  "activity.voteChangeNote": "Puedes cambiarlo cuando quieras; cierra el {when}",
+  "activity.voteClosedNote": "La votación cerró; este es el resultado final",
+  "activity.voteClosedMissed": "La votación cerró; esta vez no llegaste",
+  "activity.voteChangedToast": "Cambiado a «{opt}»",
+  "activity.walkCardProgress": "{sum} pasos hasta ahora ({pct}%) - tú {mine}",
+  "activity.walkStateMine": "Llevas {mine} pasos",
+  "activity.walkStateZero": "Aún no empezaste",
+  "activity.walkSinceStart": "Se cuenta desde que empezó; los pasos anteriores no suman"
 }
