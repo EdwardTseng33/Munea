@@ -1390,7 +1390,7 @@
   "notification.centerStateOff": "オフ",
   "settings.visitSummary": "受診サマリー",
   "settings.visitSummarySubtitle": "医師に見せる1ページのまとめ",
-  "settings.managePlanButton": "サブスクの管理",
+  "settings.managePlanButton": "プランを見る",
   "settings.ptsNote": "ポイントはおしゃべりに使います。なくなると一旦止まり、チャージすれば続けられます",
   "settings.lowPtsStrip": "ポイントが残りわずか。なくなるとおしゃべりは一旦止まります。ここでチャージすれば続けられます",
   "settings.connectIntro": "{appleHealth}とつなぐと、Muneaを開くたびに歩数・心拍・睡眠などを同期します。気にかけたい変化があればお知らせします。リアルタイムや医療レベルの監視ではありません。",

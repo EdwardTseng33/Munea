@@ -1251,10 +1251,13 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
    改成跟上面「訂閱方案／加值點數」同一套膠囊，只是把份量整個收下來：
    底色比主按鈕更淡、字更小、圓角略小、不用邊框——一看就知道是次要，但仍是同一個家族。
    觸控高度維持 44px（長輩手指不準，視覺份量低不等於難按）。 */
-.plan-links { display: flex; gap: 10px; margin-top: 10px; }   /* gap 跟上面 .plan-actions 對齊，兩排才像同一組 */
-.plan-link { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 10px; border: none; border-radius: 13px;
+/* 這一排是次要動作（管理訂閱／恢復購買）。原本跟上面的主要動作一樣滿版、一樣高，
+ * 四顆看起來一樣重，眼睛不知道該先看哪個（Edward 2026-08-01：「按鈕欄位要設計好」）。
+ * 改成置中、寬度跟著字走、比上面矮一截也小一號——主次一眼分得出來，四語都適用。 */
+.plan-links { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+.plan-link { flex: 0 1 auto; min-width: 0; min-height: 38px; padding: 0 15px; border: none; border-radius: 11px;
   background: var(--mint); color: var(--teal-d); cursor: pointer;
-  font-family: inherit; font-size: 14px; font-weight: 600; opacity: .85; }
+  font-family: inherit; font-size: 12.5px; font-weight: 600; opacity: .8; white-space: nowrap; }
 .plan-link:active { opacity: 1; }
 .plan-actions .plan-btn { flex: 1 1 0; min-width: 0; white-space: normal; min-height: 48px; padding-inline: 12px; }
 #topUpBtn.plan-btn { background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); }
@@ -2652,6 +2655,8 @@ html:lang(en) .chal-actions, html:lang(es) .chal-actions {
 
 /* 「管理訂閱／恢復購買」兩顆並排：英文與西班牙文兩個單字會折成兩行。
  * Edward 2026-08-01：「單行，按鈕文字可以小一點」——字縮一級、不換行。 */
-html:lang(en) .plan-link, html:lang(es) .plan-link,
+/* 主要動作（看方案／加值點數）維持原本的 15px——這是使用者最常按的兩顆，
+ * 文案收短之後放得下，不必為了塞而縮小（Edward 2026-08-01：「訂閱方案文字要大一點」）。
+ * 底下那排是次要動作（管理訂閱／恢復購買），縮一級剛好拉開主次。 */
 html:lang(en) .plan-actions .plan-btn, html:lang(es) .plan-actions .plan-btn {
-  font-size: 13px; white-space: nowrap; padding-inline: 10px; }
+  white-space: nowrap; }

@@ -1390,7 +1390,7 @@
   "notification.centerStateOff": "Desactivadas",
   "settings.visitSummary": "Resumen de la visita",
   "settings.visitSummarySubtitle": "Una hoja de una página para mostrar al médico",
-  "settings.managePlanButton": "Gestionar suscripción",
+  "settings.managePlanButton": "Ver planes",
   "settings.ptsNote": "Los puntos se usan para charlar; al agotarse se pausa y con una recarga se sigue",
   "settings.lowPtsStrip": "Quedan pocos puntos: al llegar a cero la charla se pausa; recarga aquí para seguir",
   "settings.connectIntro": "Conecta {appleHealth} y, cada vez que abras Munea, se sincronizan pasos, pulso, sueño y más; si llega un cambio a vigilar, te avisa. No es monitoreo en tiempo real ni de grado médico.",

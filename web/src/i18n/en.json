@@ -1390,7 +1390,7 @@
   "notification.centerStateOff": "Off",
   "settings.visitSummary": "Visit summary",
   "settings.visitSummarySubtitle": "A one-page sheet to show your doctor",
-  "settings.managePlanButton": "Manage subscription",
+  "settings.managePlanButton": "View plans",
   "settings.ptsNote": "Points power chats; when they run out chats pause — top up to continue",
   "settings.lowPtsStrip": "Points are running low — chats pause at zero; top up here to keep going",
   "settings.connectIntro": "Connect {appleHealth}, and each time you open Munea it syncs steps, heart rate, sleep and more; if a change worth noting comes in, it alerts you. This is not real-time or medical-grade monitoring.",
