@@ -515,6 +515,32 @@ function muneaSafeDisplayText(raw, fallback) {
   if (!s) return fallback;
   return muneaIsCleanDisplayText(s) ? s : fallback;
 }
+// 頭像底色的唯一清單——這八個色號在 styles.css 裡真的存在。
+// 以前分配顏色的地方寫了 p-ma / p-ba / p-jie 這種 CSS 沒有的名字，
+// 套上去等於沒有顏色；集中成一份之後，色號寫錯就會在同一個地方被抓到。
+// p-me 不在裡面：那是「本人」專用，借給家人會讓兩個人看起來是同一個。
+const MUNEA_AVA_TINTS = ['p-ama', 'p-zhi', 'p-bao', 'p-lin', 'p-hai', 'p-ye', 'p-mo', 'p-mei'];
+function muneaSafeTint(tint, seedName) {
+  if (MUNEA_AVA_TINTS.indexOf(tint) >= 0) return tint;
+  const key = String(seedName || '');
+  let sum = 0;
+  for (let i = 0; i < key.length; i += 1) sum = (sum * 31 + key.charCodeAt(i)) % 9973;
+  return MUNEA_AVA_TINTS[sum % MUNEA_AVA_TINTS.length];
+}
+// 一份名單一起配色，保證同一家人不會兩個人同色。
+// 各自去算的話會撞（用名字算出來的顏色本來就可能相同），而家人是一起出現在同一排的——
+// 兩個一樣的圓圈看起來就是同一個人。本人（self）永遠留著自己的顏色不參與輪替。
+function muneaAssignTints(list) {
+  const used = new Set();
+  (list || []).forEach(m => { if (m && m.self && m.tint) used.add(m.tint); });
+  return (list || []).map((m, i) => {
+    if (!m || m.self) return m;
+    let t = MUNEA_AVA_TINTS.indexOf(m.tint) >= 0 ? m.tint : '';
+    if (!t || used.has(t)) t = MUNEA_AVA_TINTS.find(x => !used.has(x)) || MUNEA_AVA_TINTS[i % MUNEA_AVA_TINTS.length];
+    used.add(t);
+    return Object.assign({}, m, { tint: t });
+  });
+}
 function muneaEscapeHtml(raw) {
   return String(raw == null ? '' : raw).replace(/[&<>"']/g, character => ({
     '&': '&amp;',
@@ -1477,11 +1503,14 @@ async function refreshFamilyRelayMembers() {
       relationship: m.relationship || previous.relationship || '家人',
       personId: m.personId || m.id,
       init: previous.init || name[0],
-      tint: previous.tint || ['p-ama', 'p-ma', 'p-ba', 'p-jie'][index % 4],
+      // 這裡本來配的是 p-ma / p-ba / p-jie——這三個色號 CSS 裡從來沒有，
+      // 所以四個家人裡有三個的頭像是沒有底色的（Edward 2026-08-01 從畫面上看出來）。
+      // 改用真的存在的八色，同一份名單裡也就不會兩個人長得一樣。
+      tint: (MUNEA_AVA_TINTS.indexOf(previous.tint) >= 0 ? previous.tint : MUNEA_AVA_TINTS[index % MUNEA_AVA_TINTS.length]),
       self: (m.personId || m.id) === mine,
     };
   });
-  try { localStorage.setItem('munea.circleMembers', JSON.stringify(members)); } catch (e) {}
+  try { localStorage.setItem('munea.circleMembers', JSON.stringify(muneaAssignTints(members))); } catch (e) {}
   if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync();
   return members;
 }
@@ -6675,7 +6704,7 @@ function syncPullAll(options) {
           const p = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
           arr.unshift({ name: mine || p.nick || muneaT('common.meInitial', '我'), init: (p.nick || mine || muneaT('common.meInitial', '我'))[0], tint: 'p-ama', self: true });
         }
-        localStorage.setItem('munea.circleMembers', JSON.stringify(arr));
+        localStorage.setItem('munea.circleMembers', JSON.stringify(muneaAssignTints(arr)));
         if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync();
       } catch (e) {}
     }
@@ -8425,7 +8454,9 @@ function init() {
     try { const v = JSON.parse(localStorage.getItem('munea.circleMembers')); if (Array.isArray(v)) arr = v; } catch (e) {}
     if (!arr.length) return [circleSelfMember()];
     const me = circleSelfMember();
-    return arr.map(m => (m && m.self) ? Object.assign({}, m, { name: me.name, init: me.init, tint: me.tint }) : m);
+    // 每個畫面都經過這裡，所以配色放在這一關——不管名單是雲端來的、舊版存的、
+    // 還是根本沒帶顏色，拿到手的一定是「八個真的存在的色號、同一家人不撞色」。
+    return muneaAssignTints(arr.map(m => (m && m.self) ? Object.assign({}, m, { name: me.name, init: me.init, tint: me.tint }) : m));
   }
   function saveCircle(a2) {
     try { localStorage.setItem('munea.circleMembers', JSON.stringify(a2)); } catch (e) {}
@@ -8440,7 +8471,7 @@ function init() {
       const action = m.self
         ? `<span class="fc-you">${muneaT('familyCircle.you', '本人')}</span>`
         : `<button type="button" class="fc-remove" data-name="${m.name}">${muneaT('familyCircle.remove', '移除')}</button>`;
-      return '<div class="rl"><span class="init-ava ' + m.tint + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
+      return '<div class="rl"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
     // 「退出這個健康圈」只在圈裡真的還有別人時才給（Edward 2026-07-30）：
@@ -8783,7 +8814,7 @@ function init() {
       const allBtn = fs.querySelector('[data-person="all"]');
       const invBtn = fs.querySelector('[data-person="invite"]');
       fs.innerHTML = (allBtn ? allBtn.outerHTML : '') + mem.map(m =>
-        '<button class="fam-switch-item" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '"><span class="fs-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span><span class="fs-name">' + m.name + '</span></button>'
+        '<button class="fam-switch-item" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + muneaSafeTint(m.tint, m.name) + '"><span class="fs-av"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + famInit(m) + '</span></span><span class="fs-name">' + m.name + '</span></button>'
       ).join('') + (invBtn ? invBtn.outerHTML : '');
     }
     const hl = $('#healthList');
@@ -8810,8 +8841,8 @@ function init() {
       const txt = rv
         ? muneaT('family.status.updatedAt', '數據更新於 {day}', { day: familyDay })
         : muneaT('family.status.waiting', '等他加入連上，就看得到狀態');
-      return '<div class="health-row" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + (m.tint || '') + '">' +
-        '<span class="hr-av"><span class="init-ava ' + (m.tint || '') + '">' + famInit(m) + '</span></span>' +
+      return '<div class="health-row" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + muneaSafeTint(m.tint, m.name) + '">' +
+        '<span class="hr-av"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + famInit(m) + '</span></span>' +
         '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
         '<div class="hr-status ' + st.cls + '"><span class="hr-dot"></span><span class="hr-slabel">' + st.label + '</span></div></div>';
     }).join('') : '<div class="fam-empty">' + muneaT('familyCircle.emptyRosterTitle', '圈裡還沒有家人') + '<br>' + muneaT('familyCircle.emptyRosterBody', '點上面「邀請」把家人拉進來，就看得到大家的狀態') + '</div>';
@@ -9797,7 +9828,7 @@ function init() {
       return;
     }
     box.innerHTML = mem.map(m =>
-      '<button type="button" class="iv on" data-name="' + chalEsc(m.name) + '"><span class="iv-ava"><span class="init-ava ' + chalEsc(m.tint || '') + '">' + chalEsc(famInit(m)) + '</span></span>' + chalEsc(m.name) + '</button>'
+      '<button type="button" class="iv on" data-name="' + chalEsc(m.name) + '"><span class="iv-ava"><span class="init-ava ' + chalEsc(muneaSafeTint(m.tint, m.name)) + '">' + chalEsc(famInit(m)) + '</span></span>' + chalEsc(m.name) + '</button>'
     ).join('');
   }
   if ($('#newChalBtn')) $('#newChalBtn').addEventListener('click', () => {
@@ -10157,9 +10188,30 @@ function init() {
       goal = '';
       note = '';
     } else if (act.kind === 'draw') {
+      // 以前這張卡只有一行標題跟時間，中間整片空白（Edward 2026-08-01 一眼看出來）。
+      // 抽獎最該讓人看到的是「有什麼獎」跟「我抽了沒」——前者決定他想不想點進去，
+      // 後者是他每次打開 App 最想確認的一件事。
       chip = (actLegacyDraw(act) ? muneaT('activity.drawChip', '{when}開獎', { when: drawWhen(act) }) : muneaT('activity.drawChipDue', '{when}截止', { when: drawWhen(act) }));
-      goal = '';
-      note = '';
+      const dPrizes = actPrizes(act);
+      goal = dPrizes.map(p => p.name).join(muneaT('common.listSeparator', '、'));
+      const dPicks = act.picks || {};
+      const dPicked = Object.keys(dPicks).length;
+      const total = (act.names || []).length + 1;
+      note = actLegacyDraw(act)
+        ? muneaT('activity.drawCardPeople', '{total} 個人有機會', { total })
+        : (dPicked
+          ? muneaT('activity.drawCardProgress', '{total} 個人有機會，已經抽了 {n} 個', { total, n: dPicked })
+          : muneaT('activity.drawCardPeople', '{total} 個人有機會', { total }));
+      // 「我抽了沒」是他每次打開 App 最想確認的一件事，要能一眼看到、不必點進去
+      if (!actLegacyDraw(act)) {
+        const mine = dPicks['你'];
+        const soldOut = !prizeSeatsLeft(act);
+        act._stateTag = mine
+          ? { cls: 'got', text: muneaT('activity.drawStateGot', '你抽到 {prize}', { prize: mine }) }
+          : (mine === '' ? { cls: 'miss', text: muneaT('activity.drawStateMiss', '這次沒抽到') }
+            : (soldOut ? { cls: 'over', text: muneaT('activity.drawStateSoldOut', '獎都被抽完了') }
+              : { cls: 'todo', text: muneaT('activity.drawStateTodo', '還沒抽') }));
+      }
     } else {
       chip = act.dateLabel || act.dueLabel || muneaT('activity.inProgress', '進行中');
       goal = muneaT('activity.eventGoal', '{title}，誰能到？', { title: (act.title || muneaT('activity.defaultEventTitle', '家庭活動')) + (act.place ? ' · ' + act.place : '') });
@@ -10176,7 +10228,9 @@ function init() {
         (act.kind === 'event' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.event', '揪一攤'), title: act.title || muneaT('activity.defaultEventTitle', '家庭活動') }) : act.kind === 'vote' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.vote', '投票'), title: act.title || muneaT('activity.defaultVoteTitle', '家庭投票') }) : act.kind === 'draw' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.draw', '抽獎'), title: (actPrizes(act).length > 1 ? (act.title || muneaT('activity.defaultDrawTitle', '家庭抽獎')) : (act.prize || muneaT('activity.defaultDrawTitle', '家庭抽獎'))) }) : muneaT('activity.kickerInvited', '邀請已送出 · {title}', { title: act.title || muneaT('activity.defaultEventTitle', '家庭活動') })) +
         '<span class="qc-days">' + chip + '</span></div>' +
         (goal ? '<div class="qc-goal">' + goal + '</div>' : '') +
+        (act._stateTag ? '<div class="qc-state ' + act._stateTag.cls + '">' + muneaEscapeHtml(act._stateTag.text) + '</div>' : '') +
         (note ? '<div class="qc-num">' + note + '</div>' : '') + rwLine;
+      delete act._stateTag;
     }
     // 點整張卡片＝打開完整活動詳情頁（投票／作答／開獎／管理／刪除都在裡面）
     card.style.cursor = 'pointer';
@@ -10282,6 +10336,11 @@ function init() {
   }
   function prizeSeats(act) {
     return actPrizes(act).reduce((s, p) => s + p.count, 0);
+  }
+  // 還剩幾個名額沒被抽走（0 ＝ 獎都發完了）
+  function prizeSeatsLeft(act) {
+    const taken = Object.values((act && act.picks) || {}).filter(Boolean).length;
+    return Math.max(0, prizeSeats(act) - taken);
   }
   // 開獎：把抽過票的人洗牌，再照獎項順序一個一個發下去。
   // 兩條規矩：① 一個人只中一個獎（洗完就照順序取，不會重複）
@@ -10612,6 +10671,12 @@ function init() {
             : muneaT('activity.drawWaitHost', '等發起的人開獎')) + '</div>');
       const now = wrap.querySelector('.draw-now');
       if (now) now.addEventListener('click', () => revealWinner());
+    } else if (myPick === undefined && !prizeSeatsLeft(act)) {
+      // 獎已經被抽光了：先講清楚，不要讓他滿懷期待按下去才落空
+      wrap.innerHTML = prizeBoard +
+        '<div class="draw-got miss"><div class="dg-txt"><b>' + muneaT('activity.drawSoldOutTitle', '獎都被抽完了') + '</b>' +
+        '<small>' + muneaT('activity.drawSoldOutSub', '這場來晚了一步，下次早點來') + '</small></div></div>' +
+        drawnLine();
     } else if (myPick === undefined) {
       // 還沒抽：這是每個人自己的動作，不分發起人或參加者
       wrap.innerHTML = prizeBoard + '<div class="qc-num">' + muneaT('activity.drawPickHint2', '點一下就知道自己抽到什麼，{when}截止', { when: drawWhen(act) }) + '</div>' +
@@ -10622,7 +10687,9 @@ function init() {
         savePicks();
         // 翻牌：獎項名快速跳動後定格在自己抽到的那個
         const names = actPrizes(act).map(p => p.name);
-        wrap.innerHTML = '<div class="draw-stage"><div class="ds-gift">' + GIFT + '</div><div class="draw-roll"><span class="dr-name dr-prize">…</span><small>' + muneaT('activity.drawPicking2', '看看抽到什麼…') + '</small></div></div>';
+        // 這一層要自己帶彩帶的容器——throwConfetti() 是往 .draw-confetti 裡塞紙片的，
+        // 少了它抽中就完全沒有彩帶（改成當場開獎之後漏掉的，2026-08-01 抓到）
+        wrap.innerHTML = '<div class="draw-stage"><div class="draw-confetti"></div><div class="ds-gift">' + GIFT + '</div><div class="draw-roll"><span class="dr-name dr-prize">…</span><small>' + muneaT('activity.drawPicking2', '看看抽到什麼…') + '</small></div></div>';
         const el = wrap.querySelector('.dr-prize');
         let i = 0, delay = 65;
         const flip = () => {
@@ -10630,8 +10697,9 @@ function init() {
           if (delay < 310) { delay *= 1.15; setTimeout(flip, delay); }
           else {
             el.textContent = got || muneaT('activity.drawMissShort', '沒抽到');
+            el.classList.add('locked');   // 定格「咚」一下，讓結果落地有重量
             if (got) throwConfetti();
-            setTimeout(() => { renderDrawBody(act, card); wrap.remove(); }, 820);
+            setTimeout(() => { renderDrawBody(act, card); wrap.remove(); }, 900);
           }
         };
         flip();
@@ -10699,11 +10767,26 @@ function init() {
     } else if (kind === 'draw') {
       const prizeRows = readPrizeRows();
       if (!prizeRows.length) { toast(muneaT('activity.fillPrizeFirst', "先填獎品，抽起來才有趣")); return; }
+      // 名額比人多＝一定發不完。先擋一次講清楚，不然他等到截止才發現獎沒送出去。
+      const seats = prizeRows.reduce((s, p) => s + p.count, 0);
+      const joiners = names.length + 1;
+      if (seats > joiners && $('#startChalBtn').dataset.seatWarn !== '1') {
+        $('#startChalBtn').dataset.seatWarn = '1';
+        setTimeout(() => { if ($('#startChalBtn')) $('#startChalBtn').dataset.seatWarn = ''; }, 6000);
+        toast(muneaT('activity.prizeMoreThanPeople', '獎有 {seats} 個、人只有 {people} 位，會發不完。要這樣就再按一次送出', { seats, people: joiners }));
+        return;
+      }
       act.prizes = prizeRows;
       act.prize = prizeRows[0].name;   // 舊欄位留著：通知、記錄簿、家人動態都還在讀它
       const dd0 = ($('#drawDate') && $('#drawDate').value) ? new Date($('#drawDate').value + 'T00:00') : new Date();
       const dd = isNaN(dd0) ? new Date() : dd0;
       const dtv = ($('#drawTime') && $('#drawTime').value) || '20:00';
+      // 截止時間不能設到過去——設了就是建好立刻過期，卡片隔天早上直接消失
+      const dueAt = new Date(isoOf(dd) + 'T' + dtv + ':00');
+      if (!Number.isNaN(dueAt.getTime()) && dueAt.getTime() < Date.now()) {
+        toast(muneaT('activity.drawDueInPast', '截止時間已經過了，改一個晚一點的'));
+        return;
+      }
       act.dateISO = isoOf(dd);
       act.when = fmtDay(dd) + ' ' + _clock12(dtv);
       act.title = muneaT('activity.luckyDrawTitle', '幸運抽獎');
@@ -11096,7 +11179,7 @@ function init() {
     const mem = safetyMembers();
     picks.innerHTML = mem.length ? mem.map(m =>
       '<button type="button" class="safety-pick' + (sel.includes(m.name) ? ' on' : '') + '" data-name="' + m.name + '">' +
-      '<span class="init-ava ' + (m.tint || '') + '">' + (m.init || (m.name || '')[0] || '') + '</span><span class="sp-name">' + m.name + '</span>' +
+      '<span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + (m.init || (m.name || '')[0] || '') + '</span><span class="sp-name">' + m.name + '</span>' +
       '<span class="sp-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></button>').join('')
       : '<p class="modal-sub" style="margin:4px 0 0">' + muneaT('familyCircle.emptyContactPick', '圈裡還沒有家人。先到「家人」頁邀請家人加入，就能選緊急聯絡人。') + '</p>';
     updateSafetyCount();

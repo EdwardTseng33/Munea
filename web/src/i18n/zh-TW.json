@@ -1620,5 +1620,15 @@
   "activity.drawEveryoneDone": "{n} 個人都抽完了",
   "activity.claimYouGiveSelf": "獎品是你自己出的，記得留著",
   "activity.drawLegacyWait": "這場抽獎用的是舊的玩法，{when}由發起的人開獎",
-  "activity.drawChipDue": "{when}截止"
+  "activity.drawChipDue": "{when}截止",
+  "activity.drawStateTodo": "還沒抽",
+  "activity.drawStateGot": "你抽到 {prize}",
+  "activity.drawStateMiss": "這次沒抽到",
+  "activity.drawStateSoldOut": "獎都被抽完了",
+  "activity.drawCardPeople": "{total} 個人有機會",
+  "activity.drawCardProgress": "{total} 個人有機會，已經抽了 {n} 個",
+  "activity.drawSoldOutTitle": "獎都被抽完了",
+  "activity.drawSoldOutSub": "這場來晚了一步，下次早點來",
+  "activity.prizeMoreThanPeople": "獎有 {seats} 個、人只有 {people} 位，會發不完。要這樣就再按一次送出",
+  "activity.drawDueInPast": "截止時間已經過了，改一個晚一點的"
 }

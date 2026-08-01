@@ -1620,5 +1620,15 @@
   "activity.drawEveryoneDone": "All {n} have drawn",
   "activity.claimYouGiveSelf": "You are providing this prize - keep it aside",
   "activity.drawLegacyWait": "This draw uses the older style - the host draws at {when}",
-  "activity.drawChipDue": "Closes {when}"
+  "activity.drawChipDue": "Closes {when}",
+  "activity.drawStateTodo": "Not drawn yet",
+  "activity.drawStateGot": "You got {prize}",
+  "activity.drawStateMiss": "No prize this time",
+  "activity.drawStateSoldOut": "All prizes taken",
+  "activity.drawCardPeople": "{total} in the running",
+  "activity.drawCardProgress": "{total} in the running, {n} have drawn",
+  "activity.drawSoldOutTitle": "All prizes taken",
+  "activity.drawSoldOutSub": "A bit late this time - catch the next one",
+  "activity.prizeMoreThanPeople": "{seats} prizes but only {people} people - some will go unclaimed. Tap send again to keep it",
+  "activity.drawDueInPast": "That closing time has already passed - pick a later one"
 }

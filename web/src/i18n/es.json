@@ -1620,5 +1620,15 @@
   "activity.drawEveryoneDone": "Los {n} ya sacaron",
   "activity.claimYouGiveSelf": "Tú pones este premio: guárdalo",
   "activity.drawLegacyWait": "Este sorteo usa el estilo anterior: lo sortea quien lo creó el {when}",
-  "activity.drawChipDue": "Cierra el {when}"
+  "activity.drawChipDue": "Cierra el {when}",
+  "activity.drawStateTodo": "Aún no sacaste",
+  "activity.drawStateGot": "Te tocó {prize}",
+  "activity.drawStateMiss": "Esta vez no te tocó",
+  "activity.drawStateSoldOut": "Ya no quedan premios",
+  "activity.drawCardPeople": "{total} participan",
+  "activity.drawCardProgress": "{total} participan; ya sacaron {n}",
+  "activity.drawSoldOutTitle": "Ya no quedan premios",
+  "activity.drawSoldOutSub": "Llegaste un poco tarde; a la próxima",
+  "activity.prizeMoreThanPeople": "{seats} premios y solo {people} personas: sobrarán. Toca enviar otra vez para dejarlo así",
+  "activity.drawDueInPast": "Esa hora de cierre ya pasó: elige una más tarde"
 }

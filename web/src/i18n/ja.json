@@ -1620,5 +1620,15 @@
   "activity.drawEveryoneDone": "{n} 人全員がひきました",
   "activity.claimYouGiveSelf": "この賞品はあなたが用意したものです",
   "activity.drawLegacyWait": "この抽選は以前の方式です。{when}に主催者が抽選します",
-  "activity.drawChipDue": "{when}締切"
+  "activity.drawChipDue": "{when}締切",
+  "activity.drawStateTodo": "まだひいていません",
+  "activity.drawStateGot": "{prize} が当たりました",
+  "activity.drawStateMiss": "今回ははずれました",
+  "activity.drawStateSoldOut": "賞はすべて出ました",
+  "activity.drawCardPeople": "{total} 人にチャンス",
+  "activity.drawCardProgress": "{total} 人中 {n} 人がひきました",
+  "activity.drawSoldOutTitle": "賞はすべて出ました",
+  "activity.drawSoldOutSub": "今回は一歩遅かったようです。次回はお早めに",
+  "activity.prizeMoreThanPeople": "賞 {seats} 個に対して人は {people} 人。余ります。このままでよければもう一度送信",
+  "activity.drawDueInPast": "締切時刻が過ぎています。もう少し先にしてください"
 }
