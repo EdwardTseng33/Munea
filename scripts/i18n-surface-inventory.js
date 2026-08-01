@@ -92,6 +92,11 @@ function applyNonUserFacingReview(relativePath, candidates, review = loadNonUser
         'zh-intent-matcher',
         'family-feed-recipient-locale',
         'brand-proper-noun',
+        // 畫面上的預設值，程式一開頁就依狀態覆蓋（2026-08-01）：這些元素刻意不掛
+        // data-i18n——掛了會被巡邏的翻譯層把程式算出來的真話蓋回寫死的那一句
+        //（同一天踩三次：蘋果健康「目前未同步」、情緒卡點了不會變、用藥卡「尚未服用」）。
+        // 使用者看不到這些字，但它們仍是原始碼裡的中文，所以要在這裡登記、不是放著不管。
+        'markup-placeholder-overwritten-at-runtime',
       ]
         .includes(entry.reasonCode)
     ) {
