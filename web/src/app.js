@@ -2617,6 +2617,7 @@ async function handleVoiceAction(action, args) {
     const r = fn ? await fn({
       kind: args.kind, dateISO: args.date, time: args.time, title: args.title,
       options: args.options, prizes: args.prizes, questionCount: args.questionCount,
+      stepGoal: args.stepGoal,
     }) : { ok: false, error: 'unsupported_action' };
     if (typeof toast === 'function') {
       // 缺東西要講清楚缺什麼——說「我沒聽清楚」會讓他重講一百次都沒用
@@ -10033,6 +10034,13 @@ function init() {
       act.startISO = isoOf(today);
       act.days = Math.max(1, Math.round((day - day0) / 86400000));
       act.dateISO = dateISO; act.dueTime = time; act.dueLabel = dueLabel;
+      // 步數目標：跟畫面上自己開的一樣、預設三萬步。
+      // 少了這個，卡片會印出「大家一起走 非數值 步」（2026-08-01 截圖才看見——
+      // 文字測試只看回傳 ok，看不到卡片上寫什麼）。
+      const goalRaw = Number(a.stepGoal);
+      act.goal = (Number.isFinite(goalRaw) && goalRaw >= 1000 && goalRaw <= 200000)
+        ? Math.round(goalRaw / 1000) * 1000
+        : 30000;
       act.title = muneaT('activity.exercise', '一起運動');
     } else if (kind === 'quiz') {
       const n = Number(a.questionCount);
