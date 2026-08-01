@@ -2730,13 +2730,18 @@ def worker_clock_patrol_response(data=None):
     data = data or {}
     gateway_url = str(data.get("gatewayUrl") or os.environ.get("MUNEA_CALL_CONTROL_URL") or "").strip()
     app_key = str(os.environ.get("MUNEA_APP_KEY") or "").strip()
+    # 兩把鑰匙不一樣、拿錯會被擋在門外（2026-08-01 首掛踩過）：
+    #   MUNEA_GATEWAY_ADMIN_KEY = 問總機要工作卡清單用的（Authorization: Bearer）
+    #   MUNEA_APP_KEY           = 直接問某張卡 /health 用的（?key=）
+    gateway_key = str(os.environ.get("MUNEA_GATEWAY_ADMIN_KEY") or "").strip()
     threshold = float(data.get("thresholdSeconds") or WORKER_CLOCK_SKEW_THRESHOLD_SECONDS)
-    if not gateway_url or not app_key:
+    if not gateway_url or not app_key or not gateway_key:
         return {"ok": False, "error": "gateway_or_key_missing", "checked": 0}
 
     try:
         request = urllib.request.Request(
-            gateway_url.rstrip("/") + "/health", headers={"x-munea-key": app_key}
+            gateway_url.rstrip("/") + "/health",
+            headers={"Authorization": "Bearer " + gateway_key, "Accept": "application/json"},
         )
         with urllib.request.urlopen(request, timeout=10) as response:
             health = json.loads(response.read().decode("utf-8"))

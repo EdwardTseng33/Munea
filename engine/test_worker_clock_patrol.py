@@ -19,6 +19,7 @@ from unittest.mock import patch
 os.environ.setdefault("GEMINI_API_KEY", "clock-patrol-test-key")
 os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
 os.environ["MUNEA_APP_KEY"] = "test-app-key"
+os.environ["MUNEA_GATEWAY_ADMIN_KEY"] = "test-gateway-key"
 os.environ["MUNEA_CALL_CONTROL_URL"] = "https://gateway.example"
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -149,6 +150,47 @@ class BrainKnowsTheGatewayTests(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "..", "deploy", "cloudrun", name)
         with open(path, encoding="utf-8") as source:
             return source.read()
+
+    def test_uses_the_gateway_key_not_the_app_key(self):
+        """兩把鑰匙不一樣：問總機要清單用 MUNEA_GATEWAY_ADMIN_KEY（Bearer），
+        直接問某張卡用 MUNEA_APP_KEY（?key=）。2026-08-01 首掛時拿錯，
+        被總機回 valid bearer token or client key required。"""
+        captured = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self):
+                return json.dumps(gateway_with([])).encode("utf-8")
+
+        def fake_urlopen(request, timeout=None):
+            captured["headers"] = dict(getattr(request, "headers", {}) or {})
+            return FakeResponse()
+
+        with patch.object(server.urllib.request, "urlopen", side_effect=fake_urlopen):
+            server.worker_clock_patrol_response({})
+        auth = captured["headers"].get("Authorization", "")
+        self.assertIn("test-gateway-key", auth, "問總機要用總機的鑰匙")
+        self.assertNotIn("test-app-key", auth, "拿錯鑰匙會被總機擋在門外")
+
+    def test_both_deploy_scripts_hand_the_brain_the_gateway_key(self):
+        for name in ("canary-deploy.sh", "prod-deploy.sh"):
+            path = os.path.join(os.path.dirname(__file__), "..", "deploy", "cloudrun", name)
+            with open(path, encoding="utf-8") as source:
+                text = source.read()
+            brain_secrets = next(
+                (l for l in text.splitlines() if "--update-secrets" in l and "MUNEA_ADMIN_PASSWORD" in l),
+                "",
+            )
+            self.assertTrue(brain_secrets, "%s 找不到大腦的保險箱那一行" % name)
+            self.assertIn(
+                "MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key", brain_secrets,
+                "%s 的大腦拿不到總機鑰匙——巡邏會被總機擋下" % name,
+            )
 
     def test_both_deploy_scripts_give_the_brain_the_gateway_url(self):
         for name, env_marker in (
