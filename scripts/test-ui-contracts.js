@@ -414,6 +414,68 @@ assert(/\.auth-actions\s*\{[^}]*justify-content:\s*center/s.test(css),
   'With only one button left, the account-card action column must stay vertically centered');
 assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:\s*var\(--ink\);/s.test(css), 'Development account must use the single TEST badge design (soft orange chip, ink text — orange is not a text color)');
 
+/* 程式會依狀態改寫的文字，不可以同時掛 data-i18n（2026-08-01 同一天踩兩次）
+ *
+ * 畫面上有一個一直在巡邏的翻譯層（dom-localizer 的 MutationObserver）：只要有元素被重新
+ * 加進畫面，它就對那些帶 data-i18n 的節點無條件套用翻譯值。所以「程式算出來的文字」＋
+ * 「data-i18n」放在同一個元素上，結果永遠是後者贏——而且是在使用者眼前被蓋回去。
+ *
+ * 早上：蘋果健康那行說明永遠寫著「目前未同步」（程式其實有四種說法）。
+ * 下午：情緒卡點「愉悅」，上面永遠停在「平靜」（連下面那句陪伴語也一起卡住）。
+ *
+ * 這類元素的翻譯要走程式裡的 t()／muneaUiT()，切語言時靠 munea:locale-ready 重畫。 */
+[
+  ['moodLabel', '情緒卡的心情名稱（decorate 依他今天記的心情算）'],
+  ['moodNote', '情緒卡的陪伴語（跟著心情換）'],
+  ['moodPeriodLabel', '情緒卡的「今天／寧寧從聊天感覺到的」'],
+  ['moodChip', '情緒卡右上角的狀態籤'],
+  ['cnHealthHelp', '蘋果健康的說明（依連線狀態四選一）'],
+].forEach(([id, why]) => assert(
+  new RegExp(`id="${id}"(?![^>]*data-i18n)`).test(html),
+  `#${id} 不可以掛 data-i18n——${why}，掛了會被巡邏的翻譯層蓋回寫死的那一句`,
+));
+
+/* 情緒卡的陪伴語不可以替使用者宣稱他做過什麼（Edward 2026-08-01）
+ *
+ * 舊文案是「今天特別開心，還主動說想出去走走」「心情很好，剛剛還哼了首歌呢」——
+ * 他只是點了一個表情，那些細節是憑空編的。長輩看到會以為 App 在亂記他的事。
+ * 也不可以出現 AI 的名字：角色是使用者自己選的、名字會變。
+ *
+ * 現在的規則：只複述他點的那個心情詞 ＋ 我們真的做了的事（記下了／陪著你）。 */
+['zh-TW', 'en', 'ja', 'es'].forEach((loc) => {
+  const catalog = JSON.parse(fs.readFileSync(`web/src/i18n/${loc}.json`, 'utf8'));
+  const moodKeys = Object.keys(catalog).filter((key) => key.startsWith('mood.'));
+  moodKeys.forEach((key) => assert(
+    !/\{companion\}/.test(catalog[key]),
+    `${loc} 的 ${key} 帶了 AI 名字——角色是使用者選的、名字會變，情緒卡不該提`,
+  ));
+  // 已經編過的那幾句，一個字都不准回來。
+  // 老實說：這道門擋得住回歸，擋不住「新發明的」編造——那最後要靠人看。
+  // 所以另外綁兩件可以機器判的事：長度上限、以及必須複述他點的那個心情詞。
+  const INVENTED = [
+    /主動說/, /還哼/, /哼了/, /話比較少/, /有記著/, /膝蓋/,
+    /wanted to go/i, /humming/i, /been quieter/i, /soreness/i,
+    /散歩に行きたい/, /鼻歌/, /口数が少ない/, /膝の/,
+    /te apetecía/i, /tarareabas/i, /has hablado menos/i, /rodilla/i,
+  ];
+  ['happy', 'pleasant', 'calm', 'low', 'anxious', 'angry'].forEach((mood) => {
+    const note = catalog[`mood.note.${mood}`];
+    assert(note, `${loc} 缺 mood.note.${mood}`);
+    INVENTED.forEach((pattern) => assert(
+      !pattern.test(note),
+      `${loc} 的 mood.note.${mood} 又在替他宣稱做過什麼（${pattern}）——他只是點了一個表情`,
+    ));
+    // 中日一個字塞得下的資訊量，拉丁文字要用兩三倍的字元寫，門檻不能共用一個數字
+    const cap = (loc === 'en' || loc === 'es') ? 64 : 26;
+    assert(note.length <= cap, `${loc} 的 mood.note.${mood} 太長了（${note.length}／上限 ${cap}）——這格只該有「他點的心情＋我們做了什麼」`);
+    // 拉丁語系的標籤是大寫開頭、句子裡多半小寫，比對要忽略大小寫
+    const label = catalog[`mood.${mood}`];
+    const word = String(label || '').split(/[／/]/)[0].trim().toLowerCase();
+    assert(word && note.toLowerCase().includes(word),
+      `${loc} 的 mood.note.${mood} 沒有複述他點的「${label}」——這格的規則是只講他選的那個詞`);
+  });
+});
+
 const authSheet = html.match(/<div class="modal-mask auth-sheet" id="authSheet"[\s\S]*?<\/div>\s*<!-- ===== 底部 5 分頁 ===== -->/)?.[0] || '';
 assert(authSheet.includes('id="authAppleBtn"') && authSheet.includes('id="authGoogleBtn"'), 'Auth sheet must keep Apple and Google sign-in');
 assert(!/authEmailInput|authEmailBtn|電子信箱登入|寄登入信/.test(authSheet), 'Consumer auth sheet must not expose personal email sign-in');
@@ -499,6 +561,29 @@ assert(app.includes("'subscription.monthlyVoiceCredits'"), '方案卡的點數�
 // 原本卡片這一行也要再講一次，同一個畫面上同一句話講兩遍——Edward 2026-08-01：
 // 「上面已經有寫了，不用一直重複」。揭露沒有變少（規則那排仍被守著），只是不重複、也不會折行。
 assertCatalogSays('subscription.monthlyVoiceCredits', { 'zh-TW': /\{credits\} 點/, en: /\{credits\} voice-companion credits/i }, '方案卡的每月點數必須寫明點數，且由文案表帶入數字');
+
+// 同一段字不可以印兩次：元素底下已經有 data-i18n 的子節點時，
+// 補字的小工具必須直接放棄，否則外語版會出現「Report a problemReport a problem」。
+// 2026-08-01 Edward 在西班牙文版抓到，四處都犯（意見分類四顆鈕／選圖片／三條健康警訊／我吃過了）。
+// 中文版永遠測不出來——localizeCanonicalLegacyPanels 開頭就對 zh-TW 直接 return。
+assert(
+  /function setElementOwnText[\s\S]{0,600}?querySelector\('\[data-i18n\]'\)\)\s*return;/.test(app),
+  'setElementOwnText 必須在元素底下已有 data-i18n 時放棄，否則外語版會把同一句印兩次',
+);
+assert(
+  /const setDirectText[\s\S]{0,400}?querySelector\('\[data-i18n\]'\)\)\s*return;/.test(app),
+  'setDirectText 必須在元素底下已有 data-i18n 時放棄，否則外語版會把同一句印兩次',
+);
+
+
+// 拿不到蘋果價格時，外語版不可以退回台幣金額。
+// 「1199 TWD」對西班牙／美國／日本的使用者是錯的價格＋錯的幣別，
+// 蘋果審查看到會當成誤導定價（Edward 2026-08-01 在西班牙文版看到）。
+assert(
+  /function fallbackTwdPrice[\s\S]{0,400}?muneaLocale\(\) !== 'zh-TW'\) return '—';/.test(app),
+  '拿不到蘋果價格時，非中文語系必須顯示破折號，不可以退回台幣金額',
+);
+
 assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {'), 'Credit rule explanation must have dedicated readable styling');
 // 資料匯出說明（2026-07-30 改寫）：這段已經是 data-i18n="data.description" 的翻譯節點，
 // index.html 裡那句中文只是還沒換掉的底稿，跟 zh-TW.json 的正本已經對不起來（正本沒有「立即」兩字）。
