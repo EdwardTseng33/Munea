@@ -930,7 +930,7 @@
       "path": "web/src/app.js",
       "text": "回診",
       "kind": "string",
-      "expectedOccurrences": 3,
+      "expectedOccurrences": 2,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },

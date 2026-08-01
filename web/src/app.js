@@ -1580,9 +1580,26 @@ function aiVisitLabel(dateISO, time) {
     return md + '（' + wd + '）' + tstr;
   } catch (e) { return dateISO + (time ? ' ' + time : ''); }
 }
+// 提前多久提醒（分鐘）。舊資料沒有這個欄位 → 一律當成 120，維持既有行為。
+// 放最外層是因為兩條路都要用：畫面上自己選、以及寧寧用講的幫他設（Edward 2026-08-01）。
+var VISIT_LEAD_DEFAULT = 120;
+var VISIT_LEAD_CHOICES = [0, 30, 60, 120, 1440];
+// 講出來的說法。原本存檔提示寫死「前一天會提醒你」，
+// 提前多久變成他自己選的之後，寫死就會說謊（正式機截圖抓到）。
+function visitLeadSpoken(minutes) {
+  switch (Number(minutes)) {
+    case 0: return muneaT('visit.leadSpokenOnTime', '準時');
+    case 30: return muneaT('visit.leadSpoken30m', '提前 30 分');
+    case 60: return muneaT('visit.leadSpoken1h', '提前 1 小時');
+    case 1440: return muneaT('visit.leadSpoken1d', '提前一天');
+    default: return muneaT('visit.leadSpoken2h', '提前 2 小時');
+  }
+}
 async function aiAddVisitReminder(a) {
   const rawTitle = String((a && a.title) || '').trim();
-  const title = (rawTitle && muneaIsCleanSpeechText(rawTitle)) ? rawTitle : '回診';   // AI 語音辨識可能夾雜外文雜訊，存檔前先守門（Edward 2026-07-15 事故：aiAddVisitReminder / aiAddMedReminder 原本沒接共用守門）
+  // AI 語音辨識可能夾雜外文雜訊，存檔前先守門（Edward 2026-07-15 事故：aiAddVisitReminder / aiAddMedReminder 原本沒接共用守門）。
+  // 退回去的預設名稱原本寫死中文「回診」——日文西文使用者被擋掉時，App 裡就會冒出一個中文詞（2026-08-01 實測看到）。
+  const title = (rawTitle && muneaIsCleanSpeechText(rawTitle)) ? rawTitle : muneaT('visit.defaultTitle', '回診');
   const dateISO = String((a && a.dateISO) || '').trim();
   const time = String((a && a.time) || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { ok: false, error: 'invalid_date_or_time' };
@@ -1592,7 +1609,11 @@ async function aiAddVisitReminder(a) {
   try { arr = JSON.parse(localStorage.getItem('munea.visits') || '[]') || []; } catch (e) {}
   if (!Array.isArray(arr)) arr = [];
   const label = aiVisitLabel(dateISO, time);
-  const visit = { title, dateISO, time, label };
+  // 提前多久只收畫面上有的那五種。她若聽成別的數字（例如 47 分），
+  // 收下來就會變成「畫面上選不到、但存著的是它」——一律退回預設兩小時。
+  const leadRaw = Number(a && a.remindBefore);
+  const remindBefore = VISIT_LEAD_CHOICES.includes(leadRaw) ? leadRaw : VISIT_LEAD_DEFAULT;
+  const visit = { title, dateISO, time, label, remindBefore };
   ensureVisitReminderId(visit);
   arr = arr.filter(v => String(v && v.id) !== String(visit.id));
   arr.push(visit);
@@ -1603,7 +1624,7 @@ async function aiAddVisitReminder(a) {
   try { if (window.MuneaNotify) window.MuneaNotify.sync(); } catch (e) {}
   try { if (window.__muneaRefreshVisitRow) window.__muneaRefreshVisitRow(); } catch (e) {}
   try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
-  return { ok: true, title, label, reminderId: visit.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
+  return { ok: true, title, label, remindBefore, reminderId: visit.id, persistence: cloud && cloud.ok ? 'cloud' : 'device' };
 }
 const CARE_Q_KEY = 'munea.careQuestions';
 /* 上限 5 題（Edward 2026-07-29：「可以多點但不要超過 5 點」）。
@@ -2511,8 +2532,17 @@ async function handleVoiceAction(action, args) {
     return { ok: true, locale, persistence: 'cloud' };
   }
   if (action === 'set_clinic_reminder') {
-    const r = await aiAddVisitReminder({ title: args.title, dateISO: args.date, time: args.time });
-    if (typeof toast === 'function') toast(r.ok ? muneaT('visit.reminderSetToast', '看診提醒設好了：{title} · {label}', { title: r.title, label: r.label }) : muneaT('visit.reminderDateUnclear', '看診日期我沒抓到，你再說一次日期好嗎'));
+    const r = await aiAddVisitReminder({
+      title: args.title, dateISO: args.date, time: args.time, remindBefore: args.remindBefore,
+    });
+    if (typeof toast === 'function') {
+      // 提前多久也要寫在畫面上：她講的跟畫面寫的必須一致，
+      // 不然長輩不知道到底哪個算數。
+      toast(r.ok
+        ? muneaT('visit.reminderSetToastWithLead', '看診提醒設好了：{title} · {label}（{lead}）',
+          { title: r.title, label: r.label, lead: visitLeadSpoken(r.remindBefore) })
+        : muneaT('visit.reminderDateUnclear', '看診日期我沒抓到，你再說一次日期好嗎'));
+    }
     return r;
   }
   if (action === 'add_care_question') {
@@ -2551,6 +2581,27 @@ async function handleVoiceAction(action, args) {
     const fn = window.__muneaAddPersonalEvent;
     const r = fn ? await fn({ title: args.title, dateISO: args.date, time: args.time, place: args.place }) : { ok: false, error: 'unsupported_action' };
     if (typeof toast === 'function') toast(r.ok ? muneaT('schedule.savedToast', '行程記好了：{title} · {label}', { title: r.title, label: r.label }) : muneaT('schedule.dateUnclear', '日期時間我沒抓到，你再說一次好嗎'));
+    return r;
+  }
+  if (action === 'create_family_activity') {
+    const fn = window.__muneaAddFamilyActivity;
+    const r = fn ? await fn({
+      kind: args.kind, dateISO: args.date, time: args.time, title: args.title,
+      options: args.options, prizes: args.prizes, questionCount: args.questionCount,
+    }) : { ok: false, error: 'unsupported_action' };
+    if (typeof toast === 'function') {
+      // 缺東西要講清楚缺什麼——說「我沒聽清楚」會讓他重講一百次都沒用
+      let msg;
+      if (r.ok) msg = muneaT('activity.voiceCreated', '{title}發出去了：{label}', { title: r.title, label: r.label });
+      else if (r.error === 'vote_needs_two_options') msg = muneaT('activity.voteNeedsTwoOptions', '投票至少要兩個選項');
+      else if (r.error === 'vote_question_required') msg = muneaT('activity.voiceVoteQuestionNeeded', '要投什麼？先告訴我題目');
+      else if (r.error === 'draw_prize_required') msg = muneaT('activity.fillPrizeFirst', '先填獎品，抽起來才有趣');
+      else if (r.error === 'activity_time_in_past') msg = muneaT('activity.voicePastDate', '那個日子已經過了，換一天好嗎');
+      // 種類不對是她那邊聽岔了、不是他講錯話——不可以回「日期我沒抓到」害他一直重講日期
+      else if (r.error === 'unsupported_activity_kind') msg = muneaT('activity.voiceKindUnsupported', '這種活動我還開不了，家人那頁可以自己開');
+      else msg = muneaT('activity.voiceDateUnclear', '日期我沒抓到，你再說一次好嗎');
+      toast(msg);
+    }
     return r;
   }
   if (action === 'send_family_relay') {
@@ -9862,19 +9913,6 @@ function init() {
       ? visitDateLabel(d)
       : muneaT('appointment.pickDate', '選日期');
   }
-  // 提前多久提醒（分鐘）。舊資料沒有這個欄位 → 一律當成 120，維持既有行為。
-  var VISIT_LEAD_DEFAULT = 120;
-  // 存檔提示要照他剛剛選的講——原本寫死「前一天會提醒你」，
-  // 現在提前多久是他自己選的，寫死就會說謊（2026-08-01 正式機截圖抓到）。
-  function visitLeadSpoken(minutes) {
-    switch (Number(minutes)) {
-      case 0: return muneaT('visit.leadSpokenOnTime', '準時');
-      case 30: return muneaT('visit.leadSpoken30m', '提前 30 分');
-      case 60: return muneaT('visit.leadSpoken1h', '提前 1 小時');
-      case 1440: return muneaT('visit.leadSpoken1d', '提前一天');
-      default: return muneaT('visit.leadSpoken2h', '提前 2 小時');
-    }
-  }
   function visitLeadMinutes() {
     const on = document.querySelector('#visitLeadChips .mchip.on');
     const raw = on ? Number(on.dataset.m) : NaN;
@@ -9936,6 +9974,61 @@ function init() {
     try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
     try { trackProductEvent('activity_created', { kind: 'event', source: 'voice-ai' }); } catch (e) {}
     return { ok: true, title, label: act.dateLabel };
+  };
+  // 家庭圈另外四種活動也要能用講的開（Edward 2026-08-01：所有家庭圈活動）。
+  // 揪一攤走上面的 __muneaAddPersonalEvent（已驗過的路、不動）；這裡負責
+  // 一起運動／機智問答／投票／抽獎。缺什麼就回什麼錯誤代碼，讓寧寧照著問，
+  // 不要默默用預設值把活動發出去——發出去全家人都看得到，改起來很尷尬。
+  window.__muneaAddFamilyActivity = async function (a) {
+    a = a || {};
+    const kind = String(a.kind || '').trim().toLowerCase();
+    if (!['walk', 'quiz', 'vote', 'draw'].includes(kind)) return { ok: false, error: 'unsupported_activity_kind' };
+    const dateISO = String(a.dateISO || '').trim();
+    const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(a.time || '')) ? String(a.time) : '20:00';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return { ok: false, error: 'invalid_date' };
+    const day = new Date(dateISO + 'T00:00');
+    if (Number.isNaN(day.getTime())) return { ok: false, error: 'invalid_date' };
+    const when = new Date(dateISO + 'T' + time + ':00');
+    if (when.getTime() < Date.now() - 60000) return { ok: false, error: 'activity_time_in_past' };
+    const clean = (v) => {
+      const raw = String(v || '').trim().slice(0, 24);
+      return (raw && muneaIsCleanSpeechText(raw)) ? raw : '';
+    };
+    const act = { id: Date.now(), kind, names: [], owner: myFeedName() };
+    const dueLabel = muneaT('activity.dueAt', '{when} 截止', { when: fmtDay(day) + ' ' + _clock12(time) });
+    if (kind === 'walk') {
+      const today = new Date();
+      const day0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      act.startISO = isoOf(today);
+      act.days = Math.max(1, Math.round((day - day0) / 86400000));
+      act.dateISO = dateISO; act.dueTime = time; act.dueLabel = dueLabel;
+      act.title = muneaT('activity.exercise', '一起運動');
+    } else if (kind === 'quiz') {
+      const n = Number(a.questionCount);
+      act.q = (Number.isFinite(n) && n >= 5 && n <= 20) ? Math.round(n) : 10;
+      act.title = muneaT('activity.quiz', '機智問答');
+      act.dueISO = dateISO; act.dueTime = time; act.dueLabel = dueLabel;
+    } else if (kind === 'vote') {
+      const question = clean(a.title);
+      if (!question) return { ok: false, error: 'vote_question_required' };
+      const opts = (Array.isArray(a.options) ? a.options : []).map(clean).filter(Boolean).slice(0, 3);
+      if (opts.length < 2) return { ok: false, error: 'vote_needs_two_options' };
+      act.title = question; act.opts = opts; act.votes = {};
+      act.dueISO = dateISO; act.dueTime = time; act.dateISO = dateISO; act.dueLabel = dueLabel;
+    } else {
+      const prizes = (Array.isArray(a.prizes) ? a.prizes : []).map(clean).filter(Boolean).slice(0, 3);
+      if (!prizes.length) return { ok: false, error: 'draw_prize_required' };
+      act.prizes = prizes.map(name => ({ name, n: 1 }));
+      act.prize = prizes[0];        // 舊欄位留著：通知、記錄簿、家人動態都還在讀它
+      act.dateISO = dateISO;
+      act.when = fmtDay(day) + ' ' + _clock12(time);
+      act.title = muneaT('activity.luckyDrawTitle', '幸運抽獎');
+    }
+    const acts = loadActs(); acts.push(act); saveActs(acts);
+    try { renderActCard(act); } catch (e) {}
+    try { if (window.__muneaRenderDailyTasks) window.__muneaRenderDailyTasks(); } catch (e) {}
+    try { trackProductEvent('activity_created', { kind: kind, source: 'voice-ai' }); } catch (e) {}
+    return { ok: true, kind, title: act.title, label: act.dueLabel || act.when || '' };
   };
   const FAM_AVA = { '阿嬤': [() => muneaT('demo.family.gmInit', '嬤'), 'p-ama'], '美華': [() => muneaT('demo.family.d1Init', '華'), 'p-mei'], '志明': [() => muneaT('demo.family.s1Init', '明'), 'p-zhi'], '小寶': [() => muneaT('demo.family.g1Init', '寶'), 'p-bao'], '你': [() => muneaT('common.meInitial', '我'), 'p-me'] };
   function buildRankList(act) {
