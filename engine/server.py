@@ -142,6 +142,7 @@ AI_RATE_LIMITED_PATHS = {
     "/perception/topic-plan",
     "/perception/snapshot",
     "/proactive/opening",
+    "/quiz-questions",   # 一次出 10 題＝一次 LLM 呼叫，沒閘的話有人狂建活動就狂燒
 }
 AI_RATE_WINDOW = 60            # 滑動視窗秒數
 AI_RATE_DEFAULT_LIMIT = 60     # 視窗內同一 actor 對同一端點的次數上限
@@ -9231,6 +9232,134 @@ def chat_response(data, char=DEFAULT_CHAR):
     }
 
 
+# ===== 機智問答：由寧寧當場出題（Edward 2026-08-01 拍板 B 案）=====
+#
+# 原本 App 裡是 19 題寫死的示範題庫，四國各自改寫過（不是翻譯——台灣問「哪個節日吃湯圓」，
+# 西班牙版問的是跨年夜吃什麼）。改成當場出題之後，題目永遠新鮮、還能配合他的興趣與所在地。
+#
+# 代價是「AI 當場產內容」的風險，所以這裡的重點不是出題、是**把關**：
+# 出得再好，只要有一題不能用，整份就退回 App 內建題庫——寧可老題目，不要出錯的題目。
+
+QUIZ_MAX_COUNT = 12
+QUIZ_MIN_COUNT = 3
+QUIZ_OPTIONS = 4
+QUIZ_Q_MAX_CHARS = 60
+QUIZ_OPT_MAX_CHARS = 24
+
+# 一出現就整份退回的字眼：政治、宗教、族群、醫療診斷、金錢。
+# 機智問答是全家一起玩的，出到這些不是「答錯」而是「不該問」。
+QUIZ_FORBIDDEN = (
+    "政黨", "選舉", "總統", "統獨", "藍綠", "政治",
+    "宗教", "信仰", "神明", "上帝", "佛祖",
+    "族群", "省籍", "原住民",
+    "診斷", "病因", "癌", "腫瘤", "處方", "劑量", "幾毫克",
+    "股票", "投資", "保險", "貸款",
+    "election", "president", "political", "religion", "diagnosis", "prescription", "dosage",
+    "選挙", "政治", "宗教", "診断", "処方",
+    "elecciones", "política", "religión", "diagnóstico", "receta",
+)
+
+
+def quiz_question_instruction(locale, interests, place, count):
+    """給寧寧的出題指示。難度、配比、禁區都寫死在這裡，不靠她自由發揮。"""
+    lang = localization.normalize_locale(locale)
+    place_line = f"他住在{place}。" if place else ""
+    interest_line = ("他平常喜歡聊：" + "、".join(interests) + "。") if interests else ""
+    return (
+        f"你是陪長輩聊天的照護夥伴。請出 {count} 題機智問答給一位長輩玩，用 {lang} 出題。\n"
+        f"{place_line}{interest_line}\n"
+        "出題規則：\n"
+        "1. 難度＝那個文化裡的長輩「一定知道」的生活常識，不是冷知識、不是考試題。"
+        "答錯會讓人不好意思，答對要有成就感。\n"
+        "2. 配比：一半是身體與安全的常識（走路、睡眠、飲水、過馬路、天氣），"
+        "一半是當地的生活文化（節慶、food、俗語、老歌、季節水果）。\n"
+        "3. 文化題要用**當地人從小聽到大的版本**，不要把別國的題目翻譯過來。\n"
+        "4. 每題四個選項，只有一個明確正確；其他三個要明顯不對，不可以模稜兩可。\n"
+        f"5. 題目最多 {QUIZ_Q_MAX_CHARS} 字，選項最多 {QUIZ_OPT_MAX_CHARS} 字。\n"
+        "6. 「絕對不可以」出這幾類：政治、選舉、宗教、族群、醫療診斷或用藥、金錢投資、"
+        "需要查證的數字或年份（人口、統計、某年發生什麼事）。\n"
+        "7. 不要重複同一個主題，不要出你自己不確定答案的題。\n"
+        "只回 JSON，格式：{\"questions\":[{\"q\":\"題目\",\"opts\":[\"選項1\",\"選項2\",\"選項3\",\"選項4\"],\"a\":0}]}"
+        "（a 是正確選項在 opts 裡的位置，從 0 算起）。不要加任何說明文字。"
+    )
+
+
+def quiz_question_ok(item):
+    """一題一題驗。任何一題不合格，呼叫端就整份丟掉——不做「挑好的留下」，
+    因為挑剩的那份題數會變少、配比也跑掉，不如老實退回內建題庫。"""
+    if not isinstance(item, dict):
+        return False
+    q = str(item.get("q") or "").strip()
+    opts = item.get("opts")
+    a = item.get("a")
+    if not q or len(q) > QUIZ_Q_MAX_CHARS:
+        return False
+    if not isinstance(opts, list) or len(opts) != QUIZ_OPTIONS:
+        return False
+    cleaned = [str(o or "").strip() for o in opts]
+    if any((not o) or len(o) > QUIZ_OPT_MAX_CHARS for o in cleaned):
+        return False
+    if len(set(cleaned)) != QUIZ_OPTIONS:        # 選項重複＝等於少一個選項
+        return False
+    if not isinstance(a, int) or a < 0 or a >= QUIZ_OPTIONS:
+        return False
+    blob = (q + " " + " ".join(cleaned)).lower()
+    if any(bad.lower() in blob for bad in QUIZ_FORBIDDEN):
+        return False
+    return True
+
+
+def quiz_questions_response(data):
+    data = data or {}
+    try:
+        count = int(data.get("count") or 10)
+    except Exception:
+        count = 10
+    count = max(QUIZ_MIN_COUNT, min(QUIZ_MAX_COUNT, count))
+    locale_context = localization.locale_context_from_request(data)
+    locale = locale_context["uiLocale"]
+    interests = [str(x).strip() for x in (data.get("interests") or []) if str(x or "").strip()][:5]
+    place = str(data.get("place") or "").strip()[:40]
+
+    instruction = quiz_question_instruction(locale, interests, place, count)
+    for model in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        try:
+            r = eng.client.models.generate_content(
+                model=model,
+                contents=instruction,
+                config=types.GenerateContentConfig(
+                    temperature=0.9,
+                    response_mime_type="application/json",
+                ),
+            )
+            payload = json.loads(r.text or "{}")
+            items = payload.get("questions")
+            if not isinstance(items, list) or len(items) < count:
+                continue
+            items = items[:count]
+            if not all(quiz_question_ok(item) for item in items):
+                # 有一題不合格就整份不要。這不是保守，是因為長輩玩到一題怪的，
+                # 對整個 App 的信任就掉了——那比題目重複的代價大得多。
+                continue
+            return {
+                "ok": True,
+                "source": "ai",
+                "locale": locale,
+                "questions": [
+                    {
+                        "q": str(item["q"]).strip(),
+                        "opts": [str(o).strip() for o in item["opts"]],
+                        "a": int(item["a"]),
+                    }
+                    for item in items
+                ],
+            }
+        except Exception as e:
+            log_fallback_exception(f"generate quiz questions with {model}", e)
+    # 出不出來、或出的題過不了關：誠實說一聲，App 會用內建題庫，玩得起來就好
+    return {"ok": False, "source": "fallback", "locale": locale, "questions": []}
+
+
 def relationship_state_from_turn(data, context, stored_memories):
     data = data or {}
     context = context or {}
@@ -10019,6 +10148,8 @@ class H(BaseHTTPRequestHandler):
                 self._json({"reply": t, "audio": tts_b64(t, char, data.get("locale"))})
             elif self.path == "/chat":
                 self._json(chat_response(data, char))
+            elif self.path == "/quiz-questions":
+                self._json(quiz_questions_response(data))
             elif self.path == "/voice-session":
                 self._json(voice_session(data))
             elif self.path == "/voice-note":
