@@ -1548,5 +1548,8 @@
   "mood.cardIntro": "記下來的心情，會慢慢長成你自己的一週",
   "activity.walkNoSteps": "還沒有資料",
   "activity.drawWaitOwner": "等{owner}開獎",
-  "activity.drawWaitHost": "等發起的人開獎"
+  "activity.drawWaitHost": "等發起的人開獎",
+  "activity.hideButton": "不看這個活動",
+  "activity.hideConfirm": "從我的畫面收起來？再點一下",
+  "activity.hiddenToast": "收起來了，家人那邊還在"
 }

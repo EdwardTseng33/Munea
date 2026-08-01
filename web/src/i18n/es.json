@@ -1548,5 +1548,8 @@
   "mood.cardIntro": "Lo que anotes va formando tu propia semana",
   "activity.walkNoSteps": "Sin datos aún",
   "activity.drawWaitOwner": "Esperando a que {owner} haga el sorteo",
-  "activity.drawWaitHost": "Esperando a que el anfitrión haga el sorteo"
+  "activity.drawWaitHost": "Esperando a que el anfitrión haga el sorteo",
+  "activity.hideButton": "No ver esta actividad",
+  "activity.hideConfirm": "¿Ocultarla de tu pantalla? Toca otra vez",
+  "activity.hiddenToast": "Ocultada. Tu familia la sigue viendo"
 }

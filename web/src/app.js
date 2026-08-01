@@ -10031,6 +10031,7 @@ function init() {
   function renderActCard(act) {
     const empty = document.getElementById('actEmpty');
     if (!empty) return;
+    if (actHidden(act)) return;   // 我自己收起來的，不畫；活動本身還在，別人照樣看得到
     const card = document.createElement('div');
     card.className = 'quest-card pending';
     let chip, goal, note;
@@ -10092,6 +10093,39 @@ function init() {
   }
   function actParts(act) { return ['你'].concat(act.names || []); }
   function actDisplayName(n) { return n === '你' ? muneaT('activity.selfName', '你') : n; }
+  // 「不看這個活動」＝只從我的畫面收起來（Edward 2026-08-01）。
+  //
+  // 為什麼要分兩種：刪除是把活動從雲端拿掉，全家的都會不見、救不回來——那是發起人的權利。
+  // 但參加的人也需要能整理自己的畫面（一場跟他無關的聚會一直卡在那裡）。
+  // 所以發起人看到「刪除這個活動」、其他人看到「不看這個活動」，各做各的事。
+  //
+  // 這份清單刻意只存在這台手機、不同步：它是「我的畫面偏好」，不是活動資料。
+  // 而且活動最多存在幾天就自動收進記錄簿，換手機重新出現的機會很小，
+  // 不值得為它多開一條同步的水管（多一條就多一個會壞的地方）。
+  const HIDDEN_ACTS_KEY = 'munea.hiddenActs';
+  function loadHiddenActs() {
+    try { const a = JSON.parse(localStorage.getItem(HIDDEN_ACTS_KEY) || '[]'); return Array.isArray(a) ? a.map(String) : []; }
+    catch (e) { return []; }
+  }
+  function actHidden(act) {
+    if (!act || act.id == null) return false;
+    return loadHiddenActs().indexOf(String(act.id)) >= 0;
+  }
+  function hideAct(id) {
+    try {
+      const list = loadHiddenActs();
+      if (list.indexOf(String(id)) < 0) list.push(String(id));
+      localStorage.setItem(HIDDEN_ACTS_KEY, JSON.stringify(list.slice(-60)));
+    } catch (e) {}
+  }
+  // 活動收掉之後，隱藏清單裡那筆就沒意義了——順手清掉，免得這份清單一直長
+  function pruneHiddenActs(currentActs) {
+    try {
+      const alive = new Set((currentActs || []).map(a => String(a && a.id)));
+      const kept = loadHiddenActs().filter(id => alive.has(id));
+      localStorage.setItem(HIDDEN_ACTS_KEY, JSON.stringify(kept));
+    } catch (e) {}
+  }
   // 這場活動是不是我發起的（Edward 2026-08-01：開獎是主人的事，不能誰打開誰就按）。
   // 舊活動沒記發起人，這種一律當「是我的」——不然使用者昨天開的抽獎今天突然按不動，
   // 那是把一個沒壞的東西弄壞。新建的活動從現在起都有記。
@@ -10190,16 +10224,28 @@ function init() {
     if (act.rewards && act.rewards.some(Boolean)) {
       box.insertAdjacentHTML('beforeend', '<div class="ad-sec"><div class="ad-lbl">' + muneaT('activity.rewardsLabel', '小獎勵') + '</div><div class="ad-rewards">' + act.rewards.map((r, i) => r ? '<div>' + muneaT('activity.rewardRankItem', '第 {rank} 名 · {prize}', { rank: i + 1, prize: r }) + '</div>' : '').filter(Boolean).join('') + '</div></div>');
     }
+    // 刪除是把活動從雲端拿掉、全家的都會不見——那是發起人的事。
+    // 參加的人給「不看這個活動」：只收起自己的畫面，別人照樣看得到（Edward 2026-08-01）。
+    const mine = actIsMine(act);
     const del = document.createElement('button');
-    del.className = 'ad-del'; del.type = 'button';
-    del.innerHTML = '<svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg><span>' + muneaT('activity.deleteButton', '刪除這個活動') + '</span>';
+    del.className = mine ? 'ad-del' : 'ad-del ad-hide'; del.type = 'button';
+    const idleLabel = () => mine ? muneaT('activity.deleteButton', '刪除這個活動') : muneaT('activity.hideButton', '不看這個活動');
+    const armLabel = () => mine ? muneaT('activity.deleteConfirm', '確定刪除？再點一下') : muneaT('activity.hideConfirm', '從我的畫面收起來？再點一下');
+    const ICON = mine
+      ? '<svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg>'
+      : '<svg class="ic" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.4 5.2A9.5 9.5 0 0 1 12 5c5 0 9 4.5 9 7a11 11 0 0 1-2.4 3.5M6.5 6.9C4 8.4 3 10.7 3 12c0 2.5 4 7 9 7a9.6 9.6 0 0 0 3.4-.6"/></svg>';
+    del.innerHTML = ICON + '<span>' + idleLabel() + '</span>';
     del.addEventListener('click', () => {
-      if (del.dataset.arm !== '1') { del.dataset.arm = '1'; del.classList.add('arm'); del.querySelector('span').textContent = muneaT('activity.deleteConfirm', '確定刪除？再點一下'); setTimeout(() => { del.dataset.arm = ''; del.classList.remove('arm'); const s = del.querySelector('span'); if (s) s.textContent = muneaT('activity.deleteButton', '刪除這個活動'); }, 3200); return; }
-      const acts = loadActs().filter(a => a.id !== act.id); saveActs(acts);
+      if (del.dataset.arm !== '1') { del.dataset.arm = '1'; del.classList.add('arm'); del.querySelector('span').textContent = armLabel(); setTimeout(() => { del.dataset.arm = ''; del.classList.remove('arm'); const s = del.querySelector('span'); if (s) s.textContent = idleLabel(); }, 3200); return; }
+      if (mine) {
+        const acts = loadActs().filter(a => a.id !== act.id); saveActs(acts);
+      } else {
+        hideAct(act.id);   // 資料一動都不動，只記「我不看」
+      }
       const c = card || document.querySelector('[data-act-id="' + act.id + '"]'); if (c) c.remove();
       updateActEmpty();
       sheet.classList.remove('show');
-      toast(muneaT('activity.deletedToast', "活動刪除了"));
+      toast(mine ? muneaT('activity.deletedToast', '活動刪除了') : muneaT('activity.hiddenToast', '收起來了，家人那邊還在'));
     });
     body.appendChild(del);
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();   // 有上傳帳號照片的（本人）→ 圓形頭像帶照片
@@ -10417,6 +10463,7 @@ function init() {
       } else { keep.push(a); renderActCard(a); }
     });
     if (keep.length !== acts.length) saveActs(keep);
+    pruneHiddenActs(keep);   // 收掉的活動不必再記「我不看」
     updateActEmpty();
   }
   // 進家人頁時再掃一次：不用重開 App，到期卡當場收掉＋公布結果

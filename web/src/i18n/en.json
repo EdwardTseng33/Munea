@@ -1548,5 +1548,8 @@
   "mood.cardIntro": "Each mood you note builds your own week",
   "activity.walkNoSteps": "No data yet",
   "activity.drawWaitOwner": "Waiting for {owner} to draw",
-  "activity.drawWaitHost": "Waiting for the host to draw"
+  "activity.drawWaitHost": "Waiting for the host to draw",
+  "activity.hideButton": "Hide this activity",
+  "activity.hideConfirm": "Hide it from your screen? Tap again",
+  "activity.hiddenToast": "Hidden. Your family still sees it"
 }

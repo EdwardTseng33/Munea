@@ -763,7 +763,22 @@ assert(/\} else if \(!actIsMine\(act\)\) \{/.test(drawBody),
 assert(drawBody.indexOf('!actIsMine(act)') < drawBody.indexOf("class=\"draw-now\""),
   '身分檢查必須排在開獎鍵前面');
 
-console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, draw ownership, and the App Store review chain');
+// 刪除 vs 不看（Edward 2026-08-01）。刪除會同步出去，全家的活動都會不見、救不回來，
+// 所以那是發起人的事；參加的人給「不看這個活動」＝只收起自己的畫面。
+const delBody = app.match(/const mine = actIsMine\(act\);[\s\S]*?body\.appendChild\(del\);/)?.[0] || '';
+assert(delBody, '刪除鍵必須先問這場活動是不是我發起的');
+assert(/if \(mine\) \{\s*const acts = loadActs\(\)\.filter\(a => a\.id !== act\.id\); saveActs\(acts\);\s*\} else \{\s*hideAct\(act\.id\);/.test(delBody),
+  '只有發起人能真的刪；其他人只能 hideAct（把活動從雲端拿掉會害全家的都不見）');
+// 最容易寫錯、也最貴的一條：隱藏清單若在讀取時就過濾，saveActs 會把「我不看的」
+// 當成不存在，一存檔就真的從雲端刪掉，還同步給全家——所以過濾只能發生在畫卡片的時候。
+assert(/function loadActs\(\) \{ try \{ return JSON\.parse\(localStorage\.getItem\('munea\.activities'\)\) \|\| \[\]; \}/.test(app),
+  'loadActs 必須原樣回傳資料，不能過濾隱藏的活動（會被 saveActs 當成刪除同步出去）');
+assert(/function renderActCard\(act\) \{[\s\S]{0,220}?if \(actHidden\(act\)\) return;/.test(app),
+  '隱藏只能發生在畫卡片的時候');
+assert(/localStorage\.setItem\(HIDDEN_ACTS_KEY/.test(app) && !/syncPush\('hiddenActs'/.test(app),
+  '「我不看」是這台手機的畫面偏好，不該同步出去');
+
+console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, draw ownership, delete-vs-hide, and the App Store review chain');
 
 // Multilingual catalogs stay development-only until their UI, Voice, regional,
 // App Store, and real-device gates pass. Keep this in the existing launch suite

@@ -1548,5 +1548,8 @@
   "mood.cardIntro": "記録した気分が、あなたの一週間になります",
   "activity.walkNoSteps": "データがまだありません",
   "activity.drawWaitOwner": "{owner} さんの抽選を待っています",
-  "activity.drawWaitHost": "主催者の抽選を待っています"
+  "activity.drawWaitHost": "主催者の抽選を待っています",
+  "activity.hideButton": "この活動を非表示にする",
+  "activity.hideConfirm": "自分の画面から隠しますか？もう一度タップ",
+  "activity.hiddenToast": "非表示にしました。ご家族には表示されたままです"
 }

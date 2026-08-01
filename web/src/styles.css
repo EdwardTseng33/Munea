@@ -589,6 +589,10 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .ad-del { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; max-width: 260px; margin: 30px auto 4px; padding: 12px 18px; border-radius: 999px; border: 1.5px solid #F0CFC9; background: #fff; color: var(--danger-d); font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
 .ad-del .ic { width: 16px; height: 16px; }
 .ad-del.arm { background: var(--coral-soft); color: var(--danger-d); border-color: transparent; }
+/* 「不看這個活動」＝只收起自己的畫面，不是破壞性動作，所以走按鈕規範第③階的中性灰，
+   不借用刪除的紅色——紅色會讓人以為按下去大家的活動都沒了。 */
+.ad-del.ad-hide { border-color: var(--line); color: var(--ink-2); }
+.ad-del.ad-hide.arm { background: #EFEDE8; color: var(--ink); border-color: transparent; }
 .quest-card .qc-kicker { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--teal-dd); margin-bottom: 6px; }
 .quest-card .qc-kicker .ic { width: 16px; height: 16px; }
 .quest-card .qc-goal { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
