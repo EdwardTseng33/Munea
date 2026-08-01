@@ -78,10 +78,10 @@ _TAIWAN_EMERGENCY_GUIDANCE = {
     "es": "Si alguien está en peligro inmediato en Taiwán, llama al 119. Para apoyo de salud mental, llama al 1925 y pide ayuda a una persona cercana de confianza.",
 }
 _SPAIN_EMERGENCY_GUIDANCE = {
-    "zh-TW": "如果有人在西班牙有立即危險，請立刻撥打 112，並請附近可信任的人到場協助。",
-    "en": "If anyone is in immediate danger in Spain, call 112 and ask a trusted person nearby to help.",
-    "ja": "スペインで差し迫った危険がある場合は112へ連絡し、近くの信頼できる人にも助けを求めてください。",
-    "es": "Si alguien está en peligro inmediato en España, llama al 112 y pide ayuda a una persona de confianza cercana.",
+    "zh-TW": "如果有人在西班牙有立即危險，請立刻撥打 112；想不開、有自殺念頭時可撥 024（24 小時、免費），並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Spain, call 112. For thoughts of suicide, 024 is the free 24-hour line. Ask a trusted person nearby to help.",
+    "ja": "スペインで差し迫った危険がある場合は112へ。死にたい気持ちのときは024（24時間・無料）へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en España, llama al 112. Ante ideas de suicidio, el 024 atiende las 24 horas y es gratuito. Pide ayuda a una persona de confianza cercana.",
 }
 _MEXICO_EMERGENCY_GUIDANCE = {
     "zh-TW": "如果有人在墨西哥有立即危險，請立刻撥打 911，並請附近可信任的人到場協助。",
