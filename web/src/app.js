@@ -10033,8 +10033,12 @@ function init() {
     if (Number.isNaN(day.getTime())) return { ok: false, error: 'invalid_date' };
     const when = new Date(dateISO + 'T' + time + ':00');
     if (when.getTime() < Date.now() - 60000) return { ok: false, error: 'activity_time_in_past' };
+    // 字數上限：中日文一個字塞得下的資訊量，拉丁字母要用兩倍的字元寫。
+    // 共用 24 會把英文的獎品名切掉（「A walk with your grandkid」→「grandki」，
+    // 2026-08-01 截圖看見）。
+    const nameCap = (muneaLocale() === 'en' || muneaLocale() === 'es') ? 48 : 24;
     const clean = (v) => {
-      const raw = String(v || '').trim().slice(0, 24);
+      const raw = String(v || '').trim().slice(0, nameCap);
       return (raw && muneaIsCleanSpeechText(raw)) ? raw : '';
     };
     const act = { id: Date.now(), kind, names: [], owner: myFeedName() };
@@ -10408,7 +10412,7 @@ function init() {
       delete act._rankHtml;
     } else {
       card.innerHTML = '<div class="qc-kicker"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>' +
-        (act.kind === 'event' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.event', '揪一攤'), title: act.title || muneaT('activity.defaultEventTitle', '家庭活動') }) : act.kind === 'vote' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.vote', '投票'), title: act.title || muneaT('activity.defaultVoteTitle', '家庭投票') }) : act.kind === 'draw' ? muneaT('activity.kickerTitle', '{kind} · {title}', { kind: muneaT('activity.draw', '抽獎'), title: (actPrizes(act).length > 1 ? (act.title || muneaT('activity.defaultDrawTitle', '家庭抽獎')) : (act.prize || muneaT('activity.defaultDrawTitle', '家庭抽獎'))) }) : muneaT('activity.kickerInvited', '邀請已送出 · {title}', { title: act.title || muneaT('activity.defaultEventTitle', '家庭活動') })) +
+        actKindName(act) +
         '<span class="qc-days">' + chip + '</span></div>' +
         (goal ? '<div class="qc-goal">' + goal + '</div>' : '') +
         (act._stateTag ? '<div class="qc-state ' + act._stateTag.cls + '">' + muneaEscapeHtml(act._stateTag.text) + '</div>' : '') +
@@ -10490,6 +10494,23 @@ function init() {
   }
   // 抽獎的開獎時間：舊資料或跨版本同步回來的可能沒有這欄，缺了就退回截止標籤／「稍後」，
   // 不要讓畫面印出 undefined（2026-08-01 逐一掃五種活動詳情頁時抓到）
+  // 卡片最上面那一行只寫「這是什麼活動」（Edward 2026-08-01：標題只寫是什麼活動）。
+  //
+  // 原本寫的是「種類 · 標題」，另外還有一種寫「邀請已送出 · 標題」。兩個毛病：
+  //   ① 標題在下面那行大字已經寫了一次（抽獎最明顯：上面「抽獎 · 孫子陪散步一次」、
+  //      下面又一個「孫子陪散步一次」），同一句話印兩次
+  //   ② 種類＋標題太長，中文折成兩行、英文更慘（「A walk with your grandki」被切掉）
+  // 「邀請已送出」也拿掉——它沒告訴人這是什麼活動，而且下面本來就有狀態標籤
+  //  （還沒抽／還沒投／你還沒開始走）。
+  function actKindName(act) {
+    switch (act && act.kind) {
+      case 'walk': return muneaT('activity.exercise', '一起運動');
+      case 'quiz': return muneaT('activity.quiz', '機智問答');
+      case 'vote': return muneaT('activity.vote', '投票');
+      case 'draw': return muneaT('activity.draw', '抽獎');
+      default: return muneaT('activity.event', '揪一攤');
+    }
+  }
   function drawWhen(act) {
     return (act && (act.when || act.dueLabel || act.dateLabel)) || muneaT('activity.drawWhenUnknown', '稍後');
   }
