@@ -1569,5 +1569,17 @@
   "activity.drawWaitHost": "Waiting for the host to draw",
   "activity.hideButton": "Hide this activity",
   "activity.hideConfirm": "Hide it from your screen? Tap again",
-  "activity.hiddenToast": "Hidden. Your family still sees it"
+  "activity.hiddenToast": "Hidden. Your family still sees it",
+  "activity.drawPickHint": "Everyone picks a ticket. Draw at {when}",
+  "activity.drawPickButton": "Pick a ticket",
+  "activity.drawPicking": "Picking...",
+  "activity.drawMyTicket": "You got no. {no}",
+  "activity.drawMyTicketSub": "Draw at {when} - we will tell you if you win",
+  "activity.drawWaitingOn": "{n} have picked; still to go: {names}",
+  "activity.drawAllDrawn": "All {n} have picked. Draw at {when}",
+  "activity.drawNowConfirm": "{n} have not picked yet. Draw now? Tap again",
+  "book.drawWinner": "{name} won (no. {no})",
+  "book.drawNobody": "Nobody picked a ticket",
+  "feed.drawWinner": "“{prize}” was drawn - {name} won (no. {no})!",
+  "feed.drawNobody": "“{prize}” ended - nobody picked a ticket"
 }

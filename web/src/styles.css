@@ -2356,6 +2356,18 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 /* 不是發起人時看到的：跟按鈕一樣的位置與高度，但明顯不是可以按的東西
    （Edward 2026-08-01「開獎應該是 owner 的事」）。 */
 .draw-wait { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 8px; min-height: 44px; border-radius: 13px; background: var(--mint); color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 600; }
+/* 抽一張（Edward 2026-08-01「抽獎應該是用戶能有抽的體驗，抽完才是等開獎」）。
+   做成一張卡片的樣子而不是普通按鈕——要看得出「這裡有東西可以抽」。 */
+.draw-pick { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; min-height: 52px; border: none; border-radius: 15px; background: linear-gradient(135deg, #F4B860 0%, #E09B45 100%); color: #fff; font-family: var(--display); font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(214, 148, 62, .32); -webkit-tap-highlight-color: transparent; transition: transform .12s; }
+.draw-pick:active { transform: scale(.97); }
+.draw-pick .dp-card { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: rgba(255, 255, 255, .26); font-size: 16px; font-weight: 800; }
+/* 抽完之後：自己的號碼一直看得到，開獎時才知道中沒中 */
+.draw-mine { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 13px 15px; border-radius: 15px; background: var(--mint); }
+.draw-mine .dm-no { display: grid; place-items: center; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 12px; background: #fff; color: var(--teal-dd); font-family: var(--display); font-size: 19px; font-weight: 800; letter-spacing: .5px; box-shadow: 0 1px 4px rgba(26, 114, 104, .16); }
+.draw-mine .dm-txt { display: flex; flex-direction: column; gap: 2px; }
+.draw-mine .dm-txt b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.draw-mine .dm-txt small { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.draw-roll .dr-num { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
 .draw-win { font-size: 16px; font-weight: 700; color: var(--ink); margin-top: 6px; }
 .draw-win b { color: var(--ink); }
 

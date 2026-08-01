@@ -593,15 +593,6 @@
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
-      "id": "b39-family-1332c281",
-      "path": "web/src/app.js",
-      "text": "</b> 抽中！",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
       "id": "b39-family-1e4edf86",
       "path": "web/src/app.js",
       "text": "</b> 最多票，收進<b>家庭記錄簿</b>",
@@ -728,15 +719,6 @@
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
-      "id": "b39-family-cb2c0cf1",
-      "path": "web/src/app.js",
-      "text": "」開獎了——<b>",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
       "id": "b39-zh-f59a3501",
       "path": "web/src/app.js",
       "text": "」，對嗎？",
@@ -849,7 +831,7 @@
       "path": "web/src/app.js",
       "text": "你",
       "kind": "string",
-      "expectedOccurrences": 19,
+      "expectedOccurrences": 20,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },

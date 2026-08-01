@@ -1569,5 +1569,17 @@
   "activity.drawWaitHost": "主催者の抽選を待っています",
   "activity.hideButton": "この活動を非表示にする",
   "activity.hideConfirm": "自分の画面から隠しますか？もう一度タップ",
-  "activity.hiddenToast": "非表示にしました。ご家族には表示されたままです"
+  "activity.hiddenToast": "非表示にしました。ご家族には表示されたままです",
+  "activity.drawPickHint": "全員が1枚ひいて、{when}に抽選",
+  "activity.drawPickButton": "1枚ひく",
+  "activity.drawPicking": "ひいています…",
+  "activity.drawMyTicket": "{no} 番をひきました",
+  "activity.drawMyTicketSub": "{when}に抽選。当たったらお知らせします",
+  "activity.drawWaitingOn": "{n} 人がひきました。まだの人：{names}",
+  "activity.drawAllDrawn": "{n} 人全員がひきました。{when}に抽選",
+  "activity.drawNowConfirm": "まだ {n} 人ひいていません。今抽選しますか？もう一度タップ",
+  "book.drawWinner": "{name} が当選（{no} 番）",
+  "book.drawNobody": "誰もひきませんでした",
+  "feed.drawWinner": "「{prize}」の抽選結果——{name} が当選（{no} 番）！",
+  "feed.drawNobody": "「{prize}」は終了しました——誰もひきませんでした"
 }

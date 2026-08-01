@@ -771,10 +771,25 @@ assert(/if \(!act \|\| !act\.ownerId\) return true;/.test(actIsMineBody),
   '舊活動沒記發起人時要當成「是我的」，不然使用者昨天開的抽獎今天突然按不動');
 const drawBody = app.match(/function renderDrawBody\(act, card\) \{[\s\S]*?\n    card\.appendChild\(wrap\);/)?.[0] || '';
 assert(drawBody, 'renderDrawBody 必須維持成一個讀得懂的函式');
-assert(/\} else if \(!actIsMine\(act\)\) \{/.test(drawBody),
-  '「現在開獎」必須先問是不是發起人，否則誰打開誰都能提前結束抽獎');
-assert(drawBody.indexOf('!actIsMine(act)') < drawBody.indexOf("class=\"draw-now\""),
-  '身分檢查必須排在開獎鍵前面');
+assert(/actIsMine\(act\)\s*\n?\s*\?\s*'<button type="button" class="draw-now">/.test(drawBody),
+  '「現在開獎」只能給發起人看到，否則誰打開誰都能提前結束抽獎');
+assert(!/class="draw-now"/.test(drawBody.split('actIsMine(act)')[0] || ''),
+  '開獎鍵不能出現在身分檢查之前');
+// 抽獎要有「自己抽一張」的動作（Edward 2026-08-01：「應該是用戶能有抽的體驗流程，
+// 抽完後才是等待活動結束」）。以前發起人按一下就直接公布得主，其他人全程沒有動作。
+assert(/class="draw-pick"/.test(drawBody), '抽獎必須讓每個人自己抽一張，不能只有發起人按一下就公布結果');
+assert(/act\.tickets = Object\.assign\(\{\}, act\.tickets \|\| \{\}, \{ 你: n \}\)/.test(drawBody),
+  '抽到的號碼要記在活動上，不然重開 App 就忘了他抽過');
+// 抽了才有份：開獎只能從抽過的人裡開，否則「抽」這個動作等於沒意義
+const revealBody = drawBody.match(/function revealWinner\(\) \{[\s\S]*?\n    \}/)?.[0] || '';
+assert(revealBody, 'revealWinner 必須維持成一個讀得懂的函式');
+assert(/const pool = Object\.keys\(act\.tickets \|\| \{\}\);/.test(revealBody) && /pool\[Math\.floor\(Math\.random\(\) \* pool\.length\)\]/.test(revealBody),
+  '開獎只能從抽過的人裡面開——沒抽的人本來就沒參加');
+// 卡片上寫著「X 月 X 日開獎」，時間到就必須真的開，不能只說一句「結束了」
+assert(/a\.kind === 'draw' && !a\.winner && a\.tickets && Object\.keys\(a\.tickets\)\.length/.test(app),
+  '抽獎到期必須真的開出得主，不然卡片上那句「幾點開獎」是空頭承諾');
+assert(/a\.kind === 'draw' && !a\.winner\b(?![\s\S]{0,80}tickets)/.test(app),
+  '一個人都沒抽的抽獎要誠實說沒開成，不能硬抽一個沒參加的人');
 
 // 刪除 vs 不看（Edward 2026-08-01）。刪除會同步出去，全家的活動都會不見、救不回來，
 // 所以那是發起人的事；參加的人給「不看這個活動」＝只收起自己的畫面。

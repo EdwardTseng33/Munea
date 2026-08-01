@@ -1569,5 +1569,17 @@
   "activity.drawWaitHost": "Esperando a que el anfitrión haga el sorteo",
   "activity.hideButton": "No ver esta actividad",
   "activity.hideConfirm": "¿Ocultarla de tu pantalla? Toca otra vez",
-  "activity.hiddenToast": "Ocultada. Tu familia la sigue viendo"
+  "activity.hiddenToast": "Ocultada. Tu familia la sigue viendo",
+  "activity.drawPickHint": "Cada uno saca un boleto. Sorteo el {when}",
+  "activity.drawPickButton": "Sacar un boleto",
+  "activity.drawPicking": "Sacando...",
+  "activity.drawMyTicket": "Te tocó el número {no}",
+  "activity.drawMyTicketSub": "Sorteo el {when}. Te avisamos si ganas",
+  "activity.drawWaitingOn": "{n} ya sacaron; faltan: {names}",
+  "activity.drawAllDrawn": "Los {n} ya sacaron. Sorteo el {when}",
+  "activity.drawNowConfirm": "Faltan {n} por sacar. ¿Sortear ahora? Toca otra vez",
+  "book.drawWinner": "{name} ganó (número {no})",
+  "book.drawNobody": "Nadie sacó boleto",
+  "feed.drawWinner": "«{prize}» ya se sorteó: ¡{name} ganó (número {no})!",
+  "feed.drawNobody": "«{prize}» terminó: nadie sacó boleto"
 }

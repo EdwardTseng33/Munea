@@ -1569,5 +1569,17 @@
   "activity.drawWaitHost": "等發起的人開獎",
   "activity.hideButton": "不看這個活動",
   "activity.hideConfirm": "從我的畫面收起來？再點一下",
-  "activity.hiddenToast": "收起來了，家人那邊還在"
+  "activity.hiddenToast": "收起來了，家人那邊還在",
+  "activity.drawPickHint": "每個人抽一張，{when}開獎",
+  "activity.drawPickButton": "抽一張",
+  "activity.drawPicking": "抽一張…",
+  "activity.drawMyTicket": "你抽到 {no} 號",
+  "activity.drawMyTicketSub": "{when}開獎，中了會告訴你",
+  "activity.drawWaitingOn": "已經抽了 {n} 個人；還沒抽的：{names}",
+  "activity.drawAllDrawn": "{n} 個人都抽好了，{when}開獎",
+  "activity.drawNowConfirm": "還有 {n} 個人沒抽，現在開？再點一下",
+  "book.drawWinner": "{name} 抽中（{no} 號）",
+  "book.drawNobody": "沒有人抽",
+  "feed.drawWinner": "「{prize}」開獎了——{name} 抽中（{no} 號）！",
+  "feed.drawNobody": "「{prize}」結束了，這次沒有人抽"
 }
