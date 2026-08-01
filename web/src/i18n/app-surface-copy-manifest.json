@@ -4,7 +4,7 @@
   "surfaces": [
     {"state": "screen:home", "keyPrefixes": ["app.", "home.", "visit.", "event.", "tab.", "schedule.", "greet.", "weather."], "requiredKeys": ["home.greetingEvening", "home.startChat", "home.profilePromptTitle", "home.profilePromptBody", "home.profilePromptAction", "home.care.familyRelayTitle", "home.care.walkTitle", "home.care.visitNote", "home.care.remove", "home.care.report", "visit.defaultTitle", "event.familyTitle", "tab.home"]},
     {"state": "screen:status", "keyPrefixes": ["status.", "mood.", "health."], "requiredKeys": ["status.title", "status.moodMonitoring", "health.steps"]},
-    {"state": "screen:family", "keyPrefixes": ["family.", "interaction.", "demo."], "requiredKeys": ["family.title", "family.startActivity", "family.invite"]},
+    {"state": "screen:family", "keyPrefixes": ["family.", "interaction.", "demo.", "book."], "requiredKeys": ["family.title", "family.startActivity", "family.invite"]},
     {"state": "screen:settings", "keyPrefixes": ["settings."], "requiredKeys": ["settings.title", "settings.profile", "settings.dataAndPrivacy"]},
     {"state": "screen:connect", "keyPrefixes": ["connect.", "legacyUi.connect"], "requiredKeys": ["connect.title", "connect.privacy", "connect.medicalDisclaimer"]},
     {"state": "chat:idle", "keyPrefixes": ["accessibility.", "credits."], "requiredKeys": ["voice.call.start", "voice.call.offline", "voice.caption.label", "voice.microphone.label", "accessibility.toggleCaptions", "accessibility.toggleMicrophone", "settings.creditsBalance"]},

@@ -458,21 +458,34 @@ assert(/\.mem-badge\.test\s*\{[^}]*background:\s*var\(--coral-soft\);[^}]*color:
     /散歩に行きたい/, /鼻歌/, /口数が少ない/, /膝の/,
     /te apetecía/i, /tarareabas/i, /has hablado menos/i, /rodilla/i,
   ];
+  // 每個心情備了四句輪流出（Edward 2026-08-01：不要等 AI 現寫、就用固定用語輪換）。
+  // 四句每一句都要過同一關——只驗第一句等於後三句沒人看。
   ['happy', 'pleasant', 'calm', 'low', 'anxious', 'angry'].forEach((mood) => {
-    const note = catalog[`mood.note.${mood}`];
-    assert(note, `${loc} 缺 mood.note.${mood}`);
-    INVENTED.forEach((pattern) => assert(
-      !pattern.test(note),
-      `${loc} 的 mood.note.${mood} 又在替他宣稱做過什麼（${pattern}）——他只是點了一個表情`,
-    ));
-    // 中日一個字塞得下的資訊量，拉丁文字要用兩三倍的字元寫，門檻不能共用一個數字
-    const cap = (loc === 'en' || loc === 'es') ? 64 : 26;
-    assert(note.length <= cap, `${loc} 的 mood.note.${mood} 太長了（${note.length}／上限 ${cap}）——這格只該有「他點的心情＋我們做了什麼」`);
-    // 拉丁語系的標籤是大寫開頭、句子裡多半小寫，比對要忽略大小寫
-    const label = catalog[`mood.${mood}`];
-    const word = String(label || '').split(/[／/]/)[0].trim().toLowerCase();
-    assert(word && note.toLowerCase().includes(word),
-      `${loc} 的 mood.note.${mood} 沒有複述他點的「${label}」——這格的規則是只講他選的那個詞`);
+    const variants = [`mood.note.${mood}`, `mood.note.${mood}.2`, `mood.note.${mood}.3`, `mood.note.${mood}.4`];
+    variants.forEach((key, index) => {
+      const note = catalog[key];
+      // 第一句是必備的；輪換的後三句允許缺（缺了就少一句可輪，不算壞）
+      if (index === 0) assert(note, `${loc} 缺 ${key}`);
+      if (!note) return;
+      INVENTED.forEach((pattern) => assert(
+        !pattern.test(note),
+        `${loc} 的 ${key} 又在替他宣稱做過什麼（${pattern}）——他只是點了一個表情`,
+      ));
+      // 中日一個字塞得下的資訊量，拉丁文字要用兩三倍的字元寫，門檻不能共用一個數字
+      const cap = (loc === 'en' || loc === 'es') ? 64 : 26;
+      assert(note.length <= cap, `${loc} 的 ${key} 太長了（${note.length}／上限 ${cap}）——這格只該有「他點的心情＋我們做了什麼」`);
+      // 拉丁語系的標籤是大寫開頭、句子裡多半小寫，比對要忽略大小寫
+      const label = catalog[`mood.${mood}`];
+      const word = String(label || '').split(/[／/]/)[0].trim().toLowerCase();
+      assert(word && note.toLowerCase().includes(word),
+        `${loc} 的 ${key} 沒有複述他點的「${label}」——這格的規則是只講他選的那個詞`);
+    });
+    // 輪換要真的有東西可輪：同一個心情至少三句、而且不可以有兩句一模一樣
+    const lines = variants.map((key) => catalog[key]).filter(Boolean);
+    assert(lines.length >= 3,
+      `${loc} 的「${catalog[`mood.${mood}`]}」只有 ${lines.length} 句——點兩次就會看到重複的話`);
+    assert(new Set(lines).size === lines.length,
+      `${loc} 的「${catalog[`mood.${mood}`]}」有兩句寫成一樣的——輪換會看起來像壞掉`);
   });
 });
 
