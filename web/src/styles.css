@@ -2259,7 +2259,12 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 /* ===== 狀態頁 V1-Status 設計檔移植（Edward 7/7 · 完全比照 handoff · scope #status 不污染別頁） ===== */
 #status { --mint2: var(--mint-2); --ink2: var(--ink-2); }
 #status .serif { font-family: var(--serif); }
-#status .h1 { font-size: 27px; font-weight: 900; letter-spacing: .5px; }
+/* 狀態頁的標題原本自己一套（27px/900、位置也比別頁高 14px），四頁看起來不齊。
+ * 2026-08-01 Edward 問「每個頁面都有統一了嗎」——查出來就是這一頁沒有。
+ * 改成跟 .page-title 同一組規格（24px/800、上下留白一致）。 */
+#status .h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; line-height: 1.2;
+  min-height: 44px; display: flex; align-items: center; margin: 14px 0 16px; }
+/* 上緣多 8px：狀態頁的外層比其他頁少 8px 內距，補回來四頁的標題才在同一條線上。 */
 #status .card, #family .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
 #status .row, #family .row { display: flex; align-items: center; }
 #status .chip, #family .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }  /* 7/9 Edward：家人頁標籤與狀態頁同規範（原只掛 #status、家人頁變螢光方塊） */
@@ -2776,3 +2781,20 @@ html:lang(ja) {
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .set-row .sr-on { position: relative; }
 .set-row .sr-main { padding-right: 12px; }
+
+/* 右邊的狀態字有兩種放法：有的在 .sr-on、有的塞在箭頭那格 .sr-arrow 裡。
+ * 兩種都要收（Edward 2026-08-01：「拿掉右邊的狀態說明」——指了兩次都還在，
+ * 就是因為第一次只收了 .sr-on 那種）。箭頭本身留著，它是「可以點進去」的提示。 */
+.set-row .sr-arrow > b {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.set-row .sr-arrow { position: relative; }
+
+
+/* 用藥卡：說明文字在西班牙文長到五行，把卡片撐得比別張高一倍；
+ * 右邊那顆狀態籤又做得跟主要按鈕一樣大，兩邊搶版面
+ * （Edward 2026-08-01：「副標有問題太多了、按鈕太大了」）。
+ * 說明限兩行、狀態籤降成第③級的份量——它只是狀態，不是要人按的東西。 */
+#medCard #medSub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.4; }
+#medCard #medChip { font-size: 11.5px; font-weight: 600; padding: 5px 10px; white-space: nowrap; }

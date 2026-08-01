@@ -302,7 +302,7 @@
   "status.connectAppleHealth": "Apple ヘルスと連携して取得",
   "status.healthTrendAfterConnect": "Apple ヘルスと連携すると、ここに傾向が表示されます",
   "status.healthTrendAfterData": "データを読み取ると、ここに傾向が表示されます",
-  "status.medicationUnset": "お薬はまだ登録されていません。{companion}に伝えるだけで登録できます。",
+  "status.medicationUnset": "お薬は未登録。{companion}に言うだけでOK",
   "status.medicationRecords": "服薬記録",
   "status.sleepQuality": "睡眠の質",
   "status.sleepGoal": "目標 7.5 時間",

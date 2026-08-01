@@ -302,7 +302,7 @@
   "status.connectAppleHealth": "Connect Apple Health to add data",
   "status.healthTrendAfterConnect": "Your trends will appear here after you connect Apple Health",
   "status.healthTrendAfterData": "Your trends will appear here when data is available",
-  "status.medicationUnset": "No medication is set up yet. Just tell {companion}.",
+  "status.medicationUnset": "No medicines yet — just tell {companion}",
   "status.medicationRecords": "Medication history",
   "status.sleepQuality": "Sleep quality",
   "status.sleepGoal": "Goal: 7.5 hours",

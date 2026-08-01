@@ -302,7 +302,7 @@
   "status.connectAppleHealth": "接 Apple 健康帶入",
   "status.healthTrendAfterConnect": "接上 Apple 健康後，這裡會長出你的趨勢",
   "status.healthTrendAfterData": "讀到資料後，這裡會長出你的趨勢",
-  "status.medicationUnset": "還沒設定用藥，跟{companion}說一聲就好",
+  "status.medicationUnset": "還沒設定藥，跟{companion}說一聲就好",
   "status.medicationRecords": "用藥紀錄",
   "status.sleepQuality": "睡眠品質",
   "status.sleepGoal": "目標 7.5 小時",
