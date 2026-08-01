@@ -513,6 +513,15 @@ assert(
   'setDirectText 必須在元素底下已有 data-i18n 時放棄，否則外語版會把同一句印兩次',
 );
 
+
+// 拿不到蘋果價格時，外語版不可以退回台幣金額。
+// 「1199 TWD」對西班牙／美國／日本的使用者是錯的價格＋錯的幣別，
+// 蘋果審查看到會當成誤導定價（Edward 2026-08-01 在西班牙文版看到）。
+assert(
+  /function fallbackTwdPrice[\s\S]{0,400}?muneaLocale\(\) !== 'zh-TW'\) return '—';/.test(app),
+  '拿不到蘋果價格時，非中文語系必須顯示破折號，不可以退回台幣金額',
+);
+
 assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {'), 'Credit rule explanation must have dedicated readable styling');
 // 資料匯出說明（2026-07-30 改寫）：這段已經是 data-i18n="data.description" 的翻譯節點，
 // index.html 裡那句中文只是還沒換掉的底稿，跟 zh-TW.json 的正本已經對不起來（正本沒有「立即」兩字）。

@@ -8998,7 +8998,13 @@ function init() {
   function hasNativeStore() {
     return !!(window.MuneaStore && window.MuneaStore.available());
   }
+  // 拿不到蘋果價格時的退路。台幣金額只對台灣使用者成立——
+  // 對西班牙／美國／日本的使用者顯示「1199 TWD」是錯的價格加錯的幣別
+  // （Edward 2026-08-01 在西班牙文版看到）。真機幾乎都拿得到蘋果的當地價，
+  // 但網路一慢就會走到這裡，蘋果審查若看到會當成誤導定價。
+  // 所以：只有中文版才退回台幣，其他語言一律顯示破折號——不知道就不要編一個。
   function fallbackTwdPrice(amount) {
+    if (muneaLocale() !== 'zh-TW') return '—';
     return new Intl.NumberFormat(muneaLocale(), {
       currency: 'TWD',
       currencyDisplay: 'code',

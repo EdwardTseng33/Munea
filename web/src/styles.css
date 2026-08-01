@@ -2737,3 +2737,42 @@ html:lang(ja) {
   min-height: 44px; margin: 6px 0 16px; }
 .page-title { line-height: 1.2; margin: 0; }
 .page-head > .pt-nav { flex: 0 0 auto; }
+
+/* 帳號那一列：西班牙文「Modo invitado」折成兩行、「Iniciar sesión」還頂出卡片外
+ * （Edward 2026-08-01）。原因是標題設了 overflow-wrap:anywhere（可以從單字中間斷），
+ * 而右邊的按鈕沒有寬度上限，兩邊互相擠。
+ * 改成：左邊佔滿剩下的空間、太長就用刪節號；右邊按鈕不縮但也不許超過四成寬。 */
+.auth-card-main { flex: 1 1 auto; }
+.auth-title { overflow-wrap: normal; word-break: normal; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.auth-actions { max-width: 42%; }
+.auth-actions > button { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* 心情卡：說明文字長短不一，卡片高度就跟著變，切換語言或換一天位置就跳
+ * （Edward 2026-08-01：「副標文字太多會導致板位上下位移」「間距也不同」）。
+ * 標題一行、說明固定兩行的高度——不管字多字少，這張卡永遠一樣高。 */
+#status .mood-card-title, [data-i18n="status.moodMonitoring"] { white-space: nowrap; }
+#moodNote { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: 38px; margin-top: 3px; }
+#moodLabel { white-space: nowrap; }
+
+/* 六張心情臉底下的名字拿掉（Edward 2026-08-01：「文字可以優化或簡寫或就不要文字，
+ * 因為點了上面會寫」）。點下去之後上面那行大字就是它的名字，底下再寫一次是重複；
+ * 而且各語言的名字長短不一，會把圓圈推得歪七扭八——拿掉之後間距永遠齊。
+ * 用「看不見但唸得到」的作法，不是 display:none——念螢幕給視障者聽時仍會報出名字。 */
+#status .moodface > span:last-child {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+#status .moodface { position: relative; gap: 0; }
+#moodFaces { gap: 8px; }
+
+/* 設定頁的列：右邊的狀態文字拿掉，標題才有完整一行的空間
+ * （Edward 2026-08-01：「拿掉右邊的狀態說明，讓標題可以完整單行顯示」）。
+ * 那顆小圓點留著——一眼就看得出開或關，而且只佔 7px。
+ * 文字改成「看不見但唸得到」，念螢幕給視障者聽時仍會報「未連接／已連接」。
+ * 數字（例如用藥幾種）留著，但跟左邊拉開距離，不要黏在一起。 */
+.set-row .sr-on > span:not(.d) {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.set-row .sr-on { position: relative; }
+.set-row .sr-main { padding-right: 12px; }
