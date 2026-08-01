@@ -137,7 +137,19 @@
       <div id="moodOrb" style="flex:0 0 52px;width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.42),rgba(255,255,255,0) 62%),#236C66;box-shadow:0 8px 18px -6px rgba(35,108,102,.5)"></div>
       <div style="flex:1">
         <div style="display:flex;align-items:baseline;gap:7px"><span id="moodLabel" class="serif" style="font-size:22px;font-weight:900;color:#236C66">平靜</span><span id="moodPeriodLabel" style="font-size:11.5px;color:var(--muted)">今天</span></div>
-        <div id="moodNote" style="font-size:12.5px;color:var(--ink2);line-height:1.5;margin-top:3px">今天心情平穩，膝蓋的痠有記著。</div>
+        <!-- 這一行說明的是「這張卡在做什麼」，主詞是卡、不是使用者。
+             原本寫「今天心情平穩，膝蓋的痠有記著」——主詞是「你」，
+             於是憑空替使用者記了一件他沒說過的事。
+             Edward 2026-08-01：可以有基本的介紹或敘述，但不要帶使用者狀態。
+             這句話不管他今天開心難過、記過幾次，永遠成立。
+             寧寧對他個人說的話，一律放上面那張「{她}的觀察」卡。 -->
+        <!-- 這行是「她對你剛選的心情的回應」。六句固定文案，點哪個心情出哪一句。
+             不經過 AI——這一格是點下去就要出現的即時回饋，不能等網路、也不能有一絲說錯的機會。
+             安全線：只回應他自己選的那件事，不加任何他沒說過的細節
+             （原本寫死成「膝蓋的痠有記著」，就是越過了這條線）。
+             會隨真實對話變化的敘述，放上面那張「{她}的觀察」卡。
+             高度固定，換心情時版面不會跳。 -->
+        <div id="moodNote" class="mood-note"></div>
       </div>
     </div>
     <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:9px" data-i18n="status.recordMood">記錄當下的心情</div>
@@ -1386,7 +1398,11 @@
        跟同日蘋果健康那個「畫面在說假話」是同一個病：程式算出來的文字不能同時掛翻譯標籤。
        第一次進來就把標籤拔掉，之後這兩行只由這裡寫。 */
     if(label.hasAttribute('data-i18n')) label.removeAttribute('data-i18n');
-    if(note && note.hasAttribute('data-i18n')) note.removeAttribute('data-i18n'); var cur=currentEntry(), i=cur?cur.i:null, st=state(); if(i!=null&&!MOODS[i]) i=null; /* 防呆：怪編號一律當「還沒記錄」、絕不讓卡片死 */ orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent=window.muneaUiT('mood.notRecorded','還沒記錄'); label.style.color='#8A9297'; if(note) note.textContent=window.muneaUiT('mood.emptyPrompt','點下面的表情，餵情緒球第一口'); } else { label.textContent=moodLabel(i); label.style.color=MOODS[i].c; if(note) note.textContent=moodNote(i); } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent=window.muneaUiT('mood.observedFromChat','{companion}從聊天感覺到的',{companion:window.muneaUiCompanionName()}); else sub.textContent=window.muneaUiT('status.today','今天'); } markFaces((cur&&cur.src==='self')?i:null); if(chip) chip.textContent=(i==null)?window.muneaUiT('mood.notRecorded','還沒記錄'):window.muneaUiT('status.today','今天'); }
+    if(note && note.hasAttribute('data-i18n')) note.removeAttribute('data-i18n'); var cur=currentEntry(), i=cur?cur.i:null, st=state(); if(i!=null&&!MOODS[i]) i=null; /* 防呆：怪編號一律當「還沒記錄」、絕不讓卡片死 */ orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent=window.muneaUiT('mood.notRecorded','還沒記錄'); label.style.color='#8A9297'; if(note) note.textContent=window.muneaUiT('mood.emptyPrompt','點下面的表情，餵情緒球第一口'); } else { label.textContent=moodLabel(i); label.style.color=MOODS[i].c; if(note) note.textContent=moodNote(i); } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent=window.muneaUiT('mood.observedFromChat','{companion}從聊天感覺到的',{companion:window.muneaUiCompanionName()}); else sub.textContent=window.muneaUiT('status.today','今天'); } markFaces((cur&&cur.src==='self')?i:null); if(chip) { /* 這顆標籤只顯示「你正在看哪一段時間」（今天／7 天／30 天），由分頁切換那段程式管。
+       原本這裡會把它改寫成「還沒記錄」或「今天」，造成兩個問題（Edward 2026-08-01 抓到）：
+       ① 還沒記錄時，標籤和大字都寫「還沒記錄」——同一句話印兩次
+       ② 切到「7 天」時被蓋回「今天」——看的是七天、標籤卻說今天，等於標錯
+       有沒有記錄由中間那行大字負責講，這裡不重複。 */ } }
   function weekHTML(){ var days=[],filled=0; for(var off=6;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; days.push({lab:weekdayLabel(d),i:i}); } var dots=days.map(function(x){ var col=(x.i==null)?'transparent':MOODS[x.i].c; var bd=(x.i==null)?'2px dashed #D2CCBE':'none'; return '<div style="text-align:center;flex:1"><div style="width:28px;height:28px;border-radius:50%;margin:0 auto;background:'+col+';border:'+bd+'"></div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-weight:700">'+x.lab+'</div></div>'; }).join(''); var cap=filled?window.muneaUiT('mood.weekRecorded','這週記了 {days} 天的心情，繼續保持。',{days:filled}):window.muneaUiT('mood.weekEmpty','每天記一點，這裡會慢慢長出你的心情軌跡。'); return '<div style="display:flex;justify-content:space-between;margin-bottom:12px">'+dots+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function monthHTML(){ var cells=[],filled=0; for(var off=29;off>=0;off--){ var d=new Date(); d.setDate(d.getDate()-off); var i=dominant(d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()); if(i!=null) filled++; cells.push(i); } var grid=cells.map(function(i){ var col=(i==null)?'transparent':MOODS[i].c; var bd=(i==null)?'1.5px dashed #DAD4C6':'none'; return '<div style="height:22px;border-radius:5px;background:'+col+';border:'+bd+'"></div>'; }).join(''); var cap=filled?window.muneaUiT('mood.monthRecorded','這個月記了 {days} 天，心情地圖正在長出來。',{days:filled}):window.muneaUiT('mood.monthEmpty','每天記一點，一個月後這裡就是你的心情地圖。'); return '<div style="display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:12px">'+grid+'</div><div style="font-size:12.5px;color:var(--ink2);line-height:1.6">'+cap+'</div>'; }
   function renderMood(mood){ var body=document.getElementById('moodBody'), chip=document.getElementById('moodChip'); if(!body) return; function paint(){ var b=document.getElementById('moodBody'); if(!b) return; if(mood==='today'){ if(window.__todayMoodHTML) b.innerHTML=window.__todayMoodHTML; decorate(); bindFaces(); } else if(mood==='week'){ b.innerHTML=weekHTML(); var c=document.getElementById('moodChip'); if(c) c.textContent=window.muneaUiT('status.past7Days','過去 7 天'); } else { b.innerHTML=monthHTML(); var c2=document.getElementById('moodChip'); if(c2) c2.textContent=window.muneaUiT('status.past30Days','過去 30 天'); } } paint(); pull().then(function(){ paint(); }); }
@@ -1629,7 +1645,13 @@ window.MMDEV = function(){
     var d=dataFor(period);
     refreshMedCard(period);
     refreshTrendCards(period);
-    document.getElementById('pageTitle').textContent=d.title;
+    // 這行字會跟著你在看哪一段時間變（今天／過去 7 天／過去 30 天），是程式現算的。
+    // 但它掛著 data-i18n="status.title"（釘死在「今天的狀態」），翻譯層每次重掃就蓋回去——
+    // 於是切到 7 天，標籤變了、標題還寫「今天的狀態」，等於標錯（Edward 2026-08-01 抓到）。
+    // 這是同一個病今天的第五次：程式算出來的字不能同時掛翻譯標籤。
+    var pt=document.getElementById('pageTitle');
+    if(pt.hasAttribute('data-i18n')) pt.removeAttribute('data-i18n');
+    pt.textContent=d.title;
     document.getElementById('moodChip').textContent=d.moodChip;
     var body=document.getElementById('moodBody');
     window.MM.renderMood(d.mood);

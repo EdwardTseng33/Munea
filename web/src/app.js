@@ -7362,6 +7362,20 @@ function moodFaceSvg(key, size) {
 function renderMoodWeek() {
   const wrap = $('#moodWeek');
   if (!wrap) return;
+  // 真的還沒有紀錄時，不可以拿示範資料充數（Edward 2026-08-01 拍板）。
+  // 那組示範寫著「聊到孫子回來，笑聲不斷」「翻到老伴的照片，聊著聊著有點想念」——
+  // 剛裝好 App 的人打開家人頁就會看到這一週，子女會以為是真的。
+  // 最後那句對伴侶還健在、或剛失去伴侶的人，傷的不只是準確度。
+  // 標準跟健康數據一致：讀不到就說讀不到，不假裝有。
+  if (MOOD_WEEK === MOOD_WEEK_DEMO) {
+    wrap.innerHTML = '<div class="mood-week-empty">'
+      + muneaEscapeHtml(muneaT(
+        'mood.weekAccumulating',
+        '還沒有足夠的紀錄。多聊幾次、或在下面點個心情，這裡就會長出你自己的一週。',
+      ))
+      + '</div>';
+    return;
+  }
   wrap.innerHTML = MOOD_WEEK.map((day, i) => {
     const m = MOODS[day.mood];
     const today = day.d === '今天';
