@@ -7234,6 +7234,9 @@ const MOODS = {
   tired:  { label: () => muneaT('mood.tired', '疲累'), bg: '#EEEFEA', fg: '#5F6A61', face: 'M9 10h.01M15 10h.01M9.5 15.5h5' },
   down:   { label: () => muneaT('mood.low', '低落'), bg: '#E4EBF3', fg: '#3F5F80', face: 'M9 10h.01M15 10h.01M8.5 15.5s1.2-1.8 3.5-1.8 3.5 1.8 3.5 1.8' },
   upset:  { label: () => muneaT('mood.upset', '煩躁'), bg: '#ECE1F0', fg: '#6E4488', face: 'M8.5 9.5l2 1M15.5 9.5l-2 1M8.5 15.5s1.2-1.5 3.5-1.5 3.5 1.5 3.5 1.5' },
+  // 「焦慮」以前沒有自己的位置，於是被 || 'calm' 掃進「平穩」——他明明點了焦慮，
+  // 家人看到的卻是一切安好（Edward 2026-08-01 抓到）。這是最不能錯的方向。
+  anxious: { label: () => muneaT('mood.anxious', '焦慮'), bg: '#FAECD8', fg: '#A9691B', face: 'M8.6 9.1l2 .9M15.4 9.1l-2 .9M9 11h.01M15 11h.01M9.2 15.6q1.4-1.2 2.8 0t2.8 0' },
 };
 const MOOD_WEEK_DEMO = [
   { d: '五', mood: 'happy', chats: [{ m: 'happy', t: () => muneaT('demo.mood.fri', '聊到孫子回來，笑聲不斷') }] },
@@ -7247,7 +7250,23 @@ const MOOD_WEEK_DEMO = [
     { m: 'happy', t: () => muneaT('demo.mood.todayPm', '傍晚：小寶來電話說畢業了，笑得合不攏嘴') } ] },
 ];
 let MOOD_WEEK = MOOD_WEEK_DEMO;
-const MOOD_ZH2KEY = { '開心': 'happy', '愉快': 'glad', '平穩': 'calm', '疲累': 'tired', '低落': 'down', '煩躁': 'upset' };
+// 心情詞 → 家人頁的粗標籤（Edward 2026-08-01 修）
+//
+// 這張表以前只認「聊聊觀察」用的六個詞（開心／愉快／平穩／疲累／低落／煩躁），但使用者
+// 自己在情緒球點的是另一組（開心／愉悅／平靜／低落／焦慮／生氣）——雲端原字送回來，
+// 這裡對不上就一律 || 'calm'。結果他點愉悅、焦慮、生氣，家人頁全都顯示「平穩」。
+//
+// 現在兩套詞都收。**焦慮與生氣一定要分開**：焦慮是「他不安」、煩躁是「他被惹毛」，
+// 對想關心他的家人來說是完全不同的訊號，不能混成一格。
+const MOOD_ZH2KEY = {
+  '開心': 'happy',
+  '愉快': 'glad', '愉悅': 'glad',
+  '平穩': 'calm', '平靜': 'calm',
+  '疲累': 'tired',
+  '低落': 'down',
+  '焦慮': 'anxious', '緊張': 'anxious',
+  '煩躁': 'upset', '生氣': 'upset', '憤怒': 'upset',
+};
 async function loadMoodWeekReal() {
   try {
     const r = await fetch(brainURL('/wellbeing/trend'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days: 7 }) });
@@ -8612,6 +8631,7 @@ function init() {
       calm: 'mood.calm',
       tired: 'mood.tired',
       down: 'mood.low',
+      anxious: 'mood.anxious',
       upset: 'mood.angry',
     }[m.key];
     return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label()) };
