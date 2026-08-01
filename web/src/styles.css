@@ -2396,6 +2396,8 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .prize-list { display: flex; flex-direction: column; gap: 8px; }
 .prize-row { display: flex; align-items: center; gap: 8px; }
 .prize-row .pz-name { flex: 1; min-width: 0; }
+/* 等級標籤是系統給的（大獎／二獎／安慰獎），使用者只填獎品內容 */
+.prize-row .pz-tier { flex: 0 0 52px; font-size: 13.5px; font-weight: 700; color: var(--teal-dd); }
 .prize-row .pz-count { flex: 0 0 84px; height: 46px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 13px; background: #fff; font-family: var(--sans); font-size: 15px; color: var(--ink); }
 /* 第一行沒有移除鍵，但要留同寬的位置——不然它的輸入框比下面幾行寬，整排看起來是歪的 */
 .prize-row:first-child { padding-right: 42px; }
@@ -2404,9 +2406,32 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .pz-add { display: block; margin: 10px 0 0; padding: 0; border: none; background: none; color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 /* 活動卡上把獎項攤開：看得到自己在抽什麼、各有幾個名額 */
 .prize-board { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; border-radius: 13px; overflow: hidden; background: var(--line); }
-.prize-board .pb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: var(--mint); }
-.prize-board .pb-name { font-size: 14.5px; font-weight: 700; color: var(--ink); }
-.prize-board .pb-count { font-size: 13px; font-weight: 600; color: var(--teal-dd); }
+.prize-board .pb-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--mint); }
+.prize-board .pb-tier { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: #fff; background: var(--teal-d); padding: 3px 8px; border-radius: 999px; }
+.prize-board .pb-name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prize-board .pb-count { flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--teal-dd); }
+/* 抽完就沒名額的那一列淡掉——「先搶先有」要看得見 */
+.prize-board .pb-row.gone { background: #F0EDE7; }
+.prize-board .pb-row.gone .pb-tier { background: #C2C8C5; }
+.prize-board .pb-row.gone .pb-name { color: var(--muted); text-decoration: line-through; }
+.prize-board .pb-row.gone .pb-count { color: var(--muted); }
+/* 自己抽到什麼（Edward 2026-08-01「直接顯示用戶設定的獎項」＋「下面顯示找誰領獎」） */
+.draw-got { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 14px 15px; border-radius: 15px; background: linear-gradient(135deg, #FBF0D5 0%, #F6E4BC 100%); box-shadow: inset 0 0 0 1.5px #E8C77E; }
+.draw-got .dg-ico { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%; background: #E0B354; color: #fff; }
+.draw-got .dg-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.draw-got .dg-tier { align-self: flex-start; font-size: 11.5px; font-weight: 700; color: #8A6410; background: rgba(255, 255, 255, .7); padding: 2px 8px; border-radius: 999px; }
+.draw-got .dg-txt b { font-size: 16px; font-weight: 700; color: var(--ink); }
+.draw-got .dg-txt small { font-size: 12.5px; color: #7A5A18; line-height: 1.5; }
+.draw-got.miss { background: var(--mint); box-shadow: none; }
+.draw-got.miss .dg-txt b { color: var(--ink-2); font-size: 15px; }
+.draw-got.miss .dg-txt small { color: var(--muted); }
+/* 其他人抽到什麼 */
+.pick-list { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; border-radius: 13px; overflow: hidden; background: var(--line); }
+.pick-list .pk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; background: #fff; }
+.pick-list .pk-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.pick-list .pk-got { font-size: 13px; font-weight: 700; color: #8A6410; }
+.pick-list .pk-got.miss { color: var(--muted); font-weight: 600; }
+.draw-roll .dr-prize { font-size: 26px; }
 /* 開獎結果：多個獎項時列成一張榜，自己中的那行標出來 */
 .draw-win-card.multi .dw-title { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--ink); margin: 2px 0 10px; }
 .draw-win-card.multi .dw-list { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-bottom: 12px; }
