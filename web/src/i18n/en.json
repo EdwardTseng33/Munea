@@ -1578,7 +1578,7 @@
   "activity.hideConfirm": "Hide it from your screen? Tap again",
   "activity.hiddenToast": "Hidden. Your family still sees it",
   "activity.drawPickHint": "Everyone picks a ticket. Draw at {when}",
-  "activity.drawPickButton": "Pick a ticket",
+  "activity.drawPickButton": "Draw",
   "activity.drawPicking": "Picking...",
   "activity.drawMyTicket": "You got no. {no}",
   "activity.drawMyTicketSub": "Draw at {when} - we will tell you if you win",
@@ -1588,5 +1588,15 @@
   "book.drawWinner": "{name} won (no. {no})",
   "book.drawNobody": "Nobody picked a ticket",
   "feed.drawWinner": "“{prize}” was drawn - {name} won (no. {no})!",
-  "feed.drawNobody": "“{prize}” ended - nobody picked a ticket"
+  "feed.drawNobody": "“{prize}” ended - nobody picked a ticket",
+  "activity.prizeAdd": "+ Add another prize",
+  "activity.prizeCountOption": "{n}",
+  "activity.prizeCountAria": "How many winners",
+  "activity.prizeMorePlaceholder": "e.g. 2nd prize, consolation",
+  "activity.prizeRemoveAria": "Remove this prize",
+  "activity.winnersTitle": "Results",
+  "activity.claimYouGiveAll": "You are providing the prizes - remember to hand them over",
+  "activity.claimFromHost": "Ask the host for the prize",
+  "feed.drawWinnersMulti": "The draw is in - {list}!",
+  "book.drawWinnerItem": "{prize} {name}"
 }

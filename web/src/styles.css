@@ -2390,7 +2390,31 @@ textarea.chal-input { resize: none; line-height: 1.7; }
    做成一張卡片的樣子而不是普通按鈕——要看得出「這裡有東西可以抽」。 */
 .draw-pick { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; min-height: 52px; border: none; border-radius: 15px; background: linear-gradient(135deg, #F4B860 0%, #E09B45 100%); color: #fff; font-family: var(--display); font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(214, 148, 62, .32); -webkit-tap-highlight-color: transparent; transition: transform .12s; }
 .draw-pick:active { transform: scale(.97); }
-.draw-pick .dp-card { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: rgba(255, 255, 255, .26); font-size: 16px; font-weight: 800; }
+.draw-pick .dp-card { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(255, 255, 255, .28); padding: 5px; }
+.draw-pick .dp-card svg { display: block; width: 100%; height: 100%; }
+/* 多獎項（Edward 2026-08-01「大獎、二獎、安慰獎」）
+   建立表單：一行一個獎，名稱佔滿、右邊選幾位；第一行是主獎不給移除。 */
+.prize-list { display: flex; flex-direction: column; gap: 8px; }
+.prize-row { display: flex; align-items: center; gap: 8px; }
+.prize-row .pz-name { flex: 1; min-width: 0; }
+.prize-row .pz-count { flex: 0 0 84px; height: 46px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 13px; background: #fff; font-family: var(--sans); font-size: 15px; color: var(--ink); }
+/* 第一行沒有移除鍵，但要留同寬的位置——不然它的輸入框比下面幾行寬，整排看起來是歪的 */
+.prize-row:first-child { padding-right: 42px; }
+.prize-row .pz-del { flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center; border: none; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.prize-row .pz-del svg { width: 16px; height: 16px; }
+.pz-add { display: block; margin: 10px 0 0; padding: 0; border: none; background: none; color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* 活動卡上把獎項攤開：看得到自己在抽什麼、各有幾個名額 */
+.prize-board { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; border-radius: 13px; overflow: hidden; background: var(--line); }
+.prize-board .pb-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: var(--mint); }
+.prize-board .pb-name { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.prize-board .pb-count { font-size: 13px; font-weight: 600; color: var(--teal-dd); }
+/* 開獎結果：多個獎項時列成一張榜，自己中的那行標出來 */
+.draw-win-card.multi .dw-title { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--ink); margin: 2px 0 10px; }
+.draw-win-card.multi .dw-list { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-bottom: 12px; }
+.draw-win-card.multi .dw-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 13px; border-radius: 11px; background: rgba(255, 255, 255, .62); }
+.draw-win-card.multi .dw-item.me { background: #FBEFD3; box-shadow: inset 0 0 0 1.5px #E0B354; }
+.draw-win-card.multi .dw-prize-name { font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.draw-win-card.multi .dw-item b { font-size: 15.5px; font-weight: 700; color: var(--ink); }
 /* 抽完之後：自己的號碼一直看得到，開獎時才知道中沒中 */
 .draw-mine { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 13px 15px; border-radius: 15px; background: var(--mint); }
 .draw-mine .dm-no { display: grid; place-items: center; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 12px; background: #fff; color: var(--teal-dd); font-family: var(--display); font-size: 19px; font-weight: 800; letter-spacing: .5px; box-shadow: 0 1px 4px rgba(26, 114, 104, .16); }

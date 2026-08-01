@@ -1578,7 +1578,7 @@
   "activity.hideConfirm": "自分の画面から隠しますか？もう一度タップ",
   "activity.hiddenToast": "非表示にしました。ご家族には表示されたままです",
   "activity.drawPickHint": "全員が1枚ひいて、{when}に抽選",
-  "activity.drawPickButton": "1枚ひく",
+  "activity.drawPickButton": "抽選する",
   "activity.drawPicking": "ひいています…",
   "activity.drawMyTicket": "{no} 番をひきました",
   "activity.drawMyTicketSub": "{when}に抽選。当たったらお知らせします",
@@ -1588,5 +1588,15 @@
   "book.drawWinner": "{name} が当選（{no} 番）",
   "book.drawNobody": "誰もひきませんでした",
   "feed.drawWinner": "「{prize}」の抽選結果——{name} が当選（{no} 番）！",
-  "feed.drawNobody": "「{prize}」は終了しました——誰もひきませんでした"
+  "feed.drawNobody": "「{prize}」は終了しました——誰もひきませんでした",
+  "activity.prizeAdd": "＋ 賞をもう一つ追加",
+  "activity.prizeCountOption": "{n} 名",
+  "activity.prizeCountAria": "何名",
+  "activity.prizeMorePlaceholder": "例：2等賞、参加賞",
+  "activity.prizeRemoveAria": "この賞を削除",
+  "activity.winnersTitle": "抽選結果",
+  "activity.claimYouGiveAll": "賞品はあなたが用意します。渡すのを忘れずに",
+  "activity.claimFromHost": "賞品は主催者から受け取ってください",
+  "feed.drawWinnersMulti": "抽選結果——{list}！",
+  "book.drawWinnerItem": "{prize} {name}"
 }

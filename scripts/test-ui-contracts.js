@@ -830,8 +830,20 @@ assert(/act\.tickets = Object\.assign\(\{\}, act\.tickets \|\| \{\}, \{ 你: n \
 // 抽了才有份：開獎只能從抽過的人裡開，否則「抽」這個動作等於沒意義
 const revealBody = drawBody.match(/function revealWinner\(\) \{[\s\S]*?\n    \}/)?.[0] || '';
 assert(revealBody, 'revealWinner 必須維持成一個讀得懂的函式');
-assert(/const pool = Object\.keys\(act\.tickets \|\| \{\}\);/.test(revealBody) && /pool\[Math\.floor\(Math\.random\(\) \* pool\.length\)\]/.test(revealBody),
+assert(/drawWinnersFrom\(act\.tickets, actPrizes\(act\)\)/.test(revealBody),
   '開獎只能從抽過的人裡面開——沒抽的人本來就沒參加');
+// 多獎項（Edward 2026-08-01「大獎、二獎、安慰獎，可以設數量」）
+const drawFn = app.match(/function drawWinnersFrom\(tickets, prizes\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(drawFn, 'drawWinnersFrom 必須維持成一個讀得懂的函式');
+assert(/const pool = Object\.keys\(tickets \|\| \{\}\);/.test(drawFn), '得主只能從抽過票的人裡面挑');
+assert(/for \(let i = pool\.length - 1; i > 0; i -= 1\)/.test(drawFn), '要先洗牌——照名單順序發獎等於誰先進圈誰中大獎');
+assert(/for \(let k = 0; k < p\.count && i < pool\.length; k \+= 1\) out\.push\(\{ prize: p\.name, name: pool\[i\+\+\] \}\)/.test(drawFn),
+  '一個人只能中一個獎（洗完照順序取），而且人不夠時發到沒人為止、不硬湊');
+// 舊抽獎（只有一個 prize 字串、一個 winner 名字）換版後還在使用者手機裡，不能變空白
+assert(/function actPrizes\(act\) \{[\s\S]*?const single = String\(\(act && act\.prize\) \|\| ''\)\.trim\(\);/.test(app),
+  'actPrizes 必須讀得懂舊的單一獎品');
+assert(/function actWinners\(act\) \{[\s\S]*?if \(act && act\.winner\) return \[\{ prize: String\(act\.prize \|\| ''\), name: String\(act\.winner\) \}\];/.test(app),
+  'actWinners 必須讀得懂舊的單一得主');
 // 卡片上寫著「X 月 X 日開獎」，時間到就必須真的開，不能只說一句「結束了」
 assert(/a\.kind === 'draw' && !a\.winner && a\.tickets && Object\.keys\(a\.tickets\)\.length/.test(app),
   '抽獎到期必須真的開出得主，不然卡片上那句「幾點開獎」是空頭承諾');
