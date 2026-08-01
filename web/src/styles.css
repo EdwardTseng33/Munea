@@ -2349,6 +2349,9 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 /* 抽獎卡：開獎鍵（次要描邊）＋中獎行 */
 .draw-body { margin-top: 8px; }
 .draw-now { display: block; width: 100%; margin-top: 8px; min-height: 44px; border: 1.5px solid var(--teal-d); border-radius: 13px; background: #FFF; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
+/* 不是發起人時看到的：跟按鈕一樣的位置與高度，但明顯不是可以按的東西
+   （Edward 2026-08-01「開獎應該是 owner 的事」）。 */
+.draw-wait { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 8px; min-height: 44px; border-radius: 13px; background: var(--mint); color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 600; }
 .draw-win { font-size: 16px; font-weight: 700; color: var(--ink); margin-top: 6px; }
 .draw-win b { color: var(--ink); }
 

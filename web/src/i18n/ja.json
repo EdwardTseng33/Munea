@@ -1546,5 +1546,7 @@
   "health.unit.hourNarrow": "時間",
   "mood.weekAccumulating": "まだ記録が足りません。何度か話すか、下から気分を選ぶと、あなた自身の一週間がここに現れます。",
   "mood.cardIntro": "記録した気分が、あなたの一週間になります",
-  "activity.walkNoSteps": "データがまだありません"
+  "activity.walkNoSteps": "データがまだありません",
+  "activity.drawWaitOwner": "{owner} さんの抽選を待っています",
+  "activity.drawWaitHost": "主催者の抽選を待っています"
 }

@@ -745,7 +745,25 @@ const askReviewBody = app.match(/window\.__muneaMaybeAskReview = function \(mome
 assert(askReviewBody, 'The review timing gate must remain a readable single function');
 assert(askReviewBody.indexOf("typeof window.__muneaRequestReview !== 'function'") < askReviewBody.indexOf("localStorage.setItem('munea.reviewAsked."), 'The native-availability check must run BEFORE the once-per-version flag is written');
 
-console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, and the App Store review chain');
+// 開獎是發起人的事（Edward 2026-08-01）。以前那顆「現在開獎」沒有任何身分檢查——
+// 任何家人打開卡片就能替全家結束抽獎，其他人連參加的機會都沒有。
+// 這裡守三件事：建活動有記發起人／開獎鍵有問是不是我／判斷用 ownerId 不是用名字。
+assert(/const act = \{ id: Date\.now\(\), kind, names, owner: myFeedName\(\), ownerId: muneaCloudPersonId\(\) \}/.test(app),
+  '建活動必須記下發起人（ownerId），否則沒人分得出這場是誰開的');
+const actIsMineBody = app.match(/function actIsMine\(act\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(actIsMineBody, 'actIsMine 必須維持成一個讀得懂的函式');
+assert(/String\(act\.ownerId\) === String\(muneaCloudPersonId\(\)\)/.test(actIsMineBody),
+  '發起人要比對 ownerId——名字會改、也可能兩個家人同名');
+assert(/if \(!act \|\| !act\.ownerId\) return true;/.test(actIsMineBody),
+  '舊活動沒記發起人時要當成「是我的」，不然使用者昨天開的抽獎今天突然按不動');
+const drawBody = app.match(/function renderDrawBody\(act, card\) \{[\s\S]*?\n    card\.appendChild\(wrap\);/)?.[0] || '';
+assert(drawBody, 'renderDrawBody 必須維持成一個讀得懂的函式');
+assert(/\} else if \(!actIsMine\(act\)\) \{/.test(drawBody),
+  '「現在開獎」必須先問是不是發起人，否則誰打開誰都能提前結束抽獎');
+assert(drawBody.indexOf('!actIsMine(act)') < drawBody.indexOf("class=\"draw-now\""),
+  '身分檢查必須排在開獎鍵前面');
+
+console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, draw ownership, and the App Store review chain');
 
 // Multilingual catalogs stay development-only until their UI, Voice, regional,
 // App Store, and real-device gates pass. Keep this in the existing launch suite

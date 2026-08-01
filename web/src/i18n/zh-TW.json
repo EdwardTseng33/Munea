@@ -1546,5 +1546,7 @@
   "health.unit.hourNarrow": "時",
   "mood.weekAccumulating": "還沒有足夠的紀錄。多聊幾次、或在下面點個心情，這裡就會長出你自己的一週。",
   "mood.cardIntro": "記下來的心情，會慢慢長成你自己的一週",
-  "activity.walkNoSteps": "還沒有資料"
+  "activity.walkNoSteps": "還沒有資料",
+  "activity.drawWaitOwner": "等{owner}開獎",
+  "activity.drawWaitHost": "等發起的人開獎"
 }

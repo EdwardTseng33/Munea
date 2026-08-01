@@ -1546,5 +1546,7 @@
   "health.unit.hourNarrow": "h",
   "mood.weekAccumulating": "Not enough records yet. Talk a few more times, or tap a mood below, and your own week will appear here.",
   "mood.cardIntro": "Each mood you note builds your own week",
-  "activity.walkNoSteps": "No data yet"
+  "activity.walkNoSteps": "No data yet",
+  "activity.drawWaitOwner": "Waiting for {owner} to draw",
+  "activity.drawWaitHost": "Waiting for the host to draw"
 }

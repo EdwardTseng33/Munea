@@ -1546,5 +1546,7 @@
   "health.unit.hourNarrow": "h",
   "mood.weekAccumulating": "Aún no hay suficientes registros. Habla unas cuantas veces, o toca un ánimo abajo, y aparecerá tu propia semana.",
   "mood.cardIntro": "Lo que anotes va formando tu propia semana",
-  "activity.walkNoSteps": "Sin datos aún"
+  "activity.walkNoSteps": "Sin datos aún",
+  "activity.drawWaitOwner": "Esperando a que {owner} haga el sorteo",
+  "activity.drawWaitHost": "Esperando a que el anfitrión haga el sorteo"
 }

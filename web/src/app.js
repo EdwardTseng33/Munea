@@ -10092,6 +10092,13 @@ function init() {
   }
   function actParts(act) { return ['你'].concat(act.names || []); }
   function actDisplayName(n) { return n === '你' ? muneaT('activity.selfName', '你') : n; }
+  // 這場活動是不是我發起的（Edward 2026-08-01：開獎是主人的事，不能誰打開誰就按）。
+  // 舊活動沒記發起人，這種一律當「是我的」——不然使用者昨天開的抽獎今天突然按不動，
+  // 那是把一個沒壞的東西弄壞。新建的活動從現在起都有記。
+  function actIsMine(act) {
+    if (!act || !act.ownerId) return true;
+    try { return String(act.ownerId) === String(muneaCloudPersonId()); } catch (e) { return true; }
+  }
   // 圈裡每個人給一個固定顏色（Edward 2026-08-01）
   //
   // 兩個 bug 一次修：
@@ -10270,10 +10277,19 @@ function init() {
         conf.appendChild(p);
       }
     }
+    const allInLine = '<div class="qc-num">' + muneaT('activity.drawAllIn', '{names} 都有份，{when}開獎', { names: all.map(actDisplayName).join(muneaT('common.listSeparator', '、')), when: drawWhen(act) }) + '</div>';
     if (act.winner) {
       wrap.innerHTML = winCardHtml(false);
+    } else if (!actIsMine(act)) {
+      // 開獎是發起人的事（Edward 2026-08-01）。以前這顆鍵誰打開誰都能按——
+      // 一個家人手一滑，全家連參加的機會都沒有就結束了。抽獎好玩的是一起等那一刻。
+      const who = muneaSafeDisplayText(act.owner, '');
+      wrap.innerHTML = allInLine +
+        '<div class="draw-wait">' + (who
+          ? muneaT('activity.drawWaitOwner', '等{owner}開獎', { owner: who })
+          : muneaT('activity.drawWaitHost', '等發起的人開獎')) + '</div>';
     } else {
-      wrap.innerHTML = '<div class="qc-num">' + muneaT('activity.drawAllIn', '{names} 都有份，{when}開獎', { names: all.map(actDisplayName).join(muneaT('common.listSeparator', '、')), when: drawWhen(act), companion: cname() }) + '</div>' +
+      wrap.innerHTML = allInLine +
         '<button type="button" class="draw-now">' + muneaT('activity.drawNowButton', '現在開獎') + '</button>';
       wrap.querySelector('.draw-now').addEventListener('click', () => {
         const winner = all[Math.floor(Math.random() * all.length)];
@@ -10307,7 +10323,9 @@ function init() {
     const ons = $$('#inviteList .iv.on');
     const names = ons.map(x => x.dataset.name).filter(Boolean);
     if (!names.length) { toast(loadCircle().some(m => !m.self) ? muneaT('activity.pickFamilyFirst', '先選至少一位家人一起') : muneaT('activity.noFamilyYet', '圈裡還沒有家人，先到家人頁邀請家人加入')); return; }
-    const act = { id: Date.now(), kind, names };
+    // 記下發起人（Edward 2026-08-01「開獎應該是發起人的事」）。
+    //   ownerId 才是判斷依據——名字會改、也可能兩個家人同名；顯示才用 owner。
+    const act = { id: Date.now(), kind, names, owner: myFeedName(), ownerId: muneaCloudPersonId() };
     if (kind === 'walk') {
       act.goal = +(($('#walkGoal') && $('#walkGoal').value) || 30000);
       act.title = muneaT('activity.exercise', '一起運動');
