@@ -10874,15 +10874,53 @@ function init() {
     { q: muneaT('quiz.q19', '過馬路前，先做哪件事？'), opts: [muneaT('quiz.q19o1', '左右看清楚'), muneaT('quiz.q19o2', '看手機'), muneaT('quiz.q19o3', '快跑'), muneaT('quiz.q19o4', '閉眼睛')], a: 0 },
   ];
   let quizState = null;
-  function startQuiz(act, card) {
-    quizState = { act, card, i: 0, score: 0, n: Math.min(act.q || 5, QUIZ_BANK.length) };
+
+  // 寧寧當場出題（Edward 2026-08-01 拍板 B 案）
+  //
+  // 上面那份 QUIZ_BANK 是 19 題示範題庫，四國各自改寫過，但玩幾次就重複了。
+  // 改成建立活動時跟雲端要一份新的：會配合他的語言、興趣與所在地，每次都不一樣。
+  //
+  // 拿不到就用內建題庫，玩得起來最重要——所以這裡任何一步失敗都只是「安靜退回」，
+  // 不擋住他開始玩、也不跳錯誤訊息嚇他。雲端那邊出的題只要有一題不合格就整份不給，
+  // 所以這裡收到的不是「好題目」就是「沒題目」，不必再挑一次。
+  async function fetchQuizQuestions(count) {
+    try {
+      let interests = [], place = '';
+      try { interests = (typeof loadInterests === 'function' ? loadInterests() : []) || []; } catch (e) {}
+      try {
+        const pp = JSON.parse(localStorage.getItem('munea.personProfile') || '{}');
+        place = String(pp.city || '').trim();
+      } catch (e) {}
+      const r = await brainPost('/quiz-questions', { count: count, interests: interests, place: place });
+      if (!r || !r.ok || !Array.isArray(r.questions) || !r.questions.length) return null;
+      // 雲端已經逐題驗過，這裡只做最後一道形狀檢查——萬一舊版雲端回了別的東西，
+      // 寧可用內建題庫，也不要讓畫面印出怪東西。
+      const ok = r.questions.every(x => x
+        && typeof x.q === 'string' && x.q.trim()
+        && Array.isArray(x.opts) && x.opts.length === 4 && x.opts.every(o => typeof o === 'string' && o.trim())
+        && Number.isInteger(x.a) && x.a >= 0 && x.a < 4);
+      return ok ? r.questions.map(x => ({ q: x.q.trim(), opts: x.opts.map(o => o.trim()), a: x.a })) : null;
+    } catch (e) { return null; }
+  }
+
+  async function startQuiz(act, card) {
+    const want = Math.min(act.q || 5, 12);
+    // 同一場活動只跟雲端要一次題：他關掉再點開，題目要跟剛剛一樣，不然一場活動兩套題。
+    // 只掛在記憶體裡的活動物件上、不寫進手機儲存——題目沒必要佔空間、也不必同步給家人，
+    // 而且每次作答本來就從第一題重新開始，不存也不會弄丟進度。
+    if (!Array.isArray(act._questions) || !act._questions.length) {
+      const fresh = await fetchQuizQuestions(want);
+      if (fresh && fresh.length >= want) act._questions = fresh.slice(0, want);
+    }
+    const bank = (Array.isArray(act._questions) && act._questions.length) ? act._questions : QUIZ_BANK;
+    quizState = { act, card, i: 0, score: 0, n: Math.min(want, bank.length), bank: bank };
     renderQuizStep();
     $('#quizModal').classList.add('show');
   }
   function renderQuizStep() {
     const st = quizState;
     if (!st) return;
-    const item = QUIZ_BANK[st.i];
+    const item = (st.bank || QUIZ_BANK)[st.i];
     $('#quizProgress').textContent = muneaT('activity.quizProgress', '第 {current} 題／共 {total} 題', { current: st.i + 1, total: st.n });
     $('#quizQ').textContent = item.q;
     const order = item.opts.map((_, k) => k).sort((a2, b2) => ((a2 * 7 + st.i * 3) % 4) - ((b2 * 7 + st.i * 3) % 4));
@@ -10916,7 +10954,7 @@ function init() {
   if ($('#quizOpts')) $('#quizOpts').addEventListener('click', e => {
     const btn = e.target.closest('.quiz-opt');
     if (!btn || !quizState) return;
-    const item = QUIZ_BANK[quizState.i];
+    const item = (quizState.bank || QUIZ_BANK)[quizState.i];
     const k = +btn.dataset.k;
     [...$('#quizOpts').children].forEach(b2 => {
       if (+b2.dataset.k === item.a) b2.classList.add('good');
