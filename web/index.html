@@ -1075,7 +1075,17 @@
       <div class="field-label" data-i18n="appointment.visitType">看什麼診</div>
       <input class="chal-input" id="visitTitle" maxlength="16" placeholder="例：心臟科回診、眼科" data-i18n-placeholder="appointment.titlePlaceholder">
       <div class="field-label" data-i18n="legacyUi.appointmentDate">哪一天</div>
-      <div class="cal-grid" id="visitDatePick"></div>
+      <!-- 原本是「未來 14 天」十四格：兩個月後的回診根本記不進來（Edward 2026-08-01）。
+           改成快捷兩顆 ＋ 系統的年月日行事曆——長輩最常用的今天/明天仍是一點就好，
+           其餘日子點日期欄，跳出手機自己的行事曆，往後多久都能選。 -->
+      <div class="visit-when">
+        <button type="button" class="mchip" id="visitDayToday" data-i18n="common.today">今天</button>
+        <button type="button" class="mchip" id="visitDayTomorrow" data-i18n="common.tomorrow">明天</button>
+        <label class="visit-datefield" id="visitDateField">
+          <span class="visit-datetext" id="visitDateText" aria-hidden="true"></span>
+          <input type="date" id="visitDate" aria-label="哪一天" data-i18n-aria-label="legacyUi.appointmentDate" />
+        </label>
+      </div>
       <div class="field-label" data-i18n="appointment.time">看診時間</div>
       <input type="time" id="visitTime" class="visit-time" value="09:00" step="300" aria-label="看診時間" data-i18n-aria-label="appointment.time">
       <button class="modal-btn" id="visitSaveBtn" data-i18n="appointment.add">加入這筆看診</button>
@@ -1186,11 +1196,14 @@
         <button class="mchip" data-t="睡前" data-i18n="medication.slot.bedtime">睡前</button>
       </div>
       <div class="field-label" data-i18n="medicationManager.duration">吃多久</div>
-      <div class="med-chips" id="medDayChips">
+      <!-- 五顆固定排成一行、不折行（Edward 2026-08-01）。data-d 是存進藥單的內部值，
+           既有藥單若存著「90 天」仍會正確顯示——顯示走 localizedMedicationDuration 的
+           「{count} 天」通用寫法，不是靠這裡的按鈕字。 -->
+      <div class="med-chips fit-row" id="medDayChips">
         <button class="mchip" data-d="7 天" data-i18n="medication.duration7">7 天</button>
         <button class="mchip" data-d="14 天" data-i18n="medication.duration14">14 天</button>
         <button class="mchip" data-d="30 天" data-i18n="medication.duration30">30 天</button>
-        <button class="mchip" data-d="90 天" data-i18n="medication.duration90">90 天</button>
+        <button class="mchip" data-d="60 天" data-i18n="medication.duration60">60 天</button>
         <button class="mchip on" data-d="長期" data-i18n="medication.duration.longTerm">長期</button>
       </div>
       <button class="modal-btn" id="medAddBtn" data-i18n="medicationManager.add">加入提醒</button>

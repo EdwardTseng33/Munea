@@ -6137,13 +6137,15 @@ function renderMedSlots() {
           + '<span>' + muneaEscapeHtml(localizedMedicationDuration(m.days)) + '</span>'
           + '<button type="button" class="ms-del" data-slot="' + muneaEscapeHtml(slot) + '" data-name="' + muneaEscapeHtml(m.name) + '" aria-label="' + muneaEscapeHtml(removeLabel) + '">✕</button></div>';
       }).join('')   // 用藥管理清單顯示名守門（data-name 保留原文供刪除比對，Edward 2026-07-15 事故）
-      : '<div class="ms-empty">' + muneaEscapeHtml(muneaT('medicationManager.emptySlot', '這個時段沒有藥')) + '</div>';
+      : '';
     const count = new Intl.NumberFormat(muneaLocale()).format(inSlot.length);
+    // 有藥就在第二行寫「幾種」；沒藥就把「這個時段沒有藥」寫在同一個位置——
+    // 原本那是另外一整行，四個空時段等於白白多佔四行（Edward 2026-08-01：板位太大）
     const countCopy = inSlot.length
       ? (inSlot.length === 1
         ? muneaT('medicationManager.medicineCountOne', '{count} 種', { count })
         : muneaT('medicationManager.medicineCountOther', '{count} 種', { count }))
-      : '';
+      : muneaT('medicationManager.emptySlot', '這個時段沒有藥');
     const reminderTimeLabel = muneaT(
       'medicationManager.reminderTime',
       '提醒時間',
@@ -9826,35 +9828,71 @@ function init() {
     return (d.getMonth() + 1) + '/' + d.getDate() + '（' + muneaT('mood.weekdayLabel', '週{day}', { day: muneaT(WD_KEYS[d.getDay()], WD_ZH[d.getDay()]) }) + '）';
   }
   function isoOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  function buildCalGrid(boxSel) {
-    const box = boxSel ? $(boxSel) : null;
-    if (!box || box.dataset.built) return;
-    box.dataset.built = '1';
+  // 就診日期（Edward 2026-08-01：原本只給未來 14 天，兩個月後的回診記不進來）。
+  // 用手機自己的年月日行事曆——四個語系的月份、星期、排列順序都由系統給，
+  // 不必為了日期硬刻四套文字。今天／明天留成快捷，長輩最常用的還是一點就好。
+  function visitPickedISO() {
+    const input = $('#visitDate');
+    return (input && input.value) || '';
+  }
+  function visitDateLabel(d) {
+    // 中文的排法會擠成「2026年8月2日週日」——星期直接黏在日期後面。
+    // 日文自己會加括號、英文西文本來就有逗號，所以只在缺分隔的語系補一個空格。
+    const parts = new Intl.DateTimeFormat(muneaLocale(), {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+    }).formatToParts(d);
+    return parts.map((part, i) => {
+      const prev = parts[i - 1];
+      const needsGap = part.type === 'weekday' && prev && prev.type !== 'literal';
+      return (needsGap ? ' ' : '') + part.value;
+    }).join('').trim();
+  }
+  function syncVisitDateField() {
+    const input = $('#visitDate');
+    const text = $('#visitDateText');
+    if (!input || !text) return;
+    const iso = input.value;
+    const d = iso ? new Date(iso + 'T00:00') : null;
+    text.textContent = (d && !Number.isNaN(d.getTime()))
+      ? visitDateLabel(d)
+      : muneaT('appointment.pickDate', '選日期');
     const now = new Date();
-    let html = '';
-    for (let i = 0; i < 14; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-      // 星期名走 Intl，四語系自動正確——不要為了七個星期硬刻 28 把 key，
-      // 也不要留寫死的中文（這一格捕捉工具掃不到：harness 用 showModal() 直接開面板，
-      // 不會觸發 buildCalGrid，所以這裡漏中文不會有任何測試發現）。
-      // 日期格子是等寬的七欄，一格只放得下四、五個字元。中文「今天／明天」剛好，
-      // 但英文的 Tomorrow 有八個字元、西班牙文 Mañana 六個，硬塞會擠爆或縮到看不清。
-      // 判準用長度、不用語言：塞得下就用「明天」這種好懂的字，塞不下就退回星期幾
-      // （那一格的日期數字仍在，看得出來是哪一天）。「今天」四語都夠短、一律保留。
-      const weekday = new Intl.DateTimeFormat(muneaLocale(), { weekday: 'short' }).format(d);
-      const tomorrowWord = muneaT('common.tomorrow', '明天');
-      const wdName = i === 0
-        ? muneaT('common.today', '今天')
-        : (i === 1 && [...tomorrowWord].length <= 4 ? tomorrowWord : weekday);
-      html += '<button type="button" class="cal-cell" data-iso="' + isoOf(d) + '"><small>' + wdName + '</small><b>' + (d.getDate() === 1 ? (d.getMonth() + 1) + '/1' : d.getDate()) + '</b></button>';
-    }
-    box.innerHTML = html;
-    box.addEventListener('click', e => {
-      const cell = e.target.closest('.cal-cell');
-      if (!cell) return;
-      box.querySelectorAll('.cal-cell').forEach(x => x.classList.remove('on'));
-      cell.classList.add('on');
+    const today = isoOf(now);
+    const tomorrow = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+    const todayBtn = $('#visitDayToday');
+    const tomorrowBtn = $('#visitDayTomorrow');
+    if (todayBtn) todayBtn.classList.toggle('on', iso === today);
+    if (tomorrowBtn) tomorrowBtn.classList.toggle('on', iso === tomorrow);
+  }
+  function setVisitDate(iso) {
+    const input = $('#visitDate');
+    if (!input) return;
+    input.value = iso;
+    syncVisitDateField();
+  }
+  function resetVisitDate() {
+    const input = $('#visitDate');
+    if (!input) return;
+    const now = new Date();
+    input.min = isoOf(now);              // 提醒不能設在過去
+    input.value = isoOf(now);
+    syncVisitDateField();
+  }
+  function wireVisitDateField() {
+    const input = $('#visitDate');
+    if (!input || input.dataset.wired) return;
+    input.dataset.wired = '1';
+    input.addEventListener('change', syncVisitDateField);
+    input.addEventListener('input', syncVisitDateField);
+    const now = new Date();
+    const todayBtn = $('#visitDayToday');
+    const tomorrowBtn = $('#visitDayTomorrow');
+    if (todayBtn) todayBtn.addEventListener('click', () => setVisitDate(isoOf(new Date())));
+    if (tomorrowBtn) tomorrowBtn.addEventListener('click', () => {
+      const t = new Date();
+      setVisitDate(isoOf(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)));
     });
+    input.min = isoOf(now);
   }
   function loadActs() { try { return JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) { return []; } }
   function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} syncPush('activities', a); if (window.MuneaNotify) window.MuneaNotify.sync(); }
@@ -10455,7 +10493,8 @@ function init() {
     renderVisitList(); renderVisitRow();
   });
   if ($('#visitEntry')) $('#visitEntry').addEventListener('click', () => {
-    buildCalGrid('#visitDatePick');
+    wireVisitDateField();
+    resetVisitDate();
     if ($('#visitTitle')) $('#visitTitle').value = '';
     if ($('#visitTime')) $('#visitTime').value = '09:00';
     renderVisitList();
@@ -10464,19 +10503,19 @@ function init() {
   if ($('#visitClose')) $('#visitClose').addEventListener('click', () => $('#visitModal').classList.remove('show'));
   if ($('#visitModal')) $('#visitModal').addEventListener('click', e => { if (e.target === $('#visitModal')) $('#visitModal').classList.remove('show'); });
   if ($('#visitSaveBtn')) $('#visitSaveBtn').addEventListener('click', () => {
-    const on = document.querySelector('#visitDatePick .cal-cell.on');
-    if (!on) { toast(muneaT('visit.pickDayFirst', '先選一天')); return; }
+    const pickedISO = visitPickedISO();
+    if (!pickedISO) { toast(muneaT('visit.pickDayFirst', '先選一天')); return; }
     const title = ((($('#visitTitle') && $('#visitTitle').value) || '').trim()) || muneaT('visit.defaultTitle', '回診');
     const tv = ($('#visitTime') && $('#visitTime').value) || '09:00';
-    const d = new Date(on.dataset.iso + 'T00:00');
+    const d = new Date(pickedISO + 'T00:00');
     const label = fmtDay(d) + ' ' + fmtVisitTime(tv);
-    const visit = { id: Date.now(), title, dateISO: on.dataset.iso, time: tv, label };
+    const visit = { id: Date.now(), title, dateISO: pickedISO, time: tv, label };
     const arr = loadVisits(); arr.push(visit);
     saveVisits(arr);
     syncVisitReminder(visit);
     renderVisitList(); renderVisitRow();
     if ($('#visitTitle')) $('#visitTitle').value = '';
-    document.querySelectorAll('#visitDatePick .cal-cell.on').forEach(x => x.classList.remove('on'));
+    resetVisitDate();
     toast(muneaT('visit.savedToast', '好，「{title}」{label}記下了，{companion}前一天會提醒你', { title, label, companion: cname() }));
   });
   renderVisitRow();
