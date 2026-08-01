@@ -758,7 +758,55 @@ const askReviewBody = app.match(/window\.__muneaMaybeAskReview = function \(mome
 assert(askReviewBody, 'The review timing gate must remain a readable single function');
 assert(askReviewBody.indexOf("typeof window.__muneaRequestReview !== 'function'") < askReviewBody.indexOf("localStorage.setItem('munea.reviewAsked."), 'The native-availability check must run BEFORE the once-per-version flag is written');
 
-console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, and the App Store review chain');
+// 開獎是發起人的事（Edward 2026-08-01）。以前那顆「現在開獎」沒有任何身分檢查——
+// 任何家人打開卡片就能替全家結束抽獎，其他人連參加的機會都沒有。
+// 這裡守三件事：建活動有記發起人／開獎鍵有問是不是我／判斷用 ownerId 不是用名字。
+assert(/const act = \{ id: Date\.now\(\), kind, names, owner: myFeedName\(\), ownerId: muneaCloudPersonId\(\) \}/.test(app),
+  '建活動必須記下發起人（ownerId），否則沒人分得出這場是誰開的');
+const actIsMineBody = app.match(/function actIsMine\(act\) \{[\s\S]*?\n  \}/)?.[0] || '';
+assert(actIsMineBody, 'actIsMine 必須維持成一個讀得懂的函式');
+assert(/String\(act\.ownerId\) === String\(muneaCloudPersonId\(\)\)/.test(actIsMineBody),
+  '發起人要比對 ownerId——名字會改、也可能兩個家人同名');
+assert(/if \(!act \|\| !act\.ownerId\) return true;/.test(actIsMineBody),
+  '舊活動沒記發起人時要當成「是我的」，不然使用者昨天開的抽獎今天突然按不動');
+const drawBody = app.match(/function renderDrawBody\(act, card\) \{[\s\S]*?\n    card\.appendChild\(wrap\);/)?.[0] || '';
+assert(drawBody, 'renderDrawBody 必須維持成一個讀得懂的函式');
+assert(/actIsMine\(act\)\s*\n?\s*\?\s*'<button type="button" class="draw-now">/.test(drawBody),
+  '「現在開獎」只能給發起人看到，否則誰打開誰都能提前結束抽獎');
+assert(!/class="draw-now"/.test(drawBody.split('actIsMine(act)')[0] || ''),
+  '開獎鍵不能出現在身分檢查之前');
+// 抽獎要有「自己抽一張」的動作（Edward 2026-08-01：「應該是用戶能有抽的體驗流程，
+// 抽完後才是等待活動結束」）。以前發起人按一下就直接公布得主，其他人全程沒有動作。
+assert(/class="draw-pick"/.test(drawBody), '抽獎必須讓每個人自己抽一張，不能只有發起人按一下就公布結果');
+assert(/act\.tickets = Object\.assign\(\{\}, act\.tickets \|\| \{\}, \{ 你: n \}\)/.test(drawBody),
+  '抽到的號碼要記在活動上，不然重開 App 就忘了他抽過');
+// 抽了才有份：開獎只能從抽過的人裡開，否則「抽」這個動作等於沒意義
+const revealBody = drawBody.match(/function revealWinner\(\) \{[\s\S]*?\n    \}/)?.[0] || '';
+assert(revealBody, 'revealWinner 必須維持成一個讀得懂的函式');
+assert(/const pool = Object\.keys\(act\.tickets \|\| \{\}\);/.test(revealBody) && /pool\[Math\.floor\(Math\.random\(\) \* pool\.length\)\]/.test(revealBody),
+  '開獎只能從抽過的人裡面開——沒抽的人本來就沒參加');
+// 卡片上寫著「X 月 X 日開獎」，時間到就必須真的開，不能只說一句「結束了」
+assert(/a\.kind === 'draw' && !a\.winner && a\.tickets && Object\.keys\(a\.tickets\)\.length/.test(app),
+  '抽獎到期必須真的開出得主，不然卡片上那句「幾點開獎」是空頭承諾');
+assert(/a\.kind === 'draw' && !a\.winner\b(?![\s\S]{0,80}tickets)/.test(app),
+  '一個人都沒抽的抽獎要誠實說沒開成，不能硬抽一個沒參加的人');
+
+// 刪除 vs 不看（Edward 2026-08-01）。刪除會同步出去，全家的活動都會不見、救不回來，
+// 所以那是發起人的事；參加的人給「不看這個活動」＝只收起自己的畫面。
+const delBody = app.match(/const mine = actIsMine\(act\);[\s\S]*?body\.appendChild\(del\);/)?.[0] || '';
+assert(delBody, '刪除鍵必須先問這場活動是不是我發起的');
+assert(/if \(mine\) \{\s*const acts = loadActs\(\)\.filter\(a => a\.id !== act\.id\); saveActs\(acts\);\s*\} else \{\s*hideAct\(act\.id\);/.test(delBody),
+  '只有發起人能真的刪；其他人只能 hideAct（把活動從雲端拿掉會害全家的都不見）');
+// 最容易寫錯、也最貴的一條：隱藏清單若在讀取時就過濾，saveActs 會把「我不看的」
+// 當成不存在，一存檔就真的從雲端刪掉，還同步給全家——所以過濾只能發生在畫卡片的時候。
+assert(/function loadActs\(\) \{ try \{ return JSON\.parse\(localStorage\.getItem\('munea\.activities'\)\) \|\| \[\]; \}/.test(app),
+  'loadActs 必須原樣回傳資料，不能過濾隱藏的活動（會被 saveActs 當成刪除同步出去）');
+assert(/function renderActCard\(act\) \{[\s\S]{0,220}?if \(actHidden\(act\)\) return;/.test(app),
+  '隱藏只能發生在畫卡片的時候');
+assert(/localStorage\.setItem\(HIDDEN_ACTS_KEY/.test(app) && !/syncPush\('hiddenActs'/.test(app),
+  '「我不看」是這台手機的畫面偏好，不該同步出去');
+
+console.log('UI contracts OK: version SSOT, critical consent controls, Tokyo privacy disclosure, billing credit rules, medication data chain, social auth, quiet keyboard, latest account card, challenge controls, real family activities, draw ownership, delete-vs-hide, and the App Store review chain');
 
 // Multilingual catalogs stay development-only until their UI, Voice, regional,
 // App Store, and real-device gates pass. Keep this in the existing launch suite

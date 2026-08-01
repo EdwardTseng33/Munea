@@ -536,12 +536,63 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 #actDetailBody .ad-lbl { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
 #actDetailBody .ad-avs { display: flex; gap: 9px; flex-wrap: wrap; }
 #actDetailBody .ad-avs .init-ava { width: 46px; height: 46px; font-size: 16px; border-radius: 50%; background-size: cover; background-position: center; }
+/* 走路排行那排頭像原本是方的——.init-ava 的圓角是跟父層繼承的，這裡父層沒設就變方框 */
+#actDetailBody .walk-p .init-ava { width: 30px; height: 30px; border-radius: 50%; font-size: 13px; flex: 0 0 30px; }
+/* 上下留 10px：皇冠是往徽章外面長的，行距要夠它站，而且每一行都一樣高才對得齊 */
+#actDetailBody .walk-p { display: flex; align-items: center; gap: 10px; padding: 10px; position: relative; overflow: hidden; border-radius: 12px; }
+/* 每個人佔全家的比例，畫成一條淡淡的底（跟投票同一套語言：條長就是佔比）。
+   數字看得懂的人看 %，看不懂的人也看得出誰那條比較長。 */
+#actDetailBody .walk-p .wp-bar { position: absolute; left: 0; top: 0; bottom: 0; background: #E7DECF; opacity: .72; border-radius: 12px; transition: width .5s cubic-bezier(.4, 0, .2, 1); }
+#actDetailBody .walk-p > *:not(.wp-bar) { position: relative; }
+#actDetailBody .walk-p .wp-pct { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--muted); min-width: 34px; text-align: right; }
+#actDetailBody .walk-p.lead .wp-bar { background: #F0DCAE; opacity: .78; }
+#actDetailBody .walk-p.lead .wp-pct { color: #A97A1C; }
+#actDetailBody .walk-p b { flex: 1; font-weight: 700; font-size: 14.5px; color: var(--ink); }
+#actDetailBody .walk-p span:last-child { font-weight: 700; font-size: 14.5px; color: var(--teal-dd); }
+/* 名次（Edward 2026-08-01「一起運動這裡可以做個排名」）
+   第一名給金色實心、二三名給薄荷底，其餘只是淡淡的數字——這是家人一起走路，
+   不是排行榜比輸贏；名次要看得到，但不能讓走比較少的人覺得被公告。 */
+/* 每一名的徽章尺寸一律相同——第一名放大一圈的話，後面整欄的頭像和名字就會跟它對不齊
+   （Edward 2026-08-01 一眼看出來）。冠軍靠皇冠和金色區分，不靠大小。 */
+#actDetailBody .walk-p .walk-rank { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; color: var(--muted); background: transparent; position: relative; }
+/* 前三名做成獎牌（Edward 2026-08-01「名次徽章可以遊戲化一點」）：
+   金銀銅漸層＋一道內側亮邊當光澤＋往下的投影，小小一顆也看得出是立體的獎章。
+   第一名再大一圈並加一頂小皇冠——一眼就知道今天誰最會走。 */
+#actDetailBody .walk-p .walk-rank.r1,
+#actDetailBody .walk-p .walk-rank.r2,
+#actDetailBody .walk-p .walk-rank.r3 { color: #fff; font-size: 13px; text-shadow: 0 1px 1px rgba(0, 0, 0, .18); }
+#actDetailBody .walk-p .walk-rank.r1 { background: linear-gradient(160deg, #F5D384 0%, #E0B354 46%, #BE8F2E 100%); box-shadow: 0 2px 6px rgba(190, 143, 46, .42), inset 0 1px 0 rgba(255, 255, 255, .6); }
+#actDetailBody .walk-p .walk-rank.r2 { background: linear-gradient(160deg, #E4EAEE 0%, #C3CBD0 46%, #9BA6AE 100%); box-shadow: 0 2px 5px rgba(155, 166, 174, .38), inset 0 1px 0 rgba(255, 255, 255, .65); }
+#actDetailBody .walk-p .walk-rank.r3 { background: linear-gradient(160deg, #E2A87C 0%, #C9855A 46%, #A2653F 100%); box-shadow: 0 2px 5px rgba(162, 101, 63, .35), inset 0 1px 0 rgba(255, 255, 255, .5); }
+/* 冠軍的小皇冠：用邊框畫三個尖角，不必再載一張圖 */
+#actDetailBody .walk-p .walk-rank.r1::before { content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 13px; height: 8px; background: #E8A93C; clip-path: polygon(0 100%, 0 22%, 25% 62%, 50% 0, 75% 62%, 100% 22%, 100% 100%); }
+#actDetailBody .walk-p .walk-rank.none { color: #C9CFCD; font-weight: 400; }
+#actDetailBody .walk-p.lead b { color: var(--ink); }
+#actDetailBody .walk-p.lead span:last-child { color: #A97A1C; }
+#actDetailBody .walk-p.quiet b { color: var(--ink-2); }
+#actDetailBody .walk-p.quiet span:last-child { color: var(--muted); font-weight: 600; font-size: 13.5px; }
 #actDetailBody .ad-interact { margin-top: 20px; }
+/* 活動詳情裡的說明文（步數怎麼來、誰要去…）以前完全沒有樣式，用瀏覽器預設的行高
+   擠成一團（Edward 2026-08-01「說明文字間距太窄」）。跟卡片上的說明同一階：
+   13.5px、行高 1.75，長輩讀長句才不會黏在一起。 */
+#actDetailBody .qc-num, .quest-card .qc-num { font-size: 13.5px; line-height: 1.75; color: var(--muted); margin-top: 10px; }
 #actDetailBody .ad-note { background: var(--mint); border-radius: 16px; padding: 14px 16px; font-size: 15.5px; line-height: 1.65; color: var(--ink); }
 #actDetailBody .ad-rewards { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; color: var(--ink); }
-.ad-del { display: inline-flex; align-items: center; gap: 6px; margin-top: 26px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
+/* 按鈕四階（2026-08-01 定，Edward 要一套規範）
+ *   ① 主要動作　實心薄荷綠白字　　　例：開始聊聊、登入
+ *   ② 次要動作　白底綠框綠字　　　　例：去看看、訂閱方案
+ *   ③ 中性離開　白底灰框灰字　　　　例：登出
+ *   ④ 破壞性　　白底紅字淡紅框，按第一下才變實心淡紅底　例：刪除活動
+ * 破壞性刻意不用實心紅：那會在畫面上比「開始聊聊」還搶眼，長輩容易誤按。
+ * 但也不能像以前那樣做成灰的——刪除是回不來的動作，要看得出它跟別的鍵不一樣。
+ * 位置擺畫面最下方、置中：不跟上面的內容搶，要找的時候在固定的地方。 */
+.ad-del { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; max-width: 260px; margin: 30px auto 4px; padding: 12px 18px; border-radius: 999px; border: 1.5px solid #F0CFC9; background: #fff; color: var(--danger-d); font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
 .ad-del .ic { width: 16px; height: 16px; }
 .ad-del.arm { background: var(--coral-soft); color: var(--danger-d); border-color: transparent; }
+/* 「不看這個活動」＝只收起自己的畫面，不是破壞性動作，所以走按鈕規範第③階的中性灰，
+   不借用刪除的紅色——紅色會讓人以為按下去大家的活動都沒了。 */
+.ad-del.ad-hide { border-color: var(--line); color: var(--ink-2); }
+.ad-del.ad-hide.arm { background: #EFEDE8; color: var(--ink); border-color: transparent; }
 .quest-card .qc-kicker { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--teal-dd); margin-bottom: 6px; }
 .quest-card .qc-kicker .ic { width: 16px; height: 16px; }
 .quest-card .qc-goal { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
@@ -1043,6 +1094,12 @@ body:has(#chat.active) .tab-bar { display: none; }
 .p-mei { background: #3AA8A0; color: #FFF; }
 .p-zhi { background: #36423E; color: #FFF; }
 .p-bao { background: #B98A2E; color: #FFF; }
+/* 家人多的時候不夠分（Edward 2026-08-01「顏色可以多元一點」）：原本只有四色＋本人色，
+   七個家人就會有兩個人撞色、看起來像同一個人。補三色湊滿八個，都對得起 teal／coral 的調子。 */
+.p-lin { background: #8B5E7A; color: #FFF; }
+.p-hai { background: #52738C; color: #FFF; }
+.p-ye  { background: #6E7F52; color: #FFF; }
+.p-mo  { background: #A85A47; color: #FFF; }
 .init-ava-lg { font-size: 28px; border-radius: 50%; }
 
 .re-ic { display: inline-flex; }
@@ -1358,12 +1415,15 @@ html:lang(en) .med-chips.fit-row .mchip, html:lang(es) .med-chips.fit-row .mchip
 .qc-hero b { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--ink); }
 .qc-hero .qc-unit { font-size: 15px; font-weight: 600; color: var(--muted); }
 .qc-hero .qc-badge { margin-left: auto; align-self: center; font-size: 15px; font-weight: 700; color: var(--teal-dd); background: var(--mint); border-radius: 100px; padding: 5px 13px; }
+/* 活動狀態籤走品牌橘（2026-08-01）：整頁都是薄荷綠，狀態籤跟按鍵、進度條同色，
+   看不出它只是在說明狀態、不是可以按的東西。淡橘底＋深橘字，對比 4.66 過 AA。 */
+#actDetailBody .ad-chip, .quest-card .qc-days { background: var(--coral-soft); color: var(--coral-text); }
 .qc-bar { height: 12px; border-radius: 100px; background: var(--mint); overflow: hidden; }
 .qc-bar i { display: block; height: 100%; border-radius: 100px; background: var(--teal-d); }
 .qc-crew { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 12px; }
 .qc-person { display: inline-flex; align-items: center; gap: 7px; background: var(--cream); border-radius: 100px; padding: 5px 13px 5px 5px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
 .qc-person .init-ava { width: 26px; height: 26px; border-radius: 50%; font-size: 13px; }
-.qc-note { font-size: 15px; color: var(--muted); line-height: 1.5; }
+.qc-note { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
 
 /* 發起活動：拉桿（flat） */
 .range-row { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
@@ -1385,7 +1445,7 @@ html:lang(en) .med-chips.fit-row .mchip, html:lang(es) .med-chips.fit-row .mchip
 .rank-av { width: 30px; height: 30px; flex-shrink: 0; }
 .rank-av .init-ava { width: 30px; height: 30px; border-radius: 50%; font-size: 13px; }
 .rank-score { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--teal-dd); }
-.qc-note { font-size: 15px; color: var(--muted); line-height: 1.5; }
+.qc-note { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
 
 /* 左上日期 */
 .home-date { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
@@ -2291,10 +2351,46 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .vote-opt.mine { border-color: var(--teal-d); }
 .vote-opt .vo-check { color: var(--teal-dd); font-weight: 800; }
 .vote-opt.voted { cursor: default; }
-.vo-no { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+.vo-no { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); display: grid; place-items: center; font-size: 13px; font-weight: 800; position: relative; }
+/* 選項色標（Edward 2026-08-01「有點單調」）
+   一色一選項，投票前畫面就有分別；進度條用同一色的淡版，投完票一眼看出哪一條是哪個選項。 */
+.vote-opt.v-teal  .vo-no { background: #D9EFE8; color: #1A7268; }
+.vote-opt.v-coral .vo-no { background: #FBE3D2; color: #A85A22; }
+.vote-opt.v-gold  .vo-no { background: #F7EBCF; color: #8A6410; }
+.vote-opt.v-sage  .vo-no { background: #E2EBDF; color: #4A6B4E; }
+.vote-opt.v-plum  .vo-no { background: #EFE2E8; color: #82486A; }
+.vote-opt.v-teal  i { background: #D2EDE6; }
+.vote-opt.v-coral i { background: #FADFCC; }
+.vote-opt.v-gold  i { background: #F6E9C9; }
+.vote-opt.v-sage  i { background: #DFEADB; }
+.vote-opt.v-plum  i { background: #EFDFE7; }
+/* 領先的選項：左邊一道金色，不整塊變色——長輩看得出「這個最多人選」，
+   但沒投的那幾個也不會像被劃掉。 */
+.vote-opt.lead { border-color: #E8C77E; box-shadow: inset 3px 0 0 #E0B354; }
+/* 投票的人（誰選了這個）。頭像小一圈、互相疊一點，塞得下四個還不擠。 */
+.vote-opt .vo-faces { position: relative; display: flex; align-items: center; margin-left: auto; }
+.vote-opt .vo-faces .init-ava { width: 25px; height: 25px; border-radius: 50%; font-size: 11.5px; font-weight: 700; margin-left: -5px; border: 2px solid #fff; flex: 0 0 25px; }
+.vote-opt .vo-faces .init-ava:first-child { margin-left: 0; }
+.vote-opt .vo-faces .vo-more { margin-left: 3px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.vote-opt .vo-faces + .vo-n { margin-left: 8px; }
 /* 抽獎卡：開獎鍵（次要描邊）＋中獎行 */
 .draw-body { margin-top: 8px; }
 .draw-now { display: block; width: 100%; margin-top: 8px; min-height: 44px; border: 1.5px solid var(--teal-d); border-radius: 13px; background: #FFF; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
+/* 不是發起人時看到的：跟按鈕一樣的位置與高度，但明顯不是可以按的東西
+   （Edward 2026-08-01「開獎應該是 owner 的事」）。 */
+.draw-wait { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 8px; min-height: 44px; border-radius: 13px; background: var(--mint); color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 600; }
+/* 抽一張（Edward 2026-08-01「抽獎應該是用戶能有抽的體驗，抽完才是等開獎」）。
+   做成一張卡片的樣子而不是普通按鈕——要看得出「這裡有東西可以抽」。 */
+.draw-pick { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; min-height: 52px; border: none; border-radius: 15px; background: linear-gradient(135deg, #F4B860 0%, #E09B45 100%); color: #fff; font-family: var(--display); font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(214, 148, 62, .32); -webkit-tap-highlight-color: transparent; transition: transform .12s; }
+.draw-pick:active { transform: scale(.97); }
+.draw-pick .dp-card { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: rgba(255, 255, 255, .26); font-size: 16px; font-weight: 800; }
+/* 抽完之後：自己的號碼一直看得到，開獎時才知道中沒中 */
+.draw-mine { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 13px 15px; border-radius: 15px; background: var(--mint); }
+.draw-mine .dm-no { display: grid; place-items: center; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 12px; background: #fff; color: var(--teal-dd); font-family: var(--display); font-size: 19px; font-weight: 800; letter-spacing: .5px; box-shadow: 0 1px 4px rgba(26, 114, 104, .16); }
+.draw-mine .dm-txt { display: flex; flex-direction: column; gap: 2px; }
+.draw-mine .dm-txt b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.draw-mine .dm-txt small { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.draw-roll .dr-num { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
 .draw-win { font-size: 16px; font-weight: 700; color: var(--ink); margin-top: 6px; }
 .draw-win b { color: var(--ink); }
 
