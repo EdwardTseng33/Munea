@@ -2549,11 +2549,14 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
  *
  * 只掛 en / es。中文與日文都是一字一格、本來就排得下，不受影響。 */
 
-/* 大標題：Serif 大字最容易折行，也最顯眼 */
-html:lang(en) .page-title,
-html:lang(es) .page-title { font-size: 23px; }
-html:lang(en) .greeting-big,
-html:lang(es) .greeting-big { font-size: 23px; max-width: none; }
+/* 頁面大標：四語同一個字級與粗細（Edward 2026-08-01：「標題的字體大小與字粗
+ * 不同語系的所有頁面都要統一」「位置也要一致」）。
+ * 原本中日 28px、英西 23px——那是我為了塞下英文才分開調的，結果同一個 App
+ * 換個語言標題就變大變小，看起來像兩個產品。
+ * 24px 是「四語每一頁都放得下一行」的最大值（量過首頁／家人／設定／裝置四頁）。
+ * 西班牙文的家人頁原本是 Círculo de salud familiar，太長，一併收短成 Salud familiar。 */
+.page-title, .greeting-big { font-size: 24px; }
+html:lang(en) .greeting-big, html:lang(es) .greeting-big { max-width: none; }
 
 /* 通話控制鈕：英文與西班牙文只留圖示，不放字（Edward 2026-08-01 拍板）。
  * Microphone / Subtitulos 這種長度不管怎麼縮都會頂到圓圈邊，縮到塞得下又小到看不清；
@@ -2712,7 +2715,8 @@ html:lang(en) .chal-type, html:lang(es) .chal-type, html:lang(ja) .chal-type {
  * 改成六等分格子——不管標籤多長，圓圈永遠對齊。標籤太長就自己收成兩行、不推擠鄰居。 */
 #moodFaces { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 #status .moodface { width: 100%; }
-#status .moodface > span:last-child { font-size: 11.5px; text-align: center; line-height: 1.25; max-width: 100%; }
+/* 標籤一律一行——折行會讓六張臉的底部高低不齊（Edward 2026-08-01：「變得有上有下」）。 */
+#status .moodface > span:last-child { font-size: 10.5px; text-align: center; line-height: 1.25; white-space: nowrap; }
 
 
 /* 日文版的字型：繁中字型（Noto Sans TC）沒有日文寫法的漢字，缺字會逐字掉到系統字型，
@@ -2724,3 +2728,12 @@ html:lang(ja) {
   --display: "Poppins", "Hiragino Sans", "Noto Sans JP", sans-serif;
   --serif: "Hiragino Mincho ProN", "Noto Serif JP", Georgia, serif;
 }
+
+/* 標題的位置四頁一致（Edward 2026-08-01：「位置也要一致」）。
+ * 家人頁的標題旁邊多一顆管理鍵，那顆比文字高，把整行往下推了幾 px；
+ * 各頁的標題基線因此對不齊，切換分頁時標題會上下跳。
+ * 讓標題與旁邊的按鈕都以同一條中線對齊，行高固定，四頁就不再跳。 */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; margin: 6px 0 16px; }
+.page-title { line-height: 1.2; margin: 0; }
+.page-head > .pt-nav { flex: 0 0 auto; }
