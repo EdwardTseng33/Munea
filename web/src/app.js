@@ -1216,7 +1216,7 @@ function playB64(b64) {
   } catch (e) {}
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
-const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000, '/visit-summary': 15000 };  // 摘要要撈記憶＋量測＋用藥三路，比一般請求慢（M1 PR-4c）
+const BRAIN_PATIENCE = { '/mood-line': 4000, '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000, '/visit-summary': 15000 };  // 摘要要撈記憶＋量測＋用藥三路，比一般請求慢（M1 PR-4c）
 // 管家腦雲端正式住址（台灣機房）——打包後的手機沒有「同一棟樓」可打相對路徑，一定要絕對網址
 // 否則家人同步/邀請/資料權利/回饋全打空氣（7/9 上線體檢 B2 抓到的重傷）
 // 7/16 Edward 拍板 B 案：正式包指真正式 munea-brain（測試機 -staging 留給開發包與 canary）
@@ -7184,7 +7184,34 @@ function refreshMoodTask() {
     : muneaT('home.taskAnytime', '隨時');
   refreshTaskProgress();
 }
-window.__muneaMoodRecorded = function () { refreshMoodTask(); };
+// 點了心情之後：畫面上先出固定句（立刻看到回應、不等網路），
+// 背景再請大腦寫一句新的；通過檢查才換上去。
+// 為什麼要這樣分兩層（Edward 2026-08-01 拍板由 AI 生、但立了兩條線）：
+//   ① 點下去要「馬上」有回應——長輩不會等轉圈，固定句先頂著
+//   ② AI 那句有可能生不出來、超時、或沒通過安全檢查——那就維持固定句，
+//      使用者不會看到空白，也不會看到編出來的內容
+// 安全檢查在大腦那邊（engine/server.py mood_line_is_safe，見 test_mood_line_guard.py）：
+// 不准提角色名字、不准說他做過什麼、要複述他點的那個心情詞、有字數上限。
+let _moodLineSeq = 0;
+window.__muneaMoodRecorded = function (mood) {
+  refreshMoodTask();
+  const note = document.getElementById('moodNote');
+  const word = mood && typeof mood.label === 'function' ? String(mood.label() || '').trim() : '';
+  const key = mood && mood.k ? MOOD_ZH2KEY[mood.k] : '';
+  if (!note || !word || !key) return;
+  const seq = ++_moodLineSeq;                 // 連點時只認最後一次，避免前一句慢慢回來蓋掉現在這句
+  const names = Object.values((CompanionProfile && CompanionProfile.templates) || {})
+    .map((t) => t.defaultName).filter(Boolean);
+  if (companionDisplayName) names.push(companionDisplayName.trim());
+  brainPost('/mood-line', { mood: key, moodWord: word, companionNames: names, locale: muneaLocale() })
+    .then((r) => {
+      if (!r || !r.ok || !r.line) return;     // 生不出來就安靜留著固定句
+      if (seq !== _moodLineSeq) return;       // 他已經改點別的了
+      if (!document.getElementById('moodNote')) return;
+      document.getElementById('moodNote').textContent = r.line;
+    })
+    .catch(() => {});                          // 連不上也安靜——固定句還在
+};
 window.__muneaPostMood = function (body) { return brainPost('/wellbeing/log', body || {}); };
 window.__muneaPullMood = function (body) { return brainPost('/wellbeing/recent', body || { limit: 400 }); };
 function refreshTaskProgress() {
