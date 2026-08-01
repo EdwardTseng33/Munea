@@ -36,15 +36,31 @@ vm.runInContext(
 );
 
 const profile = window.MuneaCompanionProfile;
+// 要守的是「顯示名字來自文案表」，不是「名字剛好等於某三個字」。
+// 原本寫死 'Ningning'，2026-08-01 把四國角色改成當地人名（英文 Nina）就整支紅了——
+// 紅的原因跟程式對不對無關。這是「守門寫死程式長什麼樣」的第七次。
+// 改成跟當下語言的文案表比對：以後改名字不會誤紅，但名字若沒跟著語言走仍會抓到。
 assert.equal(profile.templateFor('nening-real-female').backendChar, '寧寧');
-assert.equal(profile.templateFor('nening-real-female').defaultName, 'Ningning');
+assert.equal(
+  profile.templateFor('nening-real-female').defaultName,
+  translations.en['companion.nening.name'],
+  '角色的預設名必須來自文案表，不可以寫死',
+);
 assert.equal(
   profile.templateFor('nening-real-female').templateLabel,
   translations.en['companion.nening.label'],
 );
 assert(
-  Object.values(profile.templates).map((entry) => entry.defaultName).includes('Ningning'),
+  Object.values(profile.templates).map((entry) => entry.defaultName)
+    .includes(translations.en['companion.nening.name']),
   'Direct template iteration must also expose localized default names',
+);
+// 伺服器端的角色識別是中文、顯示名字是當地語言——兩者必須不同，
+// 否則代表顯示名字又退回用中文的識別碼了。
+assert.notEqual(
+  profile.templateFor('nening-real-female').defaultName,
+  profile.templateFor('nening-real-female').backendChar,
+  '英文版的顯示名字不可以等於伺服器端的中文識別碼',
 );
 
 profile.saveProfile({
@@ -52,7 +68,7 @@ profile.saveProfile({
   displayName: '寧寧',
   nameTouched: false,
 });
-assert.equal(profile.loadProfile().displayName, 'Ningning');
+assert.equal(profile.loadProfile().displayName, translations.en['companion.nening.name']);
 
 locale = 'ja';
 assert.equal(
