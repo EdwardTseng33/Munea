@@ -1343,6 +1343,11 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 用藥設定 · 點選籤 */
 .med-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 2px; }
+/* 「吃多久」五顆要排成一行不折行（Edward 2026-08-01）。等分五欄、最後一欄留寬一點
+   給「長期」——英文 Long term／西文 A largo plazo 比數字長，等分會擠爆。 */
+.med-chips.fit-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.32fr); gap: 8px; flex-wrap: nowrap; }
+.med-chips.fit-row .mchip { padding: 10px 4px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html:lang(en) .med-chips.fit-row .mchip, html:lang(es) .med-chips.fit-row .mchip { font-size: 13px; letter-spacing: -.2px; }
 .mchip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-family: var(--sans); font-size: 15px; font-weight: 600; padding: 10px 16px; border-radius: 100px; min-height: 44px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .mchip.on { background: var(--teal-d); border-color: var(--teal-d); color: #FFF; }
 
@@ -1386,14 +1391,17 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .home-date { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
 
 /* 揪一攤 · 14 天快選月曆（自家設計、不用瀏覽器原生格） */
-.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 2px 0 8px; }
-/* minmax(0,1fr)：1fr 的下限是「內容多寬就多寬」，所以「Tomorrow」這種長字會把自己那格撐大、
-   整排寬度就參差不齊（Edward 2026-08-01 指出）。中文版也有這個毛病，只是字短看不出來。 */
-.cal-cell { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 0 8px; text-align: center; cursor: pointer; line-height: 1.15; }
-.cal-cell small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
-.cal-cell b { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--display); }
-.cal-cell.on { background: var(--teal-d); border-color: var(--teal-d); }
-.cal-cell.on small, .cal-cell.on b { color: #FFF; }
+/* 就診日期（Edward 2026-08-01）：原本是未來 14 天的十四格，兩個月後的回診記不進來。
+   今天／明天留成一點就好的快捷，其餘日子點日期欄叫出手機自己的年月日行事曆。
+   日期欄一律自己佔滿一行——四個語系的日期長度差很多（「2026年8月3日 週一」vs
+   「Mon, August 3, 2026」），排在快捷旁邊只有中日文塞得下。 */
+.visit-when { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 8px; }
+.visit-when .mchip { padding: 9px 18px; min-height: 42px; }
+.visit-datefield { flex: 1 1 100%; position: relative; display: flex; align-items: center; justify-content: center;
+  min-height: 50px; padding: 0 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer; }
+.visit-datefield:focus-within { border-color: var(--teal-d); outline: 2px solid var(--teal-d); outline-offset: 2px; }
+.visit-datetext { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; pointer-events: none; }
+.visit-datefield input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; background: none; cursor: pointer; }
 
 /* 機智問答作答 */
 .quiz-q { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.5; margin: 6px 0 14px; min-height: 30px; }
@@ -1749,7 +1757,9 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
    window.print() 時才用得到，那條在 exportVisitSummaryPdf 內另外處理。 */
 
 /* 用藥時段清單 */
-.ms-group { background: #FFF; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+/* 沒有藥的時段本來要佔三行（時段名／空行／「這個時段沒有藥」），四個時段就吃掉大半個畫面。
+   改成把那句話塞回第二行原本擺「幾種」的位置，一個空時段只剩兩行（Edward 2026-08-01：板位太大）。 */
+.ms-group { background: #FFF; border-radius: 14px; padding: 10px 13px; margin-bottom: 8px; }
 .ms-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; }
 .ms-head > b { grid-column: 1; grid-row: 1; min-width: 0; font-size: 17px; overflow-wrap: anywhere; }
 .ms-time-wrap { grid-column: 2; grid-row: 1; display: inline-flex; align-items: center; gap: 6px; margin-left: 0; }
@@ -1760,7 +1770,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .ms-med b { font-size: 15px; }
 .ms-med span { font-size: 13px; color: var(--muted); }
 .ms-med .ms-del { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--mint); color: var(--ink-2); }
-.ms-empty { font-size: 13px; color: var(--muted); padding: 8px 0 0; }
+.ms-empty { font-size: 13px; color: var(--muted); padding: 6px 0 0; }
 
 /* ===== 智慧照護提示輪播（首頁綜合資訊入口） ===== */
 .care-card { position: relative; background: linear-gradient(180deg,#fff,#FCFAF5); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 16px 18px; margin: 14px 0 20px; box-shadow: var(--shadow-sm); overflow: hidden; }
@@ -2216,8 +2226,21 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .nps-slider::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 3px solid var(--teal); box-shadow: 0 4px 10px -3px rgba(35,108,102,.45); cursor: grab; }
 .nps-hint { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
 /* 類型籤：線條 icon ＋ 文字（同全 App stroke 圖標語言） */
-.fb-types .topic-chip { display: inline-flex; align-items: center; gap: 6px; }
-.fb-types .topic-chip .ic { width: 17px; height: 17px; flex-shrink: 0; }
+/* 給開發者的建議（Edward 2026-08-01：四個語系的設計體驗要一樣、可以活潑一點）
+   四國字長差太多——中文「回報問題」四個字、西文「Informar de un problema」二十三個。
+   自由折行會讓每一國長得都不一樣（中文 3+1、西文一行一顆）。改成固定格子：
+   上面 2×2 選種類、下面 3 欄選區塊，字長怎麼變版面都不動。 */
+.topic-chips.fb-types { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 10px; }
+.fb-types .topic-chip { display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: 9px; min-height: 88px; padding: 14px; border-radius: 18px; text-align: left; line-height: 1.3; }
+.fb-types .topic-chip .ic { width: 22px; height: 22px; flex-shrink: 0; color: var(--muted); transition: color .15s; }
+/* 選到的那張浮起來一點——這一頁是唯一會請人主動說話的地方，值得有點反應 */
+.fb-types .topic-chip.on { box-shadow: 0 3px 12px rgba(46, 138, 131, .16); transform: translateY(-1px); }
+.fb-types .topic-chip.on .ic { color: var(--teal-d); }
+/* 每一格都等高：西文字長會撐成兩行，不補這行同一排就會高低不齊 */
+#fbCats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; }
+#fbCats .topic-chip { display: flex; align-items: center; justify-content: center; min-height: 48px;
+  padding: 9px 6px; text-align: center; line-height: 1.25; }
 textarea.chal-input { resize: none; line-height: 1.7; }
 /* 想聊的話題：小圓籤（長輩好按的大觸控） */
 .topic-chips { display: flex; flex-wrap: wrap; gap: 9px; margin: 4px 0 8px; }
