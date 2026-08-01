@@ -405,6 +405,8 @@ ADMIN_POST_PATHS = {
     # 管理鑰匙呼叫的，沒有用戶登入證可帶——漏列在這裡＝鬧鐘永遠被會員門擋下。
     # 三個入口的處理端本來就各自再驗一次管理鑰匙（admin_authorized），不是開放門。
     "/admin/daily-briefing",
+    # 顯卡時鐘巡邏（2026-08-01）：同上是定時鬧鐘用管理鑰匙呼叫的，處理端自己再驗一次
+    "/admin/worker-clock-patrol",
     "/admin/memory-consolidate",
     "/admin/memory-living-profile",
     # 閒置清理（2026-07-22）：免費帳號 60 天未上線自動刪除。同上是定時鬧鐘
@@ -2682,6 +2684,101 @@ def resolve_person_region(person_id=None):
         if region:
             return (region, coords)
     return (None, None)
+
+
+# ===== 顯卡時鐘巡邏（Edward 2026-08-01 拍板 A 案）=====
+#
+# 為什麼要有這支：GPU 租賃主機的時鐘由機房控制、容器內無權校時。tw-06 從 2026-07-23 起
+# 快了 257 秒，通話證被誤判過期＝整條通話全滅；7/31 再量還是快 260 秒，前後歪了 9 天沒人
+# 發現，最後是 Edward 自己看到通話打不通才追出來、寫信請廠商校時（8/1 廠商修好，實測 0.8 秒）。
+#
+# 7/24 其實就寫好了警報（deploy/gateway/monitor.py），但那是一支要有人定時叫起來的巡邏，
+# 排程從來沒建過——工具是好的，只是沒人按下開始。deploy/ 不在大腦的映像裡，所以這裡放
+# 一支輕量版：只做時鐘這一件事，複用大腦既有的 Slack 告警線。完整版巡邏（心跳、佇列、
+# 容量）仍以 deploy/gateway/monitor.py 為準，兩邊的警戒線要一起改。
+#
+# 為什麼總機的心跳看不出這件事：總機記的 last_heartbeat_at 是「總機自己的時鐘」蓋的章，
+# 一台時鐘壞掉的卡從那裡看永遠很新鮮。只有直接問卡「你幾點」才問得出來。
+WORKER_CLOCK_SKEW_THRESHOLD_SECONDS = 90.0   # 跟 deploy/gateway/monitor.py 同一條線
+
+
+def _worker_clock_skew(url, app_key, timeout=8.0):
+    """直接問這張卡「你現在幾點」，跟我們的時鐘比。回 (差幾秒, 錯誤訊息)。
+
+    取請求前後時間的中點來比，網路來回的時間才不會被算進誤差裡。
+    """
+    probe = url.rstrip("/") + "/health?key=" + urllib.parse.quote(app_key, safe="")
+    try:
+        started = time.time()
+        with urllib.request.urlopen(probe, timeout=timeout) as response:
+            body = json.loads(response.read().decode("utf-8"))
+        finished = time.time()
+    except Exception as e:
+        return None, str(e)[:200]
+    reported = body.get("server_time")
+    if reported is None:
+        # 舊版的卡沒有這個欄位——那不是「時鐘正常」，是「量不到」，要照實回報
+        return None, "這張卡沒有回報自己的時間（舊版程式，重啟後才會有）"
+    try:
+        return float(reported) - ((started + finished) / 2.0), ""
+    except (TypeError, ValueError):
+        return None, "回報的時間看不懂：%r" % (reported,)
+
+
+def worker_clock_patrol_response(data=None):
+    """巡一次所有工作卡的時鐘，歪太多就叫。給 Cloud Scheduler 定時打。"""
+    data = data or {}
+    gateway_url = str(data.get("gatewayUrl") or os.environ.get("MUNEA_CALL_CONTROL_URL") or "").strip()
+    app_key = str(os.environ.get("MUNEA_APP_KEY") or "").strip()
+    threshold = float(data.get("thresholdSeconds") or WORKER_CLOCK_SKEW_THRESHOLD_SECONDS)
+    if not gateway_url or not app_key:
+        return {"ok": False, "error": "gateway_or_key_missing", "checked": 0}
+
+    try:
+        request = urllib.request.Request(
+            gateway_url.rstrip("/") + "/health", headers={"x-munea-key": app_key}
+        )
+        with urllib.request.urlopen(request, timeout=10) as response:
+            health = json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        notify.alert("gpu_down", "時鐘巡邏", "問不到總機的工作卡清單：%s" % str(e)[:160])
+        return {"ok": False, "error": "gateway_unreachable", "detail": str(e)[:200], "checked": 0}
+
+    workers = ((health.get("snapshot") or {}).get("workers")) or []
+    checked, offenders, unreadable = [], [], []
+    for worker in workers:
+        if not isinstance(worker, dict):
+            continue
+        worker_id = str(worker.get("worker_id") or "").strip()
+        url = str(worker.get("url") or "").strip()
+        if not worker_id or not url:
+            continue
+        skew, error = _worker_clock_skew(url, app_key)
+        if skew is None:
+            unreadable.append({"worker": worker_id, "reason": error})
+            continue
+        checked.append({"worker": worker_id, "skewSeconds": round(skew, 1)})
+        if abs(skew) > threshold:
+            offenders.append({"worker": worker_id, "skewSeconds": round(skew, 1)})
+
+    if offenders:
+        lines = "、".join("%s 快 %.0f 秒" % (o["worker"], o["skewSeconds"]) for o in offenders)
+        # critical：時鐘歪到這個地步，通話證會被誤判過期＝使用者現在就打不進來
+        notify.alert(
+            "gpu_down", "顯卡時鐘",
+            "%s（警戒線 %.0f 秒）。容器內無權校時，要寫信請機房校正宿主機時間。" % (lines, threshold),
+        )
+    elif unreadable and not checked:
+        notify.alert("gpu_down", "時鐘巡邏", "所有工作卡都問不到自己的時間：%s" % json.dumps(unreadable, ensure_ascii=False)[:200])
+
+    return {
+        "ok": True,
+        "checked": len(checked),
+        "thresholdSeconds": threshold,
+        "workers": checked,
+        "offenders": offenders,
+        "unreadable": unreadable,
+    }
 
 
 def refresh_daily_briefing(region=None, person_id=None):
@@ -9997,6 +10094,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(refresh_daily_briefing(data.get("region"), data.get("personId") or data.get("person_id")))
+            elif self.path == "/admin/worker-clock-patrol":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(worker_clock_patrol_response(data))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":
