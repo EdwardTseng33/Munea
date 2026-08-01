@@ -1817,15 +1817,6 @@
       "evidence": "scripts/test-ui-contracts.js"
     },
     {
-      "id": "b40-caf3e13504",
-      "path": "web/index.html",
-      "text": "今天心情平穩，膝蓋的痠有記著。",
-      "kind": "text",
-      "expectedOccurrences": 1,
-      "reasonCode": "markup-placeholder-overwritten-at-runtime",
-      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
-    },
-    {
       "id": "b40-24fd43e621",
       "path": "web/index.html",
       "text": "愉悅",
