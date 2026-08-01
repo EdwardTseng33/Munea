@@ -9861,22 +9861,20 @@ function init() {
     text.textContent = (d && !Number.isNaN(d.getTime()))
       ? visitDateLabel(d)
       : muneaT('appointment.pickDate', '選日期');
-    const now = new Date();
-    const today = isoOf(now);
-    const tomorrow = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
-    const todayBtn = $('#visitDayToday');
-    const tomorrowBtn = $('#visitDayTomorrow');
-    if (todayBtn) todayBtn.classList.toggle('on', iso === today);
-    if (tomorrowBtn) tomorrowBtn.classList.toggle('on', iso === tomorrow);
-  }
-  function setVisitDate(iso) {
-    const input = $('#visitDate');
-    if (!input) return;
-    input.value = iso;
-    syncVisitDateField();
   }
   // 提前多久提醒（分鐘）。舊資料沒有這個欄位 → 一律當成 120，維持既有行為。
   var VISIT_LEAD_DEFAULT = 120;
+  // 存檔提示要照他剛剛選的講——原本寫死「前一天會提醒你」，
+  // 現在提前多久是他自己選的，寫死就會說謊（2026-08-01 正式機截圖抓到）。
+  function visitLeadSpoken(minutes) {
+    switch (Number(minutes)) {
+      case 0: return muneaT('visit.leadSpokenOnTime', '準時');
+      case 30: return muneaT('visit.leadSpoken30m', '提前 30 分');
+      case 60: return muneaT('visit.leadSpoken1h', '提前 1 小時');
+      case 1440: return muneaT('visit.leadSpoken1d', '提前一天');
+      default: return muneaT('visit.leadSpoken2h', '提前 2 小時');
+    }
+  }
   function visitLeadMinutes() {
     const on = document.querySelector('#visitLeadChips .mchip.on');
     const raw = on ? Number(on.dataset.m) : NaN;
@@ -9913,15 +9911,7 @@ function init() {
     input.dataset.wired = '1';
     input.addEventListener('change', syncVisitDateField);
     input.addEventListener('input', syncVisitDateField);
-    const now = new Date();
-    const todayBtn = $('#visitDayToday');
-    const tomorrowBtn = $('#visitDayTomorrow');
-    if (todayBtn) todayBtn.addEventListener('click', () => setVisitDate(isoOf(new Date())));
-    if (tomorrowBtn) tomorrowBtn.addEventListener('click', () => {
-      const t = new Date();
-      setVisitDate(isoOf(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)));
-    });
-    input.min = isoOf(now);
+    input.min = isoOf(new Date());
   }
   function loadActs() { try { return JSON.parse(localStorage.getItem('munea.activities')) || []; } catch (e) { return []; } }
   function saveActs(a) { try { localStorage.setItem('munea.activities', JSON.stringify(a)); } catch (e) {} syncPush('activities', a); if (window.MuneaNotify) window.MuneaNotify.sync(); }
@@ -10961,7 +10951,8 @@ function init() {
     if ($('#visitTitle')) $('#visitTitle').value = '';
     resetVisitDate();
     resetVisitLead();
-    toast(muneaT('visit.savedToast', '好，「{title}」{label}記下了，{companion}前一天會提醒你', { title, label, companion: cname() }));
+    toast(muneaT('visit.savedToast', '好，「{title}」{label}記下了，{companion}會{lead}提醒你',
+      { title, label, companion: cname(), lead: visitLeadSpoken(visit.remindBefore) }));
   });
   renderVisitRow();
   refreshRoutineRemindersFromBackend();

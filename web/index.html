@@ -1085,11 +1085,10 @@
       <input class="chal-input" id="visitTitle" maxlength="16" placeholder="例：心臟科回診、眼科" data-i18n-placeholder="appointment.titlePlaceholder">
       <div class="field-label" data-i18n="legacyUi.appointmentDate">哪一天</div>
       <!-- 原本是「未來 14 天」十四格：兩個月後的回診根本記不進來（Edward 2026-08-01）。
-           改成快捷兩顆 ＋ 系統的年月日行事曆——長輩最常用的今天/明天仍是一點就好，
-           其餘日子點日期欄，跳出手機自己的行事曆，往後多久都能選。 -->
+           改成點日期欄叫出手機自己的年月日行事曆，往後多久都能選。
+           一度加過「今天／明天」兩顆快捷，Edward 當天就退掉——同一件事有兩個地方可以選，
+           使用者會猶豫該用哪個。選日期就只留一個地方。 -->
       <div class="visit-when">
-        <button type="button" class="mchip" id="visitDayToday" data-i18n="common.today">今天</button>
-        <button type="button" class="mchip" id="visitDayTomorrow" data-i18n="common.tomorrow">明天</button>
         <label class="visit-datefield" id="visitDateField">
           <span class="visit-datetext" id="visitDateText" aria-hidden="true"></span>
           <input type="date" id="visitDate" aria-label="哪一天" data-i18n-aria-label="legacyUi.appointmentDate" />
