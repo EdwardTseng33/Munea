@@ -1646,5 +1646,10 @@
   "activity.walkCardProgress": "これまで {sum} 歩（{pct}%）· あなたは {mine} 歩",
   "activity.walkStateMine": "あなたは {mine} 歩",
   "activity.walkStateZero": "まだ歩いていません",
-  "activity.walkSinceStart": "開始した瞬間からの分だけです。それ以前の歩数は入りません"
+  "activity.walkSinceStart": "開始した瞬間からの分だけです。それ以前の歩数は入りません",
+  "activity.voteCardLeading": "{n} 人が投票 · 「{opt}」が {count} 票でトップ",
+  "activity.voteCardTied": "{n} 人が投票 · 現在同票",
+  "activity.voteCardEmpty": "まだ投票がありません",
+  "activity.voteStateMine": "{opt} に投票しました",
+  "activity.voteStateTodo": "まだ投票していません"
 }

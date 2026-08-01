@@ -1646,5 +1646,10 @@
   "activity.walkCardProgress": "{sum} steps so far ({pct}%) - you walked {mine}",
   "activity.walkStateMine": "You walked {mine} steps",
   "activity.walkStateZero": "You have not started yet",
-  "activity.walkSinceStart": "Counted from the moment it started - earlier steps do not count"
+  "activity.walkSinceStart": "Counted from the moment it started - earlier steps do not count",
+  "activity.voteCardLeading": "{n} voted - “{opt}” leads with {count}",
+  "activity.voteCardTied": "{n} voted - tied so far",
+  "activity.voteCardEmpty": "No votes yet",
+  "activity.voteStateMine": "You picked {opt}",
+  "activity.voteStateTodo": "Not voted yet"
 }
