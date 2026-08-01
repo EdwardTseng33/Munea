@@ -314,9 +314,12 @@ window.MuneaNotify = (function () {
     if (Array.isArray(visits)) visits.forEach(function (visit) {
       if (!visit || !visit.dateISO) return;
       var visitAt = new Date(visit.dateISO + 'T' + (visit.time || '09:00'));
-      // 就診前 2 小時（Edward 2026-07-29：原本 1 小時，那是該出門的時間了，
-      // 來不及看摘要也來不及準備；提前到 2 小時讓他先看過要問的問題再出門）。
-      var remindAt = new Date(visitAt.getTime() - 2 * 60 * 60 * 1000);
+      // 提前多久由使用者自己選（Edward 2026-08-01）。原本寫死 2 小時
+      // （他 2026-07-29 從 1 小時改的：1 小時是該出門的時間了，來不及看摘要）。
+      // 舊資料沒有 remindBefore 這個欄位 → 一律當成 120 分，行為不變。
+      var lead = Number(visit.remindBefore);
+      if (!Number.isFinite(lead) || lead < 0) lead = 120;
+      var remindAt = new Date(visitAt.getTime() - lead * 60 * 1000);
       if (isNaN(remindAt) || remindAt <= new Date()) return;
       // 口袋問題：有記下要問醫生的問題，就在看診提醒裡帶一句「有 N 個問題要問」。
       // 只帶**數量**、不帶問題內文——健康疑問屬敏感內容，不放進推播文字（鎖定畫面另有 publicBody 遮罩）。

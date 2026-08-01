@@ -1088,6 +1088,16 @@
       </div>
       <div class="field-label" data-i18n="appointment.time">看診時間</div>
       <input type="time" id="visitTime" class="visit-time" value="09:00" step="300" aria-label="看診時間" data-i18n-aria-label="appointment.time">
+      <!-- 提前多久提醒（Edward 2026-08-01）。原本寫死提前 2 小時（他 7/29 自己從 1 小時改的），
+           改成他自己選。data-m 是提前的分鐘數，0 就是看診時間到才響。 -->
+      <div class="field-label" data-i18n="appointment.remindBefore">提前多久提醒</div>
+      <div class="med-chips fit-row even" id="visitLeadChips">
+        <button type="button" class="mchip" data-m="0" data-i18n="appointment.leadOnTime">準時</button>
+        <button type="button" class="mchip" data-m="30" data-i18n="appointment.lead30m">30 分前</button>
+        <button type="button" class="mchip" data-m="60" data-i18n="appointment.lead1h">1 小時前</button>
+        <button type="button" class="mchip on" data-m="120" data-i18n="appointment.lead2h">2 小時前</button>
+        <button type="button" class="mchip" data-m="1440" data-i18n="appointment.lead1d">1 天前</button>
+      </div>
       <button class="modal-btn" id="visitSaveBtn" data-i18n="appointment.add">加入這筆看診</button>
     </div>
   </div>
