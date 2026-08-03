@@ -34,7 +34,8 @@ from urllib.parse import urlencode
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
 from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame, hot_threshold,
-                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold)
+                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold,
+                              normalized_rms_to_pcm16, sustained_voice_evidence)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -1827,7 +1828,7 @@ def _new_call_state():
           "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
           "blocked_output_text": "", "language_retry_count": 0,
-          "client_barge_in": False, "asr_turns": 0, "asr_chars": 0,
+          "client_barge_in": False, "pending_barge_in": None, "asr_turns": 0, "asr_chars": 0,
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
           "opening_window_complete": False,
@@ -2410,6 +2411,20 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
                 _eg_rms = frame_rms(message)
                 _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
+                # Two-phase barge-in: after barge_in_start, retain a short copy of
+                # the already-captured microphone onset. Do not forward or drop it
+                # until the commit message arrives and the server has judged the
+                # actual audio evidence. A stale start self-clears after one second.
+                _pending_barge = st.get("pending_barge_in")
+                if _pending_barge:
+                    if _eg_now - _pending_barge.get("started_at", 0.0) <= 1.0:
+                        _frame_ms = len(message) / float(16000 * 2) * 1000.0
+                        _pending_barge["frames"].append((bytes(message), _eg_rms, _frame_ms))
+                        if len(_pending_barge["frames"]) > 32:
+                            del _pending_barge["frames"][:-32]
+                        continue
+                    st["pending_barge_in"] = None
+                    _diag(cid, "node.barge_in_evidence_timeout")
                 if _eg_window and _eg_rms >= _eg_hot:
                     st["last_hot_voice_at"] = _eg_now   # 窗內聽到真的夠大聲＝可信的人聲（插話裁判的依據）
                 if _eg_rms >= _eg_hot:
@@ -2475,33 +2490,73 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         )
                 elif t == "audio_end":
                     await session.send_realtime_input(audio_stream_end=True)
+                elif t == "barge_in_start":
+                    # The phone has already stopped local playback. Buffer the
+                    # immediately following pre-roll so the final decision uses
+                    # microphone evidence that arrived before the commit message.
+                    st["pending_barge_in"] = {
+                        "started_at": time.monotonic(),
+                        "threshold_pcm": normalized_rms_to_pcm16(obj.get("threshold")),
+                        "sustain_ms": obj.get("sustain_ms", 150),
+                        "frames": [],
+                    }
+                    _diag(cid, "node.barge_in_evidence_started",
+                          frames=obj.get("evidence_frames") or 0)
                 elif t == "barge_in":
                     # 2026-07-30 插話裁判（治「喇叭開大→她自己的聲音觸發手機端插話→自己閉嘴」）：
                     # 手機端的插話偵測分不出「你在說話」跟「她自己的大聲回音」（退回手機播音
-                    # 模式時系統回音消除顧不到那條路、7/16 已點名）。伺服器聽得到上行音訊，
-                    # 當裁判：她講話中收到插話通知、但最近 0.6 秒沒聽過衝過熱門檻的人聲＝回音
-                    # → 駁回（回 ack 讓 App 解除靜音、她接著講），不打斷她。
+                    # 模式時系統回音消除顧不到那條路、7/16 已點名）。新 App 先送 start、
+                    # 再送預捲音訊、最後 commit；伺服器用同一個持續人聲規則判斷，通過後才把
+                    # 留住的開頭交給 Gemini。舊 App 沒有 start 時，保留 0.6 秒熱門檻判法。
                     _bi_now = time.monotonic()
-                    if (in_playout_window(_bi_now, st.get("playout_head"))
-                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6):
+                    _pending_barge = st.get("pending_barge_in")
+                    st["pending_barge_in"] = None
+                    _evidence_ms = 0.0
+                    _onset_index = 0
+                    if _pending_barge:
+                        _levels = [(rms, frame_ms) for _, rms, frame_ms in _pending_barge["frames"]]
+                        _accepted, _evidence_ms, _onset_index = sustained_voice_evidence(
+                            _levels,
+                            _pending_barge["threshold_pcm"],
+                            _pending_barge["sustain_ms"],
+                        )
+                    else:
+                        _accepted = not (
+                            in_playout_window(_bi_now, st.get("playout_head"))
+                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6
+                        )
+                    if not _accepted:
                         st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
-                        _diag(cid, "node.barge_in_rejected_echo", count=st["barge_in_rejected"])
+                        _diag(cid, "node.barge_in_rejected_echo",
+                              count=st["barge_in_rejected"], evidence_ms=round(_evidence_ms))
                         try:
-                            await ws.send(json.dumps({"type": "barge_in_ack"}))   # App 收 ack 會解除本地靜音
+                            await ws.send(json.dumps({"type": "barge_in_ack", "accepted": False,
+                                                      "reason": "echo", "evidence_ms": round(_evidence_ms)}))
                         except Exception:
                             pass
                         continue
                     st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1
-                    await ws.send(json.dumps({"type": "barge_in_ack"}))
+                    st["last_voice_at"] = _bi_now
+                    st["await_first"] = True
+                    # Replay from one frame before the detected onset so the
+                    # user's first consonant is not lost, without replaying the
+                    # whole assistant-echo window.
+                    if _pending_barge:
+                        for _audio, _, _ in _pending_barge["frames"][max(0, _onset_index - 1):]:
+                            await session.send_realtime_input(
+                                audio=types.Blob(data=_audio, mime_type="audio/pcm;rate=16000")
+                            )
+                    await ws.send(json.dumps({"type": "barge_in_ack", "accepted": True,
+                                              "evidence_ms": round(_evidence_ms)}))
                     fw = st.get("face_ws")
                     if fw is not None:
                         try:
                             await fw.send("reset")
                         except Exception:
                             st["face_ws"] = None
-                    _diag(cid, "node.client_barge_in")
+                    _diag(cid, "node.client_barge_in", evidence_ms=round(_evidence_ms))
                 elif t == "faceaudio":
                     # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
                     if obj.get("on"):

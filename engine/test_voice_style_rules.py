@@ -54,6 +54,17 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("不要一接通就高能量歡迎", self.src)
         self.assertIn("不管你們多熟", self.src)
 
+    def test_response_length_is_task_adaptive(self):
+        """語音預設精簡，但不能把解釋、比較、健康資訊與故事硬砍成兩句。"""
+        self.assertIn("短是預設，不是硬上限", self.src)
+        for task_shape in ("直接答案", "健康說明", "比較、做法", "故事要講完整", "工具結果"):
+            self.assertIn(task_shape, self.src)
+        self.assertIn("二十到四十秒", self.src)
+        self.assertIn("我的看法是", self.src)
+        self.assertIn("嗯，我的看法是", self.src)
+        self.assertIn("安靜等他", self.src)
+        self.assertNotIn("一般閒聊預設只回答一句", self.src)
+
     def test_video_call_persona_frame_present(self):
         """2026-07-16 Edward「像與真實世界的人視訊聊天」：相處框架要在、且是行為比喻不是身分宣稱。"""
         self.assertIn("真實世界裡兩個人的視訊聊天", self.src)

@@ -94,8 +94,9 @@ expect(app.includes("localStorage.setItem('munea.dailyCallOpening'") && app.incl
   'completed calls do not advance the same-day opening route');
 expect(html.includes('src/voice-turn-policy.js'),
   'the tested local barge-in policy is not loaded before the App module');
-expect(app.includes("this.ws.send(JSON.stringify({ type: 'barge_in' }))"),
-  'local barge-in does not notify the voice bridge');
+expect(app.includes("type: 'barge_in_start', ...payload") &&
+  app.includes("type: 'barge_in', ...payload"),
+  'local barge-in does not send the two-phase evidence and commit messages');
 expect(app.includes('policy.DEFAULTS.preRollFrames'),
   'barge-in does not retain microphone pre-roll');
 expect(app.includes('policy.DEFAULTS.openingPreRollFrames'),
@@ -140,8 +141,9 @@ expect(voiceServer.includes('TURN_END_SILENCE_MS = 180'),
   'voice turns do not carry a final PCM tail guard');
 expect(voiceServer.includes('st["client_barge_in"] = True'),
   'voice bridge does not suppress stale model audio after local barge-in');
-expect(voiceServer.includes('{"type": "barge_in_ack"}'),
-  'local barge-in can leave the App dropping a newly generated response');
+expect(voiceServer.includes('{"type": "barge_in_ack", "accepted": True') &&
+  voiceServer.includes('{"type": "barge_in_ack", "accepted": False'),
+  'local barge-in does not receive an explicit accepted/rejected acknowledgement');
 expect(voiceServer.includes('barge_cancelled and source in ("model_output", "mandarin_pronunciation")'),
   'a cancelled model turn can replay language-correction audio after barge-in');
 expect(voiceServer.includes('localization.contains_unstable_mandarin_speech'),
@@ -168,9 +170,11 @@ expect(voiceServer.includes('await asyncio.sleep(1.0)') && voiceServer.includes(
 expect(voiceServer.includes('"greet_requested": False') && voiceServer.includes('node.proactive_greet_ignored'),
   'duplicate greet requests can start overlapping model turns');
 expect(everyVoiceStyleBookHas('volumeCap'),
-  'a persona book is missing the one-sentence-default section');
-expect(voiceStyleBooks['zh-TW'].includes('一般閒聊預設只回答一句'),
-  'live voice does not enforce the one-sentence default');
+  'a persona book is missing the response-length section');
+expect(voiceStyleBooks['zh-TW'].includes('短是預設，不是硬上限') &&
+  voiceStyleBooks['zh-TW'].includes('健康說明先講結論') &&
+  voiceStyleBooks['zh-TW'].includes('二十到四十秒'),
+  'live voice does not adapt response length to the task');
 expect(everyVoiceStyleBookHas('energy'),
   'a persona book is missing the delivery-energy section');
 expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),

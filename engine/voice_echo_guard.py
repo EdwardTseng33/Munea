@@ -69,6 +69,59 @@ def hot_threshold(now, playout_head, base_threshold=None):
     return base
 
 
+def normalized_rms_to_pcm16(value, default=0.028):
+    """Convert the browser's normalized RMS threshold to the server PCM16 scale.
+
+    The browser detector intentionally adapts between 0.028 and 0.07. Clamp the
+    value to that same contract so a malformed or stale client cannot turn the
+    server-side echo judge into an always-accept switch.
+    """
+    try:
+        normalized = float(value)
+    except (TypeError, ValueError):
+        normalized = default
+    normalized = min(0.07, max(0.028, normalized))
+    return normalized * 32768.0
+
+
+def sustained_voice_evidence(level_frames, threshold, sustain_ms):
+    """Mirror the browser sustain rule over buffered ``(rms, frame_ms)`` pairs.
+
+    Returns ``(accepted, strongest_run_ms, onset_index)``. The onset points to
+    the first frame of the strongest run so the caller can replay the retained
+    speech onset after accepting a barge-in without replaying the whole echo
+    window.
+    """
+    try:
+        required = float(sustain_ms or 0.0)
+    except (TypeError, ValueError):
+        required = 150.0
+    required = min(350.0, max(120.0, required))
+    run_ms = 0.0
+    strongest_ms = 0.0
+    run_start = 0
+    strongest_start = 0
+    for index, item in enumerate(level_frames or []):
+        try:
+            rms, frame_ms = item
+            rms = max(0.0, float(rms))
+            frame_ms = max(0.0, float(frame_ms))
+        except (TypeError, ValueError):
+            continue
+        if rms >= threshold:
+            if run_ms <= 0.0:
+                run_start = index
+            run_ms += frame_ms
+        else:
+            run_ms = max(0.0, run_ms - frame_ms * 1.5)
+            if run_ms <= 0.0:
+                run_start = index + 1
+        if run_ms > strongest_ms:
+            strongest_ms = run_ms
+            strongest_start = run_start
+    return strongest_ms >= required, strongest_ms, strongest_start
+
+
 def frame_rms(frame):
     """16-bit PCM 音量。壞資料回 0（寧可放行、不誤丟真人聲）。"""
     if not frame:

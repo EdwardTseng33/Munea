@@ -13,7 +13,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from voice_echo_guard import frame_rms, in_output_window, should_drop_uplink_frame
+from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
+                              normalized_rms_to_pcm16, sustained_voice_evidence)
 
 FAILS = []
 
@@ -48,6 +49,22 @@ def main():
     check("她沒講話+低能量→放行", should_drop_uplink_frame(10.0, 5.0, 300, enabled=True, tail_ms=1500, threshold=700) is False)
     check("濾網關閉→一律放行", should_drop_uplink_frame(10.0, 9.9, 0, enabled=False, tail_ms=1500, threshold=700) is False)
 
+    # 兩階段插話證據：瀏覽器的 normalized RMS 必須用同一把尺在伺服器重判，
+    # 不能因 client 0.055 通過、server 熱門檻 0.088 才通過而互相打架。
+    client_threshold = normalized_rms_to_pcm16(0.04)
+    accepted, evidence_ms, onset = sustained_voice_evidence(
+        [(300, 42.7), (1802, 42.7), (1802, 42.7), (1802, 42.7), (1802, 42.7)],
+        client_threshold, 150,
+    )
+    check("瀏覽器持續人聲證據可在伺服器同尺度通過", accepted is True)
+    check("插話證據保留真正起音位置", onset == 1 and evidence_ms >= 150)
+    rejected, _, _ = sustained_voice_evidence(
+        [(1802, 42.7), (200, 42.7), (1802, 42.7), (200, 42.7)],
+        client_threshold, 150,
+    )
+    check("零星回音尖峰不會被誤判成持續插話", rejected is False)
+    check("瀏覽器門檻不可把伺服器降成永遠放行", normalized_rms_to_pcm16(0) >= 0.028 * 32768)
+
     # 預設值鎖（7/16 首晚實戰調參：700/1500 攔不住大聲外放）
     for k in ("MUNEA_VOICE_ECHO_GUARD_RMS", "MUNEA_VOICE_ECHO_GUARD_TAIL_MS"):
         os.environ.pop(k, None)
@@ -73,6 +90,10 @@ def main():
     check("送出時間窗留著當後備", "or in_output_window(_eg_now" in srv)
     check("用戶插話→水位歸零（App 已清掉未播聲音，窗立刻收、不吃真人聲）",
           srv.count('st["playout_head"] = 0.0') >= 2)
+    check("插話先收證據再提交", 'elif t == "barge_in_start":' in srv and
+          'st["pending_barge_in"]' in srv and "sustained_voice_evidence(" in srv)
+    check("插話裁決明確回 accepted/rejected", '"accepted": False' in srv and '"accepted": True' in srv)
+    check("插話通過後補送被守門留住的開頭", '_pending_barge["frames"][max(0, _onset_index - 1):]' in srv)
 
     import voice_echo_guard as g
     head = 0.0
