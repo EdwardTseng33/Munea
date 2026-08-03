@@ -1654,5 +1654,7 @@
   "activity.voteCardTied": "{n} 人が投票 · 現在同票",
   "activity.voteCardEmpty": "まだ投票がありません",
   "activity.voteStateMine": "{opt} に投票しました",
-  "activity.voteStateTodo": "まだ投票していません"
+  "activity.voteStateTodo": "まだ投票していません",
+  "home.care.emptyTitle": "今はお知らせすることはありません",
+  "home.care.emptyBody": "お薬や通院の予定を入れるか、ご家族を追加すると、ここでお知らせします"
 }

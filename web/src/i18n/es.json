@@ -1654,5 +1654,7 @@
   "activity.voteCardTied": "{n} votaron - hay empate",
   "activity.voteCardEmpty": "Aún nadie votó",
   "activity.voteStateMine": "Votaste {opt}",
-  "activity.voteStateTodo": "Aún no votaste"
+  "activity.voteStateTodo": "Aún no votaste",
+  "home.care.emptyTitle": "Nada que avisarte por ahora",
+  "home.care.emptyBody": "Configura medicamentos o citas, o añade a tu familia: los avisos aparecerán aquí"
 }
