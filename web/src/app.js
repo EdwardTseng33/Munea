@@ -6810,6 +6810,28 @@ function handleMedicationChange(event) {
   // 家庭圈只分享服藥時段，不分享藥名，兼顧照護與用藥隱私。
   pushFamilyFeed('<b>' + myFeedName() + '</b>已記錄' + (dose.slot ? medSlotLabel(dose.slot) : '這次') + '服藥，' + cname() + '有看著');
 }
+// 真的連續按下「吃了」幾天（Edward 2026-08-02 送審前抓到）。
+//
+// 這格本來是無條件顯示、天數用「今天幾號減一」湊出來的——8/3 就說你連續 2 天準時吃藥。
+// 剛下載的人連一顆藥都還沒設，第一次打開就被稱讚吃藥很規律，那是憑空捏造。
+// 現在從今天往回數真的打勾紀錄；今天還沒吃不算中斷（早上打開 App 很正常）。
+function realMedStreak() {
+  try {
+    const meds = JSON.parse(localStorage.getItem('munea.meds') || '[]');
+    if (!Array.isArray(meds) || !meds.length) return 0;   // 藥都還沒設，沒有規律可言
+    const dayHasDose = (d) => {
+      try {
+        const done = JSON.parse(localStorage.getItem('munea.medDone.' + isoOf(d)) || '{}');
+        return !!done && Object.keys(done).some(k => done[k]);
+      } catch (e) { return false; }
+    };
+    const cursor = new Date();
+    if (!dayHasDose(cursor)) cursor.setDate(cursor.getDate() - 1);   // 今天還沒吃≠斷了
+    let streak = 0;
+    for (let i = 0; i < 60 && dayHasDose(cursor); i += 1) { streak += 1; cursor.setDate(cursor.getDate() - 1); }
+    return streak;
+  } catch (e) { return 0; }
+}
 function streakLine(n) {
   if (n >= 10) {
     return muneaT(
@@ -6947,7 +6969,12 @@ function buildCareItems() {
         : muneaT('home.care.activityProgress', '“{title}” is in progress. See how everyone is doing.', { title }),
       btn: careLabels.open,
     });
-  } else {
+  } else if (false) {
+    // 這裡本來在「一個活動都沒有」的時候，硬塞一張寫死的示範卡：
+    // 「家人發起的走路活動，還差 5000 步就達標」——但新使用者根本還沒有家人、
+    // 也沒有任何活動。第一次打開 App 就看到一件沒發生的事，那是在騙人
+    //（Edward 2026-08-02 送審前抓到：「確認剛下載登入的用戶沒有任何假資料」）。
+    // 保留這段只是留個痕跡，永遠不會執行；真的沒活動就什麼都不推。
     const owner = muneaT('home.care.familyFallback', 'Family');
     const localized = rendererCopy
       ? rendererCopy.walkActivity({ gap: 5000, owner })
@@ -6965,7 +6992,10 @@ function buildCareItems() {
       btn: careLabels.open,
     });
   }
-  if (!_relayOnButlerCard) items.push(familyItem);
+  // 動態牆是空的（新使用者、或家人還沒做任何事）就不要推這格——
+  // 它的備援文案是「家人說週末回去看你」，那是示範句子，不是真的有人這樣說
+  //（Edward 2026-08-02 送審前抓到）。沒有內容就安靜，不要編一則家人的消息給他看。
+  if (!_relayOnButlerCard && _relayClean) items.push(familyItem);
   let v = null;
   try {
     let arr = JSON.parse(localStorage.getItem('munea.visits') || 'null');
@@ -7002,7 +7032,9 @@ function buildCareItems() {
       btn: careLabels.open,
     });
   }   // 留意卡看診快到了標題守門（Edward 2026-07-15 事故）
-  items.push({ k: 'status', tone: 'gold', icon: 'medal', title: muneaT('home.care.medicationRhythm', 'Your medication routine is on track'), sub: plain(streakLine(Math.max(1, new Date().getDate() - 1))) });
+  // 真的有連續打勾才講——沒設藥、沒吃過就不要稱讚一個沒發生的習慣（Edward 2026-08-02）
+  const _medStreak = realMedStreak();
+  if (_medStreak >= 1) items.push({ k: 'status', tone: 'gold', icon: 'medal', title: muneaT('home.care.medicationRhythm', 'Your medication routine is on track'), sub: plain(streakLine(_medStreak)) });
   // 個人資料提醒（2026-07-28 Edward 拍板：從首頁那張趕不走的獨立小卡搬進來）：還沒填才插在第一則，
   // 一填完自動不再出現；輪播 5.2 秒會自己轉走＝天生不強迫，所以這則不配關閉鈕。
   // 標題刻意不放 AI 名字（Edward 2026-07-28 拍板：原本的「◯◯想更認識你」太煽情，改中性敘述）；
@@ -7039,6 +7071,18 @@ function renderCareCarousel() {
   const rendererCopy = muneaRendererCopy();
   const careLabels = localizedCareLabels(rendererCopy);
   const items = buildCareItems();
+  // 什麼都沒有的時候（剛下載、還沒設藥、還沒加家人）就誠實說沒有，
+  // 不要編一則假消息填滿版面（Edward 2026-08-02）。這句同時告訴他這格之後會裝什麼。
+  if (!items.length) {
+    body.innerHTML = '<div class="care-item on" data-k="empty">' +
+      '<span class="care-ico">' + CARE_ICONS.msg + '</span>' +
+      '<div class="care-txt"><p>' + muneaT('home.care.emptyTitle', '目前沒有要提醒你的事') + '</p>' +
+      '<small>' + muneaT('home.care.emptyBody', '設好用藥、看診，或把家人加進來，這裡就會幫你留意') + '</small></div>' +
+      '</div>';
+    dots.innerHTML = '';
+    if (_careTimer) { clearInterval(_careTimer); _careTimer = null; }
+    return;
+  }
   body.innerHTML = items.map((it, i) =>
     '<div class="care-item' + (i === 0 ? ' on' : '') + '" data-k="' + it.k + '">' +
     '<span class="care-ico ' + it.tone + '">' + CARE_ICONS[it.icon] + '</span>' +

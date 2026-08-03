@@ -1654,5 +1654,7 @@
   "activity.voteCardTied": "{n} 個人投了 · 目前平手",
   "activity.voteCardEmpty": "還沒有人投",
   "activity.voteStateMine": "你投了 {opt}",
-  "activity.voteStateTodo": "還沒投"
+  "activity.voteStateTodo": "還沒投",
+  "home.care.emptyTitle": "目前沒有要提醒你的事",
+  "home.care.emptyBody": "設好用藥、看診，或把家人加進來，這裡就會幫你留意"
 }

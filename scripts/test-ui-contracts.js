@@ -391,8 +391,9 @@ assert(/async function syncHomeFamilyRelay\(\)[\s\S]{0,1200}?finishFamilyRelayCl
   'Showing the relay must report delivery back to the cloud, otherwise it will be re-sent forever');
 assert(/function loadHomeRelay\(\)[\s\S]{0,600}?HOME_RELAY_TTL_MS[\s\S]{0,300}?munea\.lastChatAt/.test(app),
   'A shown relay must fade on its own: superseded by a chat, by a newer message, or by the next day');
-assert(/if \(!_relayOnButlerCard\) items\.push\(familyItem\)/.test(app),
-  'The care carousel must not repeat a relay that the butler card is already delivering');
+assert(/if \(!_relayOnButlerCard && _relayClean\) items\.push\(familyItem\)/.test(app),
+  '留意輪播不能重複講管家卡已經在轉達的那則傳話；動態牆是空的時候也不能推——'
+  + '它的備援文案是「家人說週末回去看你」那種示範句子，新使用者會以為真的有人這樣說');
 // 輪播那格也不准再猜（2026-07-31 收尾）：它只負責唸出動態牆最新的一則。
 // 用中文句型撈「哪一則是傳話」，換成英日西就整條認不出來——真傳話已經由上面那張卡直接拿了。
 assert(!/feed\.find\([^)]*要我提醒你/.test(app) && !/match\(\/\^\(\.\+\?\)要我提醒你/.test(app),
@@ -805,6 +806,13 @@ const askReviewBody = app.match(/window\.__muneaMaybeAskReview = function \(mome
 assert(askReviewBody, 'The review timing gate must remain a readable single function');
 assert(askReviewBody.indexOf("typeof window.__muneaRequestReview !== 'function'") < askReviewBody.indexOf("localStorage.setItem('munea.reviewAsked."), 'The native-availability check must run BEFORE the once-per-version flag is written');
 
+// 剛下載的使用者不能看到任何示範資料（Edward 2026-08-02 送審前抓到）。
+// 以前「一個活動都沒有」時，首頁會硬塞一張「家人發起的走路活動，還差 5000 步就達標」——
+// 新使用者根本還沒有家人，第一次打開就看到一件沒發生的事。
+assert(/\} else if \(false\) \{[\s\S]{0,400}?gap: 5000/.test(app),
+  '沒有活動時不能塞那張寫死的示範走路卡（新使用者會以為真的有家人發起了活動）');
+assert(/if \(!items\.length\) \{[\s\S]{0,400}?home\.care\.emptyTitle/.test(app),
+  '留意輪播沒東西時要誠實說沒有，不能整格空白、更不能編一則填版面');
 // 開獎是發起人的事（Edward 2026-08-01）。以前那顆「現在開獎」沒有任何身分檢查——
 // 任何家人打開卡片就能替全家結束抽獎，其他人連參加的機會都沒有。
 // 這裡守三件事：建活動有記發起人／開獎鍵有問是不是我／判斷用 ownerId 不是用名字。
