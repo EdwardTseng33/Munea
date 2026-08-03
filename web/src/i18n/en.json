@@ -1654,5 +1654,7 @@
   "activity.voteCardTied": "{n} voted - tied so far",
   "activity.voteCardEmpty": "No votes yet",
   "activity.voteStateMine": "You picked {opt}",
-  "activity.voteStateTodo": "Not voted yet"
+  "activity.voteStateTodo": "Not voted yet",
+  "home.care.emptyTitle": "Nothing to flag right now",
+  "home.care.emptyBody": "Set up medications, appointments, or add family - this is where reminders will show"
 }
