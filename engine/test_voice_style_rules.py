@@ -64,6 +64,18 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("嗯，我的看法是", self.src)
         self.assertIn("安靜等他", self.src)
         self.assertNotIn("一般閒聊預設只回答一句", self.src)
+        # 2026-08-04 GPT Live 對齊：舊的視訊框架／熟識度規則不能再用全域
+        # 「一次一兩句」蓋掉上面的任務式話量。需要短的場景仍由風格書明確指定，
+        # 但健康說明、比較、做法與故事要能完整講完。
+        for conflicting_rule in (
+            "句子短、口語、一次一兩句",
+            "一次還是一兩句、問完停下來聽",
+            "一次還是一兩句、不長篇",
+            "仍別長篇",
+        ):
+            self.assertNotIn(conflicting_rule, self.src)
+        self.assertIn("一次只推進一件事", self.src)
+        self.assertIn("對方明確想深入、比較、聽完整說明或故事時再自然展開", self.src)
 
     def test_video_call_persona_frame_present(self):
         """2026-07-16 Edward「像與真實世界的人視訊聊天」：相處框架要在、且是行為比喻不是身分宣稱。"""
