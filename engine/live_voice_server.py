@@ -1388,6 +1388,55 @@ def _voice_rhythm_param(explicit, env_name, default, cast=int):
     return default
 
 
+_VOICE_PAUSE_PROFILES = {
+    # 這三檔是可回退的 A/B 旋鈕，不是假裝成 semantic VAD：Gemini 目前仍用
+    # AutomaticActivityDetection，只是讓候選版能用名字測「快接話 vs 多等一下」。
+    "responsive": 650,
+    "balanced": 800,
+    "patient": 1100,
+}
+
+
+def _voice_pause_profile(raw):
+    """把單通話／環境設定收斂成有限的節奏檔位；未知值一律忽略。"""
+    token = str(raw or "").strip().lower().replace("_", "-")
+    return token if token in _VOICE_PAUSE_PROFILES else None
+
+
+def _voice_silence_duration(explicit_ms=None, pause_profile=None):
+    """解析 Gemini AAD 的尾端靜音窗，並防止錯誤設定把整通話卡死。
+
+    優先權：單通話毫秒值 → 單通話節奏檔 → 環境毫秒值 → 環境節奏檔 → 800ms。
+    毫秒值只接受 400~2000；超界或格式錯誤就退到下一層。這裡只做可控的
+    pause patience，沒有宣稱能取代語意式 turn detection。
+    """
+    def _bounded_ms(raw):
+        if raw is None or str(raw).strip() == "":
+            return None
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return None
+        return value if 400 <= value <= 2000 else None
+
+    explicit_value = _bounded_ms(explicit_ms)
+    if explicit_value is not None:
+        return explicit_value
+
+    explicit_profile = _voice_pause_profile(pause_profile)
+    if explicit_profile:
+        return _VOICE_PAUSE_PROFILES[explicit_profile]
+
+    env_value = _bounded_ms(os.environ.get("MUNEA_VOICE_SILENCE_MS"))
+    if env_value is not None:
+        return env_value
+
+    env_profile = _voice_pause_profile(os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
+    if env_profile:
+        return _VOICE_PAUSE_PROFILES[env_profile]
+    return _VOICE_PAUSE_PROFILES["balanced"]
+
+
 def _voice_sensitivity_param(explicit, env_name, default_value, high_value, low_value):
     """同 `_voice_rhythm_param` 的三層 fallback，給 HIGH/LOW 靈敏度枚舉值用。"""
     def _map(raw):
@@ -1448,7 +1497,7 @@ def _voice_thinking_level(explicit=None):
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
                  allow_care_questions=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
-                 resumption_handle=None, thinking_level=None, locale_profile=None):
+                 pause_profile=None, resumption_handle=None, thinking_level=None, locale_profile=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     locale_profile = locale_profile or localization.voice_session_locale_profile()
@@ -1553,8 +1602,8 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
                 ),
                 prefix_padding_ms=_voice_rhythm_param(
                     prefix_padding_ms, "MUNEA_VOICE_PREFIX_PADDING_MS", 300),
-                silence_duration_ms=_voice_rhythm_param(
-                    silence_duration_ms, "MUNEA_VOICE_SILENCE_MS", 800),
+                silence_duration_ms=_voice_silence_duration(
+                    silence_duration_ms, pause_profile),
             ),
             activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
@@ -2924,6 +2973,7 @@ async def handle(ws):
     allow_care_questions = False   # 只有帶 ?cap_ask=1 的新版 App 才開放口袋問題工具（M1 PR-3）      # 只有帶 ?cap_evt=1 的新版 App 才開放「幫你記行程」工具（2026-07-16）
     fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
     day_call = None           # 當日第幾通（0-based）：只負責開場路線去重，不改變關係熟識度
+    pause_profile = None      # 單通話聽話耐心：responsive / balanced / patient（候選版 A/B）
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
@@ -3037,6 +3087,11 @@ async def handle(ws):
                 day_call = max(0, min(99, int(dvals[0])))
             except Exception:
                 pass
+        # ?pause=patient：候選版可逐通 A/B「少搶話 vs 回得快」。只接受三個命名檔位，
+        # 不讓任意 query 毫秒值進到底層；未帶時仍是現行 balanced=800ms。
+        pvals = _q.get("pause")
+        if pvals:
+            pause_profile = _voice_pause_profile(pvals[0])
     except Exception:
         pass
     _CID["n"] += 1
@@ -3088,8 +3143,24 @@ async def handle(ws):
                 live_config, char, name, mood, topics, user, location, allow_reminders, fam,
                 memory_scope, allow_events, demo_mode,
                 allow_care_questions=allow_care_questions,
+                pause_profile=pause_profile,
                 resumption_handle=resumption_handle,
                 locale_profile=voice_locale_session.current_profile())
+            if first_connect:
+                aad = cfg.realtime_input_config.automatic_activity_detection
+                env_silence = os.environ.get("MUNEA_VOICE_SILENCE_MS", "").strip()
+                env_profile = _voice_pause_profile(
+                    os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
+                pause_label = pause_profile
+                if not pause_label and env_silence == str(aad.silence_duration_ms):
+                    pause_label = "custom"
+                pause_label = pause_label or env_profile or "balanced"
+                _diag(
+                    cid,
+                    "turn_taking_config",
+                    pause=pause_label,
+                    silence_ms=aad.silence_duration_ms,
+                )
             if first_connect and cfg.thinking_config is not None:
                 # A/B 實測要有帳可查：這通到底跑在哪一段思考深度，直接寫進通話紀錄。
                 # 沒設（正式機預設）時一個字都不印，日誌不變吵。

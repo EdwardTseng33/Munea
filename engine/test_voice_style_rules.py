@@ -77,6 +77,15 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("一次只推進一件事", self.src)
         self.assertIn("對方明確想深入、比較、聽完整說明或故事時再自然展開", self.src)
 
+    def test_turn_taking_waits_for_unfinished_thoughts_and_chunks_long_answers(self):
+        """GPT Live 對齊：不把沉默一律當句點；長回答要像說話，不像朗讀稿。"""
+        self.assertIn("未完線索", self.src)
+        self.assertIn("把短暫沉默當成他還在想", self.src)
+        self.assertIn("先說結論", self.src)
+        self.assertIn("口語路標", self.src)
+        self.assertIn("對方一插話就停", self.src)
+        self.assertIn("不硬把原稿講完", self.src)
+
     def test_video_call_persona_frame_present(self):
         """2026-07-16 Edward「像與真實世界的人視訊聊天」：相處框架要在、且是行為比喻不是身分宣稱。"""
         self.assertIn("真實世界裡兩個人的視訊聊天", self.src)
