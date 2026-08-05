@@ -3,10 +3,15 @@
 ①句尾不要一直反問 ②故事要有寓意、有收尾 ③內容預設台灣在地。
 規則若被改掉或誤刪，這裡會亮紅燈。"""
 import os
+import importlib
+import sys
 import unittest
 
 SRC = os.path.join(os.path.dirname(__file__), "live_voice_server.py")
 PERSONA_DIR = os.path.join(os.path.dirname(__file__), "persona")
+sys.path.insert(0, os.path.dirname(__file__))
+os.environ.setdefault("GEMINI_API_KEY", "test")
+os.environ.setdefault("MUNEA_DATABASE_PROVIDER", "json")
 
 
 def _voice_style_book(locale):
@@ -85,6 +90,12 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("口語路標", self.src)
         self.assertIn("對方一插話就停", self.src)
         self.assertIn("不硬把原稿講完", self.src)
+
+    def test_realtime_contract_is_single_and_labeled(self):
+        """Realtime 行為只留一份短契約，避免多組人格例句互相拉扯。"""
+        self.assertEqual(1, self.src.count("[即時通話互動契約]"))
+        for action in ("一次只推進一件事", "一次問一件", "不要猜他做了什麼", "消化成口語"):
+            self.assertIn(action, self.src)
 
     def test_video_call_persona_frame_present(self):
         """2026-07-16 Edward「像與真實世界的人視訊聊天」：相處框架要在、且是行為比喻不是身分宣稱。"""
@@ -236,6 +247,60 @@ class EveryShippedVoiceStyleBookTest(unittest.TestCase):
                 continue
             self.assertIn(marker, _voice_style_book(locale),
                           f"{locale}：少了「不准連續兩輪反問」的硬規矩")
+
+
+class VoicePromptBudgetTest(unittest.TestCase):
+    """提示預算與搜尋模式互斥契約。
+
+    這不是把字數當品質；它防止已刪掉的重複規則、例句與互斥搜尋說明悄悄長回來。
+    醫療、安全、權限與工具規則仍由上面的行為測試各自守住。
+    """
+
+    @staticmethod
+    def _render(search_enabled, **kwargs):
+        old = os.environ.get("MUNEA_VOICE_LIVE_LOOKUP")
+        os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1" if search_enabled else "0"
+        try:
+            import live_voice_server
+            module = importlib.reload(live_voice_server)
+            return module.system_instruction(**kwargs)
+        finally:
+            if old is None:
+                os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
+            else:
+                os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = old
+
+    def test_prompt_budget_for_current_production_shape(self):
+        prompt = self._render(True)
+        self.assertLessEqual(len(prompt), 16500)
+        self.assertEqual(1, prompt.count("[即時通話互動契約]"))
+        self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
+        self.assertNotIn("[即時資訊｜無搜尋]", prompt)
+        self.assertNotIn("Voice 伺服器會先替你播放", prompt)
+
+    def test_prompt_budget_for_capability_rich_call(self):
+        prompt = self._render(
+            True,
+            allow_reminders=True,
+            allow_events=True,
+            allow_care_questions=True,
+            user="阿明",
+            name="寧寧",
+        )
+        self.assertLessEqual(len(prompt), 18400)
+        for hard_rule in (
+            "絕對不准用查到的網路內容回答",
+            "只有工具回覆 status=ok 才能說設好了",
+            "你是幫他**保管問題**、不是**回答問題**",
+        ):
+            self.assertIn(hard_rule, prompt)
+
+    def test_no_search_mode_is_explicit_and_non_conflicting(self):
+        prompt = self._render(False)
+        self.assertLessEqual(len(prompt), 16800)
+        self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
+        self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
+        self.assertIn("你沒有辦法上網查東西", prompt)
 
 
 if __name__ == "__main__":
