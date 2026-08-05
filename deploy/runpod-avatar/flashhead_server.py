@@ -158,6 +158,27 @@ N_SLOTS = max(1, int(os.environ.get("MUNEA_FH_SLOTS", "1")))
 CALL_TOKEN_CLOCK_LEEWAY_S = max(0, int(os.environ.get("MUNEA_CALL_TOKEN_CLOCK_LEEWAY", "330")))
 
 
+def _call_token_worker_matches(payload, expected_worker):
+    """Match either a process worker claim or a base-worker slot claim.
+
+    A multi-process backend runs as ``<base>-pN``. Gateway durable workers are
+    registered once as ``<base>`` with multiple slots, so their signed token
+    carries ``worker_id=<base>`` and ``slot_id=N+1``. Only the matching process
+    may accept that base-worker token.
+    """
+    if not expected_worker or payload.get("worker_id") == expected_worker:
+        return True
+    base_worker, separator, process_suffix = expected_worker.rpartition("-p")
+    if not separator or not base_worker or not process_suffix.isdigit():
+        return False
+    if payload.get("worker_id") != base_worker:
+        return False
+    try:
+        return int(payload.get("slot_id") or 0) == int(process_suffix) + 1
+    except (TypeError, ValueError):
+        return False
+
+
 def _decode_call_token(token, secret, expected_worker):
     if not token or not secret:
         return None
@@ -172,7 +193,7 @@ def _decode_call_token(token, secret, expected_worker):
         payload = json.loads(raw)
         if int(payload.get("exp") or 0) + CALL_TOKEN_CLOCK_LEEWAY_S < int(time.time()):
             return None
-        if expected_worker and payload.get("worker_id") != expected_worker:
+        if not _call_token_worker_matches(payload, expected_worker):
             return None
         return payload
     except (ValueError, TypeError, json.JSONDecodeError):
