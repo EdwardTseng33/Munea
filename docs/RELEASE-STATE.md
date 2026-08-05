@@ -2,13 +2,23 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-07-31 23:2X Asia/Taipei` (source 升版為 1.0.51 Build 520；uploaded／review／iPhone 三條 lane 仍是 Build 492 的凍結成品，runtime 兩台已上 1.0.51 對應 commit，DB lane 未變)
+Snapshot time: `2026-08-06 02:16 Asia/Taipei`（Voice／Avatar 正式環境已更新至 `origin/main@7b0bac35`；App uploaded／review／installed-iPhone lane 仍沿用下表既有證據，尚未承接本次部署）
 
-Source reconciliation baseline: `origin/main@6786c1ba`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
+Source reconciliation baseline: `origin/main@7b0bac35`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
 
 > ⚠️ **版號回填缺口（2026-07-31 Edward 點出）**：Edward 說 App 端「已經要準備上 1.0.51」，但 repo 的 source 從 07-30 起一直停在 1.0.45——中間 1.0.46～1.0.50 這幾個號**只存在於 Edward 那端的打包，從未回寫 repo**。後果是每個 session 讀 repo 都只查得到 1.0.45（session 沒有錯，是唯一權威來源本身落後），而使用者在設定頁看到的「更新內容」也停在 07-30。本次把 source 直接推到 **1.0.51** 並補齊該段更新紀錄（1.0.45 之後 main 上共 174 個 commit、其中 83 個使用者可見）。Build number 從 500 跳到 **520 是留空間的估計值**，實際可用號以 App Store Connect 為準——Edward 打包前請對一次。
 
 Maintenance role: `Release / Platform` (`unassigned`)
+
+## 2026-08-06 GPT Live 互動優化正式部署
+
+- 最高可支持狀態：`deployed`。服務鏈與聲畫預檢已通過，但 exact installed-iPhone media E2E 尚未執行，因此整體仍標記 `App E2E pending`，不宣稱 `verified` 或 release-ready。
+- Source：`origin/main@7b0bac35c750bc46ddae2c6fd5d27d0f345c10e0`，package `1.0.53`；互動優化 PR #520 與 Avatar call-token／slot routing 修正 PR #522 均已合併。
+- Production Voice：Cloud Run revision `munea-voice-00087-suw` 已切 100% 流量；公開 `/version` 回報 `1.0.53@7b0bac35`。保留舊 revision `munea-voice-00085-nef`，回滾指令為 `gcloud run services update-traffic munea-voice --region asia-east1 --project gen-lang-client-0229303523 --to-revisions munea-voice-00085-nef=100`。
+- Production Avatar：RunPod Pod `ejs3atc7md425x`／Gateway worker `runpod-ejs3atc7md425x`，映像鎖定 digest `sha256:b5a97299d9b8b8805dea16d3d2431889113d2921164119c5c4faebd01850cb8d`；2 processes／2 seats，驗證時 `active=0`、`available=true`。舊 Pod `fclawd117hu2ay` 已終止，故 Avatar 回滾需由前版映像重新起 Pod，不是即時 traffic rollback。
+- Production service-chain evidence（2026-08-06 Asia/Taipei）：拋棄式真實 Supabase session → production Gateway lease／signed call token → production Voice tagged revision `voice_ready` 2360 ms → Avatar legacy health 與 call-token health → Gateway release；測試 account／user／wallet 清理皆 PASS。這次探針的 `real_device_media_gate=SKIP`。
+- Avatar media precheck：隔離 WebRTC 驗收 a05／a06 均收到 640×640 影像與音訊；a05 為 298 video frames／593 audio packets／聲畫差 -0.42 s，a06 為 284／564／-0.20 s。base worker token 僅能依 signed `slot_id` 到正確 process；錯誤 slot 與外來 worker 均 fail closed。
+- 剩餘 release gate：安裝 exact App build／production profile，在 iPhone 完成真麥克風、Auth／credits、Gateway、Voice＋Avatar ready、AI 開場、真實語音上行、可聽／可見 AI 回應、掛斷與 capacity release，並記錄裝置、build、時間與 evidence reference。
 
 ## Status vocabulary
 
