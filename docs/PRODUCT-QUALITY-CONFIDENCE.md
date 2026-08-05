@@ -77,7 +77,7 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.53 (Build 523)`；純 source 升版、尚未打包。版號從 1.0.45 直接推到 1.0.51 以對齊 Edward App 端要出的號（1.0.46～1.0.50 只存在於他那端的打包、從未回寫 repo）；Build 520 是留空間的估計值，實際可用號以 App Store Connect 為準。current source 已遠超凍結 commit `72a0bd46`，沒有適用此版的 Archive／IPA 或 iPhone 證據 |
+| Latest source | `1.0.54 (Build 524)`；**版號與 Build 皆由 App Store Connect 唯讀查得、不是估計值**（1.0.54／Build 524／`WAITING_FOR_REVIEW`）。Build 524 於 2026-08-01 09:41 UTC 上傳，是實際送審的成品；repo 先前停在 1.0.53 (Build 523)，523 同日稍早上傳、當天即被取代且從未送審。source 仍領先送審成品（8/1 之後 main 又進了 35 筆，含 GPT Live 互動優化），故 Build 524 的證據不適用 current source |
 | Latest uploaded App | `1.0.44 (Build 492)`；凍結 commit `72a0bd46`，IPA SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`，Edward iPhone 安裝／啟動與版號回讀成功，App E2E pending |
 | App Store | Build 492 已上傳、processing 完成並選入 1.0.44 版本頁；狀態為「準備提交」，未送審／核准／公開 |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |

@@ -67,3 +67,24 @@ node asc-check-screenshots.mjs
 （`ja-JP-rgb` / `es-MX-rgb` 是去過透明的版本，上傳用這兩個）
 
 89 MB 沒放進程式庫——重素材照城堡規矩放 E 槽，見 `app-store/localizations/SCREENSHOTS-README.md`。
+
+### `asc-read-release-state.mjs` — 版號別再用估的
+
+```
+node scripts/appstore/asc-read-release-state.mjs
+```
+
+**唯讀**，問蘋果「現在到底是哪一版、哪個 Build、什麼狀態」。
+
+為什麼要有這支：Edward 那端打包會自己升版號，而那個號**常常沒有回寫程式庫**
+（1.0.46～1.0.50、以及 1.0.54 都發生過）。以前只能寫「Build 520 是留空間的估計值」，
+下一個 session 讀到的就是錯的。現在直接問權威來源，三十秒就有答案：
+
+```
+== 蘋果那邊的版本 ==
+  1.0.54  狀態=WAITING_FOR_REVIEW  建立=2026-07-28T00:33
+== 上傳過的 Build（新到舊）==
+  Build 524  VALID  上傳=2026-08-01T09:41
+```
+
+**包版前、回填狀態文件前先跑這支**。鑰匙取法見上面那段（用完刪掉 `/tmp/asc.p8`）。

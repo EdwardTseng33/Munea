@@ -2,11 +2,13 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-08-06 02:16 Asia/Taipei`（Voice／Avatar 正式環境已更新至 `origin/main@7b0bac35`；App uploaded／review／installed-iPhone lane 仍沿用下表既有證據，尚未承接本次部署）
+Snapshot time: `2026-08-06 03:1X Asia/Taipei`（Voice／Avatar 正式環境為 `origin/main@7b0bac35`；App lane 已以 App Store Connect 唯讀查詢回填為 `1.0.54 (Build 524) WAITING_FOR_REVIEW`；installed-iPhone lane 仍沿用下表既有證據）
 
 Source reconciliation baseline: `origin/main@7b0bac35`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
 
-> ⚠️ **版號回填缺口（2026-07-31 Edward 點出）**：Edward 說 App 端「已經要準備上 1.0.51」，但 repo 的 source 從 07-30 起一直停在 1.0.45——中間 1.0.46～1.0.50 這幾個號**只存在於 Edward 那端的打包，從未回寫 repo**。後果是每個 session 讀 repo 都只查得到 1.0.45（session 沒有錯，是唯一權威來源本身落後），而使用者在設定頁看到的「更新內容」也停在 07-30。本次把 source 直接推到 **1.0.51** 並補齊該段更新紀錄（1.0.45 之後 main 上共 174 個 commit、其中 83 個使用者可見）。Build number 從 500 跳到 **520 是留空間的估計值**，實際可用號以 App Store Connect 為準——Edward 打包前請對一次。
+> ✅ **版號回填缺口已補（2026-08-06 · Edward「app 與送審都已經是 1.0.54，你們自己要同步更新好」）**：這次不用估——直接用 App 管理鑰匙唯讀問 App Store Connect。權威回答：**`1.0.54` 狀態 `WAITING_FOR_REVIEW`、綁 Build 524**（上傳 2026-08-01 09:41 UTC ＝台灣 8/1 17:41），釋出方式 `AFTER_APPROVAL`；商店上架中的仍是最早的 `1.0`（Build 49）。repo 先前停在 `1.0.53 (Build 523)`——523 於台灣 8/1 06:59 上傳，**同一天就被 524 取代、從未送審、沒有任何使用者跑過**，所以把 1.0.53 的更新說明併進 1.0.54（使用者會看到的就是這一份），並補上 Build 523→524 之間 12 筆裡使用者看得到的三件事。
+>
+> 🔴 **同時抓到：四個「叫手機重讀檔案」的記號從 1.0.45 之後就沒再動過**。`web/index.html` 裡 styles.css／version.js／auth.js／app.js 的 `?v=` 記號一路停在 `v1045`，而程式版號已經走到 1.0.53——`scripts/test-release-settings.js` 這道守門因此**在 clean main 上一直是紅的**（不是本次改壞的，已在 main 上重現）。後果：從 1.0.45 更新上來的手機，網頁層可能仍拿快取裡的舊檔，看不到新版的東西。本次已對齊 `v1054`；**但送審中的 Build 524 帶的是舊記號，改不了**。
 
 Maintenance role: `Release / Platform` (`unassigned`)
 
@@ -38,9 +40,9 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.53 (Build 523)` | 純 source 升版。版號直接從 1.0.45 推到 **1.0.51** 以對齊 Edward App 端實際要出的號（1.0.46～1.0.50 從未回寫 repo，見上方缺口說明）；更新紀錄補齊 1.0.45 之後 main 的 174 個 commit（83 個使用者可見）：家人帶話上首頁、傳話送出前複誦確認、免費版 1 位家人、四語系與四國衛教庫、主動關心、急難號碼照所在地、蘋果健康重裝自動接回、訂閱與點數顯示修復、內購重送修復、視覺與版面一批。Build 520 是留空間的估計值，**實際可用號以 App Store Connect 為準**。尚未 Archive、未打包、未上傳；沒有任何適用此版的 IPA／iPhone 證據，不得把下列 Build 492 證據上推到 current source | `package.json`; `package-lock.json`; `web/src/version.js`; Xcode project; Git history | 2026-07-31 23:2X |
-| Latest uploaded App | `unknown`（本表最後有憑證的是 `1.0.44 (Build 492)`） | **這一列已知過期。** Edward 2026-07-30 表示 492 之後又包過幾版，但那些 Archive／上傳沒有回填本表，所以最大 Build number 目前無法從 repo 證明。下面 492 的憑證只證明它上傳過，不證明它是最新：Apple 於 07-28 17:22:57 回傳 `Upload succeeded`，IPA 58,865,329 bytes，SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`。要恢復這一列，得由 Edward 從 App Store Connect 回填實際上傳過的版本與 Build | Xcode upload receipt（僅限 492）; App Store Connect（權威，尚未回讀） | 2026-07-28 17:31（已過期） |
-| App Store selected review lane | `1.0.44 (Build 492)` | 17:31 已選入 1.0.44 版本頁並儲存；頁面狀態仍為「準備提交」。未點「新增以供審查」、未送審、未核准、未公開發佈 | App Store Connect live page | 2026-07-28 17:31 |
+| Latest source | `1.0.54 (Build 524)` | 對齊 App Store Connect 的權威事實（唯讀 API 查得：1.0.54／Build 524／`WAITING_FOR_REVIEW`）。1.0.53 的更新說明併入 1.0.54（Build 523 同日被取代、從未送審），另補 Build 523→524 之間使用者看得到的三件事；四個 WebView cache identity 一併對齊 `v1054` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project; App Store Connect API | 2026-08-06 03:1X |
+| Latest uploaded App | `1.0.54 (Build 524)` | 唯讀查 App Store Connect：Build 524 `VALID`，上傳 2026-08-01 09:41 UTC。同帳號另有 Build 523（同日稍早）與 492 等歷史 Build，皆 `VALID` | App Store Connect API（權威）；`scripts/appstore/README.md` 的 app-manager 鑰匙 | 2026-08-06 03:1X |
+| App Store selected review lane | `1.0.54 (Build 524)` | **已送審**：`appStoreState=WAITING_FOR_REVIEW`，釋出方式 `AFTER_APPROVAL`（核准後自動上架）。尚未核准、尚未公開發佈；商店上架中的仍是 `1.0`（Build 49） | App Store Connect API | 2026-08-06 03:1X |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
@@ -48,11 +50,13 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Environment | Service | Serving identity observed from public endpoint | Interpretation | Evidence time |
 |---|---|---|---|---|
-| production | Brain | `1.0.44@f6d9c7fa`, `munea-brain-00023-xoc` | `/version` 200；canary 0% PASS 後 exact-revision promotion 切 100% 流量（tag `prod-0727-003757-f6d9c7f`）。帶 #268 聊天品質三修（轉述紅線／內心戲清洗）；`MUNEA_REQUIRE_AUTH=1` 已查核；回滾至 `munea-brain-00021-kow` | 2026-07-27 00:44 |
-| production | Voice | `1.0.44@f6d9c7fa`, `munea-voice-00013-joj` | `/version` 200；exact-revision promote（tag `prod-0727-003936-f6d9c7f`＝`00011-luw`）後疊試驗設定 `MUNEA_VOICE_LIVE_LOOKUP=1`／`MUNEA_VOICE_SILENCE_MS=1100`（tag `exp-0727-lookup`）切 100%；帶 #265 語音週包；回滾至 `munea-voice-00011-luw`（保留新版、去試驗設定）或 `munea-voice-00009-muh`（退 7/24 版） | 2026-07-27 00:52 |
-| production | Call Control / Gateway | release identity `unknown` | 公開 `/health` 無憑證回 401，auth boundary 正常；authenticated lease／cleanup 與 source commit 未證明 | 2026-07-18 00:20 |
-| staging | Brain | `1.0.44@dfea6aac`, `munea-brain-staging-00083-veh` | `/version` 200；安全兩閘（canary 0%→自動驗證→promote）PASS，語音 s2s 探針 5/5 PASS；`dfea6aac` 與正式線 `8ddab84c` 之間僅差文件、程式本體相同；不是 production | 2026-07-24 19:50 |
-| staging | Voice | `1.0.44@dfea6aac`, `munea-voice-staging-00058-yer` | `/version` 200；同上安全兩閘 PASS；不是 production，真人通話仍需 App E2E | 2026-07-24 19:50 |
+| production | Brain | `1.0.53@2d5afa7d`, `munea-brain-00164-yuw` | `/healthz` 200、`ai.state=ok`。落後 main 的 11 筆全是語音／臉機／測試／App 端檔案，**管家腦自己的程式已是最新**，不需重新部署 | 2026-08-06 02:5X |
+| production | Voice | `1.0.53@7b0bac35`, `munea-voice-00087-suw` | `/healthz` 200。**與 main 同步**（main 只多兩筆純文件）；GPT Live 互動優化與 Avatar slot routing 修正皆在內。舊 App 仍走保留的 0.6 秒熱門檻插話判法，不會壞 | 2026-08-06 02:5X |
+| production | Call Control / Gateway | `munea-call-control-00015-dob` | 服務在；公開 `/health` 無憑證回 401，auth boundary 正常。release identity 未由公開端點證明 | 2026-08-06 02:5X |
+| production | Avatar (RunPod) | Pod `ejs3atc7md425x`，映像 digest `sha256:b5a97299…` | 2 processes／2 seats；02:16 隔離 WebRTC 驗收 a05／a06 皆收到 640×640 影像與音訊。回滾需由前版映像重起 Pod，不是即時切流量 | 2026-08-06 02:16 |
+| production | RunPod capacity controller | `munea-runpod-controller-00012-5xt` | `/health` `state=ok`、`mode=active`、`last_error` 空 | 2026-08-06 02:5X |
+| staging | Brain | `1.0.53@89eb2fa7`, `munea-brain-staging-00122-zow` | `/healthz` 200；`89eb2fa7` 在 main 裡但較舊 | 2026-08-06 02:5X |
+| staging | Voice | `1.0.53@f806406c`, `munea-voice-staging-00098-non` | ⚠ 吃流量那版跑的是**未合併的分支版**（`f806406c` 不在 main）；另有較新的 `munea-voice-staging-00102-bap` 已 Ready 但 0% 流量。下次拿測試機驗東西前要先收乾淨 | 2026-08-06 02:5X |
 
 `/version` 是 runtime identity authority。上述 5 個公開 target 的 safe observation、target-config hash、capture time 與 capture source commit 保存在 [`RELEASE-EVIDENCE-LATEST.json`](./RELEASE-EVIDENCE-LATEST.json)，以 [`RELEASE-EVIDENCE-TARGETS.json`](./RELEASE-EVIDENCE-TARGETS.json) 及 `npm run release:evidence:check`（= `python scripts/release_evidence.py check --max-age-hours 24 --strict-version`）驗 freshness 與版號對齊；上線前跑這一條。CI 常駐的 `python scripts/release_evidence.py check`（無 `--strict-version`）只擋真漂移：sourceVersion 缺值、看不懂、或超前 package version。證據落後 package version 是版號跳了還沒重擷的正常開發狀態，只給 warning，重擷用 `npm run release:evidence:capture`。Cloud Run Ready、0% canary、source equivalence或 App 預設 URL 都不能替代 serving identity 與真實 client trace。
 
