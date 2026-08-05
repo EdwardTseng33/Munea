@@ -46,6 +46,49 @@ class VoiceRhythmParamHelperTests(unittest.TestCase):
         finally:
             os.environ.pop("MUNEA_VOICE_SILENCE_MS", None)
 
+    def test_named_pause_profiles_are_bounded_and_reversible(self):
+        prior_profile = os.environ.pop("MUNEA_VOICE_PAUSE_PROFILE", None)
+        prior_ms = os.environ.pop("MUNEA_VOICE_SILENCE_MS", None)
+        try:
+            self.assertEqual(voice._voice_silence_duration(pause_profile="responsive"), 650)
+            self.assertEqual(voice._voice_silence_duration(pause_profile="balanced"), 800)
+            self.assertEqual(voice._voice_silence_duration(pause_profile="patient"), 1100)
+            self.assertEqual(voice._voice_silence_duration(pause_profile="unknown"), 800)
+        finally:
+            if prior_profile is not None:
+                os.environ["MUNEA_VOICE_PAUSE_PROFILE"] = prior_profile
+            if prior_ms is not None:
+                os.environ["MUNEA_VOICE_SILENCE_MS"] = prior_ms
+
+    def test_explicit_ms_beats_profile_and_environment(self):
+        os.environ["MUNEA_VOICE_SILENCE_MS"] = "1200"
+        os.environ["MUNEA_VOICE_PAUSE_PROFILE"] = "patient"
+        try:
+            self.assertEqual(
+                voice._voice_silence_duration(950, pause_profile="responsive"), 950)
+        finally:
+            os.environ.pop("MUNEA_VOICE_SILENCE_MS", None)
+            os.environ.pop("MUNEA_VOICE_PAUSE_PROFILE", None)
+
+    def test_environment_ms_beats_environment_profile(self):
+        os.environ["MUNEA_VOICE_SILENCE_MS"] = "900"
+        os.environ["MUNEA_VOICE_PAUSE_PROFILE"] = "patient"
+        try:
+            self.assertEqual(voice._voice_silence_duration(), 900)
+        finally:
+            os.environ.pop("MUNEA_VOICE_SILENCE_MS", None)
+            os.environ.pop("MUNEA_VOICE_PAUSE_PROFILE", None)
+
+    def test_unsafe_ms_falls_through_instead_of_stalling_call(self):
+        os.environ["MUNEA_VOICE_SILENCE_MS"] = "9000"
+        os.environ["MUNEA_VOICE_PAUSE_PROFILE"] = "patient"
+        try:
+            self.assertEqual(voice._voice_silence_duration(), 1100)
+            self.assertEqual(voice._voice_silence_duration(200), 1100)
+        finally:
+            os.environ.pop("MUNEA_VOICE_SILENCE_MS", None)
+            os.environ.pop("MUNEA_VOICE_PAUSE_PROFILE", None)
+
     def test_sensitivity_default_and_env_and_explicit(self):
         env_name = "MUNEA_VOICE_START_SENSITIVITY"
         os.environ.pop(env_name, None)
@@ -80,7 +123,8 @@ class VoiceLiveConfigDefaultBehaviorTests(unittest.TestCase):
 
     def setUp(self):
         for name in ("MUNEA_VOICE_SILENCE_MS", "MUNEA_VOICE_PREFIX_PADDING_MS",
-                     "MUNEA_VOICE_START_SENSITIVITY", "MUNEA_VOICE_END_SENSITIVITY"):
+                     "MUNEA_VOICE_START_SENSITIVITY", "MUNEA_VOICE_END_SENSITIVITY",
+                     "MUNEA_VOICE_PAUSE_PROFILE"):
             os.environ.pop(name, None)
 
     def test_no_env_no_explicit_matches_prior_hardcoded_values(self):
@@ -106,6 +150,11 @@ class VoiceLiveConfigDefaultBehaviorTests(unittest.TestCase):
         cfg = voice.live_config(char="寧寧", name="寧寧", silence_duration_ms=950)
         aad = cfg.realtime_input_config.automatic_activity_detection
         self.assertEqual(aad.silence_duration_ms, 950)
+
+    def test_named_pause_profile_reaches_live_config(self):
+        cfg = voice.live_config(char="寧寧", name="寧寧", pause_profile="patient")
+        aad = cfg.realtime_input_config.automatic_activity_detection
+        self.assertEqual(aad.silence_duration_ms, 1100)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,8 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const policy = require('../web/src/voice-turn-policy.js');
+const app = fs.readFileSync(path.join(__dirname, '..', 'web', 'src', 'app.js'), 'utf8');
 
 function observeSeries(levels, speakerActive = true) {
   let state = policy.createState();
@@ -66,4 +69,18 @@ assert.strictEqual(
   'real sustained speech must still pass during the opening gate',
 );
 
-console.log('Voice turn policy PASS: echo rejection, sustained barge-in, pre-roll, post-speech guard, opening sustain');
+// 跨層順序契約：本地先停聲；伺服器進入證據緩衝；預捲送完；最後才提交裁決。
+// 這守的是 WebSocket 實際送出順序，不只是 client/server 各自單測通過。
+const beginStart = app.indexOf('_beginBargeIn(rms, threshold, sustainMs, preRoll)');
+const beginEnd = app.indexOf('\n  greet()', beginStart);
+const beginBarge = app.slice(beginStart, beginEnd);
+const stopAt = beginBarge.indexOf('this._stopAssistantPlayback()');
+const evidenceStartAt = beginBarge.indexOf("type: 'barge_in_start'");
+const preRollAt = beginBarge.indexOf('evidence.forEach(frame => this._sendMicBuffer(frame))');
+const commitAt = beginBarge.indexOf("type: 'barge_in', ...payload");
+assert(stopAt >= 0 && stopAt < evidenceStartAt && evidenceStartAt < preRollAt && preRollAt < commitAt,
+  'barge-in must stop playback, buffer evidence, send pre-roll, then commit in that order');
+assert(beginBarge.includes('sustain_ms:') && beginBarge.includes('threshold:'),
+  'barge-in evidence must carry the browser threshold and sustain contract to the server');
+
+console.log('Voice turn policy PASS: echo rejection, sustained barge-in, two-phase evidence ordering, pre-roll, post-speech guard, opening sustain');

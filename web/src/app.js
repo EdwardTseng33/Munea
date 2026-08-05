@@ -3979,13 +3979,25 @@ const LiveVoice = {
     this._setFaceAudioMuted(true);
     Avatar.reset();
   },
-  _beginBargeIn(rms, threshold) {
+  _beginBargeIn(rms, threshold, sustainMs, preRoll) {
     if (this._bargeInActive) return;
     this._bargeInActive = true;
     this._dropAssistantAudio = true;
     this._stopAssistantPlayback();
-    try { this.ws.send(JSON.stringify({ type: 'barge_in' })); } catch (e) {}
-    try { trackProductEvent('voice_barge_in_local', { rms: +rms.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
+    // Two-phase barge-in: ask the server to buffer the following evidence,
+    // deliver the retained microphone onset, then commit the interruption.
+    // WebSocket ordering guarantees the server judges after hearing evidence.
+    const evidence = Array.isArray(preRoll) ? preRoll : [];
+    const payload = {
+      rms: +rms.toFixed(4),
+      threshold: +threshold.toFixed(4),
+      sustain_ms: Math.max(0, Number(sustainMs) || 0),
+      evidence_frames: evidence.length,
+    };
+    try { this.ws.send(JSON.stringify({ type: 'barge_in_start', ...payload })); } catch (e) {}
+    evidence.forEach(frame => this._sendMicBuffer(frame));
+    try { this.ws.send(JSON.stringify({ type: 'barge_in', ...payload })); } catch (e) {}
+    try { trackProductEvent('voice_barge_in_local', payload); } catch (e) {}
     if (this.onListen) this.onListen();
   },
   greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet', relay: this._pendingRelay || null })); voiceCallMark('greeting_requested', 'pass'); this._openMicAfterGreet = true; } } catch (e) { voiceCallFail('greeting_requested', e); } },   // 請 AI 主動開口；若有指定給本人的家人傳話，先準確轉達
@@ -4272,9 +4284,9 @@ const LiveVoice = {
         const observed = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
         this._bargeState = observed.state;
         if (!observed.shouldInterrupt) return;
-        this._beginBargeIn(rms, observed.threshold);
         const preRoll = this._bargePreRoll.splice(0);
-        preRoll.forEach(frame => this._sendMicBuffer(frame));
+        const sustainMs = sustainOpts ? sustainOpts.sustainMs : policy.DEFAULTS.sustainMs;
+        this._beginBargeIn(rms, observed.threshold, sustainMs, preRoll);
         return;
       }
       if (speakerActive) { this.micLevel = 0; return; }
@@ -4494,6 +4506,12 @@ const LiveVoice = {
             if (o.type === 'barge_in_ack') {
               // The server owns suppression of the cancelled model turn. This
               // also covers audio that had already queued locally on the phone.
+              try {
+                trackProductEvent(o.accepted === false ? 'voice_barge_in_rejected' : 'voice_barge_in_accepted', {
+                  reason: o.reason || null,
+                  evidenceMs: Number(o.evidence_ms) || 0,
+                });
+              } catch (e) {}
               this._dropAssistantAudio = false;
               this._capBuf = '';
               this._resetBargeInDetector();

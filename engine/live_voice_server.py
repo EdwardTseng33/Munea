@@ -34,7 +34,8 @@ from urllib.parse import urlencode
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
 from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame, hot_threshold,
-                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold)
+                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold,
+                              normalized_rms_to_pcm16, sustained_voice_evidence)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -792,7 +793,8 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         "你的節奏、溫度、來回方式，都要像一個自然、有人味的人在跟他視訊——"
         "多數時候是他說、你接住；不是你表演、他觀看。"
         "剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
-        "句子短、口語、一次一兩句、講完停下來等對方回應。）"
+        "句子口語、一次只推進一件事；話量照後面的即時語音規則判斷，"
+        "講到這一輪真正需要的程度就停下來等對方回應。）"
         # 通用紅線（2026-07-16）：不管上面有沒有給「上次聊過」的提示，都不准虛構跨通記憶——
         # Gemini 沒拿到摘要也可能自己演「延續上一通」，這條對所有通話無條件生效。
         # 2026-07-28 擴寫（考卷三輪：11 次紅線違反有 9 次是這一條，佔 82%）。
@@ -836,8 +838,8 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         # 但句尾少了「吧？」就從溫暖的猜變成斷定的編。差一個字，紅線就過不了。
         "**猜他的過去時，句尾一定要帶問**（「…吧？」「…嗎？」）——"
         "「他以前一定很溫柔吧？」是關心，「他以前一定是個很溫柔的人。」是替他編故事。"
-        "**這不是叫你多問問題**——是同一句關心換個講法，"
-        "一次還是一兩句、問完停下來聽；他主動提起就順著接。）"
+        "**這不是叫你多問問題**——是同一句關心換個講法。"
+        "這種試探一次只問一件，問完停下來聽；他主動提起就順著接。）"
         "（純語音的現實：你們之間只有「聲音」。**他傳不了任何東西給你**——沒有貼圖、照片、"
         "文字訊息、影片、連結，你也看不到他的畫面；絕對不要說「你傳了貼圖／照片」，"
         "也不要叫他做任何你看不到的事（「用指的給我看」「比給我看」「拿給我看」都不行）。"
@@ -856,9 +858,15 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
     if fam < 1:
         base += "（你們還不太熟，這是頭幾通電話：整段對話都要特別收斂——話少、溫和、讓他主導，不要熱情轟炸、不要一直找話題硬聊、不要連環問。他問你、或聊到他有興趣的才多說一點。）"
     elif fam < 3:
-        base += "（你們聊過幾次、漸漸熟了：可以自在一點，但仍別長篇、別連環問、別硬炒氣氛。）"
+        base += (
+            "（你們聊過幾次、漸漸熟了：可以自在一點，但對方沒要求時不要自顧自延伸"
+            "第二個話題，也別連環問、別硬炒氣氛。）"
+        )
     else:
-        base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
+        base += (
+            "（你們很熟了、像老朋友：自在、可主動一點，但仍然一次只推進一件事；"
+            "對方明確想深入、比較、聽完整說明或故事時再自然展開。）"
+        )
     if native_search_enabled() and not demo_mode:
         # 2026-07-28：她自己查（Gemini 內建 Google 搜尋）。跟舊的橋接查詢差在——
         # 舊路要等我們繞出去查 5 秒，所以說明書叫她「不要自己先說過場，伺服器會替你播」；
@@ -1380,6 +1388,55 @@ def _voice_rhythm_param(explicit, env_name, default, cast=int):
     return default
 
 
+_VOICE_PAUSE_PROFILES = {
+    # 這三檔是可回退的 A/B 旋鈕，不是假裝成 semantic VAD：Gemini 目前仍用
+    # AutomaticActivityDetection，只是讓候選版能用名字測「快接話 vs 多等一下」。
+    "responsive": 650,
+    "balanced": 800,
+    "patient": 1100,
+}
+
+
+def _voice_pause_profile(raw):
+    """把單通話／環境設定收斂成有限的節奏檔位；未知值一律忽略。"""
+    token = str(raw or "").strip().lower().replace("_", "-")
+    return token if token in _VOICE_PAUSE_PROFILES else None
+
+
+def _voice_silence_duration(explicit_ms=None, pause_profile=None):
+    """解析 Gemini AAD 的尾端靜音窗，並防止錯誤設定把整通話卡死。
+
+    優先權：單通話毫秒值 → 單通話節奏檔 → 環境毫秒值 → 環境節奏檔 → 800ms。
+    毫秒值只接受 400~2000；超界或格式錯誤就退到下一層。這裡只做可控的
+    pause patience，沒有宣稱能取代語意式 turn detection。
+    """
+    def _bounded_ms(raw):
+        if raw is None or str(raw).strip() == "":
+            return None
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return None
+        return value if 400 <= value <= 2000 else None
+
+    explicit_value = _bounded_ms(explicit_ms)
+    if explicit_value is not None:
+        return explicit_value
+
+    explicit_profile = _voice_pause_profile(pause_profile)
+    if explicit_profile:
+        return _VOICE_PAUSE_PROFILES[explicit_profile]
+
+    env_value = _bounded_ms(os.environ.get("MUNEA_VOICE_SILENCE_MS"))
+    if env_value is not None:
+        return env_value
+
+    env_profile = _voice_pause_profile(os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
+    if env_profile:
+        return _VOICE_PAUSE_PROFILES[env_profile]
+    return _VOICE_PAUSE_PROFILES["balanced"]
+
+
 def _voice_sensitivity_param(explicit, env_name, default_value, high_value, low_value):
     """同 `_voice_rhythm_param` 的三層 fallback，給 HIGH/LOW 靈敏度枚舉值用。"""
     def _map(raw):
@@ -1440,7 +1497,7 @@ def _voice_thinking_level(explicit=None):
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
                  allow_care_questions=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
-                 resumption_handle=None, thinking_level=None, locale_profile=None):
+                 pause_profile=None, resumption_handle=None, thinking_level=None, locale_profile=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     locale_profile = locale_profile or localization.voice_session_locale_profile()
@@ -1545,8 +1602,8 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
                 ),
                 prefix_padding_ms=_voice_rhythm_param(
                     prefix_padding_ms, "MUNEA_VOICE_PREFIX_PADDING_MS", 300),
-                silence_duration_ms=_voice_rhythm_param(
-                    silence_duration_ms, "MUNEA_VOICE_SILENCE_MS", 800),
+                silence_duration_ms=_voice_silence_duration(
+                    silence_duration_ms, pause_profile),
             ),
             activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
@@ -1827,7 +1884,7 @@ def _new_call_state():
           "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
           "blocked_output_text": "", "language_retry_count": 0,
-          "client_barge_in": False, "asr_turns": 0, "asr_chars": 0,
+          "client_barge_in": False, "pending_barge_in": None, "asr_turns": 0, "asr_chars": 0,
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
           "opening_window_complete": False,
@@ -2410,6 +2467,20 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
                 _eg_rms = frame_rms(message)
                 _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
+                # Two-phase barge-in: after barge_in_start, retain a short copy of
+                # the already-captured microphone onset. Do not forward or drop it
+                # until the commit message arrives and the server has judged the
+                # actual audio evidence. A stale start self-clears after one second.
+                _pending_barge = st.get("pending_barge_in")
+                if _pending_barge:
+                    if _eg_now - _pending_barge.get("started_at", 0.0) <= 1.0:
+                        _frame_ms = len(message) / float(16000 * 2) * 1000.0
+                        _pending_barge["frames"].append((bytes(message), _eg_rms, _frame_ms))
+                        if len(_pending_barge["frames"]) > 32:
+                            del _pending_barge["frames"][:-32]
+                        continue
+                    st["pending_barge_in"] = None
+                    _diag(cid, "node.barge_in_evidence_timeout")
                 if _eg_window and _eg_rms >= _eg_hot:
                     st["last_hot_voice_at"] = _eg_now   # 窗內聽到真的夠大聲＝可信的人聲（插話裁判的依據）
                 if _eg_rms >= _eg_hot:
@@ -2475,33 +2546,73 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         )
                 elif t == "audio_end":
                     await session.send_realtime_input(audio_stream_end=True)
+                elif t == "barge_in_start":
+                    # The phone has already stopped local playback. Buffer the
+                    # immediately following pre-roll so the final decision uses
+                    # microphone evidence that arrived before the commit message.
+                    st["pending_barge_in"] = {
+                        "started_at": time.monotonic(),
+                        "threshold_pcm": normalized_rms_to_pcm16(obj.get("threshold")),
+                        "sustain_ms": obj.get("sustain_ms", 150),
+                        "frames": [],
+                    }
+                    _diag(cid, "node.barge_in_evidence_started",
+                          frames=obj.get("evidence_frames") or 0)
                 elif t == "barge_in":
                     # 2026-07-30 插話裁判（治「喇叭開大→她自己的聲音觸發手機端插話→自己閉嘴」）：
                     # 手機端的插話偵測分不出「你在說話」跟「她自己的大聲回音」（退回手機播音
-                    # 模式時系統回音消除顧不到那條路、7/16 已點名）。伺服器聽得到上行音訊，
-                    # 當裁判：她講話中收到插話通知、但最近 0.6 秒沒聽過衝過熱門檻的人聲＝回音
-                    # → 駁回（回 ack 讓 App 解除靜音、她接著講），不打斷她。
+                    # 模式時系統回音消除顧不到那條路、7/16 已點名）。新 App 先送 start、
+                    # 再送預捲音訊、最後 commit；伺服器用同一個持續人聲規則判斷，通過後才把
+                    # 留住的開頭交給 Gemini。舊 App 沒有 start 時，保留 0.6 秒熱門檻判法。
                     _bi_now = time.monotonic()
-                    if (in_playout_window(_bi_now, st.get("playout_head"))
-                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6):
+                    _pending_barge = st.get("pending_barge_in")
+                    st["pending_barge_in"] = None
+                    _evidence_ms = 0.0
+                    _onset_index = 0
+                    if _pending_barge:
+                        _levels = [(rms, frame_ms) for _, rms, frame_ms in _pending_barge["frames"]]
+                        _accepted, _evidence_ms, _onset_index = sustained_voice_evidence(
+                            _levels,
+                            _pending_barge["threshold_pcm"],
+                            _pending_barge["sustain_ms"],
+                        )
+                    else:
+                        _accepted = not (
+                            in_playout_window(_bi_now, st.get("playout_head"))
+                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6
+                        )
+                    if not _accepted:
                         st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
-                        _diag(cid, "node.barge_in_rejected_echo", count=st["barge_in_rejected"])
+                        _diag(cid, "node.barge_in_rejected_echo",
+                              count=st["barge_in_rejected"], evidence_ms=round(_evidence_ms))
                         try:
-                            await ws.send(json.dumps({"type": "barge_in_ack"}))   # App 收 ack 會解除本地靜音
+                            await ws.send(json.dumps({"type": "barge_in_ack", "accepted": False,
+                                                      "reason": "echo", "evidence_ms": round(_evidence_ms)}))
                         except Exception:
                             pass
                         continue
                     st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1
-                    await ws.send(json.dumps({"type": "barge_in_ack"}))
+                    st["last_voice_at"] = _bi_now
+                    st["await_first"] = True
+                    # Replay from one frame before the detected onset so the
+                    # user's first consonant is not lost, without replaying the
+                    # whole assistant-echo window.
+                    if _pending_barge:
+                        for _audio, _, _ in _pending_barge["frames"][max(0, _onset_index - 1):]:
+                            await session.send_realtime_input(
+                                audio=types.Blob(data=_audio, mime_type="audio/pcm;rate=16000")
+                            )
+                    await ws.send(json.dumps({"type": "barge_in_ack", "accepted": True,
+                                              "evidence_ms": round(_evidence_ms)}))
                     fw = st.get("face_ws")
                     if fw is not None:
                         try:
                             await fw.send("reset")
                         except Exception:
                             st["face_ws"] = None
-                    _diag(cid, "node.client_barge_in")
+                    _diag(cid, "node.client_barge_in", evidence_ms=round(_evidence_ms))
                 elif t == "faceaudio":
                     # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
                     if obj.get("on"):
@@ -2862,6 +2973,7 @@ async def handle(ws):
     allow_care_questions = False   # 只有帶 ?cap_ask=1 的新版 App 才開放口袋問題工具（M1 PR-3）      # 只有帶 ?cap_evt=1 的新版 App 才開放「幫你記行程」工具（2026-07-16）
     fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
     day_call = None           # 當日第幾通（0-based）：只負責開場路線去重，不改變關係熟識度
+    pause_profile = None      # 單通話聽話耐心：responsive / balanced / patient（候選版 A/B）
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
@@ -2975,6 +3087,11 @@ async def handle(ws):
                 day_call = max(0, min(99, int(dvals[0])))
             except Exception:
                 pass
+        # ?pause=patient：候選版可逐通 A/B「少搶話 vs 回得快」。只接受三個命名檔位，
+        # 不讓任意 query 毫秒值進到底層；未帶時仍是現行 balanced=800ms。
+        pvals = _q.get("pause")
+        if pvals:
+            pause_profile = _voice_pause_profile(pvals[0])
     except Exception:
         pass
     _CID["n"] += 1
@@ -3026,8 +3143,24 @@ async def handle(ws):
                 live_config, char, name, mood, topics, user, location, allow_reminders, fam,
                 memory_scope, allow_events, demo_mode,
                 allow_care_questions=allow_care_questions,
+                pause_profile=pause_profile,
                 resumption_handle=resumption_handle,
                 locale_profile=voice_locale_session.current_profile())
+            if first_connect:
+                aad = cfg.realtime_input_config.automatic_activity_detection
+                env_silence = os.environ.get("MUNEA_VOICE_SILENCE_MS", "").strip()
+                env_profile = _voice_pause_profile(
+                    os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
+                pause_label = pause_profile
+                if not pause_label and env_silence == str(aad.silence_duration_ms):
+                    pause_label = "custom"
+                pause_label = pause_label or env_profile or "balanced"
+                _diag(
+                    cid,
+                    "turn_taking_config",
+                    pause=pause_label,
+                    silence_ms=aad.silence_duration_ms,
+                )
             if first_connect and cfg.thinking_config is not None:
                 # A/B 實測要有帳可查：這通到底跑在哪一段思考深度，直接寫進通話紀錄。
                 # 沒設（正式機預設）時一個字都不印，日誌不變吵。

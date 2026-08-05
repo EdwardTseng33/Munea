@@ -100,7 +100,8 @@ function Assert-VoiceCanaryUrl($value) {
   )
   $allowedHost = $false
   foreach ($suffix in $allowedSuffixes) {
-    if ($uri.Host.StartsWith("canary-") -and $uri.Host.EndsWith($suffix)) {
+    $hasCanaryTag = $uri.Host.StartsWith("canary-") -or $uri.Host.StartsWith("stg-")
+    if ($hasCanaryTag -and $uri.Host.EndsWith($suffix)) {
       $allowedHost = $true
       break
     }
@@ -108,7 +109,7 @@ function Assert-VoiceCanaryUrl($value) {
   if ($uri.Scheme -ne "wss" -or -not $uri.IsDefaultPort -or $uri.UserInfo -or
       $uri.Query -or $uri.Fragment -or $uri.AbsolutePath -notin @("", "/") -or
       -not $allowedHost) {
-    throw "VoiceCanaryUrl must be a query-free wss://canary-* tag for Munea staging Voice"
+    throw "VoiceCanaryUrl must be a query-free wss://canary-* or wss://stg-* tag for Munea staging Voice"
   }
   return $value.TrimEnd("/")
 }

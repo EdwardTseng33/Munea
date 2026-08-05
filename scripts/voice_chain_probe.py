@@ -175,12 +175,13 @@ def validate_voice_canary_url(value):
         and parsed.path in ("", "/")
         and not parsed.query
         and not parsed.fragment
-        and hostname.startswith("canary-")
+        and hostname.startswith(("canary-", "stg-"))
         and any(hostname.endswith(suffix) for suffix in allowed_suffixes)
     )
     if not safe:
         raise ValueError(
-            "Voice canary URL must be a query-free wss://canary-* tag for this project's munea-voice-staging service"
+            "Voice canary URL must be a query-free wss://canary-* or wss://stg-* tag "
+            "for this project's munea-voice-staging service"
         )
     return "wss://" + hostname
 
