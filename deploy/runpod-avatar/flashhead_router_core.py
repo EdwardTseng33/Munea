@@ -83,6 +83,30 @@ def worker_process_index(worker_id, base_worker_id, n_procs):
     return idx if 0 <= idx < n_procs else None
 
 
+def token_process_index(payload, base_worker_id, n_procs):
+    """Resolve a signed call claim to one local backend process.
+
+    Multi-process workers historically used ``<base>-pN`` worker ids, while
+    Durable Call Control registers one Pod as ``<base>`` with N capacity slots.
+    The latter token is still unambiguous because ``slot_id`` is 1-based and
+    bound into the HMAC-signed payload. Accept both representations.
+    """
+    if not isinstance(payload, dict):
+        return None
+    worker_id = payload.get("worker_id")
+    idx = worker_process_index(worker_id, base_worker_id, n_procs)
+    if idx is not None:
+        return idx
+    if worker_id != base_worker_id:
+        return None
+    try:
+        slot_id = int(payload.get("slot_id") or 0)
+    except (TypeError, ValueError):
+        return None
+    idx = slot_id - 1
+    return idx if 0 <= idx < n_procs else None
+
+
 def process_worker_id(base_worker_id, index):
     """跟 worker_process_index 互為反函式——啟動器與路由器共用同一條命名
     規則，兩邊各自算出來的字串必須逐字相同，否則路由表對不起來。"""
@@ -195,7 +219,7 @@ def pick_backend_index(path, token, explicit_slot, base_worker_id, n_procs, roun
     if token:
         payload = decode_token_payload_unverified(token)
         if payload is not None:
-            idx = worker_process_index(payload.get("worker_id"), base_worker_id, n_procs)
+            idx = token_process_index(payload, base_worker_id, n_procs)
             if idx is not None:
                 return idx
             # JSON 解得出來但 worker_id 對不上本機任何一個 process -- 可能是
