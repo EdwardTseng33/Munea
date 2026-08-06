@@ -1,9 +1,10 @@
-"""Privacy-safe shadow hints for possibly unfinished voice turns.
+"""Privacy-safe hints for possibly unfinished voice turns.
 
-This module never controls Gemini Live turn taking.  It classifies only a
-finished input transcription so production evidence can show whether provider
-turn commits are often happening after a hesitation or an unfinished phrase.
-No transcript is returned by the classifier.
+The classifier never returns transcript text.  ``shadow`` keeps observation
+available, while the active gate may add a short, bounded playout grace period
+for high-confidence unfinished Mandarin turns.  Gemini still owns speech
+detection and barge-in; this module only prevents a reply that has already been
+generated from becoming audible while the user is continuing the same thought.
 """
 
 from dataclasses import dataclass
@@ -38,6 +39,13 @@ _TRAILING_CONNECTORS = (
     "再來",
 )
 
+_DEFAULT_HOLD_MS_BY_REASON = {
+    "explicit_hold": 850,
+    "short_filler": 600,
+    "open_punctuation": 450,
+    "trailing_connector": 600,
+}
+
 
 @dataclass(frozen=True)
 class TurnSemanticHint:
@@ -50,6 +58,33 @@ def semantic_turn_shadow_enabled(value=None):
     """Return whether observation-only semantic turn logging is enabled."""
     raw = os.environ.get("MUNEA_VOICE_SEMANTIC_TURN_SHADOW", "1") if value is None else value
     return str(raw).strip().lower() not in _FALSE_VALUES
+
+
+def semantic_turn_active_enabled(value=None):
+    """Whether the bounded audible-reply gate is active.
+
+    This is deliberately separate from provider VAD.  It has an emergency
+    kill switch and only applies to supported ``hold`` hints.
+    """
+    raw = os.environ.get("MUNEA_VOICE_SEMANTIC_TURN_ACTIVE", "1") if value is None else value
+    return str(raw).strip().lower() not in _FALSE_VALUES
+
+
+def semantic_hold_ms(hint, value=None):
+    """Return a bounded grace period for a supported high-confidence hint."""
+    if not hint or not hint.supported or hint.decision != "hold":
+        return 0
+    default = _DEFAULT_HOLD_MS_BY_REASON.get(hint.reason, 0)
+    if not default:
+        return 0
+    raw = os.environ.get("MUNEA_VOICE_SEMANTIC_HOLD_MS", "") if value is None else value
+    if str(raw or "").strip():
+        try:
+            configured = int(raw)
+        except (TypeError, ValueError):
+            configured = default
+        return max(200, min(1200, configured))
+    return default
 
 
 def _compact(text):

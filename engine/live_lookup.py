@@ -350,6 +350,18 @@ def failure_instruction(reason, locale="zh-TW"):
     return instructions.get(reason) or instructions["failed"]
 
 
+_USER_RESUMED_INSTRUCTIONS = {
+    "zh-TW": "使用者已經繼續說話。不要回答剛才的查詢，也不要說查詢失敗；直接聽最新一句，依最新內容自然接話。",
+    "en": "The user has resumed speaking. Do not answer the earlier lookup or announce a failure; listen to the latest utterance and respond to that instead.",
+    "ja": "ユーザーが話を再開しました。先ほどの検索には答えず、検索失敗とも言わず、最新の発話を聴いて自然に応じてください。",
+    "es": "El usuario ha vuelto a hablar. No respondas a la búsqueda anterior ni anuncies un fallo; escucha lo último que ha dicho y responde a eso.",
+}
+
+
+def user_resumed_instruction(locale="zh-TW"):
+    return _USER_RESUMED_INSTRUCTIONS[normalize_locale(locale)]
+
+
 def _grounding_metadata(response):
     candidates = getattr(response, "candidates", None) or []
     if not candidates:

@@ -59,6 +59,15 @@ class LiveLookupTest(unittest.TestCase):
                 self.assertIn(expected[1], wait)
                 self.assertIn(expected[2], failure)
 
+    def test_user_resumed_instruction_discards_stale_lookup_without_failure_copy(self):
+        for locale in ("zh-TW", "en", "ja", "es"):
+            with self.subTest(locale=locale):
+                self.assertTrue(live_lookup.user_resumed_instruction(locale).strip())
+        zh = live_lookup.user_resumed_instruction("zh-TW")
+        self.assertIn("不要回答剛才的查詢", zh)
+        self.assertIn("不要說查詢失敗", zh)
+        self.assertIn("最新一句", zh)
+
     def test_topic_classifier_handles_code_switching(self):
         cases = (
             ("Could you check the weather 明天？", "zh-TW", live_lookup.CUE_CATEGORY_WEATHER),

@@ -91,6 +91,14 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("對方一插話就停", self.src)
         self.assertIn("不硬把原稿講完", self.src)
 
+    def test_prosody_follows_acoustic_emotion_without_forced_fillers(self):
+        self.assertIn("[即時語音韻律與情緒]", self.src)
+        self.assertIn("不要只看逐字內容", self.src)
+        self.assertIn("聲量柔一級、語速慢一級", self.src)
+        self.assertIn("每個重點之間要有可接話的空隙", self.src)
+        self.assertIn("不要戲劇化模仿情緒", self.src)
+        self.assertIn("不要固定塞", self.src)
+
     def test_realtime_contract_is_single_and_labeled(self):
         """Realtime 行為只留一份短契約，避免多組人格例句互相拉扯。"""
         self.assertEqual(1, self.src.count("[即時通話互動契約]"))
@@ -201,7 +209,7 @@ class VoiceStyleRulesTest(unittest.TestCase):
 
 
 class EveryShippedVoiceStyleBookTest(unittest.TestCase):
-    """已授書的每一國，語音風格的六節都必須在。
+    """已授書的每一國，語音風格的七節都必須在。
 
     授書＝用另一種語言重寫一整套口語規則。漏抄一節不會有錯誤訊息——
     電話照樣打得通，只是那一國的長輩會遇到一個講太多、一直反問、
@@ -209,20 +217,20 @@ class EveryShippedVoiceStyleBookTest(unittest.TestCase):
     """
 
     SECTIONS_BY_LOCALE = {
-        "zh-TW": ("[即時語音話量上限]", "[即時語音能量]", "[開場升溫]",
+        "zh-TW": ("[即時語音話量上限]", "[即時語音能量]", "[即時語音韻律與情緒]", "[開場升溫]",
                   "[句尾收法]", "[說故事與在地內容]", "[接住情緒與陪伴引導]"),
-        "ja": ("[リアルタイム音声・話す量の上限]", "[リアルタイム音声・声の温度]",
+        "ja": ("[リアルタイム音声・話す量の上限]", "[リアルタイム音声・声の温度]", "[リアルタイム音声・韻律と感情]",
                "[話しはじめの温度]", "[文の終わり方]", "[話と、その土地のこと]",
                "[気持ちを受けとめ、寄り添って導く]"),
-        "en": ("[Live speech · how much to say]", "[Live speech · energy]",
+        "en": ("[Live speech · how much to say]", "[Live speech · energy]", "[Live speech · prosody and emotion]",
                "[Warming up at the start]", "[How to end a sentence]",
                "[Stories and local things]", "[Holding a feeling and walking with them]"),
-        "es": ("[Voz en directo · cuánto hablar]", "[Voz en directo · energía]",
+        "es": ("[Voz en directo · cuánto hablar]", "[Voz en directo · energía]", "[Voz en directo · prosodia y emoción]",
                "[El arranque, de menos a más]", "[Cómo terminar una frase]",
                "[Historias y cosas de aquí]", "[Sostener lo que siente y acompañarle]"),
     }
 
-    def test_every_book_keeps_the_six_sections(self):
+    def test_every_book_keeps_the_seven_sections(self):
         for locale in _shipped_voice_style_locales():
             sections = self.SECTIONS_BY_LOCALE.get(locale)
             self.assertIsNotNone(

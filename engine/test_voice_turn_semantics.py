@@ -61,12 +61,24 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
             if previous is not None:
                 os.environ["MUNEA_VOICE_SEMANTIC_TURN_SHADOW"] = previous
 
+    def test_active_gate_is_bounded_and_kill_switchable(self):
+        hint = semantics.classify_turn_end("我今天其實是因為", "zh-TW")
+        self.assertTrue(semantics.semantic_turn_active_enabled("1"))
+        self.assertFalse(semantics.semantic_turn_active_enabled("off"))
+        self.assertEqual(600, semantics.semantic_hold_ms(hint))
+        self.assertEqual(200, semantics.semantic_hold_ms(hint, "50"))
+        self.assertEqual(1200, semantics.semantic_hold_ms(hint, "5000"))
+        complete = semantics.classify_turn_end("我今天先休息。", "zh-TW")
+        self.assertEqual(0, semantics.semantic_hold_ms(complete))
+
     def test_live_server_wiring_is_finished_only_and_privacy_safe(self):
         source = (ENGINE_DIR / "live_voice_server.py").read_text(encoding="utf-8")
         self.assertIn('getattr(it_pre, "finished", False)', source)
         self.assertIn('"node.semantic_turn_shadow"', source)
         self.assertIn("provider_finished=True", source)
         self.assertIn('semantic_turn_holds=st["semantic_turn_shadow_holds"]', source)
+        self.assertIn('"node.semantic_turn_active_armed"', source)
+        self.assertIn('"node.semantic_turn_active_resumed"', source)
         self.assertNotIn('node.semantic_turn_shadow", transcript=', source)
 
 
