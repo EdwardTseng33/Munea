@@ -44,6 +44,7 @@ import health_selector
 import localization
 import live_lookup
 import voice_turn_semantics
+import voice_tool_continuity
 from voice_locale_session import VoiceLocaleSession
 from call_control_client import post_internal, verify_call_token, CallControlError
 from google import genai
@@ -1797,6 +1798,14 @@ def _new_call_state():
           "client_barge_in": False, "pending_barge_in": None, "asr_turns": 0, "asr_chars": 0,
           "semantic_turn_text": "", "semantic_turn_shadow_total": 0,
           "semantic_turn_shadow_holds": 0,
+          # Active semantic gate delays only the first audible reply chunk after
+          # a high-confidence unfinished Mandarin transcript. Provider VAD and
+          # barge-in remain authoritative; this is a bounded playout grace.
+          "semantic_hold_until": 0.0, "semantic_hold_reason": None,
+          "semantic_hold_resumed": False, "semantic_hold_voice_ms": 0.0,
+          "semantic_hold_outcome_recorded": False,
+          "semantic_turn_active_holds": 0, "semantic_turn_active_resumes": 0,
+          "semantic_turn_active_releases": 0,
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
           "opening_window_complete": False,
@@ -1805,6 +1814,9 @@ def _new_call_state():
           "lookup_requested_at": None, "lookup_result_at": None,
           "lookup_waiting_answer": False, "lookup_cue_task": None,
           "lookup_cue_at": 0.0, "lookup_fail_streak": 0, "lookup_block_until": 0.0,
+          # A read-only lookup never outranks a person who resumes speaking.
+          "tool_wait_active": False, "tool_wait_event": None,
+          "tool_wait_voice_ms": 0.0, "tool_wait_interrupts": 0,
           "goaway_pending": False, "goaway_deadline": None, "resumption_handle": None,  # 通話延長：GoAway 預警狀態＋最新 session resumption handle（跨底層連線延續）
           "voice_locale_profile": None, "locale_user_transcript": "",
           "locale_resolved_text": "", "locale_reconnect_requested": False,
@@ -2168,6 +2180,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 ),
             }
 
+        _tool_event = asyncio.Event()
+        st["tool_wait_active"] = True
+        st["tool_wait_event"] = _tool_event
+        st["tool_wait_voice_ms"] = 0.0
+
         if cue_already_spoken:
             cue_audio = True
             _diag(cid, "node.lookup_cue_sent", audio="model", out_bytes=0, latency_ms=0, category=category)
@@ -2211,12 +2228,27 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         wait_cue_task = asyncio.create_task(_send_wait_cue())
         st["bg_tasks"].append(wait_cue_task)
         try:
-            result = await asyncio.wait_for(
+            result = await voice_tool_continuity.run_interruptible(
                 search_current_information(
                     cli, query, lookup_location, locale=response_locale,
                 ),
-                timeout=float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "13")),
+                _tool_event,
+                float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "13")),
             )
+        except voice_tool_continuity.ToolWaitInterrupted:
+            st["tool_wait_interrupts"] += 1
+            st["lookup_result_at"] = time.monotonic()
+            st["lookup_waiting_answer"] = False
+            _diag(
+                cid,
+                "node.lookup_cancelled_user_resumed",
+                latency_ms=round((st["lookup_result_at"] - network_started) * 1000),
+            )
+            return {
+                "status": "cancelled",
+                "error": "user_resumed",
+                "instruction": live_lookup.user_resumed_instruction(response_locale),
+            }
         except asyncio.TimeoutError:
             st["lookup_failures"] += 1
             st["lookup_result_at"] = time.monotonic()
@@ -2254,6 +2286,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         finally:
             # 查詢一有結果（成功或失敗）就取消「還在找」安撫句——別讓它插在答案中間
             wait_cue_task.cancel()
+            if st.get("tool_wait_event") is _tool_event:
+                st["tool_wait_active"] = False
+                st["tool_wait_event"] = None
+                st["tool_wait_voice_ms"] = 0.0
 
         st["lookup_fail_streak"] = 0
         st["lookup_block_until"] = 0.0
@@ -2379,6 +2415,51 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
                 _eg_rms = frame_rms(message)
                 _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
+                _voice_frame_ms = len(message) / float(16000 * 2) * 1000.0
+                _above_voice_threshold = _eg_rms >= _eg_hot
+
+                # A semantic hold is only converted into a real continuation
+                # after sustained microphone evidence. One loud frame is not
+                # enough; that would turn a door knock into a cancelled reply.
+                if (
+                    st.get("semantic_hold_until", 0.0) > _eg_now
+                    and not st.get("semantic_hold_resumed")
+                ):
+                    _hold_voice_ms, _hold_resumed = voice_tool_continuity.sustained_voice_ms(
+                        st.get("semantic_hold_voice_ms", 0.0),
+                        _above_voice_threshold,
+                        _voice_frame_ms,
+                        trigger_ms=120,
+                    )
+                    st["semantic_hold_voice_ms"] = _hold_voice_ms
+                    if _hold_resumed:
+                        st["semantic_hold_resumed"] = True
+                        _diag(
+                            cid,
+                            "node.semantic_turn_active_resumed",
+                            reason=st.get("semantic_hold_reason") or "unknown",
+                            evidence_ms=round(_hold_voice_ms),
+                        )
+
+                # Read-only lookup work is cancellable when the person resumes.
+                # The event wakes the lookup coroutine; microphone streaming to
+                # Gemini continues normally, so the latest utterance wins.
+                _tool_event = st.get("tool_wait_event")
+                if st.get("tool_wait_active") and _tool_event is not None and not _tool_event.is_set():
+                    _tool_voice_ms, _tool_resumed = voice_tool_continuity.sustained_voice_ms(
+                        st.get("tool_wait_voice_ms", 0.0),
+                        _above_voice_threshold,
+                        _voice_frame_ms,
+                        trigger_ms=180,
+                    )
+                    st["tool_wait_voice_ms"] = _tool_voice_ms
+                    if _tool_resumed:
+                        _tool_event.set()
+                        _diag(
+                            cid,
+                            "node.tool_wait_user_resumed",
+                            evidence_ms=round(_tool_voice_ms),
+                        )
                 # Two-phase barge-in: after barge_in_start, retain a short copy of
                 # the already-captured microphone onset. Do not forward or drop it
                 # until the commit message arrives and the server has judged the
@@ -2608,7 +2689,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         ):
                             semantic_text = st.pop("semantic_turn_text")
                             st["semantic_turn_text"] = ""
-                            if voice_turn_semantics.semantic_turn_shadow_enabled():
+                            _semantic_shadow = voice_turn_semantics.semantic_turn_shadow_enabled()
+                            _semantic_active = voice_turn_semantics.semantic_turn_active_enabled()
+                            if _semantic_shadow or _semantic_active:
                                 current_profile = (
                                     st.get("voice_locale_profile")
                                     or voice_locale_session.current_profile()
@@ -2618,17 +2701,55 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     current_profile["sessionLocale"],
                                 )
                                 if hint.supported:
-                                    st["semantic_turn_shadow_total"] += 1
-                                    if hint.decision == "hold":
-                                        st["semantic_turn_shadow_holds"] += 1
-                                    _diag(
-                                        cid,
-                                        "node.semantic_turn_shadow",
-                                        decision=hint.decision,
-                                        reason=hint.reason,
-                                        chars=len(semantic_text),
-                                        provider_finished=True,
-                                    )
+                                    # A new provider-finished input means a
+                                    # resumed thought reached its next boundary.
+                                    # Retire the older hold so the answer to this
+                                    # newer, complete utterance is not suppressed.
+                                    if (
+                                        st.get("semantic_hold_resumed")
+                                        and st.get("semantic_hold_reason")
+                                        and not st.get("semantic_hold_outcome_recorded")
+                                    ):
+                                        st["semantic_turn_active_resumes"] += 1
+                                        st["semantic_hold_outcome_recorded"] = True
+                                        _diag(
+                                            cid,
+                                            "node.semantic_turn_active_continued",
+                                            reason=st.get("semantic_hold_reason"),
+                                        )
+                                        st["semantic_hold_until"] = 0.0
+                                        st["semantic_hold_reason"] = None
+                                        st["semantic_hold_resumed"] = False
+                                        st["semantic_hold_voice_ms"] = 0.0
+                                    if _semantic_shadow:
+                                        st["semantic_turn_shadow_total"] += 1
+                                        if hint.decision == "hold":
+                                            st["semantic_turn_shadow_holds"] += 1
+                                        _diag(
+                                            cid,
+                                            "node.semantic_turn_shadow",
+                                            decision=hint.decision,
+                                            reason=hint.reason,
+                                            chars=len(semantic_text),
+                                            provider_finished=True,
+                                        )
+                                    hold_ms = voice_turn_semantics.semantic_hold_ms(hint)
+                                    if hold_ms and _semantic_active:
+                                        st["semantic_hold_until"] = (
+                                            time.monotonic() + hold_ms / 1000.0
+                                        )
+                                        st["semantic_hold_reason"] = hint.reason
+                                        st["semantic_hold_resumed"] = False
+                                        st["semantic_hold_voice_ms"] = 0.0
+                                        st["semantic_hold_outcome_recorded"] = False
+                                        st["semantic_turn_active_holds"] += 1
+                                        _diag(
+                                            cid,
+                                            "node.semantic_turn_active_armed",
+                                            reason=hint.reason,
+                                            hold_ms=hold_ms,
+                                            chars=len(semantic_text),
+                                        )
                         ot_pre = getattr(sc, "output_transcription", None)
                         if ot_pre and getattr(ot_pre, "text", None):
                             current_profile = (
@@ -2652,6 +2773,38 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             ):
                                 await _arm_language_block("mandarin_pronunciation")
                     data = getattr(msg, "data", None)
+                    if data and not st.get("language_block") and not st.get("client_barge_in"):
+                        _semantic_reason = st.get("semantic_hold_reason")
+                        if _semantic_reason and not st.get("semantic_hold_outcome_recorded"):
+                            _remaining = max(
+                                0.0,
+                                st.get("semantic_hold_until", 0.0) - time.monotonic(),
+                            )
+                            if _remaining and not st.get("semantic_hold_resumed"):
+                                await asyncio.sleep(_remaining)
+                            if st.get("semantic_hold_resumed"):
+                                # The user continued before the old answer became
+                                # audible. Suppress that answer exactly like a
+                                # barge-in; provider AAD still receives the audio
+                                # and owns the actual model interruption.
+                                st["client_barge_in"] = True
+                                st["semantic_turn_active_resumes"] += 1
+                                _diag(
+                                    cid,
+                                    "node.semantic_turn_active_cancelled",
+                                    reason=_semantic_reason,
+                                )
+                            else:
+                                st["semantic_turn_active_releases"] += 1
+                                _diag(
+                                    cid,
+                                    "node.semantic_turn_active_released",
+                                    reason=_semantic_reason,
+                                )
+                            st["semantic_hold_outcome_recorded"] = True
+                            st["semantic_hold_until"] = 0.0
+                            st["semantic_hold_reason"] = None
+                            st["semantic_hold_voice_ms"] = 0.0
                     if data and not st.get("language_block") and not st.get("client_barge_in"):
                         await _mark_first_audio("model")
                         if st.get("lookup_waiting_answer"):
@@ -2750,6 +2903,29 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             # 就是使用者會聽到「卡一下／吃掉一個字」的那個瞬間，可以拿這個值追。
                             _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms,
                                   max_gap_ms=round(turn_max_gap_ms))
+                            _semantic_reason = st.get("semantic_hold_reason")
+                            if _semantic_reason and not st.get("semantic_hold_outcome_recorded"):
+                                if st.get("semantic_hold_resumed"):
+                                    st["client_barge_in"] = True
+                                    st["semantic_turn_active_resumes"] += 1
+                                    _diag(
+                                        cid,
+                                        "node.semantic_turn_active_cancelled",
+                                        reason=_semantic_reason,
+                                        no_audio=True,
+                                    )
+                                else:
+                                    st["semantic_turn_active_releases"] += 1
+                                    _diag(
+                                        cid,
+                                        "node.semantic_turn_active_released",
+                                        reason=_semantic_reason,
+                                        no_audio=True,
+                                    )
+                                st["semantic_hold_outcome_recorded"] = True
+                                st["semantic_hold_until"] = 0.0
+                                st["semantic_hold_reason"] = None
+                                st["semantic_hold_voice_ms"] = 0.0
                             barge_cancelled = bool(st.get("client_barge_in"))
                             completed_audio = bool(turn_out and not st.get("language_block") and not barge_cancelled)
                             if st.get("lookup_waiting_answer"):
@@ -3217,9 +3393,13 @@ async def handle(ws):
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
             semantic_turn_total=st["semantic_turn_shadow_total"],
             semantic_turn_holds=st["semantic_turn_shadow_holds"],
+            semantic_turn_active_holds=st["semantic_turn_active_holds"],
+            semantic_turn_active_resumes=st["semantic_turn_active_resumes"],
+            semantic_turn_active_releases=st["semantic_turn_active_releases"],
             barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
             lookup_failures=st["lookup_failures"],
+            tool_wait_interrupts=st["tool_wait_interrupts"],
         )
 
 
