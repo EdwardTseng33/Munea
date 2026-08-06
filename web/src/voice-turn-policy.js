@@ -10,14 +10,16 @@
     sustainMs: 150,
     // 預捲必須「蓋得住」對應的持續人聲門檻，開頭的字才補得回來（2026-07-16 Edward「回長話第一句沒反應」）：
     // 一格 ≈ 42.7ms（2048 樣本 @48kHz）。平常門檻 150ms → 10 格 ≈ 427ms；
-    // 開場門檻 300ms（openingSustainMs）→ 用 openingPreRollFrames 18 格 ≈ 768ms，含起音爬升與中途小停頓的餘裕。
+    // 開場門檻 250ms（openingSustainMs）→ 用 openingPreRollFrames 18 格 ≈ 768ms，含起音爬升與中途小停頓的餘裕。
     preRollFrames: 10,
     openingPreRollFrames: 18,
     // 講完後守門期（2026-07-16）：她停口後這段時間內，收音仍走「持續人聲才放行」，
     // 蓋住 GLOWS 偶發 1.8~2s 供聲卡點的句中空檔——回音/噪音不再裸流上去被當成插話。
     postSpeechGuardMs: 1800,
     // 開場前兩輪 iPhone 回音消除尚未收斂、回音殘留最強：插話所需持續人聲拉長一級。
-    openingSustainMs: 300,
+    // 250ms stays stricter than the normal 150ms echo guard while keeping the
+    // real 2048-sample callback boundary near 256ms instead of ~341ms.
+    openingSustainMs: 250,
   });
 
   function createState(noiseFloor) {
@@ -55,5 +57,11 @@
     };
   }
 
-  return { DEFAULTS, createState, thresholdFor, observe };
+  function localStopLatencyMs(detectedSpeechMs, stopOperationMs) {
+    const detection = Math.max(0, Number(detectedSpeechMs) || 0);
+    const stop = Math.max(0, Number(stopOperationMs) || 0);
+    return Math.round(detection + stop);
+  }
+
+  return { DEFAULTS, createState, thresholdFor, observe, localStopLatencyMs };
 });

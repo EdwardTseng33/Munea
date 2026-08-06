@@ -6747,6 +6747,17 @@ def safe_diagnostic_duration_ms(value):
         return 0
 
 
+def safe_diagnostic_metric_ms(value, maximum=10000):
+    """Return a bounded positive millisecond metric or None when malformed."""
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if parsed != parsed or parsed <= 0 or parsed > maximum:
+        return None
+    return int(round(parsed))
+
+
 def safe_diagnostic_endpoint(value):
     raw = str(value or "").strip()[:512]
     if not raw:
@@ -6778,6 +6789,9 @@ def admin_voice_diagnostics_summary(data=None):
     by_failed_stage = {}
     by_last_success = {}
     total_ms = []
+    barge_local_stop_ms = []
+    barge_accepted = 0
+    barge_rejected = 0
     for event in events:
         if event.get("eventName") != "voice_call_diagnostic":
             continue
@@ -6787,6 +6801,23 @@ def admin_voice_diagnostics_summary(data=None):
         last_success = str(props.get("lastSuccessfulStage") or "")[:80]
         duration_ms = safe_diagnostic_duration_ms(props.get("totalMs"))
         context = props.get("context") if isinstance(props.get("context"), dict) else {}
+        trace_barge_stop_ms = []
+        stages = props.get("stages") if isinstance(props.get("stages"), list) else []
+        for stage in stages:
+            if not isinstance(stage, dict):
+                continue
+            stage_name = str(stage.get("stage") or "")
+            details = stage.get("details") if isinstance(stage.get("details"), dict) else {}
+            if stage_name == "barge_in_local_stop":
+                stop_ms = safe_diagnostic_metric_ms(details.get("localStopMs"))
+                if stop_ms is not None:
+                    trace_barge_stop_ms.append(stop_ms)
+                    barge_local_stop_ms.append(stop_ms)
+            elif stage_name == "barge_in_server_ack":
+                if details.get("accepted") is True:
+                    barge_accepted += 1
+                elif details.get("accepted") is False:
+                    barge_rejected += 1
         by_outcome[outcome] = by_outcome.get(outcome, 0) + 1
         if failed_stage:
             by_failed_stage[failed_stage] = by_failed_stage.get(failed_stage, 0) + 1
@@ -6805,9 +6836,13 @@ def admin_voice_diagnostics_summary(data=None):
             "routeMode": str(context.get("routeMode") or "")[:40],
             "voiceEndpoint": safe_diagnostic_endpoint(context.get("voiceEndpoint")),
             "avatarEndpoint": safe_diagnostic_endpoint(context.get("avatarEndpoint")),
+            "bargeInCount": len(trace_barge_stop_ms),
+            "bargeInMaxLocalStopMs": max(trace_barge_stop_ms) if trace_barge_stop_ms else None,
         })
     traces.sort(key=lambda item: item.get("eventTime") or "", reverse=True)
     successful = sum(by_outcome.get(name, 0) for name in ("connected", "completed"))
+    sorted_barge_ms = sorted(barge_local_stop_ms)
+    p95_index = max(0, ((95 * len(sorted_barge_ms) + 99) // 100) - 1) if sorted_barge_ms else 0
     return {
         "ok": True,
         "windowDays": days,
@@ -6818,6 +6853,17 @@ def admin_voice_diagnostics_summary(data=None):
             "byFailedStage": dict(sorted(by_failed_stage.items(), key=lambda item: (-item[1], item[0]))),
             "byLastSuccessfulStage": dict(sorted(by_last_success.items(), key=lambda item: (-item[1], item[0]))),
             "averageTotalMs": round(sum(total_ms) / len(total_ms)) if total_ms else None,
+            "bargeIn": {
+                "count": len(sorted_barge_ms),
+                "accepted": barge_accepted,
+                "rejected": barge_rejected,
+                "averageLocalStopMs": round(sum(sorted_barge_ms) / len(sorted_barge_ms)) if sorted_barge_ms else None,
+                "p95LocalStopMs": sorted_barge_ms[p95_index] if sorted_barge_ms else None,
+                "within300Rate": round(
+                    sum(1 for value in sorted_barge_ms if value <= 300) / len(sorted_barge_ms),
+                    4,
+                ) if sorted_barge_ms else None,
+            },
         },
         "recent": traces[:limit],
         "privacy": {

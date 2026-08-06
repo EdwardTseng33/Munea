@@ -57,21 +57,30 @@ function observeSeriesWith(levels, options) {
   }
   return result;
 }
-// 4 格（~171ms）過得了平常門檻、必須過不了開場門檻；8 格（~342ms）真人講話仍放行
+// 4 格（~171ms）過得了平常門檻、必須過不了開場門檻；6 格（~256ms）
+// 真人講話放行，並把實際 callback 邊界壓在 300ms 目標內。
 assert.strictEqual(
   observeSeriesWith([0.055, 0.055, 0.055, 0.055], { sustainMs: policy.DEFAULTS.openingSustainMs }).shouldInterrupt,
   false,
   'opening sustain must reject short bursts that pass the normal gate',
 );
 assert.strictEqual(
-  observeSeriesWith(Array(8).fill(0.055), { sustainMs: policy.DEFAULTS.openingSustainMs }).shouldInterrupt,
+  observeSeriesWith(Array(6).fill(0.055), { sustainMs: policy.DEFAULTS.openingSustainMs }).shouldInterrupt,
   true,
   'real sustained speech must still pass during the opening gate',
 );
+const openingDetection = observeSeriesWith(
+  Array(6).fill(0.055),
+  { sustainMs: policy.DEFAULTS.openingSustainMs },
+);
+assert(openingDetection.state.speechMs <= 300,
+  'opening speech onset to interrupt callback must remain within the 300ms target');
+assert.strictEqual(policy.localStopLatencyMs(openingDetection.state.speechMs, 3.4), 260,
+  'local stop metric must combine detected speech evidence and synchronous stop work');
 
 // 跨層順序契約：本地先停聲；伺服器進入證據緩衝；預捲送完；最後才提交裁決。
 // 這守的是 WebSocket 實際送出順序，不只是 client/server 各自單測通過。
-const beginStart = app.indexOf('_beginBargeIn(rms, threshold, sustainMs, preRoll)');
+const beginStart = app.indexOf('_beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs)');
 const beginEnd = app.indexOf('\n  greet()', beginStart);
 const beginBarge = app.slice(beginStart, beginEnd);
 const stopAt = beginBarge.indexOf('this._stopAssistantPlayback()');
@@ -82,5 +91,10 @@ assert(stopAt >= 0 && stopAt < evidenceStartAt && evidenceStartAt < preRollAt &&
   'barge-in must stop playback, buffer evidence, send pre-roll, then commit in that order');
 assert(beginBarge.includes('sustain_ms:') && beginBarge.includes('threshold:'),
   'barge-in evidence must carry the browser threshold and sustain contract to the server');
+assert(beginBarge.includes('local_stop_ms:') && beginBarge.includes("voiceCallMark('barge_in_local_stop'"),
+  'barge-in must record onset-to-local-stop latency in the privacy-safe call trace');
+assert(beginBarge.includes("timing_basis: 'audio_callback_estimate'")
+  && app.includes('this._bargeSpeechOnsetAt = observedAt - frameMs'),
+  'local stop timing must use a monotonic audio-callback onset estimate and label its basis');
 
-console.log('Voice turn policy PASS: echo rejection, sustained barge-in, two-phase evidence ordering, pre-roll, post-speech guard, opening sustain');
+console.log('Voice turn policy PASS: echo rejection, sustained barge-in, <=300ms local stop target, two-phase evidence ordering, pre-roll, post-speech guard, opening sustain');

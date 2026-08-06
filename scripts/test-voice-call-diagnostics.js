@@ -89,6 +89,8 @@ assert(indexSource.indexOf('src/voice-call-diagnostics.js') < indexSource.indexO
   'dead_line_reconnect',
   'face_stream_stalled',
   'face_fallback_voice_only',
+  'barge_in_local_stop',
+  'barge_in_server_ack',
 ].forEach(stage => assert(appSource.includes("'" + stage + "'"), 'missing App trace stage: ' + stage));
 assert(source.includes("mark('dial_tapped'"), 'trace must start at the call button tap');
 assert(appSource.includes('closeCode: event.code') && appSource.includes('closeReason: event.reason'), 'WebSocket close code and reason must be captured');
