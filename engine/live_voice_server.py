@@ -43,6 +43,7 @@ import health_kb
 import health_selector
 import localization
 import live_lookup
+import voice_turn_semantics
 from voice_locale_session import VoiceLocaleSession
 from call_control_client import post_internal, verify_call_token, CallControlError
 from google import genai
@@ -1794,6 +1795,8 @@ def _new_call_state():
           "language_block": False, "language_block_source": None,
           "blocked_output_text": "", "language_retry_count": 0,
           "client_barge_in": False, "pending_barge_in": None, "asr_turns": 0, "asr_chars": 0,
+          "semantic_turn_text": "", "semantic_turn_shadow_total": 0,
+          "semantic_turn_shadow_holds": 0,
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
           "opening_window_complete": False,
@@ -2578,6 +2581,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["locale_user_transcript"] = (
                                 st.get("locale_user_transcript", "") + transcript
                             )[-600:]
+                            st["semantic_turn_text"] = (
+                                st.get("semantic_turn_text", "") + transcript
+                            )[-240:]
                             locale_turn = _resolve_locale_turn(
                                 st["locale_user_transcript"],
                             )
@@ -2595,6 +2601,34 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             _diag(cid, "node.asr_input", chars=len(transcript), language_block=is_hokkien)
                             if is_hokkien:
                                 await _arm_language_block("audio_input")
+                        if (
+                            it_pre
+                            and getattr(it_pre, "finished", False)
+                            and st.get("semantic_turn_text")
+                        ):
+                            semantic_text = st.pop("semantic_turn_text")
+                            st["semantic_turn_text"] = ""
+                            if voice_turn_semantics.semantic_turn_shadow_enabled():
+                                current_profile = (
+                                    st.get("voice_locale_profile")
+                                    or voice_locale_session.current_profile()
+                                )
+                                hint = voice_turn_semantics.classify_turn_end(
+                                    semantic_text,
+                                    current_profile["sessionLocale"],
+                                )
+                                if hint.supported:
+                                    st["semantic_turn_shadow_total"] += 1
+                                    if hint.decision == "hold":
+                                        st["semantic_turn_shadow_holds"] += 1
+                                    _diag(
+                                        cid,
+                                        "node.semantic_turn_shadow",
+                                        decision=hint.decision,
+                                        reason=hint.reason,
+                                        chars=len(semantic_text),
+                                        provider_finished=True,
+                                    )
                         ot_pre = getattr(sc, "output_transcription", None)
                         if ot_pre and getattr(ot_pre, "text", None):
                             current_profile = (
@@ -3181,6 +3215,8 @@ async def handle(ws):
         _diag(
             cid, "closed", in_bytes=st["in"], out_bytes=st["out"], echo_dropped=st["echo_dropped"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
+            semantic_turn_total=st["semantic_turn_shadow_total"],
+            semantic_turn_holds=st["semantic_turn_shadow_holds"],
             barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
             lookup_failures=st["lookup_failures"],
