@@ -3963,6 +3963,7 @@ const LiveVoice = {
     this._bargeState = policy ? policy.createState(floor) : null;
     this._bargePreRoll = [];
     this._bargeInActive = false;
+    this._bargeSpeechOnsetAt = 0;
   },
   _stopAssistantPlayback() {
     clearTimeout(this._speakTimer);
@@ -3979,11 +3980,17 @@ const LiveVoice = {
     this._setFaceAudioMuted(true);
     Avatar.reset();
   },
-  _beginBargeIn(rms, threshold, sustainMs, preRoll) {
+  _beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs) {
     if (this._bargeInActive) return;
     this._bargeInActive = true;
     this._dropAssistantAudio = true;
+    const stopStartedAt = performance.now();
     this._stopAssistantPlayback();
+    const stopOperationMs = Math.max(0, performance.now() - stopStartedAt);
+    const policy = window.MuneaVoiceTurnPolicy;
+    const localStopMs = policy && policy.localStopLatencyMs
+      ? policy.localStopLatencyMs(detectedSpeechMs, stopOperationMs)
+      : Math.round(Math.max(0, Number(detectedSpeechMs) || Number(sustainMs) || 0) + stopOperationMs);
     // Two-phase barge-in: ask the server to buffer the following evidence,
     // deliver the retained microphone onset, then commit the interruption.
     // WebSocket ordering guarantees the server judges after hearing evidence.
@@ -3993,11 +4000,23 @@ const LiveVoice = {
       threshold: +threshold.toFixed(4),
       sustain_ms: Math.max(0, Number(sustainMs) || 0),
       evidence_frames: evidence.length,
+      detected_speech_ms: Math.round(Math.max(0, Number(detectedSpeechMs) || 0)),
+      stop_operation_ms: Math.round(stopOperationMs),
+      local_stop_ms: localStopMs,
+      timing_basis: 'audio_callback_estimate',
     };
     try { this.ws.send(JSON.stringify({ type: 'barge_in_start', ...payload })); } catch (e) {}
     evidence.forEach(frame => this._sendMicBuffer(frame));
     try { this.ws.send(JSON.stringify({ type: 'barge_in', ...payload })); } catch (e) {}
     try { trackProductEvent('voice_barge_in_local', payload); } catch (e) {}
+    voiceCallMark('barge_in_local_stop', 'pass', {
+      localStopMs,
+      detectedSpeechMs: payload.detected_speech_ms,
+      stopOperationMs: payload.stop_operation_ms,
+      within300Ms: localStopMs <= 300,
+      openingGuard: payload.sustain_ms > ((policy && policy.DEFAULTS.sustainMs) || 150),
+      timingBasis: payload.timing_basis,
+    });
     if (this.onListen) this.onListen();
   },
   greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet', relay: this._pendingRelay || null })); voiceCallMark('greeting_requested', 'pass'); this._openMicAfterGreet = true; } } catch (e) { voiceCallFail('greeting_requested', e); } },   // 請 AI 主動開口；若有指定給本人的家人傳話，先準確轉達
@@ -4281,12 +4300,25 @@ const LiveVoice = {
         this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
         this._bargePreRoll.push(buf);
         while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
+        const observedAt = performance.now();
+        const previousSpeechMs = Math.max(0, Number(this._bargeState && this._bargeState.speechMs) || 0);
         const observed = policy.observe(this._bargeState, rms, frameMs, true, sustainOpts);
         this._bargeState = observed.state;
+        if (observed.state.speechMs > 0 && previousSpeechMs <= 0) {
+          // Web Audio hands us a completed buffer. Approximate physical onset
+          // at that buffer's start, then keep a monotonic wall-clock through
+          // brief dips instead of reporting only the configured sustain value.
+          this._bargeSpeechOnsetAt = observedAt - frameMs;
+        } else if (observed.state.speechMs <= 0) {
+          this._bargeSpeechOnsetAt = 0;
+        }
         if (!observed.shouldInterrupt) return;
         const preRoll = this._bargePreRoll.splice(0);
         const sustainMs = sustainOpts ? sustainOpts.sustainMs : policy.DEFAULTS.sustainMs;
-        this._beginBargeIn(rms, observed.threshold, sustainMs, preRoll);
+        const detectedSpeechMs = this._bargeSpeechOnsetAt
+          ? Math.max(0, performance.now() - this._bargeSpeechOnsetAt)
+          : observed.state.speechMs;
+        this._beginBargeIn(rms, observed.threshold, sustainMs, preRoll, detectedSpeechMs);
         return;
       }
       if (speakerActive) { this.micLevel = 0; return; }
@@ -4304,7 +4336,10 @@ const LiveVoice = {
         preRoll.forEach(frame => this._sendMicBuffer(frame));
         return;
       }
-      if (policy) this._bargeState = policy.observe(this._bargeState, rms, frameMs, false).state;
+      if (policy) {
+        this._bargeState = policy.observe(this._bargeState, rms, frameMs, false).state;
+        this._bargeSpeechOnsetAt = 0;
+      }
       this._sendMicBuffer(buf);
     };
   },
@@ -4512,6 +4547,11 @@ const LiveVoice = {
                   evidenceMs: Number(o.evidence_ms) || 0,
                 });
               } catch (e) {}
+              voiceCallMark('barge_in_server_ack', 'pass', {
+                accepted: o.accepted !== false,
+                reason: o.reason || '',
+                evidenceMs: Number(o.evidence_ms) || 0,
+              });
               this._dropAssistantAudio = false;
               this._capBuf = '';
               this._resetBargeInDetector();
