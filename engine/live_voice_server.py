@@ -1799,11 +1799,14 @@ def _new_call_state():
           "semantic_turn_text": "", "semantic_turn_shadow_total": 0,
           "semantic_turn_shadow_holds": 0,
           # Active semantic gate delays only the first audible reply chunk after
-          # a high-confidence unfinished Mandarin transcript. Provider VAD and
-          # barge-in remain authoritative; this is a bounded playout grace.
+          # a high-confidence unfinished turn. Provider VAD and barge-in remain
+          # authoritative; this is a bounded, per-call adaptive playout grace.
+          "semantic_turn_policy": voice_turn_semantics.AdaptiveTurnPolicy(),
           "semantic_hold_until": 0.0, "semantic_hold_reason": None,
+          "semantic_hold_started_at": 0.0, "semantic_hold_ms": 0,
           "semantic_hold_resumed": False, "semantic_hold_voice_ms": 0.0,
           "semantic_hold_outcome_recorded": False,
+          "semantic_hold_adaptation_recorded": False,
           "semantic_turn_active_holds": 0, "semantic_turn_active_resumes": 0,
           "semantic_turn_active_releases": 0,
           "barge_in_count": 0, "language_block_count": 0,
@@ -1877,6 +1880,48 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         _diag(cid, "node.session_reconnected", handle=bool(resumption_handle))
 
     call_ended = False   # 這條底層連線跑完之後，由下面的 wait/branch 邏輯決定要不要換線
+
+    def _semantic_policy():
+        policy = st.get("semantic_turn_policy")
+        if policy is None:
+            policy = voice_turn_semantics.AdaptiveTurnPolicy()
+            st["semantic_turn_policy"] = policy
+        return policy
+
+    def _record_semantic_adaptation(continued, now=None):
+        """Record low-cardinality timing once; never keep audio or transcript."""
+        policy = _semantic_policy()
+        if st.get("semantic_hold_adaptation_recorded"):
+            return policy.snapshot()
+        observed_at = now if now is not None else time.monotonic()
+        delay_ms = None
+        if continued:
+            started_at = st.get("semantic_hold_started_at", 0.0)
+            if started_at:
+                delay_ms = max(0, round((observed_at - started_at) * 1000))
+            policy.observe_continuation(delay_ms or st.get("semantic_hold_ms") or 0)
+        else:
+            policy.observe_release()
+        st["semantic_hold_adaptation_recorded"] = True
+        snapshot = policy.snapshot()
+        _diag(
+            cid,
+            "node.semantic_turn_adaptive_observed",
+            outcome="continued" if continued else "released",
+            reason=st.get("semantic_hold_reason") or "unknown",
+            delay_ms=delay_ms,
+            continuation_ewma_ms=snapshot["continuation_ewma_ms"],
+            samples=snapshot["continuations"] + snapshot["releases"],
+        )
+        return snapshot
+
+    def _clear_semantic_hold():
+        st["semantic_hold_until"] = 0.0
+        st["semantic_hold_reason"] = None
+        st["semantic_hold_started_at"] = 0.0
+        st["semantic_hold_ms"] = 0
+        st["semantic_hold_resumed"] = False
+        st["semantic_hold_voice_ms"] = 0.0
 
     async def _persist_confirmed_locale(persistence_request):
         if not persistence_request or st.get("locale_persistence_requested"):
@@ -2434,11 +2479,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     st["semantic_hold_voice_ms"] = _hold_voice_ms
                     if _hold_resumed:
                         st["semantic_hold_resumed"] = True
+                        adaptive = _record_semantic_adaptation(True, _eg_now)
                         _diag(
                             cid,
                             "node.semantic_turn_active_resumed",
                             reason=st.get("semantic_hold_reason") or "unknown",
                             evidence_ms=round(_hold_voice_ms),
+                            continuation_ewma_ms=adaptive["continuation_ewma_ms"],
                         )
 
                 # Read-only lookup work is cancellable when the person resumes.
@@ -2717,10 +2764,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                             "node.semantic_turn_active_continued",
                                             reason=st.get("semantic_hold_reason"),
                                         )
-                                        st["semantic_hold_until"] = 0.0
-                                        st["semantic_hold_reason"] = None
-                                        st["semantic_hold_resumed"] = False
-                                        st["semantic_hold_voice_ms"] = 0.0
+                                        _clear_semantic_hold()
                                     if _semantic_shadow:
                                         st["semantic_turn_shadow_total"] += 1
                                         if hint.decision == "hold":
@@ -2733,21 +2777,30 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                             chars=len(semantic_text),
                                             provider_finished=True,
                                         )
-                                    hold_ms = voice_turn_semantics.semantic_hold_ms(hint)
+                                    baseline_hold_ms = voice_turn_semantics.semantic_hold_ms(hint)
+                                    policy = _semantic_policy()
+                                    hold_ms = policy.hold_ms(hint)
                                     if hold_ms and _semantic_active:
-                                        st["semantic_hold_until"] = (
-                                            time.monotonic() + hold_ms / 1000.0
-                                        )
+                                        hold_started_at = time.monotonic()
+                                        st["semantic_hold_until"] = hold_started_at + hold_ms / 1000.0
                                         st["semantic_hold_reason"] = hint.reason
+                                        st["semantic_hold_started_at"] = hold_started_at
+                                        st["semantic_hold_ms"] = hold_ms
                                         st["semantic_hold_resumed"] = False
                                         st["semantic_hold_voice_ms"] = 0.0
                                         st["semantic_hold_outcome_recorded"] = False
+                                        st["semantic_hold_adaptation_recorded"] = False
                                         st["semantic_turn_active_holds"] += 1
+                                        adaptive = policy.snapshot()
                                         _diag(
                                             cid,
                                             "node.semantic_turn_active_armed",
                                             reason=hint.reason,
                                             hold_ms=hold_ms,
+                                            baseline_hold_ms=baseline_hold_ms,
+                                            adaptive_samples=(
+                                                adaptive["continuations"] + adaptive["releases"]
+                                            ),
                                             chars=len(semantic_text),
                                         )
                         ot_pre = getattr(sc, "output_transcription", None)
@@ -2796,15 +2849,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 )
                             else:
                                 st["semantic_turn_active_releases"] += 1
+                                _record_semantic_adaptation(False)
                                 _diag(
                                     cid,
                                     "node.semantic_turn_active_released",
                                     reason=_semantic_reason,
                                 )
                             st["semantic_hold_outcome_recorded"] = True
-                            st["semantic_hold_until"] = 0.0
-                            st["semantic_hold_reason"] = None
-                            st["semantic_hold_voice_ms"] = 0.0
+                            _clear_semantic_hold()
                     if data and not st.get("language_block") and not st.get("client_barge_in"):
                         await _mark_first_audio("model")
                         if st.get("lookup_waiting_answer"):
@@ -2916,6 +2968,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     )
                                 else:
                                     st["semantic_turn_active_releases"] += 1
+                                    _record_semantic_adaptation(False)
                                     _diag(
                                         cid,
                                         "node.semantic_turn_active_released",
@@ -2923,9 +2976,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                         no_audio=True,
                                     )
                                 st["semantic_hold_outcome_recorded"] = True
-                                st["semantic_hold_until"] = 0.0
-                                st["semantic_hold_reason"] = None
-                                st["semantic_hold_voice_ms"] = 0.0
+                                _clear_semantic_hold()
                             barge_cancelled = bool(st.get("client_barge_in"))
                             completed_audio = bool(turn_out and not st.get("language_block") and not barge_cancelled)
                             if st.get("lookup_waiting_answer"):
@@ -3388,6 +3439,7 @@ async def handle(ws):
                     _CALL_MEMORY_EXECUTOR, _persist_call_memory)
         except Exception as exc:
             _diag(cid, "node.call_memory_err", err=f"{type(exc).__name__}:{str(exc)[:60]}")
+        semantic_adaptive = st["semantic_turn_policy"].snapshot()
         _diag(
             cid, "closed", in_bytes=st["in"], out_bytes=st["out"], echo_dropped=st["echo_dropped"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
@@ -3396,6 +3448,9 @@ async def handle(ws):
             semantic_turn_active_holds=st["semantic_turn_active_holds"],
             semantic_turn_active_resumes=st["semantic_turn_active_resumes"],
             semantic_turn_active_releases=st["semantic_turn_active_releases"],
+            semantic_turn_adaptive_continuations=semantic_adaptive["continuations"],
+            semantic_turn_adaptive_releases=semantic_adaptive["releases"],
+            semantic_turn_adaptive_ewma_ms=semantic_adaptive["continuation_ewma_ms"],
             barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
             lookup_failures=st["lookup_failures"],
