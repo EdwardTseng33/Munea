@@ -453,7 +453,18 @@ def desired_backup_pods(snapshot: dict[str, Any], config: Config) -> tuple[int, 
     demand = min(config.target_concurrent_calls, all_active + queue_depth)
     reason = scale_up_reason(snapshot, config.utilization_threshold)
 
-    if not ready_primary:
+    # 主力全掛的時候先開一台備援等著——但只在真的有人要用的時候
+    # （Edward 2026-08-07：「本來就是備用會暫停，但為什麼會一直消耗？」）。
+    #
+    # 原本這裡無條件把需求墊到 1：主力一不健康就開一台預熱，好讓第一個打進來的人
+    # 不用等開機。立意是好的，但主力掛著沒修的期間，備援會開了空等 15 分鐘、被收掉、
+    # 再開一台，一整天循環燒錢，而且從頭到尾沒有半個使用者
+    # （8/6-8/7 就是這樣：主力沒接上、備援一直補，直到 RunPod 餘額見底）。
+    #
+    # 改成：沒有人在用也沒有人排隊，就不開。第一個人一打進來（排隊 > 0）
+    # 上面的 scale_up_reason 會回 queue_waiting，那時才開——寧可讓第一通等開機，
+    # 也不要沒人用的時候整天燒。
+    if not ready_primary and (all_active > 0 or queue_depth > 0):
         demand = max(1, demand)
     deficit = max(0, demand - primary_capacity)
     desired = (deficit + config.slots - 1) // config.slots
