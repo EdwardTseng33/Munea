@@ -644,7 +644,6 @@ async def guardian_flush_pending_cue(cid, session, st):
     st["pending_cues"] = []
     health_cue = st.get("pending_health_cue")
     st["pending_health_cue"] = None
-    health_record = st.get("pending_health_record")
     st["pending_health_record"] = None
     promise_cue = st.get("pending_promise_cue")
     st["pending_promise_cue"] = None
@@ -652,14 +651,17 @@ async def guardian_flush_pending_cue(cid, session, st):
         # 空頭承諾更正排最前面：長輩可能正準備坐下來等，這句要最快講
         pending = [promise_cue] + pending
     if health_cue:
-        pending = pending + [health_cue]  # 衛教排在安全導引之後：安全永遠先講、衛教只是配菜
+        # Routine health matching must never open a new spoken turn by itself.
+        # Doing so makes the assistant speak again after the App has already
+        # received turn_complete, which users hear as an unsolicited repeat.
+        # Keep the match for observability, but wait for a future user turn
+        # instead of injecting hidden client content into the live session.
+        _diag(cid, "healthkb.followup_suppressed", reason="no_new_user_turn")
     if not pending:
         return
     sources = []
     if guardian_cues:
         sources.append("guardian")
-    if health_cue:
-        sources.append("health_kb")
     if promise_cue:
         sources.append("promise")
     # The model answer produced by hidden system content is allowed to be
@@ -672,8 +674,6 @@ async def guardian_flush_pending_cue(cid, session, st):
             turn_complete=True,
         )
         _diag(cid, "guardian.cue_sent", count=len(pending))
-        if health_cue and health_record:
-            _record_voice_recommendation(cid, st, *health_record)   # 送出去了才入帳
     except Exception as e:
         st["guardian_internal_followup_active"] = False
         st["guardian_internal_followup_sources"] = ()

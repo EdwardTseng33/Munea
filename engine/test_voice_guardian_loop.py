@@ -80,10 +80,29 @@ async def _recursive_followup_scenario():
         voice.guardian_record_and_alert = original_record
 
 
+async def _routine_health_match_does_not_speak_scenario():
+    state = voice._new_call_state()
+    session = FakeSession()
+    state["pending_health_cue"] = "hidden routine health guidance"
+    state["pending_health_record"] = ("phlegm", "有痰", {}, 12)
+
+    await voice.guardian_flush_pending_cue(1, session, state)
+
+    assert session.sent == []
+    assert state["pending_health_cue"] is None
+    assert state["pending_health_record"] is None
+    assert state["guardian_internal_followup_active"] is False
+
+
 def test_guardian_internal_followup_cannot_recurse():
     asyncio.run(_recursive_followup_scenario())
 
 
+def test_routine_health_match_does_not_open_hidden_spoken_turn():
+    asyncio.run(_routine_health_match_does_not_speak_scenario())
+
+
 if __name__ == "__main__":
     test_guardian_internal_followup_cannot_recurse()
+    test_routine_health_match_does_not_open_hidden_spoken_turn()
     print("Voice guardian loop regression PASS")
