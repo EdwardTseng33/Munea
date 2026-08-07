@@ -1,0 +1,249 @@
+<title>Slate 答題紙</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Caveat:wght@500;600&display=swap">
+<style>
+:root{
+  --page:#F4F2EC; --page-ink:#1E1C18; --page-mute:#6F6A60; --page-line:#DAD5C8; --page-card:#FFFFFF;
+  --paper:#FBFAF5; --ink:#1C1B18; --pencil:#8A867C; --red:#D9382B; --hi:#FFE873; --line:#E2DED2; --rule:#D6E4F0;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page:#1B1A17; --page-ink:#F0EDE5; --page-mute:#A39E92; --page-line:#35322B; --page-card:#24221E; } }
+:root[data-theme="dark"]{ --page:#1B1A17; --page-ink:#F0EDE5; --page-mute:#A39E92; --page-line:#35322B; --page-card:#24221E; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--page-ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:48px;align-items:start}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);font-weight:700}
+h1{font-family:"Noto Serif TC",serif;font-weight:900;font-size:42px;line-height:1.1;margin:8px 0 6px;text-wrap:balance}
+h1 small{display:block;font-family:"Noto Sans TC";font-weight:500;font-size:18px;color:var(--page-mute);margin-top:6px}
+.lead{font-size:16px;max-width:60ch;margin:0 0 28px}
+.spec{display:grid;gap:14px}
+.spec section{border-top:1px solid var(--page-line);padding-top:14px}
+.spec h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 6px;color:var(--page-mute);font-weight:700}
+.spec p,.spec li{margin:0;font-size:14.5px}
+.spec ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.swatches{display:flex;gap:8px;margin-top:6px}
+.swatches i{width:34px;height:34px;border-radius:4px;display:block;border:1px solid rgba(0,0,0,.1)}
+.hint{font-size:13px;color:var(--page-mute);margin-top:12px}
+
+.phone{width:390px;height:844px;margin:0 auto;background:var(--paper);border-radius:48px;border:10px solid #141311;box-shadow:0 30px 60px rgba(0,0,0,.28);position:relative;overflow:hidden;color:var(--ink)}
+.notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:30px;background:#141311;border-radius:20px;z-index:5}
+.screen{position:absolute;inset:0;padding:54px 20px 96px;overflow-y:auto;display:none;flex-direction:column;gap:14px}
+.screen.on{display:flex}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;background:var(--paper);border-top:1px solid var(--ink);display:grid;grid-template-columns:repeat(4,1fr);z-index:4}
+.tabbar button{background:none;border:0;font:inherit;font-size:11px;color:var(--pencil);display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:12px;cursor:pointer;font-weight:500}
+.tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.on{color:var(--ink)}
+.tabbar button.on::after{content:"";width:18px;height:3px;background:var(--red);border-radius:2px}
+.tabbar button:focus-visible{outline:2px solid var(--red);border-radius:10px}
+.top{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--pencil)}
+.top b{color:var(--ink);font-family:"Noto Serif TC";font-weight:700;font-size:15px}
+.stamp{font-size:11px;border:1.5px solid var(--red);color:var(--red);padding:1px 7px;border-radius:3px;font-weight:700;letter-spacing:.06em}
+
+/* capture */
+.finder{background:#26241F;border-radius:6px;aspect-ratio:3/4;position:relative;overflow:hidden}
+.finder .sheet{position:absolute;inset:22px 18px;background:#FDFCF8;color:#222;padding:18px 16px;font-size:13px;line-height:2;transform:rotate(1.2deg);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.finder .sheet .no{color:#888;font-size:12px}
+.finder .box{position:absolute;left:12px;right:12px;top:52px;height:88px;border:2px solid var(--hi);border-radius:4px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.finder .box::before{content:"辨識到 1 題 · 一元一次方程式";position:absolute;left:-2px;top:-24px;background:var(--hi);color:#222;font-size:11px;padding:2px 8px;border-radius:3px;font-weight:700}
+.finder .shutter{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:56px;height:56px;border-radius:50%;background:#fff;border:5px solid #aaa;cursor:pointer}
+.src{display:flex;gap:8px}
+.src button{flex:1;border:1px solid var(--ink);background:transparent;border-radius:6px;padding:9px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.src button.pri{background:var(--ink);color:var(--paper)}
+.cap{font-size:12.5px;color:var(--pencil)}
+
+/* canvas */
+.sheet2{background:#fff;border:1px solid var(--line);border-radius:4px;position:relative;padding:14px 14px 14px 46px;
+  background-image:repeating-linear-gradient(transparent 0 31px,var(--rule) 31px 32px);background-position:0 12px}
+.sheet2::before{content:"";position:absolute;left:36px;top:0;bottom:0;width:1px;background:var(--red);opacity:.5}
+.prob{font-family:"Noto Serif TC";font-weight:700;font-size:15px;line-height:32px}
+.hand{font-family:Caveat,"Noto Sans TC",cursive;font-size:22px;line-height:32px;color:#2B3A6B;transform:rotate(-.6deg)}
+.hand .x{position:relative}
+.hand .x::after{content:"";position:absolute;left:-3px;right:-3px;top:55%;height:2px;background:var(--red);transform:rotate(-4deg)}
+.margin{position:absolute;right:-6px;padding:2px 8px;background:var(--hi);border-radius:3px;font-size:12px;line-height:1.35;max-width:150px;color:var(--ink);box-shadow:2px 2px 0 rgba(0,0,0,.08)}
+.margin::before{content:"";position:absolute;left:-8px;top:8px;border:5px solid transparent;border-right-color:var(--hi)}
+.note{color:var(--red);font-size:12.5px;line-height:1.5;border-left:2px solid var(--red);padding-left:10px}
+.hintlvl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.hintlvl button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:8px 4px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink);line-height:1.3}
+.hintlvl button b{display:block;font-size:11px;color:var(--pencil);font-weight:500}
+.hintlvl button.on{border-color:var(--red);background:#FFF3F1}
+.hintlvl button:disabled{opacity:.4;cursor:not-allowed}
+.act{display:flex;gap:8px}
+.act button{flex:1;border:1px solid var(--ink);background:transparent;border-radius:6px;padding:10px;font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink)}
+.act button.pri{background:var(--ink);color:var(--paper)}
+.act button:focus-visible{outline:2px solid var(--red)}
+.never{font-size:11.5px;color:var(--pencil);text-align:center}
+
+/* explain back */
+.rec{display:grid;place-items:center;gap:10px;padding:10px 0}
+.rec button{width:88px;height:88px;border-radius:50%;border:3px solid var(--ink);background:#fff;display:grid;place-items:center;cursor:pointer}
+.rec button i{display:block;width:34px;height:34px;border-radius:50%;background:var(--red);transition:.2s}
+.rec button.on i{border-radius:8px;width:28px;height:28px}
+.rec .t{font-size:12.5px;color:var(--pencil)}
+.rec .t b{font-family:"Noto Serif TC";font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums;display:block;text-align:center}
+.trans{background:#fff;border:1px solid var(--line);border-radius:4px;padding:12px 14px;font-size:13.5px;line-height:1.7;min-height:64px}
+.trans .q{color:var(--pencil);font-size:12px;display:block;margin-bottom:4px}
+.rubric{display:grid;gap:6px}
+.rubric div{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:center;font-size:13.5px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:4px}
+.rubric .m{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700}
+.rubric .ok .m{background:#2E7D5B;color:#fff}.rubric .half .m{background:var(--hi);color:var(--ink)}.rubric .no .m{border:1.5px solid var(--pencil);color:var(--pencil)}
+.rubric small{color:var(--pencil);font-size:12px}
+.verdict{font-family:"Noto Serif TC";font-weight:700;font-size:16px;border-top:1px solid var(--ink);padding-top:10px}
+.verdict span{font-family:"Noto Sans TC";font-weight:400;font-size:13px;color:var(--pencil);display:block}
+
+/* wrong book */
+.due{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.due div{background:#fff;border:1px solid var(--line);border-radius:4px;padding:10px;text-align:center}
+.due b{display:block;font-family:"Noto Serif TC";font-size:24px;font-weight:900;font-variant-numeric:tabular-nums}
+.due small{font-size:11.5px;color:var(--pencil)}
+.deck{display:grid;gap:10px}
+.wc{background:#fff;border:1px solid var(--line);border-left:4px solid var(--red);border-radius:4px;padding:12px 14px;display:grid;gap:4px;cursor:pointer}
+.wc .h{display:flex;justify-content:space-between;font-size:12px;color:var(--pencil)}
+.wc .c{font-family:"Noto Serif TC";font-weight:700;font-size:15px}
+.wc .r{font-size:12.5px;color:var(--pencil)}
+.wc .r b{color:var(--red);font-weight:500}
+.wc .back{display:none;font-size:13px;border-top:1px dashed var(--line);padding-top:8px;margin-top:4px}
+.wc.flip .back{display:block}
+.wc.ok{border-left-color:#2E7D5B;opacity:.7}
+.wc .st{font-size:11px;padding:1px 6px;border-radius:3px;background:#FFF3F1;color:var(--red)}
+.wc.ok .st{background:#E8F3EE;color:#2E7D5B}
+.toast{position:absolute;left:20px;right:20px;bottom:100px;background:var(--ink);color:var(--paper);padding:12px 14px;border-radius:6px;font-size:13px;opacity:0;transform:translateY(8px);transition:.25s;z-index:6;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div>
+    <div class="eyebrow">Prototype C · 學習教練 · 拍題、寫、說給它聽</div>
+    <h1>Slate 答題紙<small>它不解題，它在你的答案紙旁邊寫紅字，然後要你講給它聽</small></h1>
+    <p class="lead">給 <b>國一到國三</b>，尤其是有「錯題本」習慣、被會考「題題計較」壓著的孩子。台灣國中生最熟的學習動作是：拿到考卷、看紅筆、訂正。Slate 把這個動作整個接過來：拍題、在紙上寫、AI 在邊緣寫提示（<b>三級、永遠不到答案</b>）、最後你用講的證明你懂了，它才幫你把這題排進之後的回顧。</p>
+
+    <div class="spec">
+      <section><h3>用戶與情境</h3><p>晚上訂正作業、段考後訂正考卷、會考前刷錯題本。平板加筆最順，手機也能用。</p></section>
+      <section><h3>核心循環</h3><ul><li><b>拍題</b>：相機或截圖，自動切題、標概念、比對你的錯題本</li><li><b>答題紙</b>：你寫，它在邊緣貼提示，提示分三級：輕推、指方向、示範一步。沒有第四級</li><li><b>說給我聽</b>：講 30 秒為什麼這樣解，它照三條標準判斷「你是真懂還是抄懂」</li><li><b>錯題本</b>：講得出來的題才算過，然後按遺忘曲線排回顧：明天、三天後、一週後</li></ul></section>
+      <section><h3>為什麼是 next gen</h3><ul><li>相機、手寫、語音三種輸入在同一張紙上，不切換模式</li><li>「Explain-back」把作弊變得沒意義：抄了答案也過不了說給它聽這關</li><li>提示上限寫進產品規則，家長不用檢查孩子有沒有拿它抄</li><li>視覺完全用台灣孩子熟的語言：紅筆、螢光筆、格線紙</li></ul></section>
+      <section><h3>最大的賭注與護欄</h3><p>手寫辨識和語音理解的準確度就是產品。國中數學的分數、根號、圖形要能讀懂。先從一元一次、二元一次、理化計算題這種「文字多、圖少」的範圍起步。</p></section>
+      <section><h3>視覺語言</h3><p>紙與墨。單一紅色來自老師的紅筆，螢光黃來自劃重點。沒有卡片圓角，只有紙的邊。</p>
+      <div class="swatches"><i style="background:#FBFAF5"></i><i style="background:#1C1B18"></i><i style="background:#D9382B"></i><i style="background:#FFE873"></i><i style="background:#8A867C"></i></div></section>
+    </div>
+    <p class="hint">右邊的手機可以點：提示三級按鈕、錄音鈕、錯題卡翻面。</p>
+  </div>
+
+  <div class="phone" id="phone">
+    <div class="notch"></div>
+
+    <!-- 拍題 -->
+    <div class="screen on" data-s="cap">
+      <div class="top"><b>拍題</b><span>9/18 · 數學作業 p.42</span></div>
+      <div class="finder">
+        <div class="sheet">
+          <div class="no">習題 3</div>
+          <div>解方程式：2x − 3 = 7</div>
+          <div class="no">習題 4</div>
+          <div>解方程式：5 − 3x = −4</div>
+          <div class="no">習題 5</div>
+          <div>若 3(x + 2) = 15，求 x。</div>
+        </div>
+        <div class="box"></div>
+        <div class="shutter" id="shutter"></div>
+      </div>
+      <div class="src"><button class="pri" id="toCanvas">用這題</button><button>換一題</button><button>整頁</button></div>
+      <div class="cap">Slate 認出這題是「一元一次方程式 · 移項」。你的錯題本裡這個概念有 3 題，上次錯在變號。</div>
+    </div>
+
+    <!-- 答題紙 -->
+    <div class="screen" data-s="canvas">
+      <div class="top"><b>答題紙</b><span class="stamp">提示 <span id="lv">0</span>/3</span></div>
+      <div class="sheet2">
+        <div class="prob">2x − 3 = 7</div>
+        <div class="hand">2x = 7 <span class="x">− 3</span></div>
+        <div class="hand">2x = 4</div>
+        <div class="hand">x = 2</div>
+        <div class="margin" id="m1" style="top:44px;display:none">第二行，再看一次</div>
+        <div class="margin" id="m2" style="top:44px;display:none">−3 從左邊搬到右邊，符號會怎樣？</div>
+        <div class="margin" id="m3" style="top:44px;display:none">示範一步：兩邊同時 +3<br>2x − 3 + 3 = 7 + 3</div>
+      </div>
+      <div class="note" id="note">你先寫。寫完我看。卡住再按提示，一次一級。</div>
+      <div class="hintlvl" id="hl">
+        <button data-l="1">輕推<b>只指哪一行</b></button>
+        <button data-l="2">指方向<b>問一個問題</b></button>
+        <button data-l="3">示範一步<b>只做一步</b></button>
+      </div>
+      <div class="act"><button id="toExplain" class="pri">我懂了，說給你聽</button><button id="again">我再寫一次</button></div>
+      <div class="never">沒有第四級。Slate 不會寫出完整答案。</div>
+    </div>
+
+    <!-- 說給我聽 -->
+    <div class="screen" data-s="explain">
+      <div class="top"><b>說給我聽</b><span>2x − 3 = 7</span></div>
+      <div class="rec">
+        <button id="recBtn" aria-label="錄音"><i></i></button>
+        <div class="t"><b id="clock">0:00</b>按一下開始，講 30 秒就好</div>
+      </div>
+      <div class="trans" id="trans"><span class="q">Slate 問：為什麼 −3 搬過去要變成 +3？</span><span id="tx" style="color:var(--pencil)">（按錄音，講你的想法）</span></div>
+      <div class="rubric" id="rub">
+        <div class="no"><span class="m">1</span><span>講出關鍵步驟<small>兩邊同時加 3</small></span></div>
+        <div class="no"><span class="m">2</span><span>說得出為什麼<small>等號兩邊要一樣</small></span></div>
+        <div class="no"><span class="m">3</span><span>能換一題套用<small>5 − 3x = −4 怎麼搬？</small></span></div>
+      </div>
+      <div class="verdict" id="vd">還沒聽到你說<span>講完我才決定這題要不要排進回顧。</span></div>
+    </div>
+
+    <!-- 錯題本 -->
+    <div class="screen" data-s="book">
+      <div class="top"><b>錯題本</b><span>按遺忘曲線排</span></div>
+      <div class="due"><div><b>3</b><small>今天</small></div><div><b>2</b><small>明天</small></div><div><b>5</b><small>下週</small></div></div>
+      <div class="deck" id="deck">
+        <div class="wc"><div class="h"><span>數學 · 一元一次</span><span class="st">今天回顧</span></div><div class="c">2x − 3 = 7</div><div class="r">9/17 錯在 <b>移項沒變號</b> · 說給它聽：過</div><div class="back">回顧方式：Slate 會換數字出一題類似的，你不用再看原題。</div></div>
+        <div class="wc"><div class="h"><span>理化 · 密度</span><span class="st">今天回顧</span></div><div class="c">質量 120 g、體積 40 cm³，求密度</div><div class="r">9/15 錯在 <b>單位寫成 g/cm</b> · 說給它聽：過</div><div class="back">回顧方式：只考單位，不考計算。</div></div>
+        <div class="wc"><div class="h"><span>數學 · 不等式</span><span class="st">今天回顧</span></div><div class="c">−2x &gt; 6</div><div class="r">9/16 錯在 <b>除負數沒反向</b> · 說給它聽：<b>沒過</b></div><div class="back">沒過的題不排回顧，先回答題紙再寫一次。</div></div>
+        <div class="wc ok"><div class="h"><span>英文 · 現在完成式</span><span class="st">已穩 · 下週</span></div><div class="c">I ___ (live) here since 2020.</div><div class="r">9/10 錯在 <b>用了過去式</b> · 連續 2 次過</div><div class="back">再過一次就從錯題本畢業。</div></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="tabbar">
+      <button class="on" data-t="cap"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8 7l1.5-3h5L16 7"/></svg>拍題</button>
+      <button data-t="canvas"><svg viewBox="0 0 24 24"><path d="M4 20l4-1L19 8l-3-3L5 16z"/><path d="M14 7l3 3"/></svg>答題紙</button>
+      <button data-t="explain"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>說給我聽</button>
+      <button data-t="book"><svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg>錯題本</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const phone=document.getElementById('phone');
+  const toast=document.getElementById('toast');let tt;
+  function say(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove('show'),1900);}
+  function go(n){phone.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.dataset.s===n));phone.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));}
+  phone.querySelectorAll('.tabbar button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.t)));
+  document.getElementById('toCanvas').addEventListener('click',()=>go('canvas'));
+  document.getElementById('shutter').addEventListener('click',()=>say('拍好了。切出 1 題。'));
+  // hints
+  let lv=0; const lvEl=document.getElementById('lv'), note=document.getElementById('note');
+  const msgs={1:'我只標了哪一行。你自己再看一次。',2:'問你一個問題，不是給答案。想一下再寫。',3:'我只做一步。下一步你來。到這裡為止。'};
+  const btns=[...document.querySelectorAll('#hl button')];
+  function sync(){ btns.forEach(b=>{const l=+b.dataset.l; b.classList.toggle('on',l<=lv); b.disabled=l!==lv+1 && l>lv;}); lvEl.textContent=lv; }
+  btns.forEach(b=>b.addEventListener('click',()=>{ const l=+b.dataset.l; if(l!==lv+1) return; lv=l; document.getElementById('m'+l).style.display='block'; if(l>1) document.getElementById('m'+(l-1)).style.display='none'; note.textContent=msgs[l]; sync(); }));
+  sync();
+  document.getElementById('again').addEventListener('click',()=>{ lv=0; [1,2,3].forEach(i=>document.getElementById('m'+i).style.display='none'); note.textContent='好，紙擦乾淨了。你再寫一次。'; sync(); });
+  document.getElementById('toExplain').addEventListener('click',()=>go('explain'));
+  // record
+  const rb=document.getElementById('recBtn'), clock=document.getElementById('clock'), tx=document.getElementById('tx'), rub=[...document.querySelectorAll('#rub > div')], vd=document.getElementById('vd');
+  let on=false, s=0, iv, done=false;
+  const script=['因為等號兩邊要一樣，','左邊有 −3，要讓它不見就兩邊都加 3，','所以右邊變成 7 加 3 等於 10，','然後 2x 等於 10，x 等於 5。','另一題的話 5 減 3x 等於 −4，把 5 搬過去變 −4 減 5。'];
+  rb.addEventListener('click',()=>{
+    if(done) return;
+    on=!on; rb.classList.toggle('on',on);
+    if(on){ tx.style.color='var(--ink)'; tx.textContent=''; s=0; let k=0;
+      iv=setInterval(()=>{ s++; clock.textContent='0:'+String(s).padStart(2,'0'); if(s%3===0 && k<script.length){ tx.textContent+=script[k++]; } if(s>=15){ stop(); } },1000);
+    } else stop();
+  });
+  function stop(){ clearInterval(iv); on=false; rb.classList.remove('on'); done=true;
+    const res=['ok','ok','half']; rub.forEach((r,i)=>{ r.className=res[i]; r.querySelector('.m').textContent=res[i]==='ok'?'✓':'△'; });
+    vd.innerHTML='懂了八成。這題排進明天。<span>第 3 條你說了方向但沒說變號。明天回顧時我會拿 5 − 3x = −4 再問你一次。</span>';
+    say('過了。錯題本已更新。');
+  }
+  // deck
+  phone.querySelectorAll('.wc').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('flip')));
+})();
+</script>

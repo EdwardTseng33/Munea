@@ -1,0 +1,441 @@
+{
+  "required_consecutive_runs": 1,
+  "passed_runs": 1,
+  "ok": true,
+  "results": [
+    {
+      "call_id": "9295bd45-8bc2-4e30-b58c-b8c281ddb9a0",
+      "call_duration_ms": 354093,
+      "transport": "direct",
+      "transport_status": "ready",
+      "avatar_ack": true,
+      "voice_chunks": 26,
+      "voice_audio_ms": 5911,
+      "client_receive_max_gap_ms": 2671.0,
+      "source_playout": {
+        "ok": true,
+        "underrun_count": 0,
+        "max_underrun_ms": 0.0
+      },
+      "avatar_audio_ms": 8600,
+      "avatar_webrtc_timing": {
+        "ok": true,
+        "frame_count": 430,
+        "gap_count": 0,
+        "max_pts_gap_ms": 0.0,
+        "pts_gaps": [],
+        "max_receive_late_ms": 12.0
+      },
+      "user_caption": "",
+      "assistant_caption": "好，我記住了。等等便當到的時候，記得趁熱吃喔。你剛才說晚餐已經買好便當，外送等一下就會到了。不用了，我知道你晚餐要吃便當了。好的，我記得那條藍色毛巾在沙發上了。那是條藍色的毛巾，放在沙發上。你是買好便當，在等外送喔。聽你這樣說，我也很高興你今天心情很好。日子能過得開心，真的就比什麼都重要了。晚餐是點外送便當，然後藍色毛巾在沙發上。放心，你剛剛說的重點我都記住了。沒問題，我確認了，等你便當送到就會吃，不會再問你吃飯了沒。沒有，因為你已經清楚說過了，便當送到就會吃。那條藍色的毛巾，就放在沙發上喔。你晚餐吃外送便當，還有一條藍色毛巾放在沙發上。晚餐吃外送便當，藍色毛巾在沙發上。那你先忙，下次再聊囉。",
+      "first_response_ms": 891,
+      "requested_turns": 15,
+      "completed_turns": 15,
+      "turns": [
+        {
+          "turn": 1,
+          "turn_complete": true,
+          "first_response_ms": 625,
+          "voice_audio_ms": 5020,
+          "user_caption": "",
+          "assistant_caption": "好，我記住了。等等便當到的時候，記得趁熱吃喔。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 2,
+          "turn_complete": true,
+          "first_response_ms": 718,
+          "voice_audio_ms": 4691,
+          "user_caption": "",
+          "assistant_caption": "你剛才說晚餐已經買好便當，外送等一下就會到了。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 3,
+          "turn_complete": true,
+          "first_response_ms": 657,
+          "voice_audio_ms": 3470,
+          "user_caption": "",
+          "assistant_caption": "不用了，我知道你晚餐要吃便當了。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 4,
+          "turn_complete": true,
+          "first_response_ms": 891,
+          "voice_audio_ms": 3460,
+          "user_caption": "",
+          "assistant_caption": "好的，我記得那條藍色毛巾在沙發上了。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 5,
+          "turn_complete": true,
+          "first_response_ms": 750,
+          "voice_audio_ms": 3251,
+          "user_caption": "",
+          "assistant_caption": "那是條藍色的毛巾，放在沙發上。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 6,
+          "turn_complete": true,
+          "first_response_ms": 844,
+          "voice_audio_ms": 2931,
+          "user_caption": "",
+          "assistant_caption": "你是買好便當，在等外送喔。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 7,
+          "turn_complete": true,
+          "first_response_ms": 609,
+          "voice_audio_ms": 3691,
+          "user_caption": "",
+          "assistant_caption": "聽你這樣說，我也很高興你今天心情很好。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 8,
+          "turn_complete": true,
+          "first_response_ms": 641,
+          "voice_audio_ms": 3741,
+          "user_caption": "",
+          "assistant_caption": "日子能過得開心，真的就比什麼都重要了。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 9,
+          "turn_complete": true,
+          "first_response_ms": 593,
+          "voice_audio_ms": 4741,
+          "user_caption": "",
+          "assistant_caption": "晚餐是點外送便當，然後藍色毛巾在沙發上。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 10,
+          "turn_complete": true,
+          "first_response_ms": 594,
+          "voice_audio_ms": 3100,
+          "user_caption": "",
+          "assistant_caption": "放心，你剛剛說的重點我都記住了。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 11,
+          "turn_complete": true,
+          "first_response_ms": 593,
+          "voice_audio_ms": 5530,
+          "user_caption": "",
+          "assistant_caption": "沒問題，我確認了，等你便當送到就會吃，不會再問你吃飯了沒。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 12,
+          "turn_complete": true,
+          "first_response_ms": 671,
+          "voice_audio_ms": 4370,
+          "user_caption": "",
+          "assistant_caption": "沒有，因為你已經清楚說過了，便當送到就會吃。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 13,
+          "turn_complete": true,
+          "first_response_ms": 625,
+          "voice_audio_ms": 3200,
+          "user_caption": "",
+          "assistant_caption": "那條藍色的毛巾，就放在沙發上喔。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 14,
+          "turn_complete": true,
+          "first_response_ms": 578,
+          "voice_audio_ms": 4740,
+          "user_caption": "",
+          "assistant_caption": "你晚餐吃外送便當，還有一條藍色毛巾放在沙發上。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 15,
+          "turn_complete": true,
+          "first_response_ms": 875,
+          "voice_audio_ms": 5911,
+          "user_caption": "",
+          "assistant_caption": "晚餐吃外送便當，藍色毛巾在沙發上。那你先忙，下次再聊囉。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        }
+      ],
+      "unsolicited_audio_bytes": 0,
+      "unsolicited_caption": "",
+      "disconnected_after_turn": false,
+      "avatar_health_before": {
+        "ok": true,
+        "round_count": 40,
+        "round_latencies_ms": [
+          843.6,
+          894.7,
+          921.1,
+          773.0,
+          534.0,
+          921.4,
+          659.5,
+          558.3,
+          1293.0,
+          631.1,
+          494.5,
+          800.5,
+          509.9,
+          544.4,
+          745.0,
+          512.4,
+          656.7,
+          763.1,
+          691.6,
+          927.8
+        ],
+        "gen_compute_ms_rolling": {
+          "p50": 442.8,
+          "p95": 520.9,
+          "budget_ms": 960.0,
+          "n_samples": 100,
+          "headroom_p95_pct": 45.7
+        },
+        "audio_underrun": {
+          "count": 0,
+          "recent_gap_ms": [],
+          "buffer_depth_ms": 0.0,
+          "prebuffer_s": 0.2,
+          "last_prebuffer_s": 0.2,
+          "next_prebuffer_s": 0.35,
+          "adaptive_prebuffer_s": 0.2,
+          "adaptive_target_s": 0.2,
+          "adaptive_min_s": 0.2,
+          "adaptive_max_s": 0.35,
+          "generation_p95_ms": 443.0
+        },
+        "audio_sender": {
+          "rebase_count": 0,
+          "max_late_ms": 0.0,
+          "recent_late_ms": []
+        }
+      },
+      "avatar_health_after": {
+        "ok": true,
+        "round_count": 70,
+        "round_latencies_ms": [
+          651.1,
+          796.0,
+          739.0,
+          570.0,
+          710.0,
+          1415.3,
+          767.9,
+          1343.4,
+          765.6,
+          1070.5,
+          755.0,
+          1115.5,
+          785.8,
+          1288.4,
+          973.5,
+          726.5,
+          919.6,
+          544.1,
+          711.5,
+          803.5
+        ],
+        "gen_compute_ms_rolling": {
+          "p50": 429.4,
+          "p95": 510.0,
+          "budget_ms": 960.0,
+          "n_samples": 100,
+          "headroom_p95_pct": 46.9
+        },
+        "audio_underrun": {
+          "count": 0,
+          "recent_gap_ms": [],
+          "buffer_depth_ms": 10.6,
+          "prebuffer_s": 0.2,
+          "last_prebuffer_s": 0.2,
+          "next_prebuffer_s": 0.2,
+          "adaptive_prebuffer_s": 0.2,
+          "adaptive_target_s": 0.2,
+          "adaptive_min_s": 0.2,
+          "adaptive_max_s": 0.35,
+          "generation_p95_ms": 497.6
+        },
+        "audio_sender": {
+          "rebase_count": 0,
+          "max_late_ms": 0.0,
+          "recent_late_ms": []
+        }
+      },
+      "avatar_reported_underrun_delta": 0,
+      "continuity": {
+        "ok": true,
+        "alignment_ms": 2280,
+        "envelope_correlation": 0.9733,
+        "reference_speech_frames": 211,
+        "missing_speech_runs": 0,
+        "max_missing_speech_ms": 0,
+        "speech_windows_ms": [
+          [
+            2320,
+            2480
+          ],
+          [
+            2500,
+            3060
+          ],
+          [
+            3100,
+            3440
+          ],
+          [
+            3460,
+            3780
+          ],
+          [
+            3800,
+            4040
+          ],
+          [
+            4100,
+            4360
+          ],
+          [
+            4400,
+            4420
+          ],
+          [
+            4440,
+            4540
+          ],
+          [
+            4560,
+            4860
+          ],
+          [
+            4920,
+            5060
+          ],
+          [
+            5080,
+            5140
+          ],
+          [
+            5160,
+            5300
+          ],
+          [
+            5860,
+            6100
+          ],
+          [
+            6140,
+            6700
+          ],
+          [
+            6780,
+            6940
+          ],
+          [
+            7020,
+            7060
+          ],
+          [
+            7120,
+            7700
+          ]
+        ]
+      },
+      "avatar_webrtc_speech_timing": {
+        "ok": true,
+        "speech_gap_count": 0,
+        "max_speech_pts_gap_ms": 0.0,
+        "speech_pts_gaps": []
+      },
+      "asr_expected": "",
+      "asr_char_recall": null,
+      "gates": {
+        "transport": true,
+        "avatar_route": true,
+        "asr": true,
+        "first_response": true,
+        "avatar_audio": true,
+        "continuity": true,
+        "avatar_reported_underrun": true,
+        "avatar_webrtc_speech_timing": true,
+        "source_playout": true,
+        "no_unsolicited_repeat": true,
+        "connection_held": true,
+        "all_turns_completed": true,
+        "minimum_call_duration": true
+      },
+      "ok": true
+    }
+  ]
+}

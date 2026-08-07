@@ -1,0 +1,256 @@
+<title>Orbit 學習航線</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --page:#EEF0F4; --page-ink:#161A22; --page-mute:#5F6774; --page-line:#D3D8E1; --page-card:#FFFFFF;
+  --bg:#0F131A; --panel:#171C25; --panel2:#1F2531; --line:#2A3241; --ink:#E7EAF2; --mute:#8A93A6; --sig:#8FA3FF; --sig2:#5C74E6;
+  --ok:#5BD3A0; --warn:#F2B950; --bad:#F26D6D; --none:#3B4556;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page:#0B0E13; --page-ink:#E7EAF2; --page-mute:#8A93A6; --page-line:#232A36; --page-card:#141922; } }
+:root[data-theme="dark"]{ --page:#0B0E13; --page-ink:#E7EAF2; --page-mute:#8A93A6; --page-line:#232A36; --page-card:#141922; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--page-ink);font-family:"IBM Plex Sans","Noto Sans TC",system-ui,sans-serif;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:48px;align-items:start}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--sig2)}
+h1{font-weight:700;font-size:42px;line-height:1.08;margin:8px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+h1 small{display:block;font-weight:500;font-size:18px;color:var(--page-mute);margin-top:6px;letter-spacing:0}
+.lead{font-size:16px;max-width:60ch;margin:0 0 28px}
+.spec{display:grid;gap:14px}
+.spec section{border-top:1px solid var(--page-line);padding-top:14px}
+.spec h3{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px;color:var(--page-mute);font-weight:500}
+.spec p,.spec li{margin:0;font-size:14.5px}
+.spec ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.swatches{display:flex;gap:8px;margin-top:6px}
+.swatches i{width:34px;height:34px;border-radius:8px;display:block;border:1px solid rgba(255,255,255,.08)}
+.hint{font-size:13px;color:var(--page-mute);margin-top:12px}
+
+.phone{width:390px;height:844px;margin:0 auto;background:var(--bg);border-radius:48px;border:10px solid #050608;box-shadow:0 30px 60px rgba(0,0,0,.45);position:relative;overflow:hidden;color:var(--ink);font-family:"IBM Plex Sans","Noto Sans TC",sans-serif}
+.notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:30px;background:#050608;border-radius:20px;z-index:5}
+.screen{position:absolute;inset:0;padding:54px 20px 96px;overflow-y:auto;display:none;flex-direction:column;gap:14px}
+.screen.on{display:flex}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;background:var(--panel);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:4}
+.tabbar button{background:none;border:0;font:inherit;font-size:11px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:12px;cursor:pointer}
+.tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.on{color:var(--sig)}
+.tabbar button:focus-visible{outline:2px solid var(--sig);border-radius:10px}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.top{display:flex;justify-content:space-between;align-items:baseline}
+.top .d{font-size:13px;color:var(--mute)}
+.top .cd{font-family:"IBM Plex Mono";font-size:12px;color:var(--sig)}
+h2.s{font-size:24px;font-weight:600;margin:0;letter-spacing:-.01em;line-height:1.2}
+h2.s em{font-style:normal;color:var(--mute);font-weight:400;font-size:15px;display:block;margin-top:2px}
+.energy{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:8px}
+.energy .row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mute)}
+.energy .row b{color:var(--ink);font-weight:500}
+.meter{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.meter i{display:block;height:100%;width:58%;background:linear-gradient(90deg,var(--warn),var(--sig));border-radius:3px}
+.energy .note{font-size:12.5px;color:var(--ink)}
+.tl{display:grid;gap:0;position:relative}
+.blk{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.blk .t{font-family:"IBM Plex Mono";font-size:12px;color:var(--mute);padding-top:3px}
+.blk .n{font-size:14.5px;font-weight:500}
+.blk .n span{color:var(--mute);font-weight:400;font-size:12.5px;margin-left:6px;font-family:"IBM Plex Mono"}
+.blk .why{font-size:12.5px;color:var(--mute);margin-top:3px;display:none}
+.blk.open .why{display:block}
+.blk .tag{display:inline-block;font-size:10.5px;font-family:"IBM Plex Mono";padding:1px 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute);margin-top:4px}
+.blk.rest .n{color:var(--mute);font-weight:400}
+.blk.stop .n{color:var(--sig)}
+.blk.now{background:linear-gradient(90deg,rgba(143,163,255,.12),transparent);border-radius:8px;margin:0 -8px;padding:10px 8px}
+.blk .bar{height:3px;background:var(--panel2);border-radius:2px;margin-top:6px;overflow:hidden}
+.blk .bar i{display:block;height:100%;width:40%;background:var(--sig)}
+
+.legend{display:flex;gap:12px;font-size:11.5px;color:var(--mute);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.subj{display:grid;gap:8px}
+.subj h4{margin:6px 0 2px;font-size:13px;color:var(--mute);font-weight:500;display:flex;justify-content:space-between}
+.nodes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.node{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:11.5px;line-height:1.3;cursor:pointer;position:relative;overflow:hidden}
+.node .f{position:absolute;left:0;bottom:0;height:3px;background:var(--none)}
+.node[data-l="ok"] .f{background:var(--ok)}.node[data-l="warn"] .f{background:var(--warn)}.node[data-l="bad"] .f{background:var(--bad)}
+.node b{display:block;font-family:"IBM Plex Mono";font-size:12px;font-weight:500;margin-top:4px}
+.node.sel{border-color:var(--sig)}
+.detail{background:var(--panel);border:1px solid var(--sig2);border-radius:14px;padding:12px 14px;font-size:13px;display:grid;gap:6px}
+.detail .ci{font-family:"IBM Plex Mono";font-size:12px;color:var(--mute)}
+.detail .ci b{color:var(--ink);font-weight:500}
+.detail .act{margin-top:4px;display:flex;gap:8px}
+.btn{background:var(--sig);color:#0F131A;border:0;border-radius:9px;padding:8px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:focus-visible{outline:2px solid #fff}
+
+.log{display:grid;gap:10px}
+.ent{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:6px}
+.ent .when{font-family:"IBM Plex Mono";font-size:11px;color:var(--mute)}
+.ent .what{font-size:14px}
+.ent .why{font-size:12.5px;color:var(--mute)}
+.ent .act{display:flex;gap:8px;margin-top:2px}
+.ent.done{opacity:.55}
+.ent .st{font-family:"IBM Plex Mono";font-size:11px;color:var(--ok)}
+
+.sw{display:grid;gap:8px}
+.sw label{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;cursor:pointer}
+.sw label small{display:block;color:var(--mute);font-size:12px}
+.tg{width:44px;height:26px;border-radius:13px;background:var(--panel2);position:relative;flex:none;transition:.2s;border:1px solid var(--line)}
+.tg::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--mute);transition:.2s}
+input:checked + .tg{background:var(--sig)}
+input:checked + .tg::after{left:21px;background:#0F131A}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.preview{background:#F7F7FB;color:#1C1F27;border-radius:14px;padding:14px;font-size:13px;display:grid;gap:6px}
+.preview h5{margin:0;font-size:12px;color:#6B7280;font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-family:"IBM Plex Mono"}
+.preview .l{display:flex;justify-content:space-between;border-bottom:1px solid #E5E7EE;padding:4px 0}
+.preview .l.off{display:none}
+.promise{font-size:12.5px;color:var(--mute);border-left:2px solid var(--sig);padding-left:10px}
+.toast{position:absolute;left:20px;right:20px;bottom:100px;background:var(--sig);color:#0F131A;padding:12px 14px;border-radius:12px;font-size:13px;opacity:0;transform:translateY(8px);transition:.25s;z-index:6;pointer-events:none;font-weight:500}
+.toast.show{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div>
+    <div class="eyebrow">Prototype B · 學習管家 · 會主動排程的代理</div>
+    <h1>Orbit 學習航線<small>它不陪你聊天，它幫你排好今天，然後在你該睡的時候把燈關掉</small></h1>
+    <p class="lead">給 <b>國二到國三</b>（13–15 歲），面對會考的那群。兒福聯盟 2026 年調查：19% 國中生重度學習疲勞、近兩成一天睡不到 6 小時。這個年紀不缺題目、不缺講解，缺的是<b>一個看得懂全局、會替你減量的人</b>。Orbit 是那個人。</p>
+
+    <div class="spec">
+      <section><h3>用戶與情境</h3><p>週間 17:00–22:30。學校進度、段考、補習、會考倒數四條線同時跑。家長焦慮、孩子想被信任。</p></section>
+      <section><h3>核心循環</h3><ul><li><b>今天</b>：Orbit 讀了課表、段考日期、你昨晚幾點睡，排出 25 分鐘一格的航線，每格都寫「為什麼排這個」</li><li><b>地圖</b>：108 課綱知識點的掌握地圖，每個點有「多確定」（不只是百分比）</li><li><b>航海日誌</b>：它替你做的每個決定都列出來，你可以撤銷</li><li><b>分享面板</b>：爸媽看到什麼由你決定，Orbit 不偷偷回報</li></ul></section>
+      <section><h3>為什麼是 next gen</h3><ul><li>代理不是回答問題，是<b>做事</b>：把小考往前排、偵測三天沒碰英文、昨晚太晚就減量</li><li>疲勞感知是產品核心，不是設定頁的一個開關</li><li>掌握度附「信心區間」：資料少就老實說「我還不確定」</li><li>低刺激介面：沒有火焰、沒有連續天數、沒有排行榜</li></ul></section>
+      <section><h3>最大的賭注與護欄</h3><p>要孩子把課表和睡眠交給它，信任是唯一的貨幣。所以每個自動動作都可撤銷、資料分享由孩子勾選、22:30 硬停不可被家長關閉。</p></section>
+      <section><h3>視覺語言</h3><p>儀表板、深色、等寬數字。像飛航管制，不像遊戲。</p>
+      <div class="swatches"><i style="background:#0F131A"></i><i style="background:#171C25"></i><i style="background:#8FA3FF"></i><i style="background:#5BD3A0"></i><i style="background:#F2B950"></i><i style="background:#E7EAF2"></i></div></section>
+    </div>
+    <p class="hint">右邊的手機可以點：時間格看理由、地圖上的知識點、日誌的撤銷、分享面板的開關。</p>
+  </div>
+
+  <div class="phone" id="phone">
+    <div class="notch"></div>
+
+    <!-- 今天 -->
+    <div class="screen on" data-s="today">
+      <div class="top"><span class="d">週五 9/18</span><span class="cd">會考 −239 天</span></div>
+      <h2 class="s">今天排輕一點<em>昨晚 23:40 才睡，Orbit 把總量減了 30%</em></h2>
+      <div class="energy">
+        <div class="row"><span>睡眠 <b class="mono">6h 10m</b></span><span>今日負荷 <b class="mono">70 分鐘</b></span></div>
+        <div class="meter"><i></i></div>
+        <div class="note">段考還有 12 天。今天先顧理化和英文，數學明天再排回來。</div>
+      </div>
+      <div class="tl" id="tl">
+        <div class="blk rest"><div class="t">16:30</div><div><div class="n">放學 · 回家路上不排事</div></div></div>
+        <div class="blk now"><div class="t">17:00</div><div><div class="n">理化 · 浮力 <span>25'</span></div><div class="bar"><i></i></div><div class="why">週四理化小考範圍含浮力，你的掌握度 62% 但我只有 5 題資料，先確認一下。</div><span class="tag">小考 −6 天</span></div></div>
+        <div class="blk rest"><div class="t">17:25</div><div><div class="n">休息 10 分鐘</div></div></div>
+        <div class="blk"><div class="t">17:35</div><div><div class="n">英文 · Unit 3 單字 <span>20'</span></div><div class="why">你三天沒碰英文了。段考範圍到 Unit 4，今天先把 Unit 3 的 15 個字看過一次，不背。</div><span class="tag">3 天沒碰</span></div></div>
+        <div class="blk rest"><div class="t">18:00</div><div><div class="n">晚餐 · 補習 19:00–21:00</div></div></div>
+        <div class="blk"><div class="t">21:20</div><div><div class="n">數學 · 錯題 3 題 <span>25'</span></div><div class="why">昨天作業錯的 3 題都是移項變號。25 分鐘做完就停，做不完也停。</div><span class="tag">同一個概念</span></div></div>
+        <div class="blk stop"><div class="t">22:30</div><div><div class="n">航線到此。剩下的明天排。</div><div class="why">這條規則不能被關掉，爸媽也不能。</div></div></div>
+      </div>
+    </div>
+
+    <!-- 地圖 -->
+    <div class="screen" data-s="map">
+      <div class="top"><span class="d">掌握地圖</span><span class="cd">108 課綱 · 國二上</span></div>
+      <h2 class="s">哪裡穩、哪裡虛<em>顏色是掌握度，點進去看我有多確定</em></h2>
+      <div class="legend"><span><i style="background:var(--ok)"></i>穩了</span><span><i style="background:var(--warn)"></i>快了</span><span><i style="background:var(--bad)"></i>還虛</span><span><i style="background:var(--none)"></i>沒碰過</span></div>
+      <div class="subj" id="map">
+        <h4><span>理化</span><span class="mono">68%</span></h4>
+        <div class="nodes">
+          <div class="node" data-l="ok" data-n="密度" data-p="88" data-c="±5" data-k="24 題" data-w="穩了，兩週後再回顧一次就好。">密度<b>88%</b><i class="f" style="width:88%"></i></div>
+          <div class="node" data-l="warn" data-n="浮力" data-p="62" data-c="±12" data-k="5 題" data-w="資料太少，我還不確定。今天 17:00 那格就是為了確認這裡。">浮力<b>62%</b><i class="f" style="width:62%"></i></div>
+          <div class="node" data-l="bad" data-n="壓力" data-p="41" data-c="±9" data-k="11 題" data-w="你會算但常搞混單位。建議下週段考前排兩格。">壓力<b>41%</b><i class="f" style="width:41%"></i></div>
+          <div class="node" data-l="none" data-n="熱與溫度" data-p="—" data-c="" data-k="0 題" data-w="還沒教到，先不管。">熱與溫度<b>—</b><i class="f" style="width:0"></i></div>
+        </div>
+        <h4><span>數學</span><span class="mono">74%</span></h4>
+        <div class="nodes">
+          <div class="node" data-l="ok" data-n="一元一次" data-p="91" data-c="±4" data-k="38 題" data-w="穩。">一元一次<b>91%</b><i class="f" style="width:91%"></i></div>
+          <div class="node" data-l="warn" data-n="移項變號" data-p="66" data-c="±8" data-k="14 題" data-w="最近 5 題對 4 題，在往上。今晚 3 題再確認。">移項變號<b>66%</b><i class="f" style="width:66%"></i></div>
+          <div class="node" data-l="ok" data-n="二元一次" data-p="80" data-c="±7" data-k="19 題" data-w="穩，但應用題略慢。">二元一次<b>80%</b><i class="f" style="width:80%"></i></div>
+          <div class="node" data-l="bad" data-n="不等式" data-p="35" data-c="±15" data-k="4 題" data-w="資料少又低，段考前一定要排。">不等式<b>35%</b><i class="f" style="width:35%"></i></div>
+        </div>
+        <h4><span>英文</span><span class="mono">58%</span></h4>
+        <div class="nodes">
+          <div class="node" data-l="warn" data-n="Unit 3 單字" data-p="55" data-c="±10" data-k="9 題" data-w="三天沒碰，掌握度自然往下掉。今天看過一次就會回來。">U3 單字<b>55%</b><i class="f" style="width:55%"></i></div>
+          <div class="node" data-l="bad" data-n="現在完成式" data-p="40" data-c="±11" data-k="8 題" data-w="have/has + p.p. 你會，但和過去式的分界還模糊。">現在完成式<b>40%</b><i class="f" style="width:40%"></i></div>
+          <div class="node" data-l="ok" data-n="Unit 2" data-p="84" data-c="±6" data-k="21 題" data-w="穩。">U2<b>84%</b><i class="f" style="width:84%"></i></div>
+          <div class="node" data-l="none" data-n="Unit 4" data-p="—" data-c="" data-k="0 題" data-w="下週才教。">U4<b>—</b><i class="f" style="width:0"></i></div>
+        </div>
+      </div>
+      <div class="detail" id="detail">
+        <div><b>浮力</b> · 理化</div>
+        <div class="ci">掌握度 <b>62%</b> · 信心 <b>±12</b> · 依據 <b>5 題</b></div>
+        <div>資料太少，我還不確定。今天 17:00 那格就是為了確認這裡。</div>
+        <div class="act"><button class="btn" data-act="plan">排進明天</button><button class="btn ghost" data-act="skip">我自己會</button></div>
+      </div>
+    </div>
+
+    <!-- 日誌 -->
+    <div class="screen" data-s="log">
+      <div class="top"><span class="d">航海日誌</span><span class="cd">Orbit 替你做的事</span></div>
+      <h2 class="s">我動了什麼<em>每一項都可以撤銷，我不會生氣</em></h2>
+      <div class="log" id="log">
+        <div class="ent"><div class="when">今天 07:10</div><div class="what">昨晚 23:40 你還在線，今天總量減 30%</div><div class="why">睡不到 6.5 小時的日子，多排也記不住。數學挪到明天。</div><div class="act"><button class="btn ghost" data-undo>撤銷，照原本排</button></div></div>
+        <div class="ent"><div class="when">昨天 21:05</div><div class="what">週四理化小考範圍含浮力，往前 2 天排進複習</div><div class="why">你的浮力只有 5 題資料，我想早一點知道你到底會不會。</div><div class="act"><button class="btn ghost" data-undo>撤銷</button></div></div>
+        <div class="ent"><div class="when">昨天 17:00</div><div class="what">偵測到 3 天沒碰英文，今天加 20 分鐘看單字</div><div class="why">不是背，是看過一次讓它不要繼續掉。</div><div class="act"><button class="btn ghost" data-undo>撤銷</button></div></div>
+        <div class="ent done"><div class="when">週三 22:30</div><div class="what">到點關燈，把沒做完的不等式移到週五</div><div class="why">這條不能撤銷。</div><div class="st">已執行 · 不可撤銷</div></div>
+        <div class="ent done"><div class="when">週二 16:40</div><div class="what">讀取你拍的段考範圍表，更新地圖</div><div class="why">理化 3 個知識點、數學 4 個、英文 Unit 3–4。</div><div class="st">已執行</div></div>
+      </div>
+    </div>
+
+    <!-- 分享 -->
+    <div class="screen" data-s="share">
+      <div class="top"><span class="d">分享面板</span><span class="cd">爸媽看得到什麼</span></div>
+      <h2 class="s">你決定他們看什麼<em>Orbit 不會私下回報你沒勾的事</em></h2>
+      <div class="sw" id="sw">
+        <label><span>每週摘要<small>學了幾天、哪裡進步、哪裡還在練</small></span><input type="checkbox" data-k="week" checked><span class="tg"></span></label>
+        <label><span>睡眠時間<small>只有平均值，不含幾點睡</small></span><input type="checkbox" data-k="sleep" checked><span class="tg"></span></label>
+        <label><span>每天做了什麼<small>逐日的航線紀錄</small></span><input type="checkbox" data-k="daily"><span class="tg"></span></label>
+        <label><span>錯題內容<small>你錯了哪些題、錯在哪</small></span><input type="checkbox" data-k="wrong"><span class="tg"></span></label>
+        <label><span>掌握地圖<small>每個知識點的百分比</small></span><input type="checkbox" data-k="map"><span class="tg"></span></label>
+      </div>
+      <div class="preview" id="pv">
+        <h5>爸媽手機上會看到</h5>
+        <div class="l" data-k="week"><span>本週</span><b>學了 4 天 · 進步：密度 · 還在練：移項</b></div>
+        <div class="l" data-k="sleep"><span>睡眠</span><b>平均 6.8 小時</b></div>
+        <div class="l off" data-k="daily"><span>今天</span><b>理化 25' · 英文 20' · 數學 25'</b></div>
+        <div class="l off" data-k="wrong"><span>錯題</span><b>移項變號 ×3</b></div>
+        <div class="l off" data-k="map"><span>地圖</span><b>理化 68% · 數學 74% · 英文 58%</b></div>
+      </div>
+      <div class="promise">爸媽端會看到「小睿選擇分享了 2 項」。他們知道有東西沒分享，但看不到是什麼。</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="tabbar">
+      <button class="on" data-t="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>今天</button>
+      <button data-t="map"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>地圖</button>
+      <button data-t="log"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>日誌</button>
+      <button data-t="share"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>分享</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const phone=document.getElementById('phone');
+  const toast=document.getElementById('toast');let tt;
+  function say(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove('show'),1900);}
+  function go(n){phone.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.dataset.s===n));phone.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));}
+  phone.querySelectorAll('.tabbar button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.t)));
+  phone.querySelectorAll('#tl .blk').forEach(b=>{ if(b.querySelector('.why')) b.addEventListener('click',()=>b.classList.toggle('open')); });
+  // map
+  const det=document.getElementById('detail');
+  phone.querySelectorAll('.node').forEach(n=>n.addEventListener('click',()=>{
+    phone.querySelectorAll('.node').forEach(x=>x.classList.remove('sel')); n.classList.add('sel');
+    const d=n.dataset; const subj=n.closest('.nodes').previousElementSibling.querySelector('span').textContent;
+    det.innerHTML=`<div><b>${d.n}</b> · ${subj}</div><div class="ci">掌握度 <b>${d.p}${d.p==='—'?'':'%'}</b>${d.c?` · 信心 <b>${d.c}</b>`:''} · 依據 <b>${d.k}</b></div><div>${d.w}</div><div class="act"><button class="btn" data-act="plan">排進明天</button><button class="btn ghost" data-act="skip">我自己會</button></div>`;
+    bindDet();
+  }));
+  function bindDet(){ det.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>{ say(b.dataset.act==='plan'?'好，明天 17:00 排 25 分鐘，日誌有紀錄':'收到，我兩週後再問你一次'); })); }
+  bindDet();
+  // log undo
+  phone.querySelectorAll('[data-undo]').forEach(b=>b.addEventListener('click',()=>{ const e=b.closest('.ent'); e.classList.add('done'); e.querySelector('.act').innerHTML='<span class="st">已撤銷 · 今天照原本的量排</span>'; say('撤銷了。你比我清楚你的狀態。'); }));
+  // share
+  phone.querySelectorAll('#sw input').forEach(i=>i.addEventListener('change',()=>{
+    phone.querySelector(`#pv .l[data-k="${i.dataset.k}"]`).classList.toggle('off',!i.checked);
+    const n=[...phone.querySelectorAll('#sw input')].filter(x=>x.checked).length;
+    phone.querySelector('.promise').textContent=`爸媽端會看到「小睿選擇分享了 ${n} 項」。他們知道有東西沒分享，但看不到是什麼。`;
+  }));
+})();
+</script>

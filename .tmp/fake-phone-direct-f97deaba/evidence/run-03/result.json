@@ -1,0 +1,221 @@
+{
+  "transport": "direct",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 30,
+  "voice_audio_ms": 7460,
+  "client_receive_max_gap_ms": 5344.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 14400,
+  "avatar_webrtc_timing": {
+    "ok": true,
+    "frame_count": 720,
+    "gap_count": 0,
+    "max_pts_gap_ms": 0.0,
+    "pts_gaps": [],
+    "max_receive_late_ms": 26.0
+  },
+  "user_caption": "What is that?",
+  "assistant_caption": "聽起來很有精神喔！你剛剛看到什麼特別的嗎？願意跟我分享一下嗎？",
+  "first_response_ms": 750,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 39,
+    "round_latencies_ms": [
+      629.5,
+      724.9,
+      516.7,
+      873.6,
+      394.1,
+      553.3,
+      744.8,
+      -148.2,
+      585.1,
+      555.6,
+      660.3,
+      -387.0,
+      890.3,
+      408.3,
+      802.6,
+      -423.3,
+      414.0,
+      -230.7,
+      691.9,
+      457.7
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 538.8,
+      "p95": 590.4,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 38.5
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 532.7
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 41,
+    "round_latencies_ms": [
+      516.7,
+      873.6,
+      394.1,
+      553.3,
+      744.8,
+      -148.2,
+      585.1,
+      555.6,
+      660.3,
+      -387.0,
+      890.3,
+      408.3,
+      802.6,
+      -423.3,
+      414.0,
+      -230.7,
+      691.9,
+      457.7,
+      -291.1,
+      -273.9
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 537.3,
+      "p95": 585.9,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 39.0
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 526.4
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 5460,
+    "envelope_correlation": 0.9805,
+    "reference_speech_frames": 254,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0,
+    "speech_windows_ms": [
+      [
+        5520,
+        6220
+      ],
+      [
+        6340,
+        6720
+      ],
+      [
+        6780,
+        6820
+      ],
+      [
+        6840,
+        7620
+      ],
+      [
+        8160,
+        8500
+      ],
+      [
+        8560,
+        8700
+      ],
+      [
+        8720,
+        8980
+      ],
+      [
+        9040,
+        9380
+      ],
+      [
+        9400,
+        9580
+      ],
+      [
+        9700,
+        9800
+      ],
+      [
+        9860,
+        9980
+      ],
+      [
+        10020,
+        10380
+      ],
+      [
+        10900,
+        11220
+      ],
+      [
+        11260,
+        11480
+      ],
+      [
+        11580,
+        11760
+      ],
+      [
+        11780,
+        11980
+      ],
+      [
+        12000,
+        12420
+      ]
+    ]
+  },
+  "avatar_webrtc_speech_timing": {
+    "ok": true,
+    "speech_gap_count": 0,
+    "max_speech_pts_gap_ms": 0.0,
+    "speech_pts_gaps": []
+  },
+  "asr_expected": "我沒有發燒但有痰今天精神還可以想問應該注意什麼",
+  "asr_char_recall": 0.0,
+  "gates": {
+    "transport": true,
+    "avatar_route": true,
+    "asr": false,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_speech_timing": true,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": false
+}

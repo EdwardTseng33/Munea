@@ -1,0 +1,306 @@
+{
+  "transport": "relay",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 59,
+  "voice_audio_ms": 15761,
+  "client_receive_max_gap_ms": 11469.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 26000,
+  "avatar_webrtc_timing": {
+    "ok": true,
+    "frame_count": 1300,
+    "gap_count": 0,
+    "max_pts_gap_ms": 0.0,
+    "pts_gaps": [],
+    "max_receive_late_ms": 105.0
+  },
+  "user_caption": "秀英阿姨 , 聽到你膝蓋又痛了 , 你寧替你擔心呣。",
+  "assistant_caption": "聽到秀英阿姨膝蓋不舒服，我也覺得很心疼。你剛剛是聽她說膝蓋痛嗎？要不我們一起來想想看，有沒有什麼可以幫她緩和一下的？還是妳對她的狀況比較瞭解，可以跟我多說一點呢？",
+  "first_response_ms": 906,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 18,
+    "round_latencies_ms": [
+      506.1,
+      182.9,
+      -385.7,
+      -357.9,
+      690.0,
+      261.0,
+      -292.0,
+      89.8,
+      634.9,
+      -477.3,
+      -36.4,
+      -554.4,
+      -74.4,
+      266.3,
+      737.9,
+      414.1,
+      869.7,
+      415.5
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 450.3,
+      "p95": 544.0,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 43.3
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 511.7
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 20,
+    "round_latencies_ms": [
+      506.1,
+      182.9,
+      -385.7,
+      -357.9,
+      690.0,
+      261.0,
+      -292.0,
+      89.8,
+      634.9,
+      -477.3,
+      -36.4,
+      -554.4,
+      -74.4,
+      266.3,
+      737.9,
+      414.1,
+      869.7,
+      415.5,
+      902.1,
+      -25.5
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 451.7,
+      "p95": 542.8,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 43.5
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.6,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 501.0
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 9000,
+    "envelope_correlation": 0.9739,
+    "reference_speech_frames": 522,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0,
+    "speech_windows_ms": [
+      [
+        9260,
+        10420
+      ],
+      [
+        10480,
+        10600
+      ],
+      [
+        10680,
+        10880
+      ],
+      [
+        10900,
+        11040
+      ],
+      [
+        11180,
+        11660
+      ],
+      [
+        11760,
+        12080
+      ],
+      [
+        12100,
+        12200
+      ],
+      [
+        12220,
+        12400
+      ],
+      [
+        12540,
+        12580
+      ],
+      [
+        13280,
+        13880
+      ],
+      [
+        13900,
+        13980
+      ],
+      [
+        14100,
+        14180
+      ],
+      [
+        14200,
+        14400
+      ],
+      [
+        14420,
+        14680
+      ],
+      [
+        14740,
+        14880
+      ],
+      [
+        14960,
+        15400
+      ],
+      [
+        15960,
+        16100
+      ],
+      [
+        16200,
+        16560
+      ],
+      [
+        16640,
+        16840
+      ],
+      [
+        16860,
+        17100
+      ],
+      [
+        17120,
+        17300
+      ],
+      [
+        17320,
+        17440
+      ],
+      [
+        17520,
+        17720
+      ],
+      [
+        18060,
+        18580
+      ],
+      [
+        18660,
+        18820
+      ],
+      [
+        18880,
+        19020
+      ],
+      [
+        19040,
+        19160
+      ],
+      [
+        19240,
+        19880
+      ],
+      [
+        19920,
+        19980
+      ],
+      [
+        20580,
+        21060
+      ],
+      [
+        21100,
+        21420
+      ],
+      [
+        21480,
+        21640
+      ],
+      [
+        21700,
+        22360
+      ],
+      [
+        22420,
+        22560
+      ],
+      [
+        22980,
+        23100
+      ],
+      [
+        23180,
+        23360
+      ],
+      [
+        23440,
+        23660
+      ],
+      [
+        23680,
+        23860
+      ],
+      [
+        23920,
+        24280
+      ]
+    ]
+  },
+  "avatar_webrtc_speech_timing": {
+    "ok": true,
+    "speech_gap_count": 0,
+    "max_speech_pts_gap_ms": 0.0,
+    "speech_pts_gaps": []
+  },
+  "asr_expected": "管線自測不計分",
+  "asr_char_recall": 0.0,
+  "gates": {
+    "transport": true,
+    "asr": true,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_speech_timing": true,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": true
+}

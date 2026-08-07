@@ -1,0 +1,132 @@
+<meta charset="utf-8">
+<title>Tandelo 狀態層設計</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{--pine:#0E5F52;--pine-deep:#0A463D;--mint:#DCEFE8;--coral:#F26B54;--coral-soft:#FDE7E1;--coral-deep:#D9523C;--honey:#F4C24D;--honey-soft:#FDF2D2;--honey-ink:#7A5A06;
+ --bg:#ECE9E1;--card:#fff;--ink:#12211D;--mute:#5E6B67;--line:#D9D5CA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--honey-ink:#F1CF7A;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}}
+:root[data-theme="dark"]{--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--honey-ink:#F1CF7A;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.8;font-size:15.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 96px;display:grid;gap:50px}
+.wm{font-family:Outfit;font-weight:700;font-size:26px;letter-spacing:-.03em;display:flex;align-items:center;gap:6px}
+.dots{position:relative;width:26px;height:16px;display:inline-block}
+.dots i{position:absolute;width:14px;height:14px;border-radius:50%;top:1px}
+.dots i:first-child{left:0;background:#F26B54}.dots i:last-child{left:10px;background:#1C8A78;opacity:.88}
+.k{font-size:12px;letter-spacing:.16em;color:var(--coral);font-weight:700}
+h1{font-size:clamp(30px,5.2vw,50px);line-height:1.2;letter-spacing:-.02em;margin:8px 0 14px;font-weight:900;text-wrap:balance}
+h2{font-size:24px;margin:0 0 4px;font-weight:900}
+h3{font-size:16px;margin:0;font-weight:700}
+p{margin:0;max-width:70ch;color:var(--mute)}p b,li b,td b{color:var(--ink)}
+section{display:grid;gap:18px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:8px;align-content:start;min-width:0}
+.card p,.card li{font-size:14.5px}.card ul{margin:0;padding-left:18px;color:var(--mute);display:grid;gap:6px}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--mint);color:var(--pine-deep);justify-self:start}
+.tag.c{background:var(--coral-soft);color:var(--coral-deep)}.tag.h{background:var(--honey-soft);color:var(--honey-ink)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);letter-spacing:.06em;white-space:nowrap}
+.scroll{overflow-x:auto}
+.pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pipe div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:13px;line-height:1.6;color:var(--mute);position:relative}
+.pipe b{display:block;color:var(--ink);font-size:15px}.pipe small{font-family:Outfit;font-weight:700;color:var(--coral)}
+.pipe div.key{background:var(--pine);border-color:var(--pine);color:#fff}.pipe div.key b{color:#fff}.pipe div.key small{color:var(--honey)}
+@media (max-width:760px){.pipe{grid-template-columns:1fr}}
+.lv{display:grid;grid-template-columns:14px 1fr;gap:10px;align-items:start;font-size:14.5px}
+.lv i{width:14px;height:14px;border-radius:50%;margin-top:7px}
+</style>
+<div class="wrap">
+  <div class="wm">Tandelo<span class="dots"><i></i><i></i></span><span style="font-size:15px;font-weight:600;color:var(--mute);letter-spacing:0;margin-left:6px">狀態層設計 v0.1</span></div>
+
+  <div><div class="k">STATE LAYER · 2026-09-19</div>
+    <h1>怎麼知道孩子今天累不累、煩不煩，<br>而且不變成監控。</h1>
+    <p>陪跑教練要先看人再排進度。這一頁定義睡眠、活動、壓力、情緒四種狀態各自從哪裡來、怎麼合成、用來改什麼、誰看得到。原則一句話：<b>沒有任何裝置權限也要能運作；有權限只是更準。</b></p></div>
+
+  <section><h2>1. 四種狀態，三種來源</h2>
+    <div class="scroll"><table><thead><tr><th>狀態</th><th>裝置自動（要授權）</th><th>孩子手動（一秒）</th><th>App 內行為（不用授權）</th></tr></thead><tbody>
+      <tr><td><b>睡眠</b></td><td>手機健康資料的睡眠時數、就寢時間。有手錶更準；只有手機時準度普通</td><td>早上第一次打開時問一題：「昨晚大概幾點睡？」四個選項</td><td>昨晚最後一次使用 App 的時間；22:30 關燈後還在不在線</td></tr>
+      <tr><td><b>活動</b></td><td>步數、運動分鐘。手機就有，準度夠</td><td>不另外問</td><td>有沒有做「走 5 分鐘」的休息格</td></tr>
+      <tr><td><b>壓力</b></td><td>不直接量。有手錶者可選擇分享心率變化趨勢</td><td>每週日兩題：「這週壓力大嗎」「最大的是什麼」（段考／補習／家裡／朋友／其他）</td><td>離段考幾天、連續幾天沒休息、練習時間被壓到多晚</td></tr>
+      <tr><td><b>情緒</b></td><td>不量。<b>不做臉部或聲音的情緒辨識</b></td><td>每天一次心情點選：還不錯／普通／很累／有點煩，可加一個原因，也可跳過</td><td>按「煩」的次數、突然大量用提示、答題明顯變急或放棄</td></tr>
+    </tbody></table></div>
+    <p>國中生多數只有手機、沒有手錶，所以手動與行為兩欄才是主幹，裝置資料是加分。沒填、沒授權都不算壞訊號，也不會被追問。</p>
+  </section>
+
+  <section><h2>2. 資料怎麼流</h2>
+    <div class="pipe">
+      <div><small>01</small><b>收集</b>裝置、手動、行為、行事曆（段考與補習）</div>
+      <div class="key"><small>02 · 在手機上算</small><b>每日狀態摘要</b>睡眠、活動、負荷、心情各分三級。<br>原始健康數字不離開手機</div>
+      <div><small>03</small><b>教練規則</b>依摘要調整今天的量、時間、語氣</div>
+      <div><small>04</small><b>分層分享</b>孩子看全部；老師看旗標；家人看孩子選的</div>
+      <div><small>05</small><b>安全升級</b>持續低落或出現危險訊號，交給真人</div>
+    </div>
+    <div class="g3">
+      <div class="card"><div class="lv"><i style="background:#1C8A78"></i><div><b>綠：照計畫</b><br><span style="color:var(--mute)">睡夠、心情平穩、離段考還遠</span></div></div></div>
+      <div class="card"><div class="lv"><i style="background:#F4C24D"></i><div><b>黃：減量</b><br><span style="color:var(--mute)">睡不到 6.5 小時、或連兩天說累、或段考前三天</span></div></div></div>
+      <div class="card"><div class="lv"><i style="background:#F26B54"></i><div><b>珊瑚：今天可以不做</b><br><span style="color:var(--mute)">說「很煩」、或連三天睡不到 6 小時、或深夜還在線</span></div></div></div>
+    </div>
+    <p>「壓力」是合成出來的：段考距離 × 睡眠債 × 心情趨勢 × 行為訊號。對孩子<b>不顯示分數</b>，只顯示小陪的一句話和改過的計畫。門檻是初始值，要用試點資料校正。</p>
+  </section>
+
+  <section><h2>3. 狀態用來改什麼</h2>
+    <div class="scroll"><table><thead><tr><th>訊號</th><th>小陪怎麼做</th><th>小陪不做</th></tr></thead><tbody>
+      <tr><td>昨晚睡少</td><td>今天只留一件事，其餘挪到週末；提醒 22:30 關燈</td><td>不說教、不告訴家長</td></tr>
+      <tr><td>今天很少走動</td><td>練習中間插一格「走 5 分鐘」，走完也算完成</td><td>不設每日步數目標</td></tr>
+      <tr><td>段考前一週</td><td>自動減量、只練已經卡住的點、通知降到低頻</td><td>不加新單元</td></tr>
+      <tr><td>說「有點煩」</td><td>「收到，不問為什麼。」今天可以什麼都不做</td><td>不追問原因、不安慰過頭、不扮演朋友</td></tr>
+      <tr><td>連續五天狀態好</td><td>問他要不要挑戰一題加分的</td><td>不自動加量</td></tr>
+      <tr><td>上課當天狀態差</td><td>老師的課前一頁多一個旗標：「今天別點他」</td><td>不給老師看原因與數字</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section><h2>4. 誰看得到什麼</h2>
+    <div class="g4">
+      <div class="card"><h3>孩子自己</h3><p>全部。包含趨勢圖、小陪為什麼這樣排。可以隨時關掉任何一項、刪掉紀錄。</p></div>
+      <div class="card"><h3>帶他的老師</h3><p>只有旗標：「本週睡眠偏少」「心情連兩天偏低」。沒有數字、沒有原因。</p></div>
+      <div class="card"><h3>家人</h3><p>預設看不到狀態。孩子可以選擇分享「這週睡得怎麼樣」。小陪會提醒家人「段考週請不要加題目」。</p></div>
+      <div class="card"><h3>平台</h3><p>只存三級摘要與旗標，用來改善規則。不拿來投放廣告、不賣、不給第三方。</p></div>
+    </div>
+  </section>
+
+  <section><h2>5. 什麼時候交給真人</h2>
+    <div class="g3">
+      <div class="card"><span class="tag h">第一層</span><h3>連續 3 天珊瑚</h3><p>小陪停止加量，帶他的老師收到旗標，建議下堂課前私下問一句。不通知家長。</p></div>
+      <div class="card"><span class="tag c">第二層</span><h3>連續 7 天低落，或老師覺得不對</h3><p>老師一鍵轉給平台的關懷專人（受過訓練的真人）。由專人決定要不要、怎麼聯絡家長。</p></div>
+      <div class="card"><span class="tag c">第三層</span><h3>出現傷害自己的字句</h3><p>小陪立刻給出安心專線 1925 等資源、停止一般對話，關懷專人即時接手並依規定聯絡家長。這是唯一不經孩子同意的情況，同意書上會先講清楚。</p></div>
+    </div>
+    <p>Tandelo 不診斷、不評估心理健康。我們只做兩件事：把學習的量調低，和把人交給對的人。</p>
+  </section>
+
+  <section><h2>6. 授權怎麼要</h2>
+    <div class="g2">
+      <div class="card"><h3>一次只要一樣，講清楚換到什麼</h3><ul>
+        <li>第一天不要任何權限。先用手動與行為資料運作</li>
+        <li>第 3 天小陪第一次排週計畫時才問睡眠：「讓我看你睡多久，我排計畫會把你累不累算進去」</li>
+        <li>步數等他第一次用「走 5 分鐘」時再問</li>
+        <li>拒絕之後不再彈出，只在「我」裡面留一個開關</li></ul></div>
+      <div class="card"><h3>法規與平台規定</h3><ul>
+        <li>未成年人：註冊與健康資料授權都要家長同意，同意書分開勾選</li>
+        <li>蘋果與谷歌的健康資料規定：不得用於廣告、要有清楚的隱私政策、用途要事先申報審核</li>
+        <li>健康相關資料在個資法屬於敏感類別：最小蒐集、原始數字留在手機、可隨時撤回與刪除</li>
+        <li>出海時歐盟與日本的兒少資料規定更嚴，這個「手機上算、只傳三級摘要」的設計可以直接沿用</li></ul></div>
+    </div>
+  </section>
+
+  <section><h2>7. 刻意不做的</h2>
+    <div class="g3">
+      <div class="card"><h3>不做情緒辨識</h3><p>不分析臉、不分析聲音語氣。對未成年人做這件事，法規與觀感風險都太高，準度也不可靠。</p></div>
+      <div class="card"><h3>不給分數、不做連續天數</h3><p>沒有「今日狀態 72 分」、沒有「連續打卡 14 天」。狀態是拿來幫他減量的，不是另一張成績單。</p></div>
+      <div class="card"><h3>不給家長儀表板</h3><p>一旦家長能看到每天幾點睡，孩子第二天就會關掉授權，整層就失效了。</p></div>
+    </div>
+  </section>
+
+  <section><h2>8. 還沒解的問題</h2>
+    <div class="g3">
+      <div class="card"><h3>只有手機的睡眠準度</h3><p>要在試點比對「手機推估」與「孩子自己填」，決定以哪個為主。</p></div>
+      <div class="card"><h3>孩子會不會亂點心情</h3><p>會。所以心情只當趨勢用，單日不觸發任何對外的動作。</p></div>
+      <div class="card"><h3>關懷專人的編制與資格</h3><p>需要幾位、要什麼背景（輔導或社工）、夜間怎麼值班，要和法務與專業顧問一起定。</p></div>
+    </div>
+  </section>
+</div>

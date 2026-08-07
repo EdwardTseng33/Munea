@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>寧寧動起來 · 前後層骨架 v8</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --teal:#3AA8A0; --cream:#FAF7F2; --ink:#33403D; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Noto Sans TC",-apple-system,sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:18px 16px 40px; }
+  h1 { font-size:19px; font-weight:700; margin:6px 0 2px; }
+  .sub { font-size:12.5px; color:#6b7a76; margin-bottom:12px; text-align:center; }
+  .phone { width:min(46vh,340px); aspect-ratio:9/19; background:#F6EFE3; border-radius:34px; border:10px solid #2e2e30; overflow:hidden; position:relative; box-shadow:0 8px 30px rgba(51,64,61,.18); }
+  .artwrap { position:absolute; left:50%; bottom:0; width:100%; transform:translateX(-50%); aspect-ratio:853/1844; }
+  .artwrap img.layer { position:absolute; inset:0; width:100%; height:100%; }
+  #headg { position:absolute; inset:0; will-change:transform; }
+  #faceg { position:absolute; inset:0; }
+  #headpitch, #headpitchB { position:absolute; inset:0; will-change:transform; }
+  #headgB { position:absolute; inset:0; will-change:transform; }
+  canvas.mesh { position:absolute; }
+  #armLg, #armRg, #armLj, #armRj { position:absolute; inset:0; will-change:transform; }
+  #headg img.part, #headpitch > img.eyestate { position:absolute; pointer-events:none; }
+  /* 不要提升成獨立合成層：一提升，畫在它上面的睫毛與閉眼貼圖會被瀏覽器排到它下面，
+     眨眼時就會看到「半透明的睜眼眼球」浮在閉起來的眼皮上（8/12 追到的鬼影真因）。 */
+  #irisimg { }
+  /* 眨眼用「顯示／隱藏」切換，不要用透明度 0↔1：
+     透明度切換時瀏覽器會把它當合成層的淡入淡出，眨眼那 0.1 秒會被畫成
+     「半透明的睜眼眼球疊在閉眼的眼皮上」＝灰綠色鬼影（8/12 抓到）。 */
+  img.eyestate { left:38.1%; top:25.98%; width:27.55%; height:4.93%; visibility:hidden; }
+  img.gazestate { top:25.9219%; width:26.0258%; height:4.5553%; opacity:0; }
+  img.browstate { left:35.1700%; top:23.3731%; width:33.9977%; height:6.2364%; opacity:0; }
+  img.mouthpatch { left:42.79%; top:31.72%; width:19.34%; height:6.34%; opacity:0; transform-origin:50% 30%; }
+  .meters { display:flex; gap:16px; justify-content:center; margin-top:10px; font-size:12.5px; color:#6b7a76; }
+  .meters b { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .btns { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; justify-content:center; }
+  button { font:inherit; font-size:15px; padding:10px 18px; border-radius:999px; border:1.5px solid #d8d2c4; background:#fff; color:var(--ink); cursor:pointer; }
+  button.on { background:var(--teal); border-color:var(--teal); color:#fff; }
+  .note { max-width:450px; margin-top:14px; font-size:12.5px; line-height:1.7; color:#8a948f; text-align:center; }
+</style>
+</head>
+<body>
+  <h1>寧寧動起來 · 前後層骨架 v8</h1>
+  <div class="sub">v8：嘴巴吃真聲音——張口量、嘴形、重音都從寧寧的真聲線現算，不再是亂數示意</div>
+  <div class="phone">
+    <div class="artwrap" id="wrap">
+      <img class="layer" id="lowerimg" src="ning/rig6-lower.png" alt="寧寧">
+      <img class="layer" id="chestimg" src="ning/rig6-torso.png" alt="">
+      <div id="armLg"><div id="armLj"><img class="layer" id="armL" src="ning/rig6-armL.png" alt=""></div></div>
+      <div id="armRg"><div id="armRj"><img class="layer" id="armR" src="ning/rig6-armR.png" alt=""></div></div>
+      <img class="layer" id="neckimg" src="ning/p-neck.png" alt="">
+      <div id="headgB"><div id="headpitchB">
+        <img class="layer" id="hairbackimg" src="ning/rig2-hair.png" alt="">
+      </div></div>
+      <div id="headg"><div id="headpitch">
+        <img class="layer" id="headimg" src="ning/rig5-headnoiris.png" alt="">
+        <img class="layer" id="irisimg" src="ning/rig5-iris.png" alt="">
+        <img class="layer" id="lashimg" src="ning/rig5-lash.png" alt="">
+        <div id="faceg">
+          <img class="part browstate" id="p-brow-up" src="ning/brows-up.png" alt="">
+          <img class="part mouthpatch" id="f-tiny" src="ning/mouth-tiny.png" alt="">
+          <img class="part mouthpatch" id="f-half" src="ning/mouth-half.png" alt="">
+          <img class="part mouthpatch" id="f-ahsmall" src="ning/mouth-ahsmall.png" alt="">
+          <img class="part mouthpatch" id="f-a" src="ning/mouth-a.png" alt="">
+          <img class="part mouthpatch" id="f-e" src="ning/mouth-e.png" alt="">
+          <img class="part mouthpatch" id="f-i" src="ning/mouth-i.png" alt="">
+          <img class="part mouthpatch" id="f-o" src="ning/mouth-o.png" alt="">
+          <img class="part mouthpatch" id="f-u" src="ning/mouth-u.png" alt="">
+          <img class="part mouthpatch" id="v-smile" src="ning/mouth-smile.png" alt="">
+        </div>
+        <canvas class="mesh" id="hairfront"></canvas>
+        <canvas class="mesh" id="strand"></canvas>
+        <!-- 閉眼貼圖放在最後：畫在所有眼睛零件之上，眨眼才不會被睜眼的眼球透出來 -->
+        <img class="part eyestate" id="p-eyes-closed" src="ning/part-eyes-closed.png" alt="">
+      </div></div>
+    </div>
+  </div>
+  <div class="meters">
+    <span>畫面流暢度 <b id="fps">–</b> fps</span>
+    <span>狀態 <b id="st">待機</b></span>
+  </div>
+  <div class="btns">
+    <button id="b-idle" class="on">安靜待機</button>
+    <button id="b-say">講一句話</button>
+    <button id="b-chat">連續聊天</button>
+    <button id="b-happy">開心</button>
+  </div>
+  <div class="note" id="cap" style="color:var(--ink);font-size:14px;min-height:22px;margin-top:10px"></div>
+  <p class="note">v8：「講一句話／連續聊天」播的是寧寧真正的聲線（Gemini · Despina），嘴巴由 <code>lipsync-driver.js</code> 從聲音現算：音量→張多大（快張慢合）、共振峰→ㄚㄝㄧㄛㄨ哪個嘴形、氣音→露齒、閉塞音→閉嘴、重音→挑眉點頭；嘴巴刻意比聲音早 60 毫秒（補回嘴巴彈簧的延遲）。網址加 <code>?fake=1</code> 回到舊的合成示意。<br>v7：素材改用 See-through（SIGGRAPH 2026 開源）分層＋原畫像素合成——看得見的地方全是原畫，只有「被頭髮蓋住、原畫根本沒畫」的頭皮與肩膀是補畫的。因此頭髮終於能整片自由甩動而不露底。參數與幅度照 Live2D 官方標準（頭 ±30、身體 ±10），頭髮走三段串聯擺子。</p>
+
+<script src="lipsync-driver.js"></script>
+<script>
+/* ========= 可重複使用的網格層 ========= */
+function makeMesh(canvasId, src, tex, profile){
+  var ART_W = 853, MARGIN = 70;
+  var cv = document.getElementById(canvasId);
+  var gl = cv.getContext('webgl', { premultipliedAlpha:true, alpha:true });
+
+  var VS = [
+  'attribute vec2 aPos; attribute vec2 aUV;',
+  'uniform vec2 uRes; uniform float uS1,uS2,uS3,uRip,uWind,uMargin,uLift,uYaw,uPitch,uFine;',
+  'varying vec2 vUV;',
+  'void main(){',
+  '  float u = aUV.x, v = aUV.y;',
+  '  float d = length(vec2((u-uCX)/uRX, (v-uCY)/uRY));',
+  // 臉在頭殼上的位移視差（只有頭層用）：轉頭時五官掃過去，頭殼幾乎不動
+  '  float faceW = 1.0 - smoothstep(0.15, 1.30, d);',
+  '  float px = uYaw * faceW * uFaceX;',
+  '  float py = uPitch * faceW * uFaceY;',
+  // 髮流自由度：離髮根越遠越自由
+  '  float free = smoothstep(uFree0, uFree1, v);',
+  '  free *= 1.0 - uHold*smoothstep(uHold0, uHold1, v);',
+  '  float w2 = free*free*(1.0+0.7*free);',
+  '  float sA = sin(u*5.3+0.4), sB = sin(u*8.7+2.1), sC = sin(u*3.1+4.3);',
+  // 三段串聯擺子沿髮流分佈：髮根第一擺、髮中第二擺、髮尾第三擺
+  '  float wRoot = 1.0 - smoothstep(0.22, 0.50, v);',
+  '  float wTip  = smoothstep(0.50, 0.84, v);',
+  '  float wMid  = max(1.0 - wRoot - wTip, 0.0);',
+  '  float chain = uS1*wRoot + uS2*wMid + uS3*wTip;',
+  '  float off = w2 * chain * (0.78 + 0.42*sA + 0.16*sB + 0.10*sC);',
+  '  off += w2*( sin(v*6.0+u*4.0-uRip)*0.55 + sin(v*10.0+u*7.0-uRip*1.6)*0.30 )*uWind;',
+  // 細髮束：只在髮梢、u 方向高頻（一束一束各走各的），不是整片起伏
+  '  float tipOnly = smoothstep(0.55, 0.95, v) * free;',
+  '  off += tipOnly * ( sin(u*23.0 + uRip*1.7)*0.60 + sin(u*37.0 - uRip*1.15)*0.34',
+  '                   + sin(u*13.0 + uRip*0.63)*0.42 ) * uFine;',
+  '  float dy = abs(off)*0.18*w2 + w2*cos(u*4.0-uRip*0.7)*uWind*0.30',
+  '           - uLift*smoothstep(0.35,0.95,v)*free;',
+  '  vec2 p = vec2(aPos.x + uMargin + off + px, aPos.y + dy + py);',
+  '  vec2 clip = (p/uRes)*2.0 - 1.0;',
+  '  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0); vUV = aUV;',
+  '}'].join('\n');
+  // 每一層的個性用常數直接編進去（臉中心、自由度起訖、視差量）
+  VS = 'const float uCX=' + profile.cx.toFixed(3) + ', uCY=' + profile.cy.toFixed(3)
+     + ', uRX=' + profile.rx.toFixed(3) + ', uRY=' + profile.ry.toFixed(3)
+     + ', uFaceX=' + profile.faceX.toFixed(1) + ', uFaceY=' + profile.faceY.toFixed(1)
+     + ', uFree0=' + profile.free0.toFixed(3) + ', uFree1=' + profile.free1.toFixed(3)
+     + ', uHold=' + profile.hold.toFixed(3) + ', uHold0=' + profile.hold0.toFixed(3)
+     + ', uHold1=' + profile.hold1.toFixed(3) + ';\n' + VS;
+
+  var FS = 'precision mediump float; varying vec2 vUV; uniform sampler2D uTex;'
+         + 'void main(){ gl_FragColor = texture2D(uTex, vUV); }';
+  function sh(t,s){ var o=gl.createShader(t); gl.shaderSource(o,s); gl.compileShader(o);
+    if(!gl.getShaderParameter(o,gl.COMPILE_STATUS)) throw new Error(canvasId+': '+gl.getShaderInfoLog(o)); return o; }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  var L={};
+  ['aPos','aUV'].forEach(function(k){ L[k]=gl.getAttribLocation(prog,k); });
+  ['uRes','uS1','uS2','uS3','uRip','uWind','uMargin','uTex','uLift','uYaw','uPitch','uFine']
+    .forEach(function(k){ L[k]=gl.getUniformLocation(prog,k); });
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+
+  var COLS=44, ROWS=60, vb=gl.createBuffer(), ib=gl.createBuffer(), n=0;
+  function grid(w,h){
+    var V=[],I=[];
+    for(var r=0;r<=ROWS;r++) for(var c=0;c<=COLS;c++) V.push(w*c/COLS, h*r/ROWS, c/COLS, r/ROWS);
+    for(var r2=0;r2<ROWS;r2++) for(var c2=0;c2<COLS;c2++){
+      var i0=r2*(COLS+1)+c2, i1=i0+1, i2=i0+COLS+1, i3=i2+1; I.push(i0,i2,i1, i1,i2,i3);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER,vb); gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(V),gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(I),gl.STATIC_DRAW);
+    n=I.length;
+  }
+  var texo=null, img=new Image(), ready=false;
+  img.onload=function(){
+    cv.width=img.width+MARGIN*2; cv.height=img.height;
+    var m=MARGIN/ART_W*100;
+    cv.style.left=(tex.left-m)+'%'; cv.style.top=tex.top+'%';
+    cv.style.width=(tex.w+m*2)+'%'; cv.style.height=tex.h+'%';
+    gl.viewport(0,0,cv.width,cv.height); grid(img.width,img.height);
+    texo=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,texo);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    ready=true;
+  };
+  img.src=src;
+
+  // 三段串聯擺子（Live2D 的「搖擺難易度」建議 0.7~0.99）
+  var S=profile.springs.map(function(s){ return {k:s[0], c:s[1], ease:s[2], x:0, v:0}; });
+  var rip=0;
+  return {
+    step:function(dt, drive, wind, lift, yaw, pitch, fine){
+      if(!ready) return;
+      rip += dt*2.1;
+      gl.useProgram(prog);
+      gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.bindBuffer(gl.ARRAY_BUFFER,vb);
+      gl.enableVertexAttribArray(L.aPos); gl.vertexAttribPointer(L.aPos,2,gl.FLOAT,false,16,0);
+      gl.enableVertexAttribArray(L.aUV);  gl.vertexAttribPointer(L.aUV,2,gl.FLOAT,false,16,8);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);
+      gl.uniform2f(L.uRes,cv.width,cv.height);
+      gl.uniform1f(L.uMargin,MARGIN); gl.uniform1f(L.uRip,rip);
+      gl.uniform1f(L.uWind,wind); gl.uniform1f(L.uLift,lift);
+      gl.uniform1f(L.uYaw,yaw); gl.uniform1f(L.uPitch,pitch);
+      gl.uniform1f(L.uFine,fine||0);
+      var input=drive;
+      for(var i=0;i<S.length;i++){ var s=S[i];
+        s.v += (s.k*(input*s.ease - s.x) - s.c*s.v)*dt; s.x += s.v*dt; input=s.x; }
+      gl.uniform1f(L.uS1,S[0].x); gl.uniform1f(L.uS2,S[1].x); gl.uniform1f(L.uS3,S[2].x);
+      gl.bindTexture(gl.TEXTURE_2D,texo);
+      gl.drawElements(gl.TRIANGLES,n,gl.UNSIGNED_SHORT,0);
+    },
+    hair:function(){ return [S[0].x,S[1].x,S[2].x]; }
+  };
+}
+
+/* 三層各自的個性 */
+/* 瀏海：髮根釘在髮團上、髮梢左右飄。底下已經沒有第二份頭髮，飄開時看到的是額頭 */
+var HairFront = makeMesh('hairfront','ning/rig2-bang-crop.png',
+  { left:16.0610, top:9.7614, w:61.4302, h:25.1085 },
+  { cx:0.5, cy:0.5, rx:0.30, ry:0.36, faceX:0, faceY:0,
+    free0:0.12, free1:0.52, hold:0.30, hold0:0.86, hold1:1.0,
+    springs:[[40,6.4,0.96],[27,5.0,0.84],[18,3.8,0.70]] });
+
+/* 額前那條細髮束：自己一件、髮根釘死、髮梢左右擺（最輕最快） */
+var Strand = makeMesh('strand','ning/rig2-strand-crop.png',
+  { left:30.4807, top:16.1605, w:25.2052, h:15.0759 },
+  { cx:0.5, cy:0.5, rx:0.30, ry:0.36, faceX:0, faceY:0,
+    free0:0.18, free1:0.74, hold:0.0, hold0:0.9, hold1:1.0,
+    springs:[[58,6.0,1.00],[40,4.6,0.86],[27,3.4,0.70]] });
+
+/* ========= 驅動層 ========= */
+(function(){
+  var stEl=document.getElementById('st');
+  var mode='idle', sayTimer=null;
+  var ap=0, apV=0, apTgt=0, peak='f-a';
+  var BANK=['f-tiny','f-half','f-ahsmall','f-a','f-e','f-i','f-o','f-u'];
+  function setOp(id,v){ document.getElementById(id).style.opacity=Math.max(0,Math.min(1,v)); }
+  function sm(x){ x=Math.max(0,Math.min(1,x)); return x*x*(3-2*x); }
+  function rnd(a,b){ return a+Math.random()*(b-a); }
+  function pm(){ return Math.random()<0.5?-1:1; }
+
+  /* Live2D 官方標準參數：頭 ±30、身體 ±10、呼吸 0~1、前/側/後髮 −1~1 */
+  var HEAD_RANGE=30, BODY_RANGE=10;
+  var P={ AngleX:0,AngleY:0,AngleZ:0, BodyAngleX:0,BodyAngleY:0,BodyAngleZ:0,
+          Breath:0, HairFront:0, HairSide:0, HairBack:0,
+          EyeLOpen:1, EyeROpen:1, MouthOpenY:0 };
+  window.__param=P;
+  window.__level=function(){ return level; };
+
+  // 2026-08-10 Edward 認可的版本就停在這裡：頭是一塊硬物（只有真旋轉＋微量平移），
+  // 頭髮分後髮／瀏海／細髮束三層各自甩。之後加的「五官整塊平移假造轉頭」已撤除。
+  var AMP = parseFloat((location.search.match(/amp=([\d.]+)/)||[])[1] || '4.6');
+  var HEAD_MOTION = AMP > 0;
+  var A={yaw:0,yv:0,pitch:0,pv:0,roll:0,rv:0}, T={yaw:0,pitch:0,roll:0}, Ts={yaw:0,pitch:0,roll:0};
+  var tms=0, tNext=1200, tClear=0;
+  var D=function(deg){ return deg/HEAD_RANGE; };
+
+  /* ── 動作字典 ──────────────────────────────────────────────
+     每個動作有自己的角度、快慢、持續長度，還有給頭髮的力道。
+     所以「點頭」是快而俐落、「歪頭」是慢而綿長、頭髮的擺幅也就自然不同。
+     p/y/r = 點頭 / 左右轉 / 歪頭 的角度範圍（度）
+     k     = 去程的硬度（大＝俐落、小＝綿）
+     back  = 回程的軟度（小＝回得慢，餘韻長）
+     hair  = 給頭髮的力道倍率                                     */
+  var GEST_IDLE=[
+    {n:'點一下頭',   p:[ 9,17], y:[-3, 3], r:[-4, 4], hold:[240, 420], k:24, back:39, hair:1.15},
+    {n:'歪頭發呆',   p:[ 0,  4], y:[-5, 5], r:[ 9,17], hold:[900,1700], k:12, back:26, hair:0.75},
+    {n:'看向旁邊',   p:[-3,  4], y:[10,19], r:[  2, 8], hold:[700,1400], k:13, back:29, hair:0.95},
+    {n:'重心微調',   p:[-2,  3], y:[ -4, 4], r:[ -4, 4], hold:[600,1300], k:16, back: 9, hair:0.45},
+    {n:'連點兩下',   p:[ 8,14], y:[ -3, 3], r:[ -3, 3], hold:[170, 240], k:31, back:51, hair:1.4, twice:true},
+    {n:'抬一下下巴', p:[-9,-5], y:[ -3, 3], r:[ -4, 4], hold:[420, 780], k:15, back:29, hair:0.8}
+  ];
+  var GEST_TALK=[
+    {n:'重音點頭',   p:[ 6,13], y:[-3, 3], r:[-5, 5], hold:[170, 300], k:28, back:48, hair:1.2},
+    {n:'邊說邊轉',   p:[-3,  4], y:[ 8,16], r:[  3, 9], hold:[400, 760], k:14, back:29, hair:1.0},
+    {n:'思考歪頭',   p:[ 0,  4], y:[ -5, 5], r:[  8,15], hold:[500, 900], k:12, back:26, hair:0.85},
+    {n:'小拍子',     p:[ 3,  8], y:[ -3, 3], r:[ -3, 3], hold:[130, 230], k:33, back:61, hair:0.7},
+    {n:'連點兩下',   p:[ 6,11], y:[ -2, 2], r:[ -3, 3], hold:[150, 210], k:34, back:54, hair:1.3, twice:true}
+  ];
+  var curK=22, curBack=34, hairKick=0;
+  var queue=[];                       // 待跑的步驟；空了才隨機挑下一個動作
+  var settling=false, calm=0;
+  var levelWant=0, level=0;           // 1＝現在要「擺正、眼睛水平」
+  // 原畫本身兩眼連線就傾斜 8.63 度。要「眼睛水平」就得把頭轉回這麼多。
+  // 用網址參數 ?eye=8.63 開啟、?eye=0 維持原畫姿態。
+  var EYE_FIX = parseFloat((location.search.match(/eye=([\d.-]+)/)||[])[1] || '0');
+
+  function fire(g){
+    var sgn=g.sign || pm();
+    if(g.zero){ T.pitch=0; T.yaw=0; T.roll=0; curK=g.k; curBack=g.back; levelWant=1;
+      var hz=rnd(g.hold[0],g.hold[1]); tClear=tms+hz; return hz; }
+    T.pitch = D(rnd(g.p[0],g.p[1])*AMP/3);
+    T.yaw   = D(sgn*rnd(Math.abs(g.y[0]),Math.abs(g.y[1]))*AMP/3) * (g.y[0]<0&&g.y[1]>0 ? (Math.random()<0.5?-1:1) : 1);
+    T.roll  = D(sgn*rnd(Math.abs(g.r[0]),Math.abs(g.r[1]))*AMP/3);
+    curK=g.k; curBack=g.back; levelWant=0;
+    hairKick=Math.max(hairKick, g.hair);
+    var hold=rnd(g.hold[0],g.hold[1]);
+    tClear=tms+hold;
+    if(g.twice){ queue.unshift({p:g.p,y:g.y,r:g.r,hold:g.hold,k:g.k,back:g.back,hair:g.hair*0.8,sign:sgn}); }
+    return hold;
+  }
+  function straight(hold){            // 擺正：回到正面、停一下（人不會一直在動）
+    return {p:[0,0],y:[0,0],r:[0,0],hold:hold,k:22,back:46,hair:0.25,zero:true};
+  }
+  function lookAround(){              // 左右看一看：一邊 → 停 → 另一邊 → 停 → 擺正
+    var s1=pm();
+    return [
+      {p:[-2,3],y:[11,20],r:[2,7],hold:[520,900], k:30,back:46,hair:0.95,sign:s1},
+      {p:[-2,3],y:[11,20],r:[2,7],hold:[560,980], k:28,back:42,hair:0.95,sign:-s1},
+      straight([450,800])
+    ];
+  }
+  function fireBeat(){
+    var talking=(mode==='say'||mode==='chat'||mode==='voice'||mode==='happy');
+    if(queue.length){                                    // 佇列裡還有步驟就先跑完
+      var hold=fire(queue.shift());
+      tNext=tms+hold+(talking?rnd(80,220):rnd(160,420));
+      return;
+    }
+    var r=Math.random();
+    if(!talking && r<0.20){ queue=lookAround(); fireBeat(); return; }   // 兩成機率來一段「左右看看」
+    if(!talking && r<0.26){ var h0=fire(straight([420,900])); tNext=tms+h0+rnd(260,700); return; }   // 擺正只是路過，不停留  // 常常就是擺正不動
+    var pool = talking ? GEST_TALK : GEST_IDLE;
+    var g = pool[Math.floor(Math.random()*pool.length)];
+    var hold = fire(g);
+    tNext = tms + hold + (talking ? rnd(220,900) : rnd(900,2200));
+  }
+  /* 快去慢回，而且「多快、多慢」由當下的動作決定 */
+  function ax(cur,vel,tgt,dt){
+    var k=(Math.abs(tgt)>Math.abs(cur))?curK:curBack, c=2*Math.sqrt(k)*1.02;   // 阻尼>1＝不會過衝、不會抖
+    vel += (k*(tgt-cur) - c*vel)*dt;
+    return [cur+vel*dt, vel];
+  }
+
+  var nYaw=0,nYv=0,nPit=0,nPv=0,nRol=0,nRv=0;
+  // 呼吸幅度（占畫布高度的百分比）。實測：平順移動比對齊整數像素乾淨，
+  // 所以不做像素對齊——對齊會讓身體一格一格跳，看起來就是機器人卡頓。
+  var lean=0, leanV=0, stretch=0, stretchT=0, stretchNext=14000;
+  var BREATH=parseFloat((location.search.match(/br=([\d.]+)/)||[])[1] || "0.42");
+  var VOWELS=['f-a','f-e','f-i','f-o','f-u','f-ahsmall'];
+  var sp={ st:'idle', until:0, syl:null, sylEnd:0, gap:0, stressIn:2, browT:0, brow:0, browHold:0, browFast:false, flashT:0,
+           expr:'neutral', browBase:0, smile:0, smileT:0,
+           gx:0, gy:0, gxT:0, gyT:0, gxV:0, gyV:0, gzNext:900 };
+  /* 說話的四種語氣：每一句隨機挑一種，帶動眉毛高度、笑意、開口大小、動作偏好 */
+  var EXPR={
+    neutral:{ browBase:0.00, browStress:0.55, smileEnd:0.10, openMul:1.00, gest:[0,1,3] },
+    warm:   { browBase:0.14, browStress:0.62, smileEnd:0.55, openMul:1.06, gest:[0,0,1] },  // 溫暖：常帶笑
+    question:{browBase:0.06, browStress:0.80, smileEnd:0.15, openMul:1.02, gest:[2,1,0] },  // 疑問：句尾眉揚＋歪頭
+    gentle: { browBase:0.02, browStress:0.34, smileEnd:0.25, openMul:0.84, gest:[2,1,2] },  // 輕柔：小聲、多歪頭
+    excited:{ browBase:0.20, browStress:1.00, smileEnd:0.45, openMul:1.22, gest:[0,4,0],
+              rate:0.72, flash:0.70 }                                                        // 激動：講得快、挑眉閃動
+  };
+  var lagRot=0,lagRotV=0, lagPy=0,lagPyV=0, lagX=0,lagXV=0;   // 頭髮追的是「頭實際的角度」
+  var last=performance.now();
+  (function loop(now){
+    now = now || performance.now();
+    var dt=Math.min(0.05,(now-last)/1000); last=now;
+    var t=now/1000; tms += dt*1000;
+
+    speechTick();
+    // 嘴巴彈簧：合成示意用軟彈簧（k=210）就好；真聲音每個音節只有 150-250 毫秒，
+    // 軟彈簧會把音節抹平（實測嘴慢 130ms、相關 0.53）→ 真聲音模式改硬彈簧（起口約 60ms）
+    // 但硬彈簧在低幀率（無頭瀏覽器 27fps）會數值振盪、嘴發抖；真聲音改用不會過衝的
+    // 一階平滑（28 毫秒），任何幀率都穩——驅動器本身已經做過快張慢合的包絡整形。
+    if(mode==='voice'){ ap += (apTgt-ap)*(1-Math.exp(-dt/0.028)); apV=0; }
+    else { apV += (210*(apTgt-ap) - 23*apV)*dt; ap += apV*dt; }
+    if(ap<0){ap=0;apV=0;}
+    var a=Math.min(1,ap);
+    BANK.forEach(function(id){ setOp(id,0); });
+    if(a>0.06) setOp('f-tiny', sm((a-0.06)/0.08));
+    if(a>0.44) setOp('f-half', sm((a-0.44)/0.08));
+    if(a>0.76) setOp(peak,      sm((a-0.76)/0.08));
+    if(tms>sp.browHold) sp.browT *= Math.pow(0.0015, dt);   // 抬到位、停一下、再降回去                      // 抬起後很快降回去（不要一直掛在臉上）
+    var talkNow=(mode==='say'||mode==='chat'||mode==='voice');
+    // 講話時眉毛一直有細微起伏（跟著語氣與音量走），不是只有重音才動
+    var browLive = talkNow ? (0.13 + 0.11*Math.sin(t*2*Math.PI/2.3) + 0.08*Math.sin(t*2*Math.PI/3.7+1.1)
+                              + 0.26*Math.min(1,a*1.4)) : 0.05*Math.sin(t*2*Math.PI/9.0);
+    var browGoal = Math.max(sp.browT, (talkNow ? sp.browBase : 0) + Math.max(0,browLive));
+    var up = browGoal > sp.brow;
+    var tau = up ? (sp.browFast ? 0.045 : 0.10) : 0.13;          // 抬得快、放得慢＝真人的挑眉手感
+    sp.brow  += (browGoal - sp.brow)*(1-Math.exp(-dt/tau));
+    if(!up && sp.brow < 0.12) sp.browFast=false;
+    document.getElementById('p-brow-up').style.opacity = Math.max(0,Math.min(1,sp.brow));
+    sp.smileT *= Math.pow(0.25, dt);
+    sp.smile  += (sp.smileT - sp.smile)*(1-Math.exp(-dt/0.14));
+    // 視線：眼珠真的在滑。慢漂永遠在，偶爾換一個注視點（0.14 秒滑過去，不是瞬間跳）
+    if(tms > sp.gzNext){
+      var talking2=(mode==='say'||mode==='chat'||mode==='voice');
+      sp.gxT = (Math.random()*2-1) * (talking2?2.0:2.8);
+      sp.gyT = (Math.random()*2-1) * 0.9;
+      if(Math.random()<0.45){ sp.gxT*=0.25; sp.gyT*=0.25; }        // 常常只是回到正中間附近
+      sp.gzNext = tms + (talking2 ? (700+Math.random()*1600) : (1200+Math.random()*2600));
+    }
+    var gxw = sp.gxT + Math.sin(t*2*Math.PI/5.3)*0.30 + Math.sin(t*2*Math.PI/8.9+1.4)*0.22;  // 永遠不會完全靜止
+    var gyw = sp.gyT + Math.sin(t*2*Math.PI/6.7+2.2)*0.16;
+    sp.gxV += (150*(gxw-sp.gx) - 21*sp.gxV)*dt; sp.gx += sp.gxV*dt;
+    sp.gyV += (150*(gyw-sp.gy) - 21*sp.gyV)*dt; sp.gy += sp.gyV*dt;
+    document.getElementById('irisimg').style.transform =
+      'translate('+(sp.gx/853*100)+'%,'+(sp.gy/1844*100)+'%)';
+
+    if(mode!=='happy') document.getElementById('v-smile').style.opacity = Math.max(0,Math.min(1, sp.smile*(1-Math.min(1,a*3))));
+
+    if(tms>tClear){ T.yaw=0; T.pitch=0; T.roll=0; }
+    var atRest = (Math.abs(A.yaw)+Math.abs(A.pitch)+Math.abs(A.roll)) < 0.012
+              && (Math.abs(A.yv)+Math.abs(A.pv)+Math.abs(A.rv)) < 0.05;
+    settling = (tms>tClear) && !atRest;        // 動作已結束但還沒完全歸位
+    if(HEAD_MOTION && tms>tNext && (atRest || tms>tNext+1400)) fireBeat();
+    // 目標值自己也要慢慢移過去（0.18 秒），這樣頭是「開始轉」而不是「被彈出去」
+    var kk=1-Math.exp(-dt/0.18);
+    Ts.yaw   += (T.yaw   - Ts.yaw  )*kk;
+    Ts.pitch += (T.pitch - Ts.pitch)*kk;
+    Ts.roll  += (T.roll  - Ts.roll )*kk;
+    var o;
+    o=ax(A.yaw,A.yv,Ts.yaw,dt);       A.yaw=o[0];  A.yv=o[1];
+    o=ax(A.pitch,A.pv,Ts.pitch,dt);   A.pitch=o[0];A.pv=o[1];
+    o=ax(A.roll,A.rv,Ts.roll,dt);     A.roll=o[0]; A.rv=o[1];
+
+    var breathe=(Math.sin(t*2*Math.PI/4.2)+1)/2;                 // 唯一的底層脈搏：4.2 秒一次呼吸
+    // 體態微晃：三個互不整除的週期疊起來，永遠不會重複、也永遠不會完全停住
+    level += (levelWant-level)*(1-Math.exp(-dt/0.22));      // 平滑切換，不會突然拉直
+    calm  += ((settling?1:0)-calm)*(1-Math.exp(-dt/0.25));  // 收尾時把微晃也收掉
+    var lv = (1-level)*(1-calm*0.99);
+    var swayR = (Math.sin(t*2*Math.PI/6.7)*0.17 + Math.sin(t*2*Math.PI/11.3+1.9)*0.12)*lv;
+    var swayY = (Math.sin(t*2*Math.PI/9.1+0.6)*0.14 + Math.sin(t*2*Math.PI/17.9+2.7)*0.11)*(0.25+0.75*lv);
+    var swayP = Math.sin(t*2*Math.PI/7.9+1.2)*0.18*lv;
+    // 不做長週期漂移：動作結束就要回到同一個原點，否則看起來像「動完還在滑」
+    var driftR = 0, driftY = 0;
+    P.AngleX=A.yaw*HEAD_RANGE; P.AngleY=A.pitch*HEAD_RANGE; P.AngleZ=A.roll*HEAD_RANGE; P.Breath=breathe;
+    P.BodyAngleX=A.yaw*BODY_RANGE; P.BodyAngleY=A.pitch*BODY_RANGE; P.BodyAngleZ=A.roll*BODY_RANGE;
+    var bx=A.yaw*(BODY_RANGE/HEAD_RANGE);
+
+    /* 1) 身體：呼吸為主，跟頭轉三分之一 */
+    // 呼吸：以腰為軸極輕微撐起（0.45%），肩膀會微微上抬、腰不動——這是真呼吸的樣子。
+    // 幅度只有當初果凍版的二十分之一，不會有被捏的感覺。
+    // 身體完全不動：只要有低於一像素的位移，衣服上每條輪廓線就會重新取樣、看起來像在爬。
+    // 呼吸留在會動的零件上（細髮束），身體本身鎖死。
+    var chestY=(-breathe*BREATH + Math.sin(t*2*Math.PI/13.7)*BREATH*0.22);  // 呼吸＋極慢的重心起伏
+    // 腰的律動：兩個除不盡的慢週期，永遠不重複
+    var leanGoal = Math.sin(t*2*Math.PI/9.3)*1.55 + Math.sin(t*2*Math.PI/14.7+1.6)*1.05
+                 + Math.sin(t*2*Math.PI/5.7+0.9)*0.42;   // 三個除不盡的週期＝永遠不重複的擺法
+    // 伸展：每 14–34 秒來一次，慢慢挺起來（3 秒）再放鬆
+    if(tms>stretchNext){ stretchT=1; stretchNext=tms+14000+Math.random()*20000;
+      setTimeout(function(){ stretchT=0; }, 1500+Math.random()*900); }
+    stretch += (stretchT-stretch)*(1-Math.exp(-dt/1.1));
+    leanGoal += stretch*0.9*(Math.random()<0?1:1);
+    leanV += (9*(leanGoal-lean) - 5.2*leanV)*dt; lean += leanV*dt;
+    var chestRot=bx*0.78 + lean;
+    // 身體往左傾時人會把頭稍微扳回來（不然整個人像被吹倒）——頭只跟一半。
+    var chestRotHead=bx*0.78 + lean*0.48;
+    var body='translate('+(bx*0.32)+'%,'+(chestY-stretch*0.20)+'%) rotate('+chestRot+'deg)';
+    ['chestimg','armLg','armRg'].forEach(function(id){
+      var e=document.getElementById(id);
+      e.style.transformOrigin='50% 75.8%'; e.style.transform=body;
+    });
+    /* 手臂：肩關節各自小幅擺——左右不同節奏，才不會像機器人同步甩。
+       擺幅刻意壓在 1.5 度以內：袖子底下的塗り足し只有 42px，再大就會在腋下見底。 */
+    // 只往「離開身體」的方向擺：往身體內側擺會在手的外緣露出背景（手貼著畫面邊）。
+    var swL = 0.21*(1-Math.cos(t*2*Math.PI/11.9)) + 0.12*(1-Math.cos(t*2*Math.PI/7.3+2.1)) + stretch*1.05;
+    var swR = 0.20*(1-Math.cos(t*2*Math.PI/13.7+1.2)) + 0.11*(1-Math.cos(t*2*Math.PI/8.9+0.4)) + stretch*0.90;
+    var jL=document.getElementById('armLj'), jR=document.getElementById('armRj');
+    jL.style.transformOrigin='22.626% 46.692%';   // 左肩（_arms.py 量的）
+    jR.style.transformOrigin='83.001% 47.505%';   // 右肩
+    jL.style.transform='rotate('+swL+'deg)';
+    jR.style.transform='rotate('+(-swR)+'deg)';
+
+    /* 2) 脖：跟頭、慢一拍、幅度四成 */
+    o=ax(nYaw,nYv,A.yaw*0.42,dt); nYaw=o[0]; nYv=o[1];
+    o=ax(nPit,nPv,A.pitch*0.34,dt); nPit=o[0]; nPv=o[1];
+    o=ax(nRol,nRv,A.roll*0.40,dt); nRol=o[0]; nRv=o[1];
+    var ni=document.getElementById('neckimg');
+    ni.style.transformOrigin='50% 45%';
+    ni.style.transform='translate('+(nYaw*0.22)+'%,'+(chestY+nPit*0.30)+'%) rotate('+(chestRotHead*0.8+nRol*1.3)+'deg)';
+
+    /* 3) 頭：三軸一起——歪頭真旋轉、轉頭遠側收窄、點頭下沉壓扁 */
+    var yawT   = A.yaw   + (swayY+driftY)/HEAD_RANGE;
+    var pitchT = A.pitch + (swayP + (breathe-0.5)*0.55*(1-calm*0.9))/HEAD_RANGE;   // 呼吸讓頭極輕微起伏
+    var rollT  = A.roll  + (swayR+driftR)/HEAD_RANGE;
+    var headX=nYaw*0.22+yawT*0.15;
+    var headY=chestY+nPit*0.30;
+    var headRot=(chestRotHead+rollT*1.7+yawT*0.6)*(1-level*0.94) + level*EYE_FIX;   // 擺正時歪頭幾乎歸零＝兩眼水平
+    // 頭是一塊硬物：只有真旋轉＋微量平移。任何拉伸壓扁都會變成果凍感，一律不用。
+    var headTr='translate('+headX+'%,'+headY+'%) rotate('+headRot+'deg)';
+    var pitchTr='translateY('+(A.pitch*0.62)+'%)';
+    var hg=document.getElementById('headg');
+    hg.style.transformOrigin='50% 46%'; hg.style.transform=headTr;          // 轉軸＝脖根
+    document.getElementById('headpitch').style.transformOrigin='50% 12.7%';
+    document.getElementById('headpitch').style.transform=pitchTr;
+
+    // 中後髮：直接追蹤「頭實際轉了幾度」，只是慢一拍。
+    // 不再各自從角度重算——否則頭擺正時頭髮不會跟著正（2026-08-10 踩過）。
+    lagRotV += (16*(headRot - lagRot) - 6.4*lagRotV)*dt; lagRot += lagRotV*dt;
+    lagPyV  += (18*(pitchT*0.78 - lagPy) - 6.8*lagPyV)*dt; lagPy += lagPyV*dt;
+    lagXV   += (16*(headX - lagX) - 6.4*lagXV)*dt; lagX += lagXV*dt;
+    var hgB=document.getElementById('headgB');
+    hgB.style.transformOrigin='50% 46%';
+    hgB.style.transform='translate('+lagX+'%,'+headY+'%) rotate('+lagRot+'deg)';
+    var hpB=document.getElementById('headpitchB');
+    hpB.style.transformOrigin='50% 12.7%';
+    hpB.style.transform='translateY('+lagPy+'%)';
+
+    /* 4) 三層頭髮各自吃頭的角速度：後髮重而慢、瀏海輕而快 */
+    var swing=A.yv*0.9+A.rv*0.5;
+    // 細髮束自己有一股慢風，所以頭完全不動時它也在左右擺
+    // 兩片頭髮吃「不同的風」，否則同步擺動就會看起來是同一片。
+    var windBang   = Math.sin(t*0.77)*0.66 + Math.sin(t*1.19+2.4)*0.30;              // 瀏海：慢、幅寬
+    var windStrand = Math.sin(t*1.49+0.9)*0.60 + Math.sin(t*2.36+1.7)*0.32
+                   + Math.sin(t*0.57+4.4)*0.34;                                       // 細髮束：快、碎
+    hairKick *= Math.pow(0.28, dt);                       // 力道會衰減，像被甩過之後慢慢平靜
+    HairFront.step(dt, windBang*3.4 + hairKick*Math.max(-1,Math.min(1,A.roll*4+A.yaw*2))*9.0, 0.0, breathe*0.3, 0, 0, 0.9+hairKick*0.5);
+    Strand.step(dt, windStrand*5.6 + hairKick*Math.max(-1,Math.min(1,A.roll*4+A.yaw*2))*13.0, 0.0, breathe*0.25, 0, 0, 0.7+hairKick*0.6);
+    var cl=function(x){ return Math.max(-1,Math.min(1,x/28)); };
+    P.HairFront=cl(Strand.hair()[2]);
+    P.EyeLOpen=P.EyeROpen=(document.getElementById('p-eyes-closed').style.visibility==='visible')?0:1;
+    P.MouthOpenY=a;
+
+    requestAnimationFrame(loop);
+  })();
+
+  /* ══ 講話：一連串狀態，不是一個開關 ══════════════════════════
+       起手(吸氣) → 說一句 → 換氣 → 說一句 → … → 收尾 → 待機
+     一句話由音節串成；每個音節有自己的長度、開口大小、母音嘴形；
+     音節之間有子音的閉合；每 2–5 個音節一個重音（頭跟拍＋眉微抬）。   */
+
+  function newSyllable(isLast){
+    var stress = (--sp.stressIn <= 0);
+    if(stress) sp.stressIn = 2+Math.floor(Math.random()*4);
+    var dur = (90+Math.random()*170) * (isLast?1.7:1) * ((EXPR[sp.expr]||{}).rate || 1);
+    var E=EXPR[sp.expr]||EXPR.neutral;
+    var open = (stress ? (0.78+Math.random()*0.22) : (0.26+Math.random()*0.42)) * E.openMul;
+    sp.syl = { open:open, shape:VOWELS[Math.floor(Math.random()*VOWELS.length)],
+               stress:stress, last:isLast };
+    if(isLast && sp.expr==='question'){ sp.browT = Math.max(sp.browT, 0.85); sp.browHold = tms+320; }   // 疑問句尾眉毛揚起
+    sp.sylEnd = tms + dur;
+    // 子音的閉合：兩成機率完全閉起來（ㄅㄆㄇ），其餘只是收小
+    sp.gap = 45+Math.random()*50;
+    sp.closeTo = (Math.random()<0.2) ? 0 : (0.03+Math.random()*0.14);
+    if(stress){
+      var flashP = (E.flash!==undefined) ? E.flash : 0.42;
+      var big = Math.random()<flashP;                            // 激動時七成是大挑眉，平常四成
+      sp.browT = Math.max(sp.browT, E.browStress*(big ? (0.95+Math.random()*0.55) : (0.30+Math.random()*0.25)));
+      sp.browHold = tms + (big?200:110);
+      sp.browFast = big;                                          // 大挑眉＝閃動，抬得特別快
+      if(HEAD_MOTION && tms>tClear-80){
+        var gi=E.gest[Math.floor(Math.random()*E.gest.length)];
+        var hd=fire(GEST_TALK[gi]); tNext=tms+hd+rnd(200,700);
+      }
+    }
+    peak = sp.syl.shape;
+  }
+
+  /* ══ 真聲音模式（2026-09-29）：張口量、嘴形、重音全由 lipsync-driver 從聲音現算 ══
+       驅動器每格寫進 VOICE；這裡只負責把它接到既有的嘴巴彈簧、眉毛、點頭。 */
+  var VOICE={ open:0, shape:null, closed:false, stressPending:false, big:false, expr:'warm' };
+  var SHAPE={ a:'f-a', e:'f-e', i:'f-i', o:'f-o', u:'f-u', sib:'f-i' };
+  function stressBeat(big){                          // 重音：挑眉（大＝閃動）＋跟拍點頭，跟合成音節同一套手感
+    var E=EXPR[sp.expr]||EXPR.neutral;
+    sp.browT = Math.max(sp.browT, E.browStress*(big ? (0.95+Math.random()*0.55) : (0.30+Math.random()*0.25)));
+    sp.browHold = tms + (big?200:110);
+    sp.browFast = big;
+    if(HEAD_MOTION && tms>tClear-80){
+      var gi=E.gest[Math.floor(Math.random()*E.gest.length)];
+      var hd=fire(GEST_TALK[gi]); tNext=tms+hd+rnd(200,700);
+    }
+  }
+  function voiceTick(){
+    if(sp.st!=='voice'){ sp.st='voice'; sp.expr=VOICE.expr; sp.browBase=(EXPR[sp.expr]||EXPR.neutral).browBase; }
+    apTgt = VOICE.closed ? 0 : VOICE.open;
+    if(VOICE.shape){ peak = (VOICE.shape==='f-a' && VOICE.open<0.5) ? 'f-ahsmall' : VOICE.shape; }
+    if(VOICE.stressPending){ VOICE.stressPending=false; stressBeat(VOICE.big); }
+  }
+  // 給驅動器的轉接頭：lead 補回嘴巴彈簧的延遲；rendered 回報實際畫出來的張口量給量尺
+  window.__ning = {
+    voice: VOICE,
+    get mode(){ return mode; },
+    setMode: function(m){ setMode(m); },
+    adapter: {
+      lead: 0.05,
+      set: function(open, shape, meta){
+        VOICE.open = open; VOICE.closed = !!(meta && meta.closed);
+        if(SHAPE[shape]) VOICE.shape = SHAPE[shape];
+        if(meta && meta.stress){ VOICE.stressPending = true; VOICE.big = !!meta.big; }
+      },
+      idle: function(){ VOICE.open = 0; VOICE.closed = false; },
+      rendered: function(){ return Math.min(1, ap); }
+    }
+  };
+
+  function speechTick(){
+    var talking=(mode==='say'||mode==='chat'||mode==='voice');
+    if(!talking){ if(sp.st!=='idle'){ sp.st='idle'; apTgt=0; } return; }
+    if(mode==='voice'){ voiceTick(); return; }      // 真聲音：嘴巴聽驅動器的，不自己編音節
+    switch(sp.st){
+      case 'idle':                                   // 起手：吸一口氣、嘴微張、眉微抬
+        sp.st='inhale'; sp.until=tms+200+Math.random()*120; apTgt=0.10; sp.browT=0.35; break;
+      case 'inhale':
+        if(sp.flashT && tms>sp.flashT){ sp.browT=Math.max(sp.browT,1.0); sp.browHold=tms+180; sp.browFast=true; sp.flashT=0; }
+        if(tms>sp.until){
+          var ks=['neutral','warm','question','gentle','excited'];
+          sp.expr = ks[[0,0,0,1,1,2,3,4][Math.floor(Math.random()*8)]];   // 激動約八分之一
+          if(sp.expr==='excited'){ sp.flashT=tms+120; }                    // 一開口就先來一個挑眉
+          sp.browBase = EXPR[sp.expr].browBase;
+          sp.st='phrase'; sp.left=3+Math.floor(Math.random()*7); newSyllable(sp.left===1);
+        }
+        break;
+      case 'phrase':
+        if(tms > sp.sylEnd + sp.gap){                // 上一個音節連同閉合都結束了
+          sp.left--;
+          if(sp.left<=0){
+            sp.st='pause'; apTgt=0;
+            var E2=EXPR[sp.expr]||EXPR.neutral;
+            if(Math.random()<E2.smileEnd) sp.smileT=1;                       // 句尾帶一抹笑
+            if(Math.random()<0.30){ sp.gazeT=1; sp.gazeSide=(Math.random()<0.5?-1:1); }  // 換氣時看一下旁邊
+            sp.until = tms + (Math.random()<0.25 ? (900+Math.random()*700) : (220+Math.random()*380));
+          } else newSyllable(sp.left===1);
+        } else if(tms > sp.sylEnd){ apTgt = sp.closeTo; }   // 音節結束→子音閉合
+        else { apTgt = sp.syl.last ? sp.syl.open*(1-0.7*(tms-(sp.sylEnd-260))/260) : sp.syl.open; }
+        break;
+      case 'pause':                                  // 換氣：嘴閉、頭稍回正
+        apTgt=0;
+        if(tms>sp.until){
+          if(mode==='say' && Math.random()<0.55){ sp.st='tail'; sp.until=tms+320; }
+          else { sp.st='inhale'; sp.until=tms+140+Math.random()*120; apTgt=0.08; }
+        }
+        break;
+      case 'tail':
+        apTgt=0;
+        if(tms>sp.until){ sp.st='idle'; if(mode==='say') setMode('idle'); }
+        break;
+    }
+  }
+
+  window.__mouth={ set a(v){ apTgt=v; ap=v; apV=0; }, get a(){ return ap; } };
+
+  (function blink(){
+    var el=document.getElementById('p-eyes-closed');
+    // 閉眼 175–215 毫秒。真人一次眨眼 0.1–0.4 秒，取中段：
+    // 太短（0.1 秒）畫面來不及把「閉眼」完整畫出來，會變成半透明的眼睛疊影（8/12 實測）。
+    function one(cb){ el.style.visibility='visible'; setTimeout(function(){ el.style.visibility='hidden'; if(cb) cb(); }, 175+Math.random()*40); }
+    one(function(){
+      if(Math.random()<0.14) setTimeout(one, 240+Math.random()*90);
+    });
+    var talking=(mode==='say'||mode==='chat'||mode==='voice');
+    setTimeout(blink, talking ? (3400+Math.random()*4200) : (2200+Math.random()*3600));
+  })();
+
+  function smile(on){
+    document.getElementById('v-smile').style.opacity=on?1:0;
+    BANK.forEach(function(id){ document.getElementById(id).style.visibility=on?'hidden':'visible'; });
+  }
+  function setMode(m){
+    mode=m; if(sayTimer){clearTimeout(sayTimer); sayTimer=null;}
+    if(m!=='voice' && window.LipSync) LipSync.stop();
+    if(m!=='voice' && sp.st==='voice'){ sp.st='idle'; VOICE.open=0; }
+    ['b-idle','b-say','b-chat','b-happy'].forEach(function(id){ document.getElementById(id).className=''; });
+    if(m==='idle'){ document.getElementById('b-idle').className='on'; apTgt=0; smile(false); stEl.textContent='待機';
+      var ce=document.getElementById('cap'); if(ce) ce.textContent=''; }
+  }
+  document.getElementById('b-idle').onclick=function(){ setMode('idle'); };
+  /* 預設吃真聲音（寧寧真聲線的兩段話）；網址加 ?fake=1 可回到舊的合成音節示意 */
+  var FAKE = /fake=1/.test(location.search);
+  var CLIPS={ say:{ url:'voice/ning-say.wav', text:'有個週末，一家人決定一起包水餃。' },
+              chat:{ url:'voice/ning-story.wav', text:'有個週末，一家人決定一起包水餃。爸爸負責調內餡，媽媽負責桿麵皮，小朋友就幫忙把水餃包起來……' } };
+  var loaded={};
+  function clip(key){ if(!loaded[key]) loaded[key]=LipSync.load(CLIPS[key].url); return loaded[key]; }
+  var capEl=document.getElementById('cap');
+  function talk(key, loop){
+    setMode('voice'); document.getElementById(key==='say'?'b-say':'b-chat').className='on';
+    stEl.textContent='載入聲音…';
+    clip(key).then(function(c){
+      if(mode!=='voice') return;
+      stEl.textContent=(key==='say'?'講話中':'連續聊天中')+'（真聲音）';
+      if(capEl) capEl.textContent=CLIPS[key].text;
+      LipSync.play(c, window.__ning.adapter, { onEnd:function(){
+        if(mode!=='voice') return;
+        if(loop) talk(key,true); else setMode('idle');
+      }});
+    }).catch(function(e){ stEl.textContent='聲音載入失敗：'+e.message; });
+  }
+  window.__talk=talk; window.__clip=clip;
+  document.getElementById('b-say').onclick=function(){
+    if(!FAKE && window.LipSync){ talk('say',false); return; }
+    setMode('say'); document.getElementById('b-say').className='on'; stEl.textContent='講話中（示意）';
+    setTimeout(function(){ if(mode==='say') setMode('idle'); }, 2800+Math.random()*1400); };
+  document.getElementById('b-chat').onclick=function(){
+    if(!FAKE && window.LipSync){ talk('chat',true); return; }
+    setMode('chat'); document.getElementById('b-chat').className='on'; stEl.textContent='連續聊天中（示意）'; };
+  document.getElementById('b-happy').onclick=function(){
+    setMode('happy'); document.getElementById('b-happy').className='on'; stEl.textContent='開心';
+    apTgt=0; smile(true); setTimeout(function(){ if(mode==='happy') setMode('idle'); },2200); };
+
+  var fr=0,t0=performance.now();
+  (function tick(){ fr++; var n=performance.now();
+    if(n-t0>=1000){ document.getElementById('fps').textContent=Math.round(fr*1000/(n-t0)); fr=0; t0=n; }
+    requestAnimationFrame(tick); })();
+})();
+</script>
+</body>
+</html>

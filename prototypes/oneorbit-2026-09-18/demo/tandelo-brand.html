@@ -1,0 +1,142 @@
+<meta charset="utf-8">
+<title>Tandelo 品牌視覺規範</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&family=STIX+Two+Text:ital,wght@1,500&display=swap">
+<style>
+:root{--pine:#0E5F52;--pine-deep:#0A463D;--pine-ink:#0D2B26;--mint:#DCEFE8;--mint-2:#EEF7F3;--coral:#F26B54;--coral-deep:#D9523C;--coral-soft:#FDE7E1;--honey:#F4C24D;--honey-soft:#FDF2D2;--oat:#F6F4EE;
+ --bg:#ECE9E1;--card:#fff;--ink:#12211D;--mute:#5E6B67;--line:#D9D5CA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28}}
+:root[data-theme="dark"]{--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.8;font-size:15.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 96px;display:grid;gap:56px}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.wm{font-family:Outfit;font-weight:700;font-size:26px;letter-spacing:-.03em;display:flex;align-items:center;gap:6px}
+.dots{position:relative;width:26px;height:16px;display:inline-block}
+.dots i{position:absolute;width:14px;height:14px;border-radius:50%;top:1px}
+.dots i:first-child{left:0;background:var(--coral)}.dots i:last-child{left:10px;background:var(--pine);mix-blend-mode:multiply}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .top .dots i:last-child{mix-blend-mode:normal;opacity:.9;background:#2FA58F}}
+.top nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.top nav a{font-size:13px;text-decoration:none;color:var(--mute);padding:7px 12px;border-radius:999px}
+.top nav a.on{background:var(--ink);color:var(--bg)}
+.hero{display:grid;gap:18px;padding:36px 0 8px}
+.k{font-size:12px;letter-spacing:.16em;color:var(--coral);font-weight:700}
+h1{font-size:clamp(34px,6vw,58px);line-height:1.15;letter-spacing:-.02em;margin:0;font-weight:900;text-wrap:balance}
+h2{font-size:26px;margin:0 0 6px;font-weight:900;letter-spacing:-.01em}
+h3{font-size:16px;margin:0;font-weight:700}
+p{margin:0;max-width:68ch;color:var(--mute)}p b,li b{color:var(--ink)}
+section{display:grid;gap:20px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:10px;align-content:start;min-width:0}
+.card ul{margin:0;padding-left:18px;color:var(--mute);display:grid;gap:6px;font-size:14.5px}
+.sw{border-radius:18px;overflow:hidden;border:1px solid var(--line);background:var(--card)}
+.sw .c{height:92px}.sw div:last-child{padding:10px 12px;font-size:12.5px;line-height:1.5;color:var(--mute)}
+.sw b{display:block;color:var(--ink);font-size:14px}.sw code{font-family:Outfit;font-size:12px}
+.logo{display:grid;place-items:center;border-radius:20px;min-height:180px}
+.logo .wm{font-size:44px}.logo .dots{transform:scale(1.7);transform-origin:left center;margin-right:18px}
+.duo{position:relative;width:104px;height:66px}
+.duo i{position:absolute;width:60px;height:60px;border-radius:50%;top:3px}
+.duo i:first-child{left:0;background:var(--coral);animation:a 3.6s ease-in-out infinite}
+.duo i:last-child{left:40px;background:var(--pine);mix-blend-mode:multiply;animation:b 3.6s ease-in-out infinite}
+.duo.talk i:first-child{animation:ta .7s ease-in-out infinite}.duo.talk i:last-child{animation:tb .7s ease-in-out infinite}
+.duo.think i:first-child{animation:th 1.6s ease-in-out infinite}
+.duo.cheer i{animation:ch .9s cubic-bezier(.2,.8,.2,1) infinite alternate!important}
+@keyframes a{50%{transform:translateX(4px)}}@keyframes b{50%{transform:translateX(-4px)}}
+@keyframes ta{50%{transform:scale(1.08) translateX(3px)}}@keyframes tb{50%{transform:scale(.94) translateX(-3px)}}
+@keyframes th{50%{transform:translateY(-8px)}}@keyframes ch{to{transform:translateY(-10px) scale(1.05)}}
+.state{display:grid;justify-items:center;gap:14px;background:var(--oat);border-radius:20px;padding:26px 12px 16px;color:var(--pine-ink);font-size:13.5px;text-align:center}
+.type{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:14px}
+.type small{font-size:12px;color:var(--mute);letter-spacing:.06em}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 12px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);letter-spacing:.06em}
+.scroll{overflow-x:auto}
+.do{border-left:4px solid var(--pine);padding-left:14px}.dont{border-left:4px solid var(--coral);padding-left:14px}
+.btn{border:0;border-radius:18px;background:var(--pine);color:#fff;font-weight:700;font-size:16px;padding:15px 20px;font-family:inherit}
+.btn.o{background:transparent;color:var(--pine);border:1.5px solid var(--pine)}.btn.c{background:var(--coral)}
+.pill{display:inline-block;background:var(--coral);color:#fff;font-weight:700;font-size:13px;padding:5px 14px;border-radius:999px}
+.chip{display:inline-block;font-size:12.5px;padding:3px 10px;border-radius:999px;background:var(--mint);color:var(--pine-deep)}
+.demo{background:var(--oat);border-radius:20px;padding:20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:var(--pine-ink)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<div class="wrap">
+  <header class="top"><div class="wm">Tandelo<span class="dots"><i></i><i></i></span></div>
+    <nav><a target="_blank" rel="noopener" href="https://claude.ai/artifact/1sCUzMAedF384syXnFjP1w">產品 Demo</a><a class="on" href="#">品牌視覺規範</a><a target="_blank" rel="noopener" href="https://claude.ai/artifact/QWybr3HPwhRobZtD93MK5f">調研與設計依據</a></nav></header>
+
+  <div class="hero"><div class="k">BRAND GUIDELINES · v1.0 · 2026-09</div>
+    <h1>兩個圓，靠在一起。<br>一個是你，一個是陪你的人。</h1>
+    <p>Tandelo 取自 tandem（協力車）。品牌的一切，從商標到 AI 教練的臉到小隊頭像，都是同一個圖形：兩個重疊的圓。重疊的那一塊，就是「學會」發生的地方。</p></div>
+
+  <section><h2>1. 我們為什麼長這樣</h2>
+    <p>配色與氣質不是憑喜好，是看過市場、文化、用途、用戶和競品之後的選擇。</p>
+    <div class="scroll"><table><thead><tr><th>面向</th><th>我們看到的</th><th>所以這樣做</th></tr></thead><tbody>
+      <tr><td><b>競品</b></td><td>台灣補教與線上課幾乎都是藍色（信任）或橘紅（熱血衝刺）；國際 AI 家教多為紫藍漸層（科技感）；遊戲化學習是螢光綠加吉祥物</td><td>走深松綠加珊瑚：在應用商店和 LINE 裡一眼分得出來，既不像補習班，也不像 AI 工具，也不幼稚</td></tr>
+      <tr><td><b>用戶</b></td><td>國中生討厭被當小孩，也討厭「又一個家長裝的東西」。他們手機裡好看的 App 是音樂、筆記、穿搭類</td><td>大字、留白、沉穩底色，質感向生活類 App 看齊；不用卡通吉祥物，AI 教練只是兩個會呼吸的圓</td></tr>
+      <tr><td><b>付錢的人</b></td><td>家長要的是「可靠、不浮誇、看得懂」</td><td>深綠帶來穩定與成長的聯想；家長端全部在 LINE 內，用 LINE 原生樣式，不另學介面</td></tr>
+      <tr><td><b>文化與地域</b></td><td>紅色在台灣考卷上代表「錯」；綠色在台日越皆為正面、安全；金色在華人文化是成就</td><td>介面裡不用紅色標錯。卡住用珊瑚（暖、不刺眼），學會用綠，真正掌握用金。出海不需改色</td></tr>
+      <tr><td><b>用途</b></td><td>晚上 20:30–22:00 使用、多在床邊或書桌、眼睛已經累了</td><td>燕麥色底取代純白，降低刺眼；正文 15.5px 以上、行高 1.75；22:30 後整體轉暗</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section><h2>2. 商標</h2>
+    <div class="g3">
+      <div class="logo" style="background:#F6F4EE;color:#0D2B26"><div class="wm"><span class="dots"><i></i><i></i></span>Tandelo</div></div>
+      <div class="logo" style="background:#0E5F52;color:#fff"><div class="wm"><span class="dots"><i></i><i style="background:#fff;mix-blend-mode:normal;opacity:.92"></i></span>Tandelo</div></div>
+      <div class="logo" style="background:#0D2B26"><div class="duo"><i></i><i style="mix-blend-mode:normal;background:#2FA58F;opacity:.9"></i></div></div>
+    </div>
+    <div class="g2"><div class="card do"><h3>可以</h3><ul><li>字標用 Outfit Bold，字距 −3%</li><li>圓點可放字標前或後；App 圖示只用兩個圓</li><li>四周留白至少一個圓的直徑</li><li>落款：<b>萬通教育出品</b>（小字、不與商標並排）</li></ul></div>
+    <div class="card dont"><h3>不要</h3><ul><li>不把兩個圓分開、不改成三個</li><li>不加漸層、陰影、外框</li><li>不替圓點畫眼睛嘴巴</li><li>不與其他品牌商標組成聯名鎖定圖形</li></ul></div></div>
+  </section>
+
+  <section><h2>3. 顏色</h2>
+    <div class="g4">
+      <div class="sw"><div class="c" style="background:#0E5F52"></div><div><b>松綠 Pine</b><code>#0E5F52</code><br>主色。按鈕、已學會、老師與平台的聲音</div></div>
+      <div class="sw"><div class="c" style="background:#F26B54"></div><div><b>珊瑚 Coral</b><code>#F26B54</code><br>強調。卡住的點、小隊課、需要注意。不代表錯</div></div>
+      <div class="sw"><div class="c" style="background:#F4C24D"></div><div><b>蜂蜜金 Honey</b><code>#F4C24D</code><br>只給「隔三天還在」的已掌握。稀有才有價值</div></div>
+      <div class="sw"><div class="c" style="background:#F6F4EE"></div><div><b>燕麥 Oat</b><code>#F6F4EE</code><br>畫面底色。比純白柔和，晚上不刺眼</div></div>
+      <div class="sw"><div class="c" style="background:#DCEFE8"></div><div><b>薄荷 Mint</b><code>#DCEFE8</code><br>AI 教練說話的底、次要區塊</div></div>
+      <div class="sw"><div class="c" style="background:#0D2B26"></div><div><b>墨綠 Ink</b><code>#0D2B26</code><br>文字。不用純黑</div></div>
+      <div class="sw"><div class="c" style="background:linear-gradient(90deg,#DCEFE8 0 16.6%,#F9D3C9 0 33.3%,#FBE7B2 0 50%,#C9DDF8 0 66.6%,#DDD2F6 0 83.3%,#CFEBDD 0)"></div><div><b>隊友六色</b>頭像底色。加入前只看得到顏色，保護隱私也保留好奇</div></div>
+      <div class="sw"><div class="c" style="background:#06C755"></div><div><b>LINE 綠</b><code>#06C755</code><br>只在家長 LINE 畫面出現，不進 App</div></div>
+    </div>
+    <p>比例：燕麥與白 70%、松綠 20%、珊瑚 8%、金 2%。文字對比皆達 4.5:1 以上（墨綠對燕麥 13.6:1、白對松綠 7.4:1）；珊瑚底上的白字只用於 13px 粗體以上的標籤。</p>
+  </section>
+
+  <section><h2>4. 字</h2>
+    <div class="card">
+      <div class="type" style="border:0;padding:0"><small>標題 · Noto Sans TC Black 900</small><div style="font-size:40px;font-weight:900;line-height:1.2;letter-spacing:-.02em">孩子卡在哪，就從哪裡開始。</div></div>
+      <div class="type"><small>內文 · Noto Sans TC 400 / 15.5px / 行高 1.75</small><div>你們六個都走到同一段：除以負數時，不等號為什麼要改變方向。</div></div>
+      <div class="type"><small>數字與英文 · Outfit 600</small><div style="font-family:Outfit;font-size:30px;font-weight:600">9/23 19:00–19:50 · 78% · NT$2,990</div></div>
+      <div class="type"><small>數學式 · STIX Two Text Italic（跟課本長得一樣，孩子才認得）</small><div style="font-family:'STIX Two Text';font-style:italic;font-size:34px">−2x &gt; 6 → x &lt; −3</div></div>
+    </div>
+    <p>出海時：日文換 Noto Sans JP、越南文用 Be Vietnam Pro，Outfit 與數學字體不變。</p>
+  </section>
+
+  <section><h2>5. 小陪：AI 教練的樣子</h2>
+    <p>小陪沒有臉，只有兩個圓的動作。這是刻意的：它是<b>陪練的工具</b>，不是假裝成朋友的角色。對未成年人，我們不做會讓人產生情感依賴的擬人化。</p>
+    <div class="g4"><div class="state"><div class="duo"><i></i><i></i></div>待命：慢慢呼吸</div><div class="state"><div class="duo think"><i></i><i></i></div>在聽：一個圓微微浮起</div><div class="state"><div class="duo talk"><i></i><i></i></div>說話：兩個圓一縮一放</div><div class="state"><div class="duo cheer"><i></i><i></i></div>你學會了：一起跳一下</div></div>
+    <div class="g2"><div class="card do"><h3>小陪這樣說話</h3><ul><li>用「我」，句子短，一次只講一件事</li><li>先講觀察，再講建議：「昨晚睡得少，今天我只排兩件事」</li><li>沒來的隔天只說：「回來了就好」</li><li>永遠不直接給答案，最多示範一步</li></ul></div>
+    <div class="card dont"><h3>小陪不這樣</h3><ul><li>不說「我好想你」「你讓我失望」這類情緒話</li><li>不用驚嘆號轟炸、不用表情符號</li><li>不比較同學、不報排名</li><li>22:30 之後不出聲</li></ul></div></div>
+  </section>
+
+  <section><h2>6. 元件與形狀</h2>
+    <div class="demo"><span class="pill">為你配對</span><button class="btn">我想加入這一隊</button><button class="btn o">先不用</button><button class="btn c">按住說 50 秒</button><span class="chip">歸屬感</span></div>
+    <div class="g3"><div class="card"><h3>圓與大圓角</h3><p>圓來自商標。按鈕圓角 18、卡片 18–26、標籤全圓。沒有直角。</p></div><div class="card"><h3>少框線、靠留白分段</h3><p>一頁最多一張深綠主卡，其餘靠細線和間距。每頁只有一個主要按鈕。</p></div><div class="card"><h3>圖示</h3><p>線條 1.9px、圓頭圓角、不填色。不用表情符號當圖示。</p></div></div>
+  </section>
+
+  <section><h2>7. 動態</h2>
+    <div class="g3"><div class="card"><h3>翻過去</h3><p>不等號翻面、卡點變金色。招牌動作：「本來卡住的，翻過來了」。0.7 秒。</p></div><div class="card"><h3>圓點散開</h3><p>慶祝只用品牌色小圓點，不用彩帶、獎盃、煙火。一天最多看到兩次。</p></div><div class="card"><h3>安靜原則</h3><p>緩動曲線 (.2,.8,.2,1)；畫面切換 0.45 秒；系統設定減少動態時全部關閉。</p></div></div>
+  </section>
+
+  <section><h2>8. 用詞</h2>
+    <div class="scroll"><table><thead><tr><th>我們說</th><th>不說</th><th>為什麼</th></tr></thead><tbody>
+      <tr><td>卡住、卡點</td><td>弱點、不會、落後</td><td>卡住是暫時的，弱點像是你的一部分</td></tr>
+      <tr><td>小隊、隊友</td><td>班級、同學、對手</td><td>一起走完一段路的人</td></tr>
+      <tr><td>已掌握</td><td>滿分、過關</td><td>隔三天還在才算</td></tr>
+      <tr><td>說給我聽</td><td>口試、測驗</td><td>是分享，不是被考</td></tr>
+      <tr><td>今晚可以問他…</td><td>您的孩子本週表現…</td><td>給家長一句能開口的話，不給成績單</td></tr>
+    </tbody></table></div>
+  </section>
+</div>

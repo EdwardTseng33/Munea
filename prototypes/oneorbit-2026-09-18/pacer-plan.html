@@ -1,0 +1,601 @@
+<title>Tandelo 功能規劃</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F7F6F2; --ink:#15171C; --mute:#6B6F7A; --line:#E1DFD8; --card:#FFFFFF; --soft:#FFF0EC;
+  --pace:#F0442A; --pace-deep:#B92E19; --lane:#22A06B; --amber:#E09B1A; --sky:#3F6FE0;
+  --p1:#F0442A; --p2:#E09B1A; --p3:#8A8F9A;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#121317; --ink:#EEEDE8; --mute:#9EA2AC; --line:#2A2C33; --card:#1B1D23; --soft:#2A1E1B; --pace:#FF6A50; --pace-deep:#FF9A86; } }
+:root[data-theme="dark"]{ --bg:#121317; --ink:#EEEDE8; --mute:#9EA2AC; --line:#2A2C33; --card:#1B1D23; --soft:#2A1E1B; --pace:#FF6A50; --pace-deep:#FF9A86; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.65}
+.wrap{max-width:1060px;margin:0 auto;padding:48px 24px 100px}
+.eyebrow{font-family:Sora,sans-serif;font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--pace)}
+h1{font-family:Sora,"Noto Sans TC",sans-serif;font-weight:800;font-size:44px;line-height:1.08;margin:8px 0 12px;letter-spacing:-.02em;text-wrap:balance}
+h1 span{color:var(--pace)}
+.lead{font-size:17px;max-width:64ch;margin:0 0 14px}
+.meta{font-size:13px;color:var(--mute);margin-bottom:10px}
+.vocab{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.vocab span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px}
+.vocab span b{color:var(--pace);font-family:Sora;font-weight:700;margin-right:6px}
+h2{font-family:Sora,"Noto Sans TC";font-weight:800;font-size:24px;margin:54px 0 6px;letter-spacing:-.01em}
+h2 + .sub{color:var(--mute);font-size:14.5px;margin:0 0 18px;max-width:70ch}
+p{max-width:70ch}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+/* users */
+.stages{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:800px){.stages{grid-template-columns:1fr}}
+.stage{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:6px;border-top:4px solid var(--pace)}
+.stage.b{border-top-color:var(--amber)}.stage.c{border-top-color:var(--p3)}
+.stage h4{margin:0;font-family:Sora,"Noto Sans TC";font-size:17px}
+.stage h4 small{display:block;font-family:"Noto Sans TC";font-weight:400;font-size:12.5px;color:var(--mute)}
+.stage ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:3px}
+.roles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+@media (max-width:800px){.roles{grid-template-columns:1fr 1fr}}
+.roles div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;background:var(--card)}
+.roles b{display:block;font-family:Sora,"Noto Sans TC";font-size:14px;margin-bottom:2px}
+.roles i{font-style:normal;color:var(--mute);font-size:12px;display:block}
+/* devices */
+.dev{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media (max-width:900px){.dev{grid-template-columns:1fr 1fr}}
+.dev div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);font-size:13px}
+.dev b{display:block;font-family:Sora,"Noto Sans TC";font-size:14px}
+.dev small{color:var(--mute);display:block;margin-bottom:6px;font-size:12px}
+/* feature map */
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:780px;font-size:13.5px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:Sora,"Noto Sans TC";font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:700;background:var(--bg)}
+tr.grp td{background:var(--bg);font-family:Sora,"Noto Sans TC";font-weight:700;font-size:13px;color:var(--ink)}
+td.f{font-weight:700;white-space:nowrap}
+td.who{color:var(--mute);white-space:nowrap;font-size:12.5px}
+.ph{display:inline-block;font-family:"IBM Plex Mono";font-size:11px;padding:2px 8px;border-radius:6px;color:#fff;white-space:nowrap}
+.ph.p1{background:var(--p1)}.ph.p2{background:var(--p2)}.ph.p3{background:var(--p3)}
+.src{display:inline-block;font-size:11px;padding:1px 7px;border-radius:5px;background:var(--bg);border:1px solid var(--line);color:var(--mute);white-space:nowrap}
+.src.m{color:#6B4FD8;border-color:#C9BEF5}.src.n{color:var(--lane);border-color:#A8DCC3}.src.o{color:#8A5A00;border-color:#F3D28F}
+tr:last-child td{border-bottom:0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--mute);margin:10px 0 0}
+/* feature cards */
+.feats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:800px){.feats{grid-template-columns:1fr}}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:8px}
+.feat h4{margin:0;font-family:Sora,"Noto Sans TC";font-size:17px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.feat h4 small{font-family:"IBM Plex Mono";font-size:11px;color:var(--mute);font-weight:400;white-space:nowrap}
+.feat .one{font-size:14px}
+.feat dl{margin:0;display:grid;grid-template-columns:64px 1fr;gap:4px 10px;font-size:13px}
+.feat dt{color:var(--mute)}.feat dd{margin:0}
+/* gear table */
+.gears{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:800px){.gears{grid-template-columns:1fr}}
+.gear{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--card);display:grid;gap:6px}
+.gear h4{margin:0;font-family:Sora,"Noto Sans TC";font-size:16px}
+.gear h4 i{font-style:normal;font-family:"IBM Plex Mono";font-size:11px;color:var(--mute);display:block;font-weight:400}
+.gear p{margin:0;font-size:13.5px}
+.gear .cost{font-family:"IBM Plex Mono";font-size:12px;color:var(--mute)}
+.rule{border-left:3px solid var(--pace);padding:6px 0 6px 14px;font-size:14px;margin:12px 0 0}
+.steps{counter-reset:s;display:grid;gap:10px;padding:0;margin:0;list-style:none}
+.steps li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;font-size:14px}
+.steps li::before{counter-increment:s;content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:Sora;font-weight:700;font-size:13px}
+.steps li b{font-weight:700}
+/* tiers */
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:800px){.tiers{grid-template-columns:1fr}}
+.tier{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--card);display:grid;gap:8px}
+.tier h4{margin:0;font-family:Sora,"Noto Sans TC";font-size:17px}
+.tier h4 small{display:block;font-family:"Noto Sans TC";font-weight:400;font-size:12.5px;color:var(--mute)}
+.tier ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:3px}
+.tier.mid{border-color:var(--pace);box-shadow:0 0 0 3px var(--soft)}
+.note{font-size:13px;color:var(--mute);border:1px dashed var(--line);border-radius:10px;padding:10px 14px;margin-top:12px}
+/* touchpoints */
+.tp{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:800px){.tp{grid-template-columns:1fr 1fr}}
+.tp div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);font-size:13px}
+.tp b{font-family:"IBM Plex Mono";color:var(--pace);display:block;font-weight:500;margin-bottom:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:800px){.two{grid-template-columns:1fr}}
+.two div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);font-size:13.5px}
+.two b{display:block;font-family:Sora,"Noto Sans TC";font-size:14px;margin-bottom:4px}
+/* lists */
+.lines{list-style:none;padding:0;margin:0;display:grid;gap:0}
+.lines li{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+@media (max-width:640px){.lines li{grid-template-columns:1fr;gap:4px}}
+.lines li b{font-family:Sora,"Noto Sans TC";font-size:13.5px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:800px){.kpis{grid-template-columns:1fr 1fr}}
+.kpis div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--card);font-size:13px}
+.kpis b{display:block;font-family:Sora,"Noto Sans TC";font-size:14.5px;margin-bottom:2px}
+.kpis div.ns{border-color:var(--pace);background:var(--soft)}
+.kpis small{color:var(--mute);display:block}
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:800px){.phases{grid-template-columns:1fr}}
+.phase{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--card);display:grid;gap:8px}
+.phase h4{margin:0;font-family:Sora,"Noto Sans TC";font-size:16px}
+.phase h4 span{display:inline-block;font-family:"IBM Plex Mono";font-size:11px;padding:2px 8px;border-radius:6px;color:#fff;margin-right:8px;vertical-align:2px}
+.phase ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:3px}
+.phase .q{font-size:13px;color:var(--mute);border-top:1px dashed var(--line);padding-top:8px}
+.phase .q b{color:var(--ink)}
+.research{display:grid;gap:0;border-top:1px solid var(--line)}
+.research div{display:grid;grid-template-columns:190px 1fr;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+@media (max-width:640px){.research div{grid-template-columns:1fr;gap:4px}}
+.research b{font-family:Sora,"Noto Sans TC";font-size:14px}
+.research a{color:var(--sky)}
+.research small{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.next{background:var(--ink);color:var(--bg);border-radius:16px;padding:22px 26px;display:grid;gap:8px}
+.next h3{margin:0;font-family:Sora,"Noto Sans TC";font-size:18px}
+.next ol{margin:0;padding-left:20px;font-size:14.5px;display:grid;gap:5px}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">OneClass 第二事業品牌 · 功能規劃 v0.1 · 2026-09-18 · 蘇菲</div>
+  <h1><span>Tandelo</span>｜AI 配對的真人小組課<br><span style="font-size:.8em;color:var(--ink)">孩子卡在哪，就從哪裡開始。</span></h1>
+  <p class="lead">AI 配對的真人小組課。針對孩子沒弄懂的觀念，找到一起學習的同伴，讓真人老師集中帶著練。Tandelo 從學習歷程找出孩子需要釐清的地方，安排 3–6 位有相同學習需求的同學，由真人老師帶領的小組課。針對卡點上課，和同伴一起分攤學費。課堂之外，AI 教練每天陪著掌握進度，讓家人看見孩子正在練什麼、又學會了什麼。<br><span style="font-size:13px;color:var(--mute)">萬通教育出品 · 第一年國二、國三數理 · 手機是教練的日常，iPad 是跑團教室</span></p>
+  <div class="meta">v0.17 · 9/18 17:35 圈固定、團每週重湊改為「圈固定、團每週重湊」+ 三條自由 · v0.16 17:05 標題與開頭改成 Codex 敘事 · v0.15 17:00 定位再修正：Tandelo 平台公司、萬通第一客戶、兩張損益、出海全球/在地分工 · v0.14 16:55 落款改「萬通教育出品」、移除南一綁定 · v0.13 16:50 加最終體驗與理想教學情境、課的單位改 50/25/45 · v0.12 16:45 加行銷主題與敘事（Codex 版） · v0.11 16:40 加「怎麼說服別人投」五論點 + 三段要錢 · v0.10 16:35 加整張損益（電銷 vs 產品帶客、人力比例、鐵律） · v0.9 16:30 加毛利完整表 · v0.8 16:28 Codex 審查回應：更正三處引用、重算毛利含通路費、付款路徑、圈固定、團每週重湊設計、說給我聽三道關、第一天流程、硬規則例外、授權保存、第一階段改為付費試點 · v0.7 16:22 更名 Tandelo、補國二國三需求與第一版取捨 · v0.6 16:20 用戶收窄為國中生（第一年國二國三數理） · v0.5 16:10 加商業模式（課程目錄、老師介紹卡、付費八步、試算） · v0.4 16:05 一格改一小時、分頁改五個（路線合併計畫與歷程、最右是我） · v0.3 15:58 加配速計畫（整個人）+ 小陪 + Rive 臉 · v0.2 15:40 換重心：從「AI 學習教練」改成「AI 湊團的真人小組課」，跑團從第二階段提到第一階段主角。畫面見 Tandelo 原型。</div>
+  <div class="vocab">
+    <span><b>湊團引擎</b>用歷程把卡同一點的人湊成一團</span><span><b>小陪</b>AI 教練的名字，有臉、第一人稱</span><span><b>三種長度</b>跑團 50 · 補強抽查 25 · 自學格 45（讀 20 · 走 5 · 讀 20）</span><span><b>路線</b>計畫和歷程合成一頁：往前是這週，往後是走過的</span><span><b>本週配速</b>讀書 + 睡眠 + 走動 + 心情一張表</span><span><b>今日配速</b>今天的航線</span><span><b>跑團</b>3–6 人的一對多小組課</span><span><b>私人教練</b>真人一對一</span><span><b>說給我聽</b>講 30 秒證明你懂</span><span><b>答題紙</b>iPad 上用筆寫的練習紙</span><span><b>那場長跑</b>會考</span><span><b>領跑員</b>輔導老師</span>
+  </div>
+
+  <h2>定位再修正（9/18 16:40 · Edward）：Tandelo 是平台公司，萬通是第一個客戶；模型要能複製出海</h2>
+  <p class="sub">「理論上他們都是客戶，萬通也是客戶」「以後要能把商業模型與產品複製出海」。這兩句把 Tandelo 從「幫萬通做的第二品牌」改成「一家平台公司，萬通是第一個客戶」。家長端「萬通教育出品」不動，後面的合約是平台授權，兩件事不衝突。</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th></th><th>Tandelo（平台公司）</th><th>萬通（第一個客戶）</th></tr></thead>
+    <tbody>
+      <tr><td class="f">擁有</td><td>引擎（湊團、歷程、說給我聽）、App、小陪、家人迴路、領跑員台、整套做法</td><td>老師、學生、課程教材、在地營運、品牌背書</td></tr>
+      <tr><td class="f">收入</td><td>平台抽成：每筆學費的 20–25%（或每個學生月費）</td><td>學費的 75–80%</td></tr>
+      <tr><td class="f">成本</td><td>研發、AI、客戶成功、賣給下一個客戶</td><td>老師分潤、輔導老師、客服、在地行銷</td></tr>
+      <tr><td class="f">對家長</td><td>看不見</td><td>「萬通教育出品」在前面</td></tr>
+    </tbody>
+  </table></div>
+  <div class="two" style="margin-top:12px">
+    <div><b>Tandelo 的損益（像軟體公司）</b><table style="min-width:0;font-size:12.5px"><tbody><tr><td>每家學費 NT$3,600，抽 25%</td><td class="mono" style="text-align:right">NT$900</td></tr><tr><td>每家每月 AI + 金流 + 主機</td><td class="mono" style="text-align:right">約 NT$150</td></tr><tr><td><b>毛利</b></td><td class="mono" style="text-align:right"><b>約 80%</b></td></tr><tr><td>10,000 家：月營收</td><td class="mono" style="text-align:right">900 萬</td></tr><tr><td>研發 + 客戶成功 + 賣下一個客戶</td><td class="mono" style="text-align:right">400–500 萬</td></tr><tr><td><b>營業利益</b></td><td class="mono" style="text-align:right"><b>40% 以上</b></td></tr></tbody></table><div style="font-size:12.5px;color:var(--mute);margin-top:6px">不隨家庭數等比長人，這才是軟體生意。</div></div>
+    <div><b>萬通的損益（服務業，但不擔技術）</b><table style="min-width:0;font-size:12.5px"><tbody><tr><td>留 75%</td><td class="mono" style="text-align:right">NT$2,700</td></tr><tr><td>老師（8 團 × 1,000 ÷ 5 人）</td><td class="mono" style="text-align:right">約 1,600</td></tr><tr><td>輔導老師</td><td class="mono" style="text-align:right">約 210</td></tr><tr><td>金流通路</td><td class="mono" style="text-align:right">約 290</td></tr><tr><td>客服、補課準備金</td><td class="mono" style="text-align:right">約 180</td></tr><tr><td><b>留下</b></td><td class="mono" style="text-align:right"><b>約 NT$420 · 15%</b></td></tr></tbody></table><div style="font-size:12.5px;color:var(--mute);margin-top:6px">跟自己做差不多，但不出研發、不擔技術風險、老師產能放大五倍。服務的錢留給會服務的人，軟體的錢留給會做軟體的人，兩邊都比原本好。</div></div>
+  </div>
+  <h3 style="font-family:Sora,'Noto Sans TC';font-size:16px;margin:20px 0 8px">出海要複製，第一天就分清「全球的」和「在地的」</h3>
+  <div class="tblwrap"><table>
+    <thead><tr><th>全球通用（Tandelo 做一次）</th><th>在地（每個國家由客戶供）</th></tr></thead>
+    <tbody>
+      <tr><td>湊團引擎、歷程、錯因四分類、說給我聽（任何語言）</td><td>課綱知識點地圖：引擎吃的是資料，不寫死</td></tr>
+      <tr><td>App、小陪（口氣和聲音換一套；既有技術 已有「每個地區一本人設書」的做法）</td><td>老師、學生、輔導老師</td></tr>
+      <tr><td>家人迴路（通訊軟體換接口：LINE、WhatsApp、Kakao、Zalo）</td><td>付款方式、法規、家長溝通習慣</td></tr>
+      <tr><td>領跑員台（這就是賣給客戶的後台）、客戶儀表板（成班率、再測通過率、續購，是賣下一個客戶的工具）</td><td>在地行銷、品牌</td></tr>
+      <tr><td>抽成模式（跟著當地學費水準走，不用重訂價）</td><td></td></tr>
+    </tbody>
+  </table></div>
+  <div class="two" style="margin-top:12px">
+    <div><b>第一個海外市場的四個條件</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li>升學考試壓力大</li><li>補習文化強</li><li>家長手機優先</li><li>有一個「有老師有學生沒引擎」的在地夥伴</li></ul><div style="font-size:13px;margin-top:6px">照這四條，<b>越南</b>（價格低、小班剛好）和<b>日本</b>（補習班密度高、團隊已做過日本在地化）排前面。台灣試點跑完就有數字去談。</div></div>
+    <div><b>要錢的三段跟著改</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>試點</b>（不變）：跟萬通做，8 週，四個問題</li><li><b>第二段</b>：改成<b>簽第二個客戶</b>（台灣另一家補教，或第一個海外夥伴），證明引擎能離開萬通活。這比「到 3,000 家」更能證明它是平台</li><li><b>第三段</b>：三個市場、三個客戶，Tandelo 營業利益 40%</li></ul><div class="rule" style="margin-top:8px">跟萬通談的方式也變：不是「幫你做一個產品」，是「你當第一個客戶，拿台灣獨家和最好的抽成條件，換老師、學生和成功案例」。</div></div>
+  </div>
+
+  <h2>四題現在幾分：Codex 審查後（9/18 16:20）</h2>
+  <p class="sub">Edward 9/18 的四個門檻。Codex 獨立審查後的判斷：整份約 80–85，痛點最接近 90，成班、成本、學習驗證還沒接完整。下面是他的區間，不是我的。要到 90 的條件寫在右欄，都在「試點要驗的事」那一節變成可執行的流程。</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>題目</th><th>原本</th><th>Codex 審後</th><th>為什麼還不到 90</th><th>要到 90</th></tr></thead>
+    <tbody>
+      <tr><td class="f">次世代題目</td><td class="mono">84</td><td class="mono" style="color:var(--pace);font-weight:700">84–89</td><td>用歷程找卡點再配真人小班，方向有價值；但錯因辨識準不準、比一般分班好多少，沒證明</td><td>試點量「錯因判對率」和「跟隨機分組比的差」</td></tr>
+      <tr><td class="f">高度槓桿</td><td class="mono">72</td><td class="mono" style="color:var(--pace);font-weight:700">75–83</td><td>成班密度、人工協調、免費教練與補課成本沒算完整；毛利沒扣通路費</td><td>三人、五人、取消後少人、免費用量高，四種情境都算過，誰承擔寫清楚</td></tr>
+      <tr><td class="f">市場與付費</td><td class="mono">68</td><td class="mono" style="color:var(--pace);font-weight:700">76–84</td><td>有價格和購買流程；但年齡擴大不等於那些家庭願意買、找得到。已收窄回國中</td><td>試點的續購率；付款路徑先定</td></tr>
+      <tr><td class="f">用戶痛點</td><td class="mono">87</td><td class="mono" style="color:var(--pace);font-weight:700">87–92</td><td>一對一貴、大班不精準、孩子孤單、家長不知道怎麼幫，抓得準</td><td>訪談驗「願意付錢的排序」</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="rule" style="margin-bottom:8px"><b>拍板建議（9/18 16:25）</b>：Codex 給了 A 全面開發、B 收斂成付費試點、C 海外優先。<b>蘇菲建議 B</b>，理由跟他一樣：最值錢的下一步是證明「湊得成、學得會、算得過、願意續買」，而不是先把角色、健康串接、家庭功能做齊。海外在「定位再修正」那節重新處理：台灣是第一個客戶，引擎全球通用、課綱老師付款在地。</div>
+
+  <h2>最終體驗與理想教學情境（9/18 16:40 · Edward「萬通只有 25/50，不必參照，但我們期待的最終體驗是什麼」）</h2>
+  <p class="sub">用「三年後做對了會長什麼樣」來想。學習只有三種動作，課的長度跟著動作走，不跟著堂數走。</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>動作</th><th>需要誰</th><th>理想長度</th><th>對應萬通現況</th></tr></thead>
+    <tbody>
+      <tr><td class="f">弄懂一個觀念</td><td>真人老師 + 同伴</td><td class="mono">50 分鐘（跑團）</td><td>50 分鐘課，但意義換成「把一群人的同一個卡點解掉」</td></tr>
+      <tr><td class="f">練熟</td><td>孩子自己 + AI 教練</td><td class="mono">每天 45 分鐘（讀 20 · 走 5 · 讀 20）</td><td>不是課，是孩子自己的格</td></tr>
+      <tr><td class="f">講出來證明懂了</td><td>孩子對 AI；偶爾對老師、對家人</td><td class="mono">每天 5 分鐘；老師抽查 25 分鐘</td><td>25 分鐘課，意義換成「一個人的最後一哩」：抽查或一對一補強</td></tr>
+    </tbody>
+  </table></div>
+  <div class="two" style="margin-top:14px">
+    <div><b>理想的一堂跑團，50 分鐘怎麼過</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:5px"><li><b>0–10 分：老師不講課本，講「你們五個的錯」。</b>五個人上週的錯寫在同一張紙上。老師問小睿：「你看小安這步，他哪裡跟你不一樣？」解釋別人的錯時，自己的錯就看見了</li><li><b>10–25 分：老師只補最後一哩。</b>根本原因同一個，一個比喻講三分鐘。各自做兩題，老師在紙上巡</li><li><b>25–40 分：互相講。</b>兩兩一組，你講給我聽、我講給你聽，老師只聽、只記。<b>這 15 分鐘最值錢</b>：教別人是最強的學習，一對一裡永遠不會發生</li><li><b>40–50 分：每人一句「我今天搞懂的是」。</b>錄下來，當晚小陪換一題再問。老師下課 30 秒語音</li></ul><div style="font-size:13px;color:var(--mute);margin-top:6px">老師從「講述者」變「主持人加診斷者」，講話時間不到四成。小陪在教室裡是安靜的記錄員：誰在哪步卡住、誰講得出來，下課自動變五份課後一頁。</div></div>
+    <div><b>孩子的一週</b><div style="font-size:13.5px;display:grid;gap:5px"><div>週一晚：小陪排這週（學校進到哪、上週跑團結果、段考幾天）</div><div>週二到週五：放學後一格 45 分鐘，做完講 30 秒</div><div>週三 17:00：跑團。同一隊六個人、同一位老師、一季不換</div><div>週六早：25 分鐘老師抽查兩人的說給我聽，或一對一補強</div><div>週日：什麼都不排，全家散步，媽媽的 LINE 收到這週的故事</div><div>段考前三天減量、考前一晚不排新東西</div><div><b>段考後那一堂跑團是「檢討卷」</b>：六個人的考卷錯題攤在同一張紙上，老師從共同錯的那題開始。全台灣國中生最有感的一堂課，每個孩子都在等人跟他一起看考卷</div></div></div>
+  </div>
+  <div class="two" style="margin-top:12px">
+    <div><b>家長、老師、領跑員的理想樣子</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>家長</b>一個月三件事：每週看一段故事、偶爾照「今天可以問他什麼」問一句、段考前看一條準備到哪。從不接推銷電話</li><li><b>老師</b>上課前 30 分鐘拿課前一頁、下課留 30 秒語音、月底看到「我帶的隊隔三天再測通過率 78%」和收入。不問「上次教到哪」，不備每人一份講義</li><li><b>領跑員</b>早上看五個人、下午按幾個成班、續約時手上一頁歷程。不追進度、不打電話催</li></ul></div>
+    <div><b>做對了的訊號（三年後自然出現的話）</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li>孩子：「跑團的人在等我」</li><li>家長：不問「考幾分」，問「這週搞懂什麼」</li><li>老師：「我教的是他們的錯，不是課本」</li><li>輔導老師：「我認識我顧的三百個孩子」</li></ul><div class="rule" style="margin-top:10px"><b>一句話</b>：今天的補習是「把課本再講一遍」，Tandelo 的一堂課是「把你們五個的錯解掉」。教室的主角不是老師也不是 AI，是那張寫著五個人的錯的紙。</div></div>
+  </div>
+
+  <h2>用戶重新定義</h2>
+  <p class="sub">Edward 9/18 收窄：<b>用戶就是國中生，第一年只做國二、國三，科目先數學和理化。</b>家長是「付不起一對一、又不想去大班」的家庭。小學和高中是以後，不進第一版。學生是主要用戶，家人在迴路裡，買的從堂數變成跑團次數。</p>
+  <div class="stages">
+    <div class="stage"><h4>第一年：國二、國三 · 數學 + 理化<small>約 37 萬人 · 成團最密</small></h4><ul><li>全台同一套課綱、同一個會考進度，同一週卡同一點的人最多</li><li>數理的卡點最明確、錯因最好歸四類</li><li>家長付費最高：每人每年校外學習 7 萬、八成學科</li><li>萬通在國中的學生、教材、老師最厚</li></ul></div>
+    <div class="stage b"><h4>第二年：國一補進來、加英文<small>約 56 萬人 · 同一種口氣</small></h4><ul><li>還是國中生，產品不用換口氣：要自主、要同儕、手機為主、家人是觀眾</li><li>英文的錯因歸類要另外做（時態、單字、句型）</li><li>國一進來讓歷程從一開始就累積，國三時最完整</li></ul></div>
+    <div class="stage c"><h4>以後，不進第一版<small>小學 · 高中 · 其他補教</small></h4><ul><li>小學：口氣要換（陪跑感、家長高參與、半小時格），是另一個產品版本</li><li>高中：學習歷程檔案是現成制度，門留著</li><li>引擎租給其他補教和學校：市場變成整個補教業</li></ul></div>
+  </div>
+  <div class="two" style="margin-top:14px">
+    <div><b>國二、國三的需求，跟小學和高中不一樣（Edward 9/18）</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>兩條倒數同時跑</b>：段考每六週一次，會考在盡頭。計畫要同時看兩個終點，減量週要對段考也對會考</li><li><b>題題計較</b>：會考容錯少，家長和孩子都在追「精熟」。錯題本、錯因四分類、說給我聽是為這個而生</li><li><b>時間已經被補習班排滿</b>：Tandelo 排在補習班和學校之外的縫隙裡，課表要讀進補習時段</li><li><b>要自主、拒絕被管</b>：手機優先、家人是觀眾、分享由孩子勾、心情只有自己能按</li><li><b>同儕是最強的引擎</b>：跑團不只是便宜，是「不只我卡」</li><li><b>睡不夠是常態</b>：兩成睡不到 6 小時，睡不夠就減量不是加分項，是底線</li><li><b>家長要的是「準備到哪」不是分數</b>：會考落點焦慮用「段考前準備到哪」和每週故事接住</li></ul></div>
+    <div><b>因此第一版拿掉或降級</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>拿掉</b>：小學段的暖口氣、一天三件事 15 分鐘、半小時格、家人高參與版</li><li><b>拿掉</b>：高中學習歷程檔案（門留著，不做）</li><li><b>降級</b>：iPad 答題紙用筆寫（國中生手機優先，拍題上傳為主，iPad 是加分）</li><li><b>降級</b>：家人的角色、全家的長跑（第二階段）</li><li><b>保留並加重</b>：跑團、湊團引擎、說給我聽、本週配速（段考 + 會考雙倒數）、睡不夠減量、錯題回顧、家人「搞懂了」通知</li><li><b>科目</b>：數學、理化先；英文第二年（錯因歸類要另做）</li></ul></div>
+  </div>
+  <div class="roles">
+    <div><b>學生</b><i>主要用戶 · 每天用</i>教練是他的，歷程是他的，分享什麼他決定</div>
+    <div><b>家人</b><i>迴路裡的人 · 每天一下</i>爸媽買會員不買堂數；阿公阿嬤、兄姊也在迴路裡。看見的是「他搞懂了什麼」，不是分數</div>
+    <div><b>老師</b><i>一次帶一團 · 一小時</i>拿到共同卡點卡，開場直接從那一步講。一堂帶五個，時薪比一對一高</div>
+    <div><b>領跑員（輔導老師）</b><i>做判斷的人 · 每天早上</i>只看今天要出手的五個人、跑團成班確認</div>
+  </div>
+
+  <h2>裝置分工</h2>
+  <p class="sub">手機是教練的日常，iPad 是教室。同一個帳號、同一份歷程，兩台裝置各做各的。</p>
+  <div class="dev">
+    <div><b>手機</b><small>學生 · 每天</small>五個分頁：首頁（照 既有技術 骨架：問候、小陪一句話、大按鈕、今天一起完成）、跑團、說給我聽（中央凸起）、路線（計畫 + 歷程合一）、我（帳號、教練、家人迴路、狀態來源、鎖定規則）</div>
+    <div><b>iPad</b><small>學生 · 推薦但不強制</small>答題紙（Apple Pencil 直接寫在同一張紙上）、跑團教室、錯題回顧。<b>跑團在手機上也能上</b>：看紙、聽、講、拍答案。強制 iPad 會砍掉只有手機的家庭</div>
+    <div><b>LINE</b><small>家人</small>搞懂了的通知、講給家人聽、今天可以問他什麼、每週故事、找領跑員、加課。不裝新 App</div>
+    <div><b>老師端</b><small>老師 · 上課前後</small>課前一頁、下課 30 秒語音評語、跑團名單和共同卡點</div>
+    <div><b>領跑員台</b><small>輔導老師 · 網頁</small>今日名單、跑團成班、續約歷程一頁</div>
+  </div>
+
+  <h2>功能地圖</h2>
+  <p class="sub">每一項標了「誰用、哪一階段做、從哪來」。第一階段只做能驗證「孩子每天回來」的東西。</p>
+  <div class="legend"><span><span class="ph p1">第一階段</span> 驗證留存</span><span><span class="ph p2">第二階段</span> 接上真人</span><span><span class="ph p3">第三階段</span> 護城河</span><span>來源：<span class="src m">既有技術</span> <span class="src n">新做</span> <span class="src o">OneClass 現成</span></span></div>
+  <div class="tblwrap" style="margin-top:10px"><table>
+    <thead><tr><th>功能</th><th>誰用</th><th>一句話</th><th>階段</th><th>來源</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="5">學生 · 手機</td></tr>
+      <tr><td class="f">今日配速</td><td class="who">學生</td><td>讀課表、段考、睡眠，排 一小時一格，每格寫理由，可延後可頂回</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術</span> <span class="src n">新做</span></td></tr>
+      <tr><td class="f">本週配速表</td><td class="who">學生</td><td>讀書格、睡眠目標、走動、心情排在同一張表；段考前減量週、考完恢復日</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 每日簡報</span> <span class="src n">新做</span></td></tr>
+      <tr><td class="f">狀態層：睡眠 · 走動 · 心情</td><td class="who">學生</td><td>睡眠和步數接 Apple 健康（既有技術 已有接法），心情一天按一下。只影響排多少、換不換檔、叫不叫人</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 健康串接 · 心情紀錄</span></td></tr>
+      <tr><td class="f">疲勞感知減量</td><td class="who">學生</td><td>昨晚太晚睡、今天考太多，自動減 30%。22:30 關燈不可關閉</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術</span></td></tr>
+      <tr><td class="f">起來走走</td><td class="who">學生 · 家人</td><td>每格之間 5 分鐘走 300 步；週末全家散步，家人 LINE 收到邀請</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 出門走走</span></td></tr>
+      <tr><td class="f">四次出場</td><td class="who">學生</td><td>早安減量、開始、說給我聽、關燈。鎖定畫面小卡，每次都能頂回去</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術</span></td></tr>
+      <tr><td class="f">說給我聽</td><td class="who">學生</td><td>做完一格講 30 秒，三條標準判過不過。過了才算完成</td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">拍段考範圍表</td><td class="who">學生</td><td>拍一張，航線重排。第一版唯一需要孩子動手的事</td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">歷程時間軸</td><td class="who">學生</td><td>「我什麼時候搞懂了什麼」。成長感，不是成績單</td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">分享面板</td><td class="who">學生</td><td>爸媽看什麼孩子勾。卡片明講「選擇分享了 N 項」</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術</span></td></tr>
+      <tr><td class="f">搞懂了印章 · 配速紀錄</td><td class="who">學生</td><td>講得出來的概念蓋章；跟自己比的紀錄，斷了不罰。是給家人看見的材料</td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">Rive：播放器開源、角色自己畫</td><td class="who">全部</td><td>Rive 的手機播放器是開源免費的（MIT），直接用；<b>角色檔一定要自己請繪師畫</b>，不能拿官方教學或社群的角色上正式產品（授權和品牌都不行，我們既有的角色也是重畫）。一個角色含十種嘴形、待機、聽、笑，估兩到四週、幾萬到十幾萬台幣，要報價</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有做法</span> <span class="src n">繪師新畫</span></td></tr>
+      <tr><td class="f">教練「小陪」：名字、臉、第一人稱</td><td class="who">學生</td><td>臉用 Rive 2D 在手機上跑（已驗證過的做法，十幾 KB、60 fps、不用雲端顯卡）。只出現在四個地方：首頁教練卡、說給我聽（會聽、點頭、過了會笑）、歷程的觀察、跑團教室小角落。所有 AI 講話都是小陪第一人稱</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 角色層 · Rive</span></td></tr>
+      <tr><td class="f">長跑路線圖 · 跑團完賽</td><td class="who">學生 · 家人</td><td>會考是全家的長跑、段考是補給站；跑團五人全過叫完賽</td><td><span class="ph p2">第二階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr class="grp"><td colspan="5">家人迴路（驅動力所在）</td></tr>
+      <tr><td class="f">搞懂了，家人會收到</td><td class="who">家人</td><td>孩子說給我聽過了，家人手機跳一則，按一下「看到了」「厲害」，孩子看到「阿公看到了」</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 家庭群組</span> <span class="src n">新做</span></td></tr>
+      <tr><td class="f">講給家人聽</td><td class="who">學生 · 家人</td><td>過了 AI 那關，把 30 秒送給一個家人或當面講；家人只能用語音或一句話回，不能打分數</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 語音橋</span> <span class="src n">新做</span></td></tr>
+      <tr><td class="f">今天可以問他什麼</td><td class="who">家人</td><td>每天一句：「別問成績，問他浮力為什麼。」孩子狀態差時改成「今天什麼都別問」</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 家庭調解</span></td></tr>
+      <tr><td class="f">AI 在中間講對的話</td><td class="who">家人 · 學生</td><td>家長問「怎麼還沒讀」，AI 先接住；孩子沮喪時 AI 提醒家長別提分數</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 家庭調解 + 守門人</span></td></tr>
+      <tr><td class="f">家人的角色</td><td class="who">家人</td><td>阿嬤是聽眾、爸爸是補給站、姐姐是陪跑員。孩子決定誰在迴路裡、可靜音</td><td><span class="ph p2">第二階段</span></td><td><span class="src m">既有技術 家庭成員</span> <span class="src n">新做</span></td></tr>
+      <tr><td class="f">全家的長跑 · 約定</td><td class="who">家人</td><td>段考結束全家一起做一件事，AI 記著到時提醒；OneClass 獎盃兌換排在家人約定後面</td><td><span class="ph p2">第二階段</span></td><td><span class="src n">新做</span> <span class="src o">OneClass 獎盃</span></td></tr>
+      <tr><td class="f">跑團邀請</td><td class="who">學生</td><td>「這週有 4 個人跟你一樣卡在不等式除負數，週三 17:00 一起一小時？」孩子按好，領跑員確認。私人教練的提議放第二階段</td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span> <span class="src o">OneClass</span></td></tr>
+      <tr><td class="f">掌握地圖</td><td class="who">學生</td><td>知識點顏色 + 「我多確定」。資料夠了才開</td><td><span class="ph p3">第三階段</span></td><td><span class="src n">新做</span> <span class="src o">課本</span></td></tr>
+      <tr class="grp"><td colspan="5">學生 · iPad</td></tr>
+      <tr><td class="f">答題紙</td><td class="who">學生</td><td>拍題或從作業來，用筆寫，AI 在邊緣貼提示，三級封頂沒有第四級</td><td><span class="ph p2">第二階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">錯題回顧</td><td class="who">學生</td><td>說給我聽過的題才排回顧：明天、三天、一週。回顧換數字不換概念</td><td><span class="ph p2">第二階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">真人教室</td><td class="who">學生 · 老師</td><td>OneClass 視訊上課系統放進來，白板和答題紙是同一張紙</td><td><span class="ph p2">第二階段</span></td><td><span class="src o">OneClass</span></td></tr>
+      <tr><td class="f">跑團教室</td><td class="who">學生 · 老師</td><td>3–6 人同一個卡點，一小時，老師一次帶一組。共用一張答題紙</td><td><span class="ph p1">第一階段</span></td><td><span class="src o">OneClass</span> <span class="src n">新做</span></td></tr>
+      <tr class="grp"><td colspan="5">家長 · LINE</td></tr>
+      <tr><td class="f">每週故事</td><td class="who">家長</td><td>週日一段，用孩子的話。搞懂了什麼、還在練什麼</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術</span> <span class="src n">LINE 接口</span></td></tr>
+      <tr><td class="f">段考前準備到哪</td><td class="who">家長</td><td>每科一條進度，掌握度不是分數</td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">找領跑員 / 加課</td><td class="who">家長</td><td>按一下接到真人，加課走 OneClass 現有約課</td><td><span class="ph p2">第二階段</span></td><td><span class="src o">OneClass</span></td></tr>
+      <tr><td class="f">會員與點數</td><td class="who">家長</td><td>包月教練 + 跑團次數 + 私人教練分鐘。既有的帳本</td><td><span class="ph p2">第二階段</span></td><td><span class="src m">既有技術</span></td></tr>
+      <tr class="grp"><td colspan="5">老師</td></tr>
+      <tr><td class="f">課前一頁</td><td class="who">老師</td><td>上次教到哪、這週教練看到什麼、段考範圍掌握度、建議開場</td><td><span class="ph p2">第二階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">下課 30 秒語音評語</td><td class="who">老師</td><td>用說的，AI 歸進歷程、更新航線、寫進週報。老師不打字</td><td><span class="ph p2">第二階段</span></td><td><span class="src m">既有技術</span></td></tr>
+      <tr><td class="f">跑團共同卡點卡</td><td class="who">老師</td><td>這五個人為什麼被湊在一起、各自錯在哪一步</td><td><span class="ph p2">第二階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr class="grp"><td colspan="5">領跑員（輔導老師）</td></tr>
+      <tr><td class="f">今日名單</td><td class="who">領跑員</td><td>今天要出手的五個人，理由、建議、擬好的開場</td><td><span class="ph p2">第二階段</span></td><td><span class="src m">既有技術 守門人</span> <span class="src n">規則新做</span></td></tr>
+      <tr><td class="f">跑團成班確認</td><td class="who">領跑員</td><td>AI 湊好名單和時段，人按確認，通知家長扣次數</td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">續約歷程一頁</td><td class="who">領跑員</td><td>整學期搞懂了什麼，一頁給家長看</td><td><span class="ph p3">第三階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr class="grp"><td colspan="5">大腦（看不見但最重要）</td></tr>
+      <tr><td class="f">歷程引擎</td><td class="who">全部</td><td>四個來源自動流進來：上課、練習、教練、學校。每題錯誤歸四類</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術 記憶</span> <span class="src n">新做</span></td></tr>
+      <tr><td class="f">換檔規則</td><td class="who">全部</td><td>自己來 / 跑團 / 私人教練，什麼條件換哪一檔</td><td><span class="ph p2">第二階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">湊團引擎</td><td class="who">全部</td><td>每天掃全部學生的卡點和錯因，找同週同點同錯因的 3–6 人，對老師空檔和家長次數。<b>這是品類本身</b></td><td><span class="ph p1">第一階段</span></td><td><span class="src n">新做</span></td></tr>
+      <tr><td class="f">守門人</td><td class="who">全部</td><td>孩子透露情緒危機：轉領跑員、家長、學校輔導、1925</td><td><span class="ph p1">第一階段</span></td><td><span class="src m">既有技術</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>八個核心功能，細說</h2>
+  <p class="sub">每一個都寫「做什麼、為什麼、規則」。規則是產品的骨頭，畫面可以改，規則不能隨便改。</p>
+  <div class="feats">
+    <div class="feat"><h4>今日配速<small>手機 · 第一階段</small></h4><div class="one">教練讀了課表、段考、昨晚幾點睡，排出 一小時一格的今天。</div><dl><dt>為什麼</dt><dd>台灣國中生不缺題目，缺一個看全局、會減量的人</dd><dt>規則</dt><dd>每格寫理由；可延後、可頂回；總量上限依睡眠調；22:30 硬停不可關</dd><dt>來源</dt><dd>既有的每日簡報 + 新做的排程</dd></dl></div>
+    <div class="feat"><h4>說給我聽<small>手機 · 第一階段</small></h4><div class="one">做完一格，講 30 秒為什麼。三條標準：講出關鍵、說得出為什麼、能換一題套用。</div><dl><dt>為什麼</dt><dd>抄答案沒用，也是「完成」的唯一定義。老師課前一頁的資料從這來</dd><dt>規則</dt><dd>錄音不留原檔，只留三個勾和一句摘要；沒過的不排回顧，回答題紙再寫</dd><dt>來源</dt><dd>既有技術 語音橋 + 新做的評分</dd></dl></div>
+    <div class="feat"><h4>答題紙<small>iPad · 第二階段</small></h4><div class="one">拍題或從作業來，用 Apple Pencil 寫，AI 在邊緣貼提示：輕推、指方向、示範一步。</div><dl><dt>為什麼</dt><dd>台灣孩子最熟的動作是看紅筆訂正。老師的白板和孩子的答題紙是同一張紙</dd><dt>規則</dt><dd>三級封頂沒有第四級；提示一次一級；先做文字多圖少的題型</dd><dt>來源</dt><dd>新做。iPadOS 內建手寫數學辨識可以先借</dd></dl></div>
+    <div class="feat"><h4>跑團<small>iPad · 第一階段 · 主角</small></h4><div class="one">教練找出這週卡同一個知識點的 3–6 人，開一堂一小時，配一位老師。</div><dl><dt>為什麼</dt><dd>價格是一對一的幾分之一，老師時薪反而更高，孩子多了「不只我卡」的同伴感。市面上沒人能用歷程湊團</dd><dt>規則</dt><dd>同週、同知識點、同錯因；3 人成班 6 人封頂；領跑員按確認才成立</dd><dt>來源</dt><dd>OneClass 上課系統 + 新做的配對</dd></dl></div>
+    <div class="feat"><h4>私人教練<small>iPad · 第二階段</small></h4><div class="one">AI 和跑團都解不了的：很個人、很深、或情緒上的。教練提議，孩子按好，領跑員排。</div><dl><dt>為什麼</dt><dd>真人時間貴，要用在刀口上。課變短、變準，單位時間賣更貴</dd><dt>規則</dt><dd>一小時為單位；老師拿到課前一頁；下課 30 秒語音評語必留</dd><dt>來源</dt><dd>OneClass 現有一對一</dd></dl></div>
+    <div class="feat"><h4>歷程<small>全部 · 第一階段起</small></h4><div class="one">學生零輸入。上課、練習、教練、學校四個來源自動流進來，AI 寫課程紀錄、歸錯因、更新地圖、寫週報。</div><dl><dt>為什麼</dt><dd>這是護城河。換老師帶著走、續約時給家長看、以後長成高中學習歷程檔案</dd><dt>規則</dt><dd>捉行為不捉人；每題錯因四類：概念不懂、粗心、看錯題、沒時間</dd><dt>來源</dt><dd>既有技術 記憶引擎 + 新做</dd></dl></div>
+    <div class="feat"><h4>每週故事<small>LINE · 第一階段</small></h4><div class="one">週日一段，用孩子的話，不用分數。段考前多一條「準備到哪」。</div><dl><dt>為什麼</dt><dd>家長要的是安心不是報表；孩子要的是不被出賣。卡片明講「選擇分享了 N 項」兩邊都安心</dd><dt>規則</dt><dd>內容由孩子勾選；家長按一下接到真人領跑員，不是機器人</dd><dt>來源</dt><dd>既有技術 每週摘要 + LINE 接口</dd></dl></div>
+    <div class="feat"><h4>今日名單<small>領跑員台 · 第二階段</small></h4><div class="one">每天早上五個人：理由、建議動作、擬好的開場。人只出手在需要人的時刻。</div><dl><dt>為什麼</dt><dd>一位領跑員從顧幾十位變幾百位，品質一樣；歷程不跟離職的人走</dd><dt>規則</dt><dd>排序規則要先訪談資深輔導老師；情緒危機永遠排第一、永遠是人打電話</dd><dt>來源</dt><dd>既有技術 守門人升級規則 + 新做排序</dd></dl></div>
+  </div>
+
+  <h2>孩子每天回來的驅動力：不是一個，是三層，分年齡配重</h2>
+  <p class="sub">Edward 9/18 問「學習這條路該用什麼驅動：家人？社群？同學？」。城堡三個人分頭查證後的合議：蕪菁頭看孩子的證據、霍爾看產品案例、沙利曼看未成年風險。</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>驅動力</th><th>起步 · 小四到小六</th><th>衝刺 · 國一到國三</th><th>Tandelo 怎麼做</th></tr></thead>
+    <tbody>
+      <tr><td class="f">有人在等我<br><span style="font-weight:400;color:var(--mute);font-size:12px">真人老師 + 跑團夥伴</span></td><td>副引擎。老師記得他就夠</td><td><b>主引擎</b>。同儕歸屬感在這個年紀最強，「不想缺席這堂課、老師會問我」比排行榜有力</td><td>跑團 3–6 人、老師在場、封閉；夥伴看得到彼此的努力不看分數；出場提醒改成「跑團的人在等你」</td></tr>
+      <tr><td class="f">家人看見<br><span style="font-weight:400;color:var(--mute);font-size:12px">家人迴路</span></td><td><b>主引擎</b>。這年紀最想被爸媽看見</td><td>退成觀眾。只看見「他搞懂了什麼」，一句話回應，不檢討</td><td>好消息預設分享、壞消息孩子決定；家人只能回語音或一句話；「今天可以問他什麼」取代「考幾分」</td></tr>
+      <tr><td class="f">自己看得見變強<br><span style="font-weight:400;color:var(--mute);font-size:12px">搞懂了印章、歷程</span></td><td>底層</td><td>底層</td><td>全年齡通用、不受同儕比較和家長情緒影響。跟自己比、斷了不罰。是前兩層「有東西可以看見」的材料</td></tr>
+      <tr><td class="f">AI 教練今天這一格</td><td>日常入口</td><td>日常入口</td><td>它是門，不是動機。Khanmigo 免費給學校只有 15% 學生會用，證明純 AI 角色沒有人的關係，孩子不會天天回來</td></tr>
+      <tr><td class="f" style="color:var(--pace)">不做</td><td colspan="3">開放社群（跨校、可私訊）、跨學生排行榜、家長端任何像監控報表的東西。三個人一致反對，理由在下面。</td></tr>
+    </tbody>
+  </table></div>
+  <div class="two" style="margin-top:14px">
+    <div><b>證據</b><ul style="margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px"><li><b>更正（Codex 查證）</b>：Khanmigo 那份研究約 96% 學生至少用過一次；14.5% 是「訊息裡含數學問題或推理」的比例，不是使用率。原本寫「只有 15% 學生用」是錯置，也不能用它證明「加了人的關係就會留住」。保留的結論只有：純聊天式 AI 家教的深度互動偏低。<a href="https://www.chalkbeat.org/2026/08/25/ai-tutoring-students-khanmigo-khan-academy-engagement-study/" style="color:var(--sky)">Chalkbeat</a></li><li>Duolingo 連續天數讓留存變 2.4 倍，但只有 1% 用戶到最高聯賽，多數人是被「不想斷」綁住，不是想學。<a href="https://blog.duolingo.com/how-streaks-keep-duolingo-learners-committed-to-their-language-goals/" style="color:var(--sky)">Duolingo</a></li><li>717 位國中生的研究：同儕關係透過學習動機和投入，顯著提升學業成就。<a href="https://link.springer.com/article/10.1186/s40359-024-01780-z" style="color:var(--sky)">BMC Psychology 2024</a></li><li><b>更正（Codex 查證）</b>：那份家長數位追蹤研究其實指出多數青少年接受追蹤，且未發現與青少年福祉的明確關聯。不能拿它支持「追蹤造成抗拒」。「家人是觀眾不是監控」這條設計仍然成立，但依據要換成自我決定理論的自主感研究，不是這篇。<a href="https://pubmed.ncbi.nlm.nih.gov/42473703/" style="color:var(--sky)">研究摘要</a></li><li>兒福聯盟 2026：91.6% 國中生有手機，過半曾在社群遭遇言語攻擊或不舒服內容。<a href="https://newtalk.tw/news/view/2026-08-26/1055790" style="color:var(--sky)">兒盟調查</a></li><li>排行榜是最公開的遊戲化形式，引發社會比較壓力與退出；只比鄰近同儕優於全體排名。<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC13217397/" style="color:var(--sky)">Frontiers 2026</a></li></ul></div>
+    <div><b>沙利曼的風險表（只讀只報、不擋）</b><table style="min-width:0;font-size:12.5px"><thead><tr><th>驅動力</th><th>風險</th><th>最低護欄</th><th>法務</th></tr></thead><tbody><tr><td>跑團同儕（封閉、老師在場）</td><td>🟡 中</td><td>只顯示努力不排分數；留言限鼓勵貼圖和審核短句；語音先關；老師是群組管理員；一鍵檢舉、24 小時處理</td><td>建議</td></tr><tr><td>家人互動</td><td>🟡 中</td><td>只推「搞懂了」不推時長分數；孩子看得到家長收到什麼；家長只能鼓勵；多監護人分權可單獨關閉</td><td>建議</td></tr><tr><td>開放社群</td><td>🔴 高</td><td>等同經營社交平台：兒少權法網路平台義務、iWIN 稽核、24 小時申訴處理。沒有真人值班就不上線</td><td>必須</td></tr></tbody></table><div style="font-size:12px;color:var(--mute);margin-top:6px">另：Tandelo 全年齡都要走家長同意（個資法對未成年）；只要有留言或語音就是「網路平台提供者」，兒少權法第 46 條自律規範要一次寫好；Apple 2026 年起新分級，兒童類別禁社群連結。</div></div>
+  </div>
+  <div class="rule"><b>一句話定位（霍爾）</b>：Tandelo 不是靠意志力打卡的學習 App，是「AI 每天幫你留一格、真人老師記得你進度、家人看見你搞懂了什麼」的陪跑。跑團是配菜，人的關係才是主菜。</div>
+
+  <h2>家人迴路：驅動孩子的不是 AI，是家人</h2>
+  <p class="sub">Edward 9/18 定調：用家人的互動來驅動這個工具。AI 教練不是主角，它是把家人接進孩子每一天學習的那條線。教練的臉和徽章都退到後面。</p>
+  <div class="two">
+    <div><b>為什麼是家人</b>兒福聯盟 2026：44% 的國中生覺得「成績不好就不被家長重視」，只有 35% 有煩惱會找父母談。問題不是家長不關心，是家長只有「考幾分」這一句話可以問。Tandelo 給家人另一種問法、另一種看見。</div>
+    <div><b>家人在迴路裡的做法，換成學習</b>既有技術 讓照顧不必一個人扛：本人用、家人看、AI 在中間調解。Tandelo 一樣：孩子學、家人接、AI 幫兩邊講對的話。家庭群組、分享分層、家庭調解的技能都是 既有技術的。</div>
+  </div>
+  <div class="feats" style="margin-top:12px">
+    <div class="feat"><h4>搞懂了，家人會收到<small>第一階段</small></h4><div class="one">孩子「說給我聽」過了，家人手機跳一則：「小睿剛剛把浮力講給教練聽，過了。」家人按一下「看到了」「厲害」「晚上講給我聽」，孩子看到「媽媽看到了」「阿公看到了」。</div><dl><dt>規則</dt><dd>好消息預設分享、卡住的事孩子自己決定。家人一次一下、零負擔</dd><dt>來源</dt><dd>既有技術 家庭群組 + 新做</dd></dl></div>
+    <div class="feat"><h4>講給家人聽<small>第一階段</small></h4><div class="one">過了 AI 那關之後，孩子可以把那 30 秒錄音送給一個家人，或晚餐時當面講。阿嬤聽完用語音回一句。教別人是最強的學習，也是家人最自然的參與。</div><dl><dt>規則</dt><dd>孩子選要送給誰；家人回覆只能是語音或一句話，不能打分數</dd><dt>來源</dt><dd>既有技術 語音橋 + 新做</dd></dl></div>
+    <div class="feat"><h4>今天可以問他什麼<small>第一階段</small></h4><div class="one">家長 LINE 每天一句：「今天別問成績，問他浮力為什麼，他會很想講。」把「考幾分」換成一個孩子答得出來、還會得意的問題。</div><dl><dt>規則</dt><dd>一天一句、只有問法不給答案；孩子今天狀態差時改成「今天什麼都別問，他睡不夠」</dd><dt>來源</dt><dd>既有技術 家庭調解技能</dd></dl></div>
+    <div class="feat"><h4>家人的角色<small>第二階段</small></h4><div class="one">家裡每個人領一個小角色：阿嬤是聽眾、爸爸是段考前的補給站、姐姐三年前考過同一場會考是陪跑員。AI 依角色送不同的小事，誰都不用管整體。</div><dl><dt>規則</dt><dd>孩子決定誰在迴路裡、隨時可以靜音某個人；角色是邀請不是義務</dd><dt>來源</dt><dd>既有技術 家庭成員模型 + 新做</dd></dl></div>
+    <div class="feat"><h4>全家的長跑<small>第二階段</small></h4><div class="one">會考是全家的一場長跑。路線圖上家人看得到孩子走到哪；段考結束全家一起做一件事（吃什麼、去哪裡）由家人自己約定，AI 幫忙記著、到時候提醒。</div><dl><dt>規則</dt><dd>約定的是「一起做的事」不是錢；OneClass 的獎盃兌換可以接，但家人的約定排前面</dd><dt>來源</dt><dd>新做 + OneClass 獎盃</dd></dl></div>
+    <div class="feat"><h4>AI 在中間講對的話<small>第一階段</small></h4><div class="one">家長焦慮時問「怎麼還沒讀」，AI 先接住：「他 17:00 那格做完了，晚一點有數學，現在是休息。」孩子沮喪時 AI 告訴家長「今天別提分數」。兩邊都不必直接撞上。</div><dl><dt>規則</dt><dd>AI 只翻譯不代言；情緒危機一律轉領跑員和真人</dd><dt>來源</dt><dd>既有技術 家庭調解 + 守門人</dd></dl></div>
+  </div>
+  <div class="rule"><b>家人迴路的三條規則</b>：家人看見的是「他搞懂了什麼」不是「他考幾分」；好消息預設分享、壞消息孩子決定；家人的回應永遠是一句話或一段語音，沒有評分、沒有排行。這樣孩子的自主和家人的參與才能同時成立。<br><span style="color:var(--mute);font-size:13px">教練的臉、聲音、搞懂了印章、跑團完賽都還在，但退到第二層：它們是讓家人有東西可以看見、可以回應的材料，不是動機本身。</span></div>
+
+  <h2>配速計畫：陪跑教練排的是整個人，不只是讀書</h2>
+  <p class="sub">Edward 9/18 定調：既然是陪跑教練，核心是排一套適合的計畫；要排得好，就得知道學生的身心和活動狀態，不能只在乎學習。真正的跑步教練排的是訓練、休息、睡眠、補給，不是只排里程。</p>
+  <div class="two">
+    <div><b>一格 = 一小時（Edward 9/18 拍板）</b><div style="font-size:13.5px;margin-bottom:8px">排程、付費、老師排班都用一小時算，跟 OneClass 一堂課和家長的習慣一致。但一小時裡面一定有節奏：<b>讀 25、走 5、讀 25、說給我聽 5</b>；跑團一小時是<b>老師講 20、各自寫 20、說給小陪聽 10、走動 10</b>。國中生盯螢幕 60 分鐘不休息，第三週就會掉。起步段（小學）可以排半小時的格。</div><b>本週配速表排四樣東西</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>讀書格</b>：一小時一格，一天幾格看睡眠和段考距離</li><li><b>睡眠目標</b>：就寢時間和時數，從 Apple 健康讀回實際值</li><li><b>走動</b>：每格之間起來走 300 步、一天步數目標、週末全家散步</li><li><b>心情</b>：一天按一下，四種就好</li></ul><div style="margin-top:8px;font-size:13px;color:var(--mute)">跑團排在讀書格裡，家人的角色（補給站、散步）排在走動和週末裡。歷程只記「搞懂了什麼」，狀態只用來決定「今天能跑多快」，兩本帳分開。</div></div>
+    <div><b>四條排程規則（第一版）</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>睡不夠就減量</b>：前一晚不到 6.5 小時，隔天讀書格少 30%，數學那種重的挪到隔天</li><li><b>心情差不換檔，叫人</b>：連續三天「煩」或「累」，不多排，進領跑員今日名單第一位</li><li><b>段考前減量週</b>：考前三天格數遞減、考前一晚不排新東西、睡飽優先。這是跑步的減量週搬過來</li><li><b>考完恢復日</b>：段考後一天不排讀書格，只排走動和一句「辛苦了」</li></ul></div>
+  </div>
+  <div class="rule"><b>界線</b>：只看睡眠、步數、一天一下的心情，不看心率、不做任何醫療判斷（跟 既有技術 一樣，非醫療）。狀態不進成績、不給老師原始數據（老師只看到「今天偏累」一個標籤）、家人只看孩子勾選的平均值。情緒危機一律守門人轉真人。</div>
+
+  <h2>教練怎麼換檔</h2>
+  <p class="sub">三個檔位，依歷程自動換。錢有關的一律領跑員確認、家長同意，教練只提議。</p>
+  <div class="gears">
+    <div class="gear"><h4>自己來<i>大部分的日子</i></h4><p>一小時一格、說給我聽、錯題回顧。教練陪，不教。</p><div class="cost">成本最低 · 會員包含</div></div>
+    <div class="gear"><h4>跑團<i>一對多 · 3–6 人</i></h4><p>同一個知識點卡住、同一週、錯因相近。老師一次帶一組。</p><div class="cost">成本中 · 扣跑團次數</div></div>
+    <div class="gear"><h4>私人教練<i>一對一 · 一小時</i></h4><p>跑團也解不了、很個人、或孩子狀態需要人。</p><div class="cost">成本最高 · 扣分鐘</div></div>
+  </div>
+  <div class="rule"><b>換檔規則（第一版）</b>：同一個知識點「說給我聽」連續兩次沒過，或掌握度低於 40% 且段考在 10 天內 → 教練提議跑團。跑團後仍沒過，或錯因是「概念不懂」且連帶三個知識點 → 提議私人教練。孩子睡眠連續三天不到 6 小時、或透露情緒 → 不換檔，直接進領跑員今日名單，人出手。</div>
+
+  <h2>跑團怎麼被湊出來</h2>
+  <p class="sub">這是 Tandelo 最新的東西，也是只有捉了每個人歷程的公司做得到的事。</p>
+  <ol class="steps">
+    <li><span><b>教練每天掃一次</b>：全部學生這週卡住的知識點和錯因，找出同一點、同錯因、同年級版本的人。</span></li>
+    <li><span><b>湊 3 到 6 人 + 一個時段</b>：對照每個人的航線空檔和老師空檔，提出兩個時段。</span></li>
+    <li><span><b>先問孩子</b>：「這週有 4 個人跟你一樣卡在不等式除負數，週三 17:00 一起一小時？」孩子按好。</span></li>
+    <li><span><b>領跑員確認成班</b>：看名單合不合理，按確認。家長 LINE 收到通知和扣點。</span></li>
+    <li><span><b>老師拿到共同卡點卡</b>：這五個人各自錯在哪一步，開場直接從那步講。</span></li>
+    <li><span><b>下課後各自說給我聽</b>：跑團不是上完就算，每個人講 30 秒才算過，沒過的教練隔天再排。</span></li>
+  </ol>
+
+  <h2>商業模式：課程、老師、付費，一團走完</h2>
+  <p class="sub">Edward 9/18：商業模式要納入課程、老師介紹與付費流程，至少把跑團走完。八步在原型「跑團完整流程」頁可以點；這裡寫規則。</p>
+  <div class="two">
+    <div><b>課程 = 「本月可成的團」目錄，不是課表</b>從課本的知識點長出來。每個知識點顯示：現在有幾個人卡在這、下一團什麼時候開、哪位老師帶。段考前另有「衝刺包」：把考前 4 週的團先排好、一次買。家長看到的是「孩子這個月會把哪些點講得出來」，不是「幾堂課」。</div>
+    <div><b>老師介紹卡的核心數字</b>帶過幾團、<b>學生講得出來的比例</b>（說給我聽通過率）、擅長哪種錯因（概念型、粗心型、看到分數就慌）、下課評語風格、30 秒語音自介。不用星星評分：星星獎勵討好，講得出來率獎勵教會。老師收入 = 帶團數 × 每團人數 × 分潤，所以老師會希望成班，領跑員也會。</div>
+  </div>
+  <ol class="steps" style="margin-top:14px">
+    <li><span><b>邀請</b>：小陪提議，學生按加入。<b>不扣錢。</b></span></li>
+    <li><span><b>看老師</b>：老師介紹卡，學生和家長都看得到。</span></li>
+    <li><span><b>付費</b>：家長 LINE 收到「小睿按了加入，成班後扣 1 次」。沒次數就在這裡買包：4 團、8 團、16 團。Apple / Google 內購或 LINE Pay。孩子看不到價格。</span></li>
+    <li><span><b>成班</b>：領跑員按確認。一按：扣次數、通知家長、老師收到共同卡點卡、學生路線上出現這一格。<b>沒成班次數自動退回；開課 24 小時前可取消。</b></span></li>
+    <li><span><b>課前</b>：老師的課前一頁，上課前 30 分鐘送到。</span></li>
+    <li><span><b>上課</b>：一小時，老師講 20、各自寫 20、說給小陪聽 10、走動 10。iPad 最好，手機也能上。</span></li>
+    <li><span><b>完賽</b>：五個人都講得出來才算。一個沒過，不扣別人，教練隔天補一格。</span></li>
+    <li><span><b>家人 + 下一團</b>：五個家庭收到「講給我聽，過了」；引擎依這團的結果提議下一團。<b>續訂靠這一步。</b></span></li>
+  </ol>
+  <div class="tblwrap" style="margin-top:16px"><table>
+    <thead><tr><th>試算（要驗）</th><th>數字</th><th>根據</th></tr></thead>
+    <tbody>
+      <tr><td class="f">一團一小時、5 人成班</td><td class="mono">家長每人 NT$374 · 一團 NT$1,870</td><td>8 團包 NT$2,990 均價；TutorABC 1 對 3 約 NT$900/45 分鐘、我們 5 人一小時要更便宜</td></tr>
+      <tr><td class="f">老師拿</td><td class="mono">NT$1,000（3 人成班 NT$700）</td><td>要高於一對一約 NT$800，老師才願意接一小時一團</td></tr>
+      <tr><td class="f">平台毛利</td><td class="mono">約 NT$810 · 43%（含 AI 約 NT$60）</td><td>語音每人每天約 5 分鐘、Rive 臉不吃雲端</td></tr>
+      <tr><td class="f">方案（月）</td><td class="mono">陪跑 NT$0 · 跑團 8 團 NT$2,990 · 跑團 + 一對一 2h NT$5,990</td><td>單買 4 團 NT$1,790；會考衝刺包 20 團 NT$6,990</td></tr>
+      <tr><td class="f">對家長的比較</td><td class="mono">每月 NT$4,800（4h 一對一）→ NT$5,990（10h 真人）</td><td>付得差不多，孩子拿到的真人時數兩倍半，而且是「卡同一點的人一起」</td></tr>
+      <tr><td class="f">對老師的比較</td><td class="mono">每小時 NT$800 → NT$1,000</td><td>一堂帶五個，時薪反而高；排班單位仍是一小時</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><b>Codex 重算後的修正（9/18）</b>：上表的 43% 是「只扣老師和 AI」的毛利，不是完整服務的利潤。補上通路費和少人情境：</div>
+  <div class="tblwrap" style="margin-top:10px"><table>
+    <thead><tr><th>情境（8 團 NT$2,990，每人每團 NT$374）</th><th>收入</th><th>扣老師 + AI</th><th>再扣 15% 通路費</th><th>再扣 30% 通路費</th></tr></thead>
+    <tbody>
+      <tr><td class="f">五人團</td><td class="mono">NT$1,869</td><td class="mono">NT$809 · 43%</td><td class="mono">NT$528 · 28%</td><td class="mono">NT$248 · 13%</td></tr>
+      <tr><td class="f">三人團（老師 NT$700）</td><td class="mono">NT$1,121</td><td class="mono">NT$361 · 32%</td><td class="mono">NT$193 · 17%</td><td class="mono">NT$25 · 2%</td></tr>
+      <tr><td class="f">五人團取消後剩四人</td><td class="mono">NT$1,495</td><td class="mono">NT$435 · 29%</td><td class="mono">NT$211 · 14%</td><td class="mono">NT$−14</td></tr>
+      <tr><td class="f">免費用戶（陪跑 NT$0）</td><td class="mono">NT$0</td><td class="mono" colspan="3">每人每月 AI 約 NT$60–90（語音 5 分鐘/天）。免費層的人數上限要設，或把教練放進付費層</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note" style="margin-top:10px">還沒列的成本：領跑員人力、老師備課、客服、退款、補課、視訊。<b>付款路徑要先定</b>：Apple 對即時「一對一」服務有內購例外，<b>一對多小班沒有</b>，在 App 內賣跑團包就要走內購（15–30%）。所以家長的購買放在 LINE 和網頁（不在 App 內、App 內也不能引導過去），內購只留給 App 內的加購。這條要法務和 App 審核顧問一起看。<br><b>價格敘事也修正</b>：以文件自己的一對一 NT$1,200 算，小班 NT$374 是 31%，不是「五分之一」；家長從 NT$4,800 換到 NT$5,990 是多付 25%，不能寫「差不多」；十小時的團體加個別混合，也不能直接說等於四小時一對一。對外的說法改成：<b>「一對一三分之一的價格，孩子拿到的真人時數兩倍以上，而且是卡同一點的人一起」</b>。要到 90：三人、五人、取消少人、免費用量高，四種情境全算過，每種情境誰承擔成本寫清楚。</div>
+
+  <h2>湊得成嗎：最終定案「固定 8 週小隊 + 隊內每週依卡點分組」（9/18 17:50 · 市場與用戶調研後）</h2>
+  <p class="sub">最難的核心不是配對演算，是「需要的時候真的湊得成」。同週、同知識點、同錯因、同版本、學生家長老師時間都對，條件越精準越難成班。50 個學生不等於每個卡點都有夠多的人。還有一個矛盾：要「跑團的人在等我」的歸屬感，又要依卡點重配，可能每次都換同學。</p>
+  <div class="two">
+    <div><b>為什麼最後是這樣（今天改了四次，這段留著免得繞回去）</b><br>14:xx 臨時湊團 → Codex 說每次換人沒歸屬 → 16:28 一季固定一隊 → Edward 17:32 說每人每階段問題不同、進來不能走 → 17:35 圈固定團重湊 → Edward 17:42 說理論上什麼都不該固定 → 17:44 Edward 拿出「固定 8 週小隊」的畫面問哪個對 → 派蕪菁頭和霍爾查市場與用戶。<b>三邊證據一致指向 C：固定的是關係，動的是分組。</b><br><br>
+<b>定案</b>：<b>同 6 人、同老師、同時段，8 週一隊</b>（家長懂、一次成班、金流穩、老師有保底、關係效應）。配對單位是「同一單元的 8 週路徑」，不是單一卡點。<b>每週上課前 AI 依這週各自卡的那一步，把 6 人分成 2–3 小組</b>，老師同一小時輪流帶、互相講也照小組配，這週沒卡的人扮「講給同伴聽」的角色。<b>三條彈性接在殼上</b>：某週沒卡點可請假不扣次數或轉存；連續兩週卡點跟本隊脫節，系統建議轉隊（保留老師與 8 週合約）；隨時退出，未用次數退回。<b>先試後定</b>：第一堂當試上，家長同意才成班（照 Outschool 一次性課先試、喜歡再訂常態課的邏輯）。規模夠大後再開跨隊微調，不做每週全打散。</div>
+<div><b>證據（蕪菁頭 + 霍爾 + 蘇菲，2026-09-18）</b><ul style="margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px">
+<li><b>老師固定證據最硬</b>：高強度輔導整合分析，小組 ≤3、一週 ≥3 次、老師穩定效果最大；規模一大效果從 0.44 掉到 0.16，主因老師換來換去。<a href="https://edworkingpapers.com/sites/default/files/Tutoring%20Meta-Analysis%20Oct%202024_unblinded.pdf" style="color:var(--sky)">整合分析 2024</a> · <a href="https://nssa.stanford.edu/briefs/five-years-tutoring-research" style="color:var(--sky)">史丹佛 NSSA 五年總結</a>：持續的師生關係是核心特徵，小組 2–4 人仍正向</li>
+<li><b>Saga Education</b> 同一位老師帶同一組一整年，官方稱「關係效應」。<a href="https://saga.org/three-principles-to-build-great-student-tutor-relationships-relationships-rigor-and-ratio-blog/" style="color:var(--sky)">Saga</a></li>
+<li><b>同儕穩定</b>對國中生內在動機有正向預測，13–15 歲歸屬需求最強。<a href="https://journals.sagepub.com/doi/abs/10.1177/0165025419880614" style="color:var(--sky)">Vollet 2020</a></li>
+<li><b>市場</b>：TutorABC 每堂重配最常見抱怨是「不能選老師、每次重新認識、沒連貫」；Outschool 把固定 cohort 的 ongoing class 當留存引擎；日系線上塾預設固定老師、保留「不合可換」，續課率案例 91.7%。<a href="https://lang.ansr.dev/tutorabc/" style="color:var(--sky)">TutorABC 評價</a> · <a href="https://support.outschool.com/en/articles/2272596-understanding-ongoing-classes" style="color:var(--sky)">Outschool</a> · <a href="https://www.agaroot.jp/coaching/column/online-cram-high-school/" style="color:var(--sky)">Agaroot</a></li>
+<li><b>固定班 + 班內動態分組有先例</b>：Eedi 診斷迷思分層、Sparx 班內依能力調難度、美國 Station Rotation 每天依前一天資料重分組但班和老師不變。<a href="https://catlintucker.com/2021/10/station-rotation-model/" style="color:var(--sky)">Station Rotation</a></li>
+<li><b>家長要「固定老師 + 財務不綁死」</b>：按次付、24 小時前可取消是主流賣點；先試一堂再訂常態是 Outschool 的邏輯。<a href="https://wiingy.com/blog/flexible-pay-as-you-go-options/" style="color:var(--sky)">Wiingy</a></li>
+<li><b>出海</b>：日本、越南、東南亞家長把「固定老師」讀成「負責任」，每週重配容易被解讀成「不夠用心配對」</li>
+</ul><div style="font-size:12.5px;color:var(--mute);margin-top:6px"><b>還缺、要訪談</b>：台灣家長對固定 8 週的續報數據；孩子對換同學是焦慮還是新鮮；「不上不扣錢」會不會降低堅持度。</div></div>
+    <div><b>三條自由 + 湊不成怎麼辦</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>這週沒你的卡點</b>：不上、不扣錢；或選最近的主題去聽，老師給一題分支題；或小陪一格加老師 15 分鐘語音。三選一，每週保證「有課上或不扣錢」</li><li><b>隨時退出</b>：月費是次數，沒用完退回或留到下一季，沒有一季綁定</li><li><b>換時段、換圈自由</b>：圈是為了熟面孔，不是為了關人</li><li><b>連續兩週湊不到團的人</b>：引擎標給領跑員，建議轉一對一補強 25 分鐘，不硬塞進不對的團。「被滿足率」就是量這群人</li><li><b>少於 3 人</b>：當週改成兩人各 30 分鐘一對一，同一位老師，扣同一次數</li><li><b>取消</b>：開課 24 小時前可取消退次數；24 小時內取消，次數不退但老師照領，缺席者拿課後錄影和小陪補一格</li><li><b>衡量</b>：不只看「發出邀請的成班率」，要看「這週有卡點的學生裡，多少人被滿足」</li></ul></div>
+  </div>
+  <div class="two" style="margin-top:12px">
+    <div><b>老師怎麼「固定」（Edward 17:38 問）</b><table style="min-width:0;font-size:12.5px"><tbody><tr><td>圈的時段</td><td>一個時段帶，例如週三 17:00–19:00</td></tr><tr><td>老師組</td><td>2–3 位承諾這個時段帶一季：一位主帶、一到兩位副帶</td></tr><tr><td>每週怎麼分</td><td>AI 湊出 3–5 團，先依老師擅長的錯因型分，再看上週誰帶過這些孩子，讓孩子常遇到同一張臉</td></tr><tr><td>一位老師一週</td><td>兩小時帶兩團，中間 10 分鐘看下一團的卡點卡</td></tr><tr><td>人數</td><td>圈 24 人、每團約 5 人 → 一週約 5 團 → 3 位老師夠</td></tr></tbody></table></div>
+    <div><b>老師為什麼願意承諾一季</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>保底</b>：這個時段每週至少算兩團的錢；某週只湊出一團，另一小時做「湊不到團的孩子」25 分鐘一對一補強，錢照算。同時解了老師收入穩定和沒團可上的孩子有人接</li><li><b>中途走了副帶頂上</b>：課前一頁和歷程都在系統裡，新老師開場前 30 分鐘就知道每個孩子卡哪</li><li><b>錢的算法</b>：按團計酬 + 保底 + 季末依「隔三天再測通過率」一筆，不看星星</li><li><b>試點</b>：兩個圈 × 3 位 = 6 位，加 2 位備援 = 8 位老師</li></ul></div>
+  </div>
+  <div class="two" style="margin-top:12px">
+    <div><b>AI 怎麼選老師（Edward 17:41：「知道要開這堂課，才去找哪個老師開」）</b><table style="min-width:0;font-size:12.5px"><thead><tr><th>先看</th><th>找誰</th><th>為什麼</th></tr></thead><tbody><tr><td>第一層：圈的老師組</td><td>主帶、副帶 2–3 位</td><td>熟面孔、保底、上週帶過這些孩子</td></tr><tr><td>第二層：專長老師池</td><td>全平台在「這個卡點」教得最好的</td><td>老師組沒人擅長這一步，或這週團太多</td></tr></tbody></table><div style="font-size:13px;margin-top:6px">挑老師看四樣，都是數出來的：這位老師教這個卡點的<b>隔三天再測通過率</b>；擅長的錯因型；上週有沒有帶過這幾個孩子；時段有沒有空。</div></div>
+    <div><b>老師端：本週可接的團</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li>每週收到清單：卡點、五個孩子各卡哪一步、時段、酬勞，按接或不接。像接單，接的是「一群卡在同一步的孩子」</li><li>老師組有保底，優先接自己圈的；專長池的老師是加班接單</li><li><b>長出「老師的卡點履歷」</b>：每位老師在每個知識點的再測通過率累積起來，平台越用越知道「這一步全台灣誰教得最好」。萬通今天沒有這份資料；出海時通用，老師用「教哪個點教得好」配，不用年資或星星</li></ul><div class="rule" style="margin-top:8px">學生端是「卡點找同伴」，老師端是「卡點找老師」，中間是同一顆引擎。</div></div>
+  </div>
+  <div class="rule"><b>試點範圍因此收成一句</b>：國二數學、8 隊 × 6 人、兩個時段（週三晚、週六早）、同老師 8 週、每週隊內依卡點分組。一句話定位：<b>同一支隊伍陪你走完 8 週，但每一週 AI 都重新幫你找到最懂你這個卡點的小組。</b></div>
+
+  <h2>「講得出來」要更嚴（Codex 第 3 點）</h2>
+  <p class="sub">孩子可能背出說法卻不會換題，也可能真的懂只是不擅長口述。而且現在一個 AI 判定同時影響完成紀錄、家長通知、老師評價、加課推薦，判錯會一路錯下去。</p>
+  <div class="two">
+    <div><b>三道關，分開記</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>當下講得出來</b>（30 秒說給我聽）→ 記成「有努力、當下懂」，家人收到的是這一層</li><li><b>換題做得出來</b>（同概念換數字、換情境，一題）→ 記成「會用」</li><li><b>隔三天無提示再測</b>（小陪在錯題回顧裡塞一題，不提示）→ 過了才記成「<b>已掌握</b>」，掌握地圖和老師卡只看這一層</li></ul></div>
+    <div><b>判錯的保險</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li>AI 不確定（三條標準有一條拿不準）→ 標「待確認」，老師下堂抽查，不通知家人</li><li>老師每週抽查每隊兩位的說給我聽</li><li>孩子可以按「我覺得判錯了」，領跑員 24 小時內處理</li><li>老師卡的核心數字改成<b>「隔三天再測通過率」</b>，不是當下通過率，避免挑簡單的學生和題目</li></ul></div>
+  </div>
+
+  <h2>第一天怎麼開始、資料不足怎麼辦（Codex 第 4 點）</h2>
+  <div class="two">
+    <div><b>新學生的第一週</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li>第一天：20 分鐘診斷（該單元 12 題，含錯因分類）+ 拍段考範圍表 + 選課本版本。沒有歷程也能排第一週</li><li>紙本作業：拍照，AI 切題；拍不清楚的當週不算入，不硬判</li><li>校外補習、學校小考：孩子拍或家長 LINE 傳，都算「學校」來源</li><li>OneClass 舊生：上課紀錄和 OneAnswer 直接接，第一天就有歷程</li></ul></div>
+    <div><b>硬規則的依據與例外</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>22:30 關燈</b>：依據是兒福聯盟睡眠數據和國中生上學時間；例外：段考前一晚可延到 23:00 一次，需孩子和家長同時按</li><li><b>睡不夠減 30%</b>：Apple 健康沒資料時，用孩子早上按的「昨晚幾點睡」；都沒有就不減、不加，照原本排</li><li><b>考前三天減量</b>：格數遞減是預設，孩子可以改回，小陪會說一句為什麼不建議</li><li>第一階段依賴修正：<b>老師課前一頁、共同卡點卡提到第一階段</b>，沒有它們跑團上不好</li></ul></div>
+  </div>
+  <div class="rule"><b>授權與保存，統一成一套</b>：入門時孩子和家長一起設定預設值（好消息預設分享、卡住的事預設不分享），之後只有孩子能改。「說給我聽」錄音不留原檔，只留三個勾和一句摘要。「講給家人聽」是孩子主動另錄一段送出，家人端保存 7 天後自動刪除，孩子隨時可撤回。</div>
+
+  <h2>老師每月能賺多少（9/19 · Edward 問）</h2>
+  <p class="sub">老師願不願意來是整個模式成立的前提。同樣的上課時數，帶團比一對一多賺約三到六成；全職帶團一個月約 10 到 11 萬。</p>
+  <div class="tblwrap" style="padding:12px 14px"><div><h4>老師每月能賺多少（試算）</h4><table><thead><tr><th>老師類型</th><th>每週帶團</th><th>帶團費</th><th>補強課</th><th>季末獎金月攤</th><th>每月合計</th><th>同時數一對一</th></tr></thead><tbody>
+<tr><td class="k">兼職 · 一個時段</td><td class="mono">2 團 · 約 2 小時</td><td class="mono">8,600</td><td class="mono">1,300</td><td class="mono">1,200</td><td class="mono"><b>約 1.1 萬</b></td><td class="mono">約 0.7 萬</td></tr>
+<tr><td class="k">主力兼職 · 三個時段</td><td class="mono">6 團 · 約 6 小時</td><td class="mono">25,800</td><td class="mono">3,900</td><td class="mono">3,600</td><td class="mono"><b>約 3.3 萬</b></td><td class="mono">約 2.1 萬</td></tr>
+<tr><td class="k">全職</td><td class="mono">20 團 · 約 20 小時</td><td class="mono">86,000</td><td class="mono">10,300</td><td class="mono">12,000</td><td class="mono"><b>約 10.8 萬</b></td><td class="mono">約 6.9 萬</td></tr>
+</tbody></table><p style="font-size:11.5px;color:var(--mute);margin:6px 0 0"><b>算法</b>：一團 5–6 人 NT$1,000（4 人 850、3 人 700），一個月 4.3 週；補強課是湊不到團的孩子 25 分鐘一對一、一堂 NT$300；季末獎金是一隊 8 週結束「隔三天再測通過率」過七成發 NT$1,200；一對一對照用每小時 NT$800，要換成萬通實際鐘點費。備課只要上課前看卡點卡約 10 分鐘、下課留 30 秒語音。<b>人數不滿時</b>（全職 20 團）：平均 4 人約 9.5 萬、3 人約 8.3 萬，仍比同時數一對一多兩成。<b>要注意</b>：獎金攤下來每團約 150，老師等於拿走一團學費的 62%，萬通留下的約 15% 會掉到約 11%，獎金額度要跟萬通一起定；保底是平台在扛成班風險，成班率低於六成時會變固定成本。</p></div>
+      </div>
+
+  <h2>毛利到底多少（9/18 16:30 · Edward 問）</h2>
+  <p class="sub">一句話：五人團「只扣老師和 AI」約 43%；扣完通路費和該算的服務成本，一團真正留在手上約 20–25%。整體混合約 23%。研發、行銷、萬通管理費是固定成本，規模夠才攤得開。</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>每一團一小時（8 團 NT$2,990，每人每團約 NT$374）</th><th>三人團</th><th>四人團</th><th>五人團</th><th>六人團</th></tr></thead>
+    <tbody>
+      <tr><td class="f">收入</td><td class="mono">1,121</td><td class="mono">1,495</td><td class="mono">1,869</td><td class="mono">2,243</td></tr>
+      <tr><td class="f">老師</td><td class="mono">700</td><td class="mono">850</td><td class="mono">1,000</td><td class="mono">1,000</td></tr>
+      <tr><td class="f">AI（語音、判定）</td><td class="mono">36</td><td class="mono">48</td><td class="mono">60</td><td class="mono">72</td></tr>
+      <tr><td class="f">只扣老師和 AI 的毛利</td><td class="mono">34%</td><td class="mono">40%</td><td class="mono">43%</td><td class="mono">52%</td></tr>
+      <tr><td class="f">通路費（八成 LINE 約 3%、兩成內購 30%，混合約 8%）</td><td class="mono">90</td><td class="mono">120</td><td class="mono">150</td><td class="mono">179</td></tr>
+      <tr><td class="f">領跑員（一人顧 240 位、月薪 5 萬攤到每團）</td><td class="mono">78</td><td class="mono">104</td><td class="mono">130</td><td class="mono">156</td></tr>
+      <tr><td class="f">視訊、平台</td><td class="mono">20</td><td class="mono">20</td><td class="mono">20</td><td class="mono">20</td></tr>
+      <tr><td class="f">客服、退款、補課準備金（5%）</td><td class="mono">56</td><td class="mono">75</td><td class="mono">93</td><td class="mono">112</td></tr>
+      <tr><td class="f"><b>全扣完留在手上</b></td><td class="mono"><b>141 · 13%</b></td><td class="mono"><b>278 · 19%</b></td><td class="mono"><b>416 · 22%</b></td><td class="mono"><b>704 · 31%</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="two" style="margin-top:12px">
+    <div><b>四個數字決定一切（試點要驗）</b><ol style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>平均每團幾人</b>：三人 13%、六人 31%，成班密度就是毛利</li><li><b>老師拿多少</b>：押 NT$1,000；若要 1,200，五人團掉到 12%</li><li><b>家長從哪買</b>：內購 30% 會把三人團打成負的，LINE 和網頁購買是生命線，法務先確認</li><li><b>NT$2,990 家長接不接受</b>：8 週續購率回答</li></ol></div>
+    <div><b>拉到 30% 以上的四個手把</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li>成班下限 3 改 4，預設 6；三人改成兩人各半小時，不開三人團</li><li>老師分潤改收入的 55%，不是固定額，人少少拿人多多拿</li><li>領跑員一人顧 300 位（AI 名單真的幫上忙才做得到）</li><li>一對一加購和會考衝刺包毛利較高，混進去拉平均</li></ul><div style="font-size:12.5px;color:var(--mute);margin-top:6px">業界：線上一對一平台抽成三到四成；實體補習班毛利四到五成但扛場地。Tandelo 全扣完 20–25%、拉手把後約 30%，合理但不肥；錢在規模，隊數翻倍成本不翻倍。</div></div>
+  </div>
+
+  <h2>毛利之後：整張損益（9/18 16:35 · Edward「實體服務人很多，淨利會很低，要分析好」）</h2>
+  <p class="sub">結論：照 OneClass 傳統「電銷賣堂數」的方式賣，營業利益是負的。只有改成「產品自己帶客、自動續訂」，才在 3,000 個付費家庭打平、10,000 個家庭賺 10–15%。毛利 30%、成熟後營業利益 10–15%，是合理但不肥的服務業；錢在規模和續購，不在單價。</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>每月（平均每家 NT$3,600；月流失 8%）</th><th>3,000 家 · 電銷賣法</th><th>3,000 家 · 產品帶客</th><th>10,000 家 · 產品帶客</th></tr></thead>
+    <tbody>
+      <tr><td class="f">營收</td><td class="mono">1,080 萬</td><td class="mono">1,080 萬</td><td class="mono">3,600 萬</td></tr>
+      <tr><td class="f">毛利 30%（含通路 8%、視訊、準備金 5%；不含領跑員）</td><td class="mono">324 萬</td><td class="mono">324 萬</td><td class="mono">1,080 萬（手把後 35%：1,260 萬）</td></tr>
+      <tr><td class="f">領跑員（1:240 → 1:300）</td><td class="mono">72 萬 · 6.6%</td><td class="mono">72 萬 · 6.6%</td><td class="mono">198 萬 · 5.5%</td></tr>
+      <tr><td class="f">客服課服（1:600 → 1:800）</td><td class="mono">23 萬 · 2.1%</td><td class="mono">23 萬</td><td class="mono">61 萬 · 1.7%</td></tr>
+      <tr><td class="f">教務（老師招募、排班、品質）</td><td class="mono">17 萬 · 1.5%</td><td class="mono">17 萬</td><td class="mono">29 萬 · 0.8%</td></tr>
+      <tr><td class="f"><b>獲客</b>：電銷團隊 + 獎金 + 廣告，每家 NT$8,000</td><td class="mono"><b>320 萬 · 30%</b></td><td class="mono">—</td><td class="mono">—</td></tr>
+      <tr><td class="f"><b>獲客</b>：舊生轉介 + 家人迴路口碑 + 萬通通路，每家 NT$2,500</td><td class="mono">—</td><td class="mono"><b>100 萬 · 9%</b></td><td class="mono"><b>288 萬 · 8%</b></td></tr>
+      <tr><td class="f">研發產品（8 人，與既有產品共用大腦）</td><td class="mono">72 萬 · 6.7%</td><td class="mono">72 萬</td><td class="mono">72 萬 · 2%</td></tr>
+      <tr><td class="f">管理、財務、法務</td><td class="mono">28 萬 · 2.6%</td><td class="mono">28 萬</td><td class="mono">36 萬 · 1%</td></tr>
+      <tr><td class="f">辦公、工具、雲端</td><td class="mono">15 萬 · 1.4%</td><td class="mono">15 萬</td><td class="mono">18 萬 · 0.5%</td></tr>
+      <tr><td class="f"><b>營業利益</b></td><td class="mono"><b>−223 萬 · −21%</b></td><td class="mono"><b>−3 萬 · 0%</b></td><td class="mono"><b>378 萬 · 10.5%</b>（手把後約 15%）</td></tr>
+      <tr><td class="f">稅後淨利</td><td class="mono">負</td><td class="mono">0</td><td class="mono">約 8–12%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="two" style="margin-top:12px">
+    <div><b>鐵律：Tandelo 不能用 OneClass 的方式賣</b><div style="font-size:13.5px;margin-bottom:6px">線上一對一家教公司的通病：銷售費用佔營收三到五成，靠免費體驗課加電銷追單、賣大堂數包、業務抽高獎金，毛利再好也填不平。Tandelo 每個客人一個月只值三千多，養不起 NT$8,000 的獲客成本。獲客要壓到 NT$2,500 靠四件事：</div><ol style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>20 分鐘診斷取代免費體驗課加電銷</b>：家長在 LINE 讓孩子做診斷，看到「卡在哪、哪一隊在等他」，自己買。入學顧問只接進來的，不打出去</li><li><b>OneClass 舊生轉介</b>：前一千個家庭零獲客成本，萬通最大的資產</li><li><b>家人迴路就是口碑引擎</b>：每一則「講給我聽，過了」送到阿公、姐姐手上，產品在自我介紹。這是家人驅動放在商業上的意義</li><li><b>自動續訂不是每次重賣</b>：月費扣款，續購靠產品；電銷只在流失時打一通</li></ol></div>
+    <div><b>人力比例目標（寫死）</b><table style="min-width:0;font-size:12.5px"><thead><tr><th>角色</th><th>試點</th><th>3,000 家</th><th>10,000 家</th></tr></thead><tbody><tr><td>領跑員</td><td>1（兼）</td><td>1:240</td><td>1:300</td></tr><tr><td>客服課服</td><td>0（領跑員兼）</td><td>1:600</td><td>1:800</td></tr><tr><td>教務</td><td>1</td><td>3</td><td>5</td></tr><tr><td>電銷</td><td>0</td><td>0</td><td>0</td></tr><tr><td>入學顧問（只接進來）</td><td>0</td><td>2</td><td>5</td></tr><tr><td>老師</td><td colspan="3">全部外聘按團計酬，沒有固定薪</td></tr></tbody></table><div style="font-size:12.5px;color:var(--mute);margin-top:6px">兩個真正的槓桿：老師外聘按團計酬（沒有固定人力）、領跑員靠 AI 名單一人顧三百。這兩個成立，人力才不會隨規模等比長。第三個槓桿是把引擎租給其他補教，那時毛利七成以上，但那是另一個階段。</div></div>
+  </div>
+  <div class="rule"><b>⚠️ 最危險的兩個數字</b>：每月流失率（8% 是押的，一對一家教業常見更高）和獲客成本。流失 12% 加獲客 NT$5,000，3,000 家就變成每月虧 100 萬。試點要量的不只成班率，還有「8 週後多少家庭自己續」。所有數字都是估的：老師 NT$1,000、領跑員月薪 5 萬、每家 NT$3,600、通路 8%，任何一個要用萬通實際帳替換。</div>
+
+  <h2>怎麼說服別人投（9/18 16:40 · Edward「怎麼說服別人這是一門生意」）</h2>
+  <p class="sub">一句話：不是要你投一個新產品，是要你用一筆小錢，把萬通現有的老師、學生、課本、輔導老師，全部放大三到五倍產能。五個論點各附「已知」和「還沒證明」，誠實才有人信。</p>
+  <div class="feats">
+    <div class="feat"><h4>1 · 這是現有生意的毛利改善，不是新成本中心</h4><div class="one">一位老師一小時教一個變教五個、時薪 800 變 1,000；輔導老師顧 60 個變 300 個。OneClass 只要把兩成一對一時數換成跑團，老師供給和輔導人力就鬆開。</div><dl><dt>已知</dt><dd>老師和輔導老師的產能上限是真的</dd><dt>沒證明</dt><dd>老師願不願意帶團、家長願不願意換</dd></dl></div>
+    <div class="feat"><h4>2 · 為什麼是現在：純 AI 家教已經免費</h4><div class="one">ChatGPT、Gemini、Claude 的學習模式 2026 年全免費，「AI 家教」沒得賣。家長會為真人老師、同伴、講得出來的證明付錢，不會為聊天框付錢。AI 成本掉到每人每月幾十塊，既有的 AI 大腦已經做好可搬。</div><dl><dt>已知</dt><dd>大模型學習模式免費是事實</dd><dt>沒證明</dt><dd>家長付費意願排序，要訪談</dd></dl></div>
+    <div class="feat"><h4>3 · 護城河是密度，越滾越厚</h4><div class="one">同年級同科的人越多，越容易在同一週湊到卡同一點的團。歷程跟著孩子累積，換平台歸零。老師在這裡時薪更高會留下。家人迴路讓續訂靠產品。TutorABC 二十年只做到「配程度相近的人」。</div><dl><dt>已知</dt><dd>密度決定成班率，數學上成立</dd><dt>沒證明</dt><dd>50 人試點湊不湊得成，8 週第一題</dd></dl></div>
+    <div class="feat"><h4>4 · 財務三段，最後一段才是真的錢</h4><div class="one">第二年 3,000 家打平；第三年 10,000 家年營收約 4 億、營業利益 4–6 千萬；第四年起引擎租給其他補教和學校：8,000 家補習班租 200 家、每家每月 3 萬 = 每年 7,000 萬、毛利七成以上。那時從服務業變軟體生意。</div><dl><dt>已知</dt><dd>前兩段成本結構算過</dd><dt>沒證明</dt><dd>第三段有沒有人租，三年後的事，但它決定值多少</dd></dl></div>
+    <div class="feat"><h4>5 · 不做的代價比做的風險大</h4><div class="one">少子化縮池子、電銷成本漲、免費 AI 擠一對一的價值。OneClass 現在的模式三年後毛利只會更薄。Tandelo 是在池子還夠大時，把每個孩子的價值從「賣堂數」換成「一週七天陪伴加真人小班」。</div><dl><dt>已知</dt><dd>三個趨勢都有數據</dd><dt>沒證明</dt><dd>萬通內部願不願意動現有模式</dd></dl></div>
+    <div class="feat" style="background:var(--soft)"><h4>簡報的結尾不能停在損益表</h4><div class="one">成熟後營業利益 10–15%，投資人會說「補習班也有」。值得投的理由只有一個：這是萬通從「賣老師時間」變成「擁有引擎和歷程」的那一步。結尾要停在：<b>三年後我們是全台灣唯一知道每個國中生卡在哪的公司。</b></div></div>
+  </div>
+  <h3 style="font-family:Sora,'Noto Sans TC';font-size:16px;margin:20px 0 8px">怎麼要錢：三段，每段有停損</h3>
+  <div class="tblwrap"><table>
+    <thead><tr><th>段</th><th>要多少</th><th>買什麼答案</th><th>過關條件</th><th>沒過就</th></tr></thead>
+    <tbody>
+      <tr><td class="f">試點 8 週</td><td>約 NT$300–500 萬（AI 大腦是現成的、老師學生是 OneClass 的；錢花在畫面、湊團引擎、老師分潤）</td><td>湊得成嗎、學得會嗎、算得過嗎、願意續買嗎</td><td>成班率 ≥ 60%、隔三天再測通過率 ≥ 70%、8 週續購 ≥ 50%、五人團實際毛利 ≥ 25%</td><td>停，損失 500 萬，留下一顆可租的引擎</td></tr>
+      <tr><td class="f">到 3,000 家</td><td>約 NT$2,000–3,000 萬（12 個月）</td><td>獲客壓得到 NT$2,500 嗎、流失壓得到 8% 嗎</td><td>月營收 1,000 萬打平、獲客 ≤ 3,000、流失 ≤ 9%</td><td>縮回 OneClass 內部功能，不擴</td></tr>
+      <tr><td class="f">到 10,000 家 + 引擎出租</td><td>依前段數字決定</td><td>規模能不能不等比長人</td><td>營業利益 ≥ 10%、第一家外部補教簽約</td><td>維持 3,000 家做現金牛</td></tr>
+    </tbody>
+  </table></div>
+  <div class="rule">說服人的核心是這張表：不是要他們相信整個故事，是要 500 萬去買四個問題的答案，答案不好就停。沒有人會拒絕一個「知道自己會在哪裡停」的提案。</div>
+
+  <h2>行銷主題與敘事（Codex 版 · 9/18 16:32 · 蘇菲建議採用）</h2>
+  <p class="sub">從孩子講起，不從價格講起。三句主張對應產品三個骨頭，最後一句收 AI 教練和家人，沒有一個字在吹 AI。對外不寫「五分之一價」，價格只用「一起分攤」帶過。</p>
+  <div class="two">
+    <div style="background:var(--ink);color:var(--bg)"><div style="font-family:Sora,'Noto Sans TC';font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.7;margin-bottom:6px">Tandelo｜AI 配對的真人小組課</div><div style="font-family:Sora,'Noto Sans TC';font-weight:800;font-size:22px;line-height:1.25;margin-bottom:10px">孩子卡在哪，就從哪裡開始。</div><div style="font-size:14px;opacity:.9;line-height:1.6">針對孩子沒弄懂的觀念，找到一起學習的同伴，讓真人老師集中帶著練。<br><br>Tandelo 從學習歷程找出孩子需要釐清的地方，安排 3–6 位有相同學習需求的同學，由真人老師帶領一小時的小組課。<br><br><b>針對卡點上課，和同伴一起分攤學費。</b></div></div>
+    <div><div style="display:grid;gap:12px;font-size:14px"><div><b style="display:block;font-family:Sora,'Noto Sans TC'">先找出不懂的地方，再安排適合的課。</b>根據孩子當下的學習需要組班，讓課程對準真正需要釐清的觀念。</div><div><b style="display:block;font-family:Sora,'Noto Sans TC'">有人一起問，有老師帶著練。</b>小組同學面對相近的學習問題，一起提問、練習，也從彼此的思路找到突破。</div><div><b style="display:block;font-family:Sora,'Noto Sans TC'">換孩子說一次，才知道懂了多少。</b>透過自己的說明與練習，確認理解，找出還需要補強的地方。</div><div style="color:var(--mute)">課堂之外，AI 教練每天陪著掌握進度，讓家人看見孩子正在練什麼、又學會了什麼。</div></div></div>
+  </div>
+  <div class="two" style="margin-top:12px">
+    <div><b>蘇菲補的兩樣</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li><b>落款</b>：「萬通教育出品。」新品牌家長會問誰做的</li><li><b>入口動作</b>：「先做 20 分鐘免費診斷，看孩子卡在哪、有哪一隊在等他。」這句同時是獲客方式，跟損益表裡「診斷取代體驗課加電銷」是同一件事</li></ul></div>
+    <div><b>用法</b><ul style="margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px"><li>官網、簡報用品類版「AI 配對的真人小組課」</li><li>社群、LINE 用口語版「AI 幫孩子找同伴的真人小班」</li><li>三句主張就是官網三個區塊、也是家長 LINE 首次訊息的三段</li><li>對外永遠不寫「五分之一價」「比一對一便宜幾倍」</li></ul></div>
+  </div>
+
+  <h2>會員骨架</h2>
+  <p class="sub">從買堂數變成買跑團次數。教練、家人迴路、歷程是每一級都有的底層；一對一變成加購。數字要算過才寫，這裡只放結構。現成的免費 / Plus / Pro 加點數帳本直接搬。</p>
+  <div class="tiers">
+    <div class="tier"><h4>陪跑<small>免費或低價 · 進門</small></h4><ul><li>今日配速、說給我聽、歷程、家人迴路</li><li>跑團單次購買</li><li>目的：讓歷程開始累積，湊團才有材料</li></ul></div>
+    <div class="tier mid"><h4>跑團<small>主力方案 · 每月 N 團</small></h4><ul><li>以上全部</li><li>每月固定跑團次數（例如 8 團）</li><li>答題紙、錯題回顧、跑團完賽</li><li>領跑員看得到你</li></ul></div>
+    <div class="tier"><h4>跑團 + 私人教練<small>衝刺加購</small></h4><ul><li>以上全部</li><li>每月固定私人教練分鐘</li><li>會考前加碼包</li></ul></div>
+  </div>
+  <div class="note">市場錨點：台灣線上一對一 50 分鐘約 NT$300–2,000，台灣老師時薪約 NT$250–1,000。跑團的單價要落在一對一的三分之一到五分之一，老師端每堂收入要高於一對一，這兩條同時成立才划算。換重心後堂數收入不是被吃掉，是換成五倍人數的小額堂數；但每團的老師收入、平台抽成、家長月費三個數要一起算，動工前算，不是做完再算。</div>
+
+  <h2>出場與語音的邊界</h2>
+  <p class="sub">提醒是教練的臉，語音是教練的一句話，都不是聊天室。</p>
+  <div class="tp">
+    <div><b>07:10</b>早安。昨晚太晚睡，今天減量了。可頂回：照原本排</div>
+    <div><b>16:55</b>17:00 那格要開始了。可頂回：晚 10 分鐘、今天不行</div>
+    <div><b>做完每格</b>說給我聽 30 秒。可延後一次</div>
+    <div><b>22:30</b>關燈。剩下的明天排。晚安。不可頂回</div>
+  </div>
+  <div class="two" style="margin-top:12px">
+    <div><b>孩子講話給它聽：說給我聽，加開始時的一句「今天怎麼樣」</b>說給我聽 30 秒講完就停；開始時可以回教練一句，一來一回就進入今天的第一格。其他操作全部用按的。每天約 5 分鐘語音，成本仍然很低。</div>
+    <div><b>它講話給孩子聽：四個時刻，有臉、有聲音</b>開始、聽完你說給我聽回一句、過了替你高興、關燈說晚安。讓一個人在家的孩子有「有人在」的感覺。教練不是朋友：不聊心事，情緒的事交給守門人和領跑員。</div>
+  </div>
+
+  <h2>隱私與安全</h2>
+  <ul class="lines">
+    <li><b>捉行為不捉人</b><span>不看螢幕、不追位置、不錄鍵盤。疲勞只看睡眠和在線時間。</span></li>
+    <li><b>錄音不留原檔</b><span>說給我聽和老師評語只留評分和摘要。既有的 AI 大腦本來就這樣做。</span></li>
+    <li><b>孩子決定分享</b><span>家長看什麼由孩子勾；領跑員看得到全部，寫進同意書明講。</span></li>
+    <li><b>13 歲以下家長同意</b><span>個資法 + 教育部 2026《家長數位與 AI 學習知能指引》。App Store 兒童分級要過。</span></li>
+    <li><b>情緒危機永遠是人</b><span>守門人偵測到就進領跑員名單第一位，轉家長、學校輔導、1925。AI 不接這段對話。</span></li>
+  </ul>
+
+  <h2>成功指標</h2>
+  <p class="sub">一個北極星，四個陪著看。不看下載數、不看打開次數。</p>
+  <div class="kpis">
+    <div class="ns"><b>每週有效陪跑天數</b><small>北極星 · 一週有幾天至少做完一格且說給我聽過。團隊既有的算法</small></div>
+    <div><b>說給我聽通過率</b><small>真的懂的比例。太高代表題太簡單，太低代表教練排錯</small></div>
+    <div><b>跑團成班率</b><small>教練提議的跑團有幾成真的開成。配對規則好不好看這個</small></div>
+    <div><b>三週留存</b><small>Khanmigo 三週流失六成，這是要打敗的數字</small></div>
+    <div><b>續訂率與加購</b><small>會員收入有沒有接上堂數收入</small></div>
+    <div><b>領跑員每人顧的學生數</b><small>從幾十變幾百，品質不掉</small></div>
+    <div><b>家長週報開啟率</b><small>兩週沒開就進領跑員名單</small></div>
+    <div><b>平均睡眠</b><small>產品有沒有真的讓孩子少累一點。這個要敢放在儀表板上</small></div>
+  </div>
+
+  <h2>三階段路線，每階段回答一個問題</h2>
+  <div class="phases">
+    <div class="phase"><h4><span style="background:var(--p1)">第一階段 = 付費試點（Codex 建議 B，蘇菲同意）</span>證明「湊得成、學得會、算得過、願意續買」</h4><ul><li><b>範圍</b>：國二數學、兩個圈約 50 人、每週依卡點湊團、8 週、OneClass 現有學生</li><li><b>必做</b>：第一天診斷 → 進圈、每週湊團 → 家長 LINE 付款 → 老師課前一頁 + 共同卡點卡 → 一小時跑團 → 說給我聽三道關（含隔三天再測）→ 續購</li><li>手機：首頁、路線、說給我聽、我；LINE：搞懂了通知、每週故事</li><li><b>先不做</b>：Rive 角色、健康串接、家人角色、全家長跑、跨隊臨時湊團、答題紙筆寫</li></ul><div class="q"><b>要回答：</b>成班率（含被滿足率）過六成？隔三天再測通過率？三週留存過五成？8 週後續購率？三人、五人、取消少人的實際毛利？</div></div>
+    <div class="phase"><h4><span style="background:var(--p2)">第二階段</span>試點過了才做</h4><ul><li>小陪的 Rive 臉、Apple 健康串接、心情</li><li>跨隊臨時湊團、私人教練提議、換檔規則</li><li>答題紙筆寫、錯題回顧完整版</li><li>領跑員今日名單、家人的角色、全家的長跑</li><li>國一、理化、英文</li></ul><div class="q"><b>要回答：</b>跑團月費接不接得上原本的堂數收入？家長會不會為「五分之一價、一對一精準」續訂？</div></div>
+    <div class="phase"><h4><span style="background:var(--p3)">第三階段</span>護城河</h4><ul><li>掌握地圖公開給學生</li><li>換老師歷程帶著走</li><li>續約歷程一頁</li><li>高中學習歷程檔案的門</li><li>對外：偏鄉、自學家庭的跑團方案</li></ul><div class="q"><b>要回答：</b>家長續約時會不會因為那一頁歷程而留下？第二家補教願不願意租這顆大腦？</div></div>
+  </div>
+
+  <h2>調研摘要</h2>
+  <p class="sub">這份規劃背後的證據。</p>
+  <div class="research">
+    <div><b>AI + 真人混合是 2026 的贏家模式</b><span>AI 負責每天的錯誤追蹤和調整，真人負責高風險時刻：考前一晚、觀念缺口累積好幾週。這就是三個檔位的依據。<small><a href="https://www.myengineeringbuddy.com/blog/online-tutoring-trends-ultimate-guide/">Online Tutoring Trends 2026</a></small></span></div>
+    <div><b>Third Space Learning（更正，Codex 查證）</b><span>EEF 的獨立試驗<b>沒有</b>發現優於原有教學支持的證據；「14 週進步 7 個月」來自另一個 Rising Stars 試驗，兩者不能混寫。可用的結論只剩：線上一對一數學家教有規模化先例、他們用大量課堂紀錄做了 AI 家教。<small><a href="https://thirdspacelearning.com/blog/eef-trial-affordable-online-maths-tuition/">原文說明</a></small></span></div>
+    <div><b>Eedi：一週 10–15 分鐘，多 4 個月進步</b><span>大規模隨機試驗。核心是「迷思概念地圖」：從錯誤反推根本觀念缺口，還能預測下一個會卡在哪。這是我們「錯因四分類」的原型。<small><a href="https://www.eedi.com/news/new-uk-study-finds-students-using-eedi-gain-2-4-months-of-additional-maths-progress">Eedi 研究</a></small></span></div>
+    <div><b>Khanmigo 三週流失六成，聊天框家教不夠</b><span>Sal Khan 自己說是 non-event。下一代要的是主動做事的代理、家長面板、遊戲式循環。<small><a href="https://agentconn.com/blog/ai-tutoring-agents-post-khanmigo-mytutor-2026/">AgentConn</a></small></span></div>
+    <div><b>台灣國中生 19% 重度學習疲勞、15% 有煩惱找 AI</b><span>兒福聯盟 2026。產品要解的是「太累」不是「沒題目」，守門人不能少。<small><a href="https://www.children.org.tw/publication_research/research_report/3047">兒福聯盟調查</a></small></span></div>
+    <div><b>先例：TutorABC 的 DCGS 動態課程系統（2004 年起）</b><span>AI 依程度、興趣、職業配對老師、同學、教材，1 對 3 一堂約 NT$900。母公司 iTutorGroup 2019 年被平安投資、2022 年換英美投資集團接手，2025 年底稱連續數月營收破紀錄。<b>意思是：家長願意為 AI 配對的小班付錢，這件事已經被證明 20 年</b>；但它配的是「程度相近的人」，不是「此刻卡同一點的人」，也沒有平台外的學習歷程。Tandelo 的差異必須是結構上的，不是文案上的。<small><a href="http://blog.tutorabc.com/blog/2018/07/25/20180725b/">TutorABC DCGS 介紹（2018）</a> · <a href="https://technews.tw/2018/04/27/tutorabc-dcgs-ai-class/">科技新報</a> · <a href="https://www.tutorabc.com/blog/en-us/post/67192">TutorABC 2025 營收公告</a></small></span></div>
+    <div><b>台灣線上一對一價格帶</b><span>50 分鐘 NT$300–2,000，台灣老師時薪 NT$250–1,000。跑團定價的錨點。<small><a href="https://nolimittutor.com/blog/amazingtalker-review-pricing-pros-cons-2026/">AmazingTalker 2026 評價</a></small></span></div>
+    <div><b>iPad 手寫數學辨識已是內建能力</b><span>iPadOS 18 起的 Math Notes 會認手寫算式，Mathpix 等也成熟。答題紙的技術風險比半年前低很多。<small><a href="https://en.wikipedia.org/wiki/IPadOS_18">iPadOS 18</a> · <a href="https://www.mathnotes.io/">MathNotes</a></small></span></div>
+  </div>
+
+  <h2 style="margin-bottom:14px">下一步</h2>
+  <div class="next">
+    <h3>四件事，可以同時跑</h3>
+    <ol>
+      <li><b>Tandelo 原型（跑團版）</b>：學生手機、跑團教室 iPad、家人 LINE、湊團引擎四個畫面，已做，見原型頁。</li>
+      <li><b>訪談 3 到 5 位資深輔導老師</b>：他們「看到什麼就知道要出事」的直覺，就是今日名單和換檔規則的來源。大綱我來擬。</li>
+      <li><b>算數字</b>：跑團單價、老師每堂收入、會員三級定價、堂數收入被吃掉多少、要多少會員才接得上。</li>
+      <li><b>萬通法務查商標</b>：Tandelo 在教育類別；備案 Tandem。</li>
+    </ol>
+  </div>
+</div>

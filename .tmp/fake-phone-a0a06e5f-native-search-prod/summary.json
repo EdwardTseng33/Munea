@@ -1,0 +1,290 @@
+{
+  "required_consecutive_runs": 1,
+  "passed_runs": 1,
+  "ok": true,
+  "results": [
+    {
+      "transport": "direct",
+      "transport_status": "ready",
+      "avatar_ack": true,
+      "voice_chunks": 74,
+      "voice_audio_ms": 20751,
+      "client_receive_max_gap_ms": 2625.0,
+      "source_playout": {
+        "ok": true,
+        "underrun_count": 0,
+        "max_underrun_ms": 0.0
+      },
+      "avatar_audio_ms": 12500,
+      "avatar_webrtc_timing": {
+        "ok": true,
+        "frame_count": 625,
+        "gap_count": 0,
+        "max_pts_gap_ms": 0.0,
+        "pts_gaps": [],
+        "max_receive_late_ms": 27.0
+      },
+      "user_caption": "",
+      "assistant_caption": "我剛上網查了中央氣象署的資料，臺北市今天是多雲，不過午後可能會有短暫雷陣雨，降雨機率有百分之80，出門記得帶把傘比較好。氣溫大概在 28到 36度之間，天氣很熱，要多喝水避免中暑喔。你今天有要去哪裡走走嗎？",
+      "first_response_ms": 1312,
+      "requested_turns": 1,
+      "completed_turns": 1,
+      "turns": [
+        {
+          "turn": 1,
+          "turn_complete": true,
+          "first_response_ms": 1312,
+          "voice_audio_ms": 20751,
+          "user_caption": "",
+          "assistant_caption": "我剛上網查了中央氣象署的資料，臺北市今天是多雲，不過午後可能會有短暫雷陣雨，降雨機率有百分之80，出門記得帶把傘比較好。氣溫大概在 28到 36度之間，天氣很熱，要多喝水避免中暑喔。你今天有要去哪裡走走嗎？",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        }
+      ],
+      "unsolicited_audio_bytes": 0,
+      "unsolicited_caption": "",
+      "disconnected_after_turn": false,
+      "avatar_health_before": {
+        "ok": true,
+        "round_count": 8,
+        "round_latencies_ms": [
+          841.1,
+          1282.5,
+          817.8,
+          893.0,
+          742.7,
+          830.9,
+          643.3,
+          770.8
+        ],
+        "gen_compute_ms_rolling": {
+          "p50": 444.6,
+          "p95": 523.9,
+          "budget_ms": 960.0,
+          "n_samples": 72,
+          "headroom_p95_pct": 45.4
+        },
+        "audio_underrun": {
+          "count": 0,
+          "recent_gap_ms": [],
+          "buffer_depth_ms": 0.0,
+          "prebuffer_s": 0.2,
+          "last_prebuffer_s": 0.2,
+          "next_prebuffer_s": 0.35,
+          "adaptive_prebuffer_s": 0.2,
+          "adaptive_target_s": 0.2,
+          "adaptive_min_s": 0.2,
+          "adaptive_max_s": 0.35,
+          "generation_p95_ms": 539.7
+        },
+        "audio_sender": {
+          "rebase_count": 0,
+          "max_late_ms": 0.0,
+          "recent_late_ms": []
+        }
+      },
+      "avatar_health_after": {
+        "ok": true,
+        "round_count": 10,
+        "round_latencies_ms": [
+          841.1,
+          1282.5,
+          817.8,
+          893.0,
+          742.7,
+          830.9,
+          643.3,
+          770.8,
+          770.8,
+          1033.1
+        ],
+        "gen_compute_ms_rolling": {
+          "p50": 444.0,
+          "p95": 523.7,
+          "budget_ms": 960.0,
+          "n_samples": 85,
+          "headroom_p95_pct": 45.4
+        },
+        "audio_underrun": {
+          "count": 0,
+          "recent_gap_ms": [],
+          "buffer_depth_ms": 10790.6,
+          "prebuffer_s": 0.2,
+          "last_prebuffer_s": 0.2,
+          "next_prebuffer_s": 0.2,
+          "adaptive_prebuffer_s": 0.2,
+          "adaptive_target_s": 0.2,
+          "adaptive_min_s": 0.2,
+          "adaptive_max_s": 0.35,
+          "generation_p95_ms": 523.7
+        },
+        "audio_sender": {
+          "rebase_count": 0,
+          "max_late_ms": 0.0,
+          "recent_late_ms": []
+        }
+      },
+      "avatar_reported_underrun_delta": 0,
+      "continuity": {
+        "ok": true,
+        "alignment_ms": 3020,
+        "envelope_correlation": 0.9662,
+        "reference_speech_frames": 348,
+        "missing_speech_runs": 0,
+        "max_missing_speech_ms": 0,
+        "speech_windows_ms": [
+          [
+            3060,
+            3180
+          ],
+          [
+            3220,
+            3460
+          ],
+          [
+            3480,
+            3820
+          ],
+          [
+            3860,
+            3880
+          ],
+          [
+            3920,
+            4200
+          ],
+          [
+            4300,
+            4600
+          ],
+          [
+            4640,
+            4700
+          ],
+          [
+            4720,
+            5080
+          ],
+          [
+            5100,
+            5180
+          ],
+          [
+            5220,
+            5300
+          ],
+          [
+            5400,
+            5420
+          ],
+          [
+            5440,
+            5740
+          ],
+          [
+            6160,
+            6260
+          ],
+          [
+            6320,
+            6640
+          ],
+          [
+            6700,
+            6860
+          ],
+          [
+            6920,
+            7280
+          ],
+          [
+            7360,
+            7980
+          ],
+          [
+            8100,
+            8160
+          ],
+          [
+            8240,
+            8460
+          ],
+          [
+            8520,
+            8660
+          ],
+          [
+            8720,
+            8860
+          ],
+          [
+            8940,
+            9140
+          ],
+          [
+            9200,
+            9400
+          ],
+          [
+            9480,
+            9640
+          ],
+          [
+            9700,
+            10000
+          ],
+          [
+            10060,
+            10400
+          ],
+          [
+            10820,
+            11080
+          ],
+          [
+            11140,
+            11580
+          ],
+          [
+            11640,
+            11760
+          ],
+          [
+            11820,
+            12040
+          ],
+          [
+            12100,
+            12500
+          ]
+        ]
+      },
+      "avatar_webrtc_speech_timing": {
+        "ok": true,
+        "speech_gap_count": 0,
+        "max_speech_pts_gap_ms": 0.0,
+        "speech_pts_gaps": []
+      },
+      "asr_expected": "",
+      "asr_char_recall": null,
+      "gates": {
+        "transport": true,
+        "avatar_route": true,
+        "asr": true,
+        "first_response": true,
+        "avatar_audio": true,
+        "continuity": true,
+        "avatar_reported_underrun": true,
+        "avatar_webrtc_speech_timing": true,
+        "source_playout": true,
+        "no_unsolicited_repeat": true,
+        "connection_held": true,
+        "all_turns_completed": true
+      },
+      "ok": true
+    }
+  ]
+}

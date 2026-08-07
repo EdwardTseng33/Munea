@@ -1,0 +1,278 @@
+{
+  "transport": "direct",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 68,
+  "voice_audio_ms": 19000,
+  "client_receive_max_gap_ms": 2563.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 19580,
+  "avatar_webrtc_timing": {
+    "ok": true,
+    "frame_count": 979,
+    "gap_count": 0,
+    "max_pts_gap_ms": 0.0,
+    "pts_gaps": [],
+    "max_receive_late_ms": 12.0
+  },
+  "user_caption": "我沒有發燒 , 但有痰 , 今天精神還可以 , 想問應該注意什麼 ?",
+  "assistant_caption": "聽起來精神還不錯，那這兩天幫我多喝一點溫水，觀察看看痰的顏色有沒有變，如果有變濃、變色，或覺得咳嗽變嚴重，還是建議去看一下醫生比較好喔。那你除了咳嗽有痰，還有其他哪裡不舒服嗎？",
+  "first_response_ms": 484,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 19,
+    "round_latencies_ms": [
+      479.5,
+      111.5,
+      -182.1,
+      97.1,
+      724.6,
+      -45.1,
+      652.4,
+      467.6,
+      841.1,
+      750.8,
+      -130.7,
+      625.0,
+      442.4,
+      822.9,
+      437.6,
+      840.0,
+      -84.7,
+      795.5,
+      -589.7
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 457.3,
+      "p95": 538.3,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 43.9
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 543.1
+    },
+    "audio_sender": {
+      "rebase_count": 0,
+      "max_late_ms": 0.0,
+      "recent_late_ms": []
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 21,
+    "round_latencies_ms": [
+      111.5,
+      -182.1,
+      97.1,
+      724.6,
+      -45.1,
+      652.4,
+      467.6,
+      841.1,
+      750.8,
+      -130.7,
+      625.0,
+      442.4,
+      822.9,
+      437.6,
+      840.0,
+      -84.7,
+      795.5,
+      -589.7,
+      732.1,
+      364.8
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 454.9,
+      "p95": 520.8,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 45.8
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 9400.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 518.2
+    },
+    "audio_sender": {
+      "rebase_count": 0,
+      "max_late_ms": 0.0,
+      "recent_late_ms": []
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 10340,
+    "envelope_correlation": 0.9758,
+    "reference_speech_frames": 312,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0,
+    "speech_windows_ms": [
+      [
+        10420,
+        11080
+      ],
+      [
+        11180,
+        11200
+      ],
+      [
+        11220,
+        11420
+      ],
+      [
+        11440,
+        11580
+      ],
+      [
+        11640,
+        11760
+      ],
+      [
+        11840,
+        11920
+      ],
+      [
+        12020,
+        12060
+      ],
+      [
+        12120,
+        12260
+      ],
+      [
+        12700,
+        12860
+      ],
+      [
+        12920,
+        13260
+      ],
+      [
+        13340,
+        13460
+      ],
+      [
+        13480,
+        13740
+      ],
+      [
+        13820,
+        13940
+      ],
+      [
+        14040,
+        14240
+      ],
+      [
+        14300,
+        14720
+      ],
+      [
+        14740,
+        14980
+      ],
+      [
+        15340,
+        15540
+      ],
+      [
+        15580,
+        15700
+      ],
+      [
+        15780,
+        15900
+      ],
+      [
+        15940,
+        16100
+      ],
+      [
+        16140,
+        16160
+      ],
+      [
+        16200,
+        16420
+      ],
+      [
+        16440,
+        16660
+      ],
+      [
+        16780,
+        17240
+      ],
+      [
+        17360,
+        17500
+      ],
+      [
+        18060,
+        18160
+      ],
+      [
+        18240,
+        18600
+      ],
+      [
+        18680,
+        19320
+      ],
+      [
+        19360,
+        19580
+      ]
+    ]
+  },
+  "avatar_webrtc_speech_timing": {
+    "ok": true,
+    "speech_gap_count": 0,
+    "max_speech_pts_gap_ms": 0.0,
+    "speech_pts_gaps": []
+  },
+  "asr_expected": "我沒有發燒但有痰，今天精神還可以，想問應該注意什麼。",
+  "asr_char_recall": 1.0,
+  "gates": {
+    "transport": true,
+    "avatar_route": true,
+    "asr": true,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_speech_timing": true,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": true
+}

@@ -1,0 +1,12 @@
+{
+  "required_consecutive_runs": 1,
+  "passed_runs": 0,
+  "ok": false,
+  "results": [
+    {
+      "ok": false,
+      "error": "RuntimeError",
+      "error_message": "SUPABASE_SERVICE_ROLE_KEY is required"
+    }
+  ]
+}

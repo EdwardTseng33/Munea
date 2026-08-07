@@ -1,0 +1,230 @@
+{
+  "transport": "relay",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 36,
+  "voice_audio_ms": 8671,
+  "client_receive_max_gap_ms": 6156.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 18900,
+  "avatar_webrtc_timing": {
+    "ok": true,
+    "frame_count": 945,
+    "gap_count": 0,
+    "max_pts_gap_ms": 0.0,
+    "pts_gaps": [],
+    "max_receive_late_ms": 105.0
+  },
+  "user_caption": "秀英阿姨 , 聽到你膝蓋又痛了 , 你寧替你擔心呣。",
+  "assistant_caption": "秀英阿姨，你膝蓋怎麼了？聽起來真的很不好受，是剛剛才開始痛，還是已經一陣子了呢？",
+  "first_response_ms": 984,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 14,
+    "round_latencies_ms": [
+      506.1,
+      182.9,
+      -385.7,
+      -357.9,
+      690.0,
+      261.0,
+      -292.0,
+      89.8,
+      634.9,
+      -477.3,
+      -36.4,
+      -554.4,
+      -74.4,
+      266.3
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 432.1,
+      "p95": 542.8,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 43.5
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 499.2
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 16,
+    "round_latencies_ms": [
+      506.1,
+      182.9,
+      -385.7,
+      -357.9,
+      690.0,
+      261.0,
+      -292.0,
+      89.8,
+      634.9,
+      -477.3,
+      -36.4,
+      -554.4,
+      -74.4,
+      266.3,
+      737.9,
+      414.1
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 440.2,
+      "p95": 542.8,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 43.5
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 10.6,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 497.5
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 9120,
+    "envelope_correlation": 0.9776,
+    "reference_speech_frames": 291,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0,
+    "speech_windows_ms": [
+      [
+        9160,
+        10160
+      ],
+      [
+        10300,
+        10600
+      ],
+      [
+        10640,
+        10780
+      ],
+      [
+        10860,
+        11200
+      ],
+      [
+        11860,
+        11940
+      ],
+      [
+        11960,
+        12020
+      ],
+      [
+        12040,
+        12280
+      ],
+      [
+        12320,
+        12680
+      ],
+      [
+        12740,
+        12800
+      ],
+      [
+        12860,
+        13460
+      ],
+      [
+        14060,
+        14480
+      ],
+      [
+        14560,
+        14860
+      ],
+      [
+        14880,
+        14900
+      ],
+      [
+        14920,
+        15020
+      ],
+      [
+        15080,
+        15280
+      ],
+      [
+        15300,
+        15320
+      ],
+      [
+        15400,
+        15680
+      ],
+      [
+        15860,
+        16280
+      ],
+      [
+        16340,
+        16460
+      ],
+      [
+        16520,
+        16580
+      ],
+      [
+        16660,
+        16860
+      ],
+      [
+        16920,
+        17420
+      ]
+    ]
+  },
+  "avatar_webrtc_speech_timing": {
+    "ok": true,
+    "speech_gap_count": 0,
+    "max_speech_pts_gap_ms": 0.0,
+    "speech_pts_gaps": []
+  },
+  "asr_expected": "管線自測不計分",
+  "asr_char_recall": 0.0,
+  "gates": {
+    "transport": true,
+    "asr": true,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_speech_timing": true,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": true
+}

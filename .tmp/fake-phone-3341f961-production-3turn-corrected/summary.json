@@ -1,0 +1,333 @@
+{
+  "required_consecutive_runs": 1,
+  "passed_runs": 1,
+  "ok": true,
+  "results": [
+    {
+      "call_id": "46e6cda1-93f7-496d-b842-788a7fb7ba48",
+      "call_duration_ms": 53859,
+      "transport": "direct",
+      "transport_status": "ready",
+      "avatar_ack": true,
+      "voice_chunks": 68,
+      "voice_audio_ms": 18670,
+      "client_receive_max_gap_ms": 2578.0,
+      "source_playout": {
+        "ok": true,
+        "underrun_count": 0,
+        "max_underrun_ms": 0.0
+      },
+      "avatar_audio_ms": 16400,
+      "avatar_webrtc_timing": {
+        "ok": true,
+        "frame_count": 820,
+        "gap_count": 0,
+        "max_pts_gap_ms": 0.0,
+        "pts_gaps": [],
+        "max_receive_late_ms": 12.0
+      },
+      "user_caption": "我沒有發燒 , 但有痰 , 今天精神還可以。我沒有發燒 , 但有痰 , 今天精神還可以。我沒有發燒 , 但有痰 , 今天精神還可以。",
+      "assistant_caption": "自動聲音驗收，聽起來你今天精神還不錯，這樣很好。不過有痰的話，要不要多喝點溫水，讓痰稀釋一點，比較好咳出來？這幾天再多留意一下痰的顏色跟量，如果有變化，或是有其他不舒服，隨時跟我說喔。自動聲音驗收，聽起來你今天精神還不錯，這樣很好。不過有痰的話，要不要多喝點溫水，讓痰稀釋一點，比較好咳出來？你也可以注意一下，痰的顏色有沒有變，或是咳的情況有沒有嚴重，有的話，可能就要去給醫生看一下喔。這兩天有吃飯吃的好嗎？自動聲音驗收，聽起來你今天精神還不錯，這樣很好。不過有痰的話，要不要多喝點溫水，讓痰稀釋一點，比較好咳出來？你也可以觀察一下，看痰是什麼顏色，如果顏色變深或變濃，最好還是跟醫生說一下比較安心喔。",
+      "first_response_ms": 1000,
+      "requested_turns": 3,
+      "completed_turns": 3,
+      "turns": [
+        {
+          "turn": 1,
+          "turn_complete": true,
+          "first_response_ms": 796,
+          "voice_audio_ms": 17900,
+          "user_caption": "我沒有發燒 , 但有痰 , 今天精神還可以。",
+          "assistant_caption": "自動聲音驗收，聽起來你今天精神還不錯，這樣很好。不過有痰的話，要不要多喝點溫水，讓痰稀釋一點，比較好咳出來？這幾天再多留意一下痰的顏色跟量，如果有變化，或是有其他不舒服，隨時跟我說喔。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 2,
+          "turn_complete": true,
+          "first_response_ms": 1000,
+          "voice_audio_ms": 20190,
+          "user_caption": "我沒有發燒 , 但有痰 , 今天精神還可以。",
+          "assistant_caption": "自動聲音驗收，聽起來你今天精神還不錯，這樣很好。不過有痰的話，要不要多喝點溫水，讓痰稀釋一點，比較好咳出來？你也可以注意一下，痰的顏色有沒有變，或是咳的情況有沒有嚴重，有的話，可能就要去給醫生看一下喔。這兩天有吃飯吃的好嗎？",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        },
+        {
+          "turn": 3,
+          "turn_complete": true,
+          "first_response_ms": 797,
+          "voice_audio_ms": 18670,
+          "user_caption": "我沒有發燒 , 但有痰 , 今天精神還可以。",
+          "assistant_caption": "自動聲音驗收，聽起來你今天精神還不錯，這樣很好。不過有痰的話，要不要多喝點溫水，讓痰稀釋一點，比較好咳出來？你也可以觀察一下，看痰是什麼顏色，如果顏色變深或變濃，最好還是跟醫生說一下比較安心喔。",
+          "source_playout": {
+            "ok": true,
+            "underrun_count": 0,
+            "max_underrun_ms": 0.0
+          }
+        }
+      ],
+      "unsolicited_audio_bytes": 0,
+      "unsolicited_caption": "",
+      "disconnected_after_turn": false,
+      "avatar_health_before": {
+        "ok": true,
+        "round_count": 76,
+        "round_latencies_ms": [
+          767.9,
+          1343.4,
+          765.6,
+          1070.5,
+          755.0,
+          1115.5,
+          785.8,
+          1288.4,
+          973.5,
+          726.5,
+          919.6,
+          544.1,
+          711.5,
+          803.5,
+          651.6,
+          1338.1,
+          691.7,
+          870.7,
+          739.2,
+          673.3
+        ],
+        "gen_compute_ms_rolling": {
+          "p50": 459.3,
+          "p95": 516.5,
+          "budget_ms": 960.0,
+          "n_samples": 100,
+          "headroom_p95_pct": 46.2
+        },
+        "audio_underrun": {
+          "count": 0,
+          "recent_gap_ms": [],
+          "buffer_depth_ms": 0.0,
+          "prebuffer_s": 0.2,
+          "last_prebuffer_s": 0.2,
+          "next_prebuffer_s": 0.35,
+          "adaptive_prebuffer_s": 0.2,
+          "adaptive_target_s": 0.2,
+          "adaptive_min_s": 0.2,
+          "adaptive_max_s": 0.35,
+          "generation_p95_ms": 503.3
+        },
+        "audio_sender": {
+          "rebase_count": 0,
+          "max_late_ms": 0.0,
+          "recent_late_ms": []
+        }
+      },
+      "avatar_health_after": {
+        "ok": true,
+        "round_count": 82,
+        "round_latencies_ms": [
+          785.8,
+          1288.4,
+          973.5,
+          726.5,
+          919.6,
+          544.1,
+          711.5,
+          803.5,
+          651.6,
+          1338.1,
+          691.7,
+          870.7,
+          739.2,
+          673.3,
+          746.5,
+          566.8,
+          738.2,
+          740.5,
+          695.9,
+          520.2
+        ],
+        "gen_compute_ms_rolling": {
+          "p50": 415.0,
+          "p95": 498.7,
+          "budget_ms": 960.0,
+          "n_samples": 100,
+          "headroom_p95_pct": 48.1
+        },
+        "audio_underrun": {
+          "count": 0,
+          "recent_gap_ms": [],
+          "buffer_depth_ms": 9310.0,
+          "prebuffer_s": 0.2,
+          "last_prebuffer_s": 0.2,
+          "next_prebuffer_s": 0.2,
+          "adaptive_prebuffer_s": 0.2,
+          "adaptive_target_s": 0.2,
+          "adaptive_min_s": 0.2,
+          "adaptive_max_s": 0.35,
+          "generation_p95_ms": 464.4
+        },
+        "audio_sender": {
+          "rebase_count": 0,
+          "max_late_ms": 0.0,
+          "recent_late_ms": []
+        }
+      },
+      "avatar_reported_underrun_delta": 0,
+      "continuity": {
+        "ok": true,
+        "alignment_ms": 7400,
+        "envelope_correlation": 0.9713,
+        "reference_speech_frames": 297,
+        "missing_speech_runs": 0,
+        "max_missing_speech_ms": 0,
+        "speech_windows_ms": [
+          [
+            7460,
+            7620
+          ],
+          [
+            7660,
+            8320
+          ],
+          [
+            8340,
+            8660
+          ],
+          [
+            9100,
+            9260
+          ],
+          [
+            9300,
+            9660
+          ],
+          [
+            9720,
+            9740
+          ],
+          [
+            9760,
+            9880
+          ],
+          [
+            9920,
+            10100
+          ],
+          [
+            10180,
+            10460
+          ],
+          [
+            10500,
+            10600
+          ],
+          [
+            10680,
+            10740
+          ],
+          [
+            10780,
+            10820
+          ],
+          [
+            10860,
+            11000
+          ],
+          [
+            11200,
+            11340
+          ],
+          [
+            11420,
+            11740
+          ],
+          [
+            12380,
+            12440
+          ],
+          [
+            12500,
+            12740
+          ],
+          [
+            12820,
+            13100
+          ],
+          [
+            13180,
+            13400
+          ],
+          [
+            13700,
+            13800
+          ],
+          [
+            13840,
+            14000
+          ],
+          [
+            14060,
+            14180
+          ],
+          [
+            14260,
+            14340
+          ],
+          [
+            14380,
+            14740
+          ],
+          [
+            14760,
+            14860
+          ],
+          [
+            14900,
+            15040
+          ],
+          [
+            15180,
+            15360
+          ],
+          [
+            15480,
+            16140
+          ],
+          [
+            16220,
+            16400
+          ]
+        ]
+      },
+      "avatar_webrtc_speech_timing": {
+        "ok": true,
+        "speech_gap_count": 0,
+        "max_speech_pts_gap_ms": 0.0,
+        "speech_pts_gaps": []
+      },
+      "asr_expected": "我沒有發燒但有痰今天精神還可以",
+      "asr_char_recall": 1.0,
+      "gates": {
+        "transport": true,
+        "avatar_route": true,
+        "asr": true,
+        "first_response": true,
+        "avatar_audio": true,
+        "continuity": true,
+        "avatar_reported_underrun": true,
+        "avatar_webrtc_speech_timing": true,
+        "source_playout": true,
+        "no_unsolicited_repeat": true,
+        "connection_held": true,
+        "all_turns_completed": true,
+        "minimum_call_duration": true
+      },
+      "ok": true
+    }
+  ]
+}

@@ -1,0 +1,483 @@
+{
+  "transport": "direct",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 94,
+  "voice_audio_ms": 27161,
+  "client_receive_max_gap_ms": 19735.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 38700,
+  "avatar_webrtc_timing": {
+    "ok": false,
+    "frame_count": 1935,
+    "gap_count": 1,
+    "max_pts_gap_ms": 100.0,
+    "pts_gaps": [
+      {
+        "at_captured_ms": 13140.0,
+        "duration_ms": 100.0
+      }
+    ],
+    "max_receive_late_ms": 308.0
+  },
+  "user_caption": "我沒有發燒 , 但有痰 , 今天精神還可以 , 想問應該注意什麼 ?",
+  "assistant_caption": "自動聲音驗收，聽起來你現在喉嚨有痰對不對？精神還可以是不錯，不過有痰通常代表身體在跟某些東西對抗，要多喝溫開水，讓痰變稀一點，比較好咳出來。最近也要觀察痰的顏色，如果變黃、變綠，或是有血絲，都要趕快去看醫生喔。你要不要先量個體溫，確認一下有沒有發燒？",
+  "first_response_ms": 484,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 41,
+    "round_latencies_ms": [
+      516.7,
+      873.6,
+      394.1,
+      553.3,
+      744.8,
+      -148.2,
+      585.1,
+      555.6,
+      660.3,
+      -387.0,
+      890.3,
+      408.3,
+      802.6,
+      -423.3,
+      414.0,
+      -230.7,
+      691.9,
+      457.7,
+      -291.1,
+      -273.9
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 537.3,
+      "p95": 585.9,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 39.0
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 542.8
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 43,
+    "round_latencies_ms": [
+      394.1,
+      553.3,
+      744.8,
+      -148.2,
+      585.1,
+      555.6,
+      660.3,
+      -387.0,
+      890.3,
+      408.3,
+      802.6,
+      -423.3,
+      414.0,
+      -230.7,
+      691.9,
+      457.7,
+      -291.1,
+      -273.9,
+      729.8,
+      -119.1
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 437.9,
+      "p95": 563.2,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 41.3
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.6,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 447.2
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": false,
+    "alignment_ms": 10300,
+    "envelope_correlation": 0.9114,
+    "reference_speech_frames": 908,
+    "missing_speech_runs": 3,
+    "max_missing_speech_ms": 100,
+    "speech_windows_ms": [
+      [
+        10420,
+        10520
+      ],
+      [
+        10600,
+        11920
+      ],
+      [
+        12360,
+        12480
+      ],
+      [
+        12500,
+        12560
+      ],
+      [
+        12580,
+        13080
+      ],
+      [
+        13100,
+        13340
+      ],
+      [
+        13400,
+        13620
+      ],
+      [
+        13740,
+        14140
+      ],
+      [
+        14280,
+        14460
+      ],
+      [
+        14500,
+        14700
+      ],
+      [
+        14760,
+        14920
+      ],
+      [
+        15520,
+        15760
+      ],
+      [
+        15780,
+        16080
+      ],
+      [
+        16180,
+        16820
+      ],
+      [
+        16900,
+        16980
+      ],
+      [
+        17020,
+        17080
+      ],
+      [
+        17100,
+        17300
+      ],
+      [
+        17840,
+        17900
+      ],
+      [
+        17960,
+        18300
+      ],
+      [
+        18360,
+        18520
+      ],
+      [
+        18560,
+        18740
+      ],
+      [
+        18760,
+        18980
+      ],
+      [
+        19020,
+        19140
+      ],
+      [
+        19180,
+        19420
+      ],
+      [
+        19440,
+        19660
+      ],
+      [
+        19760,
+        19860
+      ],
+      [
+        19940,
+        20100
+      ],
+      [
+        20160,
+        20400
+      ],
+      [
+        20420,
+        20440
+      ],
+      [
+        20460,
+        20500
+      ],
+      [
+        20520,
+        20600
+      ],
+      [
+        20660,
+        20860
+      ],
+      [
+        20880,
+        20960
+      ],
+      [
+        21040,
+        21160
+      ],
+      [
+        21260,
+        21400
+      ],
+      [
+        21900,
+        22100
+      ],
+      [
+        22180,
+        22300
+      ],
+      [
+        22380,
+        22720
+      ],
+      [
+        22780,
+        22800
+      ],
+      [
+        22820,
+        23020
+      ],
+      [
+        23060,
+        23160
+      ],
+      [
+        23380,
+        23600
+      ],
+      [
+        23660,
+        23680
+      ],
+      [
+        23720,
+        23860
+      ],
+      [
+        23900,
+        24420
+      ],
+      [
+        24500,
+        24640
+      ],
+      [
+        24860,
+        24900
+      ],
+      [
+        24940,
+        25080
+      ],
+      [
+        25100,
+        25180
+      ],
+      [
+        25340,
+        25420
+      ],
+      [
+        25480,
+        25520
+      ],
+      [
+        25560,
+        25900
+      ],
+      [
+        26520,
+        26660
+      ],
+      [
+        26680,
+        27200
+      ],
+      [
+        27280,
+        27420
+      ],
+      [
+        27440,
+        27460
+      ],
+      [
+        27480,
+        27740
+      ],
+      [
+        27860,
+        28360
+      ],
+      [
+        28380,
+        28540
+      ],
+      [
+        28960,
+        29080
+      ],
+      [
+        29120,
+        29260
+      ],
+      [
+        29340,
+        29520
+      ],
+      [
+        29620,
+        29920
+      ],
+      [
+        29960,
+        30380
+      ],
+      [
+        30620,
+        30920
+      ],
+      [
+        31000,
+        31180
+      ],
+      [
+        31220,
+        31360
+      ],
+      [
+        31380,
+        31620
+      ],
+      [
+        31740,
+        31940
+      ],
+      [
+        32000,
+        32040
+      ],
+      [
+        32200,
+        32300
+      ],
+      [
+        32320,
+        32360
+      ],
+      [
+        32380,
+        32420
+      ],
+      [
+        32500,
+        33220
+      ],
+      [
+        33920,
+        34180
+      ],
+      [
+        34220,
+        34900
+      ],
+      [
+        35020,
+        35460
+      ],
+      [
+        35520,
+        36460
+      ],
+      [
+        36540,
+        36760
+      ],
+      [
+        36780,
+        37020
+      ]
+    ]
+  },
+  "avatar_webrtc_speech_timing": {
+    "ok": false,
+    "speech_gap_count": 1,
+    "max_speech_pts_gap_ms": 100.0,
+    "speech_pts_gaps": [
+      {
+        "at_captured_ms": 13140.0,
+        "duration_ms": 100.0
+      }
+    ]
+  },
+  "asr_expected": "我沒有發燒但有痰今天精神還可以想問應該注意什麼",
+  "asr_char_recall": 1.0,
+  "gates": {
+    "transport": true,
+    "avatar_route": true,
+    "asr": true,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": false,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_speech_timing": false,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": false
+}

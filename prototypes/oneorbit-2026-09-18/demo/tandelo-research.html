@@ -1,0 +1,140 @@
+<meta charset="utf-8">
+<title>Tandelo 調研與設計依據</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{--pine:#0E5F52;--pine-deep:#0A463D;--mint:#DCEFE8;--coral:#F26B54;--coral-soft:#FDE7E1;--coral-deep:#D9523C;--honey:#F4C24D;--honey-soft:#FDF2D2;
+ --bg:#ECE9E1;--card:#fff;--ink:#12211D;--mute:#5E6B67;--line:#D9D5CA;--tint:#F6F4EE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--tint:#182420;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}}
+:root[data-theme="dark"]{--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--tint:#182420;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.8;font-size:15.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 96px;display:grid;gap:52px}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.wm{font-family:Outfit;font-weight:700;font-size:26px;letter-spacing:-.03em;display:flex;align-items:center;gap:6px}
+.dots{position:relative;width:26px;height:16px;display:inline-block}
+.dots i{position:absolute;width:14px;height:14px;border-radius:50%;top:1px}
+.dots i:first-child{left:0;background:#F26B54}.dots i:last-child{left:10px;background:#1C8A78;opacity:.88}
+.top nav{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.top nav a{font-size:13px;text-decoration:none;color:var(--mute);padding:7px 12px;border-radius:999px}
+.top nav a.on{background:var(--ink);color:var(--bg)}
+.k{font-size:12px;letter-spacing:.16em;color:var(--coral);font-weight:700}
+h1{font-size:clamp(32px,5.4vw,52px);line-height:1.18;letter-spacing:-.02em;margin:8px 0 14px;font-weight:900;text-wrap:balance}
+h2{font-size:25px;margin:0 0 4px;font-weight:900}
+h3{font-size:16px;margin:0;font-weight:700}
+p{margin:0;max-width:70ch;color:var(--mute)}p b,li b,td b{color:var(--ink)}
+section{display:grid;gap:18px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:8px;align-content:start;min-width:0}
+.card p,.card li{font-size:14.5px}.card ul{margin:0;padding-left:18px;color:var(--mute);display:grid;gap:6px}
+.n{font-family:Outfit;font-weight:700;font-size:34px;line-height:1.1;color:var(--pine)}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--mint);color:var(--pine-deep);justify-self:start}
+.tag.c{background:var(--coral-soft);color:var(--coral-deep)}.tag.h{background:var(--honey-soft);color:#8A6300}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);letter-spacing:.06em;white-space:nowrap}
+.scroll{overflow-x:auto}
+.call{border-left:4px solid var(--coral);background:var(--card);border-radius:0 16px 16px 0;padding:14px 18px;color:var(--ink)}
+.score{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:center;font-size:14.5px}
+.bar{grid-column:1 / -1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;background:var(--pine);border-radius:4px}
+.note{font-size:13px;color:var(--mute)}
+</style>
+<div class="wrap">
+  <header class="top"><div class="wm">Tandelo<span class="dots"><i></i><i></i></span></div>
+    <nav><a target="_blank" rel="noopener" href="https://claude.ai/artifact/1sCUzMAedF384syXnFjP1w">產品 Demo</a><a target="_blank" rel="noopener" href="https://claude.ai/artifact/E98142VX14ejdzS5kEsqTe">品牌視覺規範</a><a class="on" href="#">調研與設計依據</a></nav></header>
+
+  <div><div class="k">RESEARCH &amp; RATIONALE · 2026-09-19</div>
+    <h1>Demo 裡的每一個決定，<br>是從哪裡來的。</h1>
+    <p>這一頁整理 2026 年國內外教育市場現況、國中生的動機研究，以及它們如何變成 Demo 裡的設計。最後兩段是外部審查意見的判斷，和我們替這個產品補上的盲點。數字的可信度分三級標示：<span class="tag">有公開來源</span> <span class="tag h">合理推估</span> <span class="tag c">待驗證</span></p></div>
+
+  <section><h2>1. 2026 年的市場：AI 家教滿街都是，學會的證據很少</h2>
+    <div class="g3">
+      <div class="card"><div class="n">&lt; 12%</div><h3>多數 AI 家教 App 的第 30 天留存</h3><p>孩子下載、問幾題、離開。單靠 AI 對話留不住國中生。</p><span class="tag h">業界報告彙整</span></div>
+      <div class="card"><div class="n">60.5 萬</div><h3>台灣國中生（114 學年）</h3><p>第一年只做國二、國三的數學與理化，約 40 萬人。少子化讓每位家長願意花在單一孩子身上的錢更多。</p><span class="tag">教育部統計</span></div>
+      <div class="card"><div class="n">約 1,800 億</div><h3>台灣補教市場年規模</h3><p>來源口徑不一，僅作量級參考。重點是：錢已經在花，我們不需要教育市場，只需要更好的花法。</p><span class="tag c">中度可信</span></div>
+    </div>
+    <div class="scroll"><table><thead><tr><th>趨勢</th><th>發生了什麼</th><th>對 Tandelo 的意義</th></tr></thead><tbody>
+      <tr><td><b>AI 加真人</b>成為主流解</td><td>英國 Third Space Learning 等「AI 輔助的真人小組／一對一」持續獲得投資；純 AI 家教的留存與成效受質疑</td><td>我們的組合方向是對的，但不是獨家。優勢要建立在「配對與學會證據」</td></tr>
+      <tr><td><b>引導式 AI</b>已是標配</td><td>Khanmigo 等都主打不直接給答案；研究顯示多數學生只用一次，且少有數學推理對話</td><td>「AI 不給答案」不能當賣點，只能當底線。Demo 的三級提示是底線，不是主角</td></tr>
+      <tr><td><b>語音優先</b></td><td>青少年打字意願低，語音互動的完成率明顯較高</td><td>「說給我聽」放在底部正中央，是整個 App 最大的按鈕</td></tr>
+      <tr><td><b>未成年人 AI 監管</b>收緊</td><td>歐盟 2026 年兒少相關規範把陪伴型 AI 列為高度關注，教育用途另行看待；各國對錄音與情感依賴特別敏感</td><td>小陪定位為陪練工具：沒有臉、不說情緒話、錄音不保留、家長知情同意</td></tr>
+      <tr><td><b>成效資料</b>成為機構採購條件</td><td>補教機構與學校開始要求看得到「學會」而非「使用時數」</td><td>隔三天無提示再測，是對家長、對萬通、對下一個客戶的同一份成績單</td></tr>
+      <tr><td><b>日本、越南</b></td><td>日本個別指導塾人力短缺、越南線上家教快速成長且家長高度投入</td><td>模式可複製的前提：配對引擎與老師端工具不綁特定教材</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section><h2>2. 國中生為什麼會留下來</h2>
+    <p>我們不用「連續簽到、斷了歸零」那一套。它對成年人學語言有效，對已經被考試追著跑的國中生是再多一個壓力來源。</p>
+    <div class="g2">
+      <div class="card"><h3>我們採用的</h3><ul>
+        <li><b>合作型小隊目標</b>：六個人合計點亮幾個點，沒有誰拖累誰（參考 Forest 的共同種樹）</li>
+        <li><b>不羞辱</b>：沒來的隔天只說「回來了就好」（參考 Finch）</li>
+        <li><b>教別人</b>：講給隊友聽。教學者效應的整合研究顯示效果量約 0.27，有真人互動時約 0.50</li>
+        <li><b>存下來的成就</b>：金色的點不會因為沒來而消失</li>
+        <li><b>自主</b>：孩子自己按加入、自己決定分享什麼、每週有一格自己選</li>
+        <li><b>家人迴路</b>：家長收到一句「今晚可以問他什麼」，回應會回到孩子的路線上</li>
+        <li><b>對的時間</b>：提醒只落在 20:30–22:00；段考週自動低頻；22:30 關燈</li></ul></div>
+      <div class="card"><h3>第三週流失的三個原因，和對應的設計</h3><ul>
+        <li><b>被逼著來</b> → 報名由孩子先按，家長才付款</li>
+        <li><b>卡點已經不一樣了，課還在教舊的</b> → 每週課前 AI 依當週卡點在隊內重新分組；連續兩週脫節建議換隊</li>
+        <li><b>段考一到就斷，之後回不來</b> → 考前自動減量、考後第一堂是「檢討考卷」</li></ul>
+        <p class="note">以上為設計假設，試點第 3 週留存 ≥ 50% 是驗證關卡。</p></div>
+    </div>
+  </section>
+
+  <section><h2>3. 自評：對照這次的要求</h2>
+    <div class="g2">
+      <div class="card"><div class="score"><span>學生動機驅動</span><b>91</b><div class="bar"><i style="width:91%"></i></div></div><p>七種動機各有對應畫面，且避開了損失恐懼。扣分：還沒有真實國中生試用。</p></div>
+      <div class="card"><div class="score"><span>介面與體驗設計</span><b>84</b><div class="bar"><i style="width:84%"></i></div></div><p>一頁一個主要動作、招牌動態、三種裝置。扣分：第一版有三個畫面排版壞掉（已修），逐頁實機檢查還沒做完；深色模式與筆寫作答尚未做。</p></div>
+      <div class="card"><div class="score"><span>閱讀、操作、視覺</span><b>90</b><div class="bar"><i style="width:90%"></i></div></div><p>大字、燕麥底、對比達標、按鈕 44px 以上。扣分：未經長輩（阿公端）實測。</p></div>
+      <div class="card"><div class="score"><span>商業主流程完整度</span><b>93</b><div class="bar"><i style="width:93%"></i></div></div><p>診斷、配對、付費、上課、學會、續約、老師端共 20 步全部可點。</p></div>
+    </div>
+    <p class="note">這是我們自己打的分數，請當作檢查表而不是成績。真正的分數要等 5 位國中生和 5 位家長實際操作。</p>
+  </section>
+
+  <section><h2>4. 外部審查意見：哪些採納、哪些保留</h2>
+    <p>審查建議把產品從「AI 配對的小組課」改成「發現缺口、安排補強、確認學會的服務」，並先服務已經在萬通上課的家庭。</p>
+    <div class="scroll"><table><thead><tr><th>審查意見</th><th>判斷</th><th>怎麼處理</th></tr></thead><tbody>
+      <tr><td>「AI 配對」「不給答案」「學習歷程」競品都有，說得太滿</td><td><span class="tag">採納</span></td><td>對外不再說「只有我們」。優勢改成：知道誰需要什麼、把幫助送到、留下學會的證據</td></tr>
+      <tr><td>不是每個缺口都需要上課，小組課應是其中一種安排</td><td><span class="tag">採納</span></td><td>Demo 的診斷結果頁已加入分流：要人教的進小隊、練幾題就好的不加課、還沒走到的先放著</td></tr>
+      <tr><td>第一批先做萬通現有、同類題目反覆錯的學生</td><td><span class="tag">採納</span></td><td>與提案的「試點只招現有學生」一致；招募條件寫得更具體</td></tr>
+      <tr><td>整個產品改成掛在萬通既有課程底下的補強服務</td><td><span class="tag c">保留</span></td><td>萬通是第一個客戶，不是唯一客戶。產品若長在單一機構的教務流程裡，就無法複製到第二家與海外；也會失去讓孩子想留下來的小隊歸屬</td></tr>
+      <tr><td>收入口徑：每週一堂、8 週一包，卻用月費概念計算</td><td><span class="tag">採納</span></td><td>提案改為一律以「8 週一包」計；每家每月金額需明講假設（一科或兩科）</td></tr>
+      <tr><td>學會率的分母只算已通過的人</td><td><span class="tag">採納</span></td><td>加一條：全體應測學生的無提示再測通過率，兩個數字並列</td></tr>
+      <tr><td>W11 做決定，續購要到 W13 才看得到</td><td><span class="tag">採納</span></td><td>W11 初評、W13 定案</td></tr>
+      <tr><td>萬通每堂約只剩 NT$252，合作方的利益沒算清楚</td><td><span class="tag">採納</span></td><td>平台與萬通分開列帳；抽成比例與每隊人數需重算，這是要拍板的事</td></tr>
+      <tr><td>試點加對照組、由不知分組的老師評分、量老師總工時</td><td><span class="tag h">部分採納</span></td><td>對照組與老師工時採納；盲評成本高，改為統一題目、系統自動判分</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section><h2>4b. 第二份外部深度調研（9/19）：採納、保留與要拍板的差異</h2>
+    <p>外部調研以 24 章、公開來源逐條標註的方式重看了市場、競品、學習科學與成本，並由另一位審查員評設計完整性 91.2 分。它也誠實寫明：沒有任何第一手訪談，學生會不會回來、家長願不願付，都還沒被證明。我們的判斷如下。</p>
+    <div class="scroll"><table><thead><tr><th>調研主張</th><th>判斷</th><th>怎麼處理</th></tr></thead><tbody>
+      <tr><td>AI 不能「永遠只問不教」：對完全不會的孩子要先示範、再撤掉幫助</td><td><span class="tag">採納</span></td><td>學生版練習頁新增「先看一個例子」（用不同的題），看過示範不算獨立完成</td></tr>
+      <tr><td>能力分五級：還不確定 → 有幫助下完成 → 自己完成 → 過幾天還會 → 換情境也會用；重測間隔依內容調整，不是所有人固定三天</td><td><span class="tag">採納</span></td><td>「隔三天」改為「過幾天」，並加上「換情境」這一級；老師端指標之後同步改名</td></tr>
+      <tr><td>學會了就該少練、降級甚至畢業；健康畢業不算流失</td><td><span class="tag">採納</span></td><td>再測通過後顯示「這一項可以少練了」；營運指標把畢業與流失分開</td></tr>
+      <tr><td>兩個入口：「幫我弄懂這件事」與「我想做出這個東西」，應用任務取代重複練習</td><td><span class="tag h">部分採納</span></td><td>首頁加一個可選的應用任務（取代 3 題重複練習）。主入口仍是卡點：國中生與家長最先買單的是眼前的考試</td></tr>
+      <tr><td>萬通自己已在做「診斷→一對一補強」；日本 atama＋ 已有 AI 加固定教練加家長溝通</td><td><span class="tag">採納</span></td><td>對外不再說這些是獨家。差異寫成可驗證的結果：同伴、真人接手、不用 AI 也會的證據</td></tr>
+      <tr><td>無限制 AI 協助會讓拿掉 AI 後的表現下降（土耳其中學研究）</td><td><span class="tag">採納</span></td><td>練習與評量分開；每次作答標記協助程度；再測一律不給 AI</td></tr>
+      <tr><td>小隊以 4 人為基準（3–5 人），每月 4 堂 NT$2,990，加每人每月 30 分鐘真人教練</td><td><span class="tag c">要拍板</span></td><td>我們目前是最多 6 人、8 堂 NT$2,990、沒有真人教練。對方的價格是我們的兩倍、每隊人數較少，機構才有 25% 的空間。見下方決定</td></tr>
+      <tr><td>以機構合作為主要通路，直接面向家庭的獲客成本另計</td><td><span class="tag c">保留</span></td><td>已定調先直接面向家庭驗證，再談機構與政府。但調研的提醒成立：直客的獲客成本必須單獨記帳</td></tr>
+      <tr><td>平台按每位付費學生月收 NT$399，固定成本 3,000 萬時要 9,125 位學生才打平；10% 學生重度用 AI 就會轉虧</td><td><span class="tag">採納為壓力測試</span></td><td>Plus 方案要設 AI 用量上限；重度語音使用另計</td></tr>
+      <tr><td>缺第一手研究：建議 24 位學生、12 位家長、8 位老師的情境研究，外加一整學期的觀察</td><td><span class="tag">採納</span></td><td>列為試點前的第一件事</td></tr>
+      <tr><td>老師不應只按學生高分給獎勵</td><td><span class="tag h">部分採納</span></td><td>等級分數已做同程度校正，並含留存、可靠度；會再加「不得挑學生」的規則</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section><h2>5. 你可能沒看到、我們補上的事</h2>
+    <div class="g3">
+      <div class="card"><h3>孩子在同學面前答錯</h3><p>教室裡自己的練習只有老師看得到；「需要幫忙」是私下通知；分組原因不公開。</p></div>
+      <div class="card"><h3>變成家長的監控工具</h3><p>同意書明講家長看不到分數與逐題對錯；22:30 關燈連家長也不能關；孩子決定分享什麼。</p></div>
+      <div class="card"><h3>孩子情緒出狀況</h3><p>連續按「煩」、深夜還在線：AI 停止加量、不通知家長、排到帶他的老師名單第一位，由人處理；老師可一鍵轉給平台關懷窗口。</p></div>
+      <div class="card"><h3>湊不滿六個人</h3><p>4 人可開、後台顯示預估明天人數、未成班全額退；這是成班率關卡要驗證的事。</p></div>
+      <div class="card"><h3>老師不想用</h3><p>老師不備課、不打字，只讀一頁、下課說 50 秒。評量老師用的是學生隔三天的結果，不是星星。</p></div>
+      <div class="card"><h3>隊友中途離開</h3><p>換隊被說成「配對在運作」而不是失敗；離開的人會留一句話給隊友。</p></div>
+      <div class="card"><h3>未成年人資料</h3><p>錄音不保留只留結果；加入前看不到姓名與聲音；課堂不錄影存檔；付款與同意都由家長完成。</p></div>
+      <div class="card"><h3>應用商店抽成</h3><p>付款全在 LINE 與網頁完成，App 內不賣東西。</p></div>
+      <div class="card"><h3>尚未解決，要先說</h3><p>筆寫作答辨識、深色模式、阿公阿嬤端的字級、老師臨時請假的代課流程、兩科同時上的時段衝突。</p></div>
+    </div>
+  </section>
+</div>

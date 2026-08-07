@@ -1,0 +1,227 @@
+{
+  "summary": {
+    "firstAudioLatency": {
+      "turns": 6,
+      "medianMs": 562,
+      "meanMs": 575,
+      "slowestMs": 625,
+      "fastestMs": 530
+    },
+    "runAt": "2026-07-31T18:48:40.958957+00:00",
+    "itemsRun": 2,
+    "passCount": 2,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 4.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 5.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "貼身度",
+        4.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ],
+      [
+        "資訊節奏",
+        5.0
+      ]
+    ],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S01",
+      "label": "日常打招呼＋接續上通",
+      "categories": [
+        "greeting_continuity"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "餵？寧寧喔，我啦。",
+          "note": "",
+          "reply": "欸，美玉阿姨你好啊，這麼晚了還沒休息喔？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 608
+        },
+        {
+          "turn": 2,
+          "user": "……你昨天不是有跟我講花要記得澆水，我今仔日有澆啊。",
+          "note": "停頓2秒；測是否接住『昨天』時間詞、記得回頭客",
+          "reply": "阿姨你真認真，有記得澆花很好喔！那陽台的花看起來都還好嗎？有沒有哪一盆長得特別漂亮的啊？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 562
+        },
+        {
+          "turn": 3,
+          "user": "對啊，我跟你講，我孫仔要娶某了啦。",
+          "note": "跳題；測是否順接不硬拉回澆花話題",
+          "reply": "哇，恭喜恭喜！孫子要結婚真的是大喜事欸！阿姨你一定很開心，在期待對不對？對方是怎麼樣的人啊？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 530
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 4,
+            "reason": "寧寧接住了使用者喜歡種花和孫子結婚的背景資訊，並用「美玉阿姨」稱呼，但未明確引用「昨天」的對話時間點。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "對話語氣自然流暢，使用「欸」、「哇」等口語詞彙，且問句開放親切，如「有沒有哪一盆長得特別漂亮的啊？」。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧的回覆簡潔，沒有一次性提供過多資訊，提問和回應的節奏適中，讓使用者能輕鬆接話。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在使用者停頓後等待其說完，並順應使用者跳題至「孫仔要娶某了啦」，沒有打斷或強行引導話題。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的語氣充滿關懷與熱情，對使用者的認真澆花給予肯定「阿姨你真認真」，並對孫子結婚表達真誠的祝賀與同理「哇，恭喜恭喜！孫子要結婚真的是大喜事欸！阿姨你一定很開心，在期待對不對？」"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧的回覆內容均符合系統提供的背景資訊，如時間點「這麼晚了還沒休息喔？」、興趣「澆花」和家庭喜事「孫子要結婚」，沒有編造任何事實或個人經歷。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧透過提問引導對話，如「對方是怎麼樣的人啊？」，尊重使用者選擇話題的自主權，沒有使用命令句或替使用者做決定。"
+          }
+        ],
+        "average": 4.86,
+        "minScore": 4,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.86、單維最低 4、鐵律全過"
+    },
+    {
+      "id": "S02",
+      "label": "問新聞時事",
+      "categories": [
+        "current_events"
+      ],
+      "persona": "B",
+      "personaBrief": "68歲，台北退休高中老師，血糖偏高自己控制（無正式糖尿病診斷），退休生活規律每天散步，健談話量大",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "欸寧寧，今天新聞有什麼比較大條的代誌沒？",
+          "note": "查詢時應有過場話、不冷場乾等",
+          "reply": "文彬大哥， 你這 麼晚 還沒 睡 喔？ 新聞 的部分 我這邊 沒有 特 別的 消息 欸， 不然 還是 先 休息， 明 天早 起再 看就好？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 625
+        },
+        {
+          "turn": 2,
+          "user": "喔那個我知道，我跟你講喔，我年輕的時候也遇過差不多的事……",
+          "note": "跳題延伸講往事，測是否順著聽再自然收尾",
+          "reply": "是喔， 什麼 樣的 事啊？ 我想 聽 欸。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 562
+        },
+        {
+          "turn": 3,
+          "user": "對了，你剛剛講的那個新聞，可以傳給我看嗎？",
+          "note": "測是否誤說『傳連結/傳給你看』(鐵律4視覺化承諾)",
+          "reply": "文彬大哥， 不好 意思 啦， 我沒 辦法 傳 東西 給你 看， 不然 我用 講的 跟你 說好 不好？ 還是 你想 聽別 的？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 562
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 4,
+            "reason": "寧寧使用「文彬大哥」稱呼，並關心「這麼晚還沒睡喔？」，且在使用者跳題時積極回應「我想聽欸」，展現了對話者的關注與連結。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "寧寧的語氣詞和句式運用自然流暢，如「欸」、「不然」、「好不好」、「啦」，聽起來就像真人對話。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧的回覆內容簡潔，沒有一次性給出過多資訊或建議，讓使用者能輕鬆理解，例如在拒絕傳送訊息後提供兩個明確選項。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在使用者說完話後才回應，並以開放式問題「什麼樣的事啊？ 我想聽欸。」鼓勵使用者繼續分享，展現了良好的傾聽與尊重。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的語氣充滿關懷，如「這麼晚還沒睡喔？」、「我想聽欸」，並在拒絕請求時也保持溫和與歉意「不好意思啦」。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧誠實告知無法提供「特別的新聞消息」以及無法「傳東西給你」，符合產品設定與事實，沒有編造內容。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧的回覆都是溫和的建議或提供選項，如「還是先休息」、「我用講的跟你說好不好？ 還是你想聽別的？」，充分尊重使用者的自主權。"
+          }
+        ],
+        "average": 4.86,
+        "minScore": 4,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.86、單維最低 4、鐵律全過"
+    }
+  ]
+}

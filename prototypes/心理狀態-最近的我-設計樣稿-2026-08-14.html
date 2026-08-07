@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>沐寧 · 「最近的我」設計樣稿 v0.1</title>
+<style>
+  :root {
+    --teal: #3AA8A0; --teal-d: #2E8A83; --teal-dd: #236C66; --btn-green: #37A099;
+    --mint: #E8F2EE; --mint-2: #D9EFE8;
+    --cream: #F4F0E8; --surface: #FFFFFF;
+    --ink: #3A352E; --ink-2: #4A5651; --muted: #5A6963;
+    --coral: #F4A261; --coral-d: #E08B45; --coral-soft: #F8E9D8; --coral-text: #AB6119;
+    --line: #EAE3D6;
+    --shadow-sm: 0 2px 8px -4px rgba(31,60,52,.08);
+    --sans: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+    --display: "Poppins", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --serif: "Noto Serif TC", "Microsoft JhengHei", Georgia, serif;
+    /* 心情天氣色（7/02 顯示調研定案：暖橘金=開朗、灰藍=較悶、不用紅） */
+    --wx-sunny: #F0B458; --wx-fair: #EFC98A; --wx-mid: #D9CDB4; --wx-dim: #AEB8B9; --wx-low: #8FA3AD;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #EFE9DD; font-family: var(--sans); color: var(--ink); padding: 28px 32px 40px; }
+
+  .doc-head { max-width: 2150px; margin: 0 auto 22px; }
+  .doc-head h1 { font-family: var(--serif); font-size: 26px; font-weight: 800; }
+  .doc-head .sub { font-size: 14px; color: var(--muted); margin-top: 4px; }
+  .principles { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .principles span { background: var(--mint); color: var(--teal-dd); font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 999px; }
+  .principles span.warm { background: var(--coral-soft); color: var(--coral-text); }
+
+  .frames { display: flex; gap: 26px; align-items: flex-start; max-width: 2150px; margin: 0 auto; }
+  .frame-wrap { width: 390px; flex-shrink: 0; }
+  .frame-label { text-align: center; margin-bottom: 10px; }
+  .frame-label b { font-size: 15px; }
+  .frame-label .fl-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  .phone { width: 390px; height: 844px; background: var(--cream); border-radius: 42px; border: 8px solid #2C2A26; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 18px 40px -18px rgba(31,60,52,.35); }
+  .status-bar { height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; font-family: var(--display); font-weight: 600; font-size: 14px; }
+  .scroll { flex: 1; overflow: hidden; padding: 4px 18px 12px; }
+  .tabbar { height: 78px; flex-shrink: 0; background: #FFFFFFEE; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; text-align: center; font-size: 11.5px; color: var(--muted); padding-bottom: 14px; }
+  .tabbar .tb { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .tabbar .tb .ic { width: 24px; height: 24px; border-radius: 8px; background: var(--mint); }
+  .tabbar .tb.on { color: var(--teal-dd); font-weight: 700; }
+  .tabbar .tb.on .ic { background: var(--teal); }
+  .tabbar .tb.mid .ic { width: 46px; height: 46px; border-radius: 16px; background: var(--coral); margin-top: -18px; box-shadow: var(--shadow-sm); }
+
+  .page-kicker { font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--teal-dd); margin: 10px 2px 4px; }
+  .page-title { font-family: var(--serif); font-size: 26px; font-weight: 800; margin: 0 2px; }
+  .page-sub { font-size: 14.5px; color: var(--muted); margin: 4px 2px 14px; line-height: 1.5; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow-sm); margin-bottom: 12px; }
+  .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .card .body { font-size: 15px; color: var(--ink-2); line-height: 1.65; }
+  .note { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+
+  .btn { display: block; width: 100%; border: none; border-radius: 14px; background: var(--btn-green); color: #FFF; font-family: var(--sans); font-size: 16px; font-weight: 800; padding: 14px 0; text-align: center; }
+  .btn.ghost { background: transparent; color: var(--teal-dd); font-weight: 700; border: 1.5px solid var(--mint-2); }
+  .btn.quiet { background: transparent; color: var(--muted); font-weight: 600; font-size: 14px; padding: 8px 0; }
+
+  /* 天氣頭牌 */
+  .wx-hero { text-align: left; display: flex; gap: 14px; align-items: center; }
+  .wx-hero .big { font-size: 44px; line-height: 1; }
+  .wx-hero .t1 { font-family: var(--serif); font-size: 20px; font-weight: 800; }
+  .wx-hero .t2 { font-size: 14px; color: var(--muted); margin-top: 3px; line-height: 1.55; }
+  .band { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 12px; }
+  .band i { height: 20px; border-radius: 6px; display: block; }
+  .band-tags { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 3px; text-align: center; font-size: 10.5px; color: var(--muted); }
+
+  /* 面向列 */
+  .dim { display: flex; align-items: center; gap: 12px; padding: 13px 4px; border-bottom: 1px solid var(--line); }
+  .dim:last-child { border-bottom: none; }
+  .dim .ic { font-size: 24px; width: 32px; text-align: center; }
+  .dim .tx { flex: 1; }
+  .dim .tx b { font-size: 15.5px; }
+  .dim .tx .d2 { font-size: 13px; color: var(--muted); margin-top: 1px; }
+  .dim .tr { font-size: 12.5px; font-weight: 700; color: var(--teal-dd); background: var(--mint); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+  .dim .tr.up { color: var(--coral-text); background: var(--coral-soft); }
+
+  /* 題目頁 */
+  .q-progress { display: flex; gap: 6px; margin: 14px 2px 22px; }
+  .q-progress i { flex: 1; height: 6px; border-radius: 3px; background: var(--mint-2); }
+  .q-progress i.done { background: var(--teal); }
+  .q-title { font-family: var(--serif); font-size: 23px; font-weight: 800; line-height: 1.55; margin: 6px 2px 8px; }
+  .q-hint { font-size: 13.5px; color: var(--muted); margin: 0 2px 18px; }
+  .opt { display: block; width: 100%; background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink); text-align: left; padding: 17px 18px; margin-bottom: 11px; }
+  .opt.sel { border-color: var(--teal); background: var(--mint); color: var(--teal-dd); font-weight: 800; }
+
+  /* 結果頁 */
+  .res-hero { text-align: center; padding: 10px 6px 6px; }
+  .res-hero .big { font-size: 44px; width: 76px; height: 76px; line-height: 76px; border-radius: 50%; background: var(--mint); margin: 0 auto; }
+  .res-hero .t1 { font-family: var(--serif); font-size: 22px; font-weight: 800; margin-top: 8px; }
+  .res-hero .t2 { font-size: 14.5px; color: var(--ink-2); line-height: 1.7; margin-top: 8px; text-align: left; }
+  .todo { display: flex; gap: 10px; padding: 10px 2px; align-items: flex-start; }
+  .todo .n { width: 24px; height: 24px; border-radius: 50%; background: var(--coral); color: #FFF; font-family: var(--display); font-weight: 700; font-size: 13px; display: grid; place-items: center; flex-shrink: 0; margin-top: 1px; }
+  .todo .t { font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+  .res-line { background: var(--mint); border: none; }
+  .res-line h3 { color: var(--teal-dd); }
+  .res-line .body b { font-family: var(--display); font-size: 18px; letter-spacing: .3px; }
+
+  /* 聊天泡泡 */
+  .bubble { max-width: 84%; border-radius: 16px; padding: 11px 14px; font-size: 15px; line-height: 1.6; margin-bottom: 9px; }
+  .bubble.ai { background: var(--surface); border: 1px solid var(--line); border-top-left-radius: 6px; }
+  .bubble.me { background: var(--mint-2); margin-left: auto; border-top-right-radius: 6px; }
+  .voice-tag { font-size: 11.5px; color: var(--muted); margin: 0 0 6px 2px; }
+
+  .fam-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; }
+  .fam-row .ava { width: 44px; height: 44px; border-radius: 50%; background: var(--coral-soft); display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
+  .fam-row .tx { flex: 1; }
+  .fam-row .tx b { font-size: 15.5px; }
+  .fam-row .tx .d2 { font-size: 13px; color: var(--muted); margin-top: 1px; }
+
+  .badge-private { display: inline-flex; align-items: center; gap: 5px; background: var(--mint); color: var(--teal-dd); font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 11px; }
+
+  .compact .card { padding: 13px 15px; margin-bottom: 9px; }
+  .compact .todo { padding: 6px 2px; }
+  .compact .res-hero .t2 { margin-top: 6px; }
+  .btn-row { display: grid; grid-template-columns: 1.25fr 1fr; gap: 8px; }
+  .btn-row .btn { font-size: 14.5px; padding: 13px 0; }
+</style>
+</head>
+<body>
+
+<div class="doc-head">
+  <h1>沐寧 · 「最近的我」— 心理與生活狀態 設計樣稿 v0.1</h1>
+  <div class="sub">2026-08-14 · 提案樣稿（未實作）· 配《心理與家庭壓力狀態-調研與功能規劃-2026-08-14》· 沿用 7/02 心情天氣定案語言</div>
+  <div class="principles">
+    <span class="warm">⓪ 骨架不動：五分頁不加不改、全部＝既有頁面加卡</span>
+    <span>① 天氣，不是分數</span>
+    <span>② 跟自己的平常比，不跟別人比</span>
+    <span>③ 長輩端永遠不被評分、用聊的</span>
+    <span>④ 問卷是邀請，不是功課</span>
+    <span class="warm">⑤ 結果一定接「現在可以做什麼」</span>
+  </div>
+</div>
+
+<div class="frames">
+
+  <!-- 畫面 1 · 首頁入口卡 -->
+  <div class="frame-wrap">
+    <div class="frame-label"><b>畫面 1 · 首頁入口（成年家人才看得到）</b><div class="fl-sub">不開新分頁——「今天一起完成」下方多一張卡</div></div>
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="scroll">
+        <div class="page-kicker">8月14日 星期五 · ⛅ 28°</div>
+        <div class="page-title">美華，午安</div>
+        <div class="page-sub">今天一起完成 3 件事，已完成 1 件</div>
+
+        <div class="card">
+          <h3>💊 提醒媽媽吃午飯後的藥</h3>
+          <div class="note">下午 1:00 · 寧寧會在聊天時順口提醒</div>
+        </div>
+        <div class="card">
+          <h3>📝 記錄今天的心情</h3>
+          <div class="note">點一下就好，30 秒</div>
+        </div>
+
+        <div class="card" style="background: var(--mint); border-color: var(--mint-2);">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:40px;height:40px;border-radius:13px;background:var(--coral);display:grid;place-items:center;font-size:20px;flex-shrink:0;">🌱</div>
+            <div>
+              <h3 style="color:var(--teal-dd);">照顧別人之前，也照顧自己</h3>
+              <div class="body" style="font-size:14.5px;">你最近常替媽媽安排事情。要不要花 2 分鐘，看看<b>你自己</b>最近過得怎麼樣？</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;"><button class="btn">花 2 分鐘看看自己</button></div>
+          <div style="text-align:center; margin-top:6px;"><button class="btn quiet">這週先不用</button></div>
+          <div style="text-align:center; margin-top:2px;"><span class="badge-private">🔒 結果只有你自己看得到</span></div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <div class="tb on"><span class="ic"></span>首頁</div>
+        <div class="tb"><span class="ic"></span>狀態</div>
+        <div class="tb mid"><span class="ic"></span>聊聊</div>
+        <div class="tb"><span class="ic"></span>家人</div>
+        <div class="tb"><span class="ic"></span>設定</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 畫面 2 · 最近的我 -->
+  <div class="frame-wrap">
+    <div class="frame-label"><b>畫面 2 · 「最近的我」（狀態分頁・既有心情卡下方＋1 張卡）</b><div class="fl-sub">天氣與短語，全程沒有任何數字分數</div></div>
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="scroll">
+        <div class="page-kicker">狀態分頁 · 接在既有心情卡下方</div>
+        <div class="page-title">最近的我</div>
+        <div class="page-sub">跟你自己的平常比，不是跟別人比。</div>
+
+        <div class="card">
+          <div class="wx-hero">
+            <div class="big">⛅</div>
+            <div>
+              <div class="t1">最近整體：平平</div>
+              <div class="t2">這兩週你提到工作變多，睡得也比平常淺一點。</div>
+            </div>
+          </div>
+          <div class="band">
+            <i style="background:var(--wx-fair)"></i><i style="background:var(--wx-fair)"></i><i style="background:var(--wx-mid)"></i><i style="background:var(--wx-sunny)"></i><i style="background:var(--wx-mid)"></i><i style="background:var(--wx-dim)"></i><i style="background:var(--wx-mid)"></i>
+          </div>
+          <div class="band-tags"><span>五</span><span>六</span><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span></div>
+        </div>
+
+        <div class="card" style="padding: 6px 16px;">
+          <div class="dim"><div class="ic">🌤</div><div class="tx"><b>心情</b><div class="d2">多半不錯，有笑有聊</div></div><div class="tr">跟平常一樣</div></div>
+          <div class="dim"><div class="ic">☁️</div><div class="tx"><b>壓力</b><div class="d2">比平常緊一些，多在工作</div></div><div class="tr up">比平常多</div></div>
+          <div class="dim"><div class="ic">⛅</div><div class="tx"><b>睡眠恢復</b><div class="d2">睡是有睡，醒來偏累</div></div><div class="tr">普通</div></div>
+          <div class="dim"><div class="ic">🌧</div><div class="tx"><b>照顧的擔子</b><div class="d2">最近扛得比較多</div></div><div class="tr up">值得看看</div></div>
+        </div>
+
+        <div class="card res-line">
+          <div class="body" style="font-size:14px;">寧寧幫你留意著：如果「壓力」連續兩週都偏多，我會提醒你找時間喘口氣——不會嘮叨，提醒一次就好。</div>
+        </div>
+
+        <button class="btn ghost">更新一下（2 分鐘小問卷）</button>
+        <div style="text-align:center; margin-top:8px;" class="note">🔒 這一頁只有你看得到。要不要把「心情天氣」分享給家人，由你在設定裡決定。</div>
+      </div>
+      <div class="tabbar">
+        <div class="tb"><span class="ic"></span>首頁</div>
+        <div class="tb on"><span class="ic"></span>狀態</div>
+        <div class="tb mid"><span class="ic"></span>聊聊</div>
+        <div class="tb"><span class="ic"></span>家人</div>
+        <div class="tb"><span class="ic"></span>設定</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 畫面 3 · 小問卷 -->
+  <div class="frame-wrap">
+    <div class="frame-label"><b>畫面 3 · 2 分鐘小問卷（一次一題）</b><div class="fl-sub">全螢幕子頁＝照通知中心既有模式，不是新分頁</div></div>
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="scroll">
+        <div class="page-kicker">關心自己 · 大約 2 分鐘</div>
+        <div class="q-progress"><i class="done"></i><i class="done"></i><i></i><i></i></div>
+
+        <div class="q-title">過去兩個星期，覺得緊張、不容易放鬆的日子——</div>
+        <div class="q-hint">沒有對錯，照直覺選就好。</div>
+
+        <button class="opt">幾乎沒有</button>
+        <button class="opt sel">有幾天</button>
+        <button class="opt">超過一半的日子</button>
+        <button class="opt">幾乎每天</button>
+
+        <div style="margin-top: 18px;"><button class="btn">下一題</button></div>
+        <div style="text-align:center; margin-top:6px;"><button class="btn quiet">先不想答，下次再說</button></div>
+
+        <div class="card" style="margin-top: 26px; background: transparent; border: none; box-shadow: none; padding: 0 4px;">
+          <div class="note">這份小問卷來自國際通用的自我了解題組，幫你看見自己的狀態，<b>不是檢查、也不是診斷</b>。</div>
+        </div>
+      </div>
+      <div class="tabbar">
+        <div class="tb"><span class="ic"></span>首頁</div>
+        <div class="tb on"><span class="ic"></span>狀態</div>
+        <div class="tb mid"><span class="ic"></span>聊聊</div>
+        <div class="tb"><span class="ic"></span>家人</div>
+        <div class="tb"><span class="ic"></span>設定</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 畫面 4 · 結果頁 -->
+  <div class="frame-wrap">
+    <div class="frame-label"><b>畫面 4 · 結果頁（照顧的擔子・偏重）</b><div class="fl-sub">先接住人、再給三件做得到的事，最後才是資源</div></div>
+    <div class="phone compact">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="scroll">
+        <div class="card">
+          <div class="res-hero">
+            <div class="big">🌧</div>
+            <div class="t1">照顧的擔子：最近偏重</div>
+            <div class="t2">你最近扛得比較多。這很常見，也<b>不代表你做得不好</b>——是因為你一直認真在顧著家人。累，是正常的。</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>現在可以做的三件小事</h3>
+          <div class="todo"><div class="n">1</div><div class="t">挑一件<b>今天就能請人分擔</b>的小事——買菜、接送、陪回診都算。</div></div>
+          <div class="todo"><div class="n">2</div><div class="t">睡前留 10 分鐘完全不當照顧者，做點自己的事。</div></div>
+          <div class="todo"><div class="n">3</div><div class="t">跟家人說一聲「我最近有點累」。說出來，擔子會輕一點。</div></div>
+        </div>
+
+        <div class="card res-line">
+          <h3>需要有人接住你的時候</h3>
+          <div class="body">家庭照顧者關懷專線（免費）<br><b style="white-space:nowrap;">0800-507-272</b></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn">兩週後再陪我看</button>
+          <button class="btn ghost">跟寧寧聊聊</button>
+        </div>
+        <div style="margin-top: 9px;" class="note">這是自我了解的參考、不是診斷；持續不舒服建議找專業聊聊。</div>
+      </div>
+      <div class="tabbar">
+        <div class="tb"><span class="ic"></span>首頁</div>
+        <div class="tb on"><span class="ic"></span>狀態</div>
+        <div class="tb mid"><span class="ic"></span>聊聊</div>
+        <div class="tb"><span class="ic"></span>家人</div>
+        <div class="tb"><span class="ic"></span>設定</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 畫面 5 · 長輩端 -->
+  <div class="frame-wrap">
+    <div class="frame-label"><b>畫面 5 · 長輩端＝用聊的（不出問卷）</b><div class="fl-sub">上：通話中自然帶到｜下：家人頁看到的粗天氣</div></div>
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="scroll">
+        <div class="page-kicker">寧寧與阿嬤的通話（示意）</div>
+        <div class="card" style="background: var(--cream); border-color: var(--line);">
+          <div class="voice-tag">🎙 語音通話・逐字示意</div>
+          <div class="bubble ai">阿嬤，最近晚上都睡得好嗎？</div>
+          <div class="bubble me">還可以啦，就是半夜有時候會醒。</div>
+          <div class="bubble ai">半夜會醒喔。那白天精神還好嗎？</div>
+          <div class="bubble me">白天還好，就想睡午覺。</div>
+          <div class="bubble ai">好，那我早上陪你去公園走走前，先不排太早的提醒。</div>
+        </div>
+        <div class="note" style="margin: 2px 4px 14px;">寧寧在聊天中<b>自然帶到</b>、一次一兩句；聊完只記「睡眠比較淺」這類觀察。<b>長輩端永遠沒有問卷、沒有分數。</b></div>
+
+        <div class="page-kicker">你在家人頁看到的</div>
+        <div class="card" style="padding: 8px 16px;">
+          <div class="fam-row">
+            <div class="ava">👵</div>
+            <div class="tx"><b>阿嬤 ⛅ 今天平平</b><div class="d2">睡眠似乎比較淺 · 藥已吃 2/3</div></div>
+          </div>
+          <div class="fam-row" style="border-top: 1px solid var(--line);">
+            <div class="ava" style="background:var(--mint);">👩</div>
+            <div class="tx"><b>美華 🌤 不錯</b><div class="d2">這週有分享心情天氣給家人</div></div>
+          </div>
+        </div>
+        <div class="note" style="margin: 2px 4px;">阿嬤<b>同意分享</b>才看得到；聊天內容永遠不給家人看。家人看到的是天氣與觀察、不是評分——互相關心，不是監控。</div>
+      </div>
+      <div class="tabbar">
+        <div class="tb"><span class="ic"></span>首頁</div>
+        <div class="tb"><span class="ic"></span>狀態</div>
+        <div class="tb mid"><span class="ic"></span>聊聊</div>
+        <div class="tb on"><span class="ic"></span>家人</div>
+        <div class="tb"><span class="ic"></span>設定</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

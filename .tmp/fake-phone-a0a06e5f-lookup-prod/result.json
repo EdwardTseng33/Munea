@@ -1,0 +1,311 @@
+{
+  "transport": "direct",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 72,
+  "voice_audio_ms": 20380,
+  "client_receive_max_gap_ms": 2656.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 11720,
+  "avatar_webrtc_timing": {
+    "ok": true,
+    "frame_count": 586,
+    "gap_count": 0,
+    "max_pts_gap_ms": 0.0,
+    "pts_gaps": [],
+    "max_receive_late_ms": 12.0
+  },
+  "user_caption": "",
+  "assistant_caption": "自動聲音驗收，早安喔。我剛幫你查了一下臺北的天氣，今天大概是26到34度，降雨機率還蠻高的，有88%，出門記得帶把傘比較好，在路上也要小心滑倒喔。這些資料是從氣象站網站查到的。你今天有要出去哪裡嗎？",
+  "first_response_ms": 610,
+  "requested_turns": 1,
+  "completed_turns": 1,
+  "turns": [
+    {
+      "turn": 1,
+      "turn_complete": true,
+      "first_response_ms": 610,
+      "voice_audio_ms": 20380,
+      "user_caption": "",
+      "assistant_caption": "自動聲音驗收，早安喔。我剛幫你查了一下臺北的天氣，今天大概是26到34度，降雨機率還蠻高的，有88%，出門記得帶把傘比較好，在路上也要小心滑倒喔。這些資料是從氣象站網站查到的。你今天有要出去哪裡嗎？",
+      "source_playout": {
+        "ok": true,
+        "underrun_count": 0,
+        "max_underrun_ms": 0.0
+      }
+    }
+  ],
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 6,
+    "round_latencies_ms": [
+      841.1,
+      1282.5,
+      817.8,
+      893.0,
+      742.7,
+      830.9
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 445.3,
+      "p95": 523.9,
+      "budget_ms": 960.0,
+      "n_samples": 57,
+      "headroom_p95_pct": 45.4
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 504.8
+    },
+    "audio_sender": {
+      "rebase_count": 0,
+      "max_late_ms": 0.0,
+      "recent_late_ms": []
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 8,
+    "round_latencies_ms": [
+      841.1,
+      1282.5,
+      817.8,
+      893.0,
+      742.7,
+      830.9,
+      643.3,
+      770.8
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 444.6,
+      "p95": 523.7,
+      "budget_ms": 960.0,
+      "n_samples": 70,
+      "headroom_p95_pct": 45.4
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 10240.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 523.7
+    },
+    "audio_sender": {
+      "rebase_count": 0,
+      "max_late_ms": 0.0,
+      "recent_late_ms": []
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 1920,
+    "envelope_correlation": 0.9683,
+    "reference_speech_frames": 354,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0,
+    "speech_windows_ms": [
+      [
+        1920,
+        2120
+      ],
+      [
+        2180,
+        2520
+      ],
+      [
+        2540,
+        2660
+      ],
+      [
+        2740,
+        2880
+      ],
+      [
+        2900,
+        2980
+      ],
+      [
+        3000,
+        3360
+      ],
+      [
+        3660,
+        3820
+      ],
+      [
+        3840,
+        4480
+      ],
+      [
+        4820,
+        4880
+      ],
+      [
+        4940,
+        5340
+      ],
+      [
+        5380,
+        5400
+      ],
+      [
+        5480,
+        5800
+      ],
+      [
+        5820,
+        5980
+      ],
+      [
+        6040,
+        6060
+      ],
+      [
+        6080,
+        6180
+      ],
+      [
+        6220,
+        6340
+      ],
+      [
+        6360,
+        6440
+      ],
+      [
+        6540,
+        6700
+      ],
+      [
+        6720,
+        6800
+      ],
+      [
+        6820,
+        6940
+      ],
+      [
+        7340,
+        7440
+      ],
+      [
+        7480,
+        7740
+      ],
+      [
+        7760,
+        7900
+      ],
+      [
+        7920,
+        7980
+      ],
+      [
+        8020,
+        8100
+      ],
+      [
+        8160,
+        8340
+      ],
+      [
+        8360,
+        8700
+      ],
+      [
+        8760,
+        8980
+      ],
+      [
+        9000,
+        9020
+      ],
+      [
+        9080,
+        9300
+      ],
+      [
+        9320,
+        9360
+      ],
+      [
+        9380,
+        9480
+      ],
+      [
+        9500,
+        9620
+      ],
+      [
+        9700,
+        9820
+      ],
+      [
+        10160,
+        10440
+      ],
+      [
+        10500,
+        10880
+      ],
+      [
+        10900,
+        11200
+      ],
+      [
+        11260,
+        11460
+      ],
+      [
+        11480,
+        11720
+      ]
+    ]
+  },
+  "avatar_webrtc_speech_timing": {
+    "ok": true,
+    "speech_gap_count": 0,
+    "max_speech_pts_gap_ms": 0.0,
+    "speech_pts_gaps": []
+  },
+  "asr_expected": "",
+  "asr_char_recall": null,
+  "gates": {
+    "transport": true,
+    "avatar_route": true,
+    "asr": true,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_speech_timing": true,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true,
+    "all_turns_completed": true
+  },
+  "ok": true
+}

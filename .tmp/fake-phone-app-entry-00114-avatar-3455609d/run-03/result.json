@@ -1,0 +1,125 @@
+{
+  "transport": "relay",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 44,
+  "voice_audio_ms": 10900,
+  "client_receive_max_gap_ms": 7860.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 20940,
+  "avatar_webrtc_timing": {
+    "ok": false,
+    "frame_count": 1047,
+    "gap_count": 1,
+    "max_pts_gap_ms": 100.0,
+    "max_receive_late_ms": 292.0
+  },
+  "user_caption": "秀英阿姨 , 聽到你膝蓋又痛了 , 你寧替你擔心呣。",
+  "assistant_caption": "秀英姨，真的很不好受吼？聽起來那個痛很磨人。你說你膝蓋痛，是隨時都在痛，還是做什麼動作特別明顯啊？",
+  "first_response_ms": 969,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 10,
+    "round_latencies_ms": [
+      506.1,
+      182.9,
+      -385.7,
+      -357.9,
+      690.0,
+      261.0,
+      -292.0,
+      89.8,
+      634.9,
+      -477.3
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 424.1,
+      "p95": 544.0,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 43.3
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 544.0
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 12,
+    "round_latencies_ms": [
+      506.1,
+      182.9,
+      -385.7,
+      -357.9,
+      690.0,
+      261.0,
+      -292.0,
+      89.8,
+      634.9,
+      -477.3,
+      -36.4,
+      -554.4
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 424.9,
+      "p95": 512.0,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 46.7
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 531.7
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 8840,
+    "envelope_correlation": 0.9726,
+    "reference_speech_frames": 356,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0
+  },
+  "asr_expected": "管線自測不計分",
+  "asr_char_recall": 0.0,
+  "gates": {
+    "transport": true,
+    "asr": true,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_timing": false,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": false
+}

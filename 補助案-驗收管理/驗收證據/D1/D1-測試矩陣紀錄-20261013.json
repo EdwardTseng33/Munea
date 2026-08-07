@@ -1,0 +1,1045 @@
+{
+  "generatedAt": "2026-10-13T21:59:41.958298+08:00",
+  "results": [
+    {
+      "cmd": "python engine/test_guardian_crisis.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 3.9,
+      "tail": [],
+      "order": 1,
+      "group": "安全與危機"
+    },
+    {
+      "cmd": "python engine/test_health_kb.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 18,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 2,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_health_kb_i18n.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 24,
+      "seconds": 0.4,
+      "tail": [],
+      "order": 3,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_health_selector.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 89,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 4,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_tcm_layer.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 18,
+      "seconds": 2.7,
+      "tail": [],
+      "order": 5,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_supplement_lexicon.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 21,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 6,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_food_nature.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 9,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 7,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_metabolic_topics.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 24,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 8,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_chronic_topics.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 27,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 9,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_common_symptom_topics.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 24,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 10,
+      "group": "其他"
+    },
+    {
+      "cmd": "python scripts/check_health_coverage.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 11,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python scripts/check_health_actionability.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 12,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_health_followup.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 28,
+      "seconds": 0.3,
+      "tail": [],
+      "order": 13,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_proactive_health_signal.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 6,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 14,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_clinic_visits.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 20,
+      "seconds": 0.3,
+      "tail": [],
+      "order": 15,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_health_evidence_freshness.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 8,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 16,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_ai_health.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 17,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 17,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_cloud_write_alerting.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 5,
+      "seconds": 2.9,
+      "tail": [],
+      "order": 18,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "python engine/test_cloud_resync.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 9,
+      "seconds": 0.5,
+      "tail": [],
+      "order": 19,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "python engine/test_vitals_sync.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 3.0,
+      "tail": [],
+      "order": 20,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_person_profile.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 16,
+      "seconds": 2.9,
+      "tail": [],
+      "order": 21,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "python engine/test_health_context.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 22,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_visit_summary.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 23,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 23,
+      "group": "其他"
+    },
+    {
+      "cmd": "python engine/test_health_visibility.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 5.7,
+      "tail": [],
+      "order": 24,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_voice_health_context.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 4.1,
+      "tail": [],
+      "order": 25,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_location_not_a_topic.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 8.2,
+      "tail": [],
+      "order": 26,
+      "group": "其他"
+    },
+    {
+      "cmd": "python engine/test_wellbeing_mood_key.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.3,
+      "tail": [],
+      "order": 27,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "python engine/test_medication_doses.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 9,
+      "seconds": 3.0,
+      "tail": [],
+      "order": 28,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_medication_photo_privacy.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 4,
+      "seconds": 2.9,
+      "tail": [],
+      "order": 29,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "python engine/test_family_relays.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 8,
+      "seconds": 3.9,
+      "tail": [],
+      "order": 30,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "python engine/test_quiz_questions.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 20,
+      "seconds": 2.9,
+      "tail": [],
+      "order": 31,
+      "group": "其他"
+    },
+    {
+      "cmd": "python engine/test_worker_clock_patrol.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 8,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 32,
+      "group": "部署與監控"
+    },
+    {
+      "cmd": "python engine/test_voice_call_memory.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 23,
+      "seconds": 66.7,
+      "tail": [],
+      "order": 33,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_call_diagnostics.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 2.9,
+      "tail": [],
+      "order": 34,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_live_lookup.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 10,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 35,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_lookup_model_chain.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 9,
+      "seconds": 3.8,
+      "tail": [],
+      "order": 36,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_reasoning_leak_guard.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 16,
+      "seconds": 5.6,
+      "tail": [],
+      "order": 37,
+      "group": "安全與危機"
+    },
+    {
+      "cmd": "python scripts/test_persona_books.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 11,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 38,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_locale_safety_exam.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 6,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 39,
+      "group": "介面與多語"
+    },
+    {
+      "cmd": "python engine/test_medical_escalation_asymmetry.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 15,
+      "seconds": 2.7,
+      "tail": [],
+      "order": 40,
+      "group": "安全與危機"
+    },
+    {
+      "cmd": "python engine/test_impossible_promise_guard.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 12,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 41,
+      "group": "安全與危機"
+    },
+    {
+      "cmd": "python engine/test_forecast_fabrication_guard.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 10,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 42,
+      "group": "安全與危機"
+    },
+    {
+      "cmd": "python engine/test_voice_style_rules.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 21,
+      "seconds": 5.7,
+      "tail": [],
+      "order": 43,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_rhythm_params.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 13,
+      "seconds": 4.1,
+      "tail": [],
+      "order": 44,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_turn_semantics.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 12,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 45,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_tool_continuity.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 5,
+      "seconds": 0.4,
+      "tail": [],
+      "order": 46,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_echo_guard.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 47,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_barge_probe.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.4,
+      "tail": [],
+      "order": 48,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_meters.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 3.5,
+      "tail": [],
+      "order": 49,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_opening_no_news.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 50,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_persona_books_no_hardcoded_numbers.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 51,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_session_extend.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 15,
+      "seconds": 5.3,
+      "tail": [],
+      "order": 52,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_voice_thinking_level.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 13,
+      "seconds": 4.2,
+      "tail": [],
+      "order": 53,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python engine/test_notification_platform.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 8,
+      "seconds": 2.9,
+      "tail": [],
+      "order": 54,
+      "group": "通知與推播"
+    },
+    {
+      "cmd": "python engine/test_notification_settings.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 8,
+      "seconds": 2.9,
+      "tail": [],
+      "order": 55,
+      "group": "通知與推播"
+    },
+    {
+      "cmd": "python engine/test_apns_service.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 6,
+      "seconds": 0.3,
+      "tail": [],
+      "order": 56,
+      "group": "通知與推播"
+    },
+    {
+      "cmd": "python engine/test_thin_door.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 57,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_admin_maintenance_paths.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 58,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_admin_console_paths.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 59,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_ai_rate_limit.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 60,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_admin_security_headers.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 61,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_cors_contract.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 62,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_account_scope.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 9,
+      "seconds": 0.3,
+      "tail": [],
+      "order": 63,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_request_scope.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 9,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 64,
+      "group": "後台與權限"
+    },
+    {
+      "cmd": "python engine/test_apple_store.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 14,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 65,
+      "group": "金流與訂閱"
+    },
+    {
+      "cmd": "python engine/test_privacy_export.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 3,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 66,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "python engine/test_free_signup_trial.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 2,
+      "seconds": 3.1,
+      "tail": [],
+      "order": 67,
+      "group": "金流與訂閱"
+    },
+    {
+      "cmd": "python engine/test_family_invitation_access.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 6,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 68,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "python engine/test_subscription_expiry.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 8,
+      "seconds": 2.8,
+      "tail": [],
+      "order": 69,
+      "group": "金流與訂閱"
+    },
+    {
+      "cmd": "python engine/test_localization.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 55,
+      "seconds": 0.3,
+      "tail": [],
+      "order": 70,
+      "group": "介面與多語"
+    },
+    {
+      "cmd": "python engine/test_relationship_dialogue.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 4,
+      "seconds": 3.5,
+      "tail": [],
+      "order": 71,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_voice_chain_probe.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 72,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_voice_avatar_direct_route.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 73,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_fake_phone_e2e.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 74,
+      "group": "其他"
+    },
+    {
+      "cmd": "python scripts/test_flashhead_idle_contract.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 75,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_flashhead_multislot.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.4,
+      "tail": [],
+      "order": 76,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_voice_uplink_ack.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 77,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_flashhead_av_clock.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 78,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_flashhead_patch_integrity.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 79,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_flashhead_slot_stream.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 80,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_flashhead_router_core.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 81,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "python scripts/test_call_token_clock_leeway.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 82,
+      "group": "部署與監控"
+    },
+    {
+      "cmd": "python scripts/test_deploy_linearity_check.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 9,
+      "seconds": 1.0,
+      "tail": [],
+      "order": 83,
+      "group": "部署與監控"
+    },
+    {
+      "cmd": "python scripts/test_gateway_monitor.py",
+      "ok": true,
+      "returncode": 0,
+      "cases": 29,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 84,
+      "group": "部署與監控"
+    },
+    {
+      "cmd": "node scripts/test-voice-launch-policy.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 85,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "node scripts/test-voice-turn-policy.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 86,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "node scripts/test-voice-call-state-machine.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 87,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "node scripts/test-voice-call-diagnostics.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 88,
+      "group": "聊聊與語音"
+    },
+    {
+      "cmd": "node scripts/test-store-verification.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 89,
+      "group": "金流與訂閱"
+    },
+    {
+      "cmd": "node scripts/test-health-connection.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 90,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "node scripts/test-medication-service.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 91,
+      "group": "健康知識與衛教"
+    },
+    {
+      "cmd": "node scripts/test-notification-platform.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 92,
+      "group": "通知與推播"
+    },
+    {
+      "cmd": "node scripts/test-cloud-sync-guard.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 93,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "node scripts/test-native-auth.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 94,
+      "group": "其他"
+    },
+    {
+      "cmd": "node scripts/test-development-profile.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 95,
+      "group": "其他"
+    },
+    {
+      "cmd": "node scripts/test-test-account-gateway-login.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 96,
+      "group": "其他"
+    },
+    {
+      "cmd": "node scripts/test-ios-export-test-credential-gate.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.2,
+      "tail": [],
+      "order": 97,
+      "group": "其他"
+    },
+    {
+      "cmd": "node scripts/test-cloudrun-canary-contract.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 98,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "node scripts/test-i18n-strict-locale-canary-config.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 99,
+      "group": "部署與監控"
+    },
+    {
+      "cmd": "node scripts/test-service-watchdog.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.6,
+      "tail": [],
+      "order": 100,
+      "group": "部署與監控"
+    },
+    {
+      "cmd": "node scripts/test-release-settings.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 101,
+      "group": "部署與監控"
+    },
+    {
+      "cmd": "node scripts/test-ui-contracts.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 12.6,
+      "tail": [],
+      "order": 102,
+      "group": "介面與多語"
+    },
+    {
+      "cmd": "node scripts/test-mood-pipeline.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 103,
+      "group": "資料與同步"
+    },
+    {
+      "cmd": "node scripts/test-live-text-not-i18n-tagged.js",
+      "ok": true,
+      "returncode": 0,
+      "cases": 0,
+      "seconds": 0.1,
+      "tail": [],
+      "order": 104,
+      "group": "介面與多語"
+    }
+  ]
+}

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B 引擎試驗 · 布料網格 v2</title>
+<style>
+  :root { --teal:#3AA8A0; --cream:#FAF7F2; --ink:#33403D; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Noto Sans TC",-apple-system,sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:18px 16px 40px; }
+  h1 { font-size:19px; font-weight:700; margin:6px 0 2px; }
+  .sub { font-size:12.5px; color:#6b7a76; margin-bottom:12px; text-align:center; }
+  .phone { width:min(46vh,340px); aspect-ratio:9/19; background:#F6EFE3; border-radius:34px; border:10px solid #2e2e30; overflow:hidden; position:relative; box-shadow:0 8px 30px rgba(51,64,61,.18); }
+  .artwrap { position:absolute; left:50%; top:4%; width:112%; transform:translateX(-50%); aspect-ratio:853/1844; animation:breath 3.4s ease-in-out infinite; }
+  @keyframes breath { 0%,100%{ margin-top:0 } 50%{ margin-top:0.5% } }
+  .artwrap img.layer { position:absolute; inset:0; width:100%; height:100%; }
+  canvas.hairlayer { position:absolute; left:0%; top:12.47%; width:102.46%; height:58.3%; }
+  #blinkpatch { position:absolute; left:34.58%; top:24.4%; width:32.24%; height:7.05%; opacity:0; transition:opacity .07s ease; pointer-events:none; }
+  .blinking #blinkpatch { opacity:1; }
+  .meters { display:flex; gap:16px; justify-content:center; margin-top:10px; font-size:12.5px; color:#6b7a76; }
+  .meters b { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .btns { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; justify-content:center; }
+  button { font:inherit; font-size:15px; padding:10px 18px; border-radius:999px; border:1.5px solid #d8d2c4; background:#fff; color:var(--ink); cursor:pointer; }
+  button.on { background:var(--teal); border-color:var(--teal); color:#fff; }
+  .note { max-width:430px; margin-top:14px; font-size:12.5px; line-height:1.7; color:#8a948f; text-align:center; }
+</style>
+</head>
+<body>
+  <h1>B 引擎試驗 · 布料網格 v2</h1>
+  <div class="sub">頭髮鋪在細密網格上連續彎曲（布料級）、六束各自慣性<br>全部這台裝置上運算、零外部引擎</div>
+  <div class="phone">
+    <div class="artwrap" id="wrap">
+      <img class="layer" src="ning/base-bald.png" alt="寧寧底版">
+      <canvas class="hairlayer" id="haircv"></canvas>
+      <img id="blinkpatch" src="ning/blink-patch.png" alt="">
+    </div>
+  </div>
+  <div class="meters">
+    <span>畫面流暢度 <b id="fps">–</b> fps</span>
+    <span>風 <b id="st">微風</b></span>
+  </div>
+  <div class="btns">
+    <button id="b-calm">靜風</button>
+    <button id="b-soft" class="on">微風</button>
+    <button id="b-strong">強風</button>
+    <button id="b-shake">甩頭測試</button>
+  </div>
+  <p class="note">v2＝布料網格：頭髮貼在 24×40 的細網上、由這台裝置的繪圖晶片連續彎曲——不再有切帶條紋。髮根貼頭皮、髮尾甩最多、六束不同拍。按「甩頭測試」看回彈。</p>
+
+<script>
+(function(){
+  var wrap = document.getElementById('wrap');
+  var MARGIN = 50;
+  var windAmp = 8, impulse = 0, ripPhase = 0;
+  var LAYERS = [
+    { src:'ning/hair-piece.png', amp:1.0, k:36, c:7.0, ph:0.0 }
+  ];
+  var bend2 = 0, bend2V = 0;
+  var cv = document.getElementById('haircv');
+  var gl = cv.getContext('webgl', { premultipliedAlpha: true, alpha: true });
+
+  var VS = 'attribute vec2 aPos; attribute vec2 aUV; uniform vec2 uRes; uniform float uBend, uBend2, uRip, uWind, uAmp, uPh, uMargin, uH;'
+    + 'varying vec2 vUV;'
+    + 'void main(){ float v = aPos.y / uH; float u = aUV.x; float w2 = pow(v, 1.7);'
+    + ' float strand = 0.8 + 0.3 * sin(3.14159 * u) + 0.12 * sin(u * 9.0 + 1.7);'
+    + ' float off = uBend * w2 * strand + uBend2 * w2 * cos(3.14159 * u)'
+    + '   + (sin(v * 6.5 + u * 5.0 - uRip) + 0.5 * sin(v * 11.0 + u * 8.0 - uRip * 1.7)) * w2 * (uWind * 0.24 + abs(uBend) * 0.2);'
+    + ' float dy = abs(off) * 0.15 * w2;'
+    + ' vec2 p = vec2(aPos.x + uMargin + off, aPos.y + dy);'
+    + ' vec2 clip = (p / uRes) * 2.0 - 1.0;'
+    + ' gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0); vUV = aUV; }';
+  var FS = 'precision mediump float; varying vec2 vUV; uniform sampler2D uTex;'
+    + 'void main(){ gl_FragColor = texture2D(uTex, vUV); }';
+
+  function mkShader(type, src){
+    var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  var loc = {
+    aPos: gl.getAttribLocation(prog, 'aPos'), aUV: gl.getAttribLocation(prog, 'aUV'),
+    uRes: gl.getUniformLocation(prog, 'uRes'), uBend: gl.getUniformLocation(prog, 'uBend'),
+    uBend2: gl.getUniformLocation(prog, 'uBend2'),
+    uRip: gl.getUniformLocation(prog, 'uRip'), uWind: gl.getUniformLocation(prog, 'uWind'),
+    uAmp: gl.getUniformLocation(prog, 'uAmp'), uPh: gl.getUniformLocation(prog, 'uPh'),
+    uMargin: gl.getUniformLocation(prog, 'uMargin'), uH: gl.getUniformLocation(prog, 'uH'),
+    uTex: gl.getUniformLocation(prog, 'uTex')
+  };
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+
+  var COLS = 24, ROWS = 40;
+  var vertBuf = gl.createBuffer(), idxBuf = gl.createBuffer(), idxCount = 0;
+
+  function buildGrid(w, h){
+    var verts = [], idx = [];
+    for (var r = 0; r <= ROWS; r++){
+      for (var c = 0; c <= COLS; c++){
+        verts.push(w * c / COLS, h * r / ROWS, c / COLS, r / ROWS);
+      }
+    }
+    for (var r2 = 0; r2 < ROWS; r2++){
+      for (var c2 = 0; c2 < COLS; c2++){
+        var i0 = r2 * (COLS + 1) + c2, i1 = i0 + 1, i2 = i0 + COLS + 1, i3 = i2 + 1;
+        idx.push(i0, i2, i1, i1, i2, i3);
+      }
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+    idxCount = idx.length;
+  }
+
+  var ready = 0;
+  LAYERS.forEach(function(L){
+    L.bend = 0; L.v = 0;
+    L.img = new Image();
+    L.img.onload = function(){
+      L.tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, L.tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, L.img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      ready++;
+      if (ready === LAYERS.length){
+        cv.width = L.img.width + MARGIN * 2;
+        cv.height = L.img.height;
+        gl.viewport(0, 0, cv.width, cv.height);
+        buildGrid(L.img.width, L.img.height);
+        requestAnimationFrame(loop);
+      }
+    };
+    L.img.src = L.src;
+  });
+
+  var last = performance.now();
+  function loop(now){
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    var t = now / 1000;
+    impulse *= Math.pow(0.02, dt);
+    ripPhase += dt * 2.2;
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuf);
+    gl.enableVertexAttribArray(loc.aPos);
+    gl.vertexAttribPointer(loc.aPos, 2, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(loc.aUV);
+    gl.vertexAttribPointer(loc.aUV, 2, gl.FLOAT, false, 16, 8);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+    gl.uniform2f(loc.uRes, cv.width, cv.height);
+    gl.uniform1f(loc.uMargin, MARGIN);
+    gl.uniform1f(loc.uRip, ripPhase);
+    gl.uniform1f(loc.uWind, windAmp);
+    var tgt2 = windAmp * 0.85 * Math.sin(t * 0.7 + 2.1);
+    var acc2 = 26 * (tgt2 - bend2) - 5.5 * bend2V;
+    bend2V += acc2 * dt;
+    bend2 += bend2V * dt;
+    LAYERS.forEach(function(L){
+      var tgt = (windAmp * (Math.sin(t * 0.9 + L.ph) * 0.6 + Math.sin(t * 1.9 + 1.3 + L.ph * 1.7) * 0.4) + impulse) * L.amp;
+      var acc = L.k * (tgt - L.bend) - L.c * L.v;
+      L.v += acc * dt;
+      L.bend += L.v * dt;
+      gl.uniform1f(loc.uBend, L.bend);
+      gl.uniform1f(loc.uBend2, bend2);
+      gl.uniform1f(loc.uAmp, L.amp);
+      gl.uniform1f(loc.uPh, L.ph);
+      gl.uniform1f(loc.uH, L.img.height);
+      gl.bindTexture(gl.TEXTURE_2D, L.tex);
+      gl.drawElements(gl.TRIANGLES, idxCount, gl.UNSIGNED_SHORT, 0);
+    });
+    frames++;
+    requestAnimationFrame(loop);
+  }
+
+  window.__hair = {
+    set bend(v){ windAmp = 0; impulse = 0; LAYERS.forEach(function(L){ L.bend = v * L.amp; L.v = 0; }); },
+    get bend(){ return LAYERS[0].bend; }
+  };
+
+  function setWind(amp, id, label){
+    windAmp = amp;
+    ['b-calm','b-soft','b-strong'].forEach(function(b){ document.getElementById(b).className = ''; });
+    if (id) document.getElementById(id).className = 'on';
+    document.getElementById('st').textContent = label;
+  }
+  document.getElementById('b-calm').onclick = function(){ setWind(2.5, 'b-calm', '靜風'); };
+  document.getElementById('b-soft').onclick = function(){ setWind(8, 'b-soft', '微風'); };
+  document.getElementById('b-strong').onclick = function(){ setWind(18, 'b-strong', '強風'); };
+  document.getElementById('b-shake').onclick = function(){ impulse = (Math.random() < 0.5 ? -1 : 1) * 90; };
+
+  function blink(){
+    wrap.classList.add('blinking');
+    setTimeout(function(){ wrap.classList.remove('blinking'); }, 180);
+    setTimeout(blink, 2600 + Math.random() * 2800);
+  }
+  setTimeout(blink, 1400);
+
+  var frames = 0, t0 = performance.now();
+  setInterval(function(){
+    var now = performance.now();
+    document.getElementById('fps').textContent = Math.round(frames * 1000 / (now - t0));
+    frames = 0; t0 = now;
+  }, 1000);
+})();
+</script>
+</body>
+</html>

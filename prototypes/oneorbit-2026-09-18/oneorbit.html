@@ -1,0 +1,538 @@
+<title>OneOrbit 學習管家</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F4F5F8; --ink:#171B26; --mute:#646B7C; --line:#DBDEE6; --card:#FFFFFF; --soft:#EAEFFB;
+  --orbit:#1F5EFF; --orbit-deep:#153FB8; --human:#FF9F1C; --ok:#2E9E6B; --warn:#D98E04; --bad:#D64545;
+  --dev:#0E1117; --dev-ink:#EEF0F5; --dev-mute:#8C93A6; --dev-line:#232838; --dev-panel:#161B26;
+  --line-green:#06C755;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0F1116; --ink:#EEF0F5; --mute:#9AA1B3; --line:#262A36; --card:#171A23; --soft:#1B2438; --orbit:#6E93FF; --orbit-deep:#9DB5FF; } }
+:root[data-theme="dark"]{ --bg:#0F1116; --ink:#EEF0F5; --mute:#9AA1B3; --line:#262A36; --card:#171A23; --soft:#1B2438; --orbit:#6E93FF; --orbit-deep:#9DB5FF; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:44px 24px 96px}
+.eyebrow{font-family:Manrope,sans-serif;font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--orbit)}
+h1{font-family:Manrope,"Noto Sans TC",sans-serif;font-weight:800;font-size:44px;line-height:1.08;margin:8px 0 10px;letter-spacing:-.02em;text-wrap:balance}
+h1 span{color:var(--orbit)}
+.lead{font-size:17px;max-width:64ch;margin:0 0 6px}
+.meta{font-size:13px;color:var(--mute);margin-bottom:28px}
+h2{font-family:Manrope,"Noto Sans TC";font-weight:800;font-size:24px;margin:56px 0 6px;letter-spacing:-.01em}
+h2 + .sub{color:var(--mute);font-size:14.5px;margin:0 0 18px;max-width:70ch}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+
+/* role switcher */
+.roles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 22px}
+@media (max-width:760px){.roles{grid-template-columns:1fr 1fr}}
+.roles button{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;text-align:left;font:inherit;cursor:pointer;color:var(--ink);display:grid;gap:2px;transition:.15s}
+.roles button b{font-family:Manrope,"Noto Sans TC";font-size:16px;font-weight:800}
+.roles button small{font-size:12.5px;color:var(--mute)}
+.roles button .dev{font-family:"IBM Plex Mono";font-size:11px;color:var(--orbit);letter-spacing:.06em;text-transform:uppercase}
+.roles button.on{border-color:var(--orbit);box-shadow:0 0 0 3px var(--soft)}
+.roles button:focus-visible{outline:2px solid var(--orbit);outline-offset:2px}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:36px;align-items:start}
+@media (max-width:980px){.stage{grid-template-columns:1fr}}
+.view{display:none}.view.on{display:block}
+.side{display:grid;gap:14px;position:sticky;top:24px}
+.side section{border-top:1px solid var(--line);padding-top:12px}
+.side h3{font-family:Manrope,"Noto Sans TC";font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 6px;color:var(--mute);font-weight:700}
+.side p,.side li{margin:0;font-size:14px}
+.side ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.side .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:var(--soft);color:var(--orbit-deep);font-family:"IBM Plex Mono";margin-right:4px}
+.side .tag.h{background:#FFF1DB;color:#8A5A00}
+.side .tag.n{background:#E6F5EC;color:#1F6B47}
+
+/* phone (student) */
+.phone{width:390px;height:844px;margin:0 auto;background:#FFFFFF;border-radius:48px;border:10px solid #101218;box-shadow:0 30px 60px rgba(0,0,0,.28);position:relative;overflow:hidden;color:#171B26;font-family:"Noto Sans TC",sans-serif}
+.notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:30px;background:#101218;border-radius:20px;z-index:5}
+.scr{position:absolute;inset:0;padding:54px 20px 96px;overflow-y:auto;display:none;flex-direction:column;gap:14px;background:#F7F8FB}
+.scr.on{display:flex}
+.appbar{display:flex;justify-content:space-between;align-items:center}
+.appbar .brand{font-family:Manrope;font-weight:800;font-size:15px;letter-spacing:-.01em}
+.appbar .brand i{font-style:normal;color:#1F5EFF}
+.appbar .cd{font-family:"IBM Plex Mono";font-size:11.5px;color:#1F5EFF;background:#EAEFFB;padding:3px 8px;border-radius:6px}
+.tabs{position:absolute;left:0;right:0;bottom:0;height:84px;background:#fff;border-top:1px solid #E3E6EE;display:grid;grid-template-columns:repeat(5,1fr);z-index:4}
+.tabs button{background:none;border:0;font:inherit;font-size:10.5px;color:#8C93A6;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:12px;cursor:pointer;font-weight:500}
+.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tabs button.on{color:#1F5EFF}
+.tabs button:focus-visible{outline:2px solid #1F5EFF;border-radius:10px}
+.hd{font-family:Manrope,"Noto Sans TC";font-weight:800;font-size:22px;line-height:1.2;margin:0;letter-spacing:-.01em}
+.hd em{display:block;font-style:normal;font-family:"Noto Sans TC";font-weight:400;font-size:13.5px;color:#646B7C;margin-top:3px}
+.pcard{background:#fff;border:1px solid #E3E6EE;border-radius:16px;padding:12px 14px}
+.energy{display:grid;gap:7px}
+.energy .row{display:flex;justify-content:space-between;font-size:12.5px;color:#646B7C}
+.energy .row b{color:#171B26;font-weight:500}
+.meter{height:6px;background:#EEF0F5;border-radius:3px;overflow:hidden}
+.meter i{display:block;height:100%;width:60%;background:linear-gradient(90deg,#FFB020,#1F5EFF)}
+.tl{display:grid}
+.blk{display:grid;grid-template-columns:50px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid #E9EBF1;cursor:pointer}
+.blk .t{font-family:"IBM Plex Mono";font-size:12px;color:#8C93A6;padding-top:3px}
+.blk .n{font-size:14.5px;font-weight:600}
+.blk .n span{color:#8C93A6;font-weight:400;font-size:12px;margin-left:6px;font-family:"IBM Plex Mono"}
+.blk .why{font-size:12.5px;color:#646B7C;margin-top:3px;display:none}
+.blk.open .why{display:block}
+.blk .chip{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:5px;border:1px solid #E3E6EE;color:#646B7C;margin-top:4px;margin-right:4px}
+.blk .chip.say{border-color:#1F5EFF;color:#1F5EFF}
+.blk .chip.live{background:#1F5EFF;color:#fff;border-color:#1F5EFF}
+.blk.rest .n{color:#8C93A6;font-weight:400}
+.blk.stop .n{color:#1F5EFF}
+.blk.now{background:linear-gradient(90deg,#EAEFFB,transparent);border-radius:10px;margin:0 -8px;padding:10px 8px}
+.book{background:#FFF8EC;border:1px solid #FFD89A;border-radius:16px;padding:12px 14px;display:grid;gap:8px}
+.book .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A5A00;font-family:Manrope;font-weight:700}
+.book .b{font-size:14px}
+.book .act{display:flex;gap:8px}
+.btn{background:#1F5EFF;color:#fff;border:0;border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.btn.ghost{background:#fff;color:#171B26;border:1px solid #D6DAE3}
+.btn.warm{background:#FF9F1C;color:#171B26}
+.btn:focus-visible{outline:2px solid #171B26}
+/* explain back */
+.rec{display:grid;place-items:center;gap:8px;padding:6px 0}
+.rec button{width:84px;height:84px;border-radius:50%;border:3px solid #171B26;background:#fff;display:grid;place-items:center;cursor:pointer}
+.rec button i{display:block;width:32px;height:32px;border-radius:50%;background:#D64545;transition:.2s}
+.rec button.on i{border-radius:7px;width:26px;height:26px}
+.rec .t{font-size:12.5px;color:#646B7C;text-align:center}
+.rec .t b{font-family:Manrope;font-size:22px;color:#171B26;display:block;font-variant-numeric:tabular-nums}
+.trans{background:#fff;border:1px solid #E3E6EE;border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.7;min-height:64px}
+.trans .q{color:#646B7C;font-size:12px;display:block;margin-bottom:4px}
+.rub{display:grid;gap:6px}
+.rub div{display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:center;font-size:13.5px;padding:8px 10px;background:#fff;border:1px solid #E3E6EE;border-radius:10px}
+.rub .m{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;border:1.5px solid #8C93A6;color:#8C93A6}
+.rub .ok .m{background:#2E9E6B;color:#fff;border-color:#2E9E6B}.rub .half .m{background:#FFB020;color:#171B26;border-color:#FFB020}
+.rub small{color:#646B7C;font-size:12px}
+.verdict{font-family:Manrope,"Noto Sans TC";font-weight:800;font-size:15px;border-top:1px solid #171B26;padding-top:10px}
+.verdict span{font-family:"Noto Sans TC";font-weight:400;font-size:13px;color:#646B7C;display:block}
+/* journey */
+.jr{display:grid;gap:0;position:relative;padding-left:18px}
+.jr::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:#E3E6EE}
+.je{position:relative;padding:8px 0 10px;border-bottom:1px solid #EEF0F5}
+.je::before{content:"";position:absolute;left:-17px;top:14px;width:10px;height:10px;border-radius:50%;background:#1F5EFF;border:2px solid #fff;box-shadow:0 0 0 1.5px #1F5EFF}
+.je.ok::before{background:#2E9E6B;box-shadow:0 0 0 1.5px #2E9E6B}
+.je.live::before{background:#FF9F1C;box-shadow:0 0 0 1.5px #FF9F1C}
+.je .d{font-family:"IBM Plex Mono";font-size:11px;color:#8C93A6}
+.je .w{font-size:14px;font-weight:600}
+.je .s{font-size:12.5px;color:#646B7C}
+.je .src{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:5px;background:#EEF0F5;color:#646B7C;margin-top:3px;font-family:"IBM Plex Mono"}
+.big{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big div{background:#fff;border:1px solid #E3E6EE;border-radius:12px;padding:10px 12px}
+.big b{font-family:Manrope;font-size:22px;display:block;font-weight:800}
+.big small{font-size:11.5px;color:#646B7C}
+/* share */
+.sw{display:grid;gap:8px}
+.sw label{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #E3E6EE;border-radius:12px;padding:10px 14px;font-size:14px;cursor:pointer}
+.sw label small{display:block;color:#646B7C;font-size:12px}
+.tg{width:44px;height:26px;border-radius:13px;background:#E3E6EE;position:relative;flex:none;transition:.2s}
+.tg::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+input:checked + .tg{background:#1F5EFF}
+input:checked + .tg::after{left:21px}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.promise{font-size:12.5px;color:#646B7C;border-left:2px solid #1F5EFF;padding-left:10px}
+/* lock screen notifications */
+.lock{margin:18px auto 0;width:390px;display:grid;gap:8px}
+.lock h4{margin:0 0 2px;font-family:Manrope,"Noto Sans TC";font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:700}
+.ntf{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;font-size:13px}
+.ntf .ic{width:34px;height:34px;border-radius:9px;background:var(--orbit);color:#fff;display:grid;place-items:center;font-family:Manrope;font-weight:800;font-size:13px}
+.ntf .tt{font-weight:700}
+.ntf .bd{color:var(--mute);font-size:12.5px}
+.ntf .tm{font-family:"IBM Plex Mono";font-size:11px;color:var(--mute)}
+.ntf .re{display:flex;gap:6px;margin-top:6px}
+.ntf .re span{font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mute)}
+
+/* LINE (parent) */
+.linebox{width:390px;height:720px;margin:0 auto;background:#8CABD9;border-radius:32px;border:10px solid #101218;overflow:hidden;position:relative;color:#171B26;font-family:"Noto Sans TC",sans-serif}
+.linebox .bar{background:#fff;padding:14px 16px 10px;display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;border-bottom:1px solid #E3E6EE}
+.linebox .bar i{width:34px;height:34px;border-radius:50%;background:#1F5EFF;color:#fff;display:grid;place-items:center;font-family:Manrope;font-weight:800;font-size:12px;font-style:normal}
+.linebox .bar small{display:block;font-weight:400;font-size:11px;color:#646B7C}
+.chat{padding:14px 12px 20px;display:grid;gap:10px;overflow-y:auto;height:calc(100% - 60px)}
+.day{text-align:center;font-size:11px;color:#fff;background:rgba(0,0,0,.18);border-radius:10px;padding:2px 10px;justify-self:center}
+.bub{background:#fff;border-radius:16px;border-top-left-radius:4px;padding:10px 12px;max-width:86%;font-size:13.5px;justify-self:start;display:grid;gap:6px}
+.bub.me{background:#8DE38D;border-top-left-radius:16px;border-top-right-radius:4px;justify-self:end}
+.bub h5{margin:0;font-family:Manrope,"Noto Sans TC";font-size:14px;font-weight:800}
+.bub .k{font-size:11px;color:#646B7C}
+.bub dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px}
+.bub dt{color:#646B7C}.bub dd{margin:0}
+.bub .lb{display:grid;gap:6px;margin-top:4px}
+.bub .lb button{border:1px solid #D6DAE3;background:#fff;border-radius:8px;padding:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:#1F5EFF}
+.bub .lb button:focus-visible{outline:2px solid #1F5EFF}
+.bub .hint{font-size:11.5px;color:#646B7C}
+.bub .prep{display:flex;gap:6px;align-items:center;font-size:12.5px}
+.bub .prep i{display:block;height:6px;border-radius:3px;background:#E3E6EE;flex:1;overflow:hidden;position:relative}
+.bub .prep i::after{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p);background:#1F5EFF}
+
+/* tablet/desktop frames (teacher / advisor) */
+.pad{width:100%;max-width:760px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.12);overflow:hidden;color:var(--ink)}
+.pad .top{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);font-size:13px;color:var(--mute)}
+.pad .top b{font-family:Manrope,"Noto Sans TC";font-weight:800;color:var(--ink);font-size:15px}
+.pad .top b i{font-style:normal;color:var(--orbit)}
+.pad .body{padding:18px 20px 22px;display:grid;gap:14px}
+.who{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center}
+.who .av{width:52px;height:52px;border-radius:14px;background:var(--soft);display:grid;place-items:center;font-family:Manrope;font-weight:800;color:var(--orbit-deep);font-size:18px}
+.who .nm{font-family:Manrope,"Noto Sans TC";font-weight:800;font-size:18px}
+.who .nm small{display:block;font-family:"Noto Sans TC";font-weight:400;font-size:12.5px;color:var(--mute)}
+.who .when{font-family:"IBM Plex Mono";font-size:12px;color:var(--orbit);background:var(--soft);padding:4px 10px;border-radius:8px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.g2{grid-template-columns:1fr}}
+.box{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
+.box h5{margin:0;font-family:Manrope,"Noto Sans TC";font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:700}
+.box p{margin:0;font-size:13.5px}
+.box ul{margin:0;padding-left:16px;font-size:13.5px;display:grid;gap:3px}
+.box .lv{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.box.open{border-color:var(--orbit);background:var(--soft)}
+.box.open p.big-open{font-size:15px;font-weight:600}
+.voice{display:flex;gap:10px;align-items:center;border:1px dashed var(--line);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--mute)}
+.voice button{border:0;background:var(--ink);color:var(--card);border-radius:8px;padding:7px 12px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.voice .out{display:none;color:var(--ink)}
+.voice.done .out{display:block}.voice.done .in{display:none}
+
+/* advisor */
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:640px){.kpi{grid-template-columns:1fr 1fr}}
+.kpi div{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.kpi b{font-family:Manrope;font-size:24px;display:block;font-weight:800;line-height:1.1}
+.kpi small{font-size:11.5px;color:var(--mute)}
+.kpi div.h b{color:var(--human)}
+.list{display:grid;gap:8px}
+.row{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row .hdr{display:grid;grid-template-columns:8px 1fr auto;gap:12px;align-items:center;padding:11px 14px;cursor:pointer}
+.row .st{width:8px;height:38px;border-radius:4px}
+.row.r .st{background:var(--bad)}.row.o .st{background:var(--human)}.row.y .st{background:var(--warn)}.row.g .st{background:var(--ok)}
+.row .nm{font-weight:700;font-size:14.5px}
+.row .nm small{font-weight:400;color:var(--mute);margin-left:6px;font-size:12px}
+.row .rs{font-size:12.5px;color:var(--mute)}
+.row .sug{font-size:12.5px;color:var(--ink);font-weight:500}
+.row .dt{padding:0 14px 12px 34px;display:none;gap:10px}
+.row.open .dt{display:grid}
+.row .draft{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px;white-space:pre-line}
+.row .acts{display:flex;gap:8px;flex-wrap:wrap}
+.row.done{opacity:.5}
+.row .chev{font-family:"IBM Plex Mono";font-size:11px;color:var(--mute)}
+
+/* flow */
+.flow{display:grid;grid-template-columns:1fr 40px 1.1fr 40px 1fr;gap:10px;align-items:stretch}
+@media (max-width:820px){.flow{grid-template-columns:1fr}.flow .arr{transform:rotate(90deg);height:30px}}
+.col{display:grid;gap:8px;align-content:start}
+.col h4{margin:0 0 2px;font-family:Manrope,"Noto Sans TC";font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);font-weight:700}
+.col div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13.5px}
+.col div b{display:block;font-weight:700}
+.col div small{color:var(--mute);font-size:12px}
+.col.ai div{border-color:var(--orbit);background:var(--soft)}
+.arr{display:grid;place-items:center;color:var(--mute);font-size:22px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:820px){.three{grid-template-columns:1fr}}
+.three div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.three h4{margin:0 0 8px;font-family:Manrope,"Noto Sans TC";font-size:15px}
+.three ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:4px}
+.three .n{border-top:4px solid var(--orbit)}.three .m{border-top:4px solid #7B61FF}.three .o{border-top:4px solid var(--human)}
+.pitch{background:var(--ink);color:var(--bg);border-radius:18px;padding:26px 28px;display:grid;gap:12px}
+.pitch h3{margin:0;font-family:Manrope,"Noto Sans TC";font-size:22px;font-weight:800;line-height:1.3;text-wrap:balance}
+.pitch p{margin:0;font-size:14.5px;opacity:.9;max-width:70ch}
+.pitch ol{margin:4px 0 0;padding-left:20px;font-size:14.5px;display:grid;gap:6px}
+.lines{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.lines li{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.lines li b{font-family:Manrope,"Noto Sans TC";font-size:13px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:12px;font-size:13.5px;opacity:0;transition:.25s;z-index:50;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">OneClass × 城堡 · 產品原型 · 2026-09-18</div>
+  <h1>One<span>Orbit</span> 學習管家<br>四個人，看同一份學習歷程</h1>
+  <p class="lead">整合在 OneClass App 裡，當學生的首頁。學生零輸入，歷程由系統和 AI 自己長出來；家長在 LINE 收每週一段故事；老師上課前有一頁「上週到現在」；輔導老師每天早上只看「今天要出手的五個人」。</p>
+  <div class="meta">下面四個角色都可以點。學生手機的分頁、說給我聽的錄音鈕、家長 LINE 的按鈕、輔導老師名單的展開，都有反應。</div>
+
+  <div class="roles" id="roles">
+    <button class="on" data-r="student"><span class="dev">學生手機 · OneClass App</span><b>小睿 · 國二</b><small>首頁就是今天的航線</small></button>
+    <button data-r="parent"><span class="dev">家長 · LINE</span><b>小睿媽媽</b><small>每週一段故事，不用裝新 App</small></button>
+    <button data-r="teacher"><span class="dev">老師 · 上課系統</span><b>林老師 · 數學</b><small>上課前一頁，開場不用問</small></button>
+    <button data-r="advisor"><span class="dev">輔導老師 · 後台</span><b>陳老師 · 顧 240 位</b><small>今天要出手的名單</small></button>
+  </div>
+
+  <!-- ===== STUDENT ===== -->
+  <div class="view on" data-v="student">
+    <div class="stage">
+      <div>
+        <div class="phone" id="phone">
+          <div class="notch"></div>
+          <div class="scr on" data-s="orbit">
+            <div class="appbar"><span class="brand">One<i>Class</i></span><span class="cd">會考 −239 天</span></div>
+            <h2 class="hd">今天排輕一點<em>昨晚 23:40 才睡，OneOrbit 把總量減了 30%</em></h2>
+            <div class="pcard energy">
+              <div class="row"><span>睡眠 <b class="mono">6h 10m</b></span><span>今日負荷 <b class="mono">70 分鐘 + 一堂課</b></span></div>
+              <div class="meter"><i></i></div>
+              <div style="font-size:12.5px">段考還有 12 天。今天顧理化和英文，數學晚上林老師的課會接手。</div>
+            </div>
+            <div class="tl" id="tl">
+              <div class="blk now"><div class="t">17:00</div><div><div class="n">理化 · 浮力 <span>25'</span></div><div class="why">週四理化小考範圍含浮力，你的掌握度 62% 但我只有 5 題資料，今天先確認。</div><span class="chip say">做完要說給我聽</span><span class="chip">小考 −6 天</span></div></div>
+              <div class="blk"><div class="t">17:35</div><div><div class="n">英文 · Unit 3 單字 <span>20'</span></div><div class="why">你三天沒碰英文了，今天看過一次就好，不背。</div><span class="chip">3 天沒碰</span></div></div>
+              <div class="blk rest"><div class="t">18:00</div><div><div class="n">晚餐</div></div></div>
+              <div class="blk"><div class="t">19:00</div><div><div class="n">OneClass · 數學 · 林老師 <span>50'</span></div><div class="why">老師已經收到你這週的課前一頁：移項變號在往上、不等式還沒碰。</div><span class="chip live">真人課</span><span class="chip">老師已看過你這週</span></div></div>
+              <div class="blk"><div class="t">21:20</div><div><div class="n">數學 · 錯題 3 題 <span>25'</span></div><div class="why">昨天作業錯的 3 題都是移項變號。25 分鐘做完就停。</div><span class="chip say">做完要說給我聽</span></div></div>
+              <div class="blk stop"><div class="t">22:30</div><div><div class="n">航線到此。剩下的明天排。</div><div class="why">這條爸媽也不能關。</div></div></div>
+            </div>
+            <div class="book">
+              <div class="k">OneOrbit 建議</div>
+              <div class="b">「不等式」段考前一定要碰，但你還沒學會，我教不如老師教。<b>幫你約林老師 25 分鐘？</b>週三 17:00 有空。</div>
+              <div class="act"><button class="btn warm" id="bookYes">好，幫我約</button><button class="btn ghost" id="bookNo">先不用</button></div>
+            </div>
+          </div>
+
+          <div class="scr" data-s="say">
+            <div class="appbar"><span class="brand">One<i>Class</i></span><span class="cd">理化 · 浮力</span></div>
+            <h2 class="hd">說給我聽<em>講 30 秒，這一格才算做完</em></h2>
+            <div class="rec"><button id="recBtn" aria-label="錄音"><i></i></button><div class="t"><b id="clock">0:00</b>按一下開始</div></div>
+            <div class="trans" id="trans"><span class="q">OneOrbit 問：為什麼鐵塊會沉、木頭會浮？用「密度」講一次。</span><span id="tx" style="color:#8C93A6">（按錄音，講你的想法）</span></div>
+            <div class="rub" id="rub">
+              <div><span class="m">1</span><span>講出關鍵：比水的密度大就沉<small>浮力 = 排開的水重</small></span></div>
+              <div><span class="m">2</span><span>說得出為什麼<small>不是背，是懂</small></span></div>
+              <div><span class="m">3</span><span>能換一題套用<small>同體積的鋁塊和木塊誰浮？</small></span></div>
+            </div>
+            <div class="verdict" id="vd">還沒聽到你說<span>講完我才決定這格算不算完成、要不要排進回顧。</span></div>
+          </div>
+
+          <div class="scr" data-s="journey">
+            <div class="appbar"><span class="brand">One<i>Class</i></span><span class="cd">我的歷程</span></div>
+            <h2 class="hd">這學期，我搞懂了 7 件事<em>不是成績單，是你走過的路</em></h2>
+            <div class="big"><div><b>7</b><small>講得出來的概念</small></div><div><b>23</b><small>陪你的天數</small></div></div>
+            <div class="jr">
+              <div class="je ok"><div class="d">9/17 週四 · 21:40</div><div class="w">搞懂了浮力</div><div class="s">說給我聽：過。從「背公式」變成「講得出為什麼」</div><span class="src">OneOrbit</span></div>
+              <div class="je live"><div class="d">9/16 週三 · 19:00</div><div class="w">林老師的課 · 一元一次應用題</div><div class="s">老師下課評語：「移項會了，應用題讀題還慢」</div><span class="src">上課系統</span></div>
+              <div class="je"><div class="d">9/15 週二</div><div class="w">密度 · 單位寫錯 2 次</div><div class="s">錯因：粗心，不是不懂。隔天回顧過了</div><span class="src">OneAnswer</span></div>
+              <div class="je"><div class="d">9/12 週五</div><div class="w">拍了段考範圍表</div><div class="s">理化 3 個知識點、數學 4 個、英文 Unit 3–4，航線重排</div><span class="src">拍照</span></div>
+              <div class="je ok"><div class="d">9/10 週三</div><div class="w">搞懂了移項變號的「為什麼」</div><div class="s">連續 5 題對 4 題，說給我聽：過</div><span class="src">OneOrbit</span></div>
+              <div class="je"><div class="d">9/8 週一</div><div class="w">和 OneOrbit 第一天</div><div class="s">讀了課表、OneClass 上課時間、聯絡簿</div><span class="src">系統</span></div>
+            </div>
+          </div>
+
+          <div class="scr" data-s="share">
+            <div class="appbar"><span class="brand">One<i>Class</i></span><span class="cd">分享面板</span></div>
+            <h2 class="hd">爸媽看什麼，你決定<em>OneOrbit 不會私下回報你沒勾的</em></h2>
+            <div class="sw" id="sw">
+              <label><span>每週一段故事<small>學了幾天、搞懂什麼、還在練什麼</small></span><input type="checkbox" data-k="week" checked><span class="tg"></span></label>
+              <label><span>段考前準備到哪<small>只有一條進度，不含分數</small></span><input type="checkbox" data-k="prep" checked><span class="tg"></span></label>
+              <label><span>睡眠<small>只有平均，不含幾點睡</small></span><input type="checkbox" data-k="sleep"><span class="tg"></span></label>
+              <label><span>錯題內容<small>錯了哪題、錯在哪</small></span><input type="checkbox" data-k="wrong"><span class="tg"></span></label>
+              <label><span>每天做了什麼<small>逐日航線</small></span><input type="checkbox" data-k="daily"><span class="tg"></span></label>
+            </div>
+            <div class="promise" id="promise">媽媽的 LINE 會看到「小睿選擇分享了 2 項」。她知道有東西沒分享，但看不到是什麼。輔導老師看得到全部，這是 OneClass 的規則，寫在同意書裡。</div>
+          </div>
+
+          <div class="tabs">
+            <button class="on" data-t="orbit"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>航線</button>
+            <button data-t="say"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>說給我聽</button>
+            <button data-t="journey"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 12h16M14 8l4 4-4 4"/></svg>歷程</button>
+            <button data-t="class"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>上課</button>
+            <button data-t="share"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>分享</button>
+          </div>
+        </div>
+
+        <div class="lock">
+          <h4>鎖定畫面 · 一天最多四次出場，每次都能頂回去</h4>
+          <div class="ntf"><div class="ic">O</div><div><div class="tt">今天排輕一點</div><div class="bd">昨晚 23:40 才睡，我把總量減了 30%。數學明天排回來。</div><div class="re"><span>好</span><span>照原本排</span></div></div><div class="tm">07:10</div></div>
+          <div class="ntf"><div class="ic">O</div><div><div class="tt">17:00 · 理化浮力，25 分鐘</div><div class="bd">做完講給我聽 30 秒就好。</div><div class="re"><span>開始</span><span>晚 10 分鐘</span><span>今天不行</span></div></div><div class="tm">16:55</div></div>
+          <div class="ntf"><div class="ic">O</div><div><div class="tt">說給我聽</div><div class="bd">為什麼鐵塊會沉、木頭會浮？</div><div class="re"><span>錄音</span></div></div><div class="tm">17:25</div></div>
+          <div class="ntf"><div class="ic">O</div><div><div class="tt">22:30，關燈</div><div class="bd">剩下的明天排。晚安。</div></div><div class="tm">22:30</div></div>
+        </div>
+      </div>
+
+      <div class="side">
+        <section><h3>學生看到什麼</h3><p>打開 OneClass App 第一眼就是航線，不是分頁。真人課、AI 排的複習、22:30 關燈排在同一條線上。</p></section>
+        <section><h3>三個關鍵設計</h3><ul><li><b>每格都寫理由</b>：管家不是命令你，是跟你商量</li><li><b>說給我聽是完成的定義</b>：講得出來才算做完，抄答案沒用</li><li><b>幫你約老師</b>：AI 教不動的，交給真人。這是 OneClass 才有的一格</li></ul></section>
+        <section><h3>從哪裡來</h3><p><span class="tag">既有技術</span>管家大腦、推播、記憶、守門人、22:30 規則<br><span class="tag n">新做</span>航線排程、說給我聽評分<br><span class="tag h">OneClass 現成</span>課表、老師、南一課本、聯絡簿、推播門</p></section>
+        <section><h3>語音只開兩個口</h3><p>孩子講話只在「說給我聽」30 秒；管家說話只在「開始」和「關燈」各一句。不做隨便聊。每天約 3 分鐘語音，成本很低。</p></section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PARENT ===== -->
+  <div class="view" data-v="parent">
+    <div class="stage">
+      <div>
+        <div class="linebox">
+          <div class="bar"><i>O</i><div>OneClass 學習管家<small>官方帳號 · 小睿的 OneOrbit</small></div></div>
+          <div class="chat">
+            <div class="day">週日 9/14</div>
+            <div class="bub">
+              <h5>小睿這週</h5>
+              <div class="k">OneOrbit 每週故事 · 第 2 週</div>
+              <div>這週小睿一起學了 <b>4 天</b>。最大的進步是把「移項變號」從背規則變成講得出為什麼，說給我聽連續兩次過。英文單字三天沒碰，週五補回來了。</div>
+              <dl><dt>搞懂了</dt><dd>移項變號、密度單位</dd><dt>還在練</dt><dd>不等式（下週林老師會帶）</dd></dl>
+              <div class="hint">這張卡的內容是小睿自己勾選的：小睿選擇分享了 2 項。</div>
+              <div class="lb"><button data-say="打開 OneClass App 的家長頁，同一份歷程，多一點細節">在 OneClass App 看細節</button><button data-say="陳老師會在 24 小時內用 LINE 回你">我想問輔導老師</button></div>
+            </div>
+            <div class="bub me">謝謝，不等式那個我有點擔心</div>
+            <div class="bub">收到。這件事我已經讓輔導老師陳老師知道了，她會看要不要加一堂。段考前 OneOrbit 也會每天排到它。</div>
+            <div class="day">週四 9/18</div>
+            <div class="bub">
+              <h5>段考前 12 天，準備到哪</h5>
+              <div class="prep"><span>理化</span><i style="--p:68%"></i><span class="mono">68%</span></div>
+              <div class="prep"><span>數學</span><i style="--p:74%"></i><span class="mono">74%</span></div>
+              <div class="prep"><span>英文</span><i style="--p:58%"></i><span class="mono">58%</span></div>
+              <div class="hint">這是掌握度，不是分數。英文這週會多排一點。</div>
+              <div class="lb"><button data-say="已幫你轉給陳老師，她今天下午會回">請輔導老師加一堂數學</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <section><h3>家長看到什麼</h3><p>不用裝新 App。每週日一段故事，段考前多一條「準備到哪」。全部用孩子的話，不是分數。</p></section>
+        <section><h3>信任怎麼建立</h3><ul><li>卡片明講「小睿選擇分享了 2 項」，家長知道有邊界，孩子知道沒被出賣</li><li>家長有問題按一下，接到的是真人輔導老師，不是機器人</li><li>「加一堂」的按鈕直接接約課，這是續約和加購的入口</li></ul></section>
+        <section><h3>從哪裡來</h3><p><span class="tag">既有技術</span>每週摘要的寫法、家庭群組、分享分層<br><span class="tag n">新做</span>LINE 官方帳號接口、段考前進度條<br><span class="tag h">OneClass 現成</span>家長帳號、約課</p></section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TEACHER ===== -->
+  <div class="view" data-v="teacher">
+    <div class="stage">
+      <div>
+        <div class="pad">
+          <div class="top"><b>One<i>Class</i> 上課系統 · 課前一頁</b><span>自動產生 · 今天 18:40 更新</span></div>
+          <div class="body">
+            <div class="who"><div class="av">睿</div><div class="nm">小睿 · 國二 · 數學<small>南一版 · 第 4 堂 · 上次 9/16</small></div><div class="when">今天 19:00 · 50'</div></div>
+            <div class="g2">
+              <div class="box"><h5>上次教到</h5><p>一元一次應用題。你下課評語：「移項會了，應用題讀題還慢。」</p></div>
+              <div class="box"><h5>段考範圍 · 12 天後</h5><ul><li><span class="lv" style="background:var(--ok)"></span>一元一次 91%</li><li><span class="lv" style="background:var(--warn)"></span>移項變號 66% · 在往上</li><li><span class="lv" style="background:var(--ok)"></span>二元一次 80%</li><li><span class="lv" style="background:var(--bad)"></span>不等式 35% · 只有 4 題資料</li></ul></div>
+            </div>
+            <div class="box"><h5>這週 OneOrbit 看到</h5><ul><li>移項變號 14 題對 10 題，最近 5 題對 4 題。說給我聽：過。</li><li>不等式沒碰過，OneOrbit 建議他約你 25 分鐘，他按了「好」。</li><li>昨晚 23:40 才睡，今天航線減量。狀態可能偏累。</li><li>錯因分布：概念不懂 1、粗心 3、看錯題 1、沒時間 0。</li></ul></div>
+            <div class="box open"><h5>建議開場（可不採用）</h5><p class="big-open">直接從不等式的「除負數要反向」開始，先給 −2x &gt; 6 讓他做一次，再回頭補為什麼。移項變號不用重教，抽一題確認就好。</p></div>
+            <div class="voice" id="voice"><span class="in">下課後 30 秒，用說的留評語，OneOrbit 會歸進歷程、更新航線。</span><span class="out">「不等式反向今天懂了，但看到分數就慌。下次先做三題分數不等式再進應用題。」已歸入歷程，OneOrbit 明天航線加分數不等式 3 題。</span><button id="voiceBtn">錄 30 秒評語</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <section><h3>老師看到什麼</h3><p>上課前一頁，30 秒讀完。上次教到哪、這週管家看到什麼、段考範圍掌握度、建議開場。不用再問「上次教到哪」。</p></section>
+        <section><h3>老師只要做一件事</h3><p>下課後用說的留 30 秒評語。AI 歸進歷程、更新航線、寫進家長的每週故事。老師不用打字。</p></section>
+        <section><h3>換老師時</h3><p>歷程跟著學生走，新老師拿到的是同一頁。這是 OneClass 現在做不到、家長最常抱怨的事。</p></section>
+        <section><h3>從哪裡來</h3><p><span class="tag">既有技術</span>每次對話後抽重點、不留原始逐字稿<br><span class="tag n">新做</span>課前一頁的版型、錯因四分類<br><span class="tag h">OneClass 現成</span>上課系統、白板紀錄、老師帳號</p></section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ADVISOR ===== -->
+  <div class="view" data-v="advisor">
+    <div class="stage">
+      <div>
+        <div class="pad">
+          <div class="top"><b>One<i>Orbit</i> 輔導老師台 · 今天要出手的人</b><span>陳老師 · 週五 9/18 08:30</span></div>
+          <div class="body">
+            <div class="kpi">
+              <div class="h"><b>5</b><small>今天要人出手</small></div>
+              <div><b>240</b><small>你顧的學生</small></div>
+              <div><b>38</b><small>AI 昨天替你發的週報</small></div>
+              <div><b>12</b><small>本月到期續約</small></div>
+            </div>
+            <div class="list" id="list">
+              <div class="row r"><div class="hdr"><i class="st"></i><div><div class="nm">小睿<small>國二 · 數學 林老師</small></div><div class="rs">三天沒上線 · 說給我聽連續兩次沒過 · 睡眠掉到 6 小時以下</div><div class="sug">建議：今天打給媽媽。開場我擬好了。</div></div><span class="chev">展開</span></div>
+                <div class="dt"><div class="draft">媽媽好，我是 OneClass 的陳老師。小睿這三天比較累，昨晚睡得晚，OneOrbit 今天已經幫他減量了。不是成績的問題，是節奏的問題。想跟您聊兩分鐘，看看這週家裡有沒有什麼事讓他比較緊。</div><div class="acts"><button class="btn" data-done>打電話</button><button class="btn ghost" data-done>用 LINE 傳</button><button class="btn ghost" data-skip>今天不用</button></div></div></div>
+              <div class="row o"><div class="hdr"><i class="st"></i><div><div class="nm">小安<small>國三 · 理化 王老師</small></div><div class="rs">段考剩 5 天 · 不等式掌握度 35% · 只有 4 題資料</div><div class="sug">建議：加約一堂 25 分鐘。王老師週三 17:00 有空。</div></div><span class="chev">展開</span></div>
+                <div class="dt"><div class="draft">小安媽媽好，段考前小安的不等式還沒站穩，OneOrbit 建議加一堂 25 分鐘專門補這塊，王老師週三 17:00 有空。這堂不收整堂費用，算半堂。要幫您排嗎？</div><div class="acts"><button class="btn" data-done>幫他排</button><button class="btn ghost" data-done>先傳給家長</button><button class="btn ghost" data-skip>今天不用</button></div></div></div>
+              <div class="row o"><div class="hdr"><i class="st"></i><div><div class="nm">小晴<small>國一 · 英文 李老師</small></div><div class="rs">家長兩週沒開週報 · 續約 10/15 到期</div><div class="sug">建議：本週親自聯絡一次，帶著這學期的歷程。</div></div><span class="chev">展開</span></div>
+                <div class="dt"><div class="draft">小晴這學期搞懂了 9 件事，現在完成式從 40% 到 82%。這份歷程我整理成一頁，方便您跟家長聊續約時直接給看。</div><div class="acts"><button class="btn" data-done>看歷程一頁</button><button class="btn ghost" data-done>排這週聯絡</button><button class="btn ghost" data-skip>今天不用</button></div></div></div>
+              <div class="row y"><div class="hdr"><i class="st"></i><div><div class="nm">阿哲<small>國二 · 數學 換老師第 2 週</small></div><div class="rs">換老師後兩堂評語都是「配合度低」</div><div class="sug">建議：看兩堂課程紀錄，判斷是老師不合還是孩子狀態。</div></div><span class="chev">展開</span></div>
+                <div class="dt"><div class="draft">兩堂課程紀錄對照：前一位老師評語多是「反應快」；新老師兩堂都提「配合度低」，但阿哲的作業完成率沒變。可能是節奏不合，不是態度。</div><div class="acts"><button class="btn" data-done>看課程紀錄</button><button class="btn ghost" data-skip>今天不用</button></div></div></div>
+              <div class="row g"><div class="hdr"><i class="st"></i><div><div class="nm">小嵐<small>小六 · 全科</small></div><div class="rs">連續 4 週航線全部達成</div><div class="sug">建議：傳一句鼓勵，孩子和家長都會看到。我擬好了。</div></div><span class="chev">展開</span></div>
+                <div class="dt"><div class="draft">小嵐，連續四週每天都做到，這不容易。陳老師有看到。</div><div class="acts"><button class="btn" data-done>傳出去</button><button class="btn ghost" data-skip>今天不用</button></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <section><h3>輔導老師看到什麼</h3><p>每天早上一張名單，AI 排好順序、寫好理由、擬好開場。從「每個學生都看一遍」變成「只看今天要出手的五個」。</p></section>
+        <section><h3>人留在哪裡</h3><ul><li>孩子狀況不對、想放棄：<b>人打電話</b></li><li>家長不滿、換老師、談續約：<b>人出面</b>，手上有整學期歷程</li><li>加課、鼓勵、週報：AI 擬好，人按一下</li></ul></section>
+        <section><h3>對萬通的意思</h3><p>一位輔導老師能顧的學生從幾十位變成幾百位，品質一樣。學生歷程不再跟著離職的人走。續約談判時手上有整學期的紀錄。</p></section>
+        <section><h3>從哪裡來</h3><p><span class="tag">既有技術</span>守門人的升級規則、每日簡報<br><span class="tag n">新做</span>名單排序規則（要先訪談資深輔導老師）、擬稿<br><span class="tag h">OneClass 現成</span>學生名單、續約日期、老師空檔</p></section>
+      </div>
+    </div>
+  </div>
+
+  <h2>歷程怎麼長出來</h2>
+  <p class="sub">學生零輸入。四個來源自動流進來，AI 做四件事，變成四個人各自要看的那一頁。</p>
+  <div class="flow">
+    <div class="col"><h4>自動捉</h4>
+      <div><b>上課系統</b><small>白板圈的錯、教了什麼、老師 30 秒評語</small></div>
+      <div><b>OneStudy · OneAnswer · OneWordz</b><small>每題對錯、花多久、改幾次</small></div>
+      <div><b>OneOrbit 管家</b><small>航線完成、每格時長、延後撤銷、說給我聽</small></div>
+      <div><b>學校</b><small>段考範圍表拍一張、段考成績</small></div>
+    </div>
+    <div class="arr">→</div>
+    <div class="col ai"><h4>AI 做四件事</h4>
+      <div><b>每堂課寫一頁課程紀錄</b><small>教了什麼、卡在哪、下次接什麼</small></div>
+      <div><b>每題錯誤歸四類</b><small>概念不懂 · 粗心 · 看錯題 · 沒時間。處方不同</small></div>
+      <div><b>掌握地圖隨時更新</b><small>每個點附「我多確定」，資料少老實說</small></div>
+      <div><b>每週寫一段故事</b><small>用孩子的話，不用分數</small></div>
+    </div>
+    <div class="arr">→</div>
+    <div class="col"><h4>四個人各看一頁</h4>
+      <div><b>學生</b><small>時間軸：我什麼時候搞懂了什麼</small></div>
+      <div><b>家長</b><small>每週故事 + 段考前準備到哪</small></div>
+      <div><b>老師</b><small>課前一頁：上週到現在</small></div>
+      <div><b>輔導老師</b><small>今天要出手的名單</small></div>
+    </div>
+  </div>
+
+  <h2>哪些現成、哪些新做</h2>
+  <p class="sub">大腦我們做、臉他們裝。OneOrbit 的畫面做成一個模組放進 OneClass App，登入和推播接他們的。大腦保持獨立，以後要拆成自己的 App 或給第二家用，換臉就好。</p>
+  <div class="three">
+    <div class="m"><h4>既有的 AI 大腦 · 直接搬</h4><ul><li>管家大腦：記憶、排程、每日簡報</li><li>推播出場（7 月已正式上線）</li><li>守門人：危機轉介 1925 / 119，加學校輔導</li><li>對話後抽重點、不留原始錄音</li><li>家庭群組、分享分層的骨架</li><li>帳號、點數帳本、後台管理</li></ul></div>
+    <div class="n"><h4>新做 · 三塊</h4><ul><li>航線排程：讀課表、段考、睡眠，排 25 分鐘一格</li><li>說給我聽：三條標準評分、決定過不過</li><li>輔導老師名單的排序規則和擬稿。<b>要先訪談 3 到 5 位資深輔導老師</b>，他們的直覺就是規則</li></ul></div>
+    <div class="o"><h4>OneClass 現成 · 接起來</h4><ul><li>學生、家長、老師帳號</li><li>課表、老師空檔、約課</li><li>南一多版本課本：知識點對應不用重做</li><li>上課系統、白板紀錄、聯絡簿</li><li>OneStudy / OneAnswer / OneWordz 的答題紀錄</li><li>App 本身的推播門</li></ul></div>
+  </div>
+
+  <h2>三條界線</h2>
+  <ul class="lines">
+    <li><b>捉行為不捉人</b><span>不看螢幕、不追位置、不錄鍵盤。疲勞只看睡眠和在線時間。</span></li>
+    <li><b>錄音不留原檔</b><span>「說給我聽」只留評分和一句摘要。既有的 AI 大腦本來就這樣做。</span></li>
+    <li><b>13 歲以下要家長同意</b><span>個資法和教育部 2026 年《家長數位與 AI 學習知能指引》都有寫。分享面板的規則寫進同意書，輔導老師看得到全部要明講。</span></li>
+  </ul>
+
+  <h2>拿去跟萬通講的版本</h2>
+  <div class="pitch">
+    <h3>OneClass 是一週一堂課。OneOrbit 讓它變成一週七天的陪伴，而且輔導老師顧的學生變三倍。</h3>
+    <p>學生零輸入，歷程自己長出來；家長每週收到孩子的話，不是分數；老師上課前不用問「上次教到哪」；輔導老師只看今天要出手的五個人。歷程跟著學生走，不跟著離職的人走。</p>
+    <ol>
+      <li><b>第一階段（先驗證留存）</b>：學生航線 + 說給我聽 + 家長 LINE 週報。用現有付費學生 50 位試，看每天打開率和續約。</li>
+      <li><b>第二階段（接上真人）</b>：老師課前一頁 + 幫你約老師 + 輔導老師名單。這一段開始替 OneClass 賺加購。</li>
+      <li><b>第三階段（護城河）</b>：完整歷程時間軸、換老師帶著走、續約時的一頁歷程。</li>
+    </ol>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+  const toast=document.getElementById('toast');let tt;
+  function say(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove('show'),2200);}
+  // roles
+  document.querySelectorAll('#roles button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#roles button').forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.dataset.v===b.dataset.r));
+  }));
+  // phone tabs
+  const phone=document.getElementById('phone');
+  function go(n){ if(n==='class'){say('這裡接 OneClass 原本的上課頁，不動它');return;} phone.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.dataset.s===n)); phone.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===n)); }
+  phone.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.t)));
+  phone.querySelectorAll('#tl .blk').forEach(b=>{ if(b.querySelector('.why')) b.addEventListener('click',()=>b.classList.toggle('open')); });
+  document.getElementById('bookYes').addEventListener('click',()=>{ const bk=phone.querySelector('.book'); bk.innerHTML='<div class="k">已送給輔導老師</div><div class="b">週三 17:00 · 林老師 · 不等式 25 分鐘。陳老師會跟媽媽確認，確認後會出現在你的航線。</div>'; say('約課請求已送出，走的是 OneClass 現有的約課'); });
+  document.getElementById('bookNo').addEventListener('click',()=>say('好。段考前三天我會再問一次。'));
+  // explain back
+  const rb=document.getElementById('recBtn'), clock=document.getElementById('clock'), tx=document.getElementById('tx'), rub=[...document.querySelectorAll('#rub > div')], vd=document.getElementById('vd');
+  let on=false,s=0,iv,done=false;
+  const script=['因為鐵的密度比水大，','所以同樣體積它比水重，浮力撐不住就沉。','木頭密度比水小，','排開的水比它自己還重，所以浮起來。','鋁塊……鋁比水重所以沉，木塊浮。'];
+  rb.addEventListener('click',()=>{ if(done)return; on=!on; rb.classList.toggle('on',on);
+    if(on){ tx.style.color='#171B26'; tx.textContent=''; s=0; let k=0; iv=setInterval(()=>{ s++; clock.textContent='0:'+String(s).padStart(2,'0'); if(s%3===0&&k<script.length){tx.textContent+=script[k++];} if(s>=15)stop(); },1000);} else stop(); });
+  function stop(){ clearInterval(iv); on=false; rb.classList.remove('on'); done=true; const res=['ok','ok','half']; rub.forEach((r,i)=>{r.className=res[i]; r.querySelector('.m').textContent=res[i]==='ok'?'✓':'△';}); vd.innerHTML='懂了八成。這格算完成，排進明天回顧。<span>第 3 條你講對了結論但沒講「同體積」這個前提。明天我用「同重量」再問你一次。這段錄音不會留，只留這三個勾。</span>'; say('過了。歷程和林老師的課前一頁都更新了。'); }
+  // share
+  phone.querySelectorAll('#sw input').forEach(i=>i.addEventListener('change',()=>{ const n=[...phone.querySelectorAll('#sw input')].filter(x=>x.checked).length; document.getElementById('promise').textContent=`媽媽的 LINE 會看到「小睿選擇分享了 ${n} 項」。她知道有東西沒分享，但看不到是什麼。輔導老師看得到全部，這是 OneClass 的規則，寫在同意書裡。`; }));
+  // parent buttons
+  document.querySelectorAll('[data-say]').forEach(b=>b.addEventListener('click',()=>say(b.dataset.say)));
+  // teacher voice
+  document.getElementById('voiceBtn').addEventListener('click',()=>{ const v=document.getElementById('voice'); if(v.classList.contains('done'))return; const b=document.getElementById('voiceBtn'); b.textContent='錄音中…'; setTimeout(()=>{v.classList.add('done'); b.textContent='已歸入歷程';},1400); });
+  // advisor list
+  document.querySelectorAll('#list .row').forEach(r=>{
+    r.querySelector('.hdr').addEventListener('click',()=>{ r.classList.toggle('open'); r.querySelector('.chev').textContent=r.classList.contains('open')?'收起':'展開'; });
+    r.querySelectorAll('[data-done]').forEach(b=>b.addEventListener('click',()=>{ r.classList.add('done'); r.classList.remove('open'); r.querySelector('.sug').textContent='已處理 · '+b.textContent+' · 記進歷程'; r.querySelector('.chev').textContent='完成'; updateKpi(); }));
+    r.querySelectorAll('[data-skip]').forEach(b=>b.addEventListener('click',()=>{ r.classList.add('done'); r.classList.remove('open'); r.querySelector('.sug').textContent='今天不用 · 明天再看'; r.querySelector('.chev').textContent='跳過'; updateKpi(); }));
+  });
+  function updateKpi(){ const left=document.querySelectorAll('#list .row:not(.done)').length; document.querySelector('.kpi .h b').textContent=left; if(left===0) say('今天的名單清完了。其他 235 位，AI 顧著。'); }
+})();
+</script>

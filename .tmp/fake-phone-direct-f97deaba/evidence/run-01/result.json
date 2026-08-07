@@ -1,0 +1,217 @@
+{
+  "transport": "direct",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 30,
+  "voice_audio_ms": 7231,
+  "client_receive_max_gap_ms": 5234.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 14540,
+  "avatar_webrtc_timing": {
+    "ok": true,
+    "frame_count": 727,
+    "gap_count": 0,
+    "max_pts_gap_ms": 0.0,
+    "pts_gaps": [],
+    "max_receive_late_ms": 12.0
+  },
+  "user_caption": "What is that?",
+  "assistant_caption": "Oh, thatdependsonwhatyou're seeingrightnow.Issomethingmovingaround,orare youlookingat a picture?",
+  "first_response_ms": 735,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "avatar_health_before": {
+    "ok": true,
+    "round_count": 35,
+    "round_latencies_ms": [
+      -309.9,
+      597.7,
+      475.5,
+      606.5,
+      629.5,
+      724.9,
+      516.7,
+      873.6,
+      394.1,
+      553.3,
+      744.8,
+      -148.2,
+      585.1,
+      555.6,
+      660.3,
+      -387.0,
+      890.3,
+      408.3,
+      802.6,
+      -423.3
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 545.8,
+      "p95": 605.8,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 36.9
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 0.0,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.35,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 590.4
+    }
+  },
+  "avatar_health_after": {
+    "ok": true,
+    "round_count": 37,
+    "round_latencies_ms": [
+      475.5,
+      606.5,
+      629.5,
+      724.9,
+      516.7,
+      873.6,
+      394.1,
+      553.3,
+      744.8,
+      -148.2,
+      585.1,
+      555.6,
+      660.3,
+      -387.0,
+      890.3,
+      408.3,
+      802.6,
+      -423.3,
+      414.0,
+      -230.7
+    ],
+    "gen_compute_ms_rolling": {
+      "p50": 541.4,
+      "p95": 604.4,
+      "budget_ms": 960.0,
+      "n_samples": 100,
+      "headroom_p95_pct": 37.0
+    },
+    "audio_underrun": {
+      "count": 0,
+      "recent_gap_ms": [],
+      "buffer_depth_ms": 10.6,
+      "prebuffer_s": 0.2,
+      "last_prebuffer_s": 0.2,
+      "next_prebuffer_s": 0.2,
+      "adaptive_prebuffer_s": 0.2,
+      "adaptive_target_s": 0.2,
+      "adaptive_min_s": 0.2,
+      "adaptive_max_s": 0.35,
+      "generation_p95_ms": 576.8
+    }
+  },
+  "avatar_reported_underrun_delta": 0,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 6580,
+    "envelope_correlation": 0.9765,
+    "reference_speech_frames": 252,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0,
+    "speech_windows_ms": [
+      [
+        6700,
+        7280
+      ],
+      [
+        7360,
+        7600
+      ],
+      [
+        7700,
+        7860
+      ],
+      [
+        7920,
+        8120
+      ],
+      [
+        8180,
+        8680
+      ],
+      [
+        8840,
+        9280
+      ],
+      [
+        9320,
+        9800
+      ],
+      [
+        10160,
+        10240
+      ],
+      [
+        10360,
+        10500
+      ],
+      [
+        10560,
+        10880
+      ],
+      [
+        10920,
+        12060
+      ],
+      [
+        12240,
+        12540
+      ],
+      [
+        12640,
+        12880
+      ],
+      [
+        13000,
+        13060
+      ],
+      [
+        13200,
+        13220
+      ],
+      [
+        13240,
+        13380
+      ]
+    ]
+  },
+  "avatar_webrtc_speech_timing": {
+    "ok": true,
+    "speech_gap_count": 0,
+    "max_speech_pts_gap_ms": 0.0,
+    "speech_pts_gaps": []
+  },
+  "asr_expected": "我沒有發燒但有痰今天精神還可以想問應該注意什麼",
+  "asr_char_recall": 0.0,
+  "gates": {
+    "transport": true,
+    "avatar_route": true,
+    "asr": false,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true,
+    "avatar_reported_underrun": true,
+    "avatar_webrtc_speech_timing": true,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": false
+}

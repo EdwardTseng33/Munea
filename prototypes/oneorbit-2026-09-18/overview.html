@@ -1,0 +1,165 @@
+<title>AI 學習管家三原型</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#F6F5F1; --ink:#1D1E24; --mute:#66697A; --line:#DCDBD3; --card:#FFFFFF; --acc:#3C5AA8; --acc-soft:#E8EDF9;
+  --a:#FFD93D; --b:#8FA3FF; --c:#D9382B;
+  --ok:#2E7D5B; --warn:#B7791F; --bad:#B3261E;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#15161A; --ink:#EDEDF1; --mute:#A0A3B1; --line:#2C2E36; --card:#1E2026; --acc:#9DB2F5; --acc-soft:#232A3D; } }
+:root[data-theme="dark"]{ --bg:#15161A; --ink:#EDEDF1; --mute:#A0A3B1; --line:#2C2E36; --card:#1E2026; --acc:#9DB2F5; --acc-soft:#232A3D; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.65}
+.wrap{max-width:1040px;margin:0 auto;padding:48px 24px 96px}
+.eyebrow{font-family:"Instrument Sans",sans-serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc)}
+h1{font-family:"Instrument Sans","Noto Sans TC",sans-serif;font-weight:700;font-size:40px;line-height:1.12;margin:8px 0 10px;text-wrap:balance;letter-spacing:-.01em}
+.lead{font-size:17px;max-width:62ch;margin:0 0 8px}
+.meta{font-size:13px;color:var(--mute);margin-bottom:40px}
+h2{font-family:"Instrument Sans","Noto Sans TC";font-weight:700;font-size:24px;margin:48px 0 14px;letter-spacing:-.01em}
+h2 small{font-family:"Noto Sans TC";font-weight:400;font-size:14px;color:var(--mute);margin-left:10px}
+p{max-width:68ch}
+.insights{display:grid;gap:0;border-top:1px solid var(--line)}
+.ins{display:grid;grid-template-columns:200px 1fr;gap:20px;padding:16px 0;border-bottom:1px solid var(--line)}
+.ins .k{font-family:"Instrument Sans","Noto Sans TC";font-weight:700;font-size:15px;line-height:1.35}
+.ins .v{font-size:14.5px}
+.ins .v b{font-weight:700}
+.ins .v .so{display:block;font-size:12px;color:var(--mute);margin-top:4px}
+.ins .v a{color:var(--acc)}
+@media (max-width:640px){.ins{grid-template-columns:1fr;gap:6px}}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:640px){.seg{grid-template-columns:1fr}}
+.seg div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.seg h4{margin:0 0 6px;font-family:"Instrument Sans","Noto Sans TC";font-size:16px}
+.seg ul{margin:0;padding-left:18px;font-size:14px;display:grid;gap:3px}
+.protos{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:820px){.protos{grid-template-columns:1fr}}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0;overflow:hidden;display:flex;flex-direction:column}
+.pc .band{height:8px}
+.pc .in{padding:18px 20px 20px;display:flex;flex-direction:column;gap:10px;flex:1}
+.pc .role{font-family:"Instrument Sans";font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.pc h3{margin:0;font-family:"Instrument Sans","Noto Sans TC";font-size:22px;font-weight:700;line-height:1.2}
+.pc h3 span{display:block;font-family:"Noto Sans TC";font-weight:500;font-size:14px;color:var(--mute);margin-top:2px}
+.pc .one{font-size:14.5px}
+.pc dl{margin:4px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px}
+.pc dt{color:var(--mute)}.pc dd{margin:0}
+.pc a.go{margin-top:auto;display:inline-block;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:700;font-size:14px;padding:10px 14px;border-radius:9px;text-align:center}
+.pc a.go:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:"Instrument Sans","Noto Sans TC";font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:600;background:var(--acc-soft)}
+td:first-child{font-weight:700;white-space:nowrap;color:var(--mute);font-size:12.5px}
+tr:last-child td{border-bottom:0}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.reco{background:var(--acc-soft);border-radius:14px;padding:22px 24px;display:grid;gap:10px}
+.reco h3{margin:0;font-family:"Instrument Sans","Noto Sans TC";font-size:18px}
+.reco p{margin:0;font-size:15px}
+.reco ol{margin:4px 0 0;padding-left:20px;font-size:14.5px;display:grid;gap:6px}
+.risk{font-size:14.5px;display:grid;gap:8px;padding-left:0;list-style:none;margin:0}
+.risk li{display:grid;grid-template-columns:80px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.risk li b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-family:"Instrument Sans";padding-top:3px}
+.risk .h b{color:var(--bad)}.risk .m b{color:var(--warn)}
+.src{font-size:12.5px;color:var(--mute);columns:2;column-gap:32px}
+@media (max-width:640px){.src{columns:1}}
+.src a{color:var(--acc);text-decoration:none}
+.src div{break-inside:avoid;margin-bottom:6px}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">產品概念 · 2026-09-18 · 蘇菲整理</div>
+  <h1>AI 學習管家，三個可以點的原型</h1>
+  <p class="lead">對象是<b>小五到國三</b>（10–15 歲）。三個原型故意走三條完全不同的路：一個像<b>陪跑</b>、一個像<b>管家</b>、一個像<b>教練</b>。都不是聊天框，因為聊天框這條路 2025 年已經被證明走不通。</p>
+  <div class="meta">每個原型都是一支可互動的手機畫面 + 一頁設計說明。點卡片上的按鈕打開。</div>
+  <div class="reco" style="margin-bottom:8px"><h3>後續定案（9/18）：三個合成一個，品牌 Tandelo｜AI 配對的真人小組課</h3><p>「孩子卡在哪，就從哪裡開始。」Tandelo 是平台公司，萬通教育是第一個客戶。國二國三數理試點、固定隊跑團、說給我聽、家人迴路。最新規劃與原型連結在下面。</p><p><a href="https://claude.ai/artifact/Gdtu6kBwFhebogGNdUbzpD" style="color:var(--acc);font-weight:700">Tandelo 功能規劃 →</a>　<a href="https://claude.ai/artifact/3Xd1KZKJyxfACEjRNmqSFN" style="color:var(--acc);font-weight:700">Tandelo 原型 →</a>　<a href="https://claude.ai/artifact/VRcnX37ETndnv1wyQYDqFm" style="color:var(--mute)">早期 OneOrbit 版</a></p></div>
+
+  <h2>研究看到的五件事<small>決定了三個原型的形狀</small></h2>
+  <div class="insights">
+    <div class="ins"><div class="k">聊天框家教已經證明不夠</div><div class="v">Khan Academy 的 Khanmigo 有 70 萬用戶，Sal Khan 自己承認對多數學生「是個 non-event」。史丹佛研究：沒有老師帶，<b>三週流失 60%</b>。Quizlet 的 AI 聊天家教因為成本收掉。<span class="so">來源：<a href="https://agentconn.com/blog/ai-tutoring-agents-post-khanmigo-mytutor-2026/">AgentConn · AI Tutoring After Khanmigo</a></span></div></div>
+    <div class="ins"><div class="k">窄而深的贏、廣而淺的輸</div><div class="v">Synthesis Tutor 只做小學數學、用<b>講話 + 動手玩的教具</b>，家長願意付 Khanmigo 三倍的價錢。2026 年 K-12 廣科目家教的位置還沒有贏家。<span class="so">來源：<a href="https://www.aitoolsforkids.com/blog/synthesis-tutor-vs-khanmigo-ai-math-tutor-comparison">Synthesis vs Khanmigo</a> · <a href="https://www.synthesis.com/blog/the-science-of-synthesis-tutor-1-the-embodiment-of-mathematical-knowledge">Synthesis 的教學理論</a></span></div></div>
+    <div class="ins"><div class="k">台灣國中生的問題是「太累」不是「沒題目」</div><div class="v">兒福聯盟 2026 調查：<b>19.2% 國中生重度學習疲勞</b>、近兩成一天睡不到 6 小時、六成怕跟不上同學、<b>15.2% 有煩惱會去找生成式 AI</b>。會考「考綱不考本、容錯少」讓家長直接送補習。<span class="so">來源：<a href="https://www.children.org.tw/publication_research/research_report/3047">兒福聯盟 2026 台灣國中生學習壓力調查</a></span></div></div>
+    <div class="ins"><div class="k">家長最怕的是作弊，孩子最怕的是被管</div><div class="v">Common Sense Media 2026：21% 的孩子承認用 AI 作弊；近半數從沒跟父母聊過 AI。同一份報告明講「<b>AI 陪伴對 18 歲以下不安全</b>」。所以三個原型都把「不給答案」寫進產品規則，也都讓孩子決定爸媽看什麼。<span class="so">來源：<a href="https://www.commonsensemedia.org/research/a-comprehensive-report-on-teens-tweens-and-ai">Common Sense Media · Teens, Tweens and AI 2026</a></span></div></div>
+    <div class="ins"><div class="k">「次世代」的意思是：它會做事，不是會回答</div><div class="v">2026 的消費級 AI 產品在往三個方向走：<b>聲音是第一輸入</b>、<b>代理主動做事</b>（排程、偵測、調整）、<b>低刺激介面</b>（沒有火焰、沒有排行榜）。ChatGPT、Gemini、Claude 三家都推出「學習模式」，代表「不直接給答案」已經是基本盤，不是差異化。<span class="so">來源：<a href="https://www.pearson.com/international-schools/international-schools-blog/2026/02/what-is-gemini_s-guided-learning-and-chatgpts-study-mode-.html">Pearson · 三家學習模式比較</a> · <a href="https://www.intuitia.tech/blog/app-design-trends">App Design Trends 2026</a></span></div></div>
+  </div>
+
+  <h2>用戶不是一種人<small>小五和國三差了一個世界</small></h2>
+  <div class="seg">
+    <div><h4>小五 – 國一（10–13 歲）</h4><ul><li>放學後一個人在家，需要「有人在」</li><li>還願意被角色帶著走，還會動手玩教具</li><li>家長要的是安心，不是成績單</li><li>危險：對角色產生依附</li></ul></div>
+    <div><h4>國二 – 國三（13–15 歲）</h4><ul><li>會考倒數、段考、補習、學校四條線同時跑</li><li>拒絕幼稚、拒絕被管，但接受「被尊重的幫忙」</li><li>家長焦慮到會直接送補習</li><li>危險：睡眠、疲勞、放棄</li></ul></div>
+  </div>
+
+  <h2>三個原型<small>各自押一個賭注</small></h2>
+  <div class="protos">
+    <div class="pc"><div class="band" style="background:var(--a)"></div><div class="in">
+      <div class="role">A · 學習陪跑</div>
+      <h3>Nook 小窩<span>每天 15 分鐘，跟一個「一起做事」的夥伴</span></h3>
+      <div class="one">聲音優先的角色，陪你用積木把密度拆開。心情連動你的努力和睡眠，不連動分數。</div>
+      <dl><dt>適合</dt><dd>小五 – 國一</dd><dt>賭注</dt><dd>角色感 + 動手教具能撐住每天回來</dd><dt>護欄</dt><dd>不扮演朋友、20 分鐘硬停、22:30 說晚安</dd></dl>
+      <a class="go" href="https://claude.ai/artifact/62u2pXvjhHerCXioxcdUiF">打開 Nook 原型</a>
+    </div></div>
+    <div class="pc"><div class="band" style="background:var(--b)"></div><div class="in">
+      <div class="role">B · 學習管家</div>
+      <h3>Orbit 學習航線<span>它幫你排好今天，然後在你該睡的時候關燈</span></h3>
+      <div class="one">讀課表、段考、睡眠，排出 25 分鐘一格的航線，每格都寫理由。做的每件事可撤銷，爸媽看什麼你決定。</div>
+      <dl><dt>適合</dt><dd>國二 – 國三</dd><dt>賭注</dt><dd>孩子願意把課表和睡眠交給它</dd><dt>護欄</dt><dd>22:30 硬停不可關閉、掌握度附「我多確定」</dd></dl>
+      <a class="go" href="https://claude.ai/artifact/DUKDq8cGfSYHkxBEAEiy4U">打開 Orbit 原型</a>
+    </div></div>
+    <div class="pc"><div class="band" style="background:var(--c)"></div><div class="in">
+      <div class="role">C · 學習教練</div>
+      <h3>Slate 答題紙<span>它在你的答案紙旁邊寫紅字，然後要你講給它聽</span></h3>
+      <div class="one">拍題、在紙上寫、AI 在邊緣貼三級提示、講 30 秒證明你懂，才排進錯題本回顧。</div>
+      <dl><dt>適合</dt><dd>國一 – 國三</dd><dt>賭注</dt><dd>「說給它聽」讓抄答案變得沒意義</dd><dt>護欄</dt><dd>提示只有三級、沒有第四級</dd></dl>
+      <a class="go" href="https://claude.ai/artifact/6KPrtrVYSVHNFJAvw8uW5J">打開 Slate 原型</a>
+    </div></div>
+  </div>
+
+  <h2>放在一起比<small>橫向拉一下</small></h2>
+  <div class="tblwrap"><table>
+    <thead><tr><th></th><th><span class="dot" style="background:var(--a)"></span>Nook 陪跑</th><th><span class="dot" style="background:var(--b)"></span>Orbit 管家</th><th><span class="dot" style="background:var(--c)"></span>Slate 教練</th></tr></thead>
+    <tbody>
+      <tr><td>主要輸入</td><td>講話 + 手指玩教具</td><td>幾乎不用輸入，它自己讀課表和睡眠</td><td>相機 + 手寫 + 講話</td></tr>
+      <tr><td>AI 的角色</td><td>一起做事的夥伴</td><td>看得懂全局、會減量的管家</td><td>在旁邊寫紅字的教練</td></tr>
+      <tr><td>每天的動作</td><td>3 件事、15 分鐘</td><td>看今天的航線、照著走</td><td>訂正時拍題、寫、說</td></tr>
+      <tr><td>家長看到</td><td>每週一張孩子勾選的明信片</td><td>孩子勾選的分享面板</td><td>孩子「講得出來」的題目清單</td></tr>
+      <tr><td>防作弊</td><td>只問問題、只指哪一行</td><td>不解題，只排程</td><td>提示三級封頂 + 講給它聽</td></tr>
+      <tr><td>視覺</td><td>玩具感、粗描邊、三主色</td><td>深色儀表板、等寬數字</td><td>紙與墨、紅筆、螢光筆</td></tr>
+      <tr><td>最難的技術</td><td>低延遲語音 + 教具引擎</td><td>課表/段考資料的取得 + 排程邏輯</td><td>國中手寫數學辨識 + 口語理解</td></tr>
+      <tr><td>最像誰</td><td>Synthesis Tutor（但年齡往上）</td><td>沒有直接對手</td><td>Photomath 的反面</td></tr>
+      <tr><td>做出 MVP</td><td>中</td><td>中偏低（先做排程，不做教學）</td><td>高（辨識準確度就是產品）</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>我的建議<small>不是三個都做</small></h2>
+  <div class="reco">
+    <h3>先做 Orbit 管家，把 Slate 的「說給我聽」當第二階段接上</h3>
+    <p>理由有三個。第一，Orbit 是三個裡唯一<b>沒有直接對手</b>的：市面上全是「教你」的產品，沒有「替你減量」的產品，而台灣國中生的真問題正是太累。第二，它最不吃 AI 準確度：排程做錯可以撤銷，解題解錯會失去信任。第三，它天然接會考倒數這條線，家長付費動機最直接。</p>
+    <ol>
+      <li><b>第一階段</b>：Orbit 的「今天 + 日誌 + 分享面板」，不做地圖。用戶自己拍段考範圍表就能開始。</li>
+      <li><b>第二階段</b>：把 Slate 的「說給我聽」接進 Orbit 的每一格：做完 25 分鐘，講 30 秒，掌握地圖才會動。</li>
+      <li><b>Nook 先放著</b>：小學段的角色路線 Synthesis 已經驗證過有效，但「不能扮演朋友」這條護欄和「角色感」本身有張力，需要真的找 20 個孩子測過才知道怎麼拿捏。</li>
+    </ol>
+  </div>
+
+  <h2>三個原型共同要小心的<small>不管選哪個</small></h2>
+  <ul class="risk">
+    <li class="h"><b>高</b><span>資料取得：課表、段考日期、作業內容都在學校和補習班手上。Orbit 若拿不到，就只能靠孩子自己拍。第一版就要把「拍一張範圍表就能開始」做順。</span></li>
+    <li class="h"><b>高</b><span>兒少個資：睡眠、情緒、錯題都是敏感資料。台灣個資法 + 教育部 2026《家長數位與 AI 學習知能指引》要一起看，分享面板的設計要讓法務點頭。</span></li>
+    <li class="m"><b>中</b><span>成本：每個孩子每天講 15 分鐘語音，AI 費用要算清楚。Quizlet 就是這樣收掉的。定價要在做之前先算，不是做完再算。</span></li>
+    <li class="m"><b>中</b><span>家長期待錯位：家長買的是「成績」，產品給的是「少累一點、真的懂」。行銷要把「少補一科」講成看得見的錢，不然家長不會為「減量」付費。</span></li>
+  </ul>
+
+  <h2>參考來源</h2>
+  <div class="src">
+    <div><a href="https://agentconn.com/blog/ai-tutoring-agents-post-khanmigo-mytutor-2026/">AgentConn · AI Tutoring After Khanmigo: A Field Reset</a></div>
+    <div><a href="https://www.commonsensemedia.org/research/a-comprehensive-report-on-teens-tweens-and-ai">Common Sense Media · Teens, Tweens, and AI (2026)</a></div>
+    <div><a href="https://www.children.org.tw/publication_research/research_report/3047">兒福聯盟 · 2026 台灣國中生學習壓力調查</a></div>
+    <div><a href="https://www.aitoolsforkids.com/blog/synthesis-tutor-vs-khanmigo-ai-math-tutor-comparison">Synthesis Tutor vs Khanmigo (2026)</a></div>
+    <div><a href="https://www.synthesis.com/blog/the-science-of-synthesis-tutor-1-the-embodiment-of-mathematical-knowledge">Synthesis · The Science of Synthesis Tutor</a></div>
+    <div><a href="https://www.kidsaitools.com/en/articles/khanmigo-review-2026">Khanmigo Review 2026</a></div>
+    <div><a href="https://www.pearson.com/international-schools/international-schools-blog/2026/02/what-is-gemini_s-guided-learning-and-chatgpts-study-mode-.html">Pearson · Gemini Guided Learning 與 ChatGPT Study Mode</a></div>
+    <div><a href="https://www.theai.tw/guide/ai-help-children-learning-taiwan-family-2026">TheAI 學院 · 台灣家長 AI 輔助學習指南 2026</a></div>
+    <div><a href="https://self-teach.online/blog/1215/taiwan-learning-platforms-junyi-adl-pagamo">均一、因材網、PaGamO 比較</a></div>
+    <div><a href="https://www.intuitia.tech/blog/app-design-trends">App Design Trends 2026</a></div>
+    <div><a href="https://www.uxmatters.com/mt/archives/2025/12/designing-for-autonomy-ux-principles-for-agentic-ai.php">UXmatters · Designing for Autonomy: UX Principles for Agentic AI</a></div>
+    <div><a href="https://link.springer.com/article/10.1007/s11423-023-10337-7">遊戲化與自我決定理論統合分析 (Springer)</a></div>
+  </div>
+</div>

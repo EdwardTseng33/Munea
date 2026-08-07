@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Munea 沐寧 · 115年度AI創新服務研發補助計畫 審查簡報</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; letter-spacing:0 !important; }
+  :root{
+    --green-deep:#24413A;
+    --green-mid:#2E5248;
+    --cream:#F7F4EC;
+    --paper:#FFFFFF;
+    --ink:#1E2B26;
+    --teal:#2E8F80;
+    --teal-deep:#1A5D52;
+    --gold:#C89B3C;
+    --gold-deep:#8F6A1E;
+    --muted:#414E48;
+    --line:#DDD6C6;
+  }
+  html{ background:#E9E4D8; }
+  body{
+    font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;
+    color:var(--ink);
+    word-break:keep-all; overflow-wrap:break-word;
+  }
+  h1,h2,h3,h4,h5,h6,.lead,.punch{ word-break:keep-all; overflow-wrap:break-word; text-wrap:balance; }
+  .slide{
+    width:1280px; height:720px;
+    margin:24px auto; position:relative; overflow:hidden;
+    background:var(--cream);
+    box-shadow:0 4px 24px rgba(0,0,0,.12);
+    page-break-after:always;
+  }
+  .frame{ padding:52px 64px 40px; height:100%; display:flex; flex-direction:column; }
+  .eyebrow{
+    font-size:15px; font-weight:700; color:var(--teal-deep);
+    margin-bottom:10px;
+  }
+  .eyebrow .no{ color:var(--gold-deep); margin-right:10px; }
+  h2{
+    font-family:'Noto Serif TC',serif; font-size:38px; font-weight:900;
+    color:var(--ink); line-height:1.25; margin-bottom:14px;
+  }
+  .lead{ font-size:20px; line-height:1.6; color:var(--muted); margin-bottom:22px; max-width:1050px; }
+  .lead b{ color:var(--teal-deep); }
+  .footer{
+    position:absolute; bottom:22px; left:64px; right:64px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px; color:var(--muted);
+  }
+  .page-number{ font-weight:700; }
+
+  /* ===== 通用元件 ===== */
+  .grid{ display:grid; gap:16px; }
+  .g2{ grid-template-columns:1fr 1fr; }
+  .g3{ grid-template-columns:1fr 1fr 1fr; }
+  .g4{ grid-template-columns:1fr 1fr 1fr 1fr; }
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px;
+  }
+  .card h3{ font-size:18px; font-weight:700; color:var(--teal-deep); margin-bottom:8px; }
+  .card p{ font-size:15.5px; line-height:1.6; color:var(--ink); }
+  .card p.sub{ color:var(--muted); }
+  .stat-num{
+    font-family:'Noto Serif TC',serif; font-size:42px; font-weight:900;
+    color:var(--teal-deep); line-height:1.1;
+  }
+  .stat-num small{ font-size:20px; font-weight:700; }
+  .stat-cap{ font-size:14.5px; line-height:1.5; color:var(--ink); margin-top:6px; }
+  .stat-src{ font-size:13px; color:var(--muted); margin-top:6px; }
+  .punch{
+    background:rgba(200,155,60,.09); border-left:3px solid var(--gold);
+    border-radius:0 12px 12px 0; padding:16px 22px;
+    font-size:18px; line-height:1.6; color:var(--ink);
+  }
+  .punch em{ font-style:normal; font-weight:700; color:var(--gold-deep); }
+  table{ width:100%; border-collapse:collapse; background:var(--paper); border-radius:12px; overflow:hidden; }
+  th{
+    background:var(--green-deep); color:#FFFFFF; font-size:15px; font-weight:700;
+    padding:10px 14px; text-align:left;
+  }
+  td{
+    font-size:15px; line-height:1.5; padding:10px 14px;
+    border-bottom:1px solid var(--line); vertical-align:top;
+  }
+  tr:last-child td{ border-bottom:none; }
+  td.key{ font-weight:700; color:var(--teal-deep); white-space:nowrap; }
+  .tag{
+    display:inline-block; background:rgba(46,143,128,.12); color:var(--teal-deep);
+    font-size:13.5px; font-weight:700; border-radius:999px; padding:3px 12px; margin-right:6px;
+  }
+  .tag.gold{ background:rgba(200,155,60,.14); color:var(--gold-deep); }
+  .nb{ white-space:nowrap; }
+
+  /* ===== 封面/深色頁 ===== */
+  .dark{ background:var(--green-deep); }
+  .dark .frame{ justify-content:center; }
+  .dark h1{
+    font-family:'Noto Serif TC',serif; font-size:52px; font-weight:900;
+    color:#FFFFFF; line-height:1.3; margin:20px 0 16px;
+  }
+  .dark .sub{ font-size:20px; color:#CFE0D8; line-height:1.7; }
+  .dark .footer{ color:#A9C0B6; }
+  .cover-brand{ display:flex; align-items:center; gap:16px; }
+  .cover-brand img{ width:64px; height:64px; border-radius:16px; }
+  .cover-brand span{ font-family:'Noto Serif TC',serif; font-size:24px; font-weight:700; color:#FFFFFF; }
+  .cover-phone{
+    position:absolute; right:70px; top:60px; width:280px;
+    border-radius:24px; box-shadow:0 12px 40px rgba(0,0,0,.4);
+  }
+  .cover-meta{
+    margin-top:34px; display:flex; gap:36px; font-size:16px; color:#CFE0D8;
+  }
+  .cover-meta b{ display:block; color:#FFFFFF; font-size:18px; margin-top:4px; }
+
+  .shot{ border-radius:16px; border:1px solid var(--line); box-shadow:0 6px 20px rgba(30,43,38,.15); }
+
+  .qa .frame{ justify-content:center; padding-bottom:64px; }
+
+  .gantt td{ padding:7px 10px; }
+  .gantt td.key{ font-size:14.5px; white-space:normal; line-height:1.35; }
+  .gantt .mc{ width:118px; text-align:center; position:relative; }
+  .gantt .bar{ height:16px; background:rgba(46,143,128,.35); margin:0 -10px; }
+  .gantt .bar.bs{ border-radius:8px 0 0 8px; margin-left:6px; }
+  .gantt .bar.be{ border-radius:0 8px 8px 0; margin-right:6px; }
+  .gantt .cp{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:#FFFFFF; border:2px solid var(--gold); color:var(--gold-deep);
+    font-size:14px; font-weight:700; border-radius:999px; padding:1px 9px;
+  }
+  .gantt .pv{ font-size:15px; font-weight:700; color:var(--gold-deep); }
+
+  @media print{
+    html,body{ background:#FFFFFF; }
+    .slide{ margin:0; box-shadow:none; }
+    @page{ size:1280px 720px; margin:0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════ P01 封面 ═══════ -->
+<section class="slide dark" id="s01">
+  <div class="frame">
+    <div class="cover-brand"><img src="assets/logo.png" alt="Munea logo"><span>Munea 沐寧</span></div>
+    <h1>AI 健康陪伴照護 App 開發與<br>家庭與企業 ESG 場域應用服務計畫</h1>
+    <p class="sub">數位發展部數位產業署 DIGITAL+ 數位創新補助平台<br>115 年度 AI 創新服務研發補助計畫 · 審查會議簡報</p>
+    <div class="cover-meta">
+      <div>申請單位<b>嘉瑪科技股份有限公司</b></div>
+      <div>計畫主持人<b>曾宇晞（產品負責人）</b></div>
+      <div>簡報日期<b><span class="nb">115 年 8 月 12 日</span></b></div>
+      <div>計畫期間<b><span class="nb">115/06/25 – 115/11/16</span></b></div>
+    </div>
+    <img class="cover-phone" src="assets/ui-chat.png" alt="Munea 聊聊畫面（UI 原型）">
+    <div style="position:absolute; right:96px; top:76px; background:rgba(24,34,30,.88); color:#9FD9CB; font-size:14px; font-weight:700; padding:6px 16px; border-radius:999px;">UI 設計原型 · 開發中</div>
+  </div>
+  <div class="footer"><span>限閱文件 · 僅供審查會議使用</span><span class="page-number">01</span></div>
+</section>
+
+<!-- ═══════ P02 三件事 ═══════ -->
+<section class="slide" id="s02">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">00</span>簡報導覽</div>
+    <h2>15 分鐘，想請委員帶走三件事</h2>
+    <div class="grid g3" style="margin-top:10px;">
+      <div class="card">
+        <div class="stat-num">1</div>
+        <h3>已有可操作的產品原型，不是紙上概念</h3>
+        <p>iOS 產品原型（Prototype）自籌開發中：真人臉即時語音對話、長期記憶、家庭圈等核心設計已可操作驗證，醫療安全紅線測試 <span class="nb">13 題全數通過</span>。本計畫是把這個原型「開發到正式上線、導入場域」。</p>
+      </div>
+      <div class="card">
+        <div class="stat-num">2</div>
+        <h3>申請標的清楚，全是未開發項</h3>
+        <p>四個標的：<b>多平台 App 開發（iOS 完善＋Android 新開發、多語系）、營運後台（席次管理＋關懷報告）、AI 照護智慧深化、場域驗證導入</b>。前期自籌成果不列入補助標的，界線乾淨。</p>
+      </div>
+      <div class="card">
+        <div class="stat-num">3</div>
+        <h3>安全與合規是核心架構</h3>
+        <p>危機偵測轉介安全網（113／119／1925）、醫療紅線、個資高標保護是產品地基、不是事後補丁——正好站在國際監管收緊的正確一側。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:22px;">總經費 <em><span class="nb">445.1 萬元</span></em>、申請補助 <em><span class="nb">222.5 萬元（50%）</span></em>、公司自籌 <em><span class="nb">222.6 萬元</span></em>；12 人團隊、<span class="nb">53.16 人月</span>，於 <span class="nb">115/11/16</span> 前完成四項標的並正式上線。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">02</span></div>
+</section>
+
+<!-- ═══════ P03 市場與痛點 ═══════ -->
+<section class="slide" id="s03">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">01</span>為什麼做</div>
+    <h2>超高齡社會已是現在式，缺的是「陪伴」這一段</h2>
+    <div class="grid g4" style="margin-top:6px;">
+      <div class="card">
+        <div class="stat-num">20.06<small>%</small></div>
+        <p class="stat-cap">台灣 65 歲以上人口占比，114 年 12 月正式邁入超高齡社會</p>
+        <p class="stat-src">內政部，2025</p>
+      </div>
+      <div class="card">
+        <div class="stat-num">117.9<small>萬</small></div>
+        <p class="stat-cap">65 歲以上一人戶（獨居）；政府列冊關懷僅約 5.5 萬人</p>
+        <p class="stat-src">內政部 114 年統計通報</p>
+      </div>
+      <div class="card">
+        <div class="stat-num">6.7<small>萬人</small></div>
+        <p class="stat-cap">2028 年長照人力缺口推估；87.5% 機構長期缺工</p>
+        <p class="stat-src">報導者／1111 調查，2025</p>
+      </div>
+      <div class="card">
+        <div class="stat-num">21.3<small>%</small></div>
+        <p class="stat-cap">全球 AI 銀髮照護市場年複合成長率；「陪伴」是成長最快子類</p>
+        <p class="stat-src">InsightAce Analytic，2026</p>
+      </div>
+    </div>
+    <div class="grid g3" style="margin-top:16px;">
+      <div class="card"><h3>家庭端</h3><p class="sub">子女遠距擔憂、長者不主動用科技；要的不只是陪伴，是「陪伴＋出事有人接住」。</p></div>
+      <div class="card"><h3>長照／健康中心</h3><p class="sub">離峰與夜間陪伴空白、家屬來電稀釋照護人力，需要延伸人力的關懷工具。</p></div>
+      <div class="card"><h3>企業 ESG</h3><p class="sub">員工照顧父母的隱形負擔，缺「可採購、可量化、員工有感」的社會面（S）作為。</p></div>
+    </div>
+    <div class="punch" style="margin-top:16px;">2026 政策窗口密集開啟：<em>長照 3.0</em>、<em>智慧輔具租賃</em>、<em>住宿機構品質獎勵</em>——市場需求由「監測身體」轉向「陪伴情緒」，正是本計畫切入點。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">03</span></div>
+</section>
+
+<!-- ═══════ P04 公司與執行能力 ═══════ -->
+<section class="slide" id="s04">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">02</span>我們是誰</div>
+    <h2>17 年系統整合能量，轉型自研 AI 產品的第一個計畫</h2>
+    <div class="grid g2" style="margin-top:6px;">
+      <div class="card">
+        <h3>嘉瑪科技股份有限公司</h3>
+        <p>2009 年成立、實收資本額 <span class="nb">1,500 萬元</span>；AIoT 雲平台與智慧生態解決方案（EMS 能源管理、ESG 碳盤查、智慧樓宇／工廠／醫療）。</p>
+        <p style="margin-top:8px;"><span class="tag">ISO 27001（2022 取得）</span><span class="tag">近三年營收 CAGR 約 30%</span></p>
+        <p class="sub" style="margin-top:8px;">營業額：112 年 1,597 萬 → 114 年 <span class="nb">2,682 萬元</span>——自籌款 222.6 萬具充分支應能力。</p>
+      </div>
+      <div class="card">
+        <h3>計畫主持人 曾宇晞（產品負責人）</h3>
+        <p>10 年以上健康領域產品經驗。主導 HealthBuy 健康飲食 App 從 0 到 1：上線 6 個月逾 <span class="nb">10 萬用戶</span>、獲 <b>2020 Google Play 年度最佳應用程式</b>；曾主導健身管 SaaS（30 人跨職能團隊）。</p>
+        <p class="sub" style="margin-top:8px;">正帶領團隊自研開發 Munea iOS 產品原型（前期自籌、開發中）。</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>本計畫團隊：12 人、53.16 人月，分工與分項一一對應</h3>
+      <p>AI 研發（黃聖育、林勇全—曾執行 DIGITAL+ 計畫）· 後端與資安（李守益—資工碩士、王再旺）· UIUX 與多平台（袁震宇、黃郁筑、陳佩珊）· 需求規劃（陳少喬）· 測試（鄭郁潔、蔡雅歌）· 場域驗證（蔡盛全—創辦人親自主持對外導入）。</p>
+    </div>
+    <div class="punch" style="margin-top:16px;">過往研發以營運資金支應、未單獨列示——本計畫是公司<em>首次以獨立研發專案</em>投入產品化；iOS 產品原型自籌開發中、核心已可展示，<em>執行能力已用階段成果證明</em>。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">04</span></div>
+</section>
+
+<!-- ═══════ P05 前期自籌成果 ═══════ -->
+<section class="slide" id="s05">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">03</span>產品現況（前期自籌成果）</div>
+    <h2>iOS 產品原型開發中：會記得你、聽得懂你、出事會叫人</h2>
+    <div style="display:grid; grid-template-columns:1fr 460px; gap:28px; margin-top:6px; flex:1;">
+      <div>
+        <div class="card" style="margin-bottom:14px;">
+          <h3>核心功能原型可操作展示（開發調整中；完善至正式上線為本計畫目標）</h3>
+          <p>真人臉即時語音視訊對話（可插話、嘴型對聲音）· 六款陪伴角色 · 長期記憶與情境感知 · 用藥回診提醒 · Apple 健康串接 · 家庭照護圈 · 訂閱與點數金流。</p>
+        </div>
+        <div class="card" style="margin-bottom:14px;">
+          <h3>安全防線已通過驗證</h3>
+          <p>醫療紅線測試 <b><span class="nb">13／13 全數通過</span></b>（不診斷、不判讀檢查、不調整用藥）；帳號多租戶隔離、越權防護、帳號真刪（被遺忘權）均通過自動化測試與雲端端對端驗證。</p>
+        </div>
+        <div class="punch">以上原型成果<em>全數由公司自籌開發</em>、不列入本計畫補助標的——iOS 仍在開發調整中，補助投入的每一元都用在把它做完、做上線。</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <div style="display:flex; gap:12px; justify-content:center;">
+          <img class="shot" src="assets/ui-home.png" alt="首頁" style="width:142px;">
+          <img class="shot" src="assets/ui-status.png" alt="狀態" style="width:142px;">
+          <img class="shot" src="assets/ui-family.png" alt="家人" style="width:142px;">
+        </div>
+        <p style="font-size:13.5px; color:var(--muted);">產品 UI 設計原型（Prototype）畫面 · 開發調整中（左起：首頁、狀態、家人）</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">05</span></div>
+</section>
+
+<!-- ═══════ P06 申請標的 ═══════ -->
+<section class="slide" id="s06">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">04</span>本計畫做什麼</div>
+    <h2>四個申請標的，全是未開發項</h2>
+    <table style="margin-top:6px;">
+      <tr><th style="width:190px;">申請標的</th><th style="width:300px;">現況（AS-IS）</th><th>計畫完成（TO-BE，115/11）</th></tr>
+      <tr>
+        <td class="key">① 多平台 App 開發<br>（iOS 完善＋Android 新開發）</td>
+        <td>iOS 產品原型調整中；Android 未開發</td>
+        <td>iOS 完善至正式上線＋Android 版新開發——雙平台正式上線、多語系介面與語音（繁體中文、台語為先），擴大長者可觸及裝置</td>
+      </tr>
+      <tr>
+        <td class="key">② 營運後台</td>
+        <td>僅有規劃文件、零程式產出</td>
+        <td>席次管理（組織帳號／配發開通／用量報表／月結）＋關懷報告與異常通知，支撐 B2B2C 商業模式</td>
+      </tr>
+      <tr>
+        <td class="key">③ AI 照護智慧深化</td>
+        <td>守護腦文字線紅線通過；記憶感知有骨架</td>
+        <td>心理支持約束層（CBT／ACT／MI）上線、記憶情境感知強化、安全守護規則深化</td>
+      </tr>
+      <tr>
+        <td class="key">④ 場域驗證與導入</td>
+        <td>企業／健康中心客戶 0 家</td>
+        <td>健康中心＋ESG 企業試辦導入 <span class="nb">2–3 家</span>（含付費意向書）；App 通過第三方資安檢測</td>
+      </tr>
+    </table>
+    <div class="punch" style="margin-top:18px;">一句話：把<em>開發中、已驗證可行的 iOS 原型</em>，完成為<em>雙平台正式上線＋企業機構可採購</em>的完整服務——研發界線與補助標的清楚可查核。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">06</span></div>
+</section>
+
+<!-- ═══════ P07 技術架構 ═══════ -->
+<section class="slide" id="s07">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">05</span>計畫創新性 · 架構</div>
+    <h2>三顆腦協同的照護智慧——不是單一聊天機器人</h2>
+    <div class="grid g3" style="margin-top:6px;">
+      <div class="card">
+        <h3>反射腦 · 即時對話</h3>
+        <p class="sub">低延遲即時語音對話、可被打斷；台灣繁體與台語原生。<br><span class="tag" style="margin-top:6px;">Gemini Live</span></p>
+      </div>
+      <div class="card">
+        <h3>管家腦 · 記憶感知</h3>
+        <p class="sub">長期記憶萃取、情境感知整合、每日簡報與照護摘要。<br><span class="tag" style="margin-top:6px;">Claude Sonnet</span></p>
+      </div>
+      <div class="card" style="border-color:var(--gold);">
+        <h3>守護腦 · 安全守門（最高否決權）</h3>
+        <p class="sub">決定論規則引擎為主：危機語言辨識、風險分級、醫療邊界守門、決策留痕可稽核。<br><span class="tag gold" style="margin-top:6px;">規則引擎＋AI 分類輔助</span></p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>自研核心（公司自有智財）：角色人格層＋指揮調度層</h3>
+      <p>六款角色同一組記憶「語氣不同、事實一致」；調度層負責回應優先權仲裁——<b>安全 &gt; 即時對話 &gt; 背景管家</b>。每顆腦獨立輸入輸出合約、供應商可替換不影響其他層。</p>
+      <p style="margin-top:10px; font-family:'Noto Serif TC',serif; font-weight:700; color:var(--teal-deep); font-size:17px;">最終回應 ＝ 角色人格 ＋ 使用者記憶 ＋ 即時感知 ＋ 當下對話 ＋ 安全規則</p>
+    </div>
+    <div class="punch" style="margin-top:16px;">創新在<em>多 Agent 顯式協同＋安全最高否決權＋決策留痕</em>；本計畫深化三項——<em>心理支持約束層（CBT／ACT／MI）、記憶情境感知、安全守護規則</em>，各有驗收報告與查核點（11 月驗收）。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">07</span></div>
+</section>
+
+<!-- ═══════ 信任與資安（併頁）═══════ -->
+<section class="slide" id="s09">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">06</span>信任、個資與資安</div>
+    <h2>面對脆弱族群，安全網是地基、不是加分項</h2>
+    <div class="grid g2" style="margin-top:6px;">
+      <div class="card">
+        <h3>安全網與醫療紅線</h3>
+        <p class="sub">雙層危機防護、風險分級轉介 <span class="nb">113／119／1925</span>；醫療紅線 <span class="nb">13/13</span>（不診斷、不判讀、不調整用藥）；保護事件不自動通知家庭（避免加害人即家人）。</p>
+      </div>
+      <div class="card">
+        <h3>透明與問責</h3>
+        <p class="sub">明示 AI 生成「不是真人、不是家人」、不冒充真實人物；危機告警全程留痕、模型版本管理、人工申訴通道——判斷可回溯、責任可釐清。</p>
+      </div>
+      <div class="card">
+        <h3>健康個資：比照特種個資高標</h3>
+        <p class="sub">資料最小化、原始對話限期自動刪除、AI 服務層 zero-retention 合約；企業席次三原則——<b>企業僅取匿名彙總、健康內容只給家屬、席次僅作計費</b>。</p>
+      </div>
+      <div class="card">
+        <h3>資安工程與合規</h3>
+        <p class="sub">TLS 1.3、多租戶隔離、帳號真刪已通過驗證；App 公開上架前通過政府認可第三方檢測（結案查核項）；資安經費 <span class="nb">36.5 萬元（8.20%）</span>超過 7% 門檻；AI 服務均美系供應商、資料不經中國。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:16px;">加州 SB 243 等國際監管正把「安全網」變成<em>法定門檻</em>——Munea 的危機偵測轉介是核心架構、非事後補丁，監管收緊反而成為<em>先發壁壘</em>。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">08</span></div>
+</section>
+
+<!-- ═══════ P11 商業模式 ═══════ -->
+<section class="slide" id="s11">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">07</span>商業模式與商轉可行性</div>
+    <h2>企業席次 B2B2C：企業付費、長輩免費用、不經商店抽成</h2>
+    <div class="grid g3" style="margin-top:6px;">
+      <div class="card">
+        <h3>兩條收入軌</h3>
+        <p class="sub"><b>B2B</b>：企業席次月訂閱（參考價 <span class="nb">NT$300–500／人・月</span>）＋一次性導入服務費；<b>C 端</b>：訂閱＋點數（機制已建於 App 內）。國際先例：Calm for Business、Headspace for Work。</p>
+      </div>
+      <div class="card">
+        <h3>14 天試辦框架</h3>
+        <p class="sub">指標事先議定（通話完成率、家屬滿意度、異常回報準確度）→ 達標轉正式、價格事先寫定、未達標無責結束——把場域決策門檻降到最低。</p>
+      </div>
+      <div class="card">
+        <h3>政策槓桿（加分、非前提）</h3>
+        <p class="sub">住宿機構品質獎勵（智慧照顧科技指標）· 長照 3.0 輔具租賃（規劃申請）· 台灣雲市集上架——降低場域與家庭導入門檻。</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>兩個市場？不——同一套產品的兩個付費出口，且標準化可複製</h3>
+      <p class="sub">長輩用的是<b>同一支 App</b>、公司管的是<b>同一套營運後台</b>；差別只在付費者是子女（C 端訂閱）或企業／機構（席次月訂閱、後台開通綁定）。席次模組化設計＝<b>標準化產品、非一案一製客製</b>，導入一家新機構只需後台開通、約 1–2 週。競爭定位：國際方案綁硬體與外語、本土業者聚焦機構後台不做家庭陪伴——「純軟體＋繁中台語＋安全網＋雙通路」目前市場沒有直接等價品。</p>
+    </div>
+    <div class="punch" style="margin-top:14px;">結案驗收即商轉證據：<em><span class="nb">2–3 家</span>付費導入意向書</em>（達標轉正式付費）＋成果使用者 <em><span class="nb">≥600 人</span></em>。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">09</span></div>
+</section>
+
+<!-- ═══════ P12 執行規劃（甘特圖 · 對齊計畫書） ═══════ -->
+<section class="slide" id="s12">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">08</span>執行規劃 · 預定進度表</div>
+    <h2>五個分項、12 個查核點——與計畫書甘特圖一致</h2>
+    <table style="margin-top:6px;" class="gantt">
+      <tr>
+        <th style="width:340px;">工作項（權重）</th>
+        <th class="mc">115/07</th><th class="mc">08</th><th class="mc">09</th><th class="mc">10</th><th class="mc">11</th>
+      </tr>
+      <tr><td class="key">A1 心理支持約束層（11%）</td>
+        <td class="mc"><div class="bar bs"></div></td><td class="mc"><div class="bar"></div><span class="cp">A1</span></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar be"></div><span class="cp">A2</span></td></tr>
+      <tr><td class="key">A2 記憶情境感知與安全守護深化（11%）</td>
+        <td class="mc"><div class="bar bs"></div></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar"></div><span class="cp">A3</span></td><td class="mc"><div class="bar be"></div><span class="cp">A4</span></td></tr>
+      <tr><td class="key">B 多平台開發：Android 新開發／iOS 優化／UIUX（30%）</td>
+        <td class="mc"><div class="bar bs"></div></td><td class="mc"><div class="bar"></div><span class="cp">B1</span></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar be"></div><span class="cp">B2</span></td></tr>
+      <tr><td class="key">C 營運後台：席次管理／關懷報告與異常通知（26%）</td>
+        <td class="mc"><div class="bar bs"></div></td><td class="mc"><div class="bar"></div><span class="cp">C1</span></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar be"></div><span class="cp">C2</span></td></tr>
+      <tr><td class="key">D 資安與品質驗證：QA／第三方檢測（12%）</td>
+        <td class="mc"></td><td class="mc"><div class="bar bs"></div><span class="cp">D1</span></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar be"></div><span class="cp">D2</span></td></tr>
+      <tr><td class="key">E 場域驗證與導入：健康中心＋ESG（10%）</td>
+        <td class="mc"></td><td class="mc"><div class="bar bs"></div><span class="cp">E1</span></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar"></div></td><td class="mc"><div class="bar be"></div><span class="cp">E2</span></td></tr>
+      <tr><td class="key" style="color:var(--gold-deep);">進度百分比（依經費執行比例）</td>
+        <td class="mc pv">—</td><td class="mc pv">—</td><td class="mc pv">60%</td><td class="mc pv">—</td><td class="mc pv">100%</td></tr>
+    </table>
+    <p style="font-size:14px; color:var(--muted); margin-top:10px;">計畫期間 115/06/25–115/11/16；6/25–6/30 為啟動準備期、未編列經費。金色圓標為驗收查核點（共 12 個）：8 月 5 個階段驗收、10 月 1 個、11 月 6 個結案驗收，內容與計畫書「預定查核點說明」一致。</p>
+    <div class="punch" style="margin-top:12px;">時程風險控管：每分項 <em>8 月即有階段查核</em>、11 月結案驗收；營運後台以<em>席次管理模組先行</em>、範疇可依優先級調整；後端與測試<em>雙人力互為備援</em>。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">10</span></div>
+</section>
+
+<!-- ═══════ P13 經費 KPI ═══════ -->
+<section class="slide" id="s13">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">09</span>經費與預期效益</div>
+    <h2>經費七成五投入研發人力，效益逐年可查核</h2>
+    <div style="display:grid; grid-template-columns:520px 1fr; gap:20px; margin-top:6px;">
+      <div class="card">
+        <h3>經費結構（總經費 445.1 萬元）</h3>
+        <table style="border:none;">
+          <tr><th>科目</th><th style="text-align:right;">金額（千元）</th><th style="text-align:right;">占比</th></tr>
+          <tr><td>研發人事費（12 人 53.16 人月）</td><td style="text-align:right;">3,375</td><td style="text-align:right;">76%</td></tr>
+          <tr><td>研發設備使用費（AI 工具／雲端）</td><td style="text-align:right;">496</td><td style="text-align:right;">11%</td></tr>
+          <tr><td>驗證費（App 第三方資安檢測）</td><td style="text-align:right;">200</td><td style="text-align:right;">4%</td></tr>
+          <tr><td>創新服務推廣費（參展／廣告）</td><td style="text-align:right;">380</td><td style="text-align:right;">9%</td></tr>
+        </table>
+        <p class="sub" style="margin-top:10px;">補助款 2,225 千元、自籌款 2,226 千元（50:50），各科目均對半分攤。</p>
+      </div>
+      <div class="card">
+        <h3>結案當年（N）可驗證 KPI</h3>
+        <p class="sub">✓ iOS＋Android 正式上線、營運後台上線<br>✓ 試辦導入 <span class="nb">2–3 家</span>（含付費意向書）<br>✓ 成果使用者 <span class="nb">≥600 人</span><br>✓ App 第三方資安檢測通過<br>✓ 計畫產出 ≥4 項、技術推廣活動 ≥2 場</p>
+        <h3 style="margin-top:14px;">結案後成長（N+1 → N+3）</h3>
+        <p class="sub">產值 220 萬 → 750 萬元；企業客戶 5 → 14 家；使用者 2,000 → 8,000 人次；新增就業 2 → 4 人、研發人才培育 12 → 16 人。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:14px;">對公司：由系統整合轉型<em>自研 AI 產品公司</em>、建立經常性收入；對社會：超高齡社會的<em>陪伴與安全網</em>，接住人力永遠補不上的離峰與夜間。</div>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">11</span></div>
+</section>
+
+<!-- ═══════ P14 結語 ═══════ -->
+<section class="slide dark" id="s14">
+  <div class="frame">
+    <div class="cover-brand"><img src="assets/logo.png" alt="Munea logo"><span>Munea 沐寧</span></div>
+    <h1 style="font-size:44px;">沒有人該在老去的路上，<br>孤單到沒人發現。</h1>
+    <p class="sub" style="max-width:900px;">為什麼是我們——iOS 產品原型自籌開發中、安全紅線通過驗證，團隊有從 0 到 1 的上線實績。<br>為什麼是現在——超高齡元年、政策窗口大開、國際監管把安全網變成門檻。<br>補助的意義——把驗證過的原型，在 115/11/16 前推進到雙平台正式上線與企業場域導入。</p>
+    <p style="margin-top:30px; font-size:18px; color:#CFE0D8;">敬請委員指教 · 嘉瑪科技股份有限公司 · 計畫主持人 曾宇晞</p>
+  </div>
+  <div class="footer"><span>Munea 沐寧 · 嘉瑪科技股份有限公司</span><span class="page-number">12</span></div>
+</section>
+
+<!-- ═══════ 附錄 備詢資料 ═══════ -->
+<section class="slide qa" id="a01">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">附錄</span>備詢資料索引</div>
+    <h2>委員提問 · 備詢附頁</h2>
+    <div class="grid g3" style="margin-top:10px;">
+      <div class="card"><h3>Q1 時程可行性</h3><p class="sub">3.5 個月完成四項標的的依據</p></div>
+      <div class="card"><h3>Q2 自研與創新界線</h3><p class="sub">使用外部模型，創新在哪裡</p></div>
+      <div class="card"><h3>Q3 執行能力佐證</h3><p class="sub">首次獨立研發專案的能力證明</p></div>
+      <div class="card"><h3>Q4 商轉與導入進度</h3><p class="sub">意向書、試辦洽談現況</p></div>
+      <div class="card"><h3>Q5 AI 風險與責任</h3><p class="sub">危機誤判、幻覺、個資定性</p></div>
+      <div class="card"><h3>Q6 結案後永續</h3><p class="sub">補助結束後的營運與擴散</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>附錄 · 備詢資料</span><span class="page-number">A0</span></div>
+</section>
+
+<section class="slide qa" id="a02">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">Q1</span>時程可行性</div>
+    <h2>4.7 個月做得完嗎？——可以，因為不是從零開始</h2>
+    <div class="grid g2" style="margin-top:6px;">
+      <div class="card">
+        <h3>基礎已在，補助做的是「下一段」</h3>
+        <p class="sub">後端 API、AI 調度層、六角色、金流、家庭圈皆為 iOS 版既有共用資產；Android 版重用同一套後端與設計系統，非重寫全系統。營運後台為獨立新開發、與 App 線並行不互卡。</p>
+      </div>
+      <div class="card">
+        <h3>三道保險</h3>
+        <p class="sub">① 五分項專責固定、12 個查核點分三波收斂（8 月即有 5 個階段驗收）；② 後台採席次管理先行、關懷報告次之，範疇可依優先級調整；③ 人力雙軌配置（後端、測試皆雙人力互為備援）。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:16px;">iOS 原型由同一團隊從 0 自籌開發至今、核心已可操作展示——<em>同團隊、同架構、路走過一遍</em>，是時程估算的最大依據。</div>
+  </div>
+  <div class="footer"><span>附錄 · 備詢資料</span><span class="page-number">A1</span></div>
+</section>
+
+<section class="slide qa" id="a03">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">Q2</span>自研與創新界線</div>
+    <h2>用外部模型≠套殼——自研在協同層、規則庫與照護 know-how</h2>
+    <div class="grid g2" style="margin-top:6px;">
+      <div class="card">
+        <h3>外部採購的（可替換元件）</h3>
+        <p class="sub">基礎模型能力：即時語音（Gemini Live）、語意理解（Claude Sonnet）。每顆腦獨立輸入輸出合約，任一供應商可替換、不影響整體架構——這正是「標準化架構」的設計目的。</p>
+      </div>
+      <div class="card">
+        <h3>公司自研自有的（智財標的）</h3>
+        <p class="sub">指揮調度層（優先權仲裁）· 角色人格層（六角色結構化定義）· 守護腦危機分級與轉介規則庫 · 記憶重要性判讀與情境感知參數 · 醫療紅線與心理支持約束層——以軟體著作權＋營業秘密管理。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:16px;">類比：雲端服務人人可租，但<em>把「照護分寸」做成可驗證、可稽核、可否決的系統</em>，是市場上沒有直接等價品的自研成果——安全紅線測試 13/13 是可重跑的證據。</div>
+  </div>
+  <div class="footer"><span>附錄 · 備詢資料</span><span class="page-number">A2</span></div>
+</section>
+
+<section class="slide qa" id="a04">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">Q3</span>執行能力佐證</div>
+    <h2>研發費用欄位是 0，但研發成果看得到、摸得到</h2>
+    <div class="grid g2" style="margin-top:6px;">
+      <div class="card">
+        <h3>為什麼過去帳上是 0</h3>
+        <p class="sub">公司過往自主研發（IoT 雲平台、AIoT 模型、Munea 前期開發）以營運資金支應、未於財報單獨列示研發費用科目。本計畫正是公司首次以獨立研發專案規範化管理——這是治理升級，不是能力空白。</p>
+      </div>
+      <div class="card">
+        <h3>能力的三個實證</h3>
+        <p class="sub">① Munea iOS 產品原型由本團隊自研開發中、核心可展示（<span class="nb">簡報第 5 頁</span>即原型畫面）；② 主持人 HealthBuy 從 0 到 1、Google Play 年度最佳應用；③ 公司 AIoT／智慧醫療系統整合實績與 ISO 27001 制度基礎。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:16px;">自籌能力：近三年營收成長至 <em><span class="nb">2,682 萬元</span></em>（CAGR 約 30%）、自籌款 222.6 萬元占年營收約 8.3%——<em>負擔充分可行</em>。</div>
+  </div>
+  <div class="footer"><span>附錄 · 備詢資料</span><span class="page-number">A3</span></div>
+</section>
+
+<section class="slide qa" id="a05">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">Q4</span>商轉與導入進度</div>
+    <h2>試辦框架已定、對象洽談中，結案以付費意向書驗收</h2>
+    <div class="grid g2" style="margin-top:6px;">
+      <div class="card">
+        <h3>目前進度</h3>
+        <p class="sub">C 端依計畫於期程內完善至正式上線、隨即累積真實使用與付費數據；B 端由創辦人蔡盛全親自主責，鎖定長照中心／日照／養生村／健康中心／ESG 企業洽談，目標計畫期間完成 <span class="nb">2–3 家</span>意向書用印。</p>
+      </div>
+      <div class="card">
+        <h3>為什麼場域願意試</h3>
+        <p class="sub">14 天免費試辦、指標事先議定、未達標無責結束、達標轉正式價格事先寫定；標準導入免費（線上訓練＋後台開通）、機構用既有裝置零硬體採購。<span class="nb">10 月</span>台北國際照顧博覽會參展直接接觸採購決策者。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:16px;">誠實說明：本計畫效益以<em>「試辦導入＋付費意向書」為查核口徑</em>、達標者轉正式付費——不以未簽約的大額營收作承諾，數字保守可驗證。</div>
+  </div>
+  <div class="footer"><span>附錄 · 備詢資料</span><span class="page-number">A4</span></div>
+</section>
+
+<section class="slide qa" id="a06">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">Q5</span>AI 風險與責任</div>
+    <h2>誤判怎麼辦？——分級設計、留痕稽核、紅線不碰</h2>
+    <div class="grid g3" style="margin-top:6px;">
+      <div class="card">
+        <h3>漏報（沒接住）</h3>
+        <p class="sub">雙閘門：規則詞庫先行、AI 語意判定接住委婉與拐彎訊號；服務定位為「多一層守護」、明示不取代緊急救援與醫療。</p>
+      </div>
+      <div class="card">
+        <h3>誤報（打擾家庭）</h3>
+        <p class="sub">風險分級——關懷級由角色接住、危急級才轉介通知；告警記錄觸發訊號與分級，供誤報校準；人工申訴通道納入改善循環。</p>
+      </div>
+      <div class="card">
+        <h3>醫療與個資紅線</h3>
+        <p class="sub">不診斷、不判讀檢查、不調整用藥，一律導回醫師；自行量測生理數據依函釋方向非特種個資，仍比照特種個資高標保護。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:16px;">期中查核納入 Trust AI 指標：<em>紅線測試通過率、危機轉介正確率、告警留痕完整率</em>——風險治理本身就是可驗收項目。</div>
+  </div>
+  <div class="footer"><span>附錄 · 備詢資料</span><span class="page-number">A5</span></div>
+</section>
+
+<section class="slide qa" id="a07">
+  <div class="frame">
+    <div class="eyebrow"><span class="no">Q6</span>結案後永續</div>
+    <h2>補助改善的是研發期，商業模式自己站得住</h2>
+    <div class="grid g2" style="margin-top:6px;">
+      <div class="card">
+        <h3>收入怎麼長</h3>
+        <p class="sub">企業席次月訂閱為經常性收入（企業直接付款、毛利結構健康）；C 端訂閱＋點數制把最大變動成本（即時視訊）與收入綁定。結案後目標：N+1 產值 220 萬 → N+3 750 萬元、企業客戶 14 家。</p>
+      </div>
+      <div class="card">
+        <h3>人才與擴散</h3>
+        <p class="sub">結案後逐年新增就業 2／3／4 人、研發人才培育 12→16 人；技術推廣活動與產業說明會逐年辦理；協助中小型長照機構低門檻數位轉型，建立台灣本土陪伴服務品類標準。</p>
+      </div>
+    </div>
+    <div class="punch" style="margin-top:16px;">財務紀律：營運模型以<em>「無補助」口徑</em>計算單位經濟，政府補助視為研發加速器、不是存活前提。</div>
+  </div>
+  <div class="footer"><span>附錄 · 備詢資料</span><span class="page-number">A6</span></div>
+</section>
+
+</body>
+</html>

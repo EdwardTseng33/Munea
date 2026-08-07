@@ -1,0 +1,263 @@
+<title>Nook 小窩</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --page:#F3F1EA; --page-ink:#1C1B1F; --page-mute:#6E6A62; --page-line:#DDD8CC; --page-card:#FFFFFF;
+  --sun:#FFD93D; --coral:#FF5A3C; --mint:#5FD8A9; --ink:#1A1A1F; --paper:#FFFDF7; --sand:#F2ECDC; --mute:#7A756B;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page:#1A1916; --page-ink:#F1EEE6; --page-mute:#A39E93; --page-line:#33302A; --page-card:#24221E; } }
+:root[data-theme="dark"]{ --page:#1A1916; --page-ink:#F1EEE6; --page-mute:#A39E93; --page-line:#33302A; --page-card:#24221E; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--page-ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px;display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:48px;align-items:start}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}}
+.eyebrow{font-family:Rubik,sans-serif;font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--coral)}
+h1{font-family:Rubik,"Noto Sans TC",sans-serif;font-weight:900;font-size:44px;line-height:1.05;margin:8px 0 6px;text-wrap:balance}
+h1 small{display:block;font-family:"Noto Sans TC";font-weight:500;font-size:18px;color:var(--page-mute);margin-top:6px}
+.lead{font-size:16px;max-width:60ch;margin:0 0 28px}
+.spec{display:grid;gap:14px}
+.spec section{border-top:1px solid var(--page-line);padding-top:14px}
+.spec h3{font-family:Rubik,"Noto Sans TC";font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px;color:var(--page-mute)}
+.spec p,.spec li{margin:0;font-size:14.5px}
+.spec ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.swatches{display:flex;gap:8px;margin-top:6px}
+.swatches i{width:34px;height:34px;border-radius:10px;display:block;border:1px solid rgba(0,0,0,.08)}
+.hint{font-size:13px;color:var(--page-mute);margin-top:12px}
+
+/* phone */
+.phone{width:390px;height:844px;margin:0 auto;background:var(--paper);border-radius:48px;border:10px solid #111;box-shadow:0 30px 60px rgba(0,0,0,.25);position:relative;overflow:hidden;color:var(--ink);font-family:"Noto Sans TC",sans-serif}
+.phone .screen{position:absolute;inset:0;padding:54px 22px 96px;overflow-y:auto;display:none;flex-direction:column;gap:16px}
+.phone .screen.on{display:flex}
+.notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:120px;height:30px;background:#111;border-radius:20px;z-index:5}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:84px;background:var(--paper);border-top:2px solid var(--ink);display:grid;grid-template-columns:repeat(4,1fr);z-index:4}
+.tabbar button{background:none;border:0;font:inherit;font-size:11px;font-weight:700;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:12px;cursor:pointer}
+.tabbar button svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.on{color:var(--ink)}
+.tabbar button.on svg{fill:var(--sun)}
+.tabbar button:focus-visible{outline:3px solid var(--coral);border-radius:12px}
+
+.top{display:flex;justify-content:space-between;align-items:center;font-family:Rubik,"Noto Sans TC";font-weight:700;font-size:13px}
+.pill{background:var(--sand);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:500}
+.buddy{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center}
+.blob{width:120px;height:120px;position:relative}
+.blob .body{width:120px;height:110px;background:var(--sun);border:3px solid var(--ink);border-radius:50% 50% 46% 46%/58% 58% 42% 42%;position:absolute;bottom:0;animation:bob 3.2s ease-in-out infinite}
+.blob .eye{position:absolute;top:44px;width:12px;height:16px;background:var(--ink);border-radius:50%;animation:blink 4.5s infinite}
+.blob .eye.l{left:36px}.blob .eye.r{left:70px}
+.blob .cheek{position:absolute;top:64px;width:14px;height:8px;background:var(--coral);border-radius:50%;opacity:.7}
+.blob .cheek.l{left:26px}.blob .cheek.r{left:80px}
+.blob .mouth{position:absolute;top:70px;left:52px;width:16px;height:8px;border:3px solid var(--ink);border-top:0;border-radius:0 0 12px 12px}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@media (prefers-reduced-motion:reduce){.blob .body,.blob .eye,.bar{animation:none}}
+.bubble{background:#fff;border:3px solid var(--ink);border-radius:18px;padding:12px 14px;font-size:14px;position:relative;box-shadow:4px 4px 0 var(--ink)}
+.bubble b{font-weight:700}
+.state{display:flex;gap:8px;flex-wrap:wrap}
+.state span{background:var(--sand);border-radius:10px;padding:6px 10px;font-size:12px}
+h2.s{font-family:Rubik,"Noto Sans TC";font-weight:900;font-size:22px;margin:4px 0 0}
+.quests{display:grid;gap:10px}
+.q{background:#fff;border:3px solid var(--ink);border-radius:20px;padding:12px 14px;display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;cursor:pointer;transition:transform .12s}
+.q:active{transform:scale(.98)}
+.q .ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-family:Rubik;font-weight:900;font-size:16px;border:3px solid var(--ink)}
+.q .t{font-weight:700;font-size:15px}.q .d{font-size:12px;color:var(--mute)}
+.q .m{font-family:Rubik;font-weight:700;font-size:13px}
+.q.done{opacity:.55}.q.done .t{text-decoration:line-through}
+.mic{margin-top:auto;background:var(--coral);color:#fff;border:3px solid var(--ink);border-radius:26px;padding:18px;font:inherit;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:5px 5px 0 var(--ink);cursor:pointer}
+.mic:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--ink)}
+.mic svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round}
+.rule{font-size:12px;color:var(--mute);text-align:center}
+
+/* session */
+.chat{display:grid;gap:10px}
+.msg{max-width:88%;padding:10px 13px;border-radius:16px;font-size:14px;border:2.5px solid var(--ink)}
+.msg.ai{background:#fff;border-bottom-left-radius:4px;justify-self:start}
+.msg.me{background:var(--sun);border-bottom-right-radius:4px;justify-self:end}
+.manip{background:#fff;border:3px solid var(--ink);border-radius:22px;padding:14px}
+.manip .lab{font-family:Rubik;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.blocks{display:flex;gap:6px;margin:10px 0;min-height:58px;align-items:flex-end}
+.blocks i{display:block;width:26px;height:26px;background:var(--mint);border:2.5px solid var(--ink);border-radius:7px}
+.readout{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}
+.readout div{background:var(--sand);border-radius:12px;padding:8px 4px}
+.readout b{display:block;font-family:Rubik;font-size:20px;font-weight:900}
+.readout small{font-size:11px;color:var(--mute)}
+.ctrl{display:flex;gap:8px;margin-top:10px}
+.ctrl button{flex:1;border:2.5px solid var(--ink);background:#fff;border-radius:12px;padding:8px;font:inherit;font-weight:700;cursor:pointer}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:2.5px solid var(--ink);background:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer}
+.chips button.pick{background:var(--mint)}
+.wave{display:flex;gap:4px;align-items:center;justify-content:center;height:40px}
+.wave .bar{width:6px;height:10px;background:var(--coral);border-radius:3px;animation:wv 1s ease-in-out infinite}
+.wave .bar:nth-child(2){animation-delay:.1s}.wave .bar:nth-child(3){animation-delay:.2s}.wave .bar:nth-child(4){animation-delay:.3s}.wave .bar:nth-child(5){animation-delay:.4s}.wave .bar:nth-child(6){animation-delay:.5s}.wave .bar:nth-child(7){animation-delay:.6s}
+@keyframes wv{0%,100%{height:8px}50%{height:34px}}
+.wave.off .bar{animation:none;height:6px;opacity:.35}
+
+/* camera */
+.finder{background:#2B2A2E;border:3px solid var(--ink);border-radius:22px;aspect-ratio:3/4;position:relative;overflow:hidden;color:#fff}
+.finder .paper{position:absolute;inset:26px 20px;background:#FCFBF6;color:#222;border-radius:4px;padding:16px 14px;font-family:"Noto Sans TC";font-size:12.5px;line-height:1.9;transform:rotate(-2deg)}
+.finder .paper .no{color:#888}
+.finder .paper .wrong{position:relative}
+.finder .paper .wrong::after{content:"";position:absolute;left:-4px;right:-4px;bottom:2px;height:3px;background:var(--coral);border-radius:2px}
+.finder .frame{position:absolute;inset:18px 12px;border:2px dashed var(--sun);border-radius:12px;pointer-events:none}
+.finder .tag{position:absolute;left:12px;top:12px;background:var(--sun);color:var(--ink);font-weight:700;font-size:11px;padding:3px 8px;border-radius:8px}
+.finder .shutter{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:54px;height:54px;border-radius:50%;background:#fff;border:5px solid #999}
+
+/* postcard */
+.card{background:#fff;border:3px solid var(--ink);border-radius:8px;padding:16px;box-shadow:6px 6px 0 var(--sun);position:relative}
+.card .stamp{position:absolute;right:14px;top:14px;width:46px;height:56px;border:2px dashed var(--ink);border-radius:4px;display:grid;place-items:center;font-family:Rubik;font-size:10px;font-weight:700;text-align:center;line-height:1.2}
+.card h4{font-family:Rubik,"Noto Sans TC";font-weight:900;font-size:18px;margin:0 0 6px}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:10px 0 0;font-size:13.5px}
+.card dt{color:var(--mute)}
+.card dd{margin:0;font-weight:500}
+.card .sig{margin-top:12px;font-size:12px;color:var(--mute);border-top:1px dashed var(--mute);padding-top:8px}
+.rules{display:grid;gap:8px}
+.rules div{display:flex;gap:10px;align-items:flex-start;font-size:13.5px}
+.rules div b{font-family:Rubik;background:var(--ink);color:var(--sun);border-radius:8px;width:24px;height:24px;display:grid;place-items:center;flex:none;font-size:12px}
+.toast{position:absolute;left:22px;right:22px;bottom:100px;background:var(--ink);color:#fff;padding:12px 14px;border-radius:14px;font-size:13px;opacity:0;transform:translateY(8px);transition:.25s;z-index:6;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+</style>
+
+<div class="wrap">
+  <div>
+    <div class="eyebrow">Prototype A · 學習陪跑 · 聲音優先</div>
+    <h1>Nook 小窩<small>每天 15 分鐘，跟一個「一起做事」的夥伴把一件事搞懂</small></h1>
+    <p class="lead">給 <b>小五到國一</b>（10–13 歲）。不是聊天機器人，是一個住在手機裡、會講話、會陪你動手拆概念的角色。它的規則寫在臉上：<b>不給答案、只問更好的問題</b>。它的心情連動的是你的努力和睡眠，不是你的分數。</p>
+
+    <div class="spec">
+      <section><h3>用戶與情境</h3><p>放學回家 16:30–18:00 的空檔、家長還沒下班。孩子一個人，需要「有人在」的感覺，但不要被管。</p></section>
+      <section><h3>核心循環</h3><ul><li><b>今天三件事</b>：AI 從學校進度和上次卡點挑 3 件，總量 15 分鐘上限</li><li><b>一起學</b>：用講話的，配「可以動手玩的東西」（積木、天平、數線），不是打字聊天</li><li><b>拍給我看</b>：作業拍一下，它只指出「你哪一行值得再看」</li><li><b>明信片</b>：每週一張給爸媽，內容是孩子自己勾選要分享的</li></ul></section>
+      <section><h3>為什麼是 next gen</h3><ul><li>聲音是第一輸入，不是藏在角落的麥克風</li><li>「動手玩的教具」取代選擇題：Synthesis Tutor 驗證過這在小學段有效</li><li>角色情緒跟努力連動，不跟正確率連動，避免「答錯就被討厭」</li></ul></section>
+      <section><h3>最大的賭注與護欄</h3><p>Common Sense Media 2026 明講「AI 陪伴對 18 歲以下不安全」。所以 Nook <b>不扮演朋友</b>，只當工作夥伴：不聊心事、每次 session 20 分鐘硬上限、22:30 自動說晚安。</p></section>
+      <section><h3>視覺語言</h3><p>玩具感但不幼稚：粗黑描邊、硬陰影、三個主色。參考 Playdate、Nothing 的手感，而不是兒童頻道。</p>
+      <div class="swatches"><i style="background:#FFD93D"></i><i style="background:#FF5A3C"></i><i style="background:#5FD8A9"></i><i style="background:#1A1A1F"></i><i style="background:#F2ECDC"></i></div></section>
+    </div>
+    <p class="hint">右邊的手機可以點：底部四個分頁、任務卡、麥克風、教具的加減鈕、選項。</p>
+  </div>
+
+  <div class="phone" id="phone">
+    <div class="notch"></div>
+
+    <!-- 首頁 -->
+    <div class="screen on" data-s="home">
+      <div class="top"><span>週五 9/18</span><span class="pill">第 23 天一起</span></div>
+      <div class="buddy">
+        <div class="blob"><div class="body"><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i><i class="mouth"></i></div></div>
+        <div class="bubble">嗨小睿，理化的<b>密度</b>上次卡了一下，今天先把它弄懂好嗎？我猜 12 分鐘。</div>
+      </div>
+      <div class="state"><span>昨晚睡 7.5 小時</span><span>今天狀態不錯</span><span>連續 4 天</span></div>
+      <h2 class="s">今天三件事</h2>
+      <div class="quests" id="quests">
+        <div class="q" tabindex="0"><div class="ic" style="background:#5FD8A9">理</div><div><div class="t">密度：質量 ÷ 體積</div><div class="d">上次錯 2 題 · 用積木拆</div></div><div class="m">12'</div></div>
+        <div class="q" tabindex="0"><div class="ic" style="background:#FFD93D">英</div><div><div class="t">單字 8 個 · Unit 3</div><div class="d">下週二小考</div></div><div class="m">5'</div></div>
+        <div class="q" tabindex="0"><div class="ic" style="background:#FF5A3C;color:#fff">數</div><div><div class="t">移項變號 · 錯題 2 題</div><div class="d">昨天作業</div></div><div class="m">8'</div></div>
+      </div>
+      <button class="mic" id="micHome"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>按住，用講的開始</button>
+      <div class="rule">Nook 不給答案，只問問題。20 分鐘會自動停。</div>
+    </div>
+
+    <!-- 一起學 -->
+    <div class="screen" data-s="learn">
+      <div class="top"><span>理化 · 密度</span><span class="pill" id="timer">還有 11:40</span></div>
+      <div class="chat">
+        <div class="msg ai">先不要背公式。這裡有一塊東西，質量 <b>120 g</b>。你把它體積調一調，看數字怎麼跑。</div>
+        <div class="msg me">我把體積變大，密度變小了</div>
+        <div class="msg ai">對耶。那如果<b>體積變兩倍</b>，密度會變成幾倍？先猜再按。</div>
+      </div>
+      <div class="manip">
+        <div class="lab">積木教具 · 每塊 10 cm³</div>
+        <div class="blocks" id="blocks"></div>
+        <div class="readout">
+          <div><b>120</b><small>質量 g</small></div>
+          <div><b id="vol">40</b><small>體積 cm³</small></div>
+          <div><b id="den">3.0</b><small>密度 g/cm³</small></div>
+        </div>
+        <div class="ctrl"><button id="minus">− 一塊</button><button id="plus">+ 一塊</button></div>
+      </div>
+      <div class="chips" id="chips"><button>變 2 倍</button><button>變 ½</button><button>不變</button></div>
+      <div class="wave off" id="wave"><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i></div>
+      <button class="mic" id="micLearn"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>按住講話</button>
+    </div>
+
+    <!-- 拍給我看 -->
+    <div class="screen" data-s="cam">
+      <div class="top"><span>拍給我看</span><span class="pill">只指方向，不給答案</span></div>
+      <div class="finder">
+        <div class="frame"></div><div class="tag">辨識到：數學作業 · 第 3 題</div>
+        <div class="paper">
+          <div class="no">3. 解方程式</div>
+          <div>2x − 3 = 7</div>
+          <div class="wrong">2x = 7 − 3</div>
+          <div>2x = 4</div>
+          <div>x = 2</div>
+        </div>
+        <div class="shutter"></div>
+      </div>
+      <div class="bubble">我看到第 3 題，你把 −3 搬到右邊的那一行，要不要<b>自己再看一次</b>那一行？想一下：搬過去的東西會發生什麼事？</div>
+      <div class="chips"><button>我再看一次</button><button>給我一點提示</button></div>
+    </div>
+
+    <!-- 明信片 -->
+    <div class="screen" data-s="post">
+      <div class="top"><span>給爸媽的明信片</span><span class="pill">每週日寄出</span></div>
+      <div class="card">
+        <div class="stamp">NOOK<br>WK 38</div>
+        <h4>小睿這週</h4>
+        <div style="font-size:13.5px">一起學了 <b>4 天</b>，總共 52 分鐘。</div>
+        <dl>
+          <dt>最有進步</dt><dd>密度，從「背公式」變成「講得出為什麼」</dd>
+          <dt>還在練</dt><dd>移項變號，這週錯了 3 次、最後 2 次對了</dd>
+          <dt>睡眠</dt><dd>平均 7.2 小時（小睿選擇分享）</dd>
+          <dt>他想說</dt><dd>「英文單字太多了，可以少一點嗎」</dd>
+        </dl>
+        <div class="sig">這張卡的內容是小睿自己勾選的。Nook 不會私下回報孩子沒同意的事。</div>
+      </div>
+      <h2 class="s">三條家規</h2>
+      <div class="rules">
+        <div><b>1</b><span>不給答案。只問問題、指方向、示範一步。</span></div>
+        <div><b>2</b><span>不跟同學比。沒有排行榜、沒有全班平均。</span></div>
+        <div><b>3</b><span>22:30 之後不催。只會說晚安，明天見。</span></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <div class="tabbar">
+      <button class="on" data-t="home"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9H3z"/></svg>小窩</button>
+      <button data-t="learn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>一起學</button>
+      <button data-t="cam"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8 7l1.5-3h5L16 7"/></svg>拍給我看</button>
+      <button data-t="post"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>明信片</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const phone=document.getElementById('phone');
+  const toast=document.getElementById('toast');let tt;
+  function say(m){toast.textContent=m;toast.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove('show'),1800);}
+  function go(name){
+    phone.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.dataset.s===name));
+    phone.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.t===name));
+  }
+  phone.querySelectorAll('.tabbar button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.t)));
+  document.querySelectorAll('#quests .q').forEach((q,i)=>{
+    const open=()=>{ if(i===0){go('learn');} else { q.classList.toggle('done'); say(q.classList.contains('done')?'做完了，Nook 幫你記下來':'好，放回今天的清單'); } };
+    q.addEventListener('click',open); q.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+  });
+  document.getElementById('micHome').addEventListener('click',()=>{go('learn');say('好，我們從密度開始');});
+  // manipulative
+  let n=4; const blocks=document.getElementById('blocks'), vol=document.getElementById('vol'), den=document.getElementById('den');
+  function render(){ blocks.innerHTML=''; for(let i=0;i<n;i++){blocks.appendChild(document.createElement('i'));} vol.textContent=n*10; den.textContent=(120/(n*10)).toFixed(1); }
+  document.getElementById('plus').addEventListener('click',()=>{ if(n<12){n++;render();} });
+  document.getElementById('minus').addEventListener('click',()=>{ if(n>1){n--;render();} });
+  render();
+  document.querySelectorAll('#chips button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#chips button').forEach(x=>x.classList.remove('pick')); b.classList.add('pick');
+    say(b.textContent==='變 ½'?'猜對了。現在按兩下「+ 一塊」看它真的變一半':'先按「+ 一塊」試試看，讓積木告訴你');
+  }));
+  const wave=document.getElementById('wave'); const mic=document.getElementById('micLearn');
+  ['mousedown','touchstart'].forEach(ev=>mic.addEventListener(ev,()=>wave.classList.remove('off')));
+  ['mouseup','mouseleave','touchend'].forEach(ev=>mic.addEventListener(ev,()=>wave.classList.add('off')));
+  // timer
+  let s=700; const tm=document.getElementById('timer');
+  setInterval(()=>{ if(s>0){s--; tm.textContent='還有 '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');} },1000);
+  phone.querySelectorAll('[data-s="cam"] .chips button').forEach(b=>b.addEventListener('click',()=>say(b.textContent==='我再看一次'?'好，我等你':'提示：−3 搬到等號右邊，符號會變')));
+})();
+</script>

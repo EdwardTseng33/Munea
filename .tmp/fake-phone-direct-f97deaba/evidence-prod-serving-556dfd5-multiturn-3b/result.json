@@ -1,0 +1,5 @@
+{
+  "ok": false,
+  "error": "RuntimeError",
+  "error_message": "SUPABASE_URL is required"
+}

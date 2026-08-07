@@ -1,0 +1,30 @@
+{
+  "transport": "relay",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 44,
+  "voice_audio_ms": 11510,
+  "client_receive_max_gap_ms": 8296.0,
+  "avatar_audio_ms": 32220,
+  "user_caption": "秀英阿姨 , 聽到你膝蓋又痛了 , 你寧替你擔心呣。",
+  "assistant_caption": "秀英阿姨，剛剛有聽你說膝蓋又在痛了喔？這樣聽起來真的很磨人呢，有沒有哪裡特別不舒服，還是這次痛的感覺跟以前不太裝一樣？",
+  "first_response_ms": 1375,
+  "continuity": {
+    "ok": true,
+    "alignment_ms": 9840,
+    "envelope_correlation": 0.9779,
+    "reference_speech_frames": 376,
+    "missing_speech_runs": 0,
+    "max_missing_speech_ms": 0
+  },
+  "asr_expected": "管線自測不計分",
+  "asr_char_recall": 0.0,
+  "gates": {
+    "transport": true,
+    "asr": false,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": true
+  },
+  "ok": false
+}

@@ -2,52 +2,349 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "org-portal-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-u",
+        "C:/Users/ADMINI~1/AppData/Local/Temp/claude/E--Claude-Munea/e4ba89b3-cc35-400c-b263-a1772d00fd80/scratchpad/org_portal_preview.py"
+      ],
+      "port": 8399
+    },
+    {
+      "name": "wave-c-8178",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8178",
+        "--directory",
+        "C:/Users/ADMINI~1/AppData/Local/Temp/claude/E--Claude-Munea/1b98327c-37a8-4a21-9aa4-72f8f6951158/scratchpad/wt-wave/web"
+      ],
+      "port": 8178
+    },
+    {
+      "name": "wave-lab-8177",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8177",
+        "--directory",
+        "E:/Claude/Munea/tools/wave-lab"
+      ],
+      "port": 8177
+    },
+    {
+      "name": "family-demo-8195",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8195",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/fixture-20260801/web"
+      ],
+      "port": 8195
+    },
+    {
       "name": "Munea",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8123", "--directory", "web"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8123",
+        "--directory",
+        "web"
+      ],
       "port": 8123
     },
     {
       "name": "munea-ios-public",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8127", "--directory", "ios/App/App/public"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8127",
+        "--directory",
+        "ios/App/App/public"
+      ],
       "port": 8127
     },
     {
       "name": "munea-qa-8126",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8126", "--directory", "web"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8126",
+        "--directory",
+        "web"
+      ],
       "port": 8126
+    },
+    {
+      "name": "munea-credits-qa",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8134",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/apple-purchase-retry-20260730/web"
+      ],
+      "port": 8134
     },
     {
       "name": "munea-demo",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-u", "engine/live_voice_server.py"],
+      "runtimeArgs": [
+        "-u",
+        "engine/live_voice_server.py"
+      ],
       "port": 8201
     },
     {
       "name": "busy-card-p0",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8129", "--directory", "E:/Claude/Munea-worktrees/busy-card-p0/web"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8129",
+        "--directory",
+        "E:/Claude/Munea-worktrees/busy-card-p0/web"
+      ],
       "port": 8129
     },
     {
       "name": "munea-site-i18n",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["firebase-tools@15.23.0", "emulators:start", "--only", "hosting", "--project", "gen-lang-client-0229303523"],
+      "runtimeArgs": [
+        "firebase-tools@15.23.0",
+        "emulators:start",
+        "--only",
+        "hosting",
+        "--project",
+        "gen-lang-client-0229303523"
+      ],
       "port": 5000
     },
     {
       "name": "munea-b2b-static",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "3112", "--directory", "munea-b2b"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "3112",
+        "--directory",
+        "munea-b2b"
+      ],
       "port": 3112
+    },
+    {
+      "name": "plan-links-8139",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8139",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/plan-links-20260731/web"
+      ],
+      "port": 8139
     },
     {
       "name": "munea-b2b-dev",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vercel", "dev", "--cwd", "E:/Claude/Munea/munea-b2b", "--listen", "3111", "--yes"],
+      "runtimeArgs": [
+        "vercel",
+        "dev",
+        "--cwd",
+        "E:/Claude/Munea/munea-b2b",
+        "--listen",
+        "3111",
+        "--yes"
+      ],
       "port": 3111
+    },
+    {
+      "name": "plan-credit-copy-8141",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8141",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/plan-credit-copy-20260801/web"
+      ],
+      "port": 8141
+    },
+    {
+      "name": "munea-english-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8150",
+        "--directory",
+        "C:/Users/ADMINI~1/AppData/Local/Temp/claude/E--Claude-Munea/63b3946e-fc02-4b1f-84e0-ed4105731b89/scratchpad/en-preview/web"
+      ],
+      "port": 8150
+    },
+    {
+      "name": "latin-scale-8152",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8152",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/latin-type-scale-20260801/web"
+      ],
+      "port": 8152
+    },
+    {
+      "name": "munea-japanese-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8151",
+        "--directory",
+        "C:/Users/ADMINI~1/AppData/Local/Temp/claude/E--Claude-Munea/63b3946e-fc02-4b1f-84e0-ed4105731b89/scratchpad/ja-preview/web"
+      ],
+      "port": 8151
+    },
+    {
+      "name": "munea-spanish-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8153",
+        "--directory",
+        "C:/Users/ADMINI~1/AppData/Local/Temp/claude/E--Claude-Munea/63b3946e-fc02-4b1f-84e0-ed4105731b89/scratchpad/es-preview/web"
+      ],
+      "port": 8153
+    },
+    {
+      "name": "mood-honesty-8154",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8154",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/mood-card-honesty-20260801/web"
+      ],
+      "port": 8154
+    },
+    {
+      "name": "mood-subtitle-8155",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8155",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/mood-subtitle-20260801/web"
+      ],
+      "port": 8155
+    },
+    {
+      "name": "mood-ai-8156",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8156",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/mood-ai-line-20260801/web"
+      ],
+      "port": 8156
+    },
+    {
+      "name": "mood-variants-8157",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8157",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/mood-variants-20260801/web"
+      ],
+      "port": 8157
+    },
+    {
+      "name": "med-visit-8158",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8158",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/med-visit-ui-20260801/web"
+      ],
+      "port": 8158
+    },
+    {
+      "name": "voice-lead-8159",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8159",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/voice-lead-20260801/web"
+      ],
+      "port": 8159
+    },
+    {
+      "name": "rive-lab-8161",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8161",
+        "--directory",
+        "E:/Claude/Munea/tools/rive-lab"
+      ],
+      "port": 8161
+    },
+    {
+      "name": "chip-fix-8160",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8160",
+        "--directory",
+        "E:/Claude/Munea/.worktrees/voice-lead-20260801/web"
+      ],
+      "port": 8160
+    },
+    {
+      "name": "rive-survey-8162",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8162",
+        "--directory",
+        "C:/Users/ADMINI~1/AppData/Local/Temp/claude/E--Claude-Munea/1b98327c-37a8-4a21-9aa4-72f8f6951158/scratchpad/wt-survey/web"
+      ],
+      "port": 8162
+    },
+    {
+      "name": "male-offline-8163",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8163",
+        "--directory",
+        "C:/Users/ADMINI~1/AppData/Local/Temp/claude/E--Claude-Munea/1b98327c-37a8-4a21-9aa4-72f8f6951158/scratchpad/wt-male/web"
+      ],
+      "port": 8163
     }
   ]
 }

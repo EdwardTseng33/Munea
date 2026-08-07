@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>沐寧 · 第三層試驗：手繪拆層角色（Live2D）</title>
+<style>
+  :root { --teal:#3AA8A0; --cream:#FAF7F2; --ink:#33403D; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Noto Sans TC",-apple-system,sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px 16px 40px; }
+  h1 { font-size:20px; font-weight:700; margin:8px 0 2px; }
+  .sub { font-size:13px; color:#6b7a76; margin-bottom:14px; text-align:center; }
+  .stage-wrap { background:#fff; border-radius:20px; padding:14px; box-shadow:0 2px 14px rgba(51,64,61,.08); }
+  canvas { width:min(78vw,400px); height:min(78vw,400px); display:block; border-radius:12px; background:#EFF3F0; }
+  .meters { display:flex; gap:18px; justify-content:center; margin-top:10px; font-size:12.5px; color:#6b7a76; }
+  .meters b { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .btns { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+  button { font:inherit; font-size:15px; padding:10px 18px; border-radius:999px; border:1.5px solid #d8d2c4; background:#fff; color:var(--ink); cursor:pointer; }
+  button.on { background:var(--teal); border-color:var(--teal); color:#fff; }
+  .note { max-width:440px; margin-top:18px; font-size:12.5px; line-height:1.7; color:#8a948f; text-align:center; }
+  a { color:var(--teal); }
+</style>
+</head>
+<body>
+  <h1>第三層試驗：手繪拆層角色</h1>
+  <div class="sub">整張手繪插畫拆成幾十層、在這台裝置上即時驅動<br><b>滑鼠移動時她的頭和視線會跟著你</b>（偽 3D）・頭髮衣飾有物理擺動</div>
+  <div class="stage-wrap"><canvas id="cv" width="800" height="800"></canvas></div>
+  <div class="meters">
+    <span>畫面流暢度 <b id="fps">–</b> fps</span>
+    <span>狀態 <b id="st">載入中…</b></span>
+  </div>
+  <div class="btns">
+    <button id="b-idle" class="on">安靜待機</button>
+    <button id="b-say">講一句話</button>
+    <button id="b-chat">連續聊天</button>
+    <button id="b-motion">隨機動作</button>
+    <button id="b-swap">換角色</button>
+  </div>
+  <p class="note">示範模型 Mao／Hiyori 為 Live2D 官方公開示範素材（僅內部評估用）。這是「官方樣品」等級——委託頂級繪師與動態師做的商用模型（日本 VTuber 生態）細緻度還會再高一截。寧寧正式版＝繪師手繪半寫實插畫＋這套拆層驅動。回到 <a href="index.html">第二層（Rive 向量）試驗</a>。</p>
+
+<script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.10/browser/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
+<script>
+(function(){
+  var MODELS = [
+    { name:'Mao', url:'https://raw.githubusercontent.com/Live2D/CubismWebSamples/develop/Samples/Resources/Mao/Mao.model3.json', zoom:2.4, headY:0.03 },
+    { name:'Hiyori', url:'https://raw.githubusercontent.com/Live2D/CubismWebSamples/develop/Samples/Resources/Hiyori/Hiyori.model3.json', zoom:2.2, headY:0.03 }
+  ];
+  var cur = 0, model = null, mode = 'idle', mouth = 0, mouthTarget = 0, sayTimer = null;
+  var stEl = document.getElementById('st');
+
+  var app = new PIXI.Application({ view: document.getElementById('cv'), width:800, height:800, backgroundAlpha:0, sharedTicker:true, autoDensity:false });
+
+  function fit(m, cfg){
+    var s = (800 / m.internalModel.originalWidth) * cfg.zoom;
+    m.scale.set(s);
+    m.x = 400 - m.width / 2;
+    m.y = -(m.height * cfg.headY);
+  }
+
+  function load(i){
+    stEl.textContent = '載入中…';
+    if (model){ app.stage.removeChild(model); model.destroy(); model = null; }
+    PIXI.live2d.Live2DModel.from(MODELS[i].url).then(function(m){
+      model = m;
+      app.stage.addChild(m);
+      fit(m, MODELS[i]);
+      var lipIds = ['ParamMouthOpenY'];
+      try {
+        var gs = (m.internalModel.settings.json || {}).Groups || [];
+        for (var gi = 0; gi < gs.length; gi++){
+          if (gs[gi].Name === 'LipSync' && gs[gi].Ids && gs[gi].Ids.length){ lipIds = gs[gi].Ids; break; }
+        }
+      } catch(e){}
+      var mm = m.internalModel.motionManager;
+      var orig = mm.update.bind(mm);
+      mm.update = function(coreModel, now){
+        var r = orig(coreModel, now);
+        if (window.__lab) window.__lab.updN++;
+        try {
+          for (var li = 0; li < lipIds.length; li++) coreModel.setParameterValueById(lipIds[li], mouth);
+        } catch(e){ if (window.__lab) window.__lab.err = String(e); }
+        return r;
+      };
+      stEl.textContent = '待機（會跟著你的滑鼠看）';
+    }).catch(function(e){ stEl.textContent = '載入失敗：' + e.message; });
+  }
+
+  PIXI.Ticker.shared.add(function(){
+    mouth += (mouthTarget - mouth) * 0.35;
+  }, null, PIXI.UPDATE_PRIORITY.UTILITY);
+
+  function speechEnvelope(){
+    if (mode === 'idle'){ mouthTarget = 0; return; }
+    mouthTarget = (Math.random() < 0.22) ? 0 : (0.35 + Math.random() * 0.65);
+    sayTimer = setTimeout(speechEnvelope, 70 + Math.random() * 110);
+  }
+
+  function setMode(m){
+    mode = m;
+    if (sayTimer){ clearTimeout(sayTimer); sayTimer = null; }
+    ['b-idle','b-say','b-chat'].forEach(function(id){ document.getElementById(id).className = ''; });
+    if (m === 'idle'){ document.getElementById('b-idle').className = 'on'; mouthTarget = 0; stEl.textContent = '待機（會跟著你的滑鼠看）'; }
+  }
+
+  document.getElementById('b-idle').onclick = function(){ setMode('idle'); };
+  document.getElementById('b-say').onclick = function(){
+    setMode('say'); document.getElementById('b-say').className = 'on'; stEl.textContent = '講話中';
+    speechEnvelope();
+    setTimeout(function(){ if (mode === 'say') setMode('idle'); }, 2600 + Math.random() * 1200);
+  };
+  document.getElementById('b-chat').onclick = function(){
+    setMode('chat'); document.getElementById('b-chat').className = 'on'; stEl.textContent = '連續聊天中';
+    speechEnvelope();
+  };
+  document.getElementById('b-motion').onclick = function(){
+    if (!model) return;
+    var groups = Object.keys(model.internalModel.settings.motions || {});
+    if (!groups.length) return;
+    var g = groups[Math.floor(Math.random() * groups.length)];
+    model.motion(g);
+    stEl.textContent = '播放動作：' + (g || '（預設）');
+  };
+  document.getElementById('b-swap').onclick = function(){ cur = (cur + 1) % MODELS.length; load(cur); };
+
+  window.__lab = { get mouth(){ return mouth; }, get model(){ return model; }, updN: 0 };
+
+  var frames = 0, t0 = performance.now();
+  PIXI.Ticker.shared.add(function(){
+    frames++;
+    var now = performance.now();
+    if (now - t0 >= 1000){
+      document.getElementById('fps').textContent = Math.round(frames * 1000 / (now - t0));
+      frames = 0; t0 = now;
+    }
+  });
+
+  load(0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<meta charset="utf-8">
+<title>Tandelo 老師版 規劃</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{--pine:#0E5F52;--pine-deep:#0A463D;--mint:#DCEFE8;--coral:#F26B54;--coral-soft:#FDE7E1;--coral-deep:#D9523C;--honey:#F4C24D;--honey-soft:#FDF2D2;--honey-ink:#7A5A06;
+ --bg:#ECE9E1;--card:#fff;--ink:#12211D;--mute:#5E6B67;--line:#D9D5CA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--honey-ink:#F1CF7A;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}}
+:root[data-theme="dark"]{--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--honey-ink:#F1CF7A;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.8;font-size:15.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 96px;display:grid;gap:52px}
+.wm{font-family:Outfit;font-weight:700;font-size:26px;letter-spacing:-.03em;display:flex;align-items:center;gap:6px}
+.dots{position:relative;width:26px;height:16px;display:inline-block}
+.dots i{position:absolute;width:14px;height:14px;border-radius:50%;top:1px}
+.dots i:first-child{left:0;background:#F26B54}.dots i:last-child{left:10px;background:#1C8A78;opacity:.88}
+.k{font-size:12px;letter-spacing:.16em;color:var(--coral);font-weight:700}
+h1{font-size:clamp(32px,5.4vw,52px);line-height:1.18;letter-spacing:-.02em;margin:8px 0 14px;font-weight:900;text-wrap:balance}
+h2{font-size:25px;margin:0 0 4px;font-weight:900}
+h3{font-size:16px;margin:0;font-weight:700}
+p{margin:0;max-width:70ch;color:var(--mute)}p b,li b,td b{color:var(--ink)}
+section{display:grid;gap:18px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:8px;align-content:start;min-width:0}
+.card p,.card li{font-size:14.5px}.card ul{margin:0;padding-left:18px;color:var(--mute);display:grid;gap:6px}
+.card.pick{border:2px solid var(--pine)}
+.num{font-family:Outfit;font-weight:700;font-size:13px;width:28px;height:28px;border-radius:50%;background:var(--pine);color:#fff;display:grid;place-items:center}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--mint);color:var(--pine-deep);justify-self:start}
+.tag.c{background:var(--coral-soft);color:var(--coral-deep)}.tag.h{background:var(--honey-soft);color:var(--honey-ink)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);letter-spacing:.06em;white-space:nowrap}
+.scroll{overflow-x:auto}
+.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.flow div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;font-size:13px;line-height:1.55;color:var(--mute)}
+.flow b{display:block;color:var(--ink);font-size:14.5px}.flow small{font-family:Outfit;color:var(--coral);font-weight:700}
+@media (max-width:760px){.flow{grid-template-columns:1fr 1fr}}
+</style>
+<div class="wrap">
+  <div class="wm">Tandelo<span class="dots"><i></i><i></i></span><span style="font-size:15px;font-weight:600;color:var(--mute);letter-spacing:0;margin-left:6px">老師版 · 產品規劃 v0.1</span></div>
+
+  <div><div class="k">TEACHER PRODUCT · 2026-09-19</div>
+    <h1>老師只做兩件事：<br>教，和決定。其他 AI 整理好。</h1>
+    <p>Tandelo 沒有排課行政、沒有輔導老師這一層。AI 看見哪裡有需求、把名單和理由整理好，直接送到適合的老師面前；老師決定開不開、接不接，然後專心上課。學生版讓孩子想留下來，老師版讓好老師想留下來，而且賺得到錢。</p></div>
+
+  <section><h2>1. 老師是誰，現在痛在哪</h2>
+    <div class="g3">
+      <div class="card"><h3>機構老師（第一批）</h3><p>萬通這類機構簽約的線上老師。時段零碎、學生是被分配的、上完課還要手寫紀錄，收入明細要問行政。</p></div>
+      <div class="card"><h3>獨立老師（第二階段）</h3><p>自己接家教的老師。最花時間的是找學生、排時間、催款，不是教學。</p></div>
+      <div class="card"><h3>機構的教務主管</h3><p>要看全體老師的排班、成效和對帳。他不是每天用，但他決定買不買。</p></div>
+    </div>
+    <p>三個共同的痛：<b>不知道下個月有多少課</b>、<b>課前不知道學生卡在哪</b>、<b>課後行政比上課還累</b>。</p>
+  </section>
+
+  <section><h2>2. 老師的一天，產品怎麼接</h2>
+    <div class="flow">
+      <div><small>08:30 手機</small><b>看今天</b>幾堂課、誰要留意、有幾件事等我決定</div>
+      <div><small>隨時 手機</small><b>接不接</b>AI 建議的新小隊，30 秒看完理由，按接或不接</div>
+      <div><small>18:30 平板</small><b>課前一頁</b>六個人各卡在哪、建議怎麼分組、開場怎麼問</div>
+      <div><small>19:00 平板／電腦</small><b>上課</b>看得到誰舉手、誰私下求助、每個人的作答</div>
+      <div><small>19:50 任一</small><b>說 50 秒</b>AI 自動寫成上課紀錄、學生回饋、家長訊息</div>
+      <div><small>月底 電腦</small><b>看收入</b>每堂明細、獎金進度、出帳日、下載明細</div>
+    </div>
+  </section>
+
+  <section><h2>3. 功能地圖：八個區塊</h2>
+    <div class="g2">
+      <div class="card"><span class="num">1</span><h3>今天</h3><ul><li>今日課表與倒數，一鍵進教室</li><li>「等你決定」清單：新小隊、換隊、代課請求</li><li>要留意的學生：情緒訊號、連續缺課、連兩週沒通過再測</li></ul></div>
+      <div class="card"><span class="num">2</span><h3>開課機會（AI 評估開什麼課）</h3><ul><li>需求地圖：哪個單元、哪個時段、幾個人正卡著</li><li>每個機會附：為什麼適合你、預估 8 週收入、成班機率</li><li>老師設定：可上課時段、擅長的卡點類型、每週上限</li><li>按「接這一隊」才成班；人數不足可選再等一天或小班開</li></ul></div>
+      <div class="card"><span class="num">3</span><h3>我的學生</h3><ul><li>每個學生一頁：卡點路徑、說給我聽的結果、提示用到第幾級、再測紀錄</li><li>AI 摘要三行：他現在卡哪、上次怎麼教有效、下次建議</li><li>狀態只給旗標（睡太少、壓力大），不給原始健康數據</li></ul></div>
+      <div class="card"><span class="num">4</span><h3>班表</h3><ul><li>週曆：小隊課、一對一、補強課一目了然，自動擋衝堂</li><li>請假：選日期，AI 找同類型老師代課，雙方按確認</li><li>段考週自動提示：哪幾隊要改成檢討考卷</li></ul></div>
+      <div class="card"><span class="num">5</span><h3>上課</h3><ul><li>課前一頁（2 分鐘讀完，可不採用 AI 建議）</li><li>教室的老師視角：分組拖拉、誰舉手、誰私下求助、即時看每人作答</li><li>下課按住說 50 秒</li></ul></div>
+      <div class="card"><span class="num">6</span><h3>紀錄（自動產生）</h3><ul><li>學生學習紀錄：AI 依作答、發言、再測整理，老師只改錯</li><li>老師上課紀錄：時數、出席、老師講話佔比、分組方式</li><li>家長訊息：AI 擬稿，老師一鍵確認才送出</li></ul></div>
+      <div class="card"><span class="num">7</span><h3>我的成效</h3><ul><li>學生隔三天再測通過率，對比平台平均</li><li>哪一類卡點我教得最好（會影響 AI 推給我的課）</li><li>不放星星評分、不放學生匿名評語</li></ul></div>
+      <div class="card"><span class="num">8</span><h3>收入與出帳</h3><ul><li>本月已上、預估、季獎金進度條</li><li>每堂明細：日期、小隊、人數、金額、狀態</li><li>出帳日、扣繳與二代健保試算、明細下載</li><li>機構版：教務主管的全體對帳與匯出</li></ul></div>
+    </div>
+  </section>
+
+  <section><h2>4. 做成 App 還是網頁？</h2>
+    <div class="g3">
+      <div class="card pick"><span class="tag">我們建議</span><h3>A　網頁為主 ＋ LINE 通知</h3><p>一套網頁同時給平板和電腦用；手機用網頁處理三件快事（看今天、接不接、說 50 秒）；通知走 LINE。</p><ul><li>老師的重活（上課、看學生、對帳）本來就在大螢幕</li><li>不用上架審核，改版當天生效</li><li>機構的電腦不用裝東西，教務主管也能用</li><li>出海換語言即可</li></ul></div>
+      <div class="card"><h3>B　手機 App 為主</h3><p>體驗最順、推播最穩。</p><ul><li>上課和對帳在手機上做不好，還是得另做網頁</li><li>兩個商店審核，改版慢</li><li>老師人數少（第一年幾十到幾百位），不值得先養兩套</li></ul></div>
+      <div class="card"><h3>C　兩個都做</h3><p>終局會走到這裡。</p><ul><li>建議等老師破 500 位、且資料顯示手機使用超過一半再做</li><li>到時 App 只做手機那三件快事</li></ul></div>
+    </div>
+    <p>學生版是手機 App（孩子每天用、要推播、要語音）；老師版是工作工具，邏輯不同。</p>
+  </section>
+
+  <section><h2>5. 沒有輔導老師之後，原本那些事誰做</h2>
+    <div class="scroll"><table><thead><tr><th>原本的事</th><th>現在誰做</th><th>要注意</th></tr></thead><tbody>
+      <tr><td>確認成班</td><td>AI 湊名單，<b>老師按「接這一隊」</b></td><td>老師不接的課要能自動轉給下一位</td></tr>
+      <tr><td>學生情緒、缺課追蹤</td><td>先到<b>帶他的老師</b>；老師可一鍵轉給平台關懷窗口</td><td>關懷窗口是少數專人，不是每 300 人配一位；老師花的時間要算進報酬</td></tr>
+      <tr><td>換隊、退費</td><td>AI 提案 → 家長在 LINE 同意 → 老師同意放人；退費自動算</td><td>爭議件才進人工客服</td></tr>
+      <tr><td>家長詢問</td><td>AI 先回；教學問題轉老師（AI 擬稿）；帳務轉客服</td><td>老師與家長不交換私人聯絡方式</td></tr>
+      <tr><td>新老師品質</td><td>試教 + 前兩隊由資深老師旁聽一堂</td><td>資深老師旁聽要給費用</td></tr>
+    </tbody></table></div>
+    <p>對帳的影響：少了輔導老師的人事成本，但老師每堂課外的時間會增加。設計目標是<b>每堂課外行政不超過 10 分鐘</b>；超過就代表 AI 整理得不夠好。</p>
+  </section>
+
+  <section><h2>6. 你可能沒想到的</h2>
+    <div class="g3">
+      <div class="card"><h3>老師把學生帶走私下教</h3><p>平台內不露私人聯絡方式；更重要的是讓老師留在平台比較划算：穩定的課源、不用催款、成效紀錄跟著他走。</p></div>
+      <div class="card"><h3>老師的身分與稅務</h3><p>承攬還是僱傭、扣繳、勞健保，機構老師與獨立老師不同。出帳設計前要先問法務與會計。</p></div>
+      <div class="card"><h3>AI 分課公不公平</h3><p>老師會問「為什麼好課都給他」。每個開課機會都要寫得出理由，老師也看得到自己怎麼做會接到更多。</p></div>
+      <div class="card"><h3>老師看得到多少學生資料</h3><p>只看教學需要的：卡點、作答、發言、狀態旗標。看不到家庭資訊、付款、原始健康數據。</p></div>
+      <div class="card"><h3>臨時請假</h3><p>開課前 2 小時內請假找不到代課：自動改期、學生不扣堂、老師當季獎金受影響。</p></div>
+      <div class="card"><h3>機構要的和老師要的不同</h3><p>同一套資料、兩種畫面：老師看自己，教務主管看全體。第二個客戶買的是主管那一頁。</p></div>
+    </div>
+  </section>
+
+  <section><h2>7. 下一步</h2>
+    <p>決定形式後，做老師版的可點原型：今天 → 開課機會 → 接班 → 班表 → 課前一頁 → 老師視角教室 → 50 秒 → 自動紀錄 → 成效 → 收入出帳，共約 12 個畫面，視覺沿用現有品牌規範。</p>
+  </section>
+</div>

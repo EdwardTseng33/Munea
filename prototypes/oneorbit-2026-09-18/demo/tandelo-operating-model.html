@@ -1,0 +1,139 @@
+<meta charset="utf-8">
+<title>Tandelo 營運與商業路徑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+:root{--pine:#0E5F52;--pine-deep:#0A463D;--mint:#DCEFE8;--coral:#F26B54;--coral-soft:#FDE7E1;--coral-deep:#D9523C;--honey:#F4C24D;--honey-soft:#FDF2D2;--honey-ink:#7A5A06;
+ --bg:#ECE9E1;--card:#fff;--ink:#12211D;--mute:#5E6B67;--line:#D9D5CA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--honey-ink:#F1CF7A;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}}
+:root[data-theme="dark"]{--bg:#0C1412;--card:#131D1A;--ink:#EAF1EE;--mute:#9FB0AA;--line:#1F2C28;--mint:#173B33;--coral-soft:#3A1F19;--honey-soft:#3A2F12;--honey-ink:#F1CF7A;--pine:#3FB39B;--pine-deep:#9FE0D0;--coral-deep:#FF9C88}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;line-height:1.8;font-size:15.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 16px 96px;display:grid;gap:52px}
+.wm{font-family:Outfit;font-weight:700;font-size:26px;letter-spacing:-.03em;display:flex;align-items:center;gap:6px}
+.dots{position:relative;width:26px;height:16px;display:inline-block}
+.dots i{position:absolute;width:14px;height:14px;border-radius:50%;top:1px}
+.dots i:first-child{left:0;background:#F26B54}.dots i:last-child{left:10px;background:#1C8A78;opacity:.88}
+.k{font-size:12px;letter-spacing:.16em;color:var(--coral);font-weight:700}
+h1{font-size:clamp(32px,5.4vw,52px);line-height:1.18;letter-spacing:-.02em;margin:8px 0 14px;font-weight:900;text-wrap:balance}
+h2{font-size:25px;margin:0 0 4px;font-weight:900}
+h3{font-size:16px;margin:0;font-weight:700}
+p{margin:0;max-width:70ch;color:var(--mute)}p b,li b,td b{color:var(--ink)}
+section{display:grid;gap:18px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:8px;align-content:start;min-width:0}
+.card p,.card li{font-size:14.5px}.card ul{margin:0;padding-left:18px;color:var(--mute);display:grid;gap:6px}
+.card.pick{border:2px solid var(--pine)}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--mint);color:var(--pine-deep);justify-self:start}
+.tag.c{background:var(--coral-soft);color:var(--coral-deep)}.tag.h{background:var(--honey-soft);color:var(--honey-ink)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);letter-spacing:.06em;white-space:nowrap}
+td.n{font-family:Outfit;font-weight:600;white-space:nowrap}
+.scroll{overflow-x:auto}
+.funnel{display:grid;gap:6px}
+.funnel div{background:var(--pine);color:#fff;border-radius:14px;padding:10px 16px;font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.funnel div span{opacity:.85;font-size:13px}
+.funnel div:nth-child(2){width:94%}.funnel div:nth-child(3){width:88%}.funnel div:nth-child(4){width:82%}.funnel div:nth-child(5){width:76%;background:var(--coral)}
+@media (max-width:760px){.funnel div{width:100%!important}}
+.phase{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:3px solid var(--ink)}
+.phase > div{padding:16px 18px 4px 0;display:grid;gap:8px;align-content:start;border-right:1px solid var(--line);margin-right:18px}
+.phase > div:last-child{border:0;margin:0}
+.phase small{font-family:Outfit;font-weight:700;color:var(--coral);letter-spacing:.06em}
+.phase ul{margin:0;padding-left:18px;color:var(--mute);font-size:14px;display:grid;gap:5px}
+@media (max-width:760px){.phase{grid-template-columns:1fr}.phase > div{border-right:0;border-bottom:1px solid var(--line);margin:0;padding-bottom:14px}}
+.note{font-size:13px;color:var(--mute)}
+</style>
+<div class="wrap">
+  <div class="wm">Tandelo<span class="dots"><i></i><i></i></span><span style="font-size:15px;font-weight:600;color:var(--mute);letter-spacing:0;margin-left:6px">營運與商業路徑 v0.1</span></div>
+
+  <div><div class="k">OPERATING MODEL · 2026-09-19</div>
+    <h1>不走舊路：行銷取代電銷，<br>先對家庭驗證，再談機構與政府。</h1>
+    <p>Tandelo 不沿用傳統線上家教「買名單、電話成交、行政排課、專人追續約」的流程。產品自己要能賣、自己排課、自己證明有效。這一頁寫清楚三件事：客人怎麼來、公司長什麼樣、三個階段各自要過什麼關。數字均為試算，標示<span class="tag h">推估</span>者待驗證。</p></div>
+
+  <section><h2>1. 舊路與新路，差在哪</h2>
+    <div class="scroll"><table><thead><tr><th>環節</th><th>傳統線上家教的做法</th><th>Tandelo 的做法</th></tr></thead><tbody>
+      <tr><td><b>客人怎麼來</b></td><td>廣告買名單 → 電銷邀約 → 顧問一對一成交</td><td>內容與口碑 → 孩子做 20 分鐘免費診斷 → 家長在 LINE 自己看懂、自己付款</td></tr>
+      <tr><td><b>賣什麼</b></td><td>一次買幾十到上百堂，單價數萬到十幾萬</td><td>8 週一包 NT$2,990，第一堂試上不滿意不收費</td></tr>
+      <tr><td><b>誰排課</b></td><td>教務人員人工排</td><td>AI 湊名單，老師按「接這一隊」</td></tr>
+      <tr><td><b>誰追學習</b></td><td>輔導老師／班導</td><td>AI 教練每天陪；帶課老師看得到訊號；少數關懷專人兜底</td></tr>
+      <tr><td><b>怎麼續約</b></td><td>到期前電話推銷</td><td>孩子自己按「我想繼續」，家長收到一頁成果再決定</td></tr>
+      <tr><td><b>最大成本</b></td><td>業務與行政人事</td><td>老師鐘點費與行銷費</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section><h2>2. 行銷取代電銷：客人怎麼來</h2>
+    <div class="g2">
+      <div class="funnel">
+        <div>看到內容或被推薦<span>短影音、家長社群、搜尋、同學</span></div>
+        <div>孩子做免費診斷<span>目標完成率 ≥ 60%</span></div>
+        <div>家長在 LINE 看診斷摘要<span>目標開啟率 ≥ 70%</span></div>
+        <div>第一堂試上<span>目標 診斷→試上 ≥ 15%</span></div>
+        <div>付費 8 週<span>目標 試上→付費 ≥ 60%</span></div>
+      </div>
+      <div class="card"><h3>五個來源，依優先順序</h3><ul>
+        <li><b>診斷本身</b>：「你只卡在一步」的結果圖可以分享，是最便宜的廣告</li>
+        <li><b>家人與同學轉介</b>：舊生帶新生，兩邊各送一堂補強課</li>
+        <li><b>卡點內容</b>：每個單元一支 60 秒「為什麼會錯」，段考前三週集中投放</li>
+        <li><b>老師個人品牌</b>：老師的 30 秒語音與成效頁可對外分享，老師帶來的學生多分一點</li>
+        <li><b>付費廣告</b>：只買「診斷完成」，不買名單</li></ul></div>
+    </div>
+    <div class="card"><h3>沒有電銷，猶豫的家長誰接？</h3><p>電銷存在是有原因的：教育是高單價、家長會猶豫。我們用四件事取代那通電話：<b>價格低到不用被說服</b>（2,990 而不是十萬）、<b>試上不滿意不收費</b>、<b>老師的 30 秒語音與成效數字</b>、<b>LINE 上的 AI 客服隨問隨答</b>，真的需要人時轉少數真人客服。目標獲客成本每家 ≤ NT$2,500，六個月內回本。<span class="tag h">推估</span></p></div>
+  </section>
+
+  <section><h2>3. 公司長什麼樣：六個小組</h2>
+    <div class="g3">
+      <div class="card"><h3>① 成長</h3><p>內容、社群、轉介機制、投放、數據。取代電銷部門。成績單是獲客成本與診斷轉付費。</p></div>
+      <div class="card"><h3>② 產品與 AI</h3><p>產品、設計、工程、學習內容（卡點地圖與題目）。成績單是再測通過率與留存。</p></div>
+      <div class="card"><h3>③ 老師成功</h3><p>招募、試教、培訓、品質、出帳。取代教務排課。成績單是老師留任與成班率。</p></div>
+      <div class="card"><h3>④ 家庭體驗</h3><p>AI 客服為主，少數真人客服加關懷專人。取代輔導老師與客服中心。成績單是續購率與申訴處理。</p></div>
+      <div class="card"><h3>⑤ 營運支援</h3><p>財務、法務、個資與未成年人保護、金流。</p></div>
+      <div class="card"><h3>⑥ 夥伴合作（第二階段才設）</h3><p>對補教機構、學校、政府的業務與策略合作。</p></div>
+    </div>
+    <div class="scroll"><table><thead><tr><th>規模</th><th>全職人數</th><th>說明</th></tr></thead><tbody>
+      <tr><td><b>驗證期</b>（0–500 家庭）</td><td class="n">10–14 人</td><td>成長 2–3、產品與 AI 5–6、老師成功 2、家庭體驗 1–2、支援兼任 <span class="tag h">推估</span></td></tr>
+      <tr><td><b>3,000 家庭</b></td><td class="n">22–28 人</td><td>主要加在成長與老師成功 <span class="tag h">推估</span></td></tr>
+      <tr><td><b>10,000 家庭</b></td><td class="n">35–45 人</td><td>同規模的傳統電銷模式通常需要數百人 <span class="tag h">推估</span></td></tr>
+    </tbody></table></div>
+    <p class="note">老師不算在全職人數裡，採按堂計酬。</p>
+  </section>
+
+  <section><h2>4. 錢怎麼算：少一層，帳就通了</h2>
+    <p>先前的算法是「平台抽 20–25%、合作機構留其餘」，結果合作方每堂只剩約 NT$252。改成 Tandelo 直接面對家庭之後，只有一層：</p>
+    <div class="scroll"><table><thead><tr><th>每一堂小隊課</th><th>5 人隊</th><th>6 人隊</th></tr></thead><tbody>
+      <tr><td>學費收入（每人每堂約 NT$374）</td><td class="n">1,869</td><td class="n">2,243</td></tr>
+      <tr><td>老師（每堂 1,000 ＋ 季獎金攤提約 100）</td><td class="n">−1,100</td><td class="n">−1,100</td></tr>
+      <tr><td>AI、金流、主機（約 8%）</td><td class="n">−150</td><td class="n">−180</td></tr>
+      <tr><td><b>每堂毛利</b></td><td class="n"><b>約 619（33%）</b></td><td class="n"><b>約 963（43%）</b></td></tr>
+    </tbody></table></div>
+    <p>毛利要再養行銷（每家 ≤ 2,500）與 10–14 人的團隊。<b>成班人數是生死線</b>：平均低於 5 人就不賺錢，所以驗證期最重要的數字是「平均每隊幾人」與「續購率」。若要給老師每堂加 100–150 元換取多接關心與家長溝通，6 人隊毛利仍有約 37–39%。<span class="tag h">推估</span></p>
+  </section>
+
+  <section><h2>5. 三個階段，各過什麼關</h2>
+    <div class="phase">
+      <div><small>階段一 · 0–12 個月</small><h3>直接對家庭驗證</h3><ul><li>國二、國三數學與理化</li><li>第一批 50 家 → 500 家</li><li>全部走行銷，不打一通推銷電話</li></ul><p class="note"><b>過關條件</b>：平均每隊 ≥ 5.5 人、再測通過率 ≥ 70%、續購率 ≥ 50%、獲客成本 ≤ 2,500、老師願意續帶 ≥ 75%</p></div>
+      <div><small>階段二 · 12–24 個月</small><h3>對機構合作</h3><ul><li>補教機構、私校、線上家教平台</li><li>賣的是：配對引擎 ＋ 老師版 ＋ 成效報表</li><li>按學生數或按成班數計費</li></ul><p class="note"><b>進入條件</b>：手上有 500 家以上的成效資料，能回答「用了之後學生多學會多少」</p></div>
+      <div><small>階段三 · 18 個月起</small><h3>對政府與學校</h3><ul><li>學習扶助、課後輔導、偏鄉與數位學習計畫</li><li>縣市教育局處先行，再談中央</li><li>研發補助可提早在階段一申請</li></ul><p class="note"><b>進入條件</b>：有機構客戶的實績、通過個資與未成年人保護的稽核、有一份第三方認可的成效報告</p></div>
+    </div>
+    <p>順序不能反：機構與政府買的是<b>證據</b>，證據只能從家庭端的真實使用長出來。</p>
+  </section>
+
+  <section><h2>6. 萬通在這裡的角色</h2>
+    <div class="g3">
+      <div class="card pick"><span class="tag">我們建議</span><h3>A　獨立事業單位</h3><p>萬通出資與背書（落款「萬通教育出品」），Tandelo 有自己的團隊、自己的損益、自己的流程。萬通的老師可以優先加入，但不經過萬通的電銷與教務。</p></div>
+      <div class="card"><h3>B　獨立公司，萬通是股東</h3><p>最乾淨，對外談第二家機構與海外夥伴時沒有「競爭對手的產品」疑慮。適合階段一過關後再走。</p></div>
+      <div class="card"><h3>C　掛在萬通現有部門下</h3><p>起步最快，但會被舊流程與舊考核拉回去：電銷部門的業績、教務的排課權、輔導老師的編制都會與新做法衝突。</p></div>
+    </div>
+  </section>
+
+  <section><h2>7. 我們替你先想到的風險</h2>
+    <div class="g3">
+      <div class="card"><h3>沒有電銷，轉換率可能比想像低</h3><p>先用 50 家驗證漏斗每一層的數字，再放大行銷預算。轉換不如預期時，補的是「真人線上說明會」，不是電銷隊。</p></div>
+      <div class="card"><h3>行銷費容易低估</h3><p>獲客成本一旦超過 3,500，單靠一包 2,990 回不了本，必須靠續購與第二科。續購率是真正的生命線。</p></div>
+      <div class="card"><h3>內部阻力</h3><p>新模式等於說舊部門不需要。獨立團隊、獨立損益、獨立品牌，是保護這個專案不被同化的必要條件。</p></div>
+      <div class="card"><h3>老師從哪來</h3><p>不靠機構派，就要自己招。老師版產品與穩定收入是招募的主要賣點；驗證期先從現有合作老師裡找 8–10 位。</p></div>
+      <div class="card"><h3>政府案週期長、回款慢</h3><p>不能當成現金流來源，只能當成規模與公信力的來源。</p></div>
+      <div class="card"><h3>機構客戶會問資料歸誰</h3><p>階段一就把資料歸屬、品牌歸屬、老師合約寫清楚，否則階段二每一家都要重談。</p></div>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,552 @@
+<title>台灣教育市場 2027–2029（內部版）</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#EDEFEA; --card:#F8F9F5; --ink:#1A1F1C; --ink2:#4A524C; --mute:#79827B;
+  --rule:#D5DAD1; --rule2:#C3C9BE; --accent:#2E5A4E; --accent-s:#E2EBE5;
+  --down:#A64434; --flat:#5C6660; --up:#2C5E86;
+  --serif:"Noto Serif TC",Georgia,"Songti TC",serif;
+  --sans:"Noto Sans TC",-apple-system,"Microsoft JhengHei",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#141815; --card:#1B201C; --ink:#E9ECE6; --ink2:#B0B7AF; --mute:#7F877F;
+  --rule:#2C332D; --rule2:#3A423B; --accent:#82C2AB; --accent-s:#20302A;
+  --down:#E08E79; --flat:#9BA49D; --up:#82B6E0;
+}}
+:root[data-theme="dark"]{
+  --paper:#141815; --card:#1B201C; --ink:#E9ECE6; --ink2:#B0B7AF; --mute:#7F877F;
+  --rule:#2C332D; --rule2:#3A423B; --accent:#82C2AB; --accent-s:#20302A;
+  --down:#E08E79; --flat:#9BA49D; --up:#82B6E0;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.95;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px;padding-block:0 72px}
+section{border-top:1px solid var(--rule2);padding-block:48px 8px}
+section:first-of-type{border-top:0}
+.col{max-width:720px}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(30px,6.2vw,50px);line-height:1.3;letter-spacing:-.01em;margin:10px 0 14px;text-wrap:balance}
+h2{font-family:var(--serif);font-weight:700;font-size:clamp(21px,3.6vw,27px);line-height:1.48;margin:6px 0 16px;text-wrap:balance}
+h3{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.02em;margin:26px 0 8px;color:var(--ink)}
+p{margin:0 0 15px;color:var(--ink2)}
+p.lead{color:var(--ink);font-size:17.5px}
+b,strong{color:var(--ink);font-weight:700}
+.eyebrow{display:flex;align-items:baseline;gap:12px;font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.16em;color:var(--accent);text-transform:uppercase}
+.eyebrow .n{font-size:11.5px;color:var(--mute)}
+.meta{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--mute);line-height:1.9}
+
+/* cover */
+.cover{padding-block:56px 8px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule2);border:1px solid var(--rule2);margin:26px 0 22px}
+.kpi{background:var(--card);padding:18px 16px}
+.kpi .lab{font-size:13px;color:var(--mute);letter-spacing:.04em}
+.kpi .val{font-family:var(--mono);font-weight:600;font-size:clamp(24px,5vw,32px);line-height:1.25;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:12.5px;color:var(--mute);line-height:1.6;margin-top:2px}
+.kpi.d .val{color:var(--down)} .kpi.f .val{color:var(--flat)} .kpi.u .val{color:var(--up)}
+
+/* lists */
+ol.five{counter-reset:f;list-style:none;padding:0;margin:8px 0 0}
+ol.five li{counter-increment:f;position:relative;padding:14px 0 14px 44px;border-top:1px solid var(--rule);color:var(--ink2)}
+ol.five li::before{content:counter(f,decimal-leading-zero);position:absolute;left:0;top:15px;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.04em}
+ul.pl{margin:0 0 15px;padding-left:20px;color:var(--ink2)}
+ul.pl li{margin-bottom:7px}
+
+/* tables */
+.scroll{overflow-x:auto;margin:20px 0 10px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14.5px}
+th{font-family:var(--sans);font-weight:700;font-size:12.5px;letter-spacing:.05em;color:var(--mute);text-align:left;padding:0 14px 9px 0;border-bottom:1px solid var(--rule2);white-space:nowrap}
+td{padding:12px 14px 12px 0;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink2);line-height:1.8}
+td.k{color:var(--ink);font-weight:700;white-space:nowrap}
+td.num,th.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;padding-right:18px;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+
+/* figures */
+figure{margin:24px 0 8px}
+figcaption{font-family:var(--mono);font-size:11.5px;line-height:1.85;color:var(--mute);letter-spacing:.02em;margin-top:12px}
+figcaption b{font-weight:600;color:var(--ink2)}
+.panels{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.panel{background:var(--card);border:1px solid var(--rule);padding:14px 12px 10px}
+.panel .ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
+.panel .pt{font-weight:700;font-size:14.5px;color:var(--ink)}
+.panel .pc{font-family:var(--mono);font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.panel .pr{font-family:var(--mono);font-size:10.5px;color:var(--mute);letter-spacing:.02em}
+.panel svg{display:block;width:100%;height:auto;margin-top:4px}
+.fig{background:var(--card);border:1px solid var(--rule);padding:16px 14px 10px}
+.fig svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ax{fill:var(--mute);font-size:10.5px}
+.vl{font-size:11px;font-weight:600}
+.an{fill:var(--ink2);font-size:11px;font-family:var(--sans)}
+.sd{stroke:var(--down)} .sf{stroke:var(--flat)} .su{stroke:var(--up)} .sa{stroke:var(--accent)}
+.fd{fill:var(--down)} .ff{fill:var(--flat)} .fu{fill:var(--up)} .fa{fill:var(--accent)} .fi{fill:var(--ink)}
+.grid{stroke:var(--rule);stroke-width:1}
+
+/* callout */
+.note{background:var(--accent-s);border-left:3px solid var(--accent);padding:15px 18px;margin:20px 0;font-size:15px;line-height:1.85;color:var(--ink2)}
+.note b{color:var(--ink)}
+.flag{border:1px solid var(--down);padding:15px 18px;margin:20px 0;font-size:15px;line-height:1.85;color:var(--ink2)}
+.flag .h{font-weight:700;color:var(--down);display:block;margin-bottom:4px;font-size:13.5px;letter-spacing:.04em}
+.src{font-family:var(--mono);font-size:11.5px;line-height:2;color:var(--mute);letter-spacing:.01em}
+.src ol{padding-left:20px;margin:6px 0 0}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule2);border:1px solid var(--rule2);margin:20px 0}
+.tier{background:var(--card);padding:16px 15px}
+.tier .t{font-weight:700;font-size:15px;margin-bottom:6px;color:var(--ink)}
+.tier p{font-size:13.5px;line-height:1.8;margin:0}
+.tier .v{font-family:var(--mono);font-size:11px;letter-spacing:.06em;font-weight:600;display:block;margin-bottom:8px}
+.foot{border-top:1px solid var(--rule2);margin-top:44px;padding-top:22px}
+@media (max-width:760px){
+  .kpis{grid-template-columns:1fr} .panels{grid-template-columns:1fr} .tiers{grid-template-columns:1fr}
+  body{font-size:15.5px} section{padding-block:38px 6px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<section class="cover">
+  <div class="eyebrow">市場趨勢研究 <span class="n">2026 年 9 月</span></div>
+  <h1>台灣教育市場 2027–2029</h1>
+  <p class="meta" style="color:var(--down)">內部版 · 含第 11 頁策略含義 · 不對外分享</p>
+  <div class="col">
+    <p class="lead">未來四年，台灣中小學生總人數只會少 <b>4.7%</b>。但這個平均值蓋掉了三件方向完全相反的事——<b>國小快速下降、國中幾乎不動、高中職還會再漲一波</b>。用一句「少子化」規劃整個市場，會在錯的地方投錯資源。</p>
+  </div>
+  <div class="kpis">
+    <div class="kpi d"><div class="lab">國小</div><div class="val">−15.4%</div><div class="sub">113.2 萬 → 95.8 萬人</div></div>
+    <div class="kpi f"><div class="lab">國中</div><div class="val">−1.8%</div><div class="sub">62.1 萬 → 61.0 萬人</div></div>
+    <div class="kpi u"><div class="lab">高中職</div><div class="val">+13.8%</div><div class="sub">55.9 萬 → 63.6 萬人</div></div>
+  </div>
+  <p class="meta">115 學年度（2026–27）至 118 學年度（2029–30）· 人口與師資數據採教育部 2026 年發布資料 · 分析更新 2026-09-20</p>
+</section>
+
+<section>
+  <div class="eyebrow">執行摘要 <span class="n">01</span></div>
+  <h2>五句話看完這份報告</h2>
+  <div class="col">
+    <ol class="five">
+      <li><b>國小最先縮。</b>四年少 15.4%，壓力會先出現在招生端，不是師資端。</li>
+      <li><b>國中幾乎不動。</b>四年只少 1.8%，這是可以拿來調整模式的三年窗口。</li>
+      <li><b>高中職還會漲到 118 學年。</b>但那是既有世代往上推移，不是新增需求——這一波過去就會反轉。</li>
+      <li><b>老師的總數沒有變少。</b>難的不是找不到人，是留不住好的人。</li>
+      <li><b>家庭的錢沒有跟著人口等比例減少。</b>它正在往更少的孩子、更少的服務上集中。</li>
+    </ol>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>年度</th><th>市場狀態</th><th>主要變化</th><th>對業者的含義</th></tr></thead>
+      <tbody>
+        <tr><td class="k">2027</td><td class="k" style="color:var(--down)">供需錯配</td><td>國小量縮先反映在招生端，好老師仍難招募與留任</td><td>獲客成本與師資成本同時上升，先驗證老師的產能與續約模型</td></tr>
+        <tr><td class="k">2028</td><td class="k" style="color:var(--flat)">市場分化</td><td>AI 內容與解題工具普及，固定教材、固定堂數的差異化下降</td><td>低價 AI 與高價真人兩端成形，卡在中間的服務毛利先被壓</td></tr>
+        <tr><td class="k">2029</td><td class="k" style="color:var(--up)">模式定型</td><td>國小跌破百萬，高中職在階段高點，長期關係與成效證據更重要</td><td>從賣課轉向管理學習成果與家長信任，形成持續訂閱</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <h3>2027 年會先從三個地方感覺到</h3>
+    <ul class="pl">
+      <li><b>招生端</b>——免費體驗與折扣會變多，名單的成交率下降，品牌與口碑的重要性提高。</li>
+      <li><b>供給端</b>——老師的薪酬、排課彈性、教材負擔與行政瑣事，會決定他留不留下來。</li>
+      <li><b>產品端</b>——AI 會先從備課、批改、回饋摘要與家長報告切進來，<b>不是先從「AI 老師」切進來。</b></li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">學生人口 <span class="n">02</span></div>
+  <h2>三個學段，同一段時間走三個方向</h2>
+  <div class="col">
+    <p>115 到 118 學年度，中小學生總數由 231.2 萬降至 220.4 萬，只少 4.7%。但拆開看，三條線各走各的。</p>
+  </div>
+
+  <figure>
+    <div class="panels">
+      <div class="panel">
+        <div class="ph"><span class="pt">國小</span><span class="pc" style="color:var(--down)">−15.4%</span></div>
+        <div class="pr">縱軸 92–116 萬人</div>
+        <svg viewBox="0 0 260 178" role="img" aria-label="國小學生數由 115 學年 113.2 萬降至 118 學年 95.8 萬">
+          <line class="grid" x1="34" y1="140" x2="248" y2="140"></line>
+          <polyline class="sd" fill="none" stroke-width="2.5" points="34,55.2 102,76.4 170,101.2 238,124.8"></polyline>
+          <circle class="fd" cx="34" cy="55.2" r="3.5"></circle>
+          <circle class="fd" cx="238" cy="124.8" r="4.5"></circle>
+          <text class="vl fd" x="34" y="44" text-anchor="start">113.2</text>
+          <text class="vl fd" x="238" y="114" text-anchor="end">95.8</text>
+          <text class="ax" x="34" y="158" text-anchor="start">115</text>
+          <text class="ax" x="238" y="158" text-anchor="end">118</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">國中</span><span class="pc" style="color:var(--flat)">−1.8%</span></div>
+        <div class="pr">縱軸 60.5–62.5 萬人</div>
+        <svg viewBox="0 0 260 178" role="img" aria-label="國中學生數由 115 學年 62.1 萬降至 118 學年 61.0 萬，幾乎持平">
+          <line class="grid" x1="34" y1="140" x2="248" y2="140"></line>
+          <polyline class="sf" fill="none" stroke-width="2.5" points="34,63.2 102,82.4 170,106.4 238,116"></polyline>
+          <circle class="ff" cx="34" cy="63.2" r="3.5"></circle>
+          <circle class="ff" cx="238" cy="116" r="4.5"></circle>
+          <text class="vl ff" x="34" y="52" text-anchor="start">62.1</text>
+          <text class="vl ff" x="238" y="105" text-anchor="end">61.0</text>
+          <text class="ax" x="34" y="158" text-anchor="start">115</text>
+          <text class="ax" x="238" y="158" text-anchor="end">118</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pt">高中職</span><span class="pc" style="color:var(--up)">+13.8%</span></div>
+        <div class="pr">縱軸 54–65 萬人</div>
+        <svg viewBox="0 0 260 178" role="img" aria-label="高中職學生數由 115 學年 55.9 萬增至 118 學年 63.6 萬">
+          <line class="grid" x1="34" y1="140" x2="248" y2="140"></line>
+          <polyline class="su" fill="none" stroke-width="2.5" points="34,123.4 102,100.7 170,69.3 238,56.3"></polyline>
+          <circle class="fu" cx="34" cy="123.4" r="3.5"></circle>
+          <circle class="fu" cx="238" cy="56.3" r="4.5"></circle>
+          <text class="vl fu" x="34" y="137" text-anchor="start">55.9</text>
+          <text class="vl fu" x="238" y="46" text-anchor="end">63.6</text>
+          <text class="ax" x="34" y="158" text-anchor="start">115</text>
+          <text class="ax" x="238" y="158" text-anchor="end">118</text>
+        </svg>
+      </div>
+    </div>
+    <figcaption><b>圖 1｜三學段學生數走勢（115–118 學年度）。</b>三張圖各有各的縱軸範圍（已標在圖上），因為國小人數接近國中的兩倍，畫在同一條軸上會讓國中與高中職擠成一條線。橫軸為學年度。資料來源：教育部統計處《各教育階段學生數預測報告（115~130 學年度）》，2026 年 8 月。官方用語為「高級中等教育」，涵蓋普通科、專業群科、綜合高中、實用技能學程、進修部及五專與七年一貫制前 3 年，範圍略大於一般所說的「高中職」。</figcaption>
+  </figure>
+
+  <div class="scroll">
+    <table>
+      <thead><tr><th>學年度</th><th class="num">國小</th><th class="num">國中</th><th class="num">高中職</th><th>市場判讀</th></tr></thead>
+      <tbody>
+        <tr><td class="k">115（2026–27）</td><td class="num">113.2</td><td class="num">62.1</td><td class="num">55.9</td><td>國小下行起點；國中回升到這一波高點；高中職低點</td></tr>
+        <tr><td class="k">116（2027–28）</td><td class="num">107.9</td><td class="num">61.7</td><td class="num">58.5</td><td>國小量縮加快；高中職開始回升</td></tr>
+        <tr><td class="k">117（2028–29）</td><td class="num">101.7</td><td class="num">61.2</td><td class="num">62.1</td><td>高中職人數首度超過國中</td></tr>
+        <tr><td class="k">118（2029–30）</td><td class="num">95.8</td><td class="num">61.0</td><td class="num">63.6</td><td>國小跌破百萬；高中職到階段高點</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note"><b>高中職這一波是借來的，不是長出來的。</b>教育部給的原因有兩個：2012 年龍年的生育尖峰（該年出生 229,481 人），加上民國 100 年起鼓勵生育政策墊高的 2013–2015 世代——這三批人同時在學，把 118 學年撐到 63.6 萬。報告原文也已經寫明下一步：118 學年之後「<b>仍隨對應出生人口數減少而呈減少，迄 130 學年僅 36.2 萬人</b>」，比 104 學年少 57.2%，<b>連跌十二年</b>。國小現在正在縮的那條線，幾年後會原封不動傳到國中、再傳到高中職。</div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">人口的第二層 <span class="n">03</span></div>
+  <h2>再往後看，出生數已經斷崖，而且官方自己在下修</h2>
+  <div class="col">
+    <p>上一頁的四年，孩子都已經出生了，數字幾乎不會變。真正的變數在更後面——<b>2025 年只有 107,812 個孩子出生，比前一年少 20.0%，連續第十年下降，是有紀錄以來最低。</b></p>
+  </div>
+
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 720 292" role="img" aria-label="台灣出生數由 2015 年 213,598 人降至 2025 年 107,812 人">
+        <line class="grid" x1="70" y1="250" x2="700" y2="250"></line>
+        <line class="grid" x1="70" y1="202.3" x2="700" y2="202.3" stroke-dasharray="2 5"></line>
+        <line class="grid" x1="70" y1="154.5" x2="700" y2="154.5" stroke-dasharray="2 5"></line>
+        <line class="grid" x1="70" y1="106.8" x2="700" y2="106.8" stroke-dasharray="2 5"></line>
+        <line class="grid" x1="70" y1="59.1" x2="700" y2="59.1" stroke-dasharray="2 5"></line>
+        <text class="ax" x="62" y="254" text-anchor="end">0</text>
+        <text class="ax" x="62" y="206" text-anchor="end">5 萬</text>
+        <text class="ax" x="62" y="158" text-anchor="end">10 萬</text>
+        <text class="ax" x="62" y="110" text-anchor="end">15 萬</text>
+        <text class="ax" x="62" y="63" text-anchor="end">20 萬</text>
+        <polyline class="sa" fill="none" stroke-width="2.5" points="70,46.1 132,51 194,65 256,76.6 318,80.3 380,92.3 442,103.2 504,117.3 566,120.6 628,121.3 690,147.1"></polyline>
+        <circle class="fa" cx="70" cy="46.1" r="3"></circle>
+        <circle class="fa" cx="628" cy="121.3" r="3"></circle>
+        <line class="sd" x1="628" y1="121.3" x2="690" y2="147.1" stroke-width="3"></line>
+        <circle class="fd" cx="690" cy="147.1" r="5"></circle>
+        <text class="vl fa" x="70" y="35" text-anchor="start">213,598</text>
+        <text class="vl fd" x="700" y="166" text-anchor="end">107,812</text>
+        <text class="an" x="700" y="182" text-anchor="end">一年少了 27,044 人</text>
+        <text class="ax" x="70" y="272" text-anchor="start">2015</text>
+        <text class="ax" x="380" y="272" text-anchor="middle">2020</text>
+        <text class="ax" x="690" y="272" text-anchor="end">2025</text>
+      </svg>
+    </div>
+    <figcaption><b>圖 2｜台灣歷年出生數（2015–2025）。</b>縱軸自 0 起算，單位為人。2023、2024 年一度趨緩，2025 年再度大幅下探。資料來源：內政部戶籍統計。</figcaption>
+  </figure>
+
+  <div class="col">
+    <div class="flag"><span class="h">連官方都在下修</span>教育部一年前預測 129 學年度的國中生有 37.7 萬人，<b>2026 年 8 月的新版本改成 30.7 萬人——一年之內下修了 18.7%。</b>這代表任何長期規劃都應該以「比官方數字再保守一點」為前提。</div>
+    <h3>為什麼國小「只」少 15%？因為斷崖還沒走進小學</h3>
+    <p>四年 −15.4% 看起來不像少子化該有的力道，原因很單純：<b>國小是六個年級加總，現在坐在教室裡的是 2015 到 2020 年出生的孩子</b>——那六年雖然在跌，跌幅還算溫和。2021 年之後的斷崖，最早要到 2028 年才開始進小學。</p>
+    <p>這件事可以自己驗算，不必信預測。把對應年份的出生數直接加起來，就會得到在學人數：</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>學年度</th><th>教室裡坐的是哪幾年出生的</th><th class="num">出生數加總</th><th class="num">教育部預測</th><th class="num">誤差</th></tr></thead>
+        <tbody>
+          <tr><td class="k">國小 115</td><td>2015–2020 年</td><td class="num">1,140,499</td><td class="num">1,132,326</td><td class="num">0.7%</td></tr>
+          <tr><td class="k">國小 118</td><td>2018–2023 年</td><td class="num">952,994</td><td class="num">957,998</td><td class="num">0.5%</td></tr>
+          <tr><td class="k">國中 118</td><td>2015–2017 年</td><td class="num">615,882</td><td class="num">609,566</td><td class="num">1.0%</td></tr>
+          <tr><td class="k">國中 122</td><td>2019–2021 年</td><td class="num">496,836</td><td class="num">494,174</td><td class="num">0.5%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>四筆的誤差都在 1% 以內。<b>也就是說，未來十幾年的學生人數不是預測，是已經發生的事實在排隊。</b></p>
+    <div class="flag"><span class="h">把時間拉長，兩個學段的真正跌幅</span>
+    <b>國小</b>：115 學年 113.2 萬 → 130 學年 <b>55.1 萬</b>，<b>掉 51%</b>。四年的 −15.4% 只是序幕。<br>
+    <b>國中</b>：四年只掉 1.8% 是真的，但<b>七年（到 122 學年）掉 20.4%</b>，<b>十三年（到 128 學年）掉 47.8%</b>——從 62.1 萬降到 32.4 萬。<br><br>
+    再用一個不靠預測的算法交叉驗證：2025 年只出生 107,812 人，等這批孩子長大、把三個年級填滿，<b>國中的天花板就是 32.3 萬</b>——和教育部算出來的 32.4 萬只差 0.3%。<b>兩條完全獨立的算法指到同一個數字。</b></div>
+    <p>把時間拉到 130 學年度（2041–42），同一份官方報告的數字是：國小 <b>55.1 萬</b>、國中 <b>30.0 萬</b>、高級中等教育 <b>36.2 萬</b>——三個學段分別比 104 學年少 <b>54.7%、59.8%、57.2%</b>。這不是哪一個學段的問題，是三個學段先後排隊的問題。</p>
+    <p>這件事已經無法逆轉：<b>未來十年要念國中的孩子，現在全部已經出生了。</b>人數是鎖死的，能改變的只有每個家庭願意花多少、花在誰身上。</p>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">師資 <span class="n">04</span></div>
+  <h2>老師的總數沒有變少，缺的是配置</h2>
+  <div class="col">
+    <p>109 到 114 學年度，國小專任教師由 96,966 人增至 <b>99,724 人（+2.8%）</b>，國中由 46,489 人增至 <b>47,885 人（+3.0%）</b>。教師總量並沒有跟著學生數一起下降。</p>
+    <p><b>但拐點已經出現。</b>國小教師數在 112 學年見頂 101,461 人之後，<b>已經連續兩年下降</b>（113 學年 100,373 人、114 學年 99,724 人，一年少了 649 人）；國中則是在 112 學年落到 45,123 人的低點後才回升。「教師總量還在增加」這句話，<b>已經不適用於國小。</b></p>
+  </div>
+
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 720 200" role="img" aria-label="115 學年度公立國中小正式教師開缺 6464 名，錄取 5676 名，錄取率 87.8%">
+        <text class="ax fi" x="0" y="46" style="font-size:12.5px;font-weight:600">實際開缺</text>
+        <rect x="120" y="30" width="540" height="24" class="ff" opacity="0.28"></rect>
+        <text class="vl fi" x="670" y="48" text-anchor="start">6,464</text>
+        <text class="ax fi" x="0" y="96" style="font-size:12.5px;font-weight:600">實際錄取</text>
+        <rect x="120" y="80" width="474" height="24" class="fa"></rect>
+        <text class="vl fa" x="604" y="98" text-anchor="start">5,676</text>
+        <line class="sd" x1="594" y1="76" x2="594" y2="130" stroke-width="1.5" stroke-dasharray="3 3"></line>
+        <line class="sd" x1="660" y1="76" x2="660" y2="130" stroke-width="1.5" stroke-dasharray="3 3"></line>
+        <text class="vl fd" x="627" y="146" text-anchor="middle">差 788 名</text>
+        <text class="an" x="120" y="146">錄取率 87.8%</text>
+        <line class="grid" x1="0" y1="168" x2="720" y2="168"></line>
+        <text class="ax fi" x="0" y="190" style="font-size:12.5px;font-weight:600">另計</text>
+        <text class="an" x="120" y="190">代理教師待聘　國小 211 名、國中 403 名　·　以 114 學年度教師總數 144,730 人設算，師資完成率 99.58%</text>
+      </svg>
+    </div>
+    <figcaption><b>圖 3｜115 學年度公立國中小師資招募狀況。</b>開缺、錄取與代理教師待聘屬於不同階段的指標，不應相加為單一缺口數，故分開呈現。資料截至 2026 年 7 月 23 日（開缺與錄取）及 8 月 25 日（代理待聘）。<b>其中「錄取率 87.8%」與「差 788 名」為本報告依公布數字計算，原新聞稿未列；「師資完成率 99.58%」係官方以 114 學年度（上一學年）公立國中小教師總數設算，不是 115 學年度的實際人數。</b>資料來源：教育部國民及學前教育署。</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>兩組數字要一起讀。<b>99.58% 代表學校體系並不是全面無師可用；</b>但正式教師錄取未滿、還有國小 211 名與國中 403 名代理教師待聘，說明問題出在特定地區、特定科目與聘任條件上。</p>
+    <div class="note"><b>對業者的意思很直接：能不能穩定拿到並留住好老師，比老師名單有多長重要得多。</b>薪酬、排課彈性、教材負擔與行政負荷，會是留任的關鍵。</div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">供給與需求 <span class="n">05</span></div>
+  <h2>供給沒有退場，需求正在集中</h2>
+  <div class="col">
+    <p>截至 2026 年 7 月，全台營運中的短期補習班共 <b>17,752 家</b>，另有 782 家兒童課後照顧服務中心。不過這個數字涵蓋所有類別；只看與升學直接相關的<b>文理類，是 12,943 家</b>（2026 年 9 月查詢）——談國中數理市場要用後面這個數字，用總家數會高估約三成七。當國小生源四年下降 15.4%，若這些家數與容量沒有同步退出，競爭會先以免費體驗、折扣、獲客成本與家長比價的形式浮上來。</p>
+    <p>反過來看，需求端沒有等比例跟著人口下降。</p>
+  </div>
+
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 720 196" role="img" aria-label="家長教育焦慮與固定支出調查結果">
+        <text class="ax fi" x="0" y="34" style="font-size:13px">擔心孩子學習落後</text>
+        <rect x="248" y="18" width="430" height="22" class="ff" opacity="0.16"></rect>
+        <rect x="248" y="18" width="342.7" height="22" class="fa"></rect>
+        <text class="vl fa" x="600" y="35" text-anchor="start">79.7%</text>
+        <text class="ax fi" x="0" y="84" style="font-size:13px">成績不理想時極為擔憂</text>
+        <rect x="248" y="68" width="430" height="22" class="ff" opacity="0.16"></rect>
+        <rect x="248" y="68" width="284.7" height="22" class="fa"></rect>
+        <text class="vl fa" x="542" y="85" text-anchor="start">66.2%</text>
+        <text class="ax fi" x="0" y="134" style="font-size:13px">每月有固定補習或才藝支出</text>
+        <rect x="248" y="118" width="430" height="22" class="ff" opacity="0.16"></rect>
+        <rect x="248" y="118" width="252.8" height="22" class="fa"></rect>
+        <text class="vl fa" x="510" y="135" text-anchor="start">58.8%</text>
+        <line class="grid" x1="248" y1="152" x2="678" y2="152"></line>
+        <text class="ax" x="248" y="170" text-anchor="start">0%</text>
+        <text class="ax" x="678" y="170" text-anchor="end">100%</text>
+      </svg>
+    </div>
+    <figcaption><b>圖 4｜家長教育焦慮與固定支出。</b>調查期間 2024 年 12 月至 2025 年 1 月，網路問卷，有效樣本 1,090 位育有 12 歲以下孩子的家長，其中孩子 0–6 歲占 47.2%、7–12 歲占 52.8%。<b>此樣本完全不含國中生家長、近半數孩子尚未就學，且為網路自選樣本；第三項支出也包含才藝與比賽費用，不是純學科補習。本報告僅將它當作趨勢佐證，不作為國中市場的依據。</b>資料來源：兒童福利聯盟《2025 年台灣家長育兒焦慮調查報告》。</figcaption>
+  </figure>
+
+  <div class="col">
+    <div class="note"><b>鄰國有一組更乾淨的對照。</b>韓國官方 2026 年 3 月公布的調查顯示：全國補習總支出比前一年<b>減少 5.7%</b>（因為學生變少），但<b>「有在補的學生」每人每月支出反而增加 2.0%</b>，國中生族群也是正成長。<b>量在縮、價在漲</b>——這正是「家庭把資源集中在更少的孩子身上」最直接的證據。</div>
+    <p>台灣這邊也有相同方向的訊號：108 課綱上路後的五年，全台<b>文理類補習班不減反增 966 家</b>，同期外語類則減少 500 多家。<b>錢沒有離開市場，它換了地方。</b></p>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">技術衝擊 <span class="n">06</span></div>
+  <h2>AI 讓什麼貶值，讓什麼變貴</h2>
+  <div class="col">
+    <p>這件事不需要預測，看兩家上市公司的財報就夠了。</p>
+  </div>
+
+  <figure>
+    <div class="fig">
+      <svg viewBox="0 0 720 300" role="img" aria-label="Chegg 營收由 2021 年 7.76 億美元降至 2025 年 3.77 億，Duolingo 由 2.51 億增至 10.38 億">
+        <line class="grid" x1="190" y1="44" x2="190" y2="278"></line>
+        <line class="grid" x1="530" y1="44" x2="530" y2="278"></line>
+        <text class="ax" x="190" y="296" text-anchor="middle">2021 年</text>
+        <text class="ax" x="530" y="296" text-anchor="middle">2025 年</text>
+        <line class="sd" x1="190" y1="114.8" x2="530" y2="194.6" stroke-width="3"></line>
+        <circle class="fd" cx="190" cy="114.8" r="5"></circle>
+        <circle class="fd" cx="530" cy="194.6" r="5"></circle>
+        <text class="vl fd" x="178" y="112" text-anchor="end">7.76 億</text>
+        <text class="vl fd" x="542" y="192" text-anchor="start">3.77 億</text>
+        <text class="an fd" x="178" y="94" text-anchor="end" style="font-weight:700">Chegg　解題與作業幫手</text>
+        <line class="su" x1="190" y1="219.8" x2="530" y2="62.4" stroke-width="3"></line>
+        <circle class="fu" cx="190" cy="219.8" r="5"></circle>
+        <circle class="fu" cx="530" cy="62.4" r="5"></circle>
+        <text class="vl fu" x="178" y="224" text-anchor="end">2.51 億</text>
+        <text class="vl fu" x="542" y="60" text-anchor="start">10.38 億</text>
+        <text class="an fu" x="178" y="244" text-anchor="end" style="font-weight:700">Duolingo　家長與學習者自費</text>
+        <text class="an fd" x="542" y="212" text-anchor="start">四年腰斬　−51%</text>
+        <text class="an fu" x="542" y="44" text-anchor="start">四年成長 3.1 倍</text>
+      </svg>
+    </div>
+    <figcaption><b>圖 5｜兩種商業模式在同一段時間的營收變化（單位：美元）。</b>縱軸為營收規模，兩端為 2021 與 2025 會計年度實際值。Chegg 同期市值下跌 99.3%、三年內四輪裁員，2026 年 7 月再度收到交易所的股價過低通知。資料來源：兩家公司對美國證券交易委員會申報的財報。</figcaption>
+  </figure>
+
+  <div class="col">
+    <p class="lead"><b>被 AI 取代的是「給答案」，不是「教學習」。</b>同一段時間，純解題的生意腰斬到剩一半，而讓人願意每天打開、持續練習的產品成長了三倍。</p>
+    <p>這對教育業者的意思是：把價值放在講解內容與題庫本身，會被平台型 AI 直接壓價；把價值放在讓學生真的持續學、讓家長看得見進步，才有定價權。</p>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">國際對照 <span class="n">07</span></div>
+  <h2>四個市場最近兩年的答案，指向同一邊</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>誰</th><th>發生什麼</th></tr></thead>
+      <tbody>
+        <tr><td class="k">GoStudent<br><span style="font-weight:400;color:var(--mute);font-size:13px">歐洲最大一對一家教平台</span></td><td>估值由 30 億歐元被領投方重估到 <b>9.03 億歐元</b>，三輪裁員把人力從近 2,000 人砍到約 1,000 人。之後<b>轉向收購實體補習班</b>：先收德國 900 多個據點的 Studienkreis，2026 年 9 月再收 Berlitz 德國約 50 個語言中心。官方說法是「實體做在地信任、線上做觸及」。</td></tr>
+        <tr><td class="k">atama+<br><span style="font-weight:400;color:var(--mute);font-size:13px">日本最大 AI 適性學習引擎</span></td><td>導入全日本 4,500 間以上的補習班教室。<b>2026 年 7 月被公文（KUMON）100% 全資併購</b>——這是公文自 2000 年以來的第一宗併購。</td></tr>
+        <tr><td class="k">QANDA<br><span style="font-weight:400;color:var(--mute);font-size:13px">韓國最大解題 App</span></td><td>2024 年營收 242 億韓元、年增 42% 創新高，但仍虧損 194 億。<b>2025 年 8 月，一家經營知名補習班的業者投入約 300 億韓元成為最大股東。</b></td></tr>
+        <tr><td class="k">AmazingTalker<br><span style="font-weight:400;color:var(--mute);font-size:13px">台灣，年營收約 18 億元</span></td><td>2023 年推出 AI 家教，<b>兩週吸引 3 萬名學生，但轉不成付費用戶。</b>公司已放棄把 AI 當成對外主打，執行長定調 AI 目前只是支援性的基礎設施。</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p><b>純線上的 AI 服務撐不住估值，實體補習班需要 AI；兩邊正在往中間走。</b>三個成熟市場的龍頭，各自用真金白銀做出了同一個選擇。</p>
+    <div class="flag"><span class="h">最該記住的一句</span><b>AI 拉得到試用，留不住付費。</b>兩個獨立證據指向同一件事：台灣 AmazingTalker 的 AI 家教兩週吸到 3 萬名學生卻零付費轉換；美國 Khan Academy 也承認，擁有 AI 家教使用權的學生裡<b>只有 15% 真的會去使用</b>。因此「做一個低價 AI 學習服務去取得規模」是三條路裡最難變現的一條，不是最容易的。</div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">模式推演 <span class="n">08</span></div>
+  <h2>2027–2029：三個位置，中間那個最危險</h2>
+  <div class="tiers">
+    <div class="tier"><span class="v" style="color:var(--up)">位置 一</span><div class="t">低價 AI 學習</div><p>即時、個人化、可大量使用。護城河不在能不能生成答案，而在診斷準不準、跟課綱合不合、學生有沒有持續用。<b>成本低，但獲客與變現最難。</b></p></div>
+    <div class="tier"><span class="v" style="color:var(--accent)">位置 二</span><div class="t">真人教練 ＋ AI</div><p>老師負責動機、紀律、關係、家長溝通與關鍵時刻的介入，AI 承擔標準化工作。<b>人力成本仍高，但續約率與客單價最高。</b></p></div>
+    <div class="tier"><span class="v" style="color:var(--down)">位置 三</span><div class="t">固定教材真人課</div><p>用真人交付固定內容、固定時間、固定堂數。<b>既沒有 AI 的成本優勢，也沒有長期關係的高價理由——毛利與價格同時被擠壓。</b></p></div>
+  </div>
+  <div class="col">
+    <h3>人與機器的分工</h3>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>AI 適合承擔</th><th>真人老師適合承擔</th></tr></thead>
+      <tbody>
+        <tr><td>出題、批改、例題生成、教材改寫</td><td>理解學生的情緒與動機</td></tr>
+        <tr><td>錯題分類、能力落差與複習排程</td><td>建立紀律與長期關係</td></tr>
+        <tr><td>課後摘要、學習報告與提醒</td><td>判斷什麼時候該介入、目標要不要調整</td></tr>
+        <tr><td>大量的日常問答與基礎講解</td><td>家長溝通、信任與期待管理</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <h3>真的要做，六個層次的順序不能跳</h3>
+    <p>比較務實的路，不是先做一個會聊天的 AI 老師，而是一層一層往上疊——<b>前一層累積下來的資料與做事方法，會變成下一層的地基。</b></p>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th class="num">層</th><th>要做的事</th><th>先解決什麼</th><th>怎麼知道成功了</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="k">老師與學生的配對</td><td>配得對不對</td><td>第一個月的體驗、換老師的比率、三個月後還在不在</td></tr>
+        <tr><td class="num">2</td><td class="k">老師的工作台</td><td>備課、排課、教材、任務、追蹤集中在同一個地方</td><td>每個學生要花掉老師多少時間、老師願不願意留下來</td></tr>
+        <tr><td class="num">3</td><td class="k">AI 幫手</td><td>出題、批改、寫報告這些標準化的事自動做掉</td><td>一位老師能同時帶多少學生</td></tr>
+        <tr><td class="num">4</td><td class="k">學習教練</td><td>省下來的時間，集中用在只有人做得到的介入</td><td>家長報告的閱讀率、該出手時有沒有真的出手</td></tr>
+        <tr><td class="num">5</td><td class="k">學生的能力紀錄</td><td>跨課程、跨老師累積起來，診斷才會準</td><td>紀錄的完整度、系統建議被採用的比率</td></tr>
+        <tr><td class="num">6</td><td class="k">家長的長期訂閱</td><td>用看得見的進步換長期關係，取代一次性大課包</td><td>續約率</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">監測 <span class="n">09</span></div>
+  <h2>接下來要盯的六件事</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>要看什麼</th><th>看了代表什麼</th><th>多久看一次</th></tr></thead>
+      <tbody>
+        <tr><td class="k">各學段實際學生數</td><td>確認官方預測的誤差與區域差異</td><td class="k">每學年</td></tr>
+        <tr><td class="k">正式與代理教師缺額</td><td>判斷缺口集中在哪些縣市與科目</td><td class="k">每學期</td></tr>
+        <tr><td class="k">補習班家數與退場率</td><td>判斷供給是否開始收縮與整併</td><td class="k">每半年</td></tr>
+        <tr><td class="k">獲客成本、試聽轉換、退費與續約</td><td>判斷需求壓力與產品是否真的對味</td><td class="k">每月</td></tr>
+        <tr><td class="k">老師工時、收入、留任與可服務人數</td><td>判斷 AI 是不是真的改善了單位經濟</td><td class="k">每月或每季</td></tr>
+        <tr><td class="k">AI 功能使用率與學習成效</td><td>區分「展示用的功能」與「真的有價值」</td><td class="k">每月或每季</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <h3>結論</h3>
+    <p class="lead">2027 到 2029 年是轉型窗口，不是少子化的終局。<b>最先受壓的是國小生源與依賴大量電話行銷的獲客方式；最有機會的是能放大好老師產能、並且把學習關係拉長的產品。</b>下一階段的競爭重點，會從「擁有多少課程」轉為「能不能讓好老師服務得更深、更久，並讓家長持續看見成果」。</p>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">資料與誠實聲明 <span class="n">10</span></div>
+  <h2>這份報告怎麼用</h2>
+  <div class="col">
+    <h3>三個層級要分開看</h3>
+    <ul class="pl">
+      <li><b>已知事實</b>——官方統計或已發布的調查。用來描述學生數、教師數、招募缺口、補習班家數與家長需求。</li>
+      <li><b>高可信度推估</b>——由已經出生的世代直接推算。用來判讀 2027–2029 各學段的量體變化。</li>
+      <li><b>策略推論</b>——依供需與技術能力推演。價格分化、產品形態、整併速度屬於此類，<b>是需要持續校正的判斷，不是已經發生的統計結果。</b></li>
+    </ul>
+    <div class="note"><b>本報告不引用任何第三方的市場規模與年複合成長率。</b>原因是各家市調機構對同一個市場的估計可以差到七倍，而已到期的預測多半從未對帳。凡是能用官方統計或公司財報講清楚的，一律用原始數字；查不到的就明寫查不到，不以推估替代。</div>
+    <h3>幾個要注意的讀法</h3>
+    <ul class="pl">
+      <li>學生數以學年度表示。115 學年度約對應 2026–2027，118 學年度約對應 2029–2030。</li>
+      <li>家長調查為網路問卷、樣本為育有 12 歲以下孩子的家長，<b>不含國中生家長</b>，不應直接外推為全體家庭的精確滲透率。</li>
+      <li>補習班總家數 17,752 涵蓋所有類別；與升學直接相關的文理類為 12,943 家，談學科補習市場應採後者。本報告僅用作供給密度指標，不換算為營收。</li>
+      <li>「高中職」在官方報告中的正式名稱為「高級中等教育」，涵蓋範圍包含五專及七年一貫制前 3 年，略大於一般理解的高中職。</li>
+      <li>正式教師開缺、錄取與代理教師待聘是不同階段的指標，不應相加為單一缺口數。</li>
+      <li>台灣補教業的年產值，目前沒有可信的官方統計可用（財政部稅務資料的行業分類與口徑皆不等於產值），本報告因此不列出該數字。</li>
+    </ul>
+    <h3>資料來源</h3>
+    <div class="src">
+      <ol>
+        <li>教育部統計處，2026，《各教育階段學生數預測報告（115~130 學年度）》。</li>
+        <li>教育部統計處，2026，《國民中小學校概況統計（114 學年度）》。</li>
+        <li>教育部國民及學前教育署，2026，115 學年度國中小師資整備相關新聞稿。</li>
+        <li>教育部終身教育司，2026，115 年度全國短期補習班及兒童課後照顧服務中心業務管理暨公共安全研討會。</li>
+        <li>兒童福利聯盟，2025，《2025 年台灣家長育兒焦慮調查報告》。</li>
+        <li>內政部戶籍統計，歷年出生數。</li>
+        <li>韓國國家數據處，2026-03-12，《2025 年中小學私教育費調查》。</li>
+        <li>Chegg、Duolingo 對美國證券交易委員會申報之財報與新聞稿，2021–2026。</li>
+        <li>GoStudent、atama plus、KUMON、Mathpresso 公司公告與當地媒體報導，2024–2026。</li>
+        <li>《數位時代》，2025-10-10，AmazingTalker 專訪。</li>
+        <li>《聯合新聞網》，2024-10-15，全國補習班家數與類別消長報導（引教育部統計）。</li>
+        <li>Khan Academy 對外說明與相關報導，2025–2026，Khanmigo 學生實際使用率。</li>
+      </ol>
+    </div>
+    <div class="foot">
+      <p class="meta">市場趨勢與策略研究報告　·　分析更新 2026 年 9 月 20 日<br>所有 2027–2029 的商業模式判斷均標示為策略推論，應配合內部的獲客成本、退費、續約、師資成本與產品使用數據持續校正。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">內部策略 <span class="n">11</span></div>
+  <h2>對一家靠電話銷售＋真人一對一的公司，這代表什麼</h2>
+  <div class="col">
+    <p class="lead">核心問題已經不是「怎麼提高課程成交」，而是<b>怎麼把一家賣課的公司，變成一個管理學生長期學習關係的平台。</b>這個轉型同時對應三個壓力：<b>少子化讓拉一個學生變貴、師資錯配讓交付一堂課變貴、AI 讓純教學內容本身貶值。</b></p>
+    <h3>能力要按這個順序建，每一層先回答一個問題</h3>
+  </div>
+  <div class="scroll">
+    <table>
+      <thead><tr><th class="num">序</th><th>能力</th><th>先驗證什麼</th><th>看哪幾個數字</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="k">老師與學生的配對</td><td>配得更好，會不會提高第一個月的體驗與三個月留存</td><td>開課成功率、換老師比率、三個月留存</td></tr>
+        <tr><td class="num">2</td><td class="k">老師工作台與 AI 幫手</td><td>能不能減少備課與雜事的時間，並提高一位老師能帶的學生數</td><td>每個學生佔用的工時、老師留任、可服務人數</td></tr>
+        <tr><td class="num">3</td><td class="k">學習教練與家長回報</td><td>能不能提升家長信任與長期續約</td><td>報告閱讀率、該介入時的完成率、續約率</td></tr>
+        <tr><td class="num">4</td><td class="k">學生能力紀錄</td><td>跨老師、跨課程的資料能不能讓診斷與推薦變準</td><td>資料完整率、建議採用率、學習進步</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <h3>說到底只有三個問題要答</h3>
+    <ul class="pl">
+      <li><b>拉一個學生要花多少錢</b>——能不能靠老師口碑、家長轉介、成效證據和更低門檻的入門方案把它壓下來。</li>
+      <li><b>服務一個學生要花多少成本</b>——能不能讓 AI 承擔標準化的工作，使老師在同樣的工時內多服務幾個學生，同時自己賺更多、也更願意留下來。</li>
+      <li><b>學生留不留得住</b>——能不能把「這堂課很滿意」變成「他每天真的有在練、家長看得見進步、他跟這位老師的關係穩定」。</li>
+    </ul>
+    <div class="flag"><span class="h">這一頁不對外</span>本頁為內部版限定。對外版本請使用不含本頁的版本。</div>
+  </div>
+</section>
+
+</div>

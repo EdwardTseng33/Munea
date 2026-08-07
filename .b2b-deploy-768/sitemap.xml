@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://munea-b2b.vercel.app/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea-b2b.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea-b2b.vercel.app/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea-b2b.vercel.app/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea-b2b.vercel.app/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea-b2b.vercel.app/"/>
+    <changefreq>weekly</changefreq><priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://munea-b2b.vercel.app/en</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea-b2b.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea-b2b.vercel.app/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea-b2b.vercel.app/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea-b2b.vercel.app/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea-b2b.vercel.app/"/>
+    <changefreq>weekly</changefreq><priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://munea-b2b.vercel.app/ja</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea-b2b.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea-b2b.vercel.app/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea-b2b.vercel.app/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea-b2b.vercel.app/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea-b2b.vercel.app/"/>
+    <changefreq>weekly</changefreq><priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://munea-b2b.vercel.app/es</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea-b2b.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea-b2b.vercel.app/en"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea-b2b.vercel.app/ja"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea-b2b.vercel.app/es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea-b2b.vercel.app/"/>
+    <changefreq>weekly</changefreq><priority>1.0</priority>
+  </url>
+</urlset>

@@ -1,0 +1,19 @@
+{
+  "required_consecutive_runs": 3,
+  "passed_runs": 0,
+  "ok": false,
+  "results": [
+    {
+      "ok": false,
+      "error": "RuntimeError"
+    },
+    {
+      "ok": false,
+      "error": "RuntimeError"
+    },
+    {
+      "ok": false,
+      "error": "RuntimeError"
+    }
+  ]
+}

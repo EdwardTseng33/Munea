@@ -1,0 +1,41 @@
+{
+  "transport": "relay",
+  "transport_status": "ready",
+  "avatar_ack": true,
+  "voice_chunks": 43,
+  "voice_audio_ms": 11380,
+  "client_receive_max_gap_ms": 8141.0,
+  "source_playout": {
+    "ok": true,
+    "underrun_count": 0,
+    "max_underrun_ms": 0.0
+  },
+  "avatar_audio_ms": 21520,
+  "user_caption": "秀英阿姨 , 聽到你膝蓋又痛了 , 你寧替你擔心呣。",
+  "assistant_caption": "聽你這樣講，膝蓋不舒服真的很磨人齁。有特別是哪一種痛法，還是做什麼動作比較痛嗎？多說一點讓我知道狀況，我們再來看怎麼辦。",
+  "first_response_ms": 953,
+  "unsolicited_audio_bytes": 0,
+  "unsolicited_caption": "",
+  "disconnected_after_turn": false,
+  "continuity": {
+    "ok": false,
+    "alignment_ms": 9760,
+    "envelope_correlation": 0.8094,
+    "reference_speech_frames": 364,
+    "missing_speech_runs": 4,
+    "max_missing_speech_ms": 60
+  },
+  "asr_expected": "管線自測不計分",
+  "asr_char_recall": 0.0,
+  "gates": {
+    "transport": true,
+    "asr": true,
+    "first_response": true,
+    "avatar_audio": true,
+    "continuity": false,
+    "source_playout": true,
+    "no_unsolicited_repeat": true,
+    "connection_held": true
+  },
+  "ok": false
+}

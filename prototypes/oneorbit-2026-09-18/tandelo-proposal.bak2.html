@@ -1,0 +1,408 @@
+<meta charset="utf-8">
+<title>Tandelo 提案</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F0EA; --paper:#FFFFFF; --ink:#16181D; --body:#2B2F38; --mute:#6A6F7B; --line:#E4E1D9; --hair:#EEEBE4;
+  --soft:#FFF3EF; --tint:#F7F5F0; --pace:#E8432A; --pace-deep:#B5301B; --lane:#1E8F60; --amber:#C98512; --sky:#3564D6;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0E0F12; --paper:#17191E; --ink:#F1EFEA; --body:#D9D7D1; --mute:#9CA0AA; --line:#2B2E37; --hair:#23262E; --soft:#2B1D19; --tint:#1D2026; --pace:#FF6B52; --pace-deep:#FF9C88; --lane:#4CC58F; --amber:#E6AE45; --sky:#8FB0FF; } }
+:root[data-theme="dark"]{ --bg:#0E0F12; --paper:#17191E; --ink:#F1EFEA; --body:#D9D7D1; --mute:#9CA0AA; --line:#2B2E37; --hair:#23262E; --soft:#2B1D19; --tint:#1D2026; --pace:#FF6B52; --pace-deep:#FF9C88; --lane:#4CC58F; --amber:#E6AE45; --sky:#8FB0FF; }
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--body);font-family:"Noto Sans TC",system-ui,sans-serif;font-size:15px;line-height:1.8;letter-spacing:.01em;-webkit-font-smoothing:antialiased}
+.deck{max-width:1000px;margin:0 auto;padding:40px 20px 96px;display:grid;gap:32px}
+a{color:var(--sky);text-underline-offset:3px}
+
+/* cover */
+.cover{padding:28px 8px 8px;display:grid;gap:18px}
+.cover .k{font-family:Sora,sans-serif;font-weight:700;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--pace)}
+.cover h1{font-family:Sora,"Noto Sans TC",sans-serif;font-weight:800;font-size:46px;line-height:1.12;letter-spacing:-.02em;margin:0;color:var(--ink);text-wrap:balance}
+.cover h1 em{font-style:normal;color:var(--pace)}
+.cover p{margin:0;font-size:17px;max-width:60ch;color:var(--body)}
+.toc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 28px;border-top:1px solid var(--line);margin-top:6px}
+.toc a{display:grid;grid-template-columns:34px 1fr;gap:8px;padding:14px 0;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:14.5px;line-height:1.45}
+.toc a b{font-family:Sora;font-weight:800;color:var(--pace);font-size:13px;padding-top:2px}
+.toc a small{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
+.toc a:focus-visible{outline:2px solid var(--pace);outline-offset:2px}
+@media (max-width:760px){.toc{grid-template-columns:1fr}.cover h1{font-size:34px}}
+
+/* page */
+.page{background:var(--paper);border-radius:14px;padding:56px 64px 40px;display:grid;gap:30px;box-shadow:0 1px 0 var(--line),0 24px 48px -28px rgba(20,20,30,.22);min-width:0}
+.page .hdr{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.page .hdr .tier{font-family:Sora,"Noto Sans TC";font-weight:700;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--pace)}
+.page .hdr .brand{font-family:Sora,"Noto Sans TC";font-weight:700;font-size:12.5px;color:var(--mute);white-space:nowrap}
+.page .hdr .brand span{color:var(--ink)}
+.page .ftr{display:flex;justify-content:space-between;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--mute);padding-top:16px;border-top:1px solid var(--hair)}
+.body{display:grid;gap:44px;align-content:start;min-width:0}
+.body > div{min-width:0}
+
+h1{font-family:"Noto Serif TC",serif;font-weight:700;font-size:32px;line-height:1.4;margin:0 0 12px;color:var(--ink);text-wrap:balance}
+h2{font-family:Sora,"Noto Sans TC",sans-serif;font-weight:800;font-size:21px;line-height:1.35;margin:0 0 18px;color:var(--ink);display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:4px;align-items:baseline}
+h2 .n{font-family:Sora;font-weight:800;font-size:13px;color:#fff;background:var(--pace);min-width:26px;height:26px;border-radius:13px;display:inline-grid;place-items:center;padding:0 8px;transform:translateY(-2px)}
+h2 .q{grid-column:2;font-family:"Noto Sans TC";font-weight:400;font-size:13.5px;color:var(--mute);line-height:1.6}
+p{margin:0 0 12px;max-width:68ch}
+b{color:var(--ink);font-weight:700}
+
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 40px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 32px}
+@media (max-width:820px){.two,.three{grid-template-columns:1fr}.page{padding:32px 22px 28px}}
+
+/* blocks: open by default, not cards */
+.box{display:grid;gap:10px;align-content:start;min-width:0;padding-top:14px;border-top:2px solid var(--ink)}
+.box h4{margin:0 0 2px;font-family:Sora,"Noto Sans TC";font-size:15.5px;line-height:1.4;color:var(--ink);font-weight:700;letter-spacing:0;text-transform:none}
+.box ul,.box ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:14.5px;line-height:1.75}
+.box li::marker{color:var(--pace)}
+.box p{font-size:14.5px}
+.box.hi{background:var(--soft);border-top-color:var(--pace);padding:18px 22px 22px;border-radius:0 0 12px 12px}
+.box[style*="background"]{border-top:0;border-radius:12px;padding:20px 24px}
+/* a box holding a wide table takes the full row */
+.two > .box:has(th:nth-child(3)), .three > .box:has(th:nth-child(3)){grid-column:1 / -1}
+.two > .wide, .three > .wide{grid-column:1 / -1}
+.callout{border-left:3px solid var(--pace);padding:4px 0 4px 18px;font-size:16px;line-height:1.75;color:var(--ink);max-width:66ch;margin-top:20px}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.65}
+th,td{text-align:left;padding:11px 14px 11px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+th{font-family:Sora,"Noto Sans TC";font-size:12px;letter-spacing:.06em;color:var(--mute);font-weight:700;border-bottom:1px solid var(--ink);background:transparent;text-transform:none}
+tr:last-child td{border-bottom:0}
+td.k{font-weight:700;color:var(--ink);white-space:nowrap;padding-right:20px}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:13.5px}
+td.mono{white-space:normal}
+.scroll{overflow-x:auto;min-width:0}
+.note{font-size:13.5px;line-height:1.8;color:var(--mute);max-width:74ch;margin:6px 0 0}
+.note b{color:var(--body)}
+
+/* press release */
+.pr{max-width:64ch;font-size:16px;line-height:1.95}
+.pr .dl{font-family:"IBM Plex Mono";font-size:12.5px;color:var(--mute);margin-bottom:14px;letter-spacing:.04em}
+.pr .sub{font-size:18px;line-height:1.75;color:var(--ink);margin:0 0 26px;font-weight:500;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.pr p{margin:0 0 18px;max-width:none}
+.faq{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;padding-top:26px;border-top:1px solid var(--line);font-size:14.5px;line-height:1.8}
+.faq b{display:block;font-family:Sora,"Noto Sans TC";font-size:15px;margin-bottom:6px}
+@media (max-width:820px){.faq{grid-template-columns:1fr}}
+
+/* glossary */
+.gloss{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 36px;font-size:14px;line-height:1.7}
+@media (max-width:820px){.gloss{grid-template-columns:1fr}}
+
+/* figure */
+figure{margin:0 0 32px;display:grid;gap:12px;background:var(--tint);border-radius:14px;padding:24px 24px 18px;color:var(--ink)}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:13.5px;line-height:1.75;color:var(--mute);max-width:80ch}
+
+/* timeline */
+.tl{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;border-top:2px solid var(--ink)}
+.tl div{padding:14px;font-size:13.5px;line-height:1.65;display:grid;gap:6px;align-content:start;border-right:1px solid var(--hair)}
+.tl div:last-child{border-right:0}
+.tl div b{font-family:Sora;font-size:14px;color:var(--ink);font-weight:800}
+.tl div.gate b{color:var(--pace)}
+.tl div.gate{background:linear-gradient(var(--soft),transparent)}
+@media (max-width:820px){.tl{grid-template-columns:1fr 1fr}.tl div{border-right:0;border-bottom:1px solid var(--hair)}}
+
+@media print{body{background:#fff;font-size:11pt}.deck{padding:0;gap:0;max-width:none}.cover{padding:0 0 12mm}.page{box-shadow:none;border-radius:0;page-break-after:always;padding:14mm 14mm 10mm}figure{break-inside:avoid}tr{break-inside:avoid}}
+
+</style>
+
+<div class="deck">
+
+<div class="cover">
+  <div class="k">提案 · 2026-09-19</div>
+  <h1><em>Tandelo</em>｜AI 配對的真人小組課</h1>
+  <p>孩子卡在哪，就從哪裡開始。這份六頁提案回答三件事：值得做嗎、具體怎麼做、如何驗證。先用 8 週試點買四個答案，答案不好就停。</p>
+  <nav class="toc">
+    <a href="#p1"><b>01</b><span>新聞稿<small>從上線那天寫回來</small></span></a>
+    <a href="#p2"><b>02</b><span>問題與目標<small>用戶、定位、市場、遠景</small></span></a>
+    <a href="#p3"><b>03</b><span>優先級與方案<small>產品框架圖、做與不做</small></span></a>
+    <a href="#p4"><b>04</b><span>資源、責任、時程<small>預算明細、W0 到 W11</small></span></a>
+    <a href="#p5"><b>05</b><span>指標與風險<small>基準、目標、早期訊號</small></span></a>
+    <a href="#p6"><b>06</b><span>決策與商業<small>商業模式、老師收入、三段要錢、補助</small></span></a>
+  </nav>
+</div>
+
+
+<!-- PAGE 1 · PR -->
+<div class="page" id="p1">
+  <div class="hdr"><span class="tier">第 1 頁 · 新聞稿（Codex 版 · 從上線那天寫回來 · 不含未發生的引言）</span><span class="brand"><span>Tandelo</span>｜AI 配對的真人小組課</span></div>
+  <div class="body">
+    <div class="pr">
+      <div class="dl">台北｜2027 年 3 月，預定於試點驗證後發布</div>
+      <h1>萬通教育推出 Tandelo：孩子卡住的那一步，有老師帶，也有同伴一起學</h1>
+      <p class="sub">孩子卡在哪，就從哪裡開始。AI 找卡點、配小隊，真人老師帶著學。國二、國三數理先行，3～6 人固定小隊，每週 50 分鐘、一起走 8 週，和同伴分攤學費。</p>
+      <p>孩子說「我不會」，家長卻不知道他究竟哪裡不會。再聽一次整章、再多做幾頁題目，也未必解得開真正的困難。</p>
+      <p>萬通教育今天推出 Tandelo，從診斷與平日練習找出孩子卡住的地方，再依相近程度、學習需求與可上課時段組成小隊。同一支小隊、同一位老師、同一個時段，持續學習 8 週。</p>
+      <p>每週上課前，AI 先整理每個人的卡點，讓真人老師從具體困難開始教。課堂處理共同觀念，再透過個別提問與練習，確認每個孩子是否理解。</p>
+      <p>課後，AI 教練「小陪」透過提問與提示陪孩子練習。學會不只看答對：孩子要能說明原因、獨立完成變化題，隔三天再測，確認觀念是否留下來。</p>
+      <p>家長在 LINE 收到的，是孩子今天釐清了什麼，以及今晚可以問他的一個問題。例如：「今天他學會解釋浮力。你可以問他：大船那麼重，為什麼還能浮起來？」家長不用重讀課本，也能聽懂孩子的進步。</p>
+    </div>
+    <div class="faq">
+      <div><b>跟一般補習班小班有什麼不同？</b>Tandelo 從孩子的實際卡點安排教學，課後再確認他能否自己做出來，讓家長看見這堂課解決了什麼。</div>
+      <div><b>AI 會不會讓孩子抄答案？</b>小陪以引導為主，並透過說明想法與獨立解題確認理解；真人老師負責釐清觀念、調整教學。</div>
+      <div><b>怎麼開始？</b>從 LINE 完成免費的 20 分鐘診斷，了解學習需求與適合的小隊時段。第一堂先試上，家長確認後再加入；費用、請假與退出辦法在報名前清楚說明。</div>
+    </div>
+  </div>
+  <div class="ftr"><span>Tandelo 提案 · 2026-09-18 · 蘇菲整理</span><span>1 / 6</span></div>
+</div>
+
+<!-- PAGE 2 · 值得做嗎 -->
+<div class="page" id="p2">
+  <div class="hdr"><span class="tier">一、值得做嗎？（問題 · 目標）</span><span class="brand"><span>Tandelo</span></span></div>
+  <div class="body">
+    <div class="box" style="background:var(--tint)"><h4>本案用語，先講清楚</h4><div class="gloss"><div><b>卡點</b>：孩子沒弄懂的那一步，例如「除負數不等號要反向」，不是一整章</div><div><b>歷程</b>：系統自動記下的學習紀錄：上課、練習、錯題、老師評語，學生不用自己填</div><div><b>跑團</b>：3–6 人的小組課，50 分鐘，真人老師帶</div><div><b>小隊</b>：同 6 人、同老師、同時段，一起走 8 週</div><div><b>小陪</b>：AI 教練的名字，每天陪孩子練、不給答案</div><div><b>說給我聽</b>：孩子講 30 秒證明自己懂了；隔三天再測一次才算學會</div><div><b>領跑員</b>：萬通的輔導老師，看名單、按成班、打電話</div><div><b>成班率</b>：AI 建議開的團，實際開成的比例；「被滿足率」是有需要的孩子裡真的被排到課的比例</div></div></div>
+    <div>
+      <h2><span class="n">1</span>Problem 問題與證據<span class="q">誰有什麼問題？影響多大？哪些是事實、哪些是假設？</span></h2>
+      <div class="two">
+        <div class="box"><h4>事實（有來源）</h4><ul><li>台灣國中生約 56 萬，國中校外學習支出約 270 億/年、學科 232 億；每人每年約 7 萬、八成學科</li><li>19.2% 國中生重度學習疲勞、近兩成一天睡不到 6 小時；44% 覺得成績不好就不被家長重視（兒福聯盟 2026）</li><li>一對一線上家教一小時 NT$800–2,000；老師時薪 NT$250–1,000；一位輔導老師顧數十位學生</li><li>ChatGPT、Gemini、Claude 學習模式 2026 年全部免費：純 AI 家教沒得賣</li><li>TutorABC 的 DCGS 證明家長願意為「AI 配對的小班」付錢，但它配的是程度不是卡點</li></ul></div>
+        <div class="box"><h4>假設（試點要驗）</h4><ul><li>依「同一段學習路徑」能配出 8 隊各 6 人；每週隊內依卡點分 2–3 小組仍能對準每個人</li><li>家長願意為「三分之一價、真人時數兩倍」續購</li><li>老師願意帶 50 分鐘一團、拿比一對一高的時薪</li><li>「講得出來」（含隔三天再測）能代表真的學會</li><li>家人收到「搞懂了」會讓孩子每天回來</li></ul></div>
+      </div>
+      <div class="callout">三邊同一個痛：家長覺得一對一太貴、大班沒效；孩子一個人讀很孤單；老師時間閒置。三邊同一個解：卡同一點的人一起上，真人老師帶。</div>
+    </div>
+    <div>
+      <h2><span class="n">2</span>Target 目標<span class="q">用戶是誰？定位是什麼？市場多大？遠景是什麼？要改善哪個結果？</span></h2>
+      <div class="two">
+        <div class="box"><h4>用戶主要是誰</h4><ul><li><b>使用者</b>：國中生，第一年只做國二、國三數學與理化。每天用、教練是他的、分享什麼他決定</li><li><b>買單的人</b>：家長，具體是「付不起或不想付一對一、又不想送大班」的家庭。買會員不買堂數，看得到孩子搞懂了什麼</li><li><b>供給端</b>：萬通的老師（一堂帶五個、時薪更高）與輔導老師（顧的學生 ×5）</li><li><b>不是第一版的用戶</b>：小學、高中、英文，以後再說</li></ul></div>
+        <div class="box"><h4>定位一句話</h4><p style="font-family:Sora,'Noto Sans TC';font-weight:800;font-size:17px;line-height:1.5;margin:0 0 6px;color:var(--ink)">AI 配對的真人小組課：孩子卡在哪，就從哪裡開始。</p><p style="font-size:14.5px;margin:0">品類不是「AI 家教」也不是「小班」，兩個都有人做過。是<b>歷程驅動的配對</b>：只有捉了每個孩子歷程的公司能配，只有有真人老師的公司能兌現。萬通兩樣都有。</p><div class="scroll"><table style="margin-top:10px"><thead><tr><th></th><th>一對一</th><th>大班</th><th>AI App</th><th>Tandelo</th></tr></thead><tbody><tr><td class="k">精準</td><td>高</td><td>低</td><td>中</td><td>高：配卡點</td></tr><tr><td class="k">價格</td><td>800–2,000/h</td><td>低</td><td>低</td><td>約一對一的 1/3</td></tr><tr><td class="k">真人 + 同伴</td><td>有 / 無</td><td>有 / 太多</td><td>無 / 無</td><td>有 / 5 人</td></tr></tbody></table></div></div>
+      </div>
+      <div class="two" style="margin-top:10px">
+        <div class="box"><h4>市場多大</h4><div class="scroll"><table><tbody><tr><td class="k">池子</td><td>國中生約 56 萬，國二國三約 37 萬；國中校外學習支出約 270 億/年、學科 232 億；每人每年約 7 萬</td></tr><tr><td class="k">第一年打得到</td><td>國二國三 × 願意線上的家庭（估兩成）× 數理 ≈ <span class="mono">20–30 億</span></td></tr><tr><td class="k">三年目標</td><td>1–2 萬個付費家庭 × 月費 3–6 千 ≈ <span class="mono">4–8 億/年</span></td></tr><tr><td class="k">往外長</td><td>國一與英文 → 高中 60 萬人（學習歷程檔案）→ 引擎租給其他補教（補教產值約 1,700 億、8,000 家）→ 海外（越南、日本）</td></tr></tbody></table></div><p class="note">少子化每年在縮，池子要誠實看；三層估算要用萬通實際學生數重算。</p></div>
+        <div class="box"><h4>遠景與要改善的結果</h4><p><b>三年遠景</b>：Tandelo 是平台公司，萬通是第一個客戶；第二年簽第二個客戶證明引擎能離開萬通活；第三年三個市場三個客戶。三年後，<b>唯一知道每個國中生卡在哪的公司</b>。</p><div class="scroll"><table><tbody><tr><td class="k">學生</td><td>每週 ≥ 4 次講得出來；三週留存 ≥ 50%</td></tr><tr><td class="k">家長</td><td>不問分數問「這週搞懂什麼」；8 週續購 ≥ 50%</td></tr><tr><td class="k">萬通</td><td>老師產能 ×5、時薪 800→1,000；輔導老師 1:60→1:300；續約靠產品不靠電銷</td></tr><tr><td class="k">Tandelo</td><td>抽成 20–25%、毛利約 80%、萬家規模營業利益 40% 以上；引擎全球通用、課綱老師付款在地</td></tr></tbody></table></div></div>
+      </div>
+    </div>
+    
+  </div>
+  <div class="ftr"><span>Tandelo 提案 · 2026-09-18</span><span>2 / 6</span></div>
+</div>
+
+<!-- PAGE 3 · 方案與範圍 + 框架圖 -->
+<div class="page" id="p3">
+  <div class="hdr"><span class="tier">一、值得做嗎？（優先級）→ 二、具體怎麼做？（1/2）</span><span class="brand"><span>Tandelo</span></span></div>
+  <div class="body">
+    <div>
+      <h2><span class="n">3</span>Priority 優先級與取捨<span class="q">為什麼現在？相較其他方案為何優先？因此延後什麼？</span></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>方案</th><th>對萬通的槓桿</th><th>風險</th><th>判斷</th></tr></thead>
+        <tbody>
+          <tr><td class="k">擴大電銷賣一對一</td><td>低：老師時數是天花板</td><td>獲客成本三到五成、少子化縮池</td><td>現況，越做越薄</td></tr>
+          <tr><td class="k">大班直播</td><td>中：便宜</td><td>沒效、家長不續</td><td>已被證明</td></tr>
+          <tr><td class="k">純 AI 學習 App</td><td>高但賣不掉</td><td>大模型免費、國中生不會天天用純 AI</td><td>不做</td></tr>
+          <tr><td class="k" style="color:var(--pace)">Tandelo：歷程驅動的圈固定、團每週重湊小班</td><td>高：老師 ×5、輔導 ×5、續約靠產品</td><td>成班密度、付款路徑、學會的驗證</td><td><b>現在做，用 8 週試點買答案</b></td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:12.5px;color:var(--mute);margin-top:6px"><b>因此延後</b>：小學段、高中段、英文、AI 角色臉、健康串接、家人角色、跨隊臨時湊團、海外。試點只做國二數學一個時段。</p>
+    </div>
+    <div>
+      <h2><span class="n">4</span>Scope 方案與範圍<span class="q">採取什麼方案？這次做什麼、不做什麼？有哪些前置依賴？</span></h2>
+      <figure>
+        <svg viewBox="0 0 900 400" role="img" aria-label="Tandelo 產品框架：四個來源自動流進歷程引擎，引擎湊圈固定、團每週重湊並排每週主題，跑團與每日練習的結果回流到四個角色與家人">
+          <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+          <g fill="none" stroke="currentColor" stroke-width="1.2" font-family="Noto Sans TC, sans-serif" font-size="12">
+            <!-- sources -->
+            <text x="20" y="28" fill="currentColor" stroke="none" font-size="11" font-weight="700" letter-spacing="1">自動捉（學生零輸入）</text>
+            <rect x="20" y="40" width="150" height="40" rx="6"/><text x="95" y="64" text-anchor="middle" fill="currentColor" stroke="none">上課系統 · 老師評語</text>
+            <rect x="20" y="92" width="150" height="40" rx="6"/><text x="95" y="116" text-anchor="middle" fill="currentColor" stroke="none">練習 · 錯題（OneAnswer）</text>
+            <rect x="20" y="144" width="150" height="40" rx="6"/><text x="95" y="168" text-anchor="middle" fill="currentColor" stroke="none">學校 · 段考範圍 · 拍題</text>
+            <rect x="20" y="196" width="150" height="40" rx="6"/><text x="95" y="220" text-anchor="middle" fill="currentColor" stroke="none">狀態：睡眠 · 走動 · 心情</text>
+            <!-- arrows to engine -->
+            <line x1="170" y1="60" x2="250" y2="120" marker-end="url(#ar)"/>
+            <line x1="170" y1="112" x2="250" y2="128" marker-end="url(#ar)"/>
+            <line x1="170" y1="164" x2="250" y2="140" marker-end="url(#ar)"/>
+            <line x1="170" y1="216" x2="250" y2="150" marker-end="url(#ar)"/>
+            <!-- engine -->
+            <rect x="255" y="40" width="230" height="200" rx="10" stroke="#F0442A" stroke-width="2"/>
+            <text x="370" y="62" text-anchor="middle" fill="#F0442A" stroke="none" font-weight="700" font-size="13">Tandelo 引擎（全球通用）</text>
+            <rect x="270" y="76" width="200" height="30" rx="5"/><text x="370" y="96" text-anchor="middle" fill="currentColor" stroke="none">歷程：每題錯因四分類</text>
+            <rect x="270" y="112" width="200" height="30" rx="5"/><text x="370" y="132" text-anchor="middle" fill="currentColor" stroke="none">配隊：同路徑成隊 · 每週隊內分組</text>
+            <rect x="270" y="148" width="200" height="30" rx="5"/><text x="370" y="168" text-anchor="middle" fill="currentColor" stroke="none">說給我聽：三道關</text>
+            <rect x="270" y="184" width="200" height="30" rx="5"/><text x="370" y="204" text-anchor="middle" fill="currentColor" stroke="none">配速：睡不夠減量 · 22:30</text>
+            <text x="370" y="232" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">AI 大腦已有現成版本 · 課綱是資料不是程式</text>
+            <!-- engine to team -->
+            <line x1="485" y1="128" x2="560" y2="128" marker-end="url(#ar)"/><text x="522" y="118" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">共同卡點卡</text>
+            <!-- team block -->
+            <rect x="565" y="40" width="315" height="200" rx="10"/>
+            <text x="722" y="62" text-anchor="middle" fill="currentColor" stroke="none" font-weight="700" font-size="13">8 週小隊 · 每週 50 分鐘（同隊同老師 · 隊內依卡點分組）</text>
+            <rect x="580" y="76" width="140" height="30" rx="5"/><text x="650" y="96" text-anchor="middle" fill="currentColor" stroke="none">老師講「你們的錯」10'</text>
+            <rect x="730" y="76" width="135" height="30" rx="5"/><text x="797" y="96" text-anchor="middle" fill="currentColor" stroke="none">補最後一哩 15'</text>
+            <rect x="580" y="112" width="140" height="30" rx="5" stroke="#22A06B" stroke-width="2"/><text x="650" y="132" text-anchor="middle" fill="currentColor" stroke="none">互相講 15'</text>
+            <rect x="730" y="112" width="135" height="30" rx="5"/><text x="797" y="132" text-anchor="middle" fill="currentColor" stroke="none">一句「我搞懂的」10'</text>
+            <rect x="580" y="160" width="285" height="30" rx="5"/><text x="722" y="180" text-anchor="middle" fill="currentColor" stroke="none">下課：各自說給我聽 → 隔三天再測 → 完賽</text>
+            <text x="722" y="220" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">iPad 最好、手機也能上；共用一張答題紙</text>
+            <!-- daily loop bottom -->
+            <rect x="255" y="290" width="230" height="44" rx="8"/><text x="370" y="309" text-anchor="middle" fill="currentColor" stroke="none">每天 45' 自學格 + 30" 說給我聽</text><text x="370" y="325" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">小陪陪，不教</text>
+            <line x1="370" y1="240" x2="370" y2="288" marker-end="url(#ar)"/><text x="384" y="268" fill="currentColor" stroke="none" font-size="10.5">排今天</text>
+            <line x1="722" y1="240" x2="722" y2="312" marker-end="url(#ar)"/><text x="736" y="280" fill="currentColor" stroke="none" font-size="10.5">結果回流歷程</text>
+            <path d="M485 312 H600 V240" fill="none" stroke-dasharray="4 3"/>
+            <!-- outputs to people -->
+            <rect x="565" y="290" width="315" height="44" rx="8"/><text x="722" y="309" text-anchor="middle" fill="currentColor" stroke="none">家人 LINE：「他把浮力講給我聽，過了」</text><text x="722" y="325" text-anchor="middle" fill="currentColor" stroke="none" font-size="10.5">好消息預設分享 · 一下回應 · 今天可以問他什麼</text>
+            <line x1="485" y1="312" x2="560" y2="312" marker-end="url(#ar)"/>
+            <!-- people row -->
+            <text x="20" y="300" fill="currentColor" stroke="none" font-size="11" font-weight="700" letter-spacing="1">四個角色各看一頁</text>
+            <text x="20" y="320" fill="currentColor" stroke="none" font-size="11.5">學生手機：首頁 · 跑團 · 說給我聽 · 路線 · 我</text>
+            <text x="20" y="338" fill="currentColor" stroke="none" font-size="11.5">老師：課前一頁 · 30 秒語音評語</text>
+            <text x="20" y="356" fill="currentColor" stroke="none" font-size="11.5">領跑員台：今日名單 · 成班確認</text>
+            <text x="20" y="374" fill="currentColor" stroke="none" font-size="11.5">家長：LINE，不裝新 App，在 LINE 付費</text>
+          </g>
+        </svg>
+        <figcaption>產品框架：四個來源自動流進引擎，引擎替每個孩子排今天、替每一隊排本週主題；跑團與每日練習的結果回流歷程，家人收到的是「講得出來」不是分數。紅框是 Tandelo 全球通用的部分，其餘由在地客戶供。</figcaption>
+      </figure>
+      <div class="three">
+        <div class="box"><h4>這次做</h4><ul><li>國二數學 · 8 隊 × 6 人 · 同老師同時段 8 週 · 每週隊內依卡點分組</li><li>第一天 20 分鐘診斷 → 配進 8 週小隊（試上一堂）→ LINE 付款 → 課前一頁 → 50 分鐘跑團 → 說給我聽三道關 → 續購</li><li>手機：首頁、路線、說給我聽、我；LINE：搞懂了通知、每週故事</li></ul></div>
+        <div class="box"><h4>這次不做</h4><ul><li>小陪的 Rive 臉、Apple 健康、心情</li><li>跨隊臨時湊團、一對一提議、換檔規則</li><li>答題紙筆寫完整版、家人角色、全家長跑</li><li>國一、理化、英文、小學、高中、海外</li></ul></div>
+        <div class="box"><h4>前置依賴</h4><ul><li>萬通：8 位老師、1 位輔導老師、50 個國二家庭、上課系統接口、老師分潤同意</li><li>法務：付款走 LINE/網頁（Apple 對一對多無內購例外）、13 歲以下家長同意、商標</li><li>Tandelo：現成的 AI 大腦、課綱知識點資料、LINE 官方帳號</li></ul></div>
+      </div>
+    </div>
+  </div>
+  <div class="ftr"><span>Tandelo 提案 · 2026-09-18</span><span>3 / 6</span></div>
+</div>
+
+<!-- PAGE 4 · 資源 責任 時程 -->
+<div class="page" id="p4">
+  <div class="hdr"><span class="tier">二、具體怎麼做？（2/2）</span><span class="brand"><span>Tandelo</span></span></div>
+  <div class="body">
+    <div>
+      <h2><span class="n">5</span>Resource 資源與權限<span class="q">最多投入多少人力、預算與系統資源？可以自行決定到哪裡？</span></h2>
+      <div class="two">
+        <div class="box"><h4>試點要花多少、花在哪（11 週：3 週準備 + 8 週上課）</h4><div class="scroll"><table><thead><tr><th>項目</th><th>怎麼算</th><th>金額</th></tr></thead><tbody>
+<tr><td class="k">Tandelo 人力</td><td>產品/工程 2、設計 1、客戶成功 1，共 4 人 × 約 3 個月 × 月薪含勞健保約 9 萬</td><td class="mono">約 110 萬</td></tr>
+<tr><td class="k">老師分潤</td><td>8 隊 × 8 週 × 每團 NT$1,000，加保底與備援 2 位、課前工作坊</td><td class="mono">約 15 萬</td></tr>
+<tr><td class="k">診斷題庫與教材對應</td><td>國二數學 12 題診斷 × 6 單元、課本知識點對應（萬通教務協作）</td><td class="mono">約 15 萬</td></tr>
+<tr><td class="k">法務、金流、同意書</td><td>付款路徑、兒少個資同意書、商標查詢、LINE Pay 開通</td><td class="mono">約 20 萬</td></tr>
+<tr><td class="k">AI、雲端、LINE 官方帳號</td><td>50 人 × 3 個月語音與判定，加主機</td><td class="mono">約 8 萬</td></tr>
+<tr><td class="k">訪談與試點營運</td><td>5 位輔導老師、10 位家長訪談禮金；試點期間客服補課</td><td class="mono">約 12 萬</td></tr>
+<tr><td class="k">試點招募與家長溝通</td><td>從 OneClass 現有學生招 50 家：招募訊息與圖文、LINE 官方帳號素材、線上說明會 2 場、試上邀請、家長 FAQ 與同意書版面、輔導老師話術。不買廣告</td><td class="mono">約 12 萬</td></tr>
+<tr><td class="k">小計</td><td>—</td><td class="mono"><b>約 192 萬</b></td></tr>
+<tr><td class="k">預備金 + 萬通內部人力估價</td><td>預備 20%；輔導老師 1 位、教務 1 位各投入約 3 個月（萬通出人，這裡估價不付現）</td><td class="mono">約 40 萬 + 約 50 萬</td></tr>
+<tr><td class="k">試點學費收入（回沖）</td><td>50 家 × 8 團包 NT$2,990 × 2 個月，試點價打八折</td><td class="mono">約 −24 萬</td></tr>
+<tr><td class="k"><b>上限</b></td><td>現金支出約 200–250 萬，加萬通內部人力估價，總資源約 <b>300 萬</b>；規劃寫 300–500 萬是含「第二個時段帶、換老師、延長 4 週」的餘裕</td><td class="mono"><b>300 萬（上限 500 萬）</b></td></tr>
+</tbody></table></div><p class="note"><b>涵蓋</b>：試點所需的畫面、配隊與分組、說給我聽、家長 LINE、老師課前一頁、領跑員成班、付款、法遵、訪談、試點招募與家長溝通、結案報告。<b>不涵蓋</b>：小陪的動畫臉、Apple 健康串接、iPad 筆寫答題紙、國一與理化英文、海外，這些在試點過關後另編預算。<b>行銷與業務推廣為什麼試點只編 12 萬</b>：試點刻意只招現有學生，獲客成本接近零，要驗的是產品不是廣告。<b>正式上線的行銷是第二段的錢</b>：目標每家獲客 ≤ NT$2,500，第一年若上線 1,000 個家庭約 250 萬，內容是 20 分鐘免費診斷的入口、舊生轉介方案、家人迴路的分享機制、萬通通路素材，不做電銷團隊；對第二個客戶的業務推廣（提案、展示、簽約）另估約 50 萬。</p></div>
+        <div class="box"><h4>權限分層</h4><div class="scroll"><table><tbody><tr><td class="k">團隊可自決</td><td>畫面、湊團規則調整、時段微調、老師配對、診斷題目</td></tr><tr><td class="k">要拍板</td><td>定價與抽成、老師分潤額、成班下限、22:30 等硬規則的例外、家長端文案</td></tr><tr><td class="k">要法務</td><td>付款路徑、同意書、錄音保存、商標、品牌與資料歸屬條款</td></tr><tr><td class="k">內創治理</td><td>專案獨立記帳；W0 立案、W6 期中、W11 期末三次向主管報告；預算超過 300 萬或範圍要擴，回到主管拍板</td></tr></tbody></table></div></div>
+      </div>
+    </div>
+    <div>
+      <h2><span class="n">6</span>Owner 責任歸屬<span class="q">誰對結果負責？誰協作？有衝突時誰拍板？</span></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>事</th><th>負責</th><th>協作</th><th>衝突時拍板</th></tr></thead>
+        <tbody>
+          <tr><td class="k">產品、引擎、畫面、指標</td><td>Tandelo（Edward）</td><td>萬通教務</td><td rowspan="5">Edward × 萬通指定的試點負責人；週會一次、48 小時內拍板；拍不下就照「試點範圍不擴」原則</td></tr>
+          <tr><td class="k">老師、學生、輔導老師、上課系統</td><td>萬通試點負責人</td><td>Tandelo 客戶成功</td></tr>
+          <tr><td class="k">家長付款、同意書、法遵</td><td>萬通法務</td><td>Tandelo 產品</td></tr>
+          <tr><td class="k">成班確認、今日名單</td><td>萬通輔導老師（領跑員）</td><td>引擎</td></tr>
+          <tr><td class="k">試點結案與三段決策</td><td>Edward</td><td>萬通、Codex 獨立審查</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div>
+      <h2><span class="n">7</span>Deadline 時程與里程碑<span class="q">何時交付？何時有足夠資料？何時做下一次決策？</span></h2>
+      <div class="tl">
+        <div class="gate"><b>W0</b><span>簽試點：範圍、抽成、品牌與資料歸屬</span></div>
+        <div><b>W1–W3</b><span>建置：診斷、圈固定、團每週重湊、LINE 付款、課前一頁、說給我聽三道關；訪談 5 位輔導老師、10 位家長</span></div>
+        <div><b>W4</b><span>50 個家庭做診斷、配進 8 隊、第一週試上成班</span></div>
+        <div><b>W6</b><span>第一次讀數：成班率、三週留存；不對就調規則</span></div>
+        <div><b>W9</b><span>隔三天再測資料夠了：學會率；段考後「檢討卷跑團」</span></div>
+        <div class="gate"><b>W11</b><span>8 週結束：續購率出來；結案報告；三段決策</span></div>
+      </div>
+      <p style="font-size:12.5px;color:var(--mute);margin-top:8px">足夠資料的時間點：成班率 W6、學會率 W9、續購率 W11。下一次決策在 W11，決定是否簽第二個客戶。</p>
+    </div>
+  </div>
+  <div class="ftr"><span>Tandelo 提案 · 2026-09-18</span><span>4 / 6</span></div>
+</div>
+
+<!-- PAGE 5 · 如何驗證 -->
+<div class="page" id="p5">
+  <div class="hdr"><span class="tier">三、如何驗證？</span><span class="brand"><span>Tandelo</span></span></div>
+  <div class="body">
+    <div>
+      <h2><span class="n">8</span>Expected 預期成果與指標<span class="q">基準值、目標值、計算方式</span></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>指標</th><th>基準值</th><th>目標值</th><th>計算方式</th><th>何時量</th></tr></thead>
+        <tbody>
+          <tr><td class="k">成班率（含被滿足率）</td><td>無（新指標）</td><td class="mono">≥ 60%</td><td>本週有卡點的學生中，被排進一堂對準該卡點的跑團的比例；不只看邀請成班</td><td>每週 · W6 首讀</td></tr>
+          <tr><td class="k">學會率</td><td>OneClass 現況待提供（課後測驗）</td><td class="mono">≥ 70%</td><td>隔三天無提示再測通過 ÷ 當週說給我聽通過</td><td>W9</td></tr>
+          <tr><td class="k">三週留存</td><td>Khanmigo 類產品約四成（外部）</td><td class="mono">≥ 50%</td><td>第三週仍每週至少 3 天完成一格且說給我聽的學生比例</td><td>W7</td></tr>
+          <tr><td class="k">8 週續購率</td><td>OneClass 續約率待提供</td><td class="mono">≥ 50%</td><td>試點結束 14 天內付費續下一季的家庭 ÷ 試點家庭</td><td>W11 + 2 週</td></tr>
+          <tr><td class="k">每團實際人數</td><td>—</td><td class="mono">平均 ≥ 4.5</td><td>實際上課人數平均（含取消）</td><td>每週</td></tr>
+          <tr><td class="k">五人團毛利（扣老師 AI 通路準備金）</td><td>試算 28%</td><td class="mono">≥ 25%</td><td>收入 − 老師 − AI − 通路 − 5% 準備金</td><td>W11</td></tr>
+          <tr><td class="k">老師願意續帶</td><td>—</td><td class="mono">≥ 6 / 8 位</td><td>試點後願意下一季帶團的老師數</td><td>W11</td></tr>
+          <tr><td class="k">家長「今天可以問他什麼」開啟率</td><td>—</td><td class="mono">≥ 60%</td><td>開啟 ÷ 送出</td><td>每週</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:12.5px;color:var(--mute);margin-top:6px">基準值標「待提供」的三項，簽約時請萬通給實際數，否則目標值只是猜的。</p>
+    </div>
+    <div>
+      <h2><span class="n">9</span>Risk 風險與對策<span class="q">什麼會讓它失敗？早期訊號是什麼？</span></h2>
+      <div class="scroll"><table>
+        <thead><tr><th>風險</th><th>早期訊號</th><th>對策</th></tr></thead>
+        <tbody>
+          <tr><td class="k">湊不成：密度不夠</td><td>W6 成班率 &lt; 50%、連續兩週沒團可上的人 &gt; 15%</td><td>固定小隊與老師保關係、隊內每週依卡點分組保精準；連續兩週脫節者建議轉隊；這週沒你的點就不上不扣錢；連續兩週湊不到的人轉一對一補強 25 分鐘</td></tr>
+          <tr><td class="k">講得出來 ≠ 學會</td><td>當下通過高、隔三天再測低於 55%</td><td>三道關分開記；AI 不確定交老師抽查；老師卡看再測率不看當下率</td></tr>
+          <tr><td class="k">付款被 App 規則卡住</td><td>審核退件、內購抽 30%</td><td>家長在 LINE/網頁購買，App 內不引導；法務 W0 先確認</td></tr>
+          <tr><td class="k">老師不願改教法</td><td>老師講話時間 &gt; 60%、不用共同卡點卡</td><td>W1 兩小時工作坊、課前一頁自動送、月底看再測率與收入</td></tr>
+          <tr><td class="k">家長覺得多付 25%</td><td>續購 &lt; 40%、退費集中在第 3 週</td><td>敘事不寫「五分之一價」，寫真人時數兩倍與「講得出來」；週報用孩子的話</td></tr>
+          <tr><td class="k">孩子被家人迴路反感</td><td>分享關閉率 &gt; 30%</td><td>好消息預設、壞消息孩子決定、家人只能回一句；心情只有孩子能按</td></tr>
+          <tr><td class="k">兒少個資與錄音</td><td>同意書簽署率低、家長質疑</td><td>錄音不留原檔、家人端 7 天刪、13 歲以下家長同意；法務先看</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="ftr"><span>Tandelo 提案 · 2026-09-18</span><span>5 / 6</span></div>
+</div>
+
+<!-- PAGE 6 · 決策 -->
+<div class="page" id="p6">
+  <div class="hdr"><span class="tier">三、如何驗證？（決策 · 商業模式 · 商業目標 · 補助）</span><span class="brand"><span>Tandelo</span></span></div>
+  <div class="body">
+    <div>
+      <h2><span class="n">10</span>Decision 這次要拍板的事<span class="q">現在決定什麼？下一次在哪裡決定？</span></h2>
+      <div class="two">
+        <div class="box hi"><h4>現在要拍板</h4><ol><li><b>簽 8 週試點</b>：國二數學、8 隊 × 6 人、同老師 8 週、每週隊內依卡點分組、NT$300–500 萬</li><li><b>合作結構</b>：Tandelo 是平台，萬通是第一個客戶；家長端「萬通教育出品」；抽成 20–25% 或每學生月費</li><li><b>品牌與資料歸屬</b>：引擎、歷程資料、Tandelo 品牌歸 Tandelo；老師、學生、課程歸萬通；台灣獨家年限</li><li><b>付款路徑</b>：LINE/網頁購買，App 內不引導</li></ol></div>
+        <div class="box"><h4>下一次決策（W11）</h4><ul><li>四個目標都過：簽第二個客戶（台灣另一家補教，或越南/日本夥伴），進第二段 NT$2,000–3,000 萬</li><li>過三缺一：延長 4 週修那一項</li><li>缺兩項以上：停。損失上限 500 萬，留下一顆可租的引擎和一份試點報告</li></ul></div>
+      </div>
+    </div>
+    <div>
+      <h2><span class="n">—</span>三段要錢，每段有停損</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>段</th><th>要多少</th><th>買什麼答案</th><th>過關條件</th><th>沒過就</th></tr></thead>
+        <tbody>
+          <tr><td class="k">試點 8 週</td><td class="mono">NT$300–500 萬</td><td>湊得成、學得會、算得過、願意續買</td><td>成班 ≥ 60% · 再測 ≥ 70% · 續購 ≥ 50% · 五人團毛利 ≥ 25%</td><td>停</td></tr>
+          <tr><td class="k">簽第二個客戶</td><td class="mono">NT$2,000–3,000 萬 / 12 個月</td><td>引擎能離開萬通活；獲客 ≤ NT$3,000、流失 ≤ 9%</td><td>第二客戶上線、兩邊成班率都 ≥ 60%</td><td>留在萬通內做現金牛</td></tr>
+          <tr><td class="k">三市場三客戶</td><td>依前段</td><td>規模不等比長人</td><td>Tandelo 營業利益 ≥ 30%</td><td>維持兩客戶</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="two">
+      <div class="box"><h4>老師每月能賺多少（試算）</h4><div class="scroll"><table><thead><tr><th>老師類型</th><th>每週帶團</th><th>帶團費</th><th>補強課</th><th>季末獎金月攤</th><th>每月合計</th><th>同時數一對一</th></tr></thead><tbody>
+<tr><td class="k">兼職 · 一個時段</td><td class="mono">2 團 · 約 2 小時</td><td class="mono">8,600</td><td class="mono">1,300</td><td class="mono">1,200</td><td class="mono"><b>約 1.1 萬</b></td><td class="mono">約 0.7 萬</td></tr>
+<tr><td class="k">主力兼職 · 三個時段</td><td class="mono">6 團 · 約 6 小時</td><td class="mono">25,800</td><td class="mono">3,900</td><td class="mono">3,600</td><td class="mono"><b>約 3.3 萬</b></td><td class="mono">約 2.1 萬</td></tr>
+<tr><td class="k">全職</td><td class="mono">20 團 · 約 20 小時</td><td class="mono">86,000</td><td class="mono">10,300</td><td class="mono">12,000</td><td class="mono"><b>約 10.8 萬</b></td><td class="mono">約 6.9 萬</td></tr>
+</tbody></table></div><p class="note"><b>算法</b>：一團 5–6 人 NT$1,000（4 人 850、3 人 700），一個月 4.3 週；補強課是湊不到團的孩子 25 分鐘一對一、一堂 NT$300；季末獎金是一隊 8 週結束「隔三天再測通過率」過七成發 NT$1,200；一對一對照用每小時 NT$800，要換成萬通實際鐘點費。備課只要上課前看卡點卡約 10 分鐘、下課留 30 秒語音。<b>人數不滿時</b>（全職 20 團）：平均 4 人約 9.5 萬、3 人約 8.3 萬，仍比同時數一對一多兩成。<b>要注意</b>：獎金攤下來每團約 150，老師等於拿走一團學費的 62%，萬通留下的約 15% 會掉到約 11%，獎金額度要跟萬通一起定；保底是平台在扛成班風險，成班率低於六成時會變固定成本。</p></div>
+      <div class="box wide"><h4>商業模式：誰付錢給誰</h4><div class="scroll"><table><tbody>
+<tr><td class="k">家長付</td><td>買跑團次數，不買堂數：4 團 NT$1,790 · 8 團 NT$2,990（主力）· 8 團 + 一對一 2 小時 NT$5,990 · 會考衝刺包。在 LINE 或網頁付（Apple 對一對多小班沒有內購例外，App 內不引導）</td></tr>
+<tr><td class="k">萬通留</td><td>學費的 75–80%，付老師（每團 NT$1,000，保底每週兩團）、輔導老師、客服、在地行銷。留下約 15%，老師產能 ×5</td></tr>
+<tr><td class="k">Tandelo 收</td><td>平台抽成 20–25%（每家每月約 NT$900），付 AI、金流、主機，毛利約 80%；萬家規模營業利益 40% 以上</td></tr>
+<tr><td class="k">成班才扣</td><td>學生按加入不扣錢；領跑員按成班才扣次數；沒成班次數退回；24 小時前可取消；隨時退出退次數</td></tr>
+<tr><td class="k">獲客</td><td>不走電銷：20 分鐘免費診斷、OneClass 舊生轉介、家人迴路口碑、萬通通路。目標每家 ≤ NT$2,500</td></tr>
+<tr><td class="k">第二種收入</td><td>引擎租給其他補教與學校（第二年起）、海外夥伴（第三年起）</td></tr>
+</tbody></table></div></div>
+      <div class="box"><h4>商業目標：三年各到哪裡</h4><div class="scroll"><table><thead><tr><th></th><th>第一年</th><th>第二年</th><th>第三年</th></tr></thead><tbody>
+<tr><td class="k">里程碑</td><td>8 週試點過四關 → 台灣正式上線</td><td>3,000 個付費家庭；簽第二個客戶</td><td>10,000 個家庭；三市場三客戶</td></tr>
+<tr><td class="k">學費總額（家長付的總數）</td><td class="mono">試點約 NT$50 萬</td><td class="mono">約 1,080 萬/月 · 1.3 億/年</td><td class="mono">約 3,600 萬/月 · 4.3 億/年</td></tr>
+<tr><td class="k">Tandelo 營收</td><td class="mono">—</td><td class="mono">約 3,200 萬/年</td><td class="mono">約 1.1 億/年 + 引擎授權</td></tr>
+<tr><td class="k">Tandelo 營業利益</td><td class="mono">投入 300–500 萬</td><td class="mono">打平</td><td class="mono">≥ 30%</td></tr>
+<tr><td class="k">萬通側</td><td class="mono">試點成本由試點預算吸收</td><td class="mono">留約 15%，老師時薪 800 → 1,000</td><td class="mono">同左，續約率靠產品</td></tr>
+<tr><td class="k">要守的比率</td><td colspan="3">成班率 ≥ 60% · 三週留存 ≥ 50% · 8 週續購 ≥ 50% · 月流失 ≤ 9% · 獲客 ≤ NT$2,500 · 平均每團 ≥ 4.5 人</td></tr>
+</tbody></table></div><p class="note">全部是估的：一對一單價、老師分潤、抽成比例、月費接受度，都要用萬通實際帳和 8 週試點替換。</p></div>
+      <div class="box"><h4>政府補助：SBIR 可以申請，但不是用來付試點</h4><ul>
+<li><b>資格</b>：申請人要是中小企業（實收資本額 1 億以下或員工未滿 200 人）。以 Tandelo 平台公司名義申請最順，萬通當合作場域；萬通自己申請要先看是否符合中小企業認定</li>
+<li><b>額度</b>：先期研究（第一階段）個別申請最高 150 萬、6 個月；研究開發（第二階段）每年最高 600 萬、兩年最高 1,200 萬。通常補助不超過總經費一半，另一半自籌</li>
+<li><b>時間</b>：全年隨送隨審，審查約 2–3 個月。<b>所以 8 週試點自籌先跑</b>，SBIR 拿來付「第二段」：把引擎做成能給第二個客戶用的版本（配隊與分組、說給我聽的隔三天再測、老師卡點履歷）</li>
+<li><b>對我們有利的規定</b>：研發成果與智慧財產歸申請公司，剛好對應「引擎歸 Tandelo」的定位</li>
+<li><b>要準備的</b>：研發人員名單與人月、分帳的會計、創新性說明（歷程驅動的配對、講得出來才算學會，跟現有小班的差異）、萬通的合作意向書</li>
+<li><b>備案</b>：服務業可看商業發展署 SIIR 服務業創新研發計畫；地方型 SBIR（台北市、新北市）額度較小但審得快</li>
+</ul><p class="note">來源：<a href="https://sbir.org.tw/" style="color:var(--sky)">SBIR 官網</a> · <a href="https://startup.sme.gov.tw/home/modules/funding/detail/?sId=2" style="color:var(--sky)">新創圓夢網</a>。額度與比例以送件當時公告為準。</p></div>
+      <div class="box"><h4>附件</h4><ul><li>功能規劃 v0.16（含 Codex 兩輪審查回應、毛利與損益、出海分工）</li><li>互動原型：學生手機、跑團教室、家人 LINE、湊團引擎、跑團完整流程</li><li>三個早期原型與研究來源總覽</li><li>Codex 審查原文與引用查證</li></ul></div>
+    </div>
+    <div class="callout">結尾不停在損益表：這是萬通從「賣老師時間」變成「擁有引擎和歷程」的那一步。三年後，Tandelo 是唯一知道每個國中生卡在哪的公司。</div>
+  </div>
+  <div class="ftr"><span>Tandelo 提案 · 2026-09-18 · 蘇菲整理 · 框架：值得做嗎 / 具體怎麼做 / 如何驗證，十項</span><span>6 / 6</span></div>
+</div>
+
+</div>

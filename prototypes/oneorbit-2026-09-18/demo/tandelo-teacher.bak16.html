@@ -1,0 +1,609 @@
+<meta charset="utf-8">
+<title>Tandelo 老師版 Demo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&family=STIX+Two+Text:ital,wght@0,500;1,500&display=swap">
+<link rel="stylesheet" href="demo.css">
+<link rel="stylesheet" href="teacher.css">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5V20h-5v-5H9v5H4z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2"/><circle cx="17" cy="10" r="2.6"/><path d="M3 19c.6-3.4 3-5 6-5s5.4 1.6 6 5M15.5 14.4c2.8 0 4.8 1.4 5.5 4.6"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="3"/><path d="M4 10.5h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.500"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 12V6a1.5 1.5 0 0 1 3 0v5m0-6.5a1.5 1.5 0 0 1 3 0V11m0-5a1.5 1.5 0 0 1 3 0v8c0 4-2.5 6.5-6 6.5-3 0-4.5-1.500-6-4.5l-1.800-3.500a1.500 1.500 0 0 1 2.600-1.500L8 14"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.5a2.500 2.500 0 1 1 3.500 2.300c-.700.400-1 1-1 1.700M12 17v.2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.500" width="14" height="9.500" rx="2.500"/><path d="M8.500 10.500V8a3.500 3.500 0 0 1 7 0v2.500"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.800 5.200L19 10l-5.200 1.800L12 17l-1.800-5.200L5 10l5.200-1.800zM18.500 16l.7 2 .2.600 2 .700-2 .700-.700 2-.700-2-2-.700 2-.700z"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3.500" y="6" width="17" height="13" rx="3"/><path d="M3.500 10h17M16 14.500h1.500"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3.500h7l4 4V20.500H7z"/><path d="M14 3.500v4h4M10 12h5M10 16h5"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="3.500" y="6.500" width="12" height="11" rx="3"/><path d="M15.500 10.500l5-2.500v8l-5-2.500"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3.5 9.5 12 4.5l8.5 5M5 9.5h14M6.5 9.5v7M10 9.5v7M14 9.5v7M17.5 9.5v7M4 19.5h16"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M5 19l1-4L16.5 4.5l3 3L9 18z"/><path d="M14.5 6.5l3 3"/></symbol>
+  <symbol id="i-hl" viewBox="0 0 24 24"><path d="M9 15l-4 4h5l2-2M9 15l7.5-7.5 3 3L12 18z"/></symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M8 19h11M5.5 14.5 14 6l5 5-8.5 8.5H8.5z"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M6 6h12M12 6v13M9 19h6"/></symbol>
+  <symbol id="i-shape" viewBox="0 0 24 24"><rect x="4" y="4" width="9" height="9" rx="1.5"/><circle cx="15.5" cy="15.5" r="4.5"/></symbol>
+  <symbol id="i-img" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7 5 11l4 4"/><path d="M5 11h9a5 5 0 0 1 0 10h-2"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/></symbol>
+  <symbol id="i-quiz" viewBox="0 0 24 24"><path d="M7 3.5h10v17H7z"/><path d="M10 8h4M10 12h4M10 16h2"/></symbol>
+  <symbol id="i-split" viewBox="0 0 24 24"><circle cx="7" cy="8" r="2.5"/><circle cx="17" cy="8" r="2.5"/><path d="M3 18c.5-2.500 2-4 4-4s3.500 1.500 4 4M13 18c.5-2.500 2-4 4-4s3.500 1.500 4 4"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 10.500 5M12 18v3M4 4l16 16"/></symbol>
+  <symbol id="i-end" viewBox="0 0 24 24"><path d="M3.5 14c5-4.5 12-4.5 17 0l-2 2.500-3-1.500v-2.500c-2.500-.700-4.500-.700-7 0v2.500l-3 1.500z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
+  <symbol id="i-gem" viewBox="0 0 24 24"><path d="M6 4h12l3.5 5L12 20.5 2.5 9z"/><path d="M2.5 9h19M9 4l3 16.5L15 4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19 14.500A7.500 7.500 0 0 1 9.500 5 7.500 7.500 0 1 0 19 14.500z"/></symbol>
+</defs></svg>
+
+<header class="top">
+  <div class="wm">Tandelo<span class="dots"><i></i><i></i></span></div>
+  <div class="tag">老師版 Demo · 從接班到出帳</div>
+  <nav>
+    <a target="_blank" rel="noopener" href="https://claude.ai/artifact/1sCUzMAedF384syXnFjP1w">學生版 Demo</a>
+    <a class="on" href="#">老師版 Demo</a>
+    <a target="_blank" rel="noopener" href="https://claude.ai/artifact/ECL378CLawDDCcwuQK5Pfq">老師版規劃</a>
+  </nav>
+</header>
+
+<div class="main">
+  <aside class="rail" id="rail" aria-label="主流程"></aside>
+  <section class="stagewrap">
+    <div class="stagebar">
+      <span class="role" id="role" data-r="teacher"><i>師</i><span id="roleT">林老師的手機 · LINE</span></span>
+      <div class="navbtns"><button class="navbtn" id="prev"><svg class="i"><use href="#i-back"/></svg>上一步</button><button class="navbtn pri" id="next">下一步<svg class="i"><use href="#i-arrow"/></svg></button></div>
+    </div>
+    <div class="stage" id="stage">
+
+      <!-- LINE -->
+      <div class="dev phone line" id="devLine">
+        <div class="scr" data-id="notify">
+          <div class="lh"><div class="lg"><span class="duo" style="transform:scale(.62)"><i></i><i></i></span></div><div><b>Tandelo 老師</b><small>官方帳號 · 勿擾 22:00–08:00</small></div></div>
+          <div class="chat">
+            <span class="day">今天 08:12</span>
+            <div class="bub" style="max-width:94%"><h5>有一隊很適合你</h5>
+              <div>國二數學 · 不等式 · 6 人<br>每週三 19:00–19:50 · 連續 8 週</div>
+              <div class="q">他們都「知道要變號、說不出為什麼」，這是你帶得最好的一種卡住（你的學生隔三天通過率 78%）。</div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="cap">8 週預估收入</span><b class="lat" style="font-size:22px;color:var(--pine)">NT$8,800</b></div>
+              <button class="paybtn" style="background:var(--pine)" data-next>看這一隊</button>
+              <span class="cap">為你保留到今天 11:12。沒回應會轉給下一位老師，不影響你的接班紀錄。</span>
+            </div>
+            <span class="day">昨天 19:55</span>
+            <div class="bub"><div>週三理化隊的上課紀錄已整理好，3 位家長訊息等你確認。</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- mobile web -->
+      <div class="dev phone" id="devPhone" style="display:none">
+        <div class="burst" id="burst"></div>
+        <div class="scr" data-id="offer">
+          <div class="sb"><span>08:13</span><span class="r">5G<span class="bat"></span></span></div>
+          <div class="liff"><span class="x">✕</span><div><b>Tandelo 老師</b><small>teach.tandelo.app · 已用 LINE 登入</small></div><span class="dotm">⋯</span></div>
+          <div class="sc pad-b">
+            <div class="abar"><span class="awm s">Tandelo<span class="dots"><i></i><i></i></span></span><span class="pill g" style="align-self:center">保留 2:59</span></div>
+            <div><h1 class="hero s">不等式，為什麼要變號？</h1><p class="sub" style="font-size:14.5px;margin-top:4px">國二數學 · 6 人 · 每週三 19:00 · 8 週</p></div>
+            <div class="offer">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end"><div><span class="fine" style="text-align:left;display:block">8 週預估收入</span><div class="money">8,800 <small>元</small></div></div><span class="flag g">適合度 92</span></div>
+              <p class="body" style="font-size:13.5px">每堂 1,000 × 8 ＋ 季獎金約 800（若再測通過率維持 75% 以上）。人數掉到 4 人，鐘點費不變。</p>
+            </div>
+            <div class="card"><b>為什麼是你</b><div class="chips"><span class="chip">概念型卡點是你的強項</span><span class="chip">時段在你的可上課時間內</span><span class="chip h">與你週三 20:00 的課隔 10 分鐘</span></div></div>
+            <div class="card"><b>這六個人</b>
+              <div class="avs" style="gap:6px"><img class="ph" src="img/s1.jpg" width="42" height="42" alt=""><img class="ph" src="img/s2.jpg" width="42" height="42" alt=""><img class="ph" src="img/s3.jpg" width="42" height="42" alt=""><img class="ph" src="img/s4.jpg" width="42" height="42" alt=""><img class="ph" src="img/s5.jpg" width="42" height="42" alt=""><img class="ph" src="img/s6.jpg" width="42" height="42" alt=""></div>
+              <p class="body" style="font-size:13.5px">3 位說不出為什麼、2 位會變號但算錯、1 位已經會了（可以當小老師）。其中一位看到分數會慌。</p></div>
+          </div>
+          <div class="dock"><button class="btn" id="takeBtn">接這一隊</button><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn s o">換個時段我就接</button><button class="btn s o" style="border-color:var(--line);color:var(--mute)">這次不接</button></div></div>
+        </div>
+        <div class="scr" data-id="taken">
+          <div class="sb"><span>08:14</span><span class="r">5G<span class="bat"></span></span></div>
+          <div class="liff"><span class="x">✕</span><div><b>Tandelo 老師</b><small>teach.tandelo.app · 已用 LINE 登入</small></div><span class="dotm">⋯</span></div>
+          <div class="sc" style="justify-content:center;gap:20px;text-align:center">
+            <div class="okbig"><svg class="i"><use href="#i-check"/></svg></div>
+            <h1 class="hero m">成班了。</h1>
+            <p class="sub">六個家庭已收到通知。9/23（三）19:00 第一堂，已放進你的班表。</p>
+            <div class="card" style="text-align:left"><b>接下來你不用做的事</b><p class="body" style="font-size:14px">不用建群組、不用排時間、不用收錢、不用出講義。上課前 30 分鐘，你會收到一頁課前摘要。</p></div>
+            <div class="card" style="text-align:left;background:var(--mint-2)"><b>LINE 也會收到一則確認</b><p class="body" style="font-size:13.5px">「已成班 · 9/23（三）19:00 不等式隊」，附上課前一頁的連結。關掉這一頁就回到 LINE。</p></div>
+            <button class="btn o" data-next>到電腦上看今天<svg class="i"><use href="#i-arrow"/></svg></button>
+          </div>
+        </div>
+        <div class="scr" data-id="voice">
+          <div class="sb"><span>19:51</span><span class="r">5G<span class="bat"></span></span></div>
+          <div class="sc" style="gap:16px">
+            <div class="abar"><span class="t">下課了 · 說 50 秒</span><span class="awm s">Tandelo<span class="dots"><i></i><i></i></span></span></div>
+            <p class="body">按住，把今天的課說給小陪聽。想到什麼說什麼，它會整理成三樣東西。</p>
+            <button class="hold" id="holdBtn" aria-label="按住說話"><svg class="rg" viewBox="0 0 170 170"><circle cx="85" cy="85" r="80"/></svg><svg class="i"><use href="#i-mic"/></svg></button>
+            <p class="fine" id="holdTip">按住開始（示範只需 4 秒）</p>
+            <div class="tx" style="min-height:96px"><span class="q">你說的</span><span id="vTx" style="color:var(--faint)">⋯</span></div>
+            <div class="checks" id="vOut">
+              <div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i><div>上課紀錄<small>時數、出席、分組、下週建議</small></div></div>
+              <div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i><div>給全隊的 50 秒回饋<small>放進每個人的路線</small></div></div>
+              <div class="ck"><i><svg class="i"><use href="#i-check"/></svg></i><div>6 則家長訊息草稿<small>等你確認才送出</small></div></div>
+            </div>
+            <button class="btn" id="vGo" data-next disabled style="opacity:.4">到電腦上確認草稿</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- WEB -->
+      <div class="dev web" id="devWeb" style="display:none">
+        <div class="chrome"><i></i><i></i><i></i><div class="url"><svg class="i"><use href="#i-lock"/></svg>teach.tandelo.app</div></div>
+        <div class="app">
+          <nav class="side" id="side">
+            <div class="awm s">Tandelo<span class="dots"><i></i><i></i></span></div><small>老師版</small>
+            <button data-go="today"><svg class="i"><use href="#i-home"/></svg>今天<em>3</em></button>
+            <button data-go="opps"><svg class="i"><use href="#i-spark"/></svg>開課機會<em>2</em></button>
+            <button data-go="students"><svg class="i"><use href="#i-users"/></svg>我的學生</button>
+            <button data-go="calendar"><svg class="i"><use href="#i-cal"/></svg>班表</button>
+            <button data-go="brief"><svg class="i"><use href="#i-video"/></svg>上課</button>
+            <button data-go="records"><svg class="i"><use href="#i-spark"/></svg>小陪整理<em>9</em></button>
+                        <button data-go="tier"><svg class="i"><use href="#i-gem"/></svg>評鑑</button>
+            <button data-go="income"><svg class="i"><use href="#i-wallet"/></svg>收入</button>
+            <button data-go="materials"><svg class="i"><use href="#i-quiz"/></svg>教材</button>
+                                                <button class="who" data-go="profile"><img class="ph" src="img/lin.jpg" width="38" height="38" alt=""><div>林老師 <span class="tb gold sm">黃金</span><small>個人資料 ›</small></div></button>
+          </nav>
+          <button class="aifab" id="aiFab" aria-label="打開小陪"><span class="duo"><i></i><i></i></span><b>問小陪</b></button>
+          <aside class="aichat" id="aiChat" aria-label="小陪助理">
+            <div class="ac-h"><span class="duo"><i></i><i></i></span><div><b>小陪</b><small id="acCtx">我看得到你現在在「今天」</small></div><button class="ic2" id="acX">✕</button></div>
+            <div class="ac-m" id="acM"></div>
+            <div class="ac-s" id="acS"></div>
+            <form class="ac-i" id="acF"><button type="button" class="acmic" id="acMic" aria-label="用說的"><svg class="i"><use href="#i-mic"/></svg></button><input id="acIn" placeholder="打字，或按左邊用說的" autocomplete="off"><button class="acsend" aria-label="送出"><svg class="i"><use href="#i-arrow"/></svg></button></form>
+          </aside>
+
+
+          <!-- today -->
+          <div class="scr" data-id="today"><div class="pg">
+            <div class="hd"><div><p class="eyebrow">9 月 21 日 · 星期一</p><h2>早安，林老師</h2></div>
+              <div class="sp stats3"><button data-go="income"><small>本月</small><b class="lat">21,000</b></button><button data-go="tier"><small>等級</small><b><span class="tb gold">黃金 81</span></b></button><button data-go="impact"><small>隔三天還會</small><b class="lat">78%</b></button></div></div>
+            <div class="nh2">
+              <div class="nh2-l">
+                <span class="nh2-e">下一堂 · 今天 19:00</span>
+                <h3>不等式隊 <em>第 1 週</em></h3>
+                <div class="nh2-m"><span class="ratio-s">1<i>對</i>6</span><span>50 分鐘</span><span class="ok"><i></i>4 人已在等候室</span></div>
+                <div class="nh-av"><img src="img/s1.jpg" alt=""><img src="img/s2.jpg" alt=""><img src="img/s3.jpg" alt=""><img src="img/s4.jpg" alt=""><img src="img/s5.jpg" alt=""><img src="img/s6.jpg" alt=""></div>
+              </div>
+              <div class="nh2-r">
+                <div class="cdring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52"/><circle class="f" cx="60" cy="60" r="52"/></svg><div><b class="lat">6:42</b><small>後開始</small></div></div>
+                <div class="nh2-b"><button class="enterbtn sm" data-go="room"><svg class="i"><use href="#i-video"/></svg>進教室</button><button class="ghost" data-go="brief">課前一頁</button></div>
+              </div>
+              <span class="deco"><i></i><i></i></span>
+            </div>
+            <div class="dayline"><b>今天</b><div class="dl-t"><i class="now" style="left:28.67%"><u>現在 12:18</u></i><div class="blk" style="left:73.33%;width:5.56%"></div><div class="blk c1" style="left:80.0%;width:2.78%"></div><span style="left:0.0%">8</span><span style="left:20.0%">11</span><span style="left:40.0%">14</span><span style="left:60.0%">17</span><span style="left:80.0%">20</span><span style="left:100.0%">23</span></div><div class="dl-k"><span><i></i>19:00 不等式隊</span><span><i class="c1"></i>20:00 一對一 · 小恩</span></div></div>
+            <div class="sechd"><h3>等你決定</h3><span class="cnt" id="opsN">3</span></div>
+            <div class="dec3">
+              <div class="dec coral"><span class="dic"><svg class="i"><use href="#i-help"/></svg></span><b>小芸這三天都說「煩」</b><small>昨晚 23:50 還在線 · 還沒通知家長</small><div class="dbtn"><button class="mini" data-done>我來問她</button><button class="mini o" data-done>轉關懷窗口</button></div></div>
+              <div class="dec pine"><span class="dic"><svg class="i"><use href="#i-users"/></svg></span><b>阿哲想轉到幾何隊</b><small>家長已同意 · 需要你放人</small><div class="dbtn"><button class="mini" data-done>同意</button><button class="mini o" data-done>先聊聊</button></div></div>
+              <div class="dec honey"><span class="dic"><svg class="i"><use href="#i-cal"/></svg></span><b>週四 18:00 代王老師一堂？</b><small>浮力隊 4 人 · 1,000 ＋ 200</small><div class="dbtn"><button class="mini" data-done>我可以</button><button class="mini o" data-done>這次不行</button></div></div>
+            </div>
+            <button class="aibar" data-go="opps"><span class="duo"><i></i><i></i></span><span><b>5 位學生卡在同一個新地方：分數係數。</b> 開一堂 25 分鐘補強？</span><em>看看 ›</em></button>
+          </div></div>
+
+          <!-- opps -->
+          <div class="scr" data-id="opps"><div class="pg" style="grid-template-rows:auto auto 1fr">
+            <div class="hd"><div><h2>開課機會</h2><p>只列你能上課的時段</p></div>
+              <span class="sp" style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mute)">排序<select id="oSort" style="font:inherit;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:#fff"><option value="fit">最適合我</option><option value="pay">收入最高</option><option value="wait">等最久的先</option></select></span></div>
+            <div class="ftabs" id="oTabs"><button class="on" data-f="all">全部 <em>11</em></button><button data-f="數學">數學 <em>6</em></button><button data-f="理化">理化 <em>2</em></button><button data-f="英文">英文 <em>1</em></button><button data-f="國文">國文 <em>1</em></button><button data-f="技能">技能課 <em>1</em></button><span style="margin-left:auto;display:flex;gap:6px;align-items:center"><small style="font-size:12px;color:var(--mute)">班型</small><button data-t="all" class="on sm">全部</button><button data-t="1" class="sm">1 對 1</button><button data-t="2" class="sm">1 對 2–3</button><button data-t="3" class="sm">1 對 4–6</button></span></div>
+            <div class="olist" id="oList"></div>
+            <div class="od" id="oDraw"><div class="odp">
+              <div class="lvh"><div><small>這一隊怎麼湊出來的</small><b id="odT">乘除負數 · 國二 · 週三 19:00</b></div><button class="ic2" id="odX">✕</button></div>
+              <div class="flow5" id="odFlow">
+                <div class="f5 done"><i>1</i><div><b>學生診斷完，進入等候池</b><small>11 人卡在「乘除負數」、國二、程度相近</small></div></div>
+                <div class="f5 done"><i>2</i><div><b>小陪用時段湊隊</b><small>6 人週三晚上都有空 → 第一隊；另 5 人候補第二隊</small></div></div>
+                <div class="f5 now"><i>3</i><div><b>等一位老師接</b><small>先問最適合的你 · 保留到今天 11:12</small></div></div>
+                <div class="f5"><i>4</i><div><b>學生收到邀請、家長付款</b><small>付款滿 4 人就成班；只到 3 人自動改 1 對 3</small></div></div>
+                <div class="f5"><i>5</i><div><b>成班，放進你的班表</b></div></div>
+              </div>
+              <h6 style="margin:0;font-size:12px;color:var(--mute)">這 6 位 · 綠格是週三 19:00 有空</h6>
+              <div class="pool"><div class="pk in"><img src="img/s1.jpg" alt=""><b>學生 A</b><span>說不出為什麼</span><div class="t"><u class=""></u><u class=""></u><u class="y"></u><u class=""></u><u class=""></u></div></div><div class="pk in"><img src="img/s2.jpg" alt=""><b>學生 B</b><span>會變號算錯</span><div class="t"><u class=""></u><u class="y"></u><u class="y"></u><u class=""></u><u class="y"></u></div></div><div class="pk in"><img src="img/s3.jpg" alt=""><b>學生 C</b><span>已經會了</span><div class="t"><u class="y"></u><u class=""></u><u class="y"></u><u class="y"></u><u class=""></u></div></div><div class="pk in"><img src="img/s4.jpg" alt=""><b>學生 D</b><span>方向不穩</span><div class="t"><u class=""></u><u class=""></u><u class="y"></u><u class=""></u><u class=""></u></div></div><div class="pk in"><img src="img/s5.jpg" alt=""><b>學生 E</b><span>怕分數</span><div class="t"><u class=""></u><u class="y"></u><u class="y"></u><u class=""></u><u class="y"></u></div></div><div class="pk in"><img src="img/s6.jpg" alt=""><b>學生 F</b><span>會背不會講</span><div class="t"><u class="y"></u><u class=""></u><u class="y"></u><u class="y"></u><u class=""></u></div></div></div>
+              <p style="margin:0;font-size:12px;color:var(--mute)">接班前只看得到卡點，名字在成班後才顯示。</p>
+              <button class="btn s" id="odTake">接這一隊</button>
+            </div></div>
+          </div></div>
+
+          <!-- students -->
+          <div class="scr" data-id="students"><div class="pg" style="grid-template-rows:auto auto 1fr">
+            <div class="hd"><div><h2>我的學生</h2><p>34 位 · 7 個團</p></div>
+              <div class="seg sp" id="sView" style="width:240px"><button class="on" data-v="list">名單</button><button data-v="squad">團的概況</button></div></div>
+            <div class="ftabs" id="sqTabs"></div>
+            <div class="cols" style="grid-template-columns:300px 1fr;min-height:0">
+              <div style="display:grid;gap:8px;align-content:start;min-height:0">
+                <div class="sqsum" id="sqSum"></div>
+                <div class="slist" id="slist"></div>
+              </div>
+              <div class="bx" id="sdetail" style="overflow:auto">
+                <div style="display:grid;grid-template-columns:64px 1fr auto;gap:14px;align-items:center"><img class="ph" id="sdImg" src="img/s1.jpg" width="64" height="64" alt=""><div><b style="font-size:20px" id="sdName">小睿</b><div style="font-size:13px;color:var(--mute)" id="sdGoal"></div></div><span class="flag h" id="sdFlag"></span></div>
+                <div class="chips" id="sdSq"></div>
+                <div class="ai3"><div class="duo"><i></i><i></i></div><div id="sdAi"></div></div>
+                <div class="cols3"><div class="bx" style="padding:12px"><h6>說給我聽</h6><div class="big" style="font-size:26px" id="sdSay">11<small> 次</small></div></div><div class="bx" style="padding:12px"><h6>提示用量</h6><div class="big" style="font-size:26px" id="sdHint">1.4<small> 級</small></div></div><div class="bx" style="padding:12px"><h6>已掌握</h6><div class="big" style="font-size:26px" id="sdGold">3<small> 點</small></div></div></div>
+                <div class="tl2" id="sdTl"></div>
+                
+              </div>
+              <div class="bx" id="sqDetail" style="display:none;overflow:auto"></div>
+            </div>
+          </div></div>
+
+          <!-- calendar -->
+          <div class="scr" data-id="calendar"><div class="pg">
+            <div class="hd"><div><h2>班表</h2><p id="calSub">本週 8 堂 · 點一堂課可以請假，小陪會幫你找代課</p></div>
+              <div class="seg sp" id="calSeg" style="width:300px"><button class="on" data-v="mine">我的課</button><button data-v="avail">我能上課的時間</button></div></div>
+            <div id="calMine" style="display:grid;gap:16px">
+            <div class="bx"><div class="week7"><div class="wday today"><h5>一 21</h5><div class="wev "><span class="lat">19:00</span><b>不等式隊</b><small>6 人 · 第 1 週</small></div><div class="wev c1"><span class="lat">20:00</span><b>一對一 · 小恩</b><small>25 分</small></div></div><div class="wday"><h5>二 22</h5><div class="wev "><span class="lat">19:00</span><b>函數隊</b><small>6 人 · 第 6 週</small></div></div><div class="wday"><h5>三 23</h5><div class="wev lv" id="lvEv"><span class="lat">19:00</span><b>不等式 B 隊</b><small>5 人 · 第 2 週</small></div><div class="wev c1"><span class="lat">20:00</span><b>一對一 · 小晴</b><small>25 分</small></div></div><div class="wday"><h5>四 24</h5><div class="wev c2"><span class="lat">21:00</span><b>高一 · 一對一</b><small>50 分</small></div></div><div class="wday"><h5>五 25</h5><div class="wev "><span class="lat">19:00</span><b>函數 B 隊</b><small>6 人 · 第 3 週</small></div></div><div class="wday"><h5>六 26</h5><div class="wev "><span class="lat">10:00</span><b>幾何隊</b><small>5 人 · 第 4 週</small></div></div><div class="wday"><h5>日 27</h5><div class="wempty">休息</div></div></div><p class="body" style="font-size:12.5px">本週 5 堂小隊課、3 堂一對一 · 點一堂課可以請假，小陪會幫你找代課</p></div>
+            <div class="lvd" id="lvBox"><div class="lvp">
+              <div class="lvh"><div><small>請假</small><b>週三 9/23 19:00 · 不等式 B 隊 · 第 2 週</b></div><button class="ic2" id="lvX">✕</button></div>
+              <div class="lvsteps"><span class="on">1 原因</span><span>2 找人</span><span>3 確認</span></div>
+              <div class="lvs on" data-s="1">
+                <span class="lab">離上課還有</span><div class="lvtime"><b class="lat">2 天 4 小時</b><span class="flag g">48 小時以上 · 不影響可靠度</span></div>
+                <span class="lab">原因（只有平台看得到）</span><div class="tagpick" id="lvWhy"><button class="on">生病</button><button>家裡有事</button><button>另有工作</button><button>其他</button></div>
+                <span class="lab">這堂怎麼處理比較好？</span>
+                <div class="opt2"><button class="on" data-o="sub"><b>找人代課</b><small>學生照常上課，進度不中斷</small></button><button data-o="move"><b>全隊改期</b><small>小陪問 5 位家長哪個時段可以</small></button></div>
+                <button class="btn s" id="lvNext1">下一步</button>
+              </div>
+              <div class="lvs" data-s="2">
+                <div class="ai3"><div class="duo talk"><i></i><i></i></div><div>我依「擅長這個卡點、教過這隊的學生、那個時段有空、等級與代課紀錄」排了三位。一次只問一位，12 小時沒回覆才問下一位。</div></div>
+                <div class="cands" id="cands"><button class="cand on" data-c="0"><img src="img/wang.jpg" alt=""><div><b>王老師</b><small>白金 · 概念型通過率 76%</small><small>教過這隊的小睿、小恩 · 這個時段有空</small></div><span class="fit2">96<small>合適度</small></span></button><button class="cand" data-c="1"><span class="ini" style="background:var(--sky)">陳</span><div><b>陳老師</b><small>黃金 · 帶過 3 次代課 · 評價 4.8</small><small>這個時段有空，但沒教過這些學生</small></div><span class="fit2">84<small>合適度</small></span></button><button class="cand" data-c="2"><span class="ini" style="background:var(--butter)">張</span><div><b>張老師</b><small>白銀 · 國二數學</small><small>時段有空 · 概念型不是強項</small></div><span class="fit2">71<small>合適度</small></span></button></div>
+                <button class="btn s" id="lvNext2">請王老師代課</button>
+              </div>
+              <div class="lvs" data-s="3">
+                <div class="okrow"><span class="okbig2"><svg class="i"><use href="#i-check"/></svg></span><div><b id="lvDoneT">王老師已接下這堂課</b><small>9/23 19:00 · 她 18:30 會收到課前一頁</small></div></div>
+                <div class="hand2"><h6>自動交給王老師的</h6><div>課前一頁與這堂的教案軌</div><div>上週的課後整理與每人卡點</div><div>需要留意的旗標（小晴：別在全班前點她）</div><div class="dim">她看不到：學生家庭、健康原始數據、你的評價與收入 · 下課後權限自動收回</div></div>
+                <div class="hand2"><h6>家長與學生會收到</h6><div class="lnmsg">「這週三由王老師代課，她教過小睿和小恩。林老師下週回來。<br>不方便的話可以改成下週補上，不扣堂數。」<span>＋ 王老師 30 秒自我介紹</span></div></div>
+                <div class="hand2"><h6>對你的影響</h6><div>這堂的收入給王老師（全額＋代課加給 200）</div><div>提前 48 小時以上請假，不扣可靠度</div><div>這隊 8 週內已代課 1 次；超過 2 次，小陪會建議換正式老師</div></div>
+                <button class="btn s o" id="lvClose">完成</button>
+              </div>
+            </div></div>
+            </div>
+            <div id="calAvail" style="display:none;gap:14px">
+              <div class="cols" style="grid-template-columns:1fr 300px">
+                <div class="bx"><h6>每週固定能上課的時間 · 用滑的塗起來 · 一格 1 小時</h6>
+                  <div class="avgrid" id="avgrid"></div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="font-size:12.5px;color:var(--mute)">一鍵套用</span><button class="mini o" data-pre="eve">平日晚上 19–21</button><button class="mini o" data-pre="sat">週六上午</button><button class="mini o" data-pre="late">平日 21–23（高中以上）</button><button class="mini o" data-pre="clear">全部清掉</button><span style="margin-left:auto;display:flex;gap:10px;font-size:12px;color:var(--mute);align-items:center"><i class="lg1"></i>可以排課<i class="lg2"></i>已經有課<i class="lg3"></i>夜間</span></div>
+                </div>
+                <div style="display:grid;gap:12px;align-content:start">
+                  <div class="bx pine"><h6>照這樣排</h6><div class="big" id="avEst">—</div><div style="font-size:13px;opacity:.9" id="avEstTx"></div></div>
+                  <div class="bx"><h6>每週最多幾堂</h6><div style="display:flex;align-items:center;gap:12px"><button class="mini o" id="capM">−</button><b class="lat" style="font-size:26px" id="capN">8</b><button class="mini o" id="capP">＋</button><span style="font-size:12.5px;color:var(--mute)">超過就不再推給你</span></div></div>
+                  <button class="askai" data-ask="段考前兩週我週日下午也可以"><span class="duo"><i></i><i></i></span><span>不想自己塗？跟小陪說一聲</span></button>
+                </div>
+              </div>
+              
+            </div>
+          </div></div>
+
+          <!-- brief -->
+          <div class="scr" data-id="brief"><div class="pg">
+            <div class="enterbar"><div class="eb-t"><small>下一堂 · 還有 <b class="lat">12</b> 分鐘</small><b>不等式隊 · 第 1 週</b><span>19:00–19:50 · 6 人 · 4 人已在等候室</span></div>
+              <div class="eb-av"><img class="ph" src="img/s1.jpg" width="34" height="34" alt=""><img class="ph" src="img/s3.jpg" width="34" height="34" alt=""><img class="ph" src="img/s4.jpg" width="34" height="34" alt=""><img class="ph" src="img/s6.jpg" width="34" height="34" alt=""></div>
+              <div class="eb-chk"><span><svg class="i"><use href="#i-check"/></svg>麥克風</span><span><svg class="i"><use href="#i-check"/></svg>鏡頭</span><span><svg class="i"><use href="#i-check"/></svg>網路</span><span><svg class="i"><use href="#i-check"/></svg>教材 3 份</span></div>
+              <button class="enterbtn" data-go="room"><svg class="i"><use href="#i-video"/></svg>進教室</button></div>
+            <div class="absent"><svg class="i"><use href="#i-cal"/></svg><div><b>小恩這堂請假（生病）</b><small>已自動排到週六 10:00 王老師那一隊補上 · 今晚的課後整理會送給她 · 不影響你的鐘點費</small></div><button class="mini o" data-done>傳一句話給她</button></div>
+            <div class="hd"><div><h2>課前一頁</h2><p>讀完約 2 分鐘 · 小陪的建議你都可以不採用</p></div></div>
+            <div class="open"><small>建議的開場</small>先別講規則。問全隊「−2×1 和 −2×2 哪個大」，讓他們自己在數線上看見大小反過來。A 組留下來用數線再走一次，B 組先各做兩題。阿哲最後再給分數題，先稱讚他上週的提問。</div>
+            <div class="cols3">
+              <div class="stu"><img class="ph" src="img/s1.jpg" width="40" height="40" alt=""><div><b>小睿</b><small>知道要變號，說不出為什麼。昨晚睡 5.9 小時。</small><span class="tg A">A 組</span></div></div>
+              <div class="stu"><img class="ph" src="img/s4.jpg" width="40" height="40" alt=""><div><b>小晴</b><small>概念型。上週說給我聽沒過，隔天補過。</small><span class="tg A">A 組</span></div></div>
+              <div class="stu"><img class="ph" src="img/s6.jpg" width="40" height="40" alt=""><div><b>小恩</b><small>會背規則，換題就錯。</small><span class="tg A">A 組</span></div></div>
+              <div class="stu"><img class="ph" src="img/s2.jpg" width="40" height="40" alt=""><div><b>小安</b><small>會變號，除法算錯。請他放慢。</small><span class="tg B">B 組</span></div></div>
+              <div class="stu"><img class="ph" src="img/s3.jpg" width="40" height="40" alt=""><div><b>小宇</b><small>已經會了。今天請他當「講的人」。</small><span class="tg T">換他教</span></div></div>
+              <div class="stu"><img class="ph" src="img/s5.jpg" width="40" height="40" alt=""><div><b>阿哲</b><small>看到分數就慌。上週提了全隊最好的問題。</small><span class="tg B">B 組</span></div></div>
+            </div>
+          </div></div>
+
+          <!-- room -->
+          <div class="scr" data-id="room"><div class="room">
+            <div class="rtop">
+              <b class="rt-name">不等式隊<br><small>第 1 週</small></b>
+              <div class="track" id="track">
+                <button data-b="0" style="flex:5"><i>暖身</i><small>快問一題</small></button>
+                <button data-b="1" style="flex:10"><i>你們的錯</i><small>講解＋動畫</small></button>
+                <button data-b="2" style="flex:10"><i>自己試試</i><small>分層練習</small></button>
+                <button data-b="3" style="flex:10"><i>補最後一哩</i><small>分組帶</small></button>
+                <button data-b="4" style="flex:10"><i>互相講</i><small>兩兩一組</small></button>
+                <button data-b="5" style="flex:5"><i>我搞懂的</i><small>出場卡</small></button>
+                <span class="head" id="head"></span>
+              </div>
+              <button class="nextblk" id="nextBlk">下一段 ›</button>
+              <span class="rtime"><i class="rec"></i><b class="lat" id="rClock">12:48</b> / 50:00</span>
+              <span class="rtalk">你講話 <b class="lat">34%</b></span>
+            </div>
+            <div class="rbody">
+              <div class="rboard">
+                <div class="tools" id="tools">
+                  <button class="on" data-t="pen" title="筆"><svg class="i"><use href="#i-pen"/></svg></button>
+                  <button data-t="hl" title="螢光筆"><svg class="i"><use href="#i-hl"/></svg></button>
+                  <button data-t="eraser" title="橡皮擦"><svg class="i"><use href="#i-eraser"/></svg></button>
+                  <button data-t="text" title="文字"><svg class="i"><use href="#i-text"/></svg></button>
+                  <button data-t="shape" title="形狀"><svg class="i"><use href="#i-shape"/></svg></button>
+                  <span class="sep"></span>
+                  <button class="col on" data-c="#F26B54" style="--c:#F26B54" title="珊瑚"></button>
+                  <button class="col" data-c="#0E5F52" style="--c:#0E5F52" title="綠"></button>
+                  <button class="col" data-c="#1B2530" style="--c:#1B2530" title="黑"></button>
+                  <span class="sep"></span>
+                  <button id="undo" title="復原"><svg class="i"><use href="#i-undo"/></svg></button>
+                  <button id="addMat" title="插入教材"><svg class="i"><use href="#i-img"/></svg></button>
+                </div>
+                <div class="canvaswrap" id="cw">
+                  <div class="slide" id="slide"></div>
+                  <canvas id="board"></canvas>
+                  <div class="wall" id="wall"></div>
+                  <div class="poll" id="poll"></div>
+                  <div class="exitc" id="exitc"></div>
+                  <div class="pairs2" id="pairs2"></div>
+                  <span class="hint" id="bHint">在白板上直接畫畫看</span>
+                </div>
+                <div class="pages" id="pages"><button class="on" data-p="0"><span class="math">−2x &gt; 6</span>講解</button><button data-p="1">數線動畫</button><button data-p="2"><span class="math">−3x ≤ 12</span>練習</button><button class="add" id="addPage">＋ 空白頁</button><span class="pg-note">這三頁是你在課前一頁加進來的教材</span></div>
+              </div>
+              <div class="rside">
+                <div class="me2"><img src="img/lin.jpg" alt=""><span class="nm2">你</span></div>
+                <div class="vgrid2" id="vg2"><div class="vt2" data-g="A"><img src="img/s1.jpg" alt=""><span class="nm2">小睿</span><i class="mic2"><svg class="i"><use href="#i-mute"/></svg></i></div><div class="vt2" data-g="B"><img src="img/s2.jpg" alt=""><span class="nm2">小安</span><i class="mic2"><svg class="i"><use href="#i-mute"/></svg></i></div><div class="vt2" data-g="B"><img src="img/s3.jpg" alt=""><span class="nm2">小宇</span><i class="mic2"><svg class="i"><use href="#i-mute"/></svg></i></div><div class="vt2" data-g="A"><img src="img/s4.jpg" alt=""><span class="nm2">小晴</span><i class="mic2"><svg class="i"><use href="#i-mute"/></svg></i></div><div class="vt2" data-g="B"><img src="img/s5.jpg" alt=""><span class="nm2">阿哲</span><i class="mic2"><svg class="i"><use href="#i-mute"/></svg></i></div><div class="vt2" data-g="A"><img src="img/s6.jpg" alt=""><span class="nm2">小恩</span><i class="mic2"><svg class="i"><use href="#i-mute"/></svg></i></div></div>
+                <div class="ai4"><div class="duo"><i></i><i></i></div><div id="roomAi">大家都在。小晴還沒開口過，她不會主動舉手。</div></div>
+              </div>
+            </div>
+            <div class="rbar">
+              <button class="rb on" id="bMic"><i><svg class="i"><use href="#i-mic"/></svg></i>麥克風</button>
+              <button class="rb on" id="bCam"><i><svg class="i"><use href="#i-video"/></svg></i>鏡頭</button>
+              <button class="rb" id="bShare"><i><svg class="i"><use href="#i-screen"/></svg></i>分享畫面</button>
+              <span class="rsep"></span>
+              <button class="rb" id="bMuteAll"><i><svg class="i"><use href="#i-mute"/></svg></i>全體靜音</button>
+              <button class="rb" id="bQuiz"><i><svg class="i"><use href="#i-quiz"/></svg></i>出一題</button>
+              <button class="rb" id="bGroup"><i><svg class="i"><use href="#i-split"/></svg></i>分組</button>
+              <span class="rsep"></span>
+              <button class="rb end" data-go="recap"><i><svg class="i"><use href="#i-end"/></svg></i>下課</button>
+            </div>
+            <div class="rtoast" id="rToast"></div>
+          </div></div>
+
+          <!-- recap -->
+          <div class="scr" data-id="recap"><div class="pg" style="grid-template-rows:auto auto 1fr">
+            <div class="hubtabs"><button data-go="records"><b>學生週報</b><small>每週日 · 6 份等你看</small></button><button data-go="assist"><b>給我的建議</b><small>教學 3 · 教材 4</small></button><button data-go="recap" class="on"><b>每堂課後整理</b><small>自動存檔 · 不用送出</small></button></div>
+            <div class="hd"><div><h2>課後整理 · 不等式隊 第 1 週</h2><p id="rcSub">小陪正在整理這堂課⋯</p></div></div>
+            <div class="rcprog" id="rcProg"><div><i></i>逐字稿</div><div><i></i>教學筆記</div><div><i></i>學生狀態</div><div><i></i>下次進度</div></div>
+            <div class="rcbody" id="rcBody" style="opacity:0">
+              <div class="ftabs" id="rcTabs"><button class="on" data-r="note">教學筆記</button><button data-r="tx">逐字稿 <em>6,240 字</em></button><button data-r="st">學生狀態 <em>6</em></button><button data-r="next">下次進度</button></div>
+              <div class="rcp on" data-r="note"><div class="cols">
+                <div class="bx"><h6>這堂課教了什麼</h6>
+                  <div class="tl2"><div><span>00:00</span><div>開場：「−2×1 和 −2×2 哪個大？」6 人中 4 人答對</div></div><div><span>06:30</span><div>數線動畫：乘以負數，整條數線翻過去</div></div><div><span>14:10</span><div>自己試試 <span class="math">−3x ≤ 12</span>：4 對 2 錯</div></div><div><span>21:00</span><div>分組：A 組（小睿、小晴、小恩）跟你走數線；B 組由小宇帶</div></div><div><span>33:40</span><div>互相講：三組都完成，阿哲那組卡 40 秒後自己講通</div></div><div><span>46:00</span><div>下課前每人說一句「我搞懂的」</div></div></div></div>
+                <div style="display:grid;gap:12px;align-content:start">
+                  <div class="bx"><h6>白板快照</h6><div class="snaps"><div class="snap"><span class="math">−2x &gt; 6 ⇒ x &lt; −3</span><small>06:10 · 你圈了不等號</small></div><div class="snap"><svg viewBox="0 0 160 40"><line x1="5" y1="20" x2="155" y2="20" stroke="#0D2B26" stroke-width="2"/><circle cx="100" cy="20" r="5" fill="#0E5F52"/><circle cx="60" cy="20" r="5" fill="#F26B54"/><path d="M100 12 Q80 -2 60 12" fill="none" stroke="#F26B54" stroke-width="2" stroke-dasharray="4 3"/></svg><small>08:40 · 數線</small></div></div></div>
+                  <div class="bx obs"><h6>小陪漏掉的？（選填）</h6><div class="obsrow"><input id="obsIn" placeholder="例如：小晴今天好像心情不好"><button class="mini o" id="obsMic" aria-label="用說的"><svg class="i"><use href="#i-mic"/></svg></button><button class="mini" id="obsSave">加進紀錄</button></div></div>
+                  <div class="bx"><h6>這堂課的三個關鍵時刻</h6><div class="km"><b class="g">好問題</b>阿哲 18:22「為什麼不能直接把負號丟掉？」</div><div class="km"><b class="c">卡住</b>小晴 14:10–31:00 沒有開口，作答方向反了</div><div class="km"><b class="h">突破</b>小睿 38:05 用「翻過去」講給小安聽，小安按懂了</div></div>
+                </div></div></div>
+              <div class="rcp" data-r="tx"><div class="bx" style="gap:8px">
+                <div style="display:flex;gap:8px;align-items:center"><input class="srch" id="txQ" placeholder="搜尋逐字稿，例如：負號、小晴" value=""><button class="mini o" data-jumpk="1">只看關鍵時刻</button><span style="margin-left:auto;font-size:12px;color:var(--mute)">文字保存 30 天，錄音不保留 · 只有你看得到全文</span></div>
+                <div class="txl" id="txl">
+                  <div class="tr"><span>00:12</span><b class="sp t">你</b><p>先不講規則。−2 乘以 1，和 −2 乘以 2，哪個比較大？</p></div>
+                  <div class="tr"><span>00:31</span><b class="sp">小宇</b><p>−2 比較大，因為它比較靠近 0。</p></div>
+                  <div class="tr"><span>00:40</span><b class="sp">小睿</b><p>可是 2 比 1 大啊⋯喔，乘完變反過來。</p></div>
+                  <div class="tr key"><span>18:22</span><b class="sp">阿哲</b><p>那為什麼不能直接把<mark>負號</mark>丟掉？兩邊都有負的不就消掉了？</p><em>好問題</em></div>
+                  <div class="tr"><span>18:40</span><b class="sp t">你</b><p>好問題。我們來試試看丟掉會怎樣，把數字代進去⋯</p></div>
+                  <div class="tr key"><span>31:05</span><b class="sp">小晴</b><p>老師，那個方向我還是不太懂。</p><em>第一次開口</em></div>
+                  <div class="tr key"><span>38:05</span><b class="sp">小睿</b><p>你想成整條數線翻過去，本來在右邊的就跑到左邊了。</p><em>突破</em></div>
+                  <div class="tr"><span>38:20</span><b class="sp">小安</b><p>喔喔，我懂了，所以大小會反過來。</p></div>
+                </div></div></div>
+              <div class="rcp" data-r="st"><div class="stg" id="stg"></div></div>
+              <div class="rcp" data-r="next"><div class="cols">
+                <div class="bx"><h6>小陪建議的下一堂 · 週三 9/30</h6>
+                  <div class="plan"><div><b>0–10 分</b>用上週阿哲的問題開場：「負號可以丟掉嗎？」讓小睿示範</div><div><b>10–25 分</b>進分數係數 <span class="math">−½x &gt; 3</span>；A 組先用數線，B 組直接算</div><div><b>25–40 分</b>互相講：小晴跟小睿同組（她今天第一次開口，對他比較放心）</div><div><b>40–50 分</b>每人說一句；預告下週應用題</div></div>
+                  <div style="display:flex;gap:8px"><button class="mini" data-adopt>採用，放進下一堂的課前一頁</button><button class="mini o">我自己改</button></div></div>
+                <div style="display:grid;gap:12px;align-content:start">
+                  <div class="bx"><h6>8 週進度</h6><div class="wk8"><i class="d">1</i><i class="n">2</i><i class="">3</i><i class="">4</i><i class="">5</i><i class="">6</i><i class="">7</i><i class="">8</i></div><p class="body" style="font-size:13px">照計畫。第 3 週要進應用題；小晴若週四補強後仍卡方向，建議第 2 週多留 10 分鐘。</p></div>
+                  <div class="bx"><h6>課後要派的</h6><div class="li"><span class="flag g">自動</span><div><b>每人一份依錯法出的練習</b><small>今晚送到學生 App，老師不用出</small></div><span></span></div><div class="li"><span class="flag h">你決定</span><div><b>小晴週四 25 分鐘補強</b><small>她今天沉默 17 分鐘，一對一比較適合</small></div><button class="mini o" data-adopt>排進班表</button></div></div>
+                </div></div></div>
+            </div>
+            <div class="rcfoot" id="rcFoot" style="display:none"><span>整理好了，已自動存檔並更新每個人的路線。家長的訊息改成每週一份，週日一起看。</span><button class="mini" data-go="records">看本週週報</button></div>
+          </div></div>
+
+          <!-- records -->
+          <div class="scr" data-id="records"><div class="pg" style="grid-template-rows:auto auto 1fr">
+            <div class="hubtabs"><button data-go="records" class="on"><b>學生週報</b><small>每週日 · 6 份等你看</small></button><button data-go="assist"><b>給我的建議</b><small>教學 3 · 教材 4</small></button><button data-go="recap"><b>每堂課後整理</b><small>自動存檔 · 不用送出</small></button></div>
+            <div class="hd"><div><h2>學生週報 · 9/21–9/27</h2></div><button class="mini sp" id="sendAll">全部確認送出（6）</button></div>
+            <div class="cols" style="grid-template-columns:250px 1fr;min-height:0">
+              <div class="slist" id="wlist"><button class="srow on" data-w="0"><img class="ph" src="img/s1.jpg" width="38" height="38" alt=""><div><b>小睿</b><small class="wst">待確認</small></div><span></span></button><button class="srow" data-w="1"><img class="ph" src="img/s4.jpg" width="38" height="38" alt=""><div><b>小晴</b><small class="wst">待確認</small></div><span></span></button><button class="srow" data-w="2"><img class="ph" src="img/s5.jpg" width="38" height="38" alt=""><div><b>阿哲</b><small class="wst">待確認</small></div><span></span></button><button class="srow" data-w="3"><img class="ph" src="img/s2.jpg" width="38" height="38" alt=""><div><b>小安</b><small class="wst">待確認</small></div><span></span></button><button class="srow" data-w="4"><img class="ph" src="img/s3.jpg" width="38" height="38" alt=""><div><b>小宇</b><small class="wst">待確認</small></div><span></span></button><button class="srow" data-w="5"><img class="ph" src="img/s6.jpg" width="38" height="38" alt=""><div><b>小恩</b><small class="wst">待確認</small></div><span></span></button></div>
+              <div class="wrep" id="wrep"></div>
+            </div>
+          </div></div>
+
+          <!-- impact -->
+          <div class="scr" data-id="impact"><div class="pg">
+            <div class="hubtabs" style="grid-template-columns:repeat(2,1fr)"><button data-go="tier"><b>等級與評價</b><small>黃金 · 81 分</small></button><button data-go="impact" class="on"><b>我的成效</b><small>隔三天通過 78%</small></button></div>
+            
+            <div class="hd"><div><h2>我的成效與評鑑</h2><p>近 180 天</p></div></div>
+            <div class="cols3">
+              <div class="bx pine"><h6>隔三天再測通過率</h6><div class="big">78<small>%</small></div><div style="font-size:13px;opacity:.85">平台平均 71% · 你上一季 74%</div></div>
+              <div class="bx"><h6>全體應測學生通過率</h6><div class="big">69<small>%</small></div><div style="font-size:13px;color:var(--mute)">含沒來測的。差距來自 4 位沒回來再測的學生。</div></div>
+              <div class="bx"><h6>學生續走下一段</h6><div class="big">5<small> / 6 隊</small></div><div style="font-size:13px;color:var(--mute)">平台平均 62%</div></div>
+            </div>
+            <div class="cols">
+              <div class="bx"><h6>學生與家長怎麼說 · 本季 · 只有你看得到</h6>
+                <div class="fb3"><div><b class="lat">4.6</b><small>「上課時我敢開口問」<br>學生 31 人回覆</small></div><div><b class="lat">4.4</b><small>「老師講的我聽得懂」</small></div><div><b class="lat">4.7</b><small>「孩子回家會講上課內容」<br>家長 22 人回覆</small></div></div>
+                <div class="quote">「老師不會笑我答錯，我比較敢問了。」<small>學生 · 匿名</small></div>
+                <div class="quote">「你們今天互相講的那段，孩子回家講給我聽了。」<small>家長 · 匿名</small></div>
+                </div>
+              <div class="bx"><h6>同儕觀課 · 本季 1 次</h6><div class="quote">陳老師旁聽 9/10 函數隊：「分組的時機很準；互相講時可以再少插話一點。」<small>你也可以邀請任何老師來旁聽</small></div></div>
+              <div class="bx"><h6>你帶哪一種卡住最好</h6><div class="tl2"><div><span>概念型</span><div><div class="prog"><i style="width:84%"></i></div>84% · 平台前 10%</div></div><div><span>計算型</span><div><div class="prog"><i style="width:73%"></i></div>73%</div></div><div><span>讀題型</span><div><div class="prog"><i style="width:58%;background:var(--coral)"></i></div>58% · 低於平均</div></div></div></div>
+              
+            </div>
+          </div></div>
+
+          <!-- profile -->
+          <div class="scr" data-id="profile"><div class="pg">
+            <div class="hd"><div><h2>個人資料</h2></div><div class="sp ring2"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5"/><circle id="complRing" cx="18" cy="18" r="15.5" style="stroke-dasharray:97.4;stroke-dashoffset:19.5"/></svg><b class="lat" id="complN">80%</b></div></div>
+            <div class="pv2">
+              <div class="hero2">
+                <div class="h2l"><label class="avw"><img src="img/lin.jpg" alt="" id="pAvImg"><span class="cam"><svg class="i"><use href="#i-img"/></svg></span></label>
+                  <button class="vpill" id="pRec"><svg class="i"><use href="#i-mic"/></svg><span id="pRecTx">0:28 語音介紹</span><i></i><i></i><i></i><i></i><i></i></button></div>
+                <div class="h2r">
+                  <input class="inl big" id="pName" value="林老師" aria-label="顯示名稱">
+                  <div class="meta2"><span class="tb gold">黃金老師</span><span>國中數學</span><span>帶過 142 隊</span><span class="lat" style="color:var(--pine);font-weight:700">78% 隔三天還會</span></div>
+                  <textarea class="inl" id="pLine" rows="2" aria-label="一句話介紹">我上課話不多，會先問你怎麼想的。</textarea>
+                  <div class="tagpick soft" data-max="3" id="stylePick"><button class="on">先問再講</button><button class="on">用圖像和數線</button><button class="on">慢慢來不催</button><button>節奏快</button><button>幽默</button><button>嚴謹重步驟</button><button>常用生活例子</button></div>
+                </div>
+                <span class="editflag">點任何地方直接改 · 這就是家長看到的樣子</span>
+              </div>
+              <div class="pgrid">
+                <div class="bx"><h6>能教</h6>
+                  <div class="subj"><div class="sj on"><b>數學</b><div class="lv"><i class="ok2">國一</i><i class="ok2">國二</i><i class="ok2">國三</i><i class="ok2">高中</i></div></div>
+                  <div class="sj"><b>理化</b><div class="lv"><i class="no2">國一</i><i class="pd2">國二 審核中</i><i class="no2">國三</i></div></div>
+                  <button class="sj add" data-apply2><b>＋ 新科目</b><span>試教一堂解鎖</span></button></div></div>
+                <div class="bx"><h6>擅長的卡住</h6><div class="tagpick soft" data-max="3"><button class="on">說不出為什麼</button><button class="on">看到分數就慌</button><button>計算粗心</button><button>讀題轉算式</button><button>落後一年以上</button></div>
+                  <h6 style="margin-top:6px">課型</h6><div class="tagpick soft"><button class="on">8 週小隊</button><button class="on">25 分補強</button><button class="on">一對一</button><button>技能課</button></div></div>
+                <div class="bx"><h6>資格</h6>
+                  <div class="qual"><span class="q ok"><svg class="i"><use href="#i-check"/></svg>師大數學系</span><span class="q ok"><svg class="i"><use href="#i-check"/></svg>教師證</span><span class="q ok"><svg class="i"><use href="#i-check"/></svg>8 年經驗</span><span class="q warn"><svg class="i"><use href="#i-cal"/></svg>刑事紀錄證明 · 11/2 到期</span></div>
+                  <h6 style="margin-top:6px">家長看得到</h6>
+                  <div class="tgl"><label><span>風格</span><input type="checkbox" id="pubStyle" checked><i></i></label><label><span>通過率</span><input type="checkbox" id="pubRate" checked><i></i></label><label><span>學歷</span><input type="checkbox" id="pubEdu"><i></i></label></div></div>
+              </div>
+            </div>
+          </div></div>
+
+          <!-- tier -->
+          <div class="scr" data-id="tier"><div class="pg">
+            <div class="hubtabs" style="grid-template-columns:repeat(2,1fr)"><button data-go="tier" class="on"><b>等級與評價</b><small>黃金 · 81 分</small></button><button data-go="impact"><b>我的成效</b><small>隔三天通過 78%</small></button></div>
+            
+            <div class="hd"><div><h2>等級與評價</h2><p>每月 1 日更新 · 看近 180 天</p></div><div class="seg sp" id="tierSeg" style="width:320px"><button class="on" data-v="me">我的等級</button><button data-v="rev">學生評價</button><button data-v="rule">規則</button></div></div>
+            <div class="tv on" data-v="me">
+              <div class="ladder" id="ladder"><div class="tier rook" data-t="0"><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><b>新手</b><small>樣本未滿</small></div><div class="tier silver" data-t="1"><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><b>白銀</b><small>60 分</small></div><div class="tier gold cur" data-t="2"><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><b>黃金</b><small>72 分</small></div><div class="tier plat" data-t="3"><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><b>白金</b><small>82 分</small></div><div class="tier dia" data-t="4"><div class="gem"><svg class="i"><use href="#i-gem"/></svg></div><b>鑽石</b><small>90 分 · 前 5%</small></div><i class="lline"></i></div>
+              <div class="cols" style="grid-template-columns:1.2fr 1fr">
+                <div class="bx"><h6>近 180 天分數 · 81 / 100 · 離白金還差 1 分（要連續兩個月）</h6>
+                  <div class="dims" id="dims"><div><span>學生學會了嗎</span><small>隔三天通過率 78%，同卡點平台平均 71%（已依學生程度校正）</small><div class="prog"><i data-w="83"></i></div><b>29 / 35</b></div><div><span>學生留得住嗎</span><small>續走 83% · 換師率 4%（學生主動要求換掉你）· 試上轉付費 86%</small><div class="prog"><i data-w="84"></i></div><b>21 / 25</b></div><div><span>學生與家長評價</span><small>4.7 / 5 · 53 人 · 樣本少時會往平台平均拉近</small><div class="prog"><i data-w="87"></i></div><b>13 / 15</b></div><div><span>可靠度</span><small>臨時請假 1 次 · 遲到缺課 0 · 課後當天確認 92% · 家長訊息 24 小時回覆 100%</small><div class="prog"><i data-w="73"></i></div><b>11 / 15</b></div><div><span>投入度</span><small>近 180 天每月平均 26 堂 · 接班 3 小時內回覆 88%</small><div class="prog"><i data-w="60"></i></div><b>6 / 10</b></div><div><span>貢獻加分</span><small>教材被採用 12 次 · 觀課 1 次</small><div class="prog"><i data-w="20"></i></div><b>+1 / +5</b></div></div>
+                  <div class="ai3"><div class="duo"><i></i><i></i></div><div><b>最快補到 1 分：</b>課後整理都在當天確認（可靠度 +1），或接班在 3 小時內回覆（投入度 +1）。學會率已在前段，不用動。</div></div>
+                </div>
+                <div style="display:grid;gap:12px;align-content:start">
+                  <div class="bx pine"><h6>升到白金（還差 1 分）· 你會多拿</h6><div class="big" id="upGain">+NT$3,600<small> / 月</small></div><div style="font-size:13px;opacity:.9">同樣的課量下：學費分潤 52% → 56%（約 +2,800）、學會獎金每隊 1,200 → 1,400（約 +800）。另外可以帶新手老師，帶一位 NT$1,500。</div></div>
+                  <div class="bx"><h6>你現在的福利 · 黃金</h6><div class="perk"><span>學費分潤</span><b>52%</b></div><div class="perk"><span>保底鐘點</span><b>每堂 NT$600</b></div><div class="perk"><span>學會獎金</span><b>每隊 NT$1,200</b></div><div class="perk"><span>快速入帳</span><b>免手續費</b></div><div class="perk"><span>推課</span><b>優先</b></div><div class="perk"><span>家長看到</span><b><span class="tb gold">黃金老師</span></b></div></div>
+                  
+                </div>
+              </div>
+            </div>
+            <div class="tv" data-v="rev">
+              <div class="cols" style="grid-template-columns:320px 1fr">
+                <div style="display:grid;gap:12px;align-content:start">
+                  <div class="bx"><h6>學生評價 · 最近 180 天</h6><div style="display:flex;align-items:baseline;gap:10px"><b class="lat" style="font-size:44px;color:var(--pine)">4.7</b><span class="stars">★★★★★</span></div><small style="color:var(--mute)">53 人 · 家長 22 人另計 4.8</small>
+                    <div class="dist"><div><span>5 ★</span><div class="prog"><i style="width:76%"></i></div><b>40</b></div><div><span>4 ★</span><div class="prog"><i style="width:19%"></i></div><b>10</b></div><div><span>3 ★</span><div class="prog"><i style="width:4%"></i></div><b>2</b></div><div><span>2 ★</span><div class="prog"><i style="width:2%"></i></div><b>1</b></div><div><span>1 ★</span><div class="prog"><i style="width:0%"></i></div><b>0</b></div></div></div>
+                  <div class="bx"><h6>四個小題</h6><div class="perk"><span>我敢開口問</span><b>4.8</b></div><div class="perk"><span>老師講的聽得懂</span><b>4.6</b></div><div class="perk"><span>上課時間用得好</span><b>4.7</b></div><div class="perk"><span>我會推薦給朋友</span><b>4.7</b></div></div>
+                  
+                </div>
+                <div class="bx"><h6>留言 · 匿名</h6>
+                  <div class="rv"><span class="stars s">★★★★★</span><p>老師不會笑我答錯，我比較敢問了。</p><small>國二 · 不等式隊 · 9/18</small><button class="mini o" data-thx>謝謝你</button></div>
+                  <div class="rv"><span class="stars s">★★★★★</span><p>互相講的時候很好玩，數線那個我到現在都記得。</p><small>國二 · 函數隊 · 9/10</small><button class="mini o" data-thx>謝謝你</button></div>
+                  <div class="rv"><span class="stars s">★★★★☆</span><p>有時候講太快，我還沒抄完就換下一頁。</p><small>國二 · 函數 B 隊 · 9/3</small><button class="mini o" data-thx>謝謝你</button><span class="aihint">小陪：這一隊你講話佔 48%，可以試試在換頁前停 5 秒。</span></div>
+                  <div class="rv"><span class="stars s">★★★★★</span><p>孩子回家會主動講上課內容，這是第一次。</p><small>家長 · 不等式隊 · 9/19</small><button class="mini o" data-thx>謝謝你</button></div>
+                  
+                </div>
+              </div>
+            </div>
+            <div class="tv" data-v="rule">
+              <div class="bx"><h6>五個等級 · 看近 180 天的表現，不看總堂數</h6><table class="tbl2"><thead><tr><th>等級</th><th>條件（近 180 天）</th><th>分數</th><th>學費分潤</th><th>學會獎金 / 隊</th><th>快速入帳</th><th>推課與權限</th></tr></thead><tbody><tr class=""><td><span class="tb rook">新手</span></td><td>上課未滿 30 堂，或分數未達 60</td><td>—</td><td><b>45%</b></td><td>800</td><td>15 元</td><td>一對一、1 對 2–3</td></tr><tr class=""><td><span class="tb silver">白銀</span></td><td>至少 30 堂</td><td>60</td><td><b>48%</b></td><td>1,000</td><td>15 元</td><td>最多 1 對 6</td></tr><tr class="cur"><td><span class="tb gold">黃金</span></td><td>至少 30 堂</td><td>72</td><td><b>52%</b></td><td>1,200</td><td>免費</td><td>優先推課</td></tr><tr class=""><td><span class="tb plat">白金</span></td><td>至少 60 堂 · 零安全事件</td><td>82</td><td><b>56%</b></td><td>1,400</td><td>免費</td><td>優先推課 · 可帶新手</td></tr><tr class=""><td><span class="tb dia">鑽石</span></td><td>至少 90 堂 · 零安全事件</td><td>90 · 且在平台前 5%</td><td><b>60%</b></td><td>1,600</td><td>免費 · 隔天入帳</td><td>最優先推課 · 可開技能課 · 教材審核</td></tr></tbody></table>
+              <p class="body" style="font-size:12.5px">老師每堂拿「學費 × 分潤比例」與「保底 NT$600」較高的那個。例：1 對 6 小隊每堂學費約 2,243 元，黃金老師拿 1,166 元、鑽石老師拿 1,346 元。</p></div>
+              <div class="cols3" style="margin-top:12px">
+                <div class="bx"><h6>分數組成 · 100 分 ＋ 貢獻最多 5</h6><div class="wbar"><i style="flex:35;background:var(--pine)"><b>35</b><span>學會</span></i><i style="flex:25;background:#3F8C8C"><b>25</b><span>留存</span></i><i style="flex:15;background:#E8A911"><b>15</b><span>評價</span></i><i style="flex:15;background:var(--coral)"><b>15</b><span>可靠</span></i><i style="flex:10;background:#8E9AA6"><b>10</b><span>投入</span></i></div><div class="wleg"><span>通過率 · 進步</span><span>續走 · 換師率 · 試上轉付費</span><span>兩題匿名</span><span>請假 · 遲到 · 確認 · 回覆</span><span>堂數 · 接班</span></div></div>
+                <div class="bx"><h6>公平校正</h6><p class="body" style="font-size:13px">帶基礎落後的學生不吃虧：通過率跟「同卡點、同程度」比。樣本少時分數往平台平均拉近。學生自己缺課、AI 因卡點不同建議轉隊，都不算老師的換師率。投入度每月超過 40 堂不再加分，不鼓勵過勞。</p></div>
+                <div class="bx"><h6>防灌分與紅線</h6><p class="body" style="font-size:13px">評價只算上過 3 堂以上、滿 5 人才計、去掉最高最低 5%；拜託學生給高分當期評價歸零。涉及學生安全、私下接觸、私下收費：直接暫停接課，由真人調查，不走分數。</p></div>
+              </div>
+            </div>
+          </div></div>
+
+          <!-- materials -->
+          <div class="scr" data-id="materials"><div class="pg" style="grid-template-rows:auto auto 1fr">
+            <div class="hd"><div><h2>教材</h2><p>國二數學 · 不等式</p></div><div class="seg sp" id="matSeg" style="width:340px;grid-template-columns:repeat(3,1fr)"><button class="on" data-v="lib">教材庫</button><button data-v="plan">8 週教案</button><button data-v="up">上傳</button></div></div>
+            <div class="ftabs" id="matF"><button class="on" data-f="all">全部 <em>8</em></button><button data-f="mine">我的 <em>4</em></button><button data-f="lib">平台教材庫 <em>3</em></button><button data-f="ai">AI 產生待審 <em>1</em></button><span style="margin-left:auto;font-size:12.5px;color:var(--mute)">國二數學 › 一元一次不等式 › <b style="color:var(--pine-ink)">兩邊乘除負數</b></span></div>
+            <div class="mv on" data-v="lib"><div class="mgrid" id="mgrid"><div class="mc mine" data-src="mine"><div class="mth t1"><span>−2x > 6</span><em>講解</em></div><b>兩邊乘除負數：為什麼要變號</b><small>我的 · 已用在 3 堂</small><div class="mact"><button class="mini o" data-addp>加進教案</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button><button class="ic2" title="刪除" data-del><svg class="i"><use href="#i-eraser"/></svg></button></div></div><div class="mc lib" data-src="lib"><div class="mth t2"><span></span><em>動畫</em></div><b>數線翻過去</b><small>平台教材庫 · 41 位老師用過 · 通過率 +9%</small><div class="mact"><button class="mini o" data-addp>加進教案</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button></div></div><div class="mc mine" data-src="mine"><div class="mth t3"><span>?</span><em>快問</em></div><b>−2×1 和 −2×2 哪個大？</b><small>我的 · 暖身用</small><div class="mact"><button class="mini o" data-addp>加進教案</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button><button class="ic2" title="刪除" data-del><svg class="i"><use href="#i-eraser"/></svg></button></div></div><div class="mc ai" data-src="ai"><div class="mth t4"><span>−½x > 3</span><em>分層練習</em></div><b>分數係數 3＋3＋2 題</b><small>AI 產生 · 等你審核</small><div class="mact"><button class="mini" data-rev>審核</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button><button class="ic2" title="刪除" data-del><svg class="i"><use href="#i-eraser"/></svg></button></div></div><div class="mc lib" data-src="lib"><div class="mth t5"><span>✗</span><em>錯誤示例</em></div><b>「負號不見了」找碴卡</b><small>平台教材庫 · 26 位老師用過</small><div class="mact"><button class="mini o" data-addp>加進教案</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button></div></div><div class="mc mine" data-src="mine"><div class="mth t6"><span>✓</span><em>出場卡</em></div><b>一題＋一句我搞懂的</b><small>我的 · 範本</small><div class="mact"><button class="mini o" data-addp>加進教案</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button><button class="ic2" title="刪除" data-del><svg class="i"><use href="#i-eraser"/></svg></button></div></div><div class="mc mine" data-src="mine"><div class="mth t1"><span>y = ax</span><em>講解</em></div><b>函數圖形拼圖</b><small>我的 · 被 12 位老師採用</small><div class="mact"><button class="mini o" data-addp>加進教案</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button><button class="ic2" title="刪除" data-del><svg class="i"><use href="#i-eraser"/></svg></button></div></div><div class="mc lib" data-src="lib"><div class="mth t4"><span>abc</span><em>分層練習</em></div><b>應用題：文字變不等式</b><small>平台教材庫 · 需求最多</small><div class="mact"><button class="mini o" data-addp>加進教案</button><button class="ic2" title="編輯"><svg class="i"><use href="#i-pen"/></svg></button><button class="ic2" title="複製"><svg class="i"><use href="#i-doc"/></svg></button></div></div></div></div>
+            <div class="mv" data-v="plan"><div class="bx">
+              <h6>不等式隊 · 8 週路徑 × 每堂六段 · 空格小陪可以幫你補</h6>
+              <div class="plang"><span></span><span class="ph2">暖身</span><span class="ph2">你們的錯</span><span class="ph2">自己試試</span><span class="ph2">補最後一哩</span><span class="ph2">互相講</span><span class="ph2">我搞懂的</span><div class="pw"><b>第 1 週</b><small>乘除負數</small></div><div class="pc">快問</div><div class="pc">講解＋動畫</div><div class="pc">分層練習</div><div class="pc">數線分組</div><div class="pc">互講卡</div><div class="pc">出場卡</div><div class="pw"><b>第 2 週</b><small>分數係數</small></div><div class="pc">快問</div><div class="pc">錯誤示例</div><div class="pc">分層練習</div><div class="pc ai">AI 待審</div><div class="pc">互講卡</div><div class="pc">出場卡</div><div class="pw"><b>第 3 週</b><small>應用題</small></div><div class="pc">快問</div><div class="pc">講解</div><div class="pc empty">—</div><div class="pc empty">—</div><div class="pc">互講卡</div><div class="pc">出場卡</div></div>
+              <div style="display:flex;gap:8px;align-items:center"><button class="mini" id="fillPlan">請小陪補第 3 週的空格</button><span style="font-size:12.5px;color:var(--mute)">第 4–8 週依學生實際進度，每週課後整理完再排</span></div>
+            </div></div>
+            <div class="mv" data-v="up"><div class="cols" style="grid-template-columns:1fr 1fr">
+              <div class="bx"><div class="drop2" id="drop2"><svg class="i"><use href="#i-img"/></svg><b>把講義、考卷或照片拖進來</b><small>PDF、Word、圖片都可以 · 也可以用手機拍</small><button class="mini" id="upDemo">用範例試試：〈不等式講義.pdf〉</button></div>
+                </div>
+              <div class="bx" id="upRes"><h6>小陪會幫你做的事</h6>
+                <div class="aistep"><i></i><div><b>拆成一題一題</b><small>自動辨識題目、答案、解法步驟</small></div></div>
+                <div class="aistep"><i></i><div><b>標上卡點</b><small>每一題對應到卡點地圖，例如「兩邊乘除負數」</small></div></div>
+                <div class="aistep"><i></i><div><b>分到六段活動</b><small>哪些適合暖身快問、哪些適合分層練習或出場卡</small></div></div>
+                <div class="aistep"><i></i><div><b>檢查</b><small>答案是否正確、有沒有學生個資、是否直接翻拍市售書（版權）</small></div></div>
+                <div class="aistep"><i></i><div><b>延伸</b><small>依你學生的錯法出 A/B 兩組難度、做錯誤示例卡、改寫成動畫</small></div></div>
+              </div>
+            </div></div>
+          </div></div>
+
+          <!-- assist -->
+          <div class="scr" data-id="assist"><div class="pg">
+            <div class="hubtabs"><button data-go="records"><b>學生週報</b><small>每週日 · 6 份等你看</small></button><button data-go="assist" class="on"><b>給我的建議</b><small>教學 3 · 教材 4</small></button><button data-go="recap"><b>每堂課後整理</b><small>自動存檔 · 不用送出</small></button></div>
+            <div class="hd"><div><h2>教學助理</h2><p>依你這週 6 堂課整理</p></div></div>
+            <div class="cols">
+              <div style="display:grid;gap:12px;align-content:start">
+                <div class="bx"><h6>教學建議 · 依你自己的數據</h6>
+                  <div class="li"><span class="flag g">有效</span><div><b>你讓學生互講的那幾堂，隔三天通過率高 14%</b><small>函數隊沒有互講的兩堂是 66%，有互講的是 80%。建議每堂至少留 10 分鐘。</small></div><button class="mini o" data-adopt>設為我的預設</button></div>
+                  <div class="li"><span class="flag h">試試</span><div><b>小晴、小恩這類「會背不會講」的學生，先讓他們講錯的</b><small>平台上帶這類最好的老師，會先請學生解釋一個錯誤答案為什麼錯。</small></div><button class="mini o" data-adopt>下堂課試一次</button></div>
+                  <div class="li"><span class="flag">留意</span><div><b>你在週二 20:00 那堂講話佔 52%</b><small>是你本週最高，也是學生作答最少的一堂。可能是連上第二堂累了，要不要把那個時段關掉？</small></div><button class="mini o" data-go="calendar">去調班表</button></div>
+                </div>
+                <div class="bx"><h6>想精進的話</h6>
+                  <div class="li"><span class="t" style="min-width:0">25 分</span><div><b>旁聽：陳老師怎麼帶「讀題型」應用題</b><small>你這一類通過率 58%。旁聽後接一隊試試，兩隊後重新計算適合度。</small></div><button class="mini o" data-adopt>預約旁聽</button></div>
+                </div>
+              </div>
+              <div style="display:grid;gap:12px;align-content:start">
+                <div class="bx"><h6>教材建議 · 下一堂：分數係數的不等式</h6>
+                  <div class="mat"><div class="th" style="background:var(--mint)"><svg class="i"><use href="#i-chart"/></svg></div><div><b>數線動畫：乘以 −½ 會發生什麼</b><small>平台教材庫 · 用過的 41 位老師，通過率平均 +9%</small></div><button class="mini" data-add>加進下一堂</button></div>
+                  <div class="mat"><div class="th" style="background:var(--butter)"><svg class="i"><use href="#i-doc"/></svg></div><div><b>分層練習 3 + 3 + 2 題</b><small>小陪依這六個人的錯法現出的，A 組與 B 組題目不同。請你看過再用。</small></div><button class="mini" data-add>看過，加進去</button></div>
+                  <div class="mat"><div class="th" style="background:var(--peach)"><svg class="i"><use href="#i-help"/></svg></div><div><b>錯誤示例卡：「負號不見了」</b><small>拿一個常見錯解讓學生找碴。適合阿哲這種怕出錯的孩子。</small></div><button class="mini o" data-add>加進下一堂</button></div>
+                  <div class="mat"><div class="th" style="background:var(--lilac)"><svg class="i"><use href="#i-arrow"/></svg></div><div><b>上傳我自己的講義</b><small>你的教材只有你能用；願意分享到教材庫，被其他老師採用會有分潤。</small></div><button class="mini o">上傳</button></div>
+                </div>
+                
+              </div>
+            </div>
+          </div></div>
+
+          <!-- income -->
+          <div class="scr" data-id="income"><div class="pg">
+            <div class="hubtabs" style="grid-template-columns:repeat(2,1fr)"><button data-go="income" class="on"><b>收入與獎金</b><small>本月預估 33,000</small></button><button data-go="payout"><b>出帳</b><small>下次自動：10/1</small></button></div>
+            
+            <div class="hd"><div><h2>收入與獎金</h2><p>9 月</p></div></div>
+            <div class="cols3">
+              <div class="bx pine"><h6>可出帳</h6><div class="big" id="incBig">0</div><div style="font-size:13px;opacity:.9">已上完、已結算的 18 堂</div></div>
+              <div class="bx"><h6>結算中</h6><div class="big">NT$3,000</div><div style="font-size:13px;color:var(--mute)">近 3 堂 · 明天轉為可出帳</div></div>
+              <div class="bx"><h6>本月預估總收入</h6><div class="big">NT$33,000</div><div style="font-size:13px;color:var(--mute)">含未上 9 堂與獎金</div></div>
+            </div>
+            <div class="cols">
+              <div class="bx"><h6>獎金 · 怎麼算都寫在這</h6>
+                <div class="li"><span class="flag g">季</span><div><b>學會獎金 · 第 2 級</b><small>再測通過率 78% → 每隊 NT$1,200。到 80% 升第 3 級，每隊 1,600。</small><div class="prog" style="margin-top:6px"><i id="mInc" style="width:0"></i></div></div><span class="lat" style="font-weight:700">7,200</span></div>
+                <div class="li"><span class="flag g">季</span><div><b>續走獎金</b><small>小隊走完 8 週，有 5 人以上續下一段 → 每隊 NT$800。目前 5 / 6 隊達成。</small></div><span class="lat" style="font-weight:700">4,000</span></div>
+                <div class="li"><span class="flag h">次</span><div><b>代課救援</b><small>48 小時內接下別人的請假 → 每堂加 NT$200。</small></div><span class="lat" style="font-weight:700">200</span></div>
+                <div class="li"><span class="flag h">次</span><div><b>教材被採用</b><small>你上傳的「函數圖形拼圖」被 12 位老師用了 → 每次 NT$20。</small></div><span class="lat" style="font-weight:700">240</span></div>
+                <div class="li"><span class="flag">一次</span><div><b>推薦老師</b><small>你推薦的老師帶完第一隊且通過率達標 → NT$2,000。</small></div><span class="lat" style="font-weight:700;color:var(--mute)">—</span></div>
+              </div>
+              <div class="bx"><h6>近六個月</h6><div class="bars2" id="bars2"><div><b>18k</b><i data-h="50"></i>4 月</div><div><b>22k</b><i data-h="61"></i>5 月</div><div><b>24k</b><i data-h="67"></i>6 月</div><div><b>19k</b><i data-h="53"></i>7 月</div><div><b>29k</b><i data-h="81"></i>8 月</div><div class="now"><b>33k</b><i data-h="92"></i>9 月</div></div>
+                </div>
+            </div>
+          </div></div>
+
+          <!-- payout -->
+          <div class="scr" data-id="payout"><div class="pg">
+            <div class="hubtabs" style="grid-template-columns:repeat(2,1fr)"><button data-go="income"><b>收入與獎金</b><small>本月預估 33,000</small></button><button data-go="payout" class="on"><b>出帳</b><small>下次自動：10/1</small></button></div>
+            <div class="hd"><div><h2>出帳</h2><p>每月 1 日自動入帳</p></div></div>
+            <div class="cols" style="grid-template-columns:1fr 360px">
+              <div style="display:grid;gap:12px;align-content:start">
+                <div class="bx" id="poForm"><div class="nextpay"><svg class="i"><use href="#i-cal"/></svg><div><b>下次自動出帳：10 月 1 日（四）</b><small>9 月已結算的全部收入，約 10 月 8 日前入帳。不用做任何事。</small></div></div><h6>臨時需要？現在就出帳 · 稅費為示意，依法規與會計師確認</h6>
+                  <div style="display:flex;align-items:baseline;gap:10px"><div class="big">NT$18,200</div><span style="font-size:13px;color:var(--mute)">18 堂 18,000 ＋ 代課加給 200</span></div>
+                  <div class="tl2"><div><span>扣繳（示意）</span><div class="lat">− 1,820</div></div><div><span>補充保費</span><div class="lat">− 384 <small style="color:var(--mute);font-family:'Noto Sans TC'">（2.11%）</small></div></div><div><span>手續費</span><div class="lat" id="poFee">0</div></div><div><span><b>實際入帳</b></span><div class="lat" style="font-weight:700;font-size:18px" id="poNet">NT$15,996</div></div></div>
+                  <div class="posp" id="poSpeed"><button class="on" data-d="7"><b>標準 · 7 天內入帳</b><small>免手續費 · 預計 9/28（一）</small></button><button data-d="3"><b>快速 · 3 天內入帳</b><small>手續費 NT$15 · 第 2 級以上老師免費 · 預計 9/24（四）</small></button></div>
+                  <button class="btn" id="poGo" style="font-size:16px;padding:14px">確認出帳到 玉山銀行 ••••3821</button>
+                </div>
+                <div class="bx" id="poDone" style="display:none"><h6>出帳進度</h6>
+                  <div class="steps4" id="poSteps"><div class="on"><i>1</i><b>已送出</b><small>9/21 14:02</small></div><div><i>2</i><b>平台對帳</b><small>自動 · 約 1 小時</small></div><div><i>3</i><b>銀行處理</b><small id="poBank">1–2 個工作天</small></div><div><i>4</i><b>入帳</b><small id="poEta">預計 9/24（四）</small></div></div>
+                  
+                  <div style="display:flex;gap:8px"><button class="mini o">下載這次明細</button><button class="mini o" data-go="income">回收入</button></div>
+                </div>
+              </div>
+              <div style="display:grid;gap:12px;align-content:start">
+                <div class="bx"><h6>收款帳戶</h6><div class="li" style="padding:0"><div class="sub 數學" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:12px;font-weight:900">玉山</div><div><b>玉山銀行 ••••3821</b><small>林◯◯ · 已驗證本人帳戶</small></div><span class="flag g">已綁定</span></div></div>
+                <div class="bx"><h6>自動出帳</h6><div style="display:flex;align-items:center;gap:12px"><button class="tog on" id="autoTog" aria-label="自動出帳"><i></i></button><div><b style="font-size:14.5px" id="autoTx">每月 1 日自動出帳</b><div style="font-size:12.5px;color:var(--mute)" id="autoSub">上個月已結算的全部出帳，走標準 7 天，約 8 日前入帳</div></div></div><div class="seg" id="autoFreq" style="grid-template-columns:repeat(3,1fr)"><button class="on" data-f="m">每月</button><button data-f="h">每半個月</button><button data-f="w">每週</button></div></div>
+                <div class="bx"><h6>文件</h6><div class="tl2"><div><span>9 月</span><div>出帳明細 2 份</div></div><div><span>2026</span><div>各類所得扣繳資料（報稅季自動產生）</div></div><div><span>合約</span><div>授課承攬合約 · 電子簽署 2026/6/1</div></div></div></div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+  <aside class="ctx" id="ctx"></aside>
+</div>
+<script src="teacher.js"></script>
