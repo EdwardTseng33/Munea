@@ -960,8 +960,17 @@ def unstable_replacement_targets():
     return tuple(target for _, target in _TAIWAN_MANDARIN_SPEECH_REPLACEMENTS)
 
 
-def voice_opening_instruction(familiarity=0, topics=None, location=None, opening_index=None):
-    """Rotate concrete opening directions instead of repeating mood check-ins."""
+def voice_opening_instruction(familiarity=0, topics=None, location=None, opening_index=None,
+                              has_name=True):
+    """Rotate concrete opening directions instead of repeating mood check-ins.
+
+    has_name=False 代表「我們不知道他叫什麼」（個人資料沒填暱稱／名稱）。
+    2026-08-08 Edward 真機：她開口叫他「伯伯」——他從來沒填過任何稱呼。
+    病根跟 8/1 編奧運新聞一模一樣：開場指令**寫死**「用他的稱呼開頭」，
+    手上沒有稱呼她就生一個聽起來合理的；而「不知道就不要加稱呼」那條規則
+    躺在一萬七千字說明書的另一端，搶不過眼前這句直接指令。
+    改法同樣是那條教訓：不要只寫「不准編」，要讓**指令本身不再要求她做不到的事**。
+    """
     try:
         familiarity = max(0, int(familiarity or 0))
     except (TypeError, ValueError):
@@ -986,7 +995,18 @@ def voice_opening_instruction(familiarity=0, topics=None, location=None, opening
     # 2026-08-01 Edward 定版：「就是暱稱、名稱加上時間的招呼，與記憶是否需要詢問什麼問題之類。」
     # 並明確拿掉「我在喔」「我在這裡」——那是機器人式的存在宣告，真人朋友接起電話不會那樣講。
     # 所以開場只有兩種長相，輪流用：①稱呼＋時段招呼，講完停 ②稱呼＋時段招呼＋一句從記憶來的問句。
-    greet_core = "用他的稱呼開頭，接一句照現在時間的招呼（早上早安、下午午安、晚上晚安、太晚就順口提早點休息）"
+    # 2026-08-08：稱呼只有在**真的知道**的時候才准出現在指令裡。
+    # 不知道就明說「不知道」＋給她照樣合格的替代做法（直接招呼），
+    # 而不是留一句「用他的稱呼開頭」讓她自己去湊一個。
+    if has_name:
+        greet_core = ("用他的稱呼開頭，接一句照現在時間的招呼"
+                      "（早上早安、下午午安、晚上晚安、太晚就順口提早點休息）")
+    else:
+        greet_core = ("**你不知道他叫什麼——不要加任何稱呼，也不要自己想一個**"
+                      "（不准用「先生」「小姐」「阿公」「阿嬤」「伯伯」「阿姨」這類憑外貌或年紀猜的叫法，"
+                      "你根本沒見過他）。直接講一句照現在時間的招呼就好"
+                      "（早上早安、下午午安、晚上晚安、太晚就順口提早點休息）——"
+                      "沒有稱呼一點都不失禮，叫錯才傷人")
     ask_route = (
         greet_core + "，然後接一句問句——問的內容只能來自**上面真的寫著**的他的事"
         "（他講過的、記著的，像上次說的不舒服、要去做的事）；"

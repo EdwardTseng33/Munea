@@ -875,6 +875,20 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "只有安撫他、提醒重要事情、或隔很久重新開口時才偶爾再叫一次。"
             "每一句都叫他的名字非常不自然、禁止。）"
         )
+    else:
+        # 2026-08-08 Edward 真機：個人資料沒填任何稱呼，她開口就叫他「伯伯」。
+        # 舊寫法在這裡**什麼都不說**——不知道名字時，說明書對稱呼完全沉默，
+        # 而開場指令卻要求「用他的稱呼開頭」，等於逼她自己生一個。
+        # 沉默不是中立：模型會用最像樣的猜測填空（照年紀猜「伯伯」、照性別猜「先生」）。
+        # 所以這裡要明講「不知道」＋給她一條照樣合格的路（不加稱呼直接說話）。
+        base += (
+            "（稱呼規則：**你不知道他叫什麼**——個人資料裡沒有填。"
+            "所以整通電話都不要加稱呼，直接跟他說話就好；"
+            "**絕對不准自己想一個**，包括照年紀或性別猜的「伯伯」「阿姨」「阿公」「阿嬤」"
+            "「先生」「小姐」「大哥」「大姐」——你沒見過他，那是憑空猜的。"
+            "沒有稱呼一點都不失禮，叫錯才傷人。"
+            "他自己在對話中說了名字，之後才可以用他說的那個。）"
+        )
     # 今天日期時間（台灣時間）——所有版本都給，讓「明天／今晚」算得準（2026-07-09 Edward）
     tw = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
     wd = "一二三四五六日"[tw.weekday()]
@@ -1829,7 +1843,8 @@ def _new_call_state():
 
 async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topics, fam, day_call,
                               call_payload, gate_key, call_token, asr_context_terms,
-                              first_connect, resumption_handle, voice_locale_session):
+                              first_connect, resumption_handle, voice_locale_session,
+                              user_name=None):
     """跑「一條底層 Gemini Live 連線」的完整生命週期（收麥克風、送她的聲音、查詢、字幕、
     守護腦、記憶）。2026-07-25 通話延長之前，這段是直接寫在 handle() 的 async with 區塊
     裡、整通電話只跑一次；現在拆成獨立函式，讓 handle() 能在 GoAway 換線時重複呼叫，
@@ -2013,6 +2028,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 if active_profile["sessionLocale"] == "zh-TW":
                     opening = localization.voice_opening_instruction(
                         fam, topics, location, day_call,
+                        has_name=bool((user_name or "").strip()),
                     )
                 else:
                     opening = active_profile["openingMessage"]
@@ -3342,6 +3358,7 @@ async def handle(ws):
                         session, _cli, ws, cid, t0, st, char, location, topics, fam, day_call,
                         call_payload, gate_key, call_token, asr_context_terms,
                         first_connect, resumption_handle, voice_locale_session,
+                        user_name=user,
                     )
             finally:
                 if _key_idx is not None:

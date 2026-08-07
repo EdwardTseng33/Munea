@@ -4490,7 +4490,9 @@ const LiveVoice = {
     voiceCallMark('voice_socket_connecting', 'pass', { endpoint: url, authMode: _callToken ? 'call_token' : 'app_key' });
     this.on = true;
     this.ready = false;   // 伺服器真的接上腦（Gemini session 開好）才會回 ready
-    this.micOpen = false; this._openMicAfterGreet = false;   // 麥克風預設關；招呼講完才開（見 beginConversation / turn_complete）
+    // 這裡是「連線剛建立、還沒接通」的初始值——此時本來就還不該送聲音。
+    // 真正接通（markConnected）之後會立刻開麥，不再等她把招呼講完（2026-08-08）。
+    this.micOpen = false; this._openMicAfterGreet = false;
     this._topicSaved = false; this._userBuf = '';   // 每通電話重新抓「你聊了什麼」
     this._transcript = []; this._userTurn = '';   // 每通電話重新累積聊天記錄（掛斷送去萃取長期記憶）
     this._playoutUntil = 0; this._newAvatarTurn = true; this._micPackets = 0; this._micRebuilds = 0; this._silentKeepaliveAt = 0;
@@ -7894,7 +7896,15 @@ async function connectCall() {
       if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
       try { FaceIdle.stop(); } catch (e) {}
       LiveVoice.greet();                     // 暖機不再消耗第一句；招呼從已驗證的唯一影音播放器開始
-      setTimeout(() => { if (LiveVoice._openMicAfterGreet) { LiveVoice._setMicOpen(true); LiveVoice._openMicAfterGreet = false; } }, 6000);   // 開麥保底（別在她還沒開口就開麥）
+      // 2026-08-08 Edward 真機：「我無法講話」。
+      // 舊行為＝麥克風關著，等她把招呼講完才開（保底 6 秒）。問題是她的招呼要先繞去
+      // 顯示卡算嘴型再回來，開場又刻意囤 1 秒防斷音——她「講完」得很晚，
+      // 使用者在那之前完全無法出聲，只能盯著畫面等，最壞要等滿 6 秒。
+      // 改成接通就開麥：她要講她的、他隨時能講他的，誰先開口都行。
+      // 為什麼現在敢開：回音窗 v2 已經擋掉「她聽到自己的聲音當成使用者在講」（7/28 上線），
+      // 打斷機制也早就雙保險，不必再靠「關麥克風」這種粗魯的方式防自問自答。
+      LiveVoice._setMicOpen(true);
+      LiveVoice._openMicAfterGreet = false;
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
