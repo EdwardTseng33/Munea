@@ -900,6 +900,27 @@ def looks_like_taiwanese_hokkien(text):
     return bool(_TAIWANESE_HOKKIEN_CONTEXT_RE.search(value))
 
 
+def looks_like_taiwanese_hokkien_output(text):
+    """Require phrase-level evidence before replaying streamed model output.
+
+    Live output transcription arrives in short, unstable fragments. A single
+    exclusive marker such as ``咧`` can be a partial-ASR substitution inside an
+    otherwise Mandarin answer; treating that fragment as a complete Hokkien
+    turn interrupts playback and makes the model repeat the whole answer.
+    """
+    if taiwanese_hokkien_release_enabled():
+        return False
+    value = str(text or "")
+    if any(phrase in value for phrase in _TAIWANESE_HOKKIEN_STRONG_PHRASES):
+        return True
+    marker_hits = {
+        token for token in _TAIWANESE_HOKKIEN_EXCLUSIVE_MARKERS if token in value
+    }
+    if len(marker_hits) >= 2 or _TAIWANESE_HOKKIEN_CONTEXT_RE.search(value):
+        return True
+    return bool(re.search(r"(?:我|你|伊).{0,2}咧.{0,2}(?:等|講|食|做|看|想|去|來)", value))
+
+
 def requires_taiwanese_hokkien_fallback(text):
     return requests_taiwanese_hokkien(text) or looks_like_taiwanese_hokkien(text)
 

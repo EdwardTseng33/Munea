@@ -2870,7 +2870,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["blocked_output_text"] = (st["blocked_output_text"] + output_text)[-600:]
                             if (
                                 output_locale == "zh-TW"
-                                and localization.looks_like_taiwanese_hokkien(output_text)
+                                and localization.looks_like_taiwanese_hokkien_output(
+                                    st["blocked_output_text"]
+                                )
                             ):
                                 await _arm_language_block("model_output")
                             elif (
