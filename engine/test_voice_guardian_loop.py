@@ -40,15 +40,26 @@ async def _recursive_followup_scenario():
     original_record = voice.guardian_record_and_alert
     results = iter([
         _risk("medical_emergency_signal"),
+        _risk("medical_emergency_signal"),
         _risk("self_harm_crisis"),
         _risk("medical_emergency_signal"),
     ])
     voice.guardian_scan_text = lambda text: next(results)
     voice.guardian_record_and_alert = lambda *args, **kwargs: None
     try:
-        # A real user turn may produce one corrective guardian follow-up.
+        # Assistant-output review is still recorded and alerted, but must not
+        # open a hidden spoken turn even when the classifier says high risk.
         await voice.guardian_watch(
             1, "ai", "first unsafe answer", state, session,
+            turn_id=state["guardian_real_turn_id"], allow_cue=True,
+        )
+        await voice.guardian_flush_pending_cue(1, session, state)
+        assert session.sent == []
+        assert state["pending_cues"] == []
+
+        # A real user's high-risk turn may produce one safety follow-up.
+        await voice.guardian_watch(
+            1, "user", "first unsafe user turn", state, session,
             turn_id=state["guardian_real_turn_id"], allow_cue=True,
         )
         await voice.guardian_flush_pending_cue(1, session, state)
@@ -70,7 +81,7 @@ async def _recursive_followup_scenario():
         next_turn = voice._guardian_begin_real_user_turn(state)
         assert next_turn == 2
         await voice.guardian_watch(
-            1, "ai", "new unsafe answer", state, session,
+            1, "user", "new unsafe user turn", state, session,
             turn_id=next_turn, allow_cue=True,
         )
         await voice.guardian_flush_pending_cue(1, session, state)

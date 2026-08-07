@@ -514,16 +514,16 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
         policy = (result or {}).get("responsePolicy") or {}
         _diag(cid, "guardian.hit", who=who, level=level, categories=",".join(categories) or "-",
               protection=risk.get("protectionEvent"), family=policy.get("familyNotificationCandidate"))
-        if who == "ai" and not allow_cue:
+        if who == "ai":
             _diag(
                 cid,
                 "guardian.cue_suppressed",
-                reason="internal_followup",
+                reason="assistant_output_no_hidden_turn",
                 turn=turn_id,
                 sources=",".join(st.get("guardian_internal_followup_sources") or ()) or "-",
             )
             return
-        cue = (guardian_ai_correction_cue if who == "ai" else guardian_redirect_cue)(categories, risk, policy)
+        cue = guardian_redirect_cue(categories, risk, policy)
         cues = st["pending_cues"]
         if len(cues) < 2:
             cues.append(cue)
