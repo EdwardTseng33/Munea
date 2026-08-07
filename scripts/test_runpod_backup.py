@@ -291,15 +291,32 @@ def test_observe_mode_never_spends():
         assert provider.ensure_calls == 0
 
 
-def test_primary_outage_opens_backup():
+def test_primary_outage_with_nobody_waiting_does_not_open_backup():
+    """主力掛了但沒人在用，就不要開備援（Edward 2026-08-07）。
+
+    以前這裡是無條件開一台預熱。結果主力掛著沒修的那兩天，備援開了空等 15 分鐘、
+    被收掉、再開一台，整天循環燒錢，從頭到尾沒有半個使用者——直到 RunPod 餘額見底。
+    """
     with tempfile.TemporaryDirectory() as tmp:
-        gateway = FakeGateway([primary(healthy=False)])
+        gateway = FakeGateway([primary(healthy=False)])   # 沒有人在通話、沒有人排隊
+        provider = FakeProvider()
+        controller = rb.BackupController(make_config(tmp, failures=1), gateway, provider, Clock(),
+                                         probe=lambda url, key: (_ for _ in ()).throw(RuntimeError("down")))
+        result = controller.run_once()
+        assert result["action"] == "no_change"
+        assert provider.ensure_calls == 0, "沒人要用的時候不該開卡"
+
+
+def test_primary_outage_with_someone_waiting_opens_backup():
+    """但真的有人在等，就要開——省錢不能省到讓打進來的人沒人接。"""
+    with tempfile.TemporaryDirectory() as tmp:
+        gateway = FakeGateway([primary(healthy=False)], queue_depth=1)   # 有人排隊
         provider = FakeProvider()
         controller = rb.BackupController(make_config(tmp, failures=1), gateway, provider, Clock(),
                                          probe=lambda url, key: (_ for _ in ()).throw(RuntimeError("down")))
         result = controller.run_once()
         assert result["action"] == "scaled_up"
-        assert result["reason"] == "primary_unavailable"
+        assert result["reason"] == "queue_waiting"
 
 
 def test_idle_backup_drains_then_stops():
