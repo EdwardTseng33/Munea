@@ -2,6 +2,7 @@ import os
 import pathlib
 import sys
 import unittest
+from unittest import mock
 
 
 ENGINE_DIR = pathlib.Path(__file__).resolve().parent
@@ -39,8 +40,29 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
                     semantics.classify_turn_end(transcript, "zh-Hant-TW").decision,
                 )
 
+    def test_shipped_locales_recognize_conservative_unfinished_signals(self):
+        cases = (
+            ("I stopped because", "en-US", "trailing_connector"),
+            ("Um...", "en", "short_filler"),
+            ("ちょっと待って。", "ja-JP", "explicit_hold"),
+            ("それで", "ja", "trailing_connector"),
+            ("Déjame pensar…", "es-ES", "explicit_hold"),
+            ("Lo hice porque", "es", "trailing_connector"),
+        )
+        for transcript, locale, reason in cases:
+            with self.subTest(locale=locale, transcript=transcript):
+                hint = semantics.classify_turn_end(transcript, locale)
+                self.assertTrue(hint.supported)
+                self.assertEqual("hold", hint.decision)
+                self.assertEqual(reason, hint.reason)
+
+    def test_latin_connectors_match_words_not_suffixes(self):
+        for transcript, locale in (("I like candy", "en-US"), ("Vivo en Sídney", "es-ES")):
+            with self.subTest(locale=locale, transcript=transcript):
+                self.assertEqual("respond", semantics.classify_turn_end(transcript, locale).decision)
+
     def test_unsupported_locale_does_not_pretend_to_be_smart_turn(self):
-        hint = semantics.classify_turn_end("because", "en-US")
+        hint = semantics.classify_turn_end("parce que", "fr-FR")
         self.assertFalse(hint.supported)
         self.assertEqual("unsupported_locale", hint.reason)
 
@@ -71,6 +93,30 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
         complete = semantics.classify_turn_end("我今天先休息。", "zh-TW")
         self.assertEqual(0, semantics.semantic_hold_ms(complete))
 
+    def test_adaptive_policy_learns_per_call_without_storing_text(self):
+        hint = semantics.classify_turn_end("我今天其實是因為", "zh-TW")
+        policy = semantics.AdaptiveTurnPolicy()
+        self.assertEqual(600, policy.hold_ms(hint))
+        policy.observe_continuation(900)
+        policy.observe_continuation(1000)
+        policy.observe_continuation(850)
+        self.assertGreater(policy.hold_ms(hint), 600)
+        snapshot = policy.snapshot()
+        self.assertEqual(3, snapshot["continuations"])
+        self.assertNotIn("text", snapshot)
+        self.assertNotIn("transcript", repr(snapshot).lower())
+
+    def test_adaptive_policy_is_bounded_and_kill_switchable(self):
+        hint = semantics.classify_turn_end("because", "en-US")
+        policy = semantics.AdaptiveTurnPolicy()
+        for _ in range(10):
+            policy.observe_continuation(5000)
+        self.assertLessEqual(policy.hold_ms(hint), 1200)
+        with mock.patch.dict(os.environ, {"MUNEA_VOICE_SEMANTIC_TURN_ADAPTIVE": "0"}):
+            self.assertEqual(600, policy.hold_ms(hint))
+        with mock.patch.dict(os.environ, {"MUNEA_VOICE_SEMANTIC_HOLD_MS": "250"}):
+            self.assertEqual(250, policy.hold_ms(hint))
+
     def test_live_server_wiring_is_finished_only_and_privacy_safe(self):
         source = (ENGINE_DIR / "live_voice_server.py").read_text(encoding="utf-8")
         self.assertIn('getattr(it_pre, "finished", False)', source)
@@ -79,6 +125,7 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
         self.assertIn('semantic_turn_holds=st["semantic_turn_shadow_holds"]', source)
         self.assertIn('"node.semantic_turn_active_armed"', source)
         self.assertIn('"node.semantic_turn_active_resumed"', source)
+        self.assertIn('"node.semantic_turn_adaptive_observed"', source)
         self.assertNotIn('node.semantic_turn_shadow", transcript=', source)
 
 
