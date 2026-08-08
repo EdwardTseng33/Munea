@@ -443,9 +443,35 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None):
             _diag(cid, "guardian.alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
-async def guardian_watch(cid, who, text, st, session):
+def _guardian_begin_real_user_turn(st):
+    """Re-arm guardian follow-ups only when microphone speech starts a new turn."""
+    turn_id = int(st.get("guardian_real_turn_id", 0)) + 1
+    st["guardian_real_turn_id"] = turn_id
+    st["guardian_internal_followup_active"] = False
+    st["guardian_internal_followup_sources"] = ()
+    # Keep at most the current and previous real turn. Background guardian
+    # tasks may finish late, so the turn id remains part of every dedupe key.
+    for field in ("user_flagged", "ai_flagged"):
+        current = st.setdefault(field, set())
+        st[field] = {
+            key for key in current
+            if not (
+                isinstance(key, tuple)
+                and key
+                and isinstance(key[0], int)
+                and key[0] < turn_id - 1
+            )
+        }
+    return turn_id
+
+
+async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=None):
     """背景任務：非同步跑守護腦判讀 + 記錄/告警 +（high/critical）排隊安全導引。絕不擋音訊管線。"""
     try:
+        if turn_id is None:
+            turn_id = int(st.get("guardian_real_turn_id", 0))
+        if allow_cue is None:
+            allow_cue = not (who == "ai" and st.get("guardian_internal_followup_active"))
         result = await asyncio.to_thread(guardian_scan_text, text)
         if not result:
             return
@@ -473,7 +499,7 @@ async def guardian_watch(cid, who, text, st, session):
                     }
                     _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
                     await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result)
-                    key = ("semantic", scat)
+                    key = (turn_id, "semantic", scat)
                     if key not in st["user_flagged"]:
                         st["user_flagged"].add(key)
                         cue = guardian_redirect_cue((scat,), sem_result["risk"], sem_result["responsePolicy"])
@@ -481,13 +507,23 @@ async def guardian_watch(cid, who, text, st, session):
                             st["pending_cues"].append(cue)
             return
         flagged = st["user_flagged"] if who == "user" else st["ai_flagged"]
-        if categories in flagged:
+        key = (turn_id, categories)
+        if key in flagged:
             return
-        flagged.add(categories)
+        flagged.add(key)
         policy = (result or {}).get("responsePolicy") or {}
         _diag(cid, "guardian.hit", who=who, level=level, categories=",".join(categories) or "-",
               protection=risk.get("protectionEvent"), family=policy.get("familyNotificationCandidate"))
-        cue = (guardian_ai_correction_cue if who == "ai" else guardian_redirect_cue)(categories, risk, policy)
+        if who == "ai":
+            _diag(
+                cid,
+                "guardian.cue_suppressed",
+                reason="assistant_output_no_hidden_turn",
+                turn=turn_id,
+                sources=",".join(st.get("guardian_internal_followup_sources") or ()) or "-",
+            )
+            return
+        cue = guardian_redirect_cue(categories, risk, policy)
         cues = st["pending_cues"]
         if len(cues) < 2:
             cues.append(cue)
@@ -603,11 +639,11 @@ def health_watch_user_text(cid, st):
 
 async def guardian_flush_pending_cue(cid, session, st):
     """在天然的輪替空檔（模型這一輪講完、turn_complete）送出排隊的安全導引，不是插話攔截正在講的這一句。"""
-    pending = st.get("pending_cues") or []
+    guardian_cues = list(st.get("pending_cues") or [])
+    pending = list(guardian_cues)
     st["pending_cues"] = []
     health_cue = st.get("pending_health_cue")
     st["pending_health_cue"] = None
-    health_record = st.get("pending_health_record")
     st["pending_health_record"] = None
     promise_cue = st.get("pending_promise_cue")
     st["pending_promise_cue"] = None
@@ -615,18 +651,32 @@ async def guardian_flush_pending_cue(cid, session, st):
         # 空頭承諾更正排最前面：長輩可能正準備坐下來等，這句要最快講
         pending = [promise_cue] + pending
     if health_cue:
-        pending = pending + [health_cue]  # 衛教排在安全導引之後：安全永遠先講、衛教只是配菜
+        # Routine health matching must never open a new spoken turn by itself.
+        # Doing so makes the assistant speak again after the App has already
+        # received turn_complete, which users hear as an unsolicited repeat.
+        # Keep the match for observability, but wait for a future user turn
+        # instead of injecting hidden client content into the live session.
+        _diag(cid, "healthkb.followup_suppressed", reason="no_new_user_turn")
     if not pending:
         return
+    sources = []
+    if guardian_cues:
+        sources.append("guardian")
+    if promise_cue:
+        sources.append("promise")
+    # The model answer produced by hidden system content is allowed to be
+    # recorded and alerted, but it must not create another hidden model turn.
+    st["guardian_internal_followup_active"] = True
+    st["guardian_internal_followup_sources"] = tuple(sources)
     try:
         await session.send_client_content(
             turns=types.Content(role="user", parts=[types.Part(text="\n".join(pending))]),
             turn_complete=True,
         )
         _diag(cid, "guardian.cue_sent", count=len(pending))
-        if health_cue and health_record:
-            _record_voice_recommendation(cid, st, *health_record)   # 送出去了才入帳
     except Exception as e:
+        st["guardian_internal_followup_active"] = False
+        st["guardian_internal_followup_sources"] = ()
         _diag(cid, "guardian.cue_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
@@ -1803,6 +1853,8 @@ def _new_call_state():
           "last_voice_at": 0.0,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
+          "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
+          "guardian_internal_followup_sources": (),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
           "health_topics_sent": set(), "pending_health_cue": None, "pending_promise_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
 
@@ -2713,6 +2765,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         if it_pre and getattr(it_pre, "text", None):
                             if st.get("user_turn_started_at") is None:
                                 st["user_turn_started_at"] = time.monotonic()
+                                _guardian_begin_real_user_turn(st)
                             current_profile = (
                                 st.get("voice_locale_profile")
                                 or voice_locale_session.current_profile()
@@ -2833,7 +2886,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["blocked_output_text"] = (st["blocked_output_text"] + output_text)[-600:]
                             if (
                                 output_locale == "zh-TW"
-                                and localization.looks_like_taiwanese_hokkien(output_text)
+                                and localization.looks_like_taiwanese_hokkien_output(
+                                    st["blocked_output_text"]
+                                )
                             ):
                                 await _arm_language_block("model_output")
                             elif (
@@ -2942,7 +2997,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
-                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
+                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                                    cid, "ai", st["ai_buf"], st, session,
+                                    turn_id=st.get("guardian_real_turn_id", 0),
+                                    allow_cue=not st.get("guardian_internal_followup_active"),
+                                )))
                         it = getattr(sc, "input_transcription", None)
                         if it and getattr(it, "text", None):
                             user_text = localization.reconcile_context_transcription(
@@ -2952,7 +3011,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             )
                             await ws.send(json.dumps({"type": "caption", "who": "user", "text": user_text}))
                             st["user_buf"] = (st["user_buf"] + user_text)[-200:]
-                            st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
+                            st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                                cid, "user", st["user_buf"], st, session,
+                                turn_id=st.get("guardian_real_turn_id", 0),
+                                allow_cue=True,
+                            )))
                             health_watch_user_text(cid, st)  # B2 衛教：同一份字幕順手比對題庫（同步、零模型呼叫）
                         if getattr(sc, "interrupted", False) and not st.get("language_block"):
                             st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
@@ -3043,8 +3106,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
                             st["user_buf"] = ""
                             st["ai_buf"] = ""
-                            st["user_flagged"] = set()
-                            st["ai_flagged"] = set()
+                            st["guardian_internal_followup_active"] = False
+                            st["guardian_internal_followup_sources"] = ()
                             if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if st.get("locale_reconnect_requested"):

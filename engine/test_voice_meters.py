@@ -70,6 +70,23 @@ def test_app_side_stall_meter_waits_for_the_face_to_start():
     assert guard < stall, "斷流計數必須排在『臉機已開口』的關卡後面"
 
 
+def test_app_degrades_slow_same_line_only_at_a_turn_boundary():
+    """Sub-second stalls are visible, but switching audio paths never cuts a sentence."""
+    app_js = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "src", "app.js")
+    with open(app_js, encoding="utf-8") as fh:
+        src = fh.read()
+
+    assert "sameline_audio_microstall" in src
+    assert "sameline_face_slow" in src
+    assert "_scheduleSameLineBoundaryFallback" in src
+    assert "_slFallbackAfterTurn" in src
+    assert "}, 200);" in src, "same-line monitoring is still too coarse to see 1-2 word stalls"
+    turn_complete = src.index("if (o.type === 'turn_complete')")
+    boundary_fallback = src.index("this._scheduleSameLineBoundaryFallback", turn_complete)
+    assert turn_complete < boundary_fallback
+
+
 if __name__ == "__main__":
     passed = 0
     for name, fn in sorted(globals().items()):
