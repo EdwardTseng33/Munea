@@ -4019,7 +4019,23 @@ const LiveVoice = {
     });
     if (this.onListen) this.onListen();
   },
-  greet() { try { if (this.ws && this.ws.readyState === 1) { this.ws.send(JSON.stringify({ type: 'greet', relay: this._pendingRelay || null })); voiceCallMark('greeting_requested', 'pass'); this._openMicAfterGreet = true; } } catch (e) { voiceCallFail('greeting_requested', e); } },   // 請 AI 主動開口；若有指定給本人的家人傳話，先準確轉達
+  // 2026-08-08 Edward 拍板：「讓她放棄主動打招呼，改由用戶先說第一句話她才開始回話」。
+  //
+  // 為什麼這樣比較好：她主動開口那一句，得先繞去顯示卡算嘴型再回來，
+  // 使用者只能盯著畫面等——而那正是「接通後感覺當機」的來源。
+  // 改成使用者先說：接通即可出聲，她收到才回，沒有任何人在等一句罐頭招呼。
+  //
+  // 唯一的例外是**家人傳話**：那是有人託她轉達的具體內容，
+  // 讓使用者先開口反而會錯過，所以這種情況仍由她先說。
+  greet() {
+    try {
+      if (!(this.ws && this.ws.readyState === 1)) return;
+      const relay = this._pendingRelay || null;
+      if (!relay) { voiceCallMark('greeting_skipped', 'pass', { reason: 'user_speaks_first' }); return; }
+      this.ws.send(JSON.stringify({ type: 'greet', relay }));
+      voiceCallMark('greeting_requested', 'pass', { reason: 'family_relay' });
+    } catch (e) { voiceCallFail('greeting_requested', e); }
+  },   // 只有「家人託她轉達」才主動開口；其餘一律等使用者先說
   async prepareRelay() {
     if (this._pendingRelay) return this._pendingRelay;
     this._relaySpokenId = null;
@@ -4417,9 +4433,13 @@ const LiveVoice = {
     clearTimeout(this._deadLineWatchT);
     this._deadLineWatchT = setTimeout(() => {
       if (!this.on || !this.ws || this.ws.readyState !== 1) return;
+      // 2026-08-08 Edward 拍板改「使用者先說」之後，判斷要跟著改：
+      // 她不再主動開口，所以「她沒出聲」變成**正常現象**，不能再當成線死掉的證據。
+      // 現在唯一能證明線活著的是上行——麥克風在 ready 就開，健康的通話零點幾秒內
+      // 就有封包（安靜時是靜音包）。上行一包都沒有，才是真的死線。
       const lineAlive = phase === 'ready_timeout'
         ? !!this.ready
-        : (this._firstAudioRecorded || (this._micPackets || 0) > 0);   // 任一方向有聲＝線是活的
+        : ((this._micPackets || 0) > 0 || this._firstAudioRecorded);
       if (lineAlive) return;
       const sessionKey = String((typeof activeChatSessionId !== 'undefined' && activeChatSessionId) || 'unknown');
       if (this._deadLineSessionId === sessionKey) {
@@ -4563,7 +4583,19 @@ const LiveVoice = {
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
-            if (o.type === 'ready') { this.ready = true; voiceCallMark('voice_ready', 'pass'); this._armDeadLineWatch('no_audio_both_ways', 5000); if (this.onReady) this.onReady(); this._toListening(); try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {} }   // 腦開機完成 → 語音就緒信號＋開麥；記下「聊過了」；ready 後 5 秒雙向無聲＝死線重接
+            if (o.type === 'ready') {
+              this.ready = true; voiceCallMark('voice_ready', 'pass');
+              this._armDeadLineWatch('no_audio_both_ways', 5000);
+              // 2026-08-08 Edward：「有一通可以講，但撥通後就又都不能講了」。
+              // 開麥本來掛在接通那條路的尾巴（markConnected 之後），但那條路上有兩道
+              // 「狀態變了就直接離開」的檢查——一旦命中就整段跳過，麥克風永遠關著。
+              // 間歇性正是這樣來的：同一份程式，有時走到、有時沒走到。
+              // 改成掛在這裡：腦一接上就開麥。這是「能收音」的最早時機，
+              // 而且它在 ready 事件本身，沒有任何提早離開的分支繞得過去。
+              this._setMicOpen(true); this._openMicAfterGreet = false;
+              if (this.onReady) this.onReady(); this._toListening();
+              try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {}
+            }   // 腦開機完成 → 語音就緒＋立刻開麥；記下「聊過了」；ready 後 5 秒雙向無聲＝死線重接
             if (o.type === 'caption' && o.who === 'user' && o.text) {
               this._ackUserSpeech();
               if (!this._firstUserCaptionRecorded) { this._firstUserCaptionRecorded = true; voiceCallMark('asr_first_caption', 'pass'); }
@@ -7895,14 +7927,10 @@ async function connectCall() {
       voiceCallMark('call_connected', 'pass');
       if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
       try { FaceIdle.stop(); } catch (e) {}
-      LiveVoice.greet();                     // 暖機不再消耗第一句；招呼從已驗證的唯一影音播放器開始
-      // 2026-08-08 Edward 真機：「我無法講話」。
-      // 舊行為＝麥克風關著，等她把招呼講完才開（保底 6 秒）。問題是她的招呼要先繞去
-      // 顯示卡算嘴型再回來，開場又刻意囤 1 秒防斷音——她「講完」得很晚，
-      // 使用者在那之前完全無法出聲，只能盯著畫面等，最壞要等滿 6 秒。
-      // 改成接通就開麥：她要講她的、他隨時能講他的，誰先開口都行。
-      // 為什麼現在敢開：回音窗 v2 已經擋掉「她聽到自己的聲音當成使用者在講」（7/28 上線），
-      // 打斷機制也早就雙保險，不必再靠「關麥克風」這種粗魯的方式防自問自答。
+      // greet() 現在只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
+      LiveVoice.greet();
+      // 麥克風已經在 ready 事件開好了（見 'ready' 分支）。這裡再補一次是保險：
+      // 萬一 ready 早於 markConnected、中間狀態被別的路徑動過，接通當下一定是開的。
       LiveVoice._setMicOpen(true);
       LiveVoice._openMicAfterGreet = false;
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
@@ -7935,7 +7963,13 @@ async function connectCall() {
           try { setLocalizedCallHint('idleWarning'); } catch (e) {}
           try { trackProductEvent('voice_idle_warning_shown', { afterMs: _idleGapMs * 2 }); } catch (e) {}
         }
-        else { clearInterval(_idleMon); _autoEndCall(); }                              // 第三段沉默 → 自動收線
+        // 2026-08-08 Edward 拍板：「現在只要不講話就會自動掐斷通話，拿掉這個機制」。
+        // 改成「你先說她才回」之後，接通後的安靜變成常態——使用者可能只是在想要講什麼，
+        // 卻被當成離開而收線；被系統掛掉的感覺跟當機沒兩樣。
+        // 現在沉默只留畫面上的提示（上面那段），**不再自動掛斷**。
+        // 代價講明：使用者忘記掛斷就會一直計費，靠的是他自己按結束。
+        // 要復原＝把下面這行換回 `clearInterval(_idleMon); _autoEndCall();`
+        else { _idleLast = Date.now(); }                                               // 沉默不再收線，時鐘往後推、繼續等他
       }, 1500);
     };
     const tryStart = () => { beginConversation().catch(() => {}); };
