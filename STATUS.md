@@ -1,6 +1,10 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 📦 **2026-08-08 最新包版：`1.0.56 (Build 526)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「打包更新手機 app／上傳 appstore」→ 見紅燈後拍板「先包版到我手機」＝A 案）**：來源 `origin/main@4098b3d0`（#533）、精確包版存檔點 `f63d83b6`。IPA SHA-256 `e2686a1fe1a3288a95f8241ac0907facaf420566fb8f045e610de8cbb268cad7`；手機回讀 `1.0.56 (526)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS。
+> 📦 **2026-08-09 最新包版：`1.0.57 (Build 527)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@4f9dd4cb`（#534、#535）、精確包版存檔點 `f1e65ade`。手機回讀 `1.0.57 (527)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS、447 項綠。
+> - **這版重點**：通話改成「**你先開口她才回**」——順帶治好偶爾講不出話、講到一半被系統掛斷；她誤判你插話時會**先把自己音量壓小、確認真的是你在講才停**，不再硬切。
+> - 🔴 **同一條紅燈續留**：`test-voice-launch-policy.js` 影像通話 1 秒暖機守門仍不過（主線既有、乾淨 main 亦紅，見 1.0.56 段）。Edward 已拍板照包，追蹤中。
+>
+> 📦 **2026-08-08 前一包版：`1.0.56 (Build 526)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「打包更新手機 app／上傳 appstore」→ 見紅燈後拍板「先包版到我手機」＝A 案）**：來源 `origin/main@4098b3d0`（#533）、精確包版存檔點 `f63d83b6`。IPA SHA-256 `e2686a1fe1a3288a95f8241ac0907facaf420566fb8f045e610de8cbb268cad7`；手機回讀 `1.0.56 (526)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS。
 > - **這版重點**：不知道使用者名字時不再自己編一個來叫、電話接通就能開口說話（不必等她講完開場白）、開場少等 0.4 秒。
 > - 🔴 **已知紅燈（主線既有、非本包造成，待修）**：`test-voice-launch-policy.js` 的「影像通話第一句前要留 1 秒暖機」不過——**用乾淨 `origin/main` 單獨跑同樣紅**，推測 8/3 那批通話改動（`b66534fe` 插話與回話長度）動到暖機設定但守門沒跟上。防的是**第一句嘴型對不上聲音／被吃掉半截**。Edward 8/8 拍板：先包、這條記著追蹤（改動屬通話核心，蘇菲無把握不影響現場品質，宜由做那批改動的另一台處理）。
 > - 🍎 **ASC 版本頁仍停在 1.0.54**：Mac 端 Claude 瀏覽器外掛未連線（`list_connected_browsers` 只回報 Windows 那台），四步無法代做。**建議根治＝申請 App Store Connect API 金鑰（.p8）**：辦好後改版號／貼說明／選 build／送審皆可自動完成，不再依賴瀏覽器登入。此機**查無任何 .p8**（`~/.appstoreconnect/private_keys`、`~/private_keys` 皆空）。
