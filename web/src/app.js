@@ -3980,10 +3980,55 @@ const LiveVoice = {
     this._setFaceAudioMuted(true);
     Avatar.reset();
   },
+  // 先把音量壓小、看你是不是真的在講，再決定要不要把她的話砍掉（2026-08-09）。
+  //
+  // 為什麼要多這一關：Edward 8/8 真機「整句話頻繁出現斷字、卡住一個字跳針」。
+  // 舊行為＝一判定你插話就硬停播放＋清空臉那邊的緩衝，代價是**要重新囤半秒才出得了聲**。
+  // 判對了沒事（你本來就要講話），**判錯了就是斷字**——而在手機開擴音的情況下，
+  // 她自己的聲音繞回麥克風本來就容易被誤判。
+  //
+  // 業界 2026 的做法不是砍，是**把她的音量壓低約 24 分貝**（audio ducking）：
+  // 判錯了也只是音量抖一下、聽起來像禮讓；判對了再真的停。
+  // 這一關把「誤判的代價」從斷字降成音量抖一下。
+  _duckAssistantAudio() {
+    try {
+      var p=document.getElementById('faceVid');
+      if(p && !this._duckPrevVolume){ this._duckPrevVolume=(p.volume===0?1:p.volume); p.volume=0.06; }   // 0.06 ≈ −24dB
+    } catch (e) {}
+  },
+  _unduckAssistantAudio() {
+    try {
+      var p=document.getElementById('faceVid');
+      if(p && this._duckPrevVolume){ p.volume=this._duckPrevVolume; }
+    } catch (e) {}
+    this._duckPrevVolume=0;
+  },
+  _maybeBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs) {
+    if (this._bargeInActive || this._duckPendingAt) return;
+    // 第一步：只壓音量，不砍話、不清緩衝
+    this._duckPendingAt = performance.now();
+    this._duckAssistantAudio();
+    voiceCallMark('barge_in_ducked', 'pass', { rms: Math.round(rms*1000)/1000, sustainMs });
+    var self=this;
+    // 第二步：再看 180 毫秒。真人插話會持續講；回音殘響撐不了那麼久。
+    this._duckConfirmT = setTimeout(function(){
+      self._duckPendingAt = 0;
+      var stillTalking = self._bargeState && self._bargeState.speechMs > 0;
+      if (stillTalking) {
+        self._beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs);   // 真的是你 → 讓路
+      } else {
+        self._unduckAssistantAudio();                                               // 誤判 → 音量還原，話沒斷
+        voiceCallMark('barge_in_false_alarm', 'pass', { recoveredMs: 180 });
+        try { trackProductEvent('voice_barge_in_false_alarm', {}); } catch (e) {}
+      }
+    }, 180);
+  },
   _beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs) {
     if (this._bargeInActive) return;
     this._bargeInActive = true;
     this._dropAssistantAudio = true;
+    try { clearTimeout(this._duckConfirmT); } catch (e) {}
+    this._duckPendingAt = 0; this._duckPrevVolume = 0;
     const stopStartedAt = performance.now();
     this._stopAssistantPlayback();
     const stopOperationMs = Math.max(0, performance.now() - stopStartedAt);
@@ -4334,7 +4379,8 @@ const LiveVoice = {
         const detectedSpeechMs = this._bargeSpeechOnsetAt
           ? Math.max(0, performance.now() - this._bargeSpeechOnsetAt)
           : observed.state.speechMs;
-        this._beginBargeIn(rms, observed.threshold, sustainMs, preRoll, detectedSpeechMs);
+        // 先壓音量觀察 180ms，確定真的是他在講才砍話（誤判就只是音量抖一下，不再斷字）
+        this._maybeBargeIn(rms, observed.threshold, sustainMs, preRoll, detectedSpeechMs);
         return;
       }
       if (speakerActive) { this.micLevel = 0; return; }
@@ -4759,6 +4805,9 @@ const LiveVoice = {
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); clearTimeout(this._userSpeechWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     clearTimeout(this._uplinkWatchT); clearTimeout(this._deadLineWatchT);   // 收音管看門＋死線看門一起收
     this.micOpen = false; this._openMicAfterGreet = false;
+    try { clearTimeout(this._duckConfirmT); } catch (e) {}
+    this._duckPendingAt = 0;
+    this._unduckAssistantAudio();   // 掛斷時把壓低的音量還原，否則下一通會小聲
     this._sameLineWarmup = false;
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();

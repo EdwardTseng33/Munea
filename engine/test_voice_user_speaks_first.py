@@ -88,6 +88,49 @@ def test_silence_does_not_hang_up():
     )
 
 
+GUESS_FREE_DUCK = "誤判插話不准再把她的話砍掉（2026-08-09）"
+
+
+def test_barge_in_ducks_before_cutting():
+    """判定插話要先壓音量、確認過才砍——不能一偵測就硬停。
+
+    Edward 8/8 真機「整句話頻繁斷字、卡住一個字跳針」。舊行為＝一判定就硬停播放
+    ＋清空臉那邊的緩衝，代價是要重新囤半秒才出得了聲。判對了沒事，**判錯就是斷字**。
+    業界 2026 的做法是先把音量壓低約 24 分貝，判錯只是音量抖一下。
+    """
+    src = _src()
+    assert "_maybeBargeIn" in src, "少了「先壓音量再確認」那一關"
+    assert "_duckAssistantAudio" in src and "_unduckAssistantAudio" in src, (
+        "少了壓音量／還原音量的動作"
+    )
+    caller = re.search(r"this\.(_maybeBargeIn|_beginBargeIn)\(rms, observed\.threshold", src)
+    assert caller and caller.group(1) == "_maybeBargeIn", (
+        "偵測到插話還是直接砍話——要先走 _maybeBargeIn 壓音量觀察"
+    )
+
+
+def test_false_alarm_restores_audio():
+    """確認不是真的插話時，音量要還原，而且要留下紀錄（不然誤判率永遠量不到）。"""
+    src = _src()
+    assert "barge_in_false_alarm" in src, "誤判沒有留下紀錄，就沒辦法量誤判率"
+    assert "voice_barge_in_false_alarm" in src, "誤判沒有回報，看不到改善幅度"
+
+
+def test_hangup_restores_volume():
+    """掛斷要把壓低的音量還原，否則下一通會整通小聲。"""
+    src = _src()
+    # 兩個坑都踩過，這裡一次講清楚：
+    #  ① 不能用「抓到下一個 }」框範圍——stop() 裡有巢狀括號，比對式會提早結束、
+    #     明明有寫卻報沒有（2026-08-01 同一個坑）。
+    #  ② app.js 裡有五個 stop()，要的是掛斷通話那一個（收掉收音管與看門的那個），
+    #     不是最前面那個。用它獨有的內容定位。
+    at = src.index("clearTimeout(this._uplinkWatchT); clearTimeout(this._deadLineWatchT);")
+    body = src[at:at + 1200]
+    assert "_unduckAssistantAudio" in body, (
+        "掛斷沒有還原音量——下一通會小聲"
+    )
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
