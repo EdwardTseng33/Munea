@@ -6,7 +6,7 @@
 - **正式服務已對齊**：Gateway `munea-call-control-00016-jeh@52a21fb7`、Voice `munea-voice-00103-suy@52a21fb7` 均為 100% traffic 且要求 signed `call_protocol=3`；Glows `tw-06` Avatar runtime 為 `23fe64ca`、`call_protocol=3`。component release 不再有權結束整張 paired lease，只有 App 明確掛斷或 45 秒 reaper 可收線。
 - **唯一 App 候選**：`1.0.62 (Build 533)`。App 會帶 native version／build／protocol，並拒絕 Gateway 或 Voice 協議不符；WebView cache identity 為 `20260811-callprotocol-b533-v1062`。App Store Connect 唯讀實查：最新上傳為 `1.0.61 (Build 532)`；目前 `WAITING_FOR_REVIEW` 的版本其實是 `1.0.55`，選用 `1.0.55 (Build 525)`，不是 1.0.61。
 - **自動實聲 Gate**：正式候選三邊 3/3 PASS，第一聲 `922／828／921ms`；Voice underrun、Avatar 助理說話區 RTP gap、缺波形、自主重複、意外斷線皆 `0`。升為正式預設入口後另跑 1/1 PASS，第一聲 `890ms`、同五項皆 `0`，連線保持。兩輪非說話區各觀察到單一 `100ms` video PTS gap，不影響助理有聲區，但保留追蹤。
-- **狀態邊界**：`services deployed + source tested + App 1.0.62 Build 533 not packaged + App E2E pending`。尚未有 exact IPA／安裝版 iPhone 真麥克風與聲畫證據，因此不得稱 fully verified、release-ready 或已送審。
+- **狀態邊界**：`services deployed + source merged at main@c4477ae3 + App 1.0.62 Build 533 not packaged + App E2E pending`。尚未有 exact IPA／安裝版 iPhone 真麥克風與聲畫證據，因此不得稱 fully verified、release-ready 或已送審。
 
 ## 2026-08-10 21:18 台灣｜聊聊卡頓／重複／自行斷線 P0 候選
 
@@ -20,13 +20,13 @@
 - **正式 App 測試入口實證**：staging Voice `munea-voice-staging-00114-yuf@3ebd91d4` 已承接預設 URL 100% 流量；以正式 Gateway lease／call token、App relay、現役 Avatar WebRTC 連打三通，`3/3 PASS`。第一聲 `906／1140／953ms`；Voice 來源 underrun、Avatar 內部 underrun、實際助理說話區段 RTP gap、波形缺字、無輸入自主重複、通話自行斷線均為 `0`。證據：`.tmp/fake-phone-app-entry-final-00114-avatar-3455609d/summary.json`。
 - **自動驗收**：插話／回音、啟動、Avatar direct kill switch、通話儀表、UI 契約、假手機契約與可執行狀態機均 PASS。正式 App 本地播放排程以 80 個 200ms PCM chunk、147ms 到貨間隔重播：`0 underrun`、`0 scheduling gap`；Avatar idle RMS `0.04` 連續模擬 3 分鐘：麥克風守門阻擋 `0` 次。`smoke:no-api`、UI contracts、Voice chain contracts 全綠。
 - **完整套件例外**：`npm run test:launch` 在既有 `test_flashhead_router_core.py` Windows Bash dry-run 失敗；該測試與輸入檔均未被本分支修改，針對性與後續 UI 測試全綠。
-- **狀態**：`Voice staging deployed / live Avatar deployed / App-entry fake-phone 3/3 PASS / App E2E pending`。服務端卡頓、重複與連線保持 Gate 已通過；分支尚未合併、尚未包新 App。既有合成 WAV 只能證明整條聲音管線連續，不能冒充真人聲 ASR 或 exact-build iPhone PASS；仍需以經同意且無個資的固定真人錄音驗 ASR，合併後再由 exact-build iPhone 自動／實機 Gate 驗真麥克風與喇叭。
+- **狀態**：`Voice staging deployed / live Avatar deployed / App-entry fake-phone 3/3 PASS / main@c4477ae3 / App E2E pending`。服務端卡頓、重複與連線保持 Gate 已通過；PR #558 已合併，尚未包新 App。既有合成 WAV 只能證明整條聲音管線連續，不能冒充真人聲 ASR 或 exact-build iPhone PASS；仍需由 exact-build iPhone 自動／實機 Gate 驗真麥克風與喇叭。
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
 Snapshot time: `2026-08-11 00:49 Asia/Taipei`（production Voice 為 `munea-voice-00103-suy@52a21fb7`；Gateway 為 `munea-call-control-00016-jeh@52a21fb7`；Avatar 為 `tw-06@23fe64ca`；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；current source 候選為 `1.0.62 (Build 533)`；installed-iPhone lane 尚無 Build 533 證據）
 
-Source reconciliation baseline: `codex/fix-call-audio-state-p0-20260810`; latest uploaded App Build 532 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
+Source reconciliation baseline: `origin/main@c4477ae380df8a8f908b5383577b9f3df5591239`; latest uploaded App Build 532 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
 
 ## 2026-08-10 開場卡頓／假斷線修復
 
