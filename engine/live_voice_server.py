@@ -3345,6 +3345,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     return call_ended, st.get("resumption_handle") or resumption_handle
 
 
+def _defer_control_release_for_reconnect(reason, state):
+    """Keep the lease alive when the App deliberately rebuilds a dead preflight socket.
+
+    The installed App closes Voice after five seconds when its microphone
+    pipeline has produced no packets.  That close is a reconnect request, not
+    a user hang-up.  Releasing the whole call here makes the App's subsequent
+    token refresh fail with ``stale_lease`` and presents a false busy line.
+    The App remains the owner of an intentional release; the durable 45-second
+    reaper is the final guard for a crashed client.
+    """
+    return (
+        reason == "call_ended"
+        and int((state or {}).get("in") or 0) == 0
+        and int((state or {}).get("out") or 0) == 0
+    )
+
+
 async def handle(ws):
     char = "寧寧"
     # 從連線網址讀使用者改過的名字（?name=新名字），讓 AI 知道自己現在叫什麼
@@ -3578,20 +3595,23 @@ async def handle(ws):
         _diag(cid, "node.error", err=f"{type(e).__name__}:{str(e)[:80]}")
     finally:
         if call_payload and call_release_reason:
-            try:
-                await asyncio.to_thread(
-                    post_internal,
-                    os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
-                    os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
-                    f"/v1/internal/calls/{call_payload['call_id']}/release",
-                    {
-                        "lease_version": int(call_payload["lease_version"]),
-                        "event_id": "voice-release-" + uuid.uuid4().hex,
-                        "reason": call_release_reason,
-                    },
-                )
-            except Exception as exc:
-                _diag(cid, "node.control_release_err", err=f"{type(exc).__name__}:{str(exc)[:80]}")
+            if _defer_control_release_for_reconnect(call_release_reason, st):
+                _diag(cid, "node.control_release_deferred", reason="preflight_zero_audio_reconnect")
+            else:
+                try:
+                    await asyncio.to_thread(
+                        post_internal,
+                        os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
+                        os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
+                        f"/v1/internal/calls/{call_payload['call_id']}/release",
+                        {
+                            "lease_version": int(call_payload["lease_version"]),
+                            "event_id": "voice-release-" + uuid.uuid4().hex,
+                            "reason": call_release_reason,
+                        },
+                    )
+                except Exception as exc:
+                    _diag(cid, "node.control_release_err", err=f"{type(exc).__name__}:{str(exc)[:80]}")
         if _key_idx is not None:
             _release_client(_key_idx)   # 這通結束，把這把鑰匙的空位放回去給下一通
         for t in st.get("bg_tasks", []):

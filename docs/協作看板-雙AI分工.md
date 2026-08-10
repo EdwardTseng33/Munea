@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-10 Codex · P0 接通閃屏後誤顯忙線熱修（進行中）
+
+- **範圍／風險**：`codex/hotfix-call-lease-reconnect-20260810`，call-path risk；修改 `engine/live_voice_server.py`、`web/src/app.js`、Voice 啟動／收線測試與本看板。
+- **正式事故證據**：三次 iPhone 撥號均成功派位，Voice／Avatar 約 2 秒 ready 且 lease 已 active；約 5.1 秒後 Voice 以 `call_ended` 結束零上行／零下行連線，App 隨後連續 7 次 token refresh 得到 409，畫面閃退並誤顯忙線。GLOWS 三次 WebRTC 都曾 connected，約 6.2 秒由 App 關閉，並非 GPU 或席位不足。
+- **根因／修法**：App 的 ready 後 5 秒零上行看門把「麥克風管線尚未出包」當死線，主動關 Voice；Voice 又把這個準備期重連當正式掛斷，先結束整個 lease，使重連必然 stale。Voice 對 `call_ended + in=0 + out=0` 延後釋放給 App／45 秒 reaper；新 App 不再因零上行硬砍已 ready 的 Voice／Avatar，只保留收音重建與明確提示。
+- **驗收責任**：由 Codex 自行完成 canary、真語音錄音、重連、重複／卡頓與容量釋放證據；不把 Edward 當驗收操作員。正式安裝版設備能力若不可控，只記設備缺口並另接可控實機，不交辦老闆點測。
+
 ### 2026-08-10 Codex · Voice 回音誤判插話／整句斷續修復（程式已合併）
 
 - **範圍／風險**：`codex/fix-voice-echo-barge-20260810`，call-path risk；預計修改 `engine/live_voice_server.py`、`engine/voice_echo_guard.py`、`web/src/app.js`、`web/src/voice-turn-policy.js`、對應 Voice 插話／回音測試與本看板。若驗證證明仍有獨立的 Avatar 音訊佇列破洞，再另開後續 PR，不把兩種根因混成一批。
