@@ -220,6 +220,8 @@ def test_http_v2_contract():
     assert token_payload["locale_context"]["uiLocale"] == "en"
     assert token_payload["locale_context"]["conversationLocale"] == "ja"
     assert token_payload["locale_context"]["safetyRegion"] == "JP"
+    assert token_payload["call_protocol"] == 3
+    assert body["call_protocol"] == 3
 
     queued = client.post("/v1/calls", headers=auth, json={
         "character_id": "a05", "idempotency_key": "queued",
@@ -236,6 +238,32 @@ def test_http_v2_contract():
         "lease_version": 1, "event_id": "app-release-1", "reason": "user_hangup",
     }).json()
     assert released["state"] == "ended" and gs.DURABLE.releases[-1]["user_id"]
+
+    release_count = len(gs.DURABLE.releases)
+    avatar_release = client.post(
+        f"/v1/internal/calls/{call_id}/release",
+        headers={"Authorization": "Bearer unit-admin"},
+        json={
+            "lease_version": 1,
+            "event_id": "avatar-release:pc-closed",
+            "reason": "webrtc_closed",
+            "component": "avatar",
+        },
+    ).json()
+    assert avatar_release["call_continues"] is True
+    assert len(gs.DURABLE.releases) == release_count
+
+    legacy_voice_release = client.post(
+        f"/v1/internal/calls/{call_id}/release",
+        headers={"Authorization": "Bearer unit-admin"},
+        json={
+            "lease_version": 1,
+            "event_id": "voice-release-unit",
+            "reason": "voice_socket_closed",
+        },
+    ).json()
+    assert legacy_voice_release["component"] == "voice"
+    assert len(gs.DURABLE.releases) == release_count
 
     ready = client.post("/v1/internal/calls/ready", headers={"Authorization": "Bearer unit-admin"}, json={
         "call_id": call_id, "lease_version": 1, "event_id": "avatar-ready-1", "component": "avatar",

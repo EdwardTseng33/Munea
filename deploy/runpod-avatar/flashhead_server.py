@@ -435,6 +435,10 @@ class FlashHead:
             if _token_secret:
                 payload = _decode_call_token(token, _token_secret, _worker_id)
                 if payload is not None:
+                    required_protocol = int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0)
+                    if (required_protocol and not payload.get("demo")
+                            and int(payload.get("call_protocol") or 0) < required_protocol):
+                        return False
                     return payload
                 if not (_allow_legacy and _pass(request_key)):
                     return False
@@ -468,6 +472,7 @@ class FlashHead:
                 "lease_version": version,
                 "event_id": "avatar-release:" + call_id + ":" + str(version),
                 "reason": reason,
+                "component": "avatar",
             }
             try:
                 await asyncio.to_thread(
@@ -622,6 +627,7 @@ class FlashHead:
             primary = outer.slots[0]
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
+                         "call_protocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
                          "avatar_render_contract": avatar_render_contract(primary.char),
                          "capacity": snap,
                          # 2026-07-23 STATUS 125 防線 2：機器自報時鐘（機房控制、容器內無權校時）。

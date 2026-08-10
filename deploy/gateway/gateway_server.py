@@ -113,12 +113,16 @@ class CallRequestV2Body(BaseModel):
     character_id: str
     idempotency_key: str
     person_id: str | None = None
+    app_version: str = ""
+    app_build: str = ""
+    client_protocol: int = 0
 
 
 class CallLeaseV2Body(BaseModel):
     lease_version: int
     event_id: str
     reason: str = "completed"
+    component: str | None = None
 
 
 class CallClaimV2Body(BaseModel):
@@ -246,6 +250,11 @@ def _decorate_connect(result: dict, user_id: str, store: SupabaseCallStore) -> d
         "voice_shard_id": str((result.get("voice") or {}).get("shard_id") or ""),
         "slot_id": int(result.get("slot_id") or 0),
         "lease_version": int(result.get("lease_version") or 0),
+        # One signed protocol identity travels through Gateway -> Voice ->
+        # Avatar. App releases can then be rolled out only after all three
+        # services advertise the same contract instead of trusting a marketing
+        # version string that may have been bumped manually on the Mac.
+        "call_protocol": 3,
         **locale_context_call_claims(locale_context),
     }
     if _TURN_SECRET and _TURN_URLS:
@@ -263,6 +272,7 @@ def _decorate_connect(result: dict, user_id: str, store: SupabaseCallStore) -> d
         }]
     result["call_token"] = issue_call_token(token_payload, _CALL_TOKEN_SECRET, ttl_seconds=90)
     result["token_expires_in"] = 90
+    result["call_protocol"] = 3
     return result
 
 
@@ -336,6 +346,10 @@ def metrics(authorization: str = Header(default=""),
 def calls_v2(body: CallRequestV2Body, authorization: str = Header(default="")):
     store = _durable()
     user = _authenticate_user(store, authorization)
+    logger.info(
+        "call_client_identity app_version=%s app_build=%s client_protocol=%s",
+        str(body.app_version)[:24], str(body.app_build)[:24], int(body.client_protocol or 0),
+    )
     try:
         result = store.request_call(
             user_id=user.user_id,
@@ -421,6 +435,27 @@ def call_internal_release_v2(call_id: str, body: CallLeaseV2Body,
                              authorization: str = Header(default=""),
                              x_munea_admin_token: str = Header(default="")):
     _admin_bearer(authorization, x_munea_admin_token)
+    component = str(body.component or "").strip().lower()
+    if not component:
+        if str(body.event_id).startswith("avatar-release:"):
+            component = "avatar"
+        elif str(body.event_id).startswith("voice-release-"):
+            component = "voice"
+    if component in {"voice", "avatar"}:
+        # Voice and Avatar are components of one paired lease, not owners of
+        # the entire call. A transient WebRTC close must not make the lease
+        # stale while the authenticated App is still heartbeating; the App or
+        # the 45-second reaper remains the authority that ends/bills the call.
+        logger.warning(
+            "call_component_release_deferred call_id=%s component=%s reason=%s",
+            call_id, component, str(body.reason)[:80],
+        )
+        return {
+            "ok": True,
+            "state": "component_released",
+            "component": component,
+            "call_continues": True,
+        }
     try:
         return _durable().release(
             call_id=call_id, lease_version=body.lease_version,

@@ -109,9 +109,15 @@ envs = (containers[0] if containers else {}).get("env", [])
 values = {item.get("name"): item.get("value", "") for item in envs}
 print(values.get("MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT", ""))
 print(values.get("MUNEA_CALL_CONTROL_REQUIRED", ""))
+print(values.get("MUNEA_CALL_PROTOCOL_REQUIRED", ""))
 ')"
   ALLOW_LEGACY_LOCALE_CONTEXT="$(printf '%s\n' "$VOICE_LOCALE_META" | sed -n '1p')"
   CALL_CONTROL_REQUIRED="$(printf '%s\n' "$VOICE_LOCALE_META" | sed -n '2p')"
+  CALL_PROTOCOL_REQUIRED="$(printf '%s\n' "$VOICE_LOCALE_META" | sed -n '3p')"
+  [ "$CALL_PROTOCOL_REQUIRED" = "3" ] || {
+    echo "Voice revision is missing MUNEA_CALL_PROTOCOL_REQUIRED=3"
+    exit 1
+  }
   case "$ALLOW_LEGACY_LOCALE_CONTEXT" in
     1) LOCALE_MODE="compatibility" ;;
     0)

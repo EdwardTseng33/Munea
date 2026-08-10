@@ -13,6 +13,8 @@
  */
 window.MuneaVersion = {
   current: '1.0.55',
+  callProtocol: 3,
+  voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
     {

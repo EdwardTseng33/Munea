@@ -1951,6 +1951,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             if not ready_result.get("ok"):
                 raise CallControlError("voice reservation was rejected: " + str(ready_result))
         try:
+            await ws.send(json.dumps({
+                "type": "service_identity",
+                "service": "voice",
+                "version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
+                "commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
+                "callProtocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
+                "voiceProtocol": "speaker-arbiter-v2",
+            }))
             await ws.send(json.dumps({"type": "ready"}))
         except Exception:
             pass
@@ -3518,6 +3526,8 @@ async def handle(ws):
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
+    client_release = "-"
+    client_protocol = "-"
     voice_locale_session = None
     demo_mode = False
     # 收線時要告訴總機「這一席讓出來了」的原因。2026-07-28 修：這裡原本是空字串，而下面
@@ -3536,6 +3546,12 @@ async def handle(ws):
 
     demo_mode = _q.get("demo") == ["1"]
 
+    client_release = "+".join(filter(None, [
+        str((_q.get("app_version") or [""])[0]).strip()[:24],
+        str((_q.get("app_build") or [""])[0]).strip()[:24],
+    ])) or "-"
+    client_protocol = str((_q.get("client_protocol") or [""])[0]).strip()[:48] or "-"
+
     call_token = (_q.get("token") or [""])[0].strip()
     control_required = os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") == "1"
     if call_token or control_required:
@@ -3549,6 +3565,9 @@ async def handle(ws):
             token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
             voice_shard_id = os.environ.get("MUNEA_VOICE_SHARD_ID", "").strip()
             call_payload = verify_call_token(call_token, token_secret, voice_shard_id=voice_shard_id)
+            required_protocol = int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0)
+            if required_protocol and int(call_payload.get("call_protocol") or 0) < required_protocol:
+                raise CallControlError("incompatible call protocol")
             voice_locale_session = VoiceLocaleSession.from_verified_call_payload(
                 call_payload,
                 allow_legacy=(
@@ -3647,6 +3666,8 @@ async def handle(ws):
         char=char,
         demo=demo_mode,
         locale=st["voice_locale_profile"]["sessionLocale"],
+        client_release=client_release,
+        client_protocol=client_protocol,
     )
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     # 通話記憶的人別隔離鍵：Gateway 正式路徑的 call token 帶已驗證的 user_id；
@@ -3747,6 +3768,7 @@ async def handle(ws):
                             "lease_version": int(call_payload["lease_version"]),
                             "event_id": "voice-release-" + uuid.uuid4().hex,
                             "reason": call_release_reason,
+                            "component": "voice",
                         },
                     )
                 except Exception as exc:

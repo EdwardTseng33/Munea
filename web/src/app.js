@@ -3072,6 +3072,28 @@ const LIVE_VOICE_URL_DEFAULT = 'wss://munea-voice-491603544409.asia-east1.run.ap
 // 薄門通行碼：App 自動帶、用戶無感；擋「拿到網址直接來撥」的陌生流量（本機引擎沒開門檢查、帶了也無妨）
 const MUNEA_APP_KEY = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
 const CALL_CONTROL_URL_DEFAULT = 'https://munea-call-control-fiu65jd4da-de.a.run.app';
+let _clientReleaseInfoPromise = null;
+async function clientReleaseInfo() {
+  if (_clientReleaseInfoPromise) return _clientReleaseInfoPromise;
+  _clientReleaseInfoPromise = (async () => {
+    const fallback = {
+      version: String((window.MuneaVersion && window.MuneaVersion.current) || ''),
+      build: '',
+      protocol: Number((window.MuneaVersion && window.MuneaVersion.callProtocol) || 0),
+    };
+    try {
+      const plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+      if (!plugin || typeof plugin.getInfo !== 'function') return fallback;
+      const info = await plugin.getInfo();
+      return {
+        version: String((info && info.version) || fallback.version),
+        build: String((info && info.build) || ''),
+        protocol: fallback.protocol,
+      };
+    } catch (e) { return fallback; }
+  })();
+  return _clientReleaseInfoPromise;
+}
 const CallControl = {
   active: null,
   pending: null,
@@ -3120,11 +3142,15 @@ const CallControl = {
     this._queueSeen = false;
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
     let accountRecoveryAttempted = false;
+    const clientRelease = await clientReleaseInfo();
     while (!this.cancelled) {
       const personId = storageGet('munea.cloudPersonId') || '';
       const requestBody = {
         character_id: characterId || 'default',
         idempotency_key: idempotencyKey,
+        app_version: clientRelease.version,
+        app_build: clientRelease.build,
+        client_protocol: clientRelease.protocol,
       };
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(personId)) {
         requestBody.person_id = personId;
@@ -3140,6 +3166,10 @@ const CallControl = {
         throw new Error('call_cancelled');
       }
       if (result.status === 'connect') {
+        if (clientRelease.protocol && Number(result.call_protocol || 0) !== clientRelease.protocol) {
+          await this._disposeResult(result, 'incompatible_call_protocol');
+          throw new Error('incompatible_call_protocol');
+        }
         this.pending = null;
         this.active = result;
         this._startHeartbeat();
@@ -4781,6 +4811,10 @@ const LiveVoice = {
     url += '&cap_evt=1';
     // 能力握手：「接得住 AI 幫你記要問醫生的問題」（口袋問題）→ 舊版不會拿到工具（M1 PR-3）
     url += '&cap_ask=1';
+    const _clientRelease = await clientReleaseInfo();
+    url += '&app_version=' + encodeURIComponent(_clientRelease.version || '');
+    url += '&app_build=' + encodeURIComponent(_clientRelease.build || '');
+    url += '&client_protocol=' + encodeURIComponent(_clientRelease.protocol || 0);
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
     // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。
@@ -4815,6 +4849,7 @@ const LiveVoice = {
     this._slFallbackAfterTurn = ''; this._slSlowLeads = 0; this._slWouldFallbackSent = false;
     try { clearTimeout(this._slBoundaryFallbackT); } catch (e) {} this._slBoundaryFallbackT = null;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
+    this._serviceIdentity = null;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
     this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
@@ -4855,6 +4890,14 @@ const LiveVoice = {
         if (typeof ev.data === 'string') {
           try {
             const o = JSON.parse(ev.data);
+            if (o.type === 'service_identity') {
+              this._serviceIdentity = o;
+              voiceCallMark('voice_service_identity', 'pass', {
+                version: o.version || '', commit: o.commit || '',
+                callProtocol: Number(o.callProtocol) || 0,
+                voiceProtocol: o.voiceProtocol || '',
+              });
+            }
             if (o.type === 'faceaudio_status') {
               const wasDirect = this._faceDirect === true;
               this._faceDirect = o.on === true;
@@ -4935,6 +4978,19 @@ const LiveVoice = {
               if (this.onCaption) this.onCaption(this._capBuf);
             }
             if (o.type === 'ready') {
+              const expectedCall = Number((window.MuneaVersion && window.MuneaVersion.callProtocol) || 0);
+              const expectedVoice = String((window.MuneaVersion && window.MuneaVersion.voiceProtocol) || '');
+              const identity = this._serviceIdentity || {};
+              if ((expectedCall && Number(identity.callProtocol || 0) !== expectedCall)
+                  || (expectedVoice && String(identity.voiceProtocol || '') !== expectedVoice)) {
+                voiceCallFail('voice_protocol_mismatch', 'incompatible_voice_service', {
+                  expectedCall, actualCall: Number(identity.callProtocol || 0),
+                  expectedVoice, actualVoice: String(identity.voiceProtocol || ''),
+                });
+                setLocalizedRuntimeHint('reconnecting', true);
+                try { this.ws.close(4412, 'incompatible voice protocol'); } catch (e) {}
+                return;
+              }
               this.ready = true; voiceCallMark('voice_ready', 'pass');
               this._armDeadLineWatch('no_audio_both_ways', 5000);
               // 2026-08-08 Edward：「有一通可以講，但撥通後就又都不能講了」。

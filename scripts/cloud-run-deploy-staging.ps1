@@ -243,6 +243,7 @@ try {
       "MUNEA_RELEASE_COMMIT=$gitCommit",
       "MUNEA_CALL_CONTROL_URL=$CallControlUrl",
       "MUNEA_CALL_CONTROL_REQUIRED=$callControlRequired",
+      "MUNEA_CALL_PROTOCOL_REQUIRED=3",
       "MUNEA_VOICE_SHARD_ID=$VoiceShardId"
     ) -join ","
 
