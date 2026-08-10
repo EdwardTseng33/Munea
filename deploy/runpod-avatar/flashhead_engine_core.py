@@ -544,9 +544,11 @@ class Feeder:
                 self._idle_on = False
                 self._epoch += 1
                 self._prev_frame = None
-                # Idle chunks are zero-valued context only. Do not let their
-                # history soften the first mouth movement of the real turn.
-                self.slot.audio_dq.clear()
+                # Do not clear audio_dq here. The embedding model indexes a
+                # fixed-length history window; shortening it while an idle
+                # chunk is in flight makes the next embedding index past the
+                # array and poisons the CUDA context. The zero-valued idle
+                # history is the required neutral pre-roll for real speech.
                 self.slot.idle_invalidation_count += 1
                 stop_idle = True
             if self.t0 is None or (now - self.last_in) > 0.8:
