@@ -135,13 +135,35 @@ _TAIWANESE_HOKKIEN_REQUEST_RE = re.compile(
 _TAIWANESE_HOKKIEN_STRONG_PHRASES = (
     "食飽未", "呷飽未", "拍謝", "歹勢", "按怎", "按呢", "啥物", "毋知",
     "毋通", "袂使", "無要緊", "無代誌", "有影", "足感心",
+    # 2026-08-10 補：把「阮」降級成弱證據後，「阮兜足遠的」「阮今仔日真歡喜」
+    # 這種真台語會漏掉。這幾個詞國語不會這樣講，單獨命中很安全。
+    "阮兜", "恁兜", "伊兜", "今仔日", "昨昏", "明仔載",
 )
 _TAIWANESE_HOKKIEN_EXCLUSIVE_MARKERS = (
-    "阮", "恁", "佮", "攏", "毋", "袂", "咧", "𪜶", "媠", "遐",
+    "恁", "佮", "攏", "袂", "𪜶", "媠",
+)
+# 2026-08-10：這四個字原本跟上面那組一樣「出現一次就算台語」，但它們在台灣人講的
+# 國語裡本來就會出現，單獨咬到就是誤判——而誤判的代價是她整段話被攔掉、換一個
+# 陌生聲線重講（Edward 8/10 真機踩到）：
+#   咧 → 「你在幹嘛咧」「這個我不太懂咧」＝台灣國語超常用的語尾
+#   毋 → 「毋庸置疑」「毋寧」＝國語書面語
+#   遐 → 「遐想」「遐邇聞名」＝國語詞
+#   阮 → 姓氏（阮先生、阮小姐）
+# 改成「弱證據」：要再配上另一個獨有字、整句台語詞、或台語句型才算數。
+# 注意 _TAIWANESE_HOKKIEN_STRONG_PHRASES 裡的「毋知」「毋通」是完整台語詞，
+# 仍然單獨命中——真台語不會因為這次放寬而漏掉。
+_TAIWANESE_HOKKIEN_WEAK_MARKERS = (
+    "阮", "毋", "咧", "遐",
 )
 _TAIWANESE_HOKKIEN_CONTEXT_RE = re.compile(
     r"(?:伊.{0,3}(?:欲|咧|有|講|食|去|來)|(?:欲|閣).{0,3}(?:去|來|食|睏|講|買|做)|"
-    r"予.{0,3}(?:你|伊|我)|甲你|敢有|真好食|足(?:好|濟))"
+    r"予.{0,3}(?:你|伊|我)|甲你|敢有|真好食|"
+    # 台語的「咧」放在動詞前面（我咧等你＝我正在等你）；台灣人講國語的「咧」放句尾
+    # （你在幹嘛咧）。位置就是分辨點——只咬「咧＋動詞」，句尾的語尾詞放行。
+    r"咧(?:等|食|睏|做|創|講|看|走|想|寫|開|洗|買|賣|行|坐|忙|哭|笑|讀|學|聽)|"
+    # 台語的「足＋形容詞」＝很…（足好、足遠、足貴）。國語的「足」多是足夠／足球／充足，
+    # 所以只列台語常搭的形容詞，不用「足＋任一字」那種會反咬的寫法。
+    r"足(?:好|濟|遠|近|貴|俗|熱|寒|媠|讚|甜|鹹|忝|爽))"
 )
 
 # Keep product copy canonical while giving speech synthesis an explicit,
@@ -889,7 +911,12 @@ def requests_taiwanese_hokkien(text):
 
 
 def looks_like_taiwanese_hokkien(text):
-    """Fail closed for high-signal Hokkien wording while launch support is off."""
+    """Fail closed for high-signal Hokkien wording while launch support is off.
+
+    2026-08-10：弱證據字（阮／毋／咧／遐）單獨出現不算數——它們在台灣人講的國語裡
+    本來就會出現，單獨咬到會把正常對話誤判成台語、整段話被攔掉。要兩個弱證據字，
+    或弱證據字＋台語句型，才算。強台語詞與獨有字維持一個就命中，真台語不會漏。
+    """
     if taiwanese_hokkien_release_enabled():
         return False
     value = str(text or "")
@@ -897,7 +924,11 @@ def looks_like_taiwanese_hokkien(text):
         return True
     if any(token in value for token in _TAIWANESE_HOKKIEN_EXCLUSIVE_MARKERS):
         return True
-    return bool(_TAIWANESE_HOKKIEN_CONTEXT_RE.search(value))
+    has_context = bool(_TAIWANESE_HOKKIEN_CONTEXT_RE.search(value))
+    if has_context:
+        return True
+    weak_hits = sum(1 for token in _TAIWANESE_HOKKIEN_WEAK_MARKERS if token in value)
+    return weak_hits >= 2
 
 
 def requires_taiwanese_hokkien_fallback(text):
