@@ -116,6 +116,57 @@ function runVisibilityContract() {
   assert.strictEqual(hangups, 1, 'Sustained background did not release the call once');
 }
 
+function runLocalPlaybackContinuityContract() {
+  const method = extract('_scheduleLocalPlayback(f) {', '\n  _setFaceAudioMuted(muted) {');
+  const scheduled = [];
+  const context = {
+    Avatar: { on: true },
+    faceEngine() { return 'flashhead'; },
+    localStorage: { getItem() { return null; } },
+    trackProductEvent() {},
+  };
+  vm.createContext(context);
+  vm.runInContext(`globalThis.holder = {${method}\n  };`, context);
+  const voice = context.holder;
+  voice.playCtx = {
+    currentTime: 0,
+    destination: {},
+    createBuffer(_channels, length, rate) {
+      return { duration: length / rate, getChannelData() { return { set() {} }; } };
+    },
+    createBufferSource() {
+      return {
+        buffer: null,
+        connect() {},
+        start(at) { scheduled.push({ at, duration: this.buffer.duration }); },
+      };
+    },
+  };
+  voice.playHead = 0;
+  voice._playbackTurn = 1;
+  voice._playbackUnderruns = 0;
+  voice._turnHasScheduledAudio = false;
+  voice._srcs = [];
+  voice._ensureLocalPlaybackGain = () => null;
+  voice._playbackLeadSeconds = () => 0.48;
+  voice._toListening = () => {};
+
+  // Production Voice evidence showed 136-147ms delivery gaps. Each modeled
+  // PCM chunk carries 200ms, so the first-turn queue must absorb that jitter.
+  for (let index = 0; index < 80; index += 1) {
+    voice.playCtx.currentTime = index * 0.147;
+    voice._scheduleLocalPlayback(new Float32Array(4800));
+  }
+  assert.strictEqual(voice._playbackUnderruns, 0, '147ms PCM jitter caused a local playback underrun');
+  assert.strictEqual(scheduled.length, 80, 'Not every PCM chunk was scheduled');
+  for (let index = 1; index < scheduled.length; index += 1) {
+    const previousEnd = scheduled[index - 1].at + scheduled[index - 1].duration;
+    assert(Math.abs(scheduled[index].at - previousEnd) < 1e-9,
+      `PCM scheduling gap before chunk ${index}`);
+  }
+}
+
 runAvatarFallbackContract();
 runVisibilityContract();
-console.log('Voice call state machine PASS: paired lease preserved and transient iOS hiding tolerated');
+runLocalPlaybackContinuityContract();
+console.log('Voice call state machine PASS: paired lease preserved, transient iOS hiding tolerated, 147ms PCM jitter continuous');

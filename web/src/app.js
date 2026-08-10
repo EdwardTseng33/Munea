@@ -4324,6 +4324,33 @@ const LiveVoice = {
     const base = (this._playbackTurn || 0) <= 1 ? 0.48 : 0.22;
     return Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08);
   },
+  _scheduleLocalPlayback(f) {
+    const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
+    const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._ensureLocalPlaybackGain() || this._avAnalyser || this.playCtx.destination);
+    const now = this.playCtx.currentTime;
+    let offset = 0.18;
+    try {
+      if (typeof Avatar !== 'undefined' && Avatar.on) {
+        const flashhead = (typeof faceEngine === 'function' && faceEngine() === 'flashhead');
+        let ms = flashhead ? 200 : parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
+        if (isNaN(ms) || ms < 0 || ms > 3000) ms = flashhead ? 200 : 900;
+        offset = ms / 1000;
+      }
+    } catch (e) {}
+    offset = Math.max(offset, this._playbackLeadSeconds());
+    if (!this._turnHasScheduledAudio) {
+      this.playHead = now + offset;
+      this._turnHasScheduledAudio = true;
+    } else if (this.playHead < now + 0.06) {
+      this._playbackUnderruns = (this._playbackUnderruns || 0) + 1;
+      this.playHead = now + this._playbackLeadSeconds();
+      try { trackProductEvent('voice_playback_underrun', { turn: this._playbackTurn, count: this._playbackUnderruns }); } catch (e) {}
+    }
+    s.start(this.playHead); this.playHead += b.duration;
+    if (!this._srcs) this._srcs = [];
+    this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); this._toListening(); };
+    this._toListening();
+  },
   _setFaceAudioMuted(muted) {
     // faceAud 永久靜音，只當 analyser 的 MediaStream 來源；faceVid 是唯一同線播放器。
     try { const meter = document.getElementById('faceAud'); if (meter) meter.muted = true; } catch (e) {}
@@ -5069,38 +5096,7 @@ const LiveVoice = {
           this._toListening();                                    // 依實際應播完時間換手，不再用「資料停止到貨」誤判句尾
           return;                                                  // 不本地排程（聲音由 faceAud 出）
         }
-        const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
-        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._ensureLocalPlaybackGain() || this._avAnalyser || this.playCtx.destination);   // 共用 gain 讓同線退回／純語音也能真的 duck
-        const now = this.playCtx.currentTime;
-        // 有會動的臉在跑時，聲音多等一下跟臉對齊（臉要往返雲端、比聲音慢約 1 秒）→ 聲音+嘴一起出、不再話先出嘴慢半拍（Edward 2026-07-10）。
-        // 純語音不接臉＝維持 0.18 秒快起播。等多久可在手機上微調：localStorage['munea.faceSyncMs']（毫秒、預設 900、0~3000）。
-        let _off = 0.18;
-        try {
-          if (typeof Avatar !== 'undefined' && Avatar.on) {
-            // 舊水管拆除（1.24.6）：新引擎臉快 3 倍、退回本地播放也只等 0.2 秒＝寫死（連校時器寫進手機的舊毒值一併無視）；
-            // 舊引擎照舊 0.9 秒可手調。不拆＝退回狀態聲音被推後最多 3 秒 → 「嘴跑在聲音前面」（Edward 7/11 症狀④機制源）。
-            const _fh = (typeof faceEngine === 'function' && faceEngine() === 'flashhead');
-            let ms = _fh ? 200 : parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
-            if (isNaN(ms) || ms < 0 || ms > 3000) ms = _fh ? 200 : 900;
-            _off = ms / 1000;
-          }
-        } catch (e) {}
-        _off = Math.max(_off, this._playbackLeadSeconds());
-        if (!this._turnHasScheduledAudio) {
-          this.playHead = now + _off;
-          this._turnHasScheduledAudio = true;
-        } else if (this.playHead < now + 0.06) {
-          this._playbackUnderruns = (this._playbackUnderruns || 0) + 1;
-          this.playHead = now + this._playbackLeadSeconds();
-          try { trackProductEvent('voice_playback_underrun', { turn: this._playbackTurn, count: this._playbackUnderruns }); } catch (e) {}
-        }
-        s.start(this.playHead); this.playHead += b.duration;
-        // 記著正在播的語音，插話時才能一次停乾淨（不留尾巴跟新句疊音）
-        if (!this._srcs) this._srcs = [];
-        this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); this._toListening(); };
-        // 安全網：她若一段時間沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）。
-        // 放寬 0.9→2 秒：斷續破洞不再被誤判成「講完」把她攔腰切斷（Edward 2026-07-12）；真講完有 turn_complete 即時接手、不靠這條
-        this._toListening();                                      // 本地備援同樣等排程音訊真的播完才開麥
+        this._scheduleLocalPlayback(f);                            // 本地備援同樣等排程音訊真的播完才開麥
       };
       this.ws.onclose = event => {
         const wasOpen = this.on;
