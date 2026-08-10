@@ -3064,7 +3064,10 @@ html:lang(ja) {
   display: flex; align-items: center; justify-content: center;
 }
 .boot-splash[hidden], .onb[hidden] { display: none; }
-.boot-splash { background: var(--cream); }
+/* 啟動頁要疊在開場三頁「上面」。兩層本來同高，而開場頁在畫面檔裡排比較後面＝蓋住啟動頁；
+   啟動頁淡出那半秒露出來的就會是 App 首頁，看起來像閃了一下（Edward 2026-08-10 真機回報）。
+   把啟動頁墊高一階，淡出時露出的才是已經鋪在下面的開場頁。 */
+.boot-splash { background: var(--cream); z-index: 91; }
 .boot-splash.is-leaving { animation: bootLeave .5s ease-in both; }
 @keyframes bootLeave { to { opacity: 0; visibility: hidden; } }
 
@@ -3124,7 +3127,12 @@ html:lang(ja) {
 .onb-track {
   flex: 1; display: flex; overflow-x: auto; overflow-y: hidden;
   scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  /* 橫向滑動是手勢，不該看到捲軸。App 其他地方在 .app-shell * 那條就藏掉了，
+     但開場頁是 body 底下獨立的一層、不在 .app-shell 裡面，所以漏掉——
+     Edward 2026-08-10 在截圖上看到那條灰線。 */
+  scrollbar-width: none;
 }
+.onb-track::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .onb-page {
   flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always;
   display: flex; flex-direction: column; align-items: center; justify-content: center;

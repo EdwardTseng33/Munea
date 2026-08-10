@@ -13098,10 +13098,15 @@ function runBootSplash() {
   // 第一次要接開場三頁，播久一點；平常只要蓋住載入那一兩秒就好
   const hold = needIntro ? 2400 : 1600;
   window.setTimeout(() => {
+    // 開場頁要在啟動頁「開始淡出之前」就鋪好。
+    // 原本是等淡出跑完 500ms 才顯示——那半秒底下露出來的是 App 首頁，
+    // 使用者看到的就是「啟動頁 → 閃一下首頁 → 開場頁」（Edward 2026-08-10 真機回報）。
+    // 配套：.boot-splash 的層級要比 .onb 高一階，否則排在後面的開場頁會直接蓋掉
+    // 還在淡出的啟動頁，動畫等於沒播。
+    if (needIntro) openOnboardingIntro();
     splash.classList.add('is-leaving');
     window.setTimeout(() => {
       splash.hidden = true;
-      if (needIntro) openOnboardingIntro();
     }, 500);
   }, hold);
 }
