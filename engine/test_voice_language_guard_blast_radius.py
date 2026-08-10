@@ -82,9 +82,21 @@ class PronunciationGuardMustNotBlock(unittest.TestCase):
         )
 
     def test_hokkien_fallback_survives(self):
-        """對方講台語時的罐頭回覆要留著——那是產品要的行為，不是這次要拆的東西。"""
+        """對方講台語時的罐頭回覆要留著——那是產品要的行為，不是這次要拆的東西。
+
+        比對式要釘「定義」跟「呼叫」兩處，而且要連結尾的括號一起比：
+        只找 `_send_hokkien_fallback` 這個名字的話，改名成 `_send_hokkien_fallbackX`
+        也會被當成還在（2026-08-10 突變測試抓到，原本的寫法沒叫）。
+        """
         src = _src()
-        self.assertIn("_send_hokkien_fallback", src)
+        self.assertTrue(
+            re.search(r"async def _send_hokkien_fallback\(", src),
+            "台語罐頭回覆那支不見了",
+        )
+        self.assertTrue(
+            re.search(r"await _send_hokkien_fallback\(source\)", src),
+            "台語罐頭回覆沒有被呼叫——對方講台語時她會整段沒聲音",
+        )
 
 
 class MandarinWordsMustNotLookLikeHokkien(unittest.TestCase):
