@@ -12826,3 +12826,80 @@ try {
     if (document.visibilityState === 'visible') preDialConnWarm('resume');
   });
 } catch (e) {}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   啟動頁與開場三頁（Edward 2026-08-10 拍板）
+   需求單：docs/開場與啟動頁-需求單-2026-08-10.md
+
+   啟動頁在 index.html 裡「預設就是顯示的」——不能等這支檔案跑完才蓋上去，
+   不然使用者會先看到首頁閃一下。這裡只負責決定什麼時候收掉。
+   保險絲寫在 index.html 的 inline script：萬一這段出錯，幾秒後也會自己收掉，App 不會被鎖死。
+
+   ⚠ 刻意不重用 ONBOARDING_COMPLETED_KEY：那個記號是舊迎賓精靈留下的，
+   現在還被拿來決定要不要跑帳號初始化（app_init 那段）。把它的意思改掉會動到通話路徑，
+   所以開場三頁自己用一個新記號。
+   ═══════════════════════════════════════════════════════════════════════════ */
+const ONBOARDING_INTRO_SEEN_KEY = 'munea.onboardingIntroSeen.v1';
+const ONBOARDING_INTRO_PAGES = 3;
+
+function onboardingIntroSeen() {
+  return storageGet(ONBOARDING_INTRO_SEEN_KEY) === 'true';
+}
+
+function openOnboardingIntro() {
+  const root = $('#onboarding');
+  const track = $('#onbTrack');
+  const nextBtn = $('#onbNext');
+  const startBtn = $('#onbStart');
+  const dots = $('#onbDots');
+  if (!root || !track || !nextBtn || !startBtn || !dots) return;
+  root.hidden = false;
+  let index = 0;
+
+  // 兩顆按鈕輪流出現、不是一顆按鈕換字——句子留在畫面檔各自綁鍵，這裡只決定誰顯示
+  function syncControls() {
+    Array.prototype.forEach.call(dots.children, (dot, i) => dot.classList.toggle('on', i === index));
+    const last = index === ONBOARDING_INTRO_PAGES - 1;
+    nextBtn.hidden = last;
+    startBtn.hidden = !last;
+  }
+
+  track.addEventListener('scroll', () => {
+    const width = track.clientWidth || 1;
+    const moved = Math.round(track.scrollLeft / width);
+    if (moved !== index && moved >= 0 && moved < ONBOARDING_INTRO_PAGES) {
+      index = moved;
+      syncControls();
+    }
+  }, { passive: true });
+
+  nextBtn.addEventListener('click', () => {
+    if (index >= ONBOARDING_INTRO_PAGES - 1) return;
+    track.scrollTo({ left: (index + 1) * track.clientWidth, behavior: 'smooth' });
+  });
+
+  startBtn.addEventListener('click', () => {
+    // 三頁全部看完才算看過；中途關掉的話下次重看，不然有人會漏掉整段介紹
+    storageSet(ONBOARDING_INTRO_SEEN_KEY, 'true');
+    root.hidden = true;
+  });
+
+  syncControls();
+}
+
+function runBootSplash() {
+  const splash = $('#bootSplash');
+  if (!splash || splash.hidden) return;
+  const needIntro = !onboardingIntroSeen();
+  // 第一次要接開場三頁，播久一點；平常只要蓋住載入那一兩秒就好
+  const hold = needIntro ? 2400 : 1600;
+  window.setTimeout(() => {
+    splash.classList.add('is-leaving');
+    window.setTimeout(() => {
+      splash.hidden = true;
+      if (needIntro) openOnboardingIntro();
+    }, 500);
+  }, hold);
+}
+
+document.addEventListener('DOMContentLoaded', runBootSplash);

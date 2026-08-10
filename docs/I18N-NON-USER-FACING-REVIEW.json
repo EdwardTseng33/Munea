@@ -1905,6 +1905,15 @@
       "expectedOccurrences": 1,
       "reasonCode": "markup-placeholder-overwritten-at-runtime",
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "brand-lockup-boot-splash-zh",
+      "path": "web/index.html",
+      "text": "沐寧",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "brand-proper-noun",
+      "evidence": "scripts/test-brand-lockup-not-translated.js"
     }
   ]
 }

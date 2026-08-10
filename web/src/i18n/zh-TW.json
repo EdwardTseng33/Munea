@@ -1656,5 +1656,18 @@
   "activity.voteStateMine": "你投了 {opt}",
   "activity.voteStateTodo": "還沒投",
   "home.care.emptyTitle": "目前沒有要提醒你的事",
-  "home.care.emptyBody": "設好用藥、看診，或把家人加進來，這裡就會幫你留意"
+  "home.care.emptyBody": "設好用藥、看診，或把家人加進來，這裡就會幫你留意",
+  "splash.tagline": "全家人的健康陪伴AI照護管家",
+  "onboarding.p1.titleLine1": "家人的健康，",
+  "onboarding.p1.titleLine2": "終於有人一直記得",
+  "onboarding.p1.body": "沐寧有臉、有聲音，像視訊一樣陪爸媽聊天，這次從上次聊到的地方接著聊。",
+  "onboarding.p2.titleLine1": "想記什麼，",
+  "onboarding.p2.titleLine2": "跟她說一聲就好",
+  "onboarding.p2.body": "吃藥、回診、要問醫生的事——用講的就記下來，時間到了手機會提醒你。",
+  "onboarding.p3.titleLine1": "不只陪爸媽，",
+  "onboarding.p3.titleLine2": "是陪一家人",
+  "onboarding.p3.body": "把家人加進家庭圈，健康和心情互相看得見；一起比步數、玩機智問答，在外地的人也放得下心。",
+  "onboarding.next": "下一步",
+  "onboarding.start": "開始使用",
+  "onboarding.stepLabel": "第 {current} 頁，共 {total} 頁"
 }

@@ -89,6 +89,19 @@ function localAuthConfig(port, previewLocale = null) {
   return [...lines, '};', ''].join('\n');
 }
 
+// 啟動頁（水滴動畫）在 index.html 裡預設就是顯示的——真的開 App 時才不會先閃一下首頁。
+// 但畫面驗收工具是直接開頁面、點元件，覆蓋層蓋在最上層會攔截所有點擊、也會蓋住每一張截圖。
+// 這裡在供檔時就把兩個覆蓋層收起來，所有驗收工具一次受惠；
+// 要拍開場三頁本身的工具再自己把 #onboarding 打開即可。
+function hideBootOverlays(html) {
+  // 不管畫面檔那邊寫成有沒有 hidden，這裡一律補上——寫死整串標籤的話，
+  // 哪天畫面檔多加一個屬性，這個替換就會無聲失效。
+  return html.replace(
+    /<div\s+class="(?:boot-splash|onb)"\s+id="(?:bootSplash|onboarding)"(?![^>]*\bhidden\b)/g,
+    '$& hidden',
+  );
+}
+
 function injectPreviewBootstrap(html, port, previewLocale) {
   if (!PREVIEW_LOCALES.has(previewLocale)) return html;
   const marker = '<script src="src/i18n.js';
@@ -191,7 +204,7 @@ function createFixtureServer({ port = DEFAULT_PORT } = {}) {
     if (extension === '.html') {
       const previewLocale = url.searchParams.get('lang');
       const html = injectPreviewBootstrap(
-        stripExternalResources(body.toString('utf8')),
+        hideBootOverlays(stripExternalResources(body.toString('utf8'))),
         port,
         previewLocale,
       );
