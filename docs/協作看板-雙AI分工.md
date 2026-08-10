@@ -4,6 +4,23 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-10 21:07 Claude/蘇菲 🚨 正式 Voice 已切「direct route 預設關」——給 Codex 的實機證據與交接（call-path risk）
+
+> **Edward 21:19 拍板：Codex 主修、蘇菲只給建議。** 本條是交接：我做過的事、實機證據、與建議。之後這條線我不再動手，只回答問題。
+
+- **⚠ 先知道這件事**：正式 `munea-voice` 現在是 `munea-voice-00101-yog`（`9a0308a6`＝main + PR #557），**21:07 已切 100%**。#557 加了總開關 `face_direct_enabled()`（env `MUNEA_VOICE_FACE_DIRECT`、**預設關**）：App 問 faceaudio 一律回 `on:false reason=direct_disabled`、伺服器不連臉機 → App 走舊 relay 路。**接下來若在正式看不到 `node.faceaudio_on`，是這個開關關著，不是 App wiring 消失。** 開回：部署時 `--update-env-vars MUNEA_VOICE_FACE_DIRECT=1`（每通開場判定、不必重啟）。回滾點 `munea-voice-00099-him`。守門在 `scripts/test_voice_avatar_direct_route.py`（預設必須關／關著必回 direct_disabled／關著不連臉機，三條都突變驗過）。
+- **為什麼切**：Edward 1.0.60 實機 20:40-20:43 三通（c3/c4/c5、revision 00099、direct route 有 armed——`node.faceaudio_on` 都在）災情：
+  - **c5：113 秒的通話 asr_turns=3、asr_chars=20**；12:42:30→12:43:18 有 **48 秒**只有 session_resumption_update——他講什麼、帳上完全空白；echo_dropped=36。
+  - **c1/c2（19:10-19:13、同 revision）：整通 in_bytes=0**——連開麥前的靜音保活包都沒到。
+  - 供聲端反而乾淨：每輪 `max_gap_ms` 136-147、first_audio 874-3302ms。
+- **🔑 給 Codex 最重要的一句：合成 canary 全綠、實機全滅——因為病灶多半在 App 端的收音守門，合成探針根本不經過那段。** 合成路（一次性帳號直灌 PCM）繞過了 App 的 `speechActive()` 麥克風閘、插話 sustain 判定、post-speech guard——實機的聲音要先過這三道再加伺服器回音濾網，共**四道門、四套門檻、三週內各自被調過**。48 秒空白最像「`speechActive()` 卡在 true」：mic 迴圈 `if (speakerActive) return` 一格都不送（波紋同時死掉＝Edward 看到的「動態斷掉」）。
+- **具體建議（按我認為的優先序）**：
+  1. **先查 `speechActive()` 會不會被新的 Avatar 連續音訊卡死**：`MuneaAvatar._faceAudLevel > 0.015` 就續命；tw-06 18:27 換上「keep avatar audio continuous」的引擎後，若 WebRTC 音軌在 idle 也持續有能量（哪怕很小），speechActive 永遠 true → 麥克風永遠關。驗法＝實機通話時記 `_faceAudLevel` 的靜默值。c5 的 48 秒空白結束點（12:43:18）值得對 App 診斷時間軸——很可能是臉那條線剛好死掉、閘才鬆開。
+  2. **8/9 就有同病**：當日總帳「三分鐘 31 字＋46 段被當回音丟」standing 未解——**別只在今天的改動裡找**，baseline 已壞好幾版（Edward 原話「壞了好幾版了」）。
+  3. **結構建議（v5.4.24 同類 bug ≥3 該砍架構）**：四道門收斂成一道——「現在誰在講話」只在一處判、一個門檻；其他三道退成純觀測（記帳不擋聲）。逐一調門檻的路線這三週試了至少 7 次，每版壞法不同，就是門互相相乘的證據。
+  4. **驗收面**：實機 Gate 請務必含「她講話中途、使用者用正常音量插話」與「開擴音、整通不碰手機講 3 分鐘、數 asr_chars」兩案例——這兩個正是合成探針蓋不到、Edward 天天踩的。
+- **我這邊的狀態**：不再動 Voice/Avatar/App 的程式。#557 若礙事，直接在你的分支處置（拔掉或改預設），不用等我。
+
 ### 2026-08-10 Codex｜App 1.0.55 Build 530 語音修復候選（call-path risk）
 
 - **分支／範圍**：`codex/app-1.0.55-build530-20260810`；只調整 `package*.json`、`web/src/version.js`、`web/index.html`、Xcode version/build 與 current release authority 文件，不改 Voice／Avatar／Gateway 邏輯。
