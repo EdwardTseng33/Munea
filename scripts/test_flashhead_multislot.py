@@ -289,6 +289,30 @@ def test_lip_catchup_skips_only_expired_frames():
     print("test_lip_catchup_skips_only_expired_frames: PASS")
 
 
+def test_lip_timeline_survives_mid_turn_pause():
+    original_time = fec.time.time
+    clock = [500.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        slot = make_slot(0, "s0")
+        emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+        feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+        pcm = np.arange(OUTPUT_SAMPLE_RATE // 10, dtype=np.int16)
+        feeder.push24k(pcm.tobytes())
+        assert feeder.timeline_base_s == 0.0
+
+        with slot.audio_out.lock:
+            slot.audio_out.buf = np.zeros(0, dtype=np.int16)
+            slot.audio_out.depth_samples = 0
+            slot.audio_out.played_samples = len(pcm)
+        clock[0] += 1.0
+        feeder.push24k(pcm.tobytes())
+        assert round(feeder.timeline_base_s, 3) == 0.1
+    finally:
+        fec.time.time = original_time
+    print("test_lip_timeline_survives_mid_turn_pause: PASS")
+
+
 def test_audio_finish_does_not_count_natural_tail_as_underrun():
     slot = make_slot(0, "s0")
     emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
@@ -629,6 +653,7 @@ def main():
     test_audible_output_keeps_original_24k_samples()
     test_audio_ingress_waits_for_video_once_then_stays_continuous()
     test_lip_catchup_skips_only_expired_frames()
+    test_lip_timeline_survives_mid_turn_pause()
     test_audio_finish_does_not_count_natural_tail_as_underrun()
     test_audio_prebuffer_starts_when_first_pcm_arrives()
     test_audio_prebuffer_adapts_without_counting_natural_silence()

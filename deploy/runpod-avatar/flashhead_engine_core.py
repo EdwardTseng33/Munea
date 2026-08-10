@@ -470,6 +470,7 @@ class Feeder:
         # resampling never becomes the audible output path.
         self.acc_out = np.zeros(0, dtype=np.float32)
         self.consumed = 0
+        self.timeline_base_s = 0.0
         self.t0 = None
         self.last_in = 0.0
         self._idle_due = 0.0
@@ -505,6 +506,17 @@ class Feeder:
             if self.t0 is None or (now - self.last_in) > 0.8:
                 self.t0 = now
                 self.consumed = 0
+                # A pause starts a new model round, not a new audible turn.
+                # Anchor the round after PCM queued before this push so its
+                # first lip frame keeps the full-turn playback timeline.
+                with self.slot.audio_out.lock:
+                    queued_before_push = max(
+                        0,
+                        self.slot.audio_out.depth_samples - len(pcm_int16),
+                    )
+                    self.timeline_base_s = (
+                        self.slot.audio_out.played_samples + queued_before_push
+                    ) / max(1, self.slot.audio_out.sample_rate)
                 self.slot.round_count += 1
                 self.slot.round_start_ts = now
                 self._round_pending = True
@@ -520,6 +532,7 @@ class Feeder:
             self.acc_out = np.zeros(0, dtype=np.float32)
             self.t0 = None
             self.consumed = 0
+            self.timeline_base_s = 0.0
             self._epoch += 1
             self._finish_pending = False
             self._complete_pending = False
@@ -685,7 +698,8 @@ class Feeder:
                     ahead_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
                     if ahead_s < self.max_ahead_s:
                         output_samples = min(len(self.acc_out), int(round(cs * self.sr_in / self.sr_eng)))
-                        timeline_start_s = self.consumed / max(1, self.sr_eng)
+                        timeline_start_s = (self.timeline_base_s
+                                            + self.consumed / max(1, self.sr_eng))
                         todo = (self.acc[:cs].copy(), cs,
                                 self.acc_out[:output_samples].copy(), timeline_start_s)
                         self.acc = self.acc[cs:]
@@ -706,7 +720,8 @@ class Feeder:
                     self.acc = np.zeros(0, dtype=np.float32)
                     self.acc_out = self.acc_out[output_samples:]
                     self._finish_pending = False
-                    timeline_start_s = self.consumed / max(1, self.sr_eng)
+                    timeline_start_s = (self.timeline_base_s
+                                        + self.consumed / max(1, self.sr_eng))
                     self.consumed += valid
                     todo = (padded, valid, output_pcm, timeline_start_s)
                 if todo is None and self._complete_pending and len(self.acc) == 0:
