@@ -53,7 +53,7 @@ class VoiceRhythmParamHelperTests(unittest.TestCase):
             self.assertEqual(voice._voice_silence_duration(pause_profile="responsive"), 650)
             self.assertEqual(voice._voice_silence_duration(pause_profile="balanced"), 800)
             self.assertEqual(voice._voice_silence_duration(pause_profile="patient"), 1100)
-            self.assertEqual(voice._voice_silence_duration(pause_profile="unknown"), 800)
+            self.assertEqual(voice._voice_silence_duration(pause_profile="unknown"), 650)
         finally:
             if prior_profile is not None:
                 os.environ["MUNEA_VOICE_PAUSE_PROFILE"] = prior_profile
@@ -130,7 +130,7 @@ class VoiceLiveConfigDefaultBehaviorTests(unittest.TestCase):
     def test_no_env_no_explicit_matches_prior_hardcoded_values(self):
         cfg = voice.live_config(char="寧寧", name="寧寧")
         aad = cfg.realtime_input_config.automatic_activity_detection
-        self.assertEqual(aad.silence_duration_ms, 800)
+        self.assertEqual(aad.silence_duration_ms, 650)
         self.assertEqual(aad.prefix_padding_ms, 300)
         self.assertEqual(aad.start_of_speech_sensitivity,
                           types.StartSensitivity.START_SENSITIVITY_LOW)

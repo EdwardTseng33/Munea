@@ -70,6 +70,35 @@ def test_app_side_stall_meter_waits_for_the_face_to_start():
     assert guard < stall, "斷流計數必須排在『臉機已開口』的關卡後面"
 
 
+def test_turn_stopwatch_has_all_five_runtime_markers():
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, "engine", "live_voice_server.py"), encoding="utf-8") as fh:
+        voice = fh.read()
+    with open(os.path.join(root, "web", "src", "app.js"), encoding="utf-8") as fh:
+        app = fh.read()
+    with open(os.path.join(root, "deploy", "runpod-avatar", "flashhead_server.py"), encoding="utf-8") as fh:
+        avatar = fh.read()
+    for marker in ("last_human_voice", "vad_stop", "voice_first_pcm", "avatar_pcm_received", "webrtc_playout"):
+        assert marker in (voice + app), f"逐輪碼錶缺少 {marker}"
+    assert '"avatar_pcm_received"' in avatar and '"turn": audio_turn' in avatar
+    assert "decoded_remote_audio_player_active" in app, "WebRTC 播放點不能只記排程時間"
+    assert "webrtc_jitter_buffer_emitted_player_active" in app
+    assert "jitterBufferEmittedCount" in app
+    assert "this._playoutArmedTurn = turn" in app, "Avatar ACK 前不能把殘音當成本輪播放"
+
+
+def test_same_line_microstalls_degrade_only_between_turns():
+    app_js = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "src", "app.js")
+    with open(app_js, encoding="utf-8") as fh:
+        src = fh.read()
+    assert "sameline_audio_microstall" in src
+    assert "sameline_face_slow" in src
+    assert "_scheduleSameLineBoundaryFallback" in src
+    assert "_slFallbackAfterTurn" in src
+    assert "}, 200);" in src
+
+
 if __name__ == "__main__":
     passed = 0
     for name, fn in sorted(globals().items()):

@@ -194,6 +194,8 @@ class AudioOutBuffer:
         self._awaiting_first_push = True
         self._turn_complete = False
         self._one_shot_prebuffer = False
+        self._turn_underrun_seen = False
+        self.stable_turns = 0
 
     def _raise_adaptive_prebuffer_locked(self, seconds):
         if self.adaptive_max_s <= self.adaptive_min_s:
@@ -206,13 +208,11 @@ class AudioOutBuffer:
             self.next_prebuffer_s = self.adaptive_prebuffer_s
 
     def observe_generation(self, compute_ms, budget_ms):
-        """Tune the next start gate from measured GPU headroom, never guesswork.
+        """Record GPU headroom without charging every turn a speculative wait.
 
-        The first 75% of a chunk budget is treated as healthy headroom.  Work
-        above that threshold is converted into extra playout cushion, bounded
-        by the operator-controlled minimum and maximum.  Increases apply at
-        once; decreases move 20 ms at a time so a single fast chunk cannot
-        make the next turn fragile.
+        Compute p95 remains operational evidence, but only a real mid-turn
+        starvation may raise the next turn's 200-350 ms prebuffer.  This avoids
+        turning one slow/cold chunk into a fixed latency tax on every sentence.
         """
         if compute_ms is None or budget_ms is None or budget_ms <= 0:
             return
@@ -222,23 +222,10 @@ class AudioOutBuffer:
             ordered = sorted(self.generation_compute_ms)
             # Match health_snapshot's operational p95: with a short rolling
             # window, do not let one cold-compile maximum dominate every
-            # subsequent turn.  Real starvation still takes the separate
-            # immediate +80ms path in push().
+            # subsequent turn. Real starvation still takes the separate
+            # immediate +50ms path in push().
             p95_index = max(0, int(len(ordered) * 0.95) - 1)
             self.generation_p95_ms = ordered[p95_index]
-            if len(ordered) < 3:
-                return
-            excess_ms = max(0.0, self.generation_p95_ms - self.generation_budget_ms * 0.75)
-            target = self.adaptive_min_s + excess_ms / 1000.0
-            self.adaptive_target_s = min(self.adaptive_max_s, max(self.adaptive_min_s, target))
-            if self.adaptive_target_s >= self.adaptive_prebuffer_s:
-                self.adaptive_prebuffer_s = self.adaptive_target_s
-            else:
-                self.adaptive_prebuffer_s = max(
-                    self.adaptive_target_s, self.adaptive_prebuffer_s - 0.02
-                )
-            if self._awaiting_first_push and not self._one_shot_prebuffer:
-                self.next_prebuffer_s = self.adaptive_prebuffer_s
 
     def push(self, pcm_int16):
         with self.lock:
@@ -247,9 +234,10 @@ class AudioOutBuffer:
                 gap_ms = round((now - self._underrun_started_ts) * 1000, 1)
                 self.underrun_gap_ms.append(gap_ms)
                 self._underrun_started_ts = None
-                # A real mid-turn starvation is stronger evidence than a
-                # compute-time estimate.  Add 80 ms of protection next turn.
-                self._raise_adaptive_prebuffer_locked(0.08)
+                # Only observed starvation raises the next-turn cushion.
+                self._turn_underrun_seen = True
+                self.stable_turns = 0
+                self._raise_adaptive_prebuffer_locked(0.05)
             if len(pcm_int16) and self._awaiting_first_push:
                 delay = self.next_prebuffer_s
                 self.last_prebuffer_s = delay
@@ -268,6 +256,7 @@ class AudioOutBuffer:
             self.hold_until_ts = float("inf")
             self._awaiting_first_push = True
             self._turn_complete = False
+            self._turn_underrun_seen = False
             self._one_shot_prebuffer = False
             self._underrun_started_ts = None
             self.next_prebuffer_s = self.adaptive_prebuffer_s
@@ -281,6 +270,18 @@ class AudioOutBuffer:
     def mark_input_complete(self):
         """Stop treating the natural end of a response as buffer starvation."""
         with self.lock:
+            if self._turn_underrun_seen:
+                self.stable_turns = 0
+            else:
+                self.stable_turns += 1
+                if self.stable_turns >= 3 and self.adaptive_prebuffer_s > self.adaptive_min_s:
+                    self.adaptive_prebuffer_s = max(
+                        self.adaptive_min_s, self.adaptive_prebuffer_s - 0.05
+                    )
+                    self.adaptive_target_s = self.adaptive_prebuffer_s
+                    self.stable_turns = 0
+            if self._awaiting_first_push and not self._one_shot_prebuffer:
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
             self._turn_complete = True
             self._underrun_started_ts = None
 

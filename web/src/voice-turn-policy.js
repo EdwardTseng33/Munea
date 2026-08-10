@@ -11,15 +11,17 @@
     // 因果：判定成「他插話」→ 立刻把她嘴邊的話整包丟掉 → 要重新囤半秒才出得了聲，
     // 那半秒就是斷字。實測那通清了 29 次、輪次才 21 次＝一輪內誤判好幾次。
     // 病根是她自己的聲音從喇叭繞回麥克風（回音殘留），被當成使用者在講話。
-    // 門檻 150ms 太鬆。但這裡加嚴有天花板：既有合約要求「持續 4 格（≈171ms）的
+    // 門檻太鬆。但這裡加嚴有天花板：既有合約要求「持續 4 格（≈171ms）的
     // 近場人聲必須讓路」（scripts/test-voice-turn-policy.js），那是「真人插話要跟得上」
     // 的產品底線，不能為了擋回音把它犧牲掉——我第一版設 220 就被那條守門擋下來。
-    // 取 165ms：守住合約，同時比原本嚴一成。
-    // 開場那一段（回音最強、也是 Edward 最痛的地方）另外拉到 350ms，見下方。
-    sustainMs: 165,
+    // 取 150ms，再加 100ms duck-confirm；總停聲目標仍在 300ms 內。
+    sustainMs: 150,
+    // Duck first, then require another short slice of continuing speech.
+    // 150 + 100 ms keeps normal local stop below the 300 ms product target.
+    duckConfirmMs: 100,
     // 預捲必須「蓋得住」對應的持續人聲門檻，開頭的字才補得回來（2026-07-16 Edward「回長話第一句沒反應」）：
-    // 一格 ≈ 42.7ms（2048 樣本 @48kHz）。平常門檻 165ms → 需要 ≥7 格，取 12 格 ≈ 512ms 留餘裕；
-    // 開場門檻 350ms → openingPreRollFrames 18 格 ≈ 768ms，含起音爬升與中途小停頓的餘裕。
+    // 一格 ≈ 42.7ms（2048 樣本 @48kHz）。平常取 12 格 ≈ 512ms 留餘裕；
+    // 開場取 18 格 ≈ 768ms，含起音爬升與中途小停頓的餘裕。
     preRollFrames: 12,
     openingPreRollFrames: 18,
     // 講完後守門期（2026-07-16）：她停口後這段時間內，收音仍走「持續人聲才放行」，
@@ -27,13 +29,8 @@
     postSpeechGuardMs: 1800,
     // 開場前兩輪 iPhone 回音消除尚未收斂、回音殘留最強：插話所需持續人聲拉長一級。
     //
-    // 2026-08-08 查過一輪的結論（先前誤判成「#525 改反了」，這裡更正）：
-    // 8/6 的 #525 把 300 調到 250 **不是亂改**——它同時立了一條產品目標
-    // 「開場插話到讓路要在 300ms 內」（見 scripts/test-voice-turn-policy.js 的
-    // `speechMs <= 300` 那條）。250 是為了達成那個目標推出來的上限，
-    // 拉回 300 或 350 都會直接違反它（我試過 350，守門立刻紅）。
-    // 所以這個值維持 250；擋回音誤判改從別處下手（見上方 sustainMs 與 minRms）。
-    openingSustainMs: 250,
+    // 開場仍比平常嚴，但 190 + 100ms duck-confirm 不超過 300ms。
+    openingSustainMs: 190,
   });
 
   function createState(noiseFloor) {

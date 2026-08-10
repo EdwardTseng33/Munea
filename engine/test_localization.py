@@ -637,6 +637,12 @@ class LocalizationTests(unittest.TestCase):
         self.assertFalse(localization.looks_like_taiwanese_hokkien("勇敢說出自己的想法嘛"))
         self.assertFalse(localization.looks_like_taiwanese_hokkien(localization.TAIWANESE_HOKKIEN_FALLBACK))
 
+    def test_streamed_output_requires_phrase_level_hokkien_evidence(self):
+        self.assertFalse(localization.looks_like_taiwanese_hokkien_output("咧"))
+        self.assertFalse(localization.looks_like_taiwanese_hokkien_output("我咧"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien_output("我咧等你"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien_output("拍謝，我閣咧學"))
+
     def test_assistant_output_gate_maps_known_terms_and_blocks_residual_hokkien(self):
         self.assertEqual(
             localization.assistant_output_text("食飽未？拍謝喔", "zh-TW"),

@@ -4,6 +4,14 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-10 Codex · 聊聊逐輪 650／800／1100＋Avatar 200–350ms＋五節點碼錶（進行中）
+
+- **範圍／風險**：`codex/adaptive-voice-turn-timing-20260810`，call-path risk；修改 Voice 輪替、Avatar 音訊緩衝、App WebRTC 播放觀測、barge-in 與防重複。預計檔案為 `engine/voice_turn_semantics.py`、`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_*`、`web/src/app.js`、`web/src/voice-*` 及對應測試／文件。
+- **設計**：provider AAD 650ms；明確完整句總 650、一般句 800、未完句或同通已確認慢速使用者 1100，不再在 800/1100 上疊加另一段固定 hold。Avatar 每輪 200ms 起，只有真 underrun 才 +50ms、最高 350ms，三輪穩定後降 50ms。
+- **逐輪證據**：同一 turn id 串起最後人聲、VAD stop、Voice 首 PCM、Avatar 首 PCM、WebRTC jitter buffer 已吐出音訊或已解碼有聲且實際播放器活躍五點。瀏覽器不能量實體喇叭振膜，最後一點保留實際 basis，不冒充硬體量測。
+- **一併處理**：一般輪 duck-confirm 目標約 250ms、開場約 290ms；同線微卡只在輪界切 voice-only；守護隱藏追問不能自我觸發第二次口語回答；已帶入 Draft PR #531 中仍適用的重複／微卡修正。候選為 Draft PR **#540**，#531 已留言並關閉為由 #540 取代。
+- **目前證據**：本批相關 Python／JS／Avatar、發布契約與 router 後續測試已 PASS。完整 `test:launch` 仍被兩項未修改的本機基礎測試擋住：Windows 上 FlashHead Linux launcher dry-run 無 stderr 但回非 0、git linearity 測試在此 shallow／worktree 取不到 orphan commit；兩檔對本分支皆無 diff。Draft PR **#540** 已建立，尚待 CI、正式 Voice 舊 `MUNEA_VOICE_SILENCE_MS=1100` 稽核、部署與指定 iPhone 安裝版真實通話。Avatar 新版已硬鎖 200–350ms，舊 0.5–0.7 秒環境值不能越界。狀態：**App E2E pending，未合併、未部署、未上線**。詳見 [`docs/聊聊逐輪延遲優化-2026-08-10.md`](聊聊逐輪延遲優化-2026-08-10.md)。
+
 ### 2026-07-31 下午 蘇菲/城堡 🌏 人設書分國＋所在地改用聊的＋考卷分國（PR #439-#443 全合）
 
 - **人設書一國一本**：說明書從程式碼常數搬成 `engine/persona/<類型>.<語系>.txt`（主書／安全紅線／查詢規則兩種／語音口語風格／常駐保命紅線），四國全授。中文版用程式產出＋回讀比對**一字不差**。取用＝`core_instruction(lookup, locale)`／`red_lines(locale)`；語音線用 **sessionLocale**（這通實際講哪種語言，不是介面語言）。

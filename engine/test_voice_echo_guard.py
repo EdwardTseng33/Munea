@@ -2,8 +2,8 @@
 """回音濾網＋聲線統一 · 護欄測試（2026-07-16 · 聊聊事故夜病歷 a/d）
 
 守的線：a. 她講話期間（＋殘響窗）低能量上行＝回音要丟、正常音量直說要放行、
-她沒講話時一律放行＝不取捨。d. 台語攔截後先讓她自己重講（同聲線）、重講再被攔
-才換安全配音。
+她沒講話時一律放行＝不取捨。d. 片語級台語輸出攔截後只允許一次同聲線重講；
+單一國語發音不穩只記證據，不再換陌生安全配音重播整段。
 
 跑法：python engine/test_voice_echo_guard.py
 """
@@ -105,14 +105,15 @@ def main():
     check("播完+殘響後窗會關（不永遠蓋）", not g.in_playout_window(114.0, head))
     check("歸零後窗立即關", not g.in_playout_window(105.0, 0.0))
     check("收線總帳含回音丟棄數", "echo_dropped=st" in srv)
-    check("發音級攔截先讓她自己重講(同聲線)", 'source in ("model_output", "mandarin_pronunciation")' in srv)
-    check("重講再被攔才換安全配音", "_send_safe_mandarin_tts(blocked_text, source)" in srv)
+    check("片語級台語輸出只讓她自己重講一次", 'source == "model_output" and st.get("language_retry_count", 0) < 1' in srv)
+    check("單一國語發音不穩不再重播整段", "_send_safe_mandarin_tts(blocked_text, source)" not in srv)
 
     # 契約：查詢備胎鏈＋安撫句＋配速（7/16 晚 gemini-2.5-flash 整批客滿事故後立）
     check("查詢有備胎鏈", "lookup_model_failover" in srv and "gemini-3.1-flash-lite" in srv)
     check("查太久先安撫一句", "lookup_wait_cue_sent" in srv and "LOOKUP_WAIT_TEXT" in srv)
     check("結果一到取消安撫句", "wait_cue_task.cancel()" in srv)
-    check("過場音配速不灌爆", srv.count("await asyncio.sleep(0.08)") >= 3)
+    check("過場音配速不灌爆", "for offset in range(0, len(pcm), 4800):" in srv and
+          "await asyncio.sleep(0.08)" in srv)
     check("查詢總預算 13 秒", 'MUNEA_LOOKUP_TIMEOUT_SECONDS", "13"' in srv)
 
     # 契約：重試斷路器（7/16 深夜「一直重複我幫你查一下」事故後立）
