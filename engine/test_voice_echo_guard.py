@@ -14,7 +14,8 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
-                              normalized_rms_to_pcm16, sustained_voice_evidence)
+                              normalized_rms_to_pcm16, sustained_voice_evidence,
+                              barge_evidence_threshold)
 
 FAILS = []
 
@@ -66,6 +67,38 @@ def main():
     check("瀏覽器門檻不可把伺服器降成永遠放行", normalized_rms_to_pcm16(0) >= 0.028 * 32768)
 
     # 預設值鎖（7/16 首晚實戰調參：700/1500 攔不住大聲外放）
+    # A destructive two-phase interruption must not reuse the browser's low
+    # adaptive threshold while the assistant is still playing. Production's
+    # regular uplink multiplier may be tuned lower; buffered barge evidence
+    # keeps the independent 2.5x safety floor.
+    os.environ["MUNEA_VOICE_ECHO_GUARD_HOT_MULT"] = "1.7"
+    os.environ.pop("MUNEA_VOICE_BARGE_EVIDENCE_HOT_MULT", None)
+    pre_duck_threshold = barge_evidence_threshold(client_threshold, playout_active=True)
+    check("pre-duck barge evidence keeps the 2.5x safety floor",
+          pre_duck_threshold >= client_threshold * 2.5)
+    false_echo, _, _ = sustained_voice_evidence(
+        [(1802, 42.7)] * 4, pre_duck_threshold, 150,
+    )
+    check("sustained speaker echo cannot cancel the assistant", false_echo is False)
+    real_barge, _, _ = sustained_voice_evidence(
+        [(4000, 42.7)] * 4, pre_duck_threshold, 150,
+    )
+    check("near-field speech still interrupts through the hot gate", real_barge is True)
+
+    # New clients submit a dedicated post-duck tail. Two fresh callbacks are
+    # enough for the 80ms confirmation while the original pre-roll remains
+    # available only for first-syllable replay.
+    post_duck_threshold = barge_evidence_threshold(client_threshold, playout_active=False)
+    post_duck_voice, post_duck_ms, _ = sustained_voice_evidence(
+        [(1802, 42.7)] * 2,
+        post_duck_threshold,
+        80,
+        minimum_ms=60,
+    )
+    check("post-duck continuing speech has its own bounded gate",
+          post_duck_voice is True and post_duck_ms >= 80)
+    os.environ.pop("MUNEA_VOICE_ECHO_GUARD_HOT_MULT", None)
+
     for k in ("MUNEA_VOICE_ECHO_GUARD_RMS", "MUNEA_VOICE_ECHO_GUARD_TAIL_MS"):
         os.environ.pop(k, None)
     from voice_echo_guard import guard_rms_threshold, guard_tail_ms
@@ -94,6 +127,13 @@ def main():
           'st["pending_barge_in"]' in srv and "sustained_voice_evidence(" in srv)
     check("插話裁決明確回 accepted/rejected", '"accepted": False' in srv and '"accepted": True' in srv)
     check("插話通過後補送被守門留住的開頭", '_pending_barge["frames"][max(0, _onset_index - 1):]' in srv)
+
+    check("server stores playout state at evidence start",
+          '"playout_active": in_playout_window' in srv)
+    check("server judges a declared post-duck tail separately",
+          'evidence_basis = "post_duck"' in srv and '_decision_levels = _levels[-_post_duck_frames:]' in srv)
+    check("legacy clients use the hot buffered-evidence threshold",
+          'barge_evidence_threshold(' in srv and 'evidence_basis = "pre_duck_hot"' in srv)
 
     import voice_echo_guard as g
     head = 0.0

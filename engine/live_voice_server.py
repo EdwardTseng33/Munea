@@ -35,7 +35,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
 from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame, hot_threshold,
                               note_playout, in_playout_window, guard_enabled, guard_rms_threshold,
-                              normalized_rms_to_pcm16, sustained_voice_evidence)
+                              normalized_rms_to_pcm16, sustained_voice_evidence,
+                              barge_evidence_threshold)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -1863,7 +1864,9 @@ def _new_call_state():
           # 若真的很頻繁，正解是回頭調說明書的用詞提醒，不是再把整段話攔下來。
           "mandarin_pronunciation_seen": 0,
           "blocked_output_text": "", "language_retry_count": 0,
-          "client_barge_in": False, "pending_barge_in": None, "asr_turns": 0, "asr_chars": 0,
+          "client_barge_in": False, "pending_barge_in": None,
+          "barge_in_rejected": 0, "barge_post_duck_accepted": 0,
+          "barge_pre_duck_accepted": 0, "asr_turns": 0, "asr_chars": 0,
           "semantic_turn_text": "", "semantic_turn_shadow_total": 0,
           "semantic_turn_shadow_holds": 0,
           # Active semantic gate delays only the first audible reply chunk after
@@ -2662,17 +2665,32 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 elif t == "audio_end":
                     await session.send_realtime_input(audio_stream_end=True)
                 elif t == "barge_in_start":
-                    # The phone has already stopped local playback. Buffer the
-                    # immediately following pre-roll so the final decision uses
-                    # microphone evidence that arrived before the commit message.
+                    # Buffer the ordered evidence frames that follow. Existing
+                    # clients send pre-duck pre-roll only; fixed clients append a
+                    # declared post-duck tail so the destructive decision can use
+                    # fresh microphone evidence while retaining the first syllable.
+                    _bi_started_at = time.monotonic()
+                    try:
+                        _post_duck_frames = min(12, max(0, int(obj.get("post_duck_frames") or 0)))
+                    except (TypeError, ValueError):
+                        _post_duck_frames = 0
+                    try:
+                        _post_duck_sustain_ms = min(120, max(60, int(obj.get("post_duck_sustain_ms") or 80)))
+                    except (TypeError, ValueError):
+                        _post_duck_sustain_ms = 80
                     st["pending_barge_in"] = {
-                        "started_at": time.monotonic(),
+                        "started_at": _bi_started_at,
                         "threshold_pcm": normalized_rms_to_pcm16(obj.get("threshold")),
                         "sustain_ms": obj.get("sustain_ms", 150),
+                        "playout_active": in_playout_window(_bi_started_at, st.get("playout_head")),
+                        "post_duck_frames": _post_duck_frames,
+                        "post_duck_sustain_ms": _post_duck_sustain_ms,
                         "frames": [],
                     }
                     _diag(cid, "node.barge_in_evidence_started",
-                          frames=obj.get("evidence_frames") or 0)
+                          frames=obj.get("evidence_frames") or 0,
+                          post_duck_frames=_post_duck_frames,
+                          playout_active=st["pending_barge_in"]["playout_active"])
                 elif t == "barge_in":
                     # 2026-07-30 插話裁判（治「喇叭開大→她自己的聲音觸發手機端插話→自己閉嘴」）：
                     # 手機端的插話偵測分不出「你在說話」跟「她自己的大聲回音」（退回手機播音
@@ -2684,11 +2702,51 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     st["pending_barge_in"] = None
                     _evidence_ms = 0.0
                     _onset_index = 0
+                    _evidence_basis = "legacy"
+                    _evidence_threshold = 0.0
                     if _pending_barge:
                         _levels = [(rms, frame_ms) for _, rms, frame_ms in _pending_barge["frames"]]
+                        _client_threshold = _pending_barge["threshold_pcm"]
+                        _post_duck_frames = min(
+                            len(_levels),
+                            max(0, int(_pending_barge.get("post_duck_frames") or 0)),
+                        )
+                        if _post_duck_frames:
+                            # New clients keep collecting microphone frames after
+                            # the speaker has been ducked.  Judge only that tail:
+                            # real nearby speech continues, speaker echo collapses.
+                            _decision_levels = _levels[-_post_duck_frames:]
+                            _decision_sustain_ms = _pending_barge.get("post_duck_sustain_ms", 80)
+                            _evidence_threshold = barge_evidence_threshold(
+                                _client_threshold, playout_active=False,
+                            )
+                            _evidence_basis = "post_duck"
+                            _minimum_evidence_ms = 60.0
+                        else:
+                            # Existing installed clients only send pre-duck
+                            # pre-roll.  Their adaptive threshold is not safe for
+                            # a destructive interruption while the assistant is
+                            # playing, so apply the dedicated hot evidence gate.
+                            _decision_levels = _levels
+                            _decision_sustain_ms = _pending_barge["sustain_ms"]
+                            _playout_active = bool(_pending_barge.get("playout_active"))
+                            _evidence_threshold = barge_evidence_threshold(
+                                _client_threshold, playout_active=_playout_active,
+                            )
+                            _evidence_basis = "pre_duck_hot" if _playout_active else "pre_duck_idle"
+                            _minimum_evidence_ms = 120.0
                         _accepted, _evidence_ms, _onset_index = sustained_voice_evidence(
+                            _decision_levels,
+                            _evidence_threshold,
+                            _decision_sustain_ms,
+                            minimum_ms=_minimum_evidence_ms,
+                        )
+                        # Acceptance uses the safe decision slice above, but
+                        # replay still starts at the original speech onset so a
+                        # genuine interruption does not lose its first syllable.
+                        _, _, _onset_index = sustained_voice_evidence(
                             _levels,
-                            _pending_barge["threshold_pcm"],
+                            _client_threshold,
                             _pending_barge["sustain_ms"],
                         )
                     else:
@@ -2699,16 +2757,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     if not _accepted:
                         st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
                         _diag(cid, "node.barge_in_rejected_echo",
-                              count=st["barge_in_rejected"], evidence_ms=round(_evidence_ms))
+                              count=st["barge_in_rejected"], evidence_ms=round(_evidence_ms),
+                              evidence_basis=_evidence_basis,
+                              threshold_pcm=round(_evidence_threshold))
                         try:
                             await ws.send(json.dumps({"type": "barge_in_ack", "accepted": False,
-                                                      "reason": "echo", "evidence_ms": round(_evidence_ms)}))
+                                                      "reason": "echo", "evidence_ms": round(_evidence_ms),
+                                                      "evidence_basis": _evidence_basis}))
                         except Exception:
                             pass
                         continue
                     st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1
+                    if _evidence_basis == "post_duck":
+                        st["barge_post_duck_accepted"] += 1
+                    elif _evidence_basis.startswith("pre_duck"):
+                        st["barge_pre_duck_accepted"] += 1
                     st["last_voice_at"] = _bi_now
                     st["await_first"] = True
                     # Replay from one frame before the detected onset so the
@@ -2720,14 +2785,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 audio=types.Blob(data=_audio, mime_type="audio/pcm;rate=16000")
                             )
                     await ws.send(json.dumps({"type": "barge_in_ack", "accepted": True,
-                                              "evidence_ms": round(_evidence_ms)}))
+                                              "evidence_ms": round(_evidence_ms),
+                                              "evidence_basis": _evidence_basis}))
                     fw = st.get("face_ws")
                     if fw is not None:
                         try:
                             await fw.send("reset")
                         except Exception:
                             st["face_ws"] = None
-                    _diag(cid, "node.client_barge_in", evidence_ms=round(_evidence_ms))
+                    _diag(cid, "node.client_barge_in", evidence_ms=round(_evidence_ms),
+                          evidence_basis=_evidence_basis,
+                          threshold_pcm=round(_evidence_threshold))
                 elif t == "faceaudio":
                     # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
                     if obj.get("on"):
@@ -3600,7 +3668,11 @@ async def handle(ws):
             semantic_turn_adaptive_continuations=semantic_adaptive["continuations"],
             semantic_turn_adaptive_releases=semantic_adaptive["releases"],
             semantic_turn_adaptive_ewma_ms=semantic_adaptive["continuation_ewma_ms"],
-            barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
+            barge_ins=st["barge_in_count"],
+            barge_rejected=st["barge_in_rejected"],
+            barge_post_duck_accepted=st["barge_post_duck_accepted"],
+            barge_pre_duck_accepted=st["barge_pre_duck_accepted"],
+            language_blocks=st["language_block_count"],
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
             lookup_failures=st["lookup_failures"],
             tool_wait_interrupts=st["tool_wait_interrupts"],

@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-10 Codex · Voice 回音誤判插話／整句斷續修復（進行中）
+
+- **範圍／風險**：`codex/fix-voice-echo-barge-20260810`，call-path risk；預計修改 `engine/live_voice_server.py`、`engine/voice_echo_guard.py`、`web/src/app.js`、`web/src/voice-turn-policy.js`、對應 Voice 插話／回音測試與本看板。若驗證證明仍有獨立的 Avatar 音訊佇列破洞，再另開後續 PR，不把兩種根因混成一批。
+- **實機故障證據**：正式通話 11 輪中接受 4 次 client barge-in、後續 Voice PCM 被大量 `reason=barge_in` 抑制；同通另有 90 段回音被防護丟棄。Avatar GPU p95 約 608ms／預算 960ms，排除 GPU 算力不足為第一根因。
+- **修復目標**：AI 播放期間的兩階段插話確認不得只用較低的 client threshold；舊 App 證據改用伺服器播放期回音熱門檻。新 App 必須用 duck 後仍持續的聲音作確認，不能把確認窗的新片段丟掉又拿 duck 前回音裁決；純語音退回也要真的 duck。現有 App 版本可由 Voice 伺服器端先受益。
+- **驗收狀態**：回音／真人插話／post-duck 證據／純語音 duck／Voice 啟動與逐輪碼錶定向測試全 PASS；正常與開場插話上限仍分別為 260／300ms。`test:launch` 本批之前與之後的守門均已跑完，唯一停止點是 Windows 上 FlashHead Linux launcher dry-run 回非 0，已在乾淨 `origin/main@5c1ee338` 原樣重現；另有前段天氣快照污染後段 prompt 長度的既有順序問題，清除測試快照後該項 PASS。下一關為 canary 與正式安裝版 iPhone「只開喇叭不說話＋真人插話」雙案例。狀態：**App E2E pending，未部署、未上線**。
+
 ### 2026-08-10 Codex · 正式 Voice 移除舊 1100ms 覆蓋（進行中）
 
 - **範圍／風險**：`codex/voice-adaptive-env-deploy-20260810`，call-path risk；預計只改 `deploy/cloudrun/prod-deploy.sh`、`scripts/test-cloudrun-canary-contract.js` 與本看板。
