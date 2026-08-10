@@ -265,6 +265,7 @@ try {
     --profile production `
     --gateway-url $GatewayUrl `
     --voice-canary-url $VoiceCanaryUrl `
+    --reconnect-check `
     --timeout $TimeoutSeconds
   if ($LASTEXITCODE -ne 0) {
     throw "Voice chain probe failed with exit code $LASTEXITCODE"

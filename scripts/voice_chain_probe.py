@@ -54,6 +54,7 @@ class Stage:
 class ProbeReport:
     profile: str
     started_at: str
+    require_reconnect: bool = False
     stages: list[Stage] = field(default_factory=list)
 
     def add(self, name, status, started, detail="", endpoint=""):
@@ -76,10 +77,15 @@ class ProbeReport:
         """
         if self.profile == "development":
             return ("voice_ready", "avatar_health")
-        return (
+        required = (
             "gateway_health", "gateway_lease", "voice_ready",
             "avatar_health", "avatar_call_token_health", "gateway_release",
         )
+        if self.require_reconnect:
+            required = required[:-1] + (
+                "gateway_token_refresh", "voice_reconnect_ready", "gateway_release",
+            )
+        return required
 
     @property
     def passed(self):
@@ -238,6 +244,88 @@ async def probe_voice_ready(report, voice_url, app_key, timeout, call_token=""):
         reason = getattr(error, "reason", "")
         detail = type(error).__name__ + (f" code={code}" if code else "") + (f" reason={reason}" if reason else "")
         report.add("voice_ready", "FAIL", started, detail, voice_url)
+
+
+async def probe_voice_preflight_reconnect(
+    report, voice_url, gateway_url, access_token, lease, timeout
+):
+    """Reproduce the installed App's zero-audio close and token refresh.
+
+    The App used to close a ready Voice socket after five seconds without any
+    microphone or assistant packets, then immediately refresh the same Gateway
+    lease before reconnecting. Voice must preserve that lease for this exact
+    preflight close; otherwise the refresh returns stale_lease and the App shows
+    a false busy line.
+    """
+
+    import websockets
+
+    async def connect_until_ready(token, stage_name):
+        started = time.monotonic()
+        try:
+            url = with_query(voice_url, token=token, char="撖批祐", user="?芸?撌⊥炎", fam="0")
+            async with websockets.connect(
+                url, open_timeout=timeout, close_timeout=2, max_size=None
+            ) as websocket:
+                while True:
+                    message = await asyncio.wait_for(websocket.recv(), timeout=timeout)
+                    if not isinstance(message, str):
+                        continue
+                    event = json.loads(message)
+                    if event.get("type") == "ready":
+                        report.add(
+                            stage_name, "PASS", started,
+                            "Voice reported ready with zero media packets", voice_url,
+                        )
+                        return True
+        except Exception as error:
+            code = getattr(error, "code", "")
+            reason = getattr(error, "reason", "")
+            detail = type(error).__name__ + (f" code={code}" if code else "") + (
+                f" reason={reason}" if reason else ""
+            )
+            report.add(stage_name, "FAIL", started, detail, voice_url)
+            return False
+
+    if not await connect_until_ready(lease["call_token"], "voice_ready"):
+        return
+
+    # Let Voice finish its normal-close teardown before exercising the refresh.
+    await asyncio.sleep(1.0)
+    started = time.monotonic()
+    try:
+        _, refreshed = await asyncio.to_thread(
+            post_json,
+            gateway_url.rstrip("/") + "/v1/calls/" + urllib.parse.quote(str(lease["call_id"])) + "/token",
+            {"lease_version": lease["lease_version"]},
+            timeout,
+            access_token,
+        )
+        if not isinstance(refreshed, dict) or refreshed.get("status") != "connect" or not refreshed.get("call_token"):
+            report.add(
+                "gateway_token_refresh", "FAIL", started,
+                str((refreshed or {}).get("reason") or "malformed refresh response"), gateway_url,
+            )
+            return
+        report.add(
+            "gateway_token_refresh", "PASS", started,
+            "same lease remained claimable after zero-audio Voice close", gateway_url,
+        )
+        lease.update(refreshed)
+    except urllib.error.HTTPError as error:
+        detail = f"HTTP {error.code}"
+        try:
+            payload = json.loads(error.read().decode("utf-8"))
+            detail += " " + str(payload.get("detail") or "")
+        except Exception:
+            pass
+        report.add("gateway_token_refresh", "FAIL", started, detail, gateway_url)
+        return
+    except Exception as error:
+        report.add("gateway_token_refresh", "FAIL", started, type(error).__name__, gateway_url)
+        return
+
+    await connect_until_ready(lease["call_token"], "voice_reconnect_ready")
 
 
 def resolve_serving_avatar_url(gateway_url, timeout):
@@ -406,7 +494,11 @@ async def run_probe(args):
     app_key = args.app_key or os.environ.get("MUNEA_APP_KEY") or config["app_key"]
     access_token = os.environ.get("MUNEA_ACCESS_TOKEN") or ""
     voice_canary_url = getattr(args, "voice_canary_url", "") or ""
-    report = ProbeReport(args.profile, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    report = ProbeReport(
+        args.profile,
+        time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        require_reconnect=bool(getattr(args, "reconnect_check", False)),
+    )
 
     lease = None
     try:
@@ -424,7 +516,12 @@ async def run_probe(args):
             if voice_canary_url:
                 started = time.monotonic()
                 report.add("voice_route", "PASS", started, "Gateway call token routed to explicit 0% canary", voice_url)
-            await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
+            if getattr(args, "reconnect_check", False):
+                await probe_voice_preflight_reconnect(
+                    report, voice_url, gateway_url, access_token, lease, args.timeout,
+                )
+            else:
+                await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
         elif args.profile == "development":
             await probe_voice_ready(report, voice_url, app_key, args.timeout)
         else:
@@ -506,6 +603,11 @@ def main():
     parser.add_argument("--app-key", default="")
     parser.add_argument("--timeout", type=float, default=12.0)
     parser.add_argument("--json-output", default="")
+    parser.add_argument(
+        "--reconnect-check",
+        action="store_true",
+        help="Close the ready Voice socket with zero media, refresh the same lease, and reconnect",
+    )
     args = parser.parse_args()
     if args.voice_canary_url and args.profile != "production":
         parser.error("--voice-canary-url requires --profile production")
