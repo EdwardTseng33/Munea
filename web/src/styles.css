@@ -961,19 +961,22 @@ html[lang="es"] #connect .cn-row .cn-btn {
 .cue-speak b:nth-child(1){ animation-delay: 0s; } .cue-speak b:nth-child(2){ animation-delay: .12s; } .cue-speak b:nth-child(3){ animation-delay: .24s; } .cue-speak b:nth-child(4){ animation-delay: .36s; } .cue-speak b:nth-child(5){ animation-delay: .48s; }
 @keyframes cueSpeak { 0%,100% { transform: scaleY(.5); } 50% { transform: scaleY(2.4); } }
 
-.face-screen[data-state="listening"] .face-wave { display: inline-flex; }
+/* 通話一開始（撥通中）就顯示，一路留到掛斷——接通後畫面不該是空的（Edward 2026-08-10）。
+   撥通中／她在說話時它是靜止的一排小點，只有長輩開口才起波。 */
+.face-screen[data-state="connecting"] .face-wave,
+.face-screen[data-state="listening"]  .face-wave,
+.face-screen[data-state="speaking"]   .face-wave { display: inline-flex; }
 .face-screen[data-state="thinking"]  .cue-think  { display: inline-flex; }
-.face-screen[data-state="speaking"]  .face-wave { display: inline-flex; }
 /* 待命態：不顯 cue（臉靜靜呼吸眨眼即可）*/
 
-/* 聲波波頻：JS 依「真實音量」逐格設 scaleY；沒聲音低伏收攏，不再是常亮假 loading */
-/* 波頻：不用深色膠囊底，改浮在畫面上的圓潤發光細柱（跟著真實音量跳、間距拉開、不是一片綠塊）*/
-.face-cue .cue.face-wave { background: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 0 !important; gap: 5px !important; }
-.face-wave i { display: block; width: 3.5px; height: 20px; border-radius: 999px; background: #3ED4C2;
-  box-shadow: 0 0 11px rgba(62,212,194,.95), 0 2px 6px rgba(0,0,0,.28);
-  transform: scaleY(.3); transform-origin: center; transition: transform .12s cubic-bezier(.34,1.4,.5,1); }
-.face-screen[data-state="listening"] .face-wave i { background: #3ED4C2; }   /* 收音（聽你說）＝亮療癒綠 */
-.face-screen[data-state="speaking"]  .face-wave i { background: #16C4AE; box-shadow: 0 0 12px rgba(22,196,174,1), 0 2px 6px rgba(0,0,0,.28); }  /* 講話（她在說）＝深亮綠 */
+/* 收音波紋「點線」（2026-08-10 Edward 從三款提案挑的 C）：細長條配一排小點，畫在 canvas 上。
+   不放任何底色——墊底的暗影由 canvas 貼著形狀畫（見 app.js _paint），
+   底色會在臉上留一塊灰霧（8/10 合成實測）。 */
+.face-cue .cue.face-wave {
+  background: none !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  padding: 0 !important; gap: 0 !important; }
+.face-wave canvas { display: block; width: 236px; height: 46px; }
 
 /* Edward 2026-07-06：圖片不要有動態——移除說話時的臉部微動（改由下方聲波動態表達「在說」） */
 
@@ -2704,19 +2707,9 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
   background: var(--btn-green); color: #fff; font-weight: 700; font-size: 15px; }
 .tc-input-row button.busy-spin { color: rgba(255,255,255,.85); }
 
-/* 撥通中（腦開機）：同位置放載入動態；真收音動態等 ready 才出現（Edward 7/9） */
-/* 撥通中不再放收音載入動態（Edward 7/9：不直覺）——波紋等真的接通（聽/說狀態）才出現 */
-.face-screen[data-state="connecting"] .face-wave { display: none; }
-@keyframes wave-boot { 0%, 100% { transform: scaleY(.18); opacity: .45; } 50% { transform: scaleY(.85); opacity: 1; } }
-.face-screen[data-state="connecting"] .face-wave i { animation: wave-boot 1.05s ease-in-out infinite; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(2) { animation-delay: .09s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(3) { animation-delay: .18s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(4) { animation-delay: .27s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(5) { animation-delay: .36s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(6) { animation-delay: .45s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(7) { animation-delay: .54s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(8) { animation-delay: .63s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(9) { animation-delay: .72s; }
+/* 撥通中的波紋規則已改寫到上方 .face-wave 那段（2026-08-10）：
+   7/9 當時是「撥通中不顯示波紋」；8/10 Edward 反過來要求「接通就要看到靜止狀態」，
+   舊的 wave-boot 假 loading 動畫連同九根 <i> 一起退場，改由 canvas 畫真的靜止點線。 */
 
 /* 抽獎儀式（Edward 7/9：開獎要有動畫、中獎要有慶祝；全用自家色盤、不用外部素材） */
 .draw-stage { position: relative; overflow: hidden; text-align: center; padding: 20px 12px 22px; background: var(--gold-soft); border: 1.5px solid var(--gold); border-radius: 18px; margin-top: 10px; }
