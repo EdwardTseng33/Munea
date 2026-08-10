@@ -87,7 +87,7 @@ def test_turn_stopwatch_has_all_five_runtime_markers():
     assert "this._playoutArmedTurn = turn" in app, "Avatar ACK 前不能把殘音當成本輪播放"
 
 
-def test_same_line_microstalls_degrade_only_between_turns():
+def test_same_line_degrade_preserves_the_paired_call_lease():
     app_js = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "src", "app.js")
     with open(app_js, encoding="utf-8") as fh:
@@ -97,6 +97,12 @@ def test_same_line_microstalls_degrade_only_between_turns():
     assert "_scheduleSameLineBoundaryFallback" in src
     assert "_slFallbackAfterTurn" in src
     assert "}, 200);" in src
+    start = src.index("_fallbackVoiceOnly(reason) {")
+    end = src.index("\n  stop() {", start)
+    fallback = src[start:end]
+    assert "try { this.stop();" not in fallback, "純聲音降級不可關 Avatar transport，否則總機會釋放整通"
+    assert "avatar_transport_preserved" in fallback
+    assert "if (CallControl.active) { this._fallbackVoiceOnly('stall_preserve_paired_lease'); return; }" in src
 
 
 if __name__ == "__main__":

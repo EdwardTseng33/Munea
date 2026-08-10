@@ -239,13 +239,93 @@ def test_audible_output_keeps_original_24k_samples():
     original = (np.sin(np.linspace(0, 20 * np.pi, 40000)) * 12000).astype(np.int16)
 
     feeder.push24k(original.tobytes())
+    expected_total = len(original)
+    assert slot.audio_out.depth_samples == expected_total
+    assert np.array_equal(slot.audio_out.buf, original)
     assert _drain_all(feeder, n_max=1) == 1
 
-    expected_samples = int(round(CHUNK_SAMPLES * feeder.sr_in / feeder.sr_eng))
     assert slot.audio_out.sample_rate == OUTPUT_SAMPLE_RATE
-    assert slot.audio_out.depth_samples == expected_samples
-    assert np.array_equal(slot.audio_out.buf, original[:expected_samples])
+    assert slot.audio_out.depth_samples == expected_total, "rendering must not duplicate or consume PCM"
+    assert np.array_equal(slot.audio_out.buf, original)
     print("test_audible_output_keeps_original_24k_samples: PASS")
+
+
+def test_audio_ingress_waits_for_video_once_then_stays_continuous():
+    original_time = fec.time.time
+    clock = [300.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        slot = make_slot(0, "s0")
+        slot.audio_out = fec.AudioOutBuffer(OUTPUT_SAMPLE_RATE, prebuffer_s=0.2)
+        emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+        feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+        pcm = np.arange(OUTPUT_SAMPLE_RATE * 2, dtype=np.int16)
+        feeder.push24k(pcm.tobytes())
+
+        assert slot.audio_out.playout_held() is True
+        before = slot.audio_out.depth_samples
+        assert np.count_nonzero(slot.audio_out.pop_frame()) == 0
+        assert slot.audio_out.depth_samples == before
+
+        assert _drain_all(feeder, n_max=1) == 1
+        assert slot.audio_out.playout_held() is True
+        clock[0] += slot.audio_out.last_prebuffer_s
+        first = slot.audio_out.pop_frame()
+        assert np.array_equal(first, pcm[:slot.audio_out.frame_samples])
+        assert slot.audio_out.played_samples == slot.audio_out.frame_samples
+        assert slot.audio_out.underrun_count == 0
+        slot.audio_out.clear()
+        assert slot.audio_out.played_samples == 0
+    finally:
+        fec.time.time = original_time
+    print("test_audio_ingress_waits_for_video_once_then_stays_continuous: PASS")
+
+
+def test_lip_catchup_skips_only_expired_frames():
+    assert fec.lip_catchup_frame_count(0.0, 0.0, 0.0, 24, 25) == 0
+    assert fec.lip_catchup_frame_count(1.0, 0.2, 0.4, 24, 25) == 20
+    assert fec.lip_catchup_frame_count(10.0, 0.0, 0.0, 8, 25) == 6
+    assert fec.lip_catchup_frame_count(1.0, 0.0, None, 8, 25) == 0
+    print("test_lip_catchup_skips_only_expired_frames: PASS")
+
+
+def test_lip_timeline_survives_mid_turn_pause():
+    original_time = fec.time.time
+    clock = [500.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        slot = make_slot(0, "s0")
+        emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+        feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+        pcm = np.arange(OUTPUT_SAMPLE_RATE // 10, dtype=np.int16)
+        feeder.push24k(pcm.tobytes())
+        assert feeder.timeline_base_s == 0.0
+
+        with slot.audio_out.lock:
+            slot.audio_out.buf = np.zeros(0, dtype=np.int16)
+            slot.audio_out.depth_samples = 0
+            slot.audio_out.played_samples = len(pcm)
+        clock[0] += 1.0
+        feeder.push24k(pcm.tobytes())
+        assert round(feeder.timeline_base_s, 3) == 0.1
+    finally:
+        fec.time.time = original_time
+    print("test_lip_timeline_survives_mid_turn_pause: PASS")
+
+
+def test_audio_finish_does_not_count_natural_tail_as_underrun():
+    slot = make_slot(0, "s0")
+    emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+    pcm = np.arange(slot.audio_out.frame_samples, dtype=np.int16)
+    feeder.push24k(pcm.tobytes())
+    slot.audio_out.release_playout()
+    feeder.finish()
+    assert np.array_equal(slot.audio_out.pop_frame(), pcm)
+    slot.audio_out.pop_frame()
+    assert slot.audio_out.underrun_count == 0
+    assert slot.audio_out._turn_complete is True
+    print("test_audio_finish_does_not_count_natural_tail_as_underrun: PASS")
 
 
 def test_audio_prebuffer_starts_when_first_pcm_arrives():
@@ -471,6 +551,11 @@ def test_health_snapshot_math():
     assert body["frames"] == 0
     assert body["output_resolution"] == {"width": 768, "height": 768}
     assert body["video_underrun"]["count"] == 0
+    assert body["video_sync"] == {
+        "catchup_events": 0,
+        "catchup_frames": 0,
+        "audio_played_ms": 0.0,
+    }
     print("test_health_snapshot_math: PASS")
 
 
@@ -566,6 +651,10 @@ def main():
     test_health_n1_shape_matches_capacity_contract()
     test_cross_slot_isolation()
     test_audible_output_keeps_original_24k_samples()
+    test_audio_ingress_waits_for_video_once_then_stays_continuous()
+    test_lip_catchup_skips_only_expired_frames()
+    test_lip_timeline_survives_mid_turn_pause()
+    test_audio_finish_does_not_count_natural_tail_as_underrun()
     test_audio_prebuffer_starts_when_first_pcm_arrives()
     test_audio_prebuffer_adapts_without_counting_natural_silence()
     test_fault_isolation_one_slot_does_not_crash_others()

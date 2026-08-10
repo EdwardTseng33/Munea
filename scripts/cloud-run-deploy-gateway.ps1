@@ -21,6 +21,11 @@ if ($StrictLocaleContext -and $AllowTraffic) {
 }
 $root = Split-Path -Parent $PSScriptRoot
 $source = Join-Path $root "deploy\gateway"
+$releaseCommit = (& git -C $root rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or $releaseCommit -notmatch '^[0-9a-fA-F]{40,64}$') {
+  throw "Unable to resolve an exact release commit"
+}
+$releaseVersion = (Get-Content -LiteralPath (Join-Path $root "package.json") -Raw | ConvertFrom-Json).version
 
 function Resolve-Gcloud {
   $command = Get-Command gcloud.cmd -ErrorAction SilentlyContinue
@@ -72,6 +77,8 @@ $envValues = [ordered]@{
   SUPABASE_URL = $SupabaseUrl
   SUPABASE_ANON_KEY = $publishableKey
   MUNEA_GATEWAY_REQUIRE_DURABLE = "1"
+  MUNEA_RELEASE_VERSION = [string]$releaseVersion
+  MUNEA_RELEASE_COMMIT = $releaseCommit
   MUNEA_GATEWAY_ALLOW_LEGACY_LOCALE_CONTEXT = if ($StrictLocaleContext) { "0" } else { "1" }
   MUNEA_GATEWAY_QUEUE_MAX_DEPTH = "30"
   MUNEA_GATEWAY_VOICE_LIMIT = "30"

@@ -109,6 +109,13 @@ expect(styles.includes('.fh-frame') && !styles.includes('background: #0E1A17'),
   'the face frame still uses a near-black backdrop that reads as a black flash before art paints');
 expect(!app.includes('if (speechActive()) { this.micLevel = 0; return; }'),
   'assistant playback still disables microphone uplink unconditionally');
+const speechActiveStart = app.indexOf('function speechActive() {');
+const speechActiveEnd = app.indexOf('\n}', speechActiveStart) + 2;
+const speechActiveContract = app.slice(speechActiveStart, speechActiveEnd);
+expect(speechActiveStart >= 0 &&
+  speechActiveContract.includes('LiveVoice._playoutUntil') &&
+  !speechActiveContract.includes('_faceAudLevel'),
+  'raw Avatar idle audio can still keep speechActive true and suppress microphone uplink');
 expect(voiceServer.includes('localization.requires_taiwanese_hokkien_fallback(obj["text"])'),
   'explicit Hokkien text requests are not blocked before reaching the conversational model');
 expect(voiceServer.includes('await _arm_language_block("audio_input")'),
@@ -282,5 +289,17 @@ expect(app.includes('(this._faceRebuilds || 0) >= 2'),
   'face stream rebuilds are not capped at two attempts before degrading');
 expect(app.includes("'face_fallback_voice_only'") && app.includes('LiveVoice._sameLineFellBack = true;'),
   'voice-only degradation is missing or leaves same-line audio dead when the face is torn down');
+const voiceOnlyStart = app.indexOf('_fallbackVoiceOnly(reason) {');
+const voiceOnlyEnd = app.indexOf('\n  stop() {', voiceOnlyStart);
+const voiceOnlyFallback = app.slice(voiceOnlyStart, voiceOnlyEnd);
+expect(voiceOnlyStart >= 0 && voiceOnlyEnd > voiceOnlyStart &&
+  !voiceOnlyFallback.includes('try { this.stop();') &&
+  voiceOnlyFallback.includes("voiceCallMark('avatar_transport_preserved'") &&
+  app.includes("if (CallControl.active) { this._fallbackVoiceOnly('stall_preserve_paired_lease'); return; }"),
+  'audio-only degradation can still close the paired Avatar transport and stale the whole call lease');
+expect(app.includes('let _hangupOnLeaveT = null;') &&
+  app.includes("if (document.visibilityState !== 'hidden') return;") &&
+  app.includes("else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio();"),
+  'a transient iOS WebView visibility change can still hang up an active call immediately');
 
 console.log('Voice launch policy PASS: buffering, language gate, tail guard, varied opening, and barge-in');

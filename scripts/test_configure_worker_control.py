@@ -29,3 +29,28 @@ with tempfile.TemporaryDirectory() as directory:
     )
 
 print("FlashHead control settings updater: PASS")
+
+with tempfile.TemporaryDirectory() as directory:
+    env_file = Path(directory) / "service.env"
+    env_file.write_text(
+        "export KEEP=value\n"
+        "export MUNEA_WORKER_ID=old\n"
+        "MUNEA_CALL_PROTOCOL_REQUIRED=2\n",
+        encoding="utf-8",
+    )
+    MODULE.update_env(
+        env_file,
+        {
+            "MUNEA_WORKER_ID": "worker-1",
+            "MUNEA_CALL_PROTOCOL_REQUIRED": "3",
+            "MUNEA_RELEASE_COMMIT": "abc123",
+        },
+    )
+    assert env_file.read_text(encoding="utf-8") == (
+        "export KEEP=value\n"
+        "export MUNEA_WORKER_ID=worker-1\n"
+        "export MUNEA_CALL_PROTOCOL_REQUIRED=3\n"
+        "export MUNEA_RELEASE_COMMIT=abc123\n"
+    )
+
+print("FlashHead exported control settings updater: PASS")

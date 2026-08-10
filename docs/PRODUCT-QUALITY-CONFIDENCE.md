@@ -77,9 +77,9 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.55 (Build 530)`；為下一個唯一候選，包含 8/10 的 speaker echo 防誤判與 Voice→Avatar 直連。App Store Connect 目前最新上傳／送審仍是 `1.0.55 (Build 529)`，其 03:38 UTC 上傳時間早於兩項修復，故 Build 529 的證據不適用 current source |
-| Latest uploaded App | `1.0.55 (Build 529)`；App Store Connect 回報 `VALID`，上傳時間 2026-08-10 03:38 UTC；早於完整 echo／Voice→Avatar 修復，不能代表 Build 530 |
-| App Store | 1.0.55 狀態 `WAITING_FOR_REVIEW`；Build 530 尚未上傳、選入、核准或公開 |
+| Latest source | `1.0.62 (Build 533)`；為下一個唯一候選，加入 App／Gateway／Voice `call_protocol=3` 身分握手與拒絕混版。服務端三邊已部署，App 尚未封裝或真機驗證 |
+| Latest uploaded App | `1.0.61 (Build 532)`；App Store Connect 回報 `VALID`，上傳時間 2026-08-10 08:35 UTC；不含本輪三邊協議，不能代表 Build 533 |
+| App Store | 1.0.55 狀態 `WAITING_FOR_REVIEW`，實際選用 App 1.0.55 Build 525；1.0.61 Build 532 未被該審核版本選用；Build 533 尚未上傳、選入、核准或公開 |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
 | Production Brain | 17:23 secret-free manifest：公開 `/version` 回 `1.0.40@fa14e4c`，revision `munea-brain-00006-faw`，100% traffic；點數包 100／300／600／1,000 與 Plus 100／Pro 200 mapping 已部署，安全 smoke 與新 revision ERROR log 檢查 PASS，真人 Sandbox purchase 仍 pending |
 | Production Voice | 00:21 secret-free manifest：公開 `/version` 回 `1.0.41@906732ab`，revision `munea-voice-00007-xab`；已與 current Voice source 對齊，真人通話仍需 App E2E |

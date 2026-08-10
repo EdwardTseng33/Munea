@@ -38,11 +38,16 @@ def main() -> None:
         "idle motion must not enqueue generated silence into the speech buffer"
     )
     finish_block = source[source.index("def finish(self):") : source.index("def _on_fault", source.index("def finish(self):"))]
-    assert "mark_input_complete" not in finish_block, (
-        "input EOF must not hide underruns while final model chunks are still generating"
+    assert "self.slot.audio_out.queue(pcm_int16)" in source, (
+        "original Voice PCM must enter the audible queue before lip rendering"
     )
-    assert "self._complete_pending = True" in finish_block
-    assert "if complete_now:" in source and "self.slot.audio_out.mark_input_complete()" in source
+    assert "self.slot.audio_out.release_playout()" in source, (
+        "first rendered video must release the shared start gate without re-queueing PCM"
+    )
+    assert "self.slot.audio_out.mark_input_complete()" in finish_block, (
+        "after audio/render decoupling, input EOF must classify post-speech silence immediately"
+    )
+    assert "self._complete_pending = False" in finish_block
     print("FlashHead idle contract: PASS")
 
 

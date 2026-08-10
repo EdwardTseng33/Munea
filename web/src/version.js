@@ -12,9 +12,21 @@
  * 一個新功能面板算「小功能」，走最後一碼；要跳中間碼請先問 Edward。
  */
 window.MuneaVersion = {
-  current: '1.0.55',
+  current: '1.0.62',
+  callProtocol: 3,
+  voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
+    {
+      version: '1.0.62',
+      date: '2026-08-11',
+      title: '聊聊三邊版本對齊與通話穩定修復',
+      items: [
+        'App、Voice、Avatar／Gateway 使用同一套通話協議，避免新舊服務混接。',
+        '修正開場自我打斷、通話仍顯示進行中但麥克風失效，以及嘴型落後聲音。',
+        '加入實際版本與 Build 身分紀錄，後續可追查每次通話使用的完整環境。',
+      ],
+    },
     {
       version: '1.0.55',
       date: '2026-08-01',

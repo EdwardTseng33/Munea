@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""Capture real Voice -> Avatar direct-route audio and detect missing playout frames.
+"""Act as a fake phone on the real Gateway -> Voice -> Avatar call path.
 
-This is a pre-release media gate, not a replacement for the exact-build iPhone
-gate. It creates an isolated test account, obtains a real Gateway lease/call
-token, routes Voice to an explicit 0% canary, captures both Voice PCM and the
-Avatar WebRTC audio track, writes WAV evidence, and deletes the test account.
+This is the automated gate that runs before a human receives a candidate. It
+creates an isolated test account, obtains a real Gateway lease/call token,
+streams a recorded human WAV into Voice, relays Voice PCM to Avatar exactly as
+the current App does, captures Avatar WebRTC audio, scores the ASR transcript,
+and deletes the test account. ``--transport direct`` remains available for the
+separate server-to-server experiment; release candidates use ``relay``.
+
+It still does not certify iOS permissions, WebView audio routing, or an exact
+installed build. Those remain the final device gate after this fake phone has
+passed.
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
+import difflib
 import json
 import os
+import re
 import sys
 import time
 import urllib.parse
@@ -29,7 +37,113 @@ from scipy.signal import correlate, correlation_lags, resample_poly
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "deploy" / "gateway"))
+sys.path.insert(0, str(ROOT / "engine"))
+from env_loader import load_engine_env  # noqa: E402
 from call_control_store import SupabaseCallStore  # noqa: E402
+
+load_engine_env()
+
+
+def normalize_transcript(value: str) -> str:
+    """Keep only comparable CJK letters and alphanumerics."""
+    return "".join(re.findall(r"[\u3400-\u9fffA-Za-z0-9]", str(value or ""))).lower()
+
+
+def transcript_char_recall(expected: str, actual: str) -> float:
+    """Ordered character recall; suitable for short Mandarin ASR fixtures."""
+    wanted = normalize_transcript(expected)
+    heard = normalize_transcript(actual)
+    if not wanted:
+        return 1.0
+    matcher = difflib.SequenceMatcher(a=wanted, b=heard, autojunk=False)
+    matched = sum(block.size for block in matcher.get_matching_blocks())
+    return matched / len(wanted)
+
+
+def source_playout_metrics(chunks, arrival_times, prebuffer_ms=350.0) -> dict:
+    """Model the App/Avatar PCM queue and expose audible source starvation."""
+    if not chunks or not arrival_times or len(chunks) != len(arrival_times):
+        return {"ok": False, "underrun_count": 0, "max_underrun_ms": None}
+    head = float(arrival_times[0]) + max(0.0, float(prebuffer_ms)) / 1000.0
+    gaps = []
+    for chunk, arrived in zip(chunks, arrival_times):
+        arrived = float(arrived)
+        if arrived > head:
+            gaps.append(1000.0 * (arrived - head))
+            head = arrived + max(0.0, float(prebuffer_ms)) / 1000.0
+        head += len(chunk) / float(24000 * 2)
+    material = [gap for gap in gaps if gap >= 40.0]
+    return {
+        "ok": not material,
+        "underrun_count": len(material),
+        "max_underrun_ms": round(max(material, default=0.0), 1),
+    }
+
+
+def webrtc_frame_timing_metrics(frames) -> dict:
+    """Detect RTP timeline holes separately from content-envelope comparison."""
+    if len(frames) < 2:
+        return {"ok": False, "frame_count": len(frames), "gap_count": 0,
+                "max_pts_gap_ms": None, "max_receive_late_ms": None}
+    pts_gaps = []
+    receive_late = []
+    captured_samples = 0
+    for previous, current in zip(frames, frames[1:]):
+        prev_pts, prev_samples, prev_rate, prev_received = previous
+        pts, _samples, rate, received = current
+        rate = int(rate or prev_rate or 0)
+        captured_samples += int(prev_samples)
+        if rate > 0 and pts is not None and prev_pts is not None:
+            missing = int(pts) - (int(prev_pts) + int(prev_samples))
+            if missing > 0:
+                pts_gaps.append({
+                    "at_captured_ms": 1000.0 * captured_samples / rate,
+                    "duration_ms": 1000.0 * missing / rate,
+                })
+        expected_s = float(prev_samples) / max(1, int(prev_rate or rate or 1))
+        late_ms = 1000.0 * ((float(received) - float(prev_received)) - expected_s)
+        if late_ms > 0:
+            receive_late.append(late_ms)
+    material_pts = [gap for gap in pts_gaps if gap["duration_ms"] >= 20.0]
+    max_receive = max(receive_late, default=0.0)
+    return {
+        "ok": not material_pts,
+        "frame_count": len(frames),
+        "gap_count": len(material_pts),
+        "max_pts_gap_ms": round(max(
+            (gap["duration_ms"] for gap in material_pts), default=0.0
+        ), 1),
+        "pts_gaps": [{key: round(value, 1) for key, value in gap.items()}
+                     for gap in material_pts],
+        # Diagnostic only: browser/aiortc jitter buffers can absorb wall-clock
+        # delivery variance without an audible RTP timeline hole.
+        "max_receive_late_ms": round(max_receive, 1),
+    }
+
+
+def webrtc_speech_gap_metrics(timing: dict, continuity: dict) -> dict:
+    """Fail only RTP holes that intersect captured assistant speech.
+
+    WebRTC can drop idle/poster silence before the Avatar begins speaking. That
+    remains diagnostic evidence, but it is not the audible in-sentence failure
+    this release gate is designed to block.
+    """
+    windows = continuity.get("speech_windows_ms") or []
+    material = []
+    for gap in timing.get("pts_gaps") or []:
+        at_ms = float(gap.get("at_captured_ms") or 0.0)
+        for start_ms, end_ms in windows:
+            if float(start_ms) - 20.0 <= at_ms <= float(end_ms) + 20.0:
+                material.append(gap)
+                break
+    return {
+        "ok": not material,
+        "speech_gap_count": len(material),
+        "max_speech_pts_gap_ms": round(max(
+            (float(gap.get("duration_ms") or 0.0) for gap in material), default=0.0
+        ), 1),
+        "speech_pts_gaps": material,
+    }
 
 
 def required(name: str) -> str:
@@ -110,6 +224,20 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
     else:
         envelope_correlation = 0.0
     max_gap_ms = max(material, default=0) * 20
+    speech_windows = []
+    speech_start = None
+    for index, value in enumerate(speech):
+        if value and speech_start is None:
+            speech_start = index
+        elif not value and speech_start is not None:
+            speech_windows.append([
+                int((out_start + speech_start) * 20), int((out_start + index) * 20)
+            ])
+            speech_start = None
+    if speech_start is not None:
+        speech_windows.append([
+            int((out_start + speech_start) * 20), int((out_start + len(speech)) * 20)
+        ])
     return {
         "ok": max_gap_ms <= 40 and len(material) == 0,
         "alignment_ms": lag * 20,
@@ -117,6 +245,7 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
         "reference_speech_frames": int(np.sum(speech)),
         "missing_speech_runs": len(material),
         "max_missing_speech_ms": int(max_gap_ms),
+        "speech_windows_ms": speech_windows,
     }
 
 
@@ -130,10 +259,32 @@ class EvidenceRun:
         self.access_token = ""
         self.lease = None
         self.pc = None
+        self.avatar_feed = None
+        self.avatar_feed_task = None
+        self.avatar_feed_ack = False
         self.capture_tasks = []
         self.avatar_audio = []
+        self.avatar_frame_timing = []
         self.avatar_rate = 48000
         self.stop_capture = False
+
+    def avatar_health(self, base, token):
+        """Read only decision-useful Avatar counters; never persist the call token."""
+        try:
+            response = requests.get(
+                base.rstrip("/") + "/health", params={"token": token}, timeout=10
+            )
+            response.raise_for_status()
+            body = response.json()
+            return {
+                "ok": bool(body.get("ok")),
+                "round_count": body.get("round_count"),
+                "round_latencies_ms": body.get("round_latencies_ms", []),
+                "gen_compute_ms_rolling": body.get("gen_compute_ms_rolling", {}),
+                "audio_underrun": body.get("audio_underrun", {}),
+            }
+        except Exception as error:
+            return {"ok": False, "error": type(error).__name__}
 
     def service_headers(self, prefer=""):
         return self.store._service_headers(prefer)
@@ -222,6 +373,9 @@ class EvidenceRun:
                     array = array.reshape(-1, channels).astype(np.float32).mean(axis=1)
             self.avatar_audio.append(np.clip(array, -32768, 32767).astype(np.int16).reshape(-1))
             self.avatar_rate = int(frame.sample_rate)
+            self.avatar_frame_timing.append(
+                (frame.pts, frame.samples, frame.sample_rate, time.monotonic())
+            )
 
     async def connect_avatar(self):
         token = self.lease["call_token"]
@@ -263,11 +417,34 @@ class EvidenceRun:
             raise RuntimeError("Avatar WebRTC did not connect")
         return base, str(answer.get("session") or "")
 
+    async def read_avatar_feed(self):
+        try:
+            async for message in self.avatar_feed:
+                if not isinstance(message, str):
+                    continue
+                event = json.loads(message)
+                if event.get("type") == "avatar_pcm_received":
+                    self.avatar_feed_ack = True
+        except Exception:
+            return
+
+    async def connect_avatar_feed(self, base, session, token):
+        query = urllib.parse.urlencode({"token": token, "session": session})
+        feed_url = base.replace("https://", "wss://").replace("http://", "ws://")
+        self.avatar_feed = await websockets.connect(
+            feed_url + "/audio?" + query,
+            open_timeout=20,
+            close_timeout=2,
+            max_size=None,
+        )
+        self.avatar_feed_task = asyncio.create_task(self.read_avatar_feed())
+
     async def run_media(self):
         avatar_url, avatar_session = await self.connect_avatar()
         if not avatar_session:
             raise RuntimeError("Avatar session missing")
         token = self.lease["call_token"]
+        avatar_health_before = self.avatar_health(avatar_url, token)
         voice_url = self.args.voice_canary.rstrip("/").replace("https://", "wss://")
         query = urllib.parse.urlencode({
             "token": token, "char": "寧寧", "user": "自動聲音驗收", "fam": "0",
@@ -279,25 +456,35 @@ class EvidenceRun:
         assistant_caption = ""
         avatar_ack = False
         turn_complete = False
+        unsolicited_audio_bytes = 0
+        unsolicited_caption = ""
+        disconnected_after_turn = False
+        first_response_at = None
+        mic_finished_at = None
+        relay_turn_started = False
+        if self.args.transport == "relay":
+            await self.connect_avatar_feed(avatar_url, avatar_session, token)
         async with websockets.connect(voice_url + "/?" + query, max_size=None, open_timeout=20) as voice:
             deadline = time.monotonic() + self.args.timeout
             while time.monotonic() < deadline:
                 message = await asyncio.wait_for(voice.recv(), timeout=20)
                 if isinstance(message, str) and json.loads(message).get("type") == "ready":
                     break
-            await voice.send(json.dumps({
-                "type": "faceaudio", "on": True, "url": avatar_url, "session": avatar_session,
-            }))
-            while time.monotonic() < deadline:
-                message = await asyncio.wait_for(voice.recv(), timeout=20)
-                if not isinstance(message, str):
-                    continue
-                event = json.loads(message)
-                if event.get("type") == "faceaudio_status":
-                    statuses.append(event)
-                    if event.get("on") is True:
-                        break
-                    raise RuntimeError("Voice direct route failed: " + str(event.get("reason")))
+            if self.args.transport == "direct":
+                await voice.send(json.dumps({
+                    "type": "faceaudio", "on": True, "url": avatar_url,
+                    "session": avatar_session,
+                }))
+                while time.monotonic() < deadline:
+                    message = await asyncio.wait_for(voice.recv(), timeout=20)
+                    if not isinstance(message, str):
+                        continue
+                    event = json.loads(message)
+                    if event.get("type") == "faceaudio_status":
+                        statuses.append(event)
+                        if event.get("on") is True:
+                            break
+                        raise RuntimeError("Voice direct route failed: " + str(event.get("reason")))
             if self.args.mic_wav:
                 with wave.open(self.args.mic_wav, "rb") as source:
                     if source.getnchannels() != 1 or source.getsampwidth() != 2:
@@ -317,14 +504,24 @@ class EvidenceRun:
                     next_send += 0.020
                     await asyncio.sleep(max(0.0, next_send - time.monotonic()))
                 await voice.send(json.dumps({"type": "audio_end"}))
+                mic_finished_at = time.monotonic()
             else:
                 await voice.send(json.dumps({"type": "text", "text": self.args.prompt}, ensure_ascii=False))
+                mic_finished_at = time.monotonic()
             deadline = time.monotonic() + self.args.timeout
             while time.monotonic() < deadline:
                 message = await asyncio.wait_for(voice.recv(), timeout=20)
                 if isinstance(message, (bytes, bytearray)):
+                    if first_response_at is None:
+                        first_response_at = time.monotonic()
                     voice_chunks.append(bytes(message))
                     voice_times.append(time.monotonic())
+                    if self.args.transport == "relay":
+                        if not relay_turn_started:
+                            await self.avatar_feed.send("reset")
+                            await self.avatar_feed.send("turn:1")
+                            relay_turn_started = True
+                        await self.avatar_feed.send(bytes(message))
                     continue
                 event = json.loads(message)
                 if event.get("type") == "faceaudio_status":
@@ -336,29 +533,72 @@ class EvidenceRun:
                 elif event.get("type") == "caption" and event.get("who") == "nening":
                     assistant_caption += str(event.get("text") or "")
                 elif event.get("type") == "turn_complete" and voice_chunks:
+                    if self.args.transport == "relay":
+                        await self.avatar_feed.send("finish")
                     turn_complete = True
                     break
-            await asyncio.sleep(3.0)
+            # A completed user turn must stay quiet until another user input.
+            # This catches the production failure where the same answer starts
+            # again by itself, as well as a socket that silently drops afterward.
+            quiet_deadline = time.monotonic() + self.args.post_turn_quiet_seconds
+            while time.monotonic() < quiet_deadline:
+                try:
+                    message = await asyncio.wait_for(
+                        voice.recv(), timeout=max(0.05, quiet_deadline - time.monotonic())
+                    )
+                except asyncio.TimeoutError:
+                    break
+                except Exception:
+                    disconnected_after_turn = True
+                    break
+                if isinstance(message, (bytes, bytearray)):
+                    unsolicited_audio_bytes += len(message)
+                    continue
+                event = json.loads(message)
+                if event.get("type") == "caption" and event.get("who") == "nening":
+                    unsolicited_caption += str(event.get("text") or "")
+        avatar_health_after = self.avatar_health(avatar_url, token)
+        before_underruns = int(
+            avatar_health_before.get("audio_underrun", {}).get("count") or 0
+        )
+        after_underruns = int(
+            avatar_health_after.get("audio_underrun", {}).get("count") or 0
+        )
         if not turn_complete:
             raise RuntimeError("Voice turn did not complete")
-        if not avatar_ack:
-            raise RuntimeError("Avatar did not ACK direct PCM")
-        if any(item.get("on") is False for item in statuses):
-            raise RuntimeError("direct route fell back during the turn")
+        if self.args.transport == "direct":
+            if not avatar_ack:
+                raise RuntimeError("Avatar did not ACK direct PCM")
+            if any(item.get("on") is False for item in statuses):
+                raise RuntimeError("direct route fell back during the turn")
+        elif not self.avatar_feed_ack and not self.avatar_audio:
+            raise RuntimeError("Avatar relay received no PCM acknowledgement or WebRTC audio")
         voice_pcm = np.frombuffer(b"".join(voice_chunks), dtype=np.int16).copy()
         avatar_pcm = np.concatenate(self.avatar_audio) if self.avatar_audio else np.zeros(0, dtype=np.int16)
         arrival_gaps = [1000 * (right - left) for left, right in zip(voice_times, voice_times[1:])]
+        source_playout = source_playout_metrics(voice_chunks, voice_times)
         return voice_pcm, avatar_pcm, {
-            "direct_status": "ready",
-            "avatar_ack": avatar_ack,
+            "transport": self.args.transport,
+            "transport_status": "ready",
+            "avatar_ack": avatar_ack if self.args.transport == "direct" else self.avatar_feed_ack,
             "voice_chunks": len(voice_chunks),
             "voice_audio_ms": round(len(voice_pcm) / 24),
             # This measures what the test laptop's event loop received. Avatar
             # direct playout is judged separately against captured WebRTC PCM.
             "client_receive_max_gap_ms": round(max(arrival_gaps, default=0), 1),
+            "source_playout": source_playout,
             "avatar_audio_ms": round(len(avatar_pcm) / self.avatar_rate * 1000),
+            "avatar_webrtc_timing": webrtc_frame_timing_metrics(self.avatar_frame_timing),
             "user_caption": user_caption,
             "assistant_caption": assistant_caption,
+            "first_response_ms": round(1000 * (first_response_at - mic_finished_at))
+            if first_response_at and mic_finished_at else None,
+            "unsolicited_audio_bytes": unsolicited_audio_bytes,
+            "unsolicited_caption": unsolicited_caption,
+            "disconnected_after_turn": disconnected_after_turn,
+            "avatar_health_before": avatar_health_before,
+            "avatar_health_after": avatar_health_after,
+            "avatar_reported_underrun_delta": max(0, after_underruns - before_underruns),
         }
 
     def cleanup(self):
@@ -389,18 +629,7 @@ class EvidenceRun:
                 print("cleanup auth warning:", type(error).__name__, file=sys.stderr)
 
 
-async def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--voice-canary", required=True)
-    parser.add_argument("--gateway", default="https://munea-call-control-491603544409.asia-east1.run.app")
-    parser.add_argument("--character", default="a05")
-    parser.add_argument("--timeout", type=float, default=60)
-    parser.add_argument("--out", required=True)
-    parser.add_argument("--mic-wav", default="")
-    parser.add_argument("--mic-seconds", type=float, default=5.0)
-    parser.add_argument("--prompt", default="請只用自然台灣華語，連續清楚地說一段約十五秒的話，內容是今天精神還不錯、早餐吃得下、下午想在家休息；不要列點，也不要問問題。")
-    args = parser.parse_args()
-    output = Path(args.out).resolve()
+async def execute_run(args, output):
     output.mkdir(parents=True, exist_ok=True)
     run = EvidenceRun(args)
     try:
@@ -410,19 +639,110 @@ async def main():
         wav_write(output / "voice-reference.wav", voice_pcm, 24000)
         wav_write(output / "avatar-webrtc.wav", avatar_pcm, run.avatar_rate)
         metrics["continuity"] = continuity_metrics(voice_pcm, avatar_pcm, run.avatar_rate)
-        metrics["ok"] = bool(metrics["continuity"].get("ok"))
-        (output / "result.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps(metrics, ensure_ascii=False, indent=2))
-        print("evidence=" + str(output))
-        if not metrics["ok"]:
-            raise SystemExit(2)
+        metrics["avatar_webrtc_speech_timing"] = webrtc_speech_gap_metrics(
+            metrics.get("avatar_webrtc_timing", {}), metrics["continuity"]
+        )
+        metrics["asr_expected"] = args.expected_text
+        metrics["asr_char_recall"] = round(
+            transcript_char_recall(args.expected_text, metrics.get("user_caption", "")), 4
+        ) if args.expected_text else None
+        metrics["gates"] = {
+            "transport": metrics.get("transport_status") == "ready",
+            "asr": (metrics["asr_char_recall"] is None
+                    or metrics["asr_char_recall"] >= args.min_asr_char_recall),
+            "first_response": (metrics.get("first_response_ms") is not None
+                               and metrics["first_response_ms"] <= args.max_first_response_ms),
+            "avatar_audio": metrics.get("avatar_audio_ms", 0) >= args.min_avatar_audio_ms,
+            "continuity": bool(metrics["continuity"].get("ok")),
+            "avatar_reported_underrun": (
+                metrics.get("avatar_health_before", {}).get("ok") is True
+                and metrics.get("avatar_health_after", {}).get("ok") is True
+                and metrics.get("avatar_reported_underrun_delta") == 0
+            ),
+            "avatar_webrtc_speech_timing": bool(
+                metrics.get("avatar_webrtc_speech_timing", {}).get("ok")
+            ),
+            "source_playout": (
+                metrics.get("source_playout", {}).get("max_underrun_ms") is not None
+                and metrics["source_playout"]["max_underrun_ms"] <= args.max_source_underrun_ms
+            ),
+            "no_unsolicited_repeat": (
+                metrics.get("unsolicited_audio_bytes", 0) == 0
+                and not metrics.get("unsolicited_caption")
+            ),
+            "connection_held": not metrics.get("disconnected_after_turn"),
+        }
+        metrics["ok"] = all(metrics["gates"].values())
+        (output / "result.json").write_text(
+            json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        return metrics
     finally:
         run.stop_capture = True
         if run.pc:
             await run.pc.close()
+        if run.avatar_feed:
+            await run.avatar_feed.close()
+        if run.avatar_feed_task:
+            run.avatar_feed_task.cancel()
         for task in run.capture_tasks:
             task.cancel()
         run.cleanup()
+
+
+async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--voice-canary", required=True)
+    parser.add_argument("--gateway", default="https://munea-call-control-491603544409.asia-east1.run.app")
+    parser.add_argument("--character", default="a05")
+    parser.add_argument("--timeout", type=float, default=60)
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--transport", choices=("relay", "direct"), default="relay")
+    parser.add_argument("--mic-wav", default="")
+    parser.add_argument("--mic-seconds", type=float, default=5.0)
+    parser.add_argument("--expected-text", default="")
+    parser.add_argument("--min-asr-char-recall", type=float, default=0.80)
+    parser.add_argument("--max-first-response-ms", type=int, default=4500)
+    parser.add_argument("--min-avatar-audio-ms", type=int, default=1000)
+    parser.add_argument("--max-source-underrun-ms", type=int, default=250)
+    parser.add_argument("--post-turn-quiet-seconds", type=float, default=3.0)
+    parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--prompt", default="請只用自然台灣華語，連續清楚地說一段約十五秒的話，內容是今天精神還不錯、早餐吃得下、下午想在家休息；不要列點，也不要問問題。")
+    args = parser.parse_args()
+    if args.runs < 1:
+        parser.error("--runs must be at least 1")
+    if args.mic_wav and not args.expected_text.strip():
+        parser.error("--expected-text is required with --mic-wav; a fake phone must score what Voice heard")
+    output = Path(args.out).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    results = []
+    for index in range(args.runs):
+        run_output = output if args.runs == 1 else output / ("run-%02d" % (index + 1))
+        try:
+            metrics = await execute_run(args, run_output)
+        except Exception as error:
+            metrics = {"ok": False, "error": type(error).__name__}
+            run_output.mkdir(parents=True, exist_ok=True)
+            (run_output / "result.json").write_text(
+                json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        results.append(metrics)
+        print(json.dumps(metrics, ensure_ascii=False, indent=2))
+        print("evidence=" + str(run_output))
+    summary = {
+        "required_consecutive_runs": args.runs,
+        "passed_runs": sum(1 for result in results if result.get("ok") is True),
+        "ok": all(result.get("ok") is True for result in results),
+        "results": results,
+    }
+    (output / "summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(json.dumps({key: summary[key] for key in (
+        "required_consecutive_runs", "passed_runs", "ok"
+    )}, ensure_ascii=False))
+    if not summary["ok"]:
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

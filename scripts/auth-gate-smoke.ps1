@@ -33,9 +33,15 @@ function Resolve-Python {
   foreach ($candidate in @("python3", "python", "python.exe")) {
     $pythonCommand = Get-Command $candidate -ErrorAction SilentlyContinue
     if ($pythonCommand) {
-      & $pythonCommand.Source --version | Out-Null
-      if ($LASTEXITCODE -eq 0) {
-        return $pythonCommand.Source
+      try {
+        & $pythonCommand.Source --version 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+          return $pythonCommand.Source
+        }
+      } catch {
+        # WindowsApps can expose an execution alias that Get-Command resolves even
+        # when the underlying launcher is unavailable. Try the next real runtime.
+        continue
       }
     }
   }
@@ -81,6 +87,15 @@ try {
 Pass "$BaseUrl is free"
 
 $Python = Resolve-Python
+# Some Windows hosts inject both PATH and Path. Start-Process builds a
+# case-insensitive environment dictionary and rejects that duplicate pair.
+$processEnvironment = [Environment]::GetEnvironmentVariables("Process")
+$pathKeys = @($processEnvironment.Keys | Where-Object { [string]$_ -ieq "PATH" })
+if ($pathKeys.Count -gt 1) {
+  $pathValue = $env:Path
+  [Environment]::SetEnvironmentVariable("PATH", $null, "Process")
+  [Environment]::SetEnvironmentVariable("Path", $pathValue, "Process")
+}
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("munea-auth-smoke-" + [System.Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Path $tempDir | Out-Null
 $proc = $null

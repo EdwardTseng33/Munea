@@ -190,6 +190,9 @@ class AudioOutBuffer:
         self._underrun_started_ts = None
         self.last_push_ts = 0.0
         self.depth_samples = 0
+        # Counts only PCM frames actually handed to WebRTC. Held/underrun
+        # zeroes are excluded so lip catch-up follows the audible timeline.
+        self.played_samples = 0
         self.hold_until_ts = float("inf")
         self._awaiting_first_push = True
         self._turn_complete = False
@@ -227,32 +230,60 @@ class AudioOutBuffer:
             p95_index = max(0, int(len(ordered) * 0.95) - 1)
             self.generation_p95_ms = ordered[p95_index]
 
-    def push(self, pcm_int16):
+    def _queue_locked(self, pcm_int16):
+        now = time.time()
+        if len(pcm_int16) and self._underrun_started_ts is not None:
+            gap_ms = round((now - self._underrun_started_ts) * 1000, 1)
+            self.underrun_gap_ms.append(gap_ms)
+            self._underrun_started_ts = None
+            # Only observed starvation raises the next-turn cushion.
+            self._turn_underrun_seen = True
+            self.stable_turns = 0
+            self._raise_adaptive_prebuffer_locked(0.05)
+        self.buf = np.concatenate([self.buf, pcm_int16])
+        self.last_push_ts = now
+        self.depth_samples = len(self.buf)
+
+    def queue(self, pcm_int16):
+        """Queue original Voice PCM immediately, without waiting for lip rendering.
+
+        Playout remains held until ``release_playout`` sees the first rendered
+        video chunk. GPU variance may then freeze video, but it can no longer
+        starve the audible PCM queue every model chunk.
+        """
         with self.lock:
-            now = time.time()
-            if len(pcm_int16) and self._underrun_started_ts is not None:
-                gap_ms = round((now - self._underrun_started_ts) * 1000, 1)
-                self.underrun_gap_ms.append(gap_ms)
-                self._underrun_started_ts = None
-                # Only observed starvation raises the next-turn cushion.
-                self._turn_underrun_seen = True
-                self.stable_turns = 0
-                self._raise_adaptive_prebuffer_locked(0.05)
-            if len(pcm_int16) and self._awaiting_first_push:
+            self._queue_locked(np.asarray(pcm_int16, dtype=np.int16).reshape(-1))
+
+    def release_playout(self):
+        """Open the shared audio/video start gate after first video is ready."""
+        with self.lock:
+            if len(self.buf) and self._awaiting_first_push:
+                now = time.time()
                 delay = self.next_prebuffer_s
                 self.last_prebuffer_s = delay
                 self.next_prebuffer_s = self.adaptive_prebuffer_s
                 self._one_shot_prebuffer = False
                 self.hold_until_ts = now + delay
                 self._awaiting_first_push = False
-            self.buf = np.concatenate([self.buf, pcm_int16])
-            self.last_push_ts = now
-            self.depth_samples = len(self.buf)
+
+    def push(self, pcm_int16):
+        """Backward-compatible queue-and-release path for local callers/tests."""
+        with self.lock:
+            self._queue_locked(np.asarray(pcm_int16, dtype=np.int16).reshape(-1))
+            if len(self.buf) and self._awaiting_first_push:
+                now = time.time()
+                delay = self.next_prebuffer_s
+                self.last_prebuffer_s = delay
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
+                self._one_shot_prebuffer = False
+                self.hold_until_ts = now + delay
+                self._awaiting_first_push = False
 
     def clear(self):
         with self.lock:
             self.buf = np.zeros(0, dtype=np.int16)
             self.depth_samples = 0
+            self.played_samples = 0
             self.hold_until_ts = float("inf")
             self._awaiting_first_push = True
             self._turn_complete = False
@@ -298,6 +329,7 @@ class AudioOutBuffer:
                 chunk = self.buf[:self.frame_samples]
                 self.buf = self.buf[self.frame_samples:]
                 self.depth_samples = len(self.buf)
+                self.played_samples += len(chunk)
                 return chunk
             if not self._turn_complete and self._underrun_started_ts is None:
                 self.underrun_count += 1
@@ -350,6 +382,8 @@ class Slot:
         self.round_latencies = collections.deque(maxlen=20)
         self.last_gen_compute_ms = None
         self.gen_compute_ms_hist = collections.deque(maxlen=100)
+        self.video_catchup_events = 0
+        self.video_catchup_frames = 0
         # ---- 准入/佔用（SlotPool 管）----
         self.active_session = None
         self.active_pc = None
@@ -358,6 +392,22 @@ class Slot:
         self.healthy = True
         self.fault_count = 0
         self.last_fault = None
+
+
+def lip_catchup_frame_count(audio_played_s, queued_video_s, timeline_start_s,
+                            frame_count, fps, keep_frames=2):
+    """Return how many already-expired lip frames may be skipped safely.
+
+    Audio remains the master clock. The final ``keep_frames`` are retained so
+    a slow GPU produces a short mouth freeze/catch-up instead of an empty video
+    queue or delaying audible PCM.
+    """
+    if not frame_count or not fps or timeline_start_s is None:
+        return 0
+    expired_s = max(0.0, float(audio_played_s) + float(queued_video_s)
+                    - float(timeline_start_s))
+    expired_frames = int(expired_s * float(fps))
+    return min(max(0, int(frame_count) - max(1, int(keep_frames))), expired_frames)
 
 
 def switch_slot_char(slot, char, char_src_map, get_base_data_fn, load_poster_fn):
@@ -420,6 +470,7 @@ class Feeder:
         # resampling never becomes the audible output path.
         self.acc_out = np.zeros(0, dtype=np.float32)
         self.consumed = 0
+        self.timeline_base_s = 0.0
         self.t0 = None
         self.last_in = 0.0
         self._idle_due = 0.0
@@ -440,7 +491,11 @@ class Feeder:
             threading.Thread(target=self._loop, daemon=True).start()
 
     def push24k(self, pcm_bytes):
-        x = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        pcm_int16 = np.frombuffer(pcm_bytes, dtype=np.int16).copy()
+        # Audible PCM takes the direct ingress path. Lip generation consumes a
+        # resampled copy, but never becomes the clock that feeds the speaker.
+        self.slot.audio_out.queue(pcm_int16)
+        x = pcm_int16.astype(np.float32) / 32768.0
         n_out = int(len(x) * self.sr_eng / self.sr_in)
         if n_out <= 0:
             return
@@ -451,6 +506,17 @@ class Feeder:
             if self.t0 is None or (now - self.last_in) > 0.8:
                 self.t0 = now
                 self.consumed = 0
+                # A pause starts a new model round, not a new audible turn.
+                # Anchor the round after PCM queued before this push so its
+                # first lip frame keeps the full-turn playback timeline.
+                with self.slot.audio_out.lock:
+                    queued_before_push = max(
+                        0,
+                        self.slot.audio_out.depth_samples - len(pcm_int16),
+                    )
+                    self.timeline_base_s = (
+                        self.slot.audio_out.played_samples + queued_before_push
+                    ) / max(1, self.slot.audio_out.sample_rate)
                 self.slot.round_count += 1
                 self.slot.round_start_ts = now
                 self._round_pending = True
@@ -466,6 +532,7 @@ class Feeder:
             self.acc_out = np.zeros(0, dtype=np.float32)
             self.t0 = None
             self.consumed = 0
+            self.timeline_base_s = 0.0
             self._epoch += 1
             self._finish_pending = False
             self._complete_pending = False
@@ -482,8 +549,13 @@ class Feeder:
     def finish(self):
         with self.lock:
             self._finish_pending = bool(len(self.acc))
-            self._complete_pending = True
+            # Audible PCM is queued at ingress now, so input completion no
+            # longer depends on the last lip-render chunk finishing. Waiting
+            # for GPU tail work here mislabels natural end silence as an audio
+            # underrun even though the captured waveform is continuous.
+            self._complete_pending = False
             partial_samples = len(self.acc)
+        self.slot.audio_out.mark_input_complete()
         if self._finish_pending:
             print("[feeder] slot" + str(self.slot.index) + " finish requested partial_samples="
                   + str(partial_samples), flush=True)
@@ -530,7 +602,7 @@ class Feeder:
         return frames
 
     def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None,
-                   emit_audio=True):
+                   emit_audio=True, timeline_start_s=None):
         t_chunk_ready = time.time()
         with self.lock:
             chunk_epoch = self._epoch
@@ -567,6 +639,27 @@ class Feeder:
                 print("[feeder] slot" + str(self.slot.index) + " stale chunk dropped (epoch "
                       + str(chunk_epoch) + " -> " + str(self._epoch) + ")", flush=True)
                 return
+        if emit_audio and timeline_start_s is not None and len(frames):
+            queued_video_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
+            audio_played_s = (self.slot.audio_out.played_samples
+                              / max(1, self.slot.audio_out.sample_rate))
+            drop_count = lip_catchup_frame_count(
+                audio_played_s,
+                queued_video_s,
+                timeline_start_s,
+                len(frames),
+                self.slot.tgt_fps,
+            )
+            if drop_count:
+                frames = frames[drop_count:]
+                self.slot.video_catchup_events += 1
+                self.slot.video_catchup_frames += drop_count
+                print("[video-sync] slot" + str(self.slot.index)
+                      + " drop=" + str(drop_count)
+                      + " audio=" + str(round(audio_played_s, 3)) + "s"
+                      + " queued=" + str(round(queued_video_s, 3)) + "s"
+                      + " source=" + str(round(timeline_start_s, 3)) + "s",
+                      flush=True)
         if ANTIFLICKER:
             frames = self._stabilize(frames, chunk_epoch)
         self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
@@ -583,8 +676,7 @@ class Feeder:
             else:
                 output_pcm = np.zeros(0, dtype=np.float32)
         if emit_audio:
-            pcm_out = np.clip(output_pcm * 32768.0, -32768, 32767).astype(np.int16)
-            self.slot.audio_out.push(pcm_out)
+            self.slot.audio_out.release_playout()
         if self._round_pending:
             self._round_pending = False
             lat_ms = round((t_frames_ready - self.slot.round_start_ts) * 1000, 1)
@@ -599,10 +691,17 @@ class Feeder:
             complete_now = False
             with self.lock:
                 if len(self.acc) >= cs and self.t0 is not None:
-                    ahead_s = self.slot.audio_out.depth_samples / self.slot.audio_out.sample_rate
+                    # The audio queue now holds ingress PCM before GPU work.
+                    # Throttle only generated video depth; using audio depth
+                    # here would postpone lip rendering until speech nearly
+                    # finished and defeat the shared start gate.
+                    ahead_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
                     if ahead_s < self.max_ahead_s:
                         output_samples = min(len(self.acc_out), int(round(cs * self.sr_in / self.sr_eng)))
-                        todo = (self.acc[:cs].copy(), cs, self.acc_out[:output_samples].copy())
+                        timeline_start_s = (self.timeline_base_s
+                                            + self.consumed / max(1, self.sr_eng))
+                        todo = (self.acc[:cs].copy(), cs,
+                                self.acc_out[:output_samples].copy(), timeline_start_s)
                         self.acc = self.acc[cs:]
                         self.acc_out = self.acc_out[output_samples:]
                         self.consumed += cs
@@ -621,8 +720,10 @@ class Feeder:
                     self.acc = np.zeros(0, dtype=np.float32)
                     self.acc_out = self.acc_out[output_samples:]
                     self._finish_pending = False
+                    timeline_start_s = (self.timeline_base_s
+                                        + self.consumed / max(1, self.sr_eng))
                     self.consumed += valid
-                    todo = (padded, valid, output_pcm)
+                    todo = (padded, valid, output_pcm, timeline_start_s)
                 if todo is None and self._complete_pending and len(self.acc) == 0:
                     self._complete_pending = False
                     complete_now = True
@@ -639,7 +740,7 @@ class Feeder:
                     self.slot.sink.clear()
                     print("[feeder] slot" + str(self.slot.index)
                           + " real audio arrived, stop idle feed", flush=True)
-                self._gen_chunk(todo[0], todo[1], todo[2])
+                self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])
                 continue
             now = time.time()
             with self.lock:
@@ -832,6 +933,12 @@ def health_snapshot(slot, wake_ts=None):
                                     if ao and ao.generation_p95_ms is not None else None),
         },
         "video_underrun": {"count": sink.underrun_count if sink else 0},
+        "video_sync": {
+            "catchup_events": slot.video_catchup_events,
+            "catchup_frames": slot.video_catchup_frames,
+            "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
+                                if ao else 0),
+        },
     }
 
 

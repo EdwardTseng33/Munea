@@ -4,6 +4,15 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-11 Codex｜聊聊三邊協議對齊與 1.0.62 Build 533 候選（Draft PR #558 · call-path risk）
+
+- **分支／範圍**：`codex/fix-call-audio-state-p0-20260810`；修改 App call control／speaker arbiter、Gateway paired-lease ownership、Voice protocol identity、Avatar 音訊／嘴型時間軸、部署腳本、假手機 Gate、版本與發行權威文件。與其他 active PR 無同檔競爭時才續作。
+- **根因**：1.0.61 實機使用的 App、production Voice、Gateway、Avatar 沒有共同 release handshake；單邊更新可形成舊 Voice＋新 Avatar＋新外殼。Avatar component release 又能提前收整張 paired lease，造成畫面仍在通話、麥克風卻失效；GPU lip queue 同時落後 audible PCM。
+- **已部署服務**：Gateway `munea-call-control-00016-jeh@52a21fb7`、Voice `munea-voice-00103-suy@52a21fb7` 100%，Glows Avatar `tw-06@23fe64ca`；三者 `call_protocol=3`。rollback revisions／worker backups 均保留。
+- **自主驗收**：候選三邊 3/3 PASS（第一聲 `922／828／921ms`），正式預設入口再 1/1 PASS（`890ms`）；Voice underrun、助理有聲區 RTP gap、缺波形、自主重複、意外斷線均 `0`。兩輪非說話區各有單一 `100ms` video PTS gap，保留追蹤但未污染有聲區 Gate。
+- **App／商店權威**：App 候選鎖定 `1.0.62 (Build 533)`，上報 native version／build 並拒絕 Gateway／Voice 協議不符。App Store Connect 唯讀回讀 latest uploaded `1.0.61 (Build 532)`；`WAITING_FOR_REVIEW` 實際是 `1.0.55 (Build 525)`。
+- **Gate**：先跑完整 repository／App call-path 檢查、CI 與 exact commit 對帳，通過後才交 Mac 一次 Archive。Build 533 尚未 packaged／installed，`App E2E pending（Codex ownership）`；不得把假手機或服務健康冒充 exact-build iPhone verified。
+
 ### 2026-08-10 21:07 Claude/蘇菲 🚨 正式 Voice 已切「direct route 預設關」——給 Codex 的實機證據與交接（call-path risk）
 
 > **Edward 21:19 拍板：Codex 主修、蘇菲只給建議。** 本條是交接：我做過的事、實機證據、與建議。之後這條線我不再動手，只回答問題。

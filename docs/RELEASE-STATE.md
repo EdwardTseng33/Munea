@@ -1,10 +1,32 @@
 # Munea Release State
 
+## 2026-08-11 00:49 台灣｜聊聊三邊協議版 1.0.62 Build 533
+
+- **三邊一起換的根因**：1.0.61 實機當時連到舊 production Voice、新 Avatar 與未具版本握手的 App／Gateway，造成開場自我插話、paired lease 被 Avatar component release 提前結束，以及聲音已播放但嘴型 GPU queue 落後。版本字串本身無法證明三邊程式一致。
+- **正式服務已對齊**：Gateway `munea-call-control-00016-jeh@52a21fb7`、Voice `munea-voice-00103-suy@52a21fb7` 均為 100% traffic 且要求 signed `call_protocol=3`；Glows `tw-06` Avatar runtime 為 `23fe64ca`、`call_protocol=3`。component release 不再有權結束整張 paired lease，只有 App 明確掛斷或 45 秒 reaper 可收線。
+- **唯一 App 候選**：`1.0.62 (Build 533)`。App 會帶 native version／build／protocol，並拒絕 Gateway 或 Voice 協議不符；WebView cache identity 為 `20260811-callprotocol-b533-v1062`。App Store Connect 唯讀實查：最新上傳為 `1.0.61 (Build 532)`；目前 `WAITING_FOR_REVIEW` 的版本其實是 `1.0.55`，選用 `1.0.55 (Build 525)`，不是 1.0.61。
+- **自動實聲 Gate**：正式候選三邊 3/3 PASS，第一聲 `922／828／921ms`；Voice underrun、Avatar 助理說話區 RTP gap、缺波形、自主重複、意外斷線皆 `0`。升為正式預設入口後另跑 1/1 PASS，第一聲 `890ms`、同五項皆 `0`，連線保持。兩輪非說話區各觀察到單一 `100ms` video PTS gap，不影響助理有聲區，但保留追蹤。
+- **狀態邊界**：`services deployed + source tested + App 1.0.62 Build 533 not packaged + App E2E pending`。尚未有 exact IPA／安裝版 iPhone 真麥克風與聲畫證據，因此不得稱 fully verified、release-ready 或已送審。
+
+## 2026-08-10 21:18 台灣｜聊聊卡頓／重複／自行斷線 P0 候選
+
+- **失敗實證**：正式 App 診斷自報 `1.0.60`（Build 尚未取得），2026-08-10 約 20:39–20:43 台灣時間走 production Gateway／Voice／GLOWS `tw-06`。觀測到喇叭殘響 RMS `0.051`、僅 2 個 post-duck frame 就被接受為插話；同線臉聲 lead `2652ms` 後 App 自動降級並關閉 Avatar WebRTC，Avatar component release 令整張 paired lease 變成 `stale_lease`，之後使用者失去麥克風且通話自行結束。
+- **正式止血**：`origin/main@9a0308a6`／production Voice `munea-voice-00101-yog@9a0308a6` 已把 Voice→Avatar direct route 預設關閉，回到 App relay。這是服務端 kill switch，不等於 App 故障已永久修好。
+- **App 候選**：`codex/fix-call-audio-state-p0-20260810`。降級只隱藏／靜音 Avatar 並切回本地聲音，不再關閉 paired transport；`speechActive()` 只信 Voice PCM 播放水位，不再讓 Avatar idle 音軌底噪長時間關閉麥克風；iOS 短暫 hidden 改為 5 秒 grace。App 插話邏輯降級為「候選觸發＋duck＋送證據」，不得自行停止 AI；只有 Voice 的 `decide_speaker_evidence()` 可以接受／拒絕，且不採信 App 傳來的 RMS 門檻。
+- **假手機 Gate**：新增 `python scripts/fake_phone_e2e.py`，預設走現役 App relay，取得真 Gateway lease／call token，連 Voice＋Avatar WebRTC，送入固定 PCM16 WAV，核對 ASR 字元召回、第一聲、Voice PCM 供給缺口、Avatar WebRTC 連續性、turn complete 後無自主第二段與連線保持。2026-08-10 首次用既有合成 WAV 做「不計分管線自測」時，現役 staging 在 `turn_complete` 後無新輸入又送出 `319230` bytes 及第二段字幕；假手機因此正確判 FAIL，證明 Gate 能攔下自主重複。
+- **升流量前 canary 實證**：Voice revision `munea-voice-staging-00114-yuf@3ebd91d4`（tag `stg-0810-220410-3ebd91d`）在 0% traffic 階段三次兩階段插話皆 PASS：Voice 裁決 ACK `15–16ms`、AI 停聲 `110–125ms`、送入證據 `200ms`、舊聲外漏 `0B`。canary 也已壓住 routine health 自主第二輪，五次假手機皆為 `unsolicited_audio_bytes=0`、連線保持；通過後才升為預設入口 100%。
+- **間歇卡頓已由假手機重現**：正式入口預設連打三通；2026-08-10 22:33 台灣的三通管線驗證只過 `1/3`。失敗兩通 Voice 來源 queue 均為 `0 underrun`，但 Glows Avatar 內部 `audio_underrun` 分別增加 `3`／`2`，波形缺口最長 `140ms`／`200ms`；WebRTC RTP timeline 無跳號。根因位於 FlashHead 把原始 PCM 等到每塊嘴型 GPU 完成後才推入播放 queue，GPU 區塊抖動會直接抽乾聲音。
+- **Avatar 修復已部署**：`flashhead_engine_core.py` 改成原始 Voice PCM 抵達即進連續音訊 queue，第一批嘴型 ready 後只開一次共同起播門；後續 GPU 慢只允許畫面停格，不得再阻塞聲音。輸入 EOF 立即關閉已解耦音訊，避免自然句尾被誤算 underrun。2026-08-10 已在 Glows `tw-06` 現役 worker 重啟；`flashhead_server.py` SHA-256 `8521f883…d6aa`、`flashhead_engine_core.py` SHA-256 `1bac6c77…ab84`，回退備份保留在 worker。
+- **正式 App 測試入口實證**：staging Voice `munea-voice-staging-00114-yuf@3ebd91d4` 已承接預設 URL 100% 流量；以正式 Gateway lease／call token、App relay、現役 Avatar WebRTC 連打三通，`3/3 PASS`。第一聲 `906／1140／953ms`；Voice 來源 underrun、Avatar 內部 underrun、實際助理說話區段 RTP gap、波形缺字、無輸入自主重複、通話自行斷線均為 `0`。證據：`.tmp/fake-phone-app-entry-final-00114-avatar-3455609d/summary.json`。
+- **自動驗收**：插話／回音、啟動、Avatar direct kill switch、通話儀表、UI 契約、假手機契約與可執行狀態機均 PASS。正式 App 本地播放排程以 80 個 200ms PCM chunk、147ms 到貨間隔重播：`0 underrun`、`0 scheduling gap`；Avatar idle RMS `0.04` 連續模擬 3 分鐘：麥克風守門阻擋 `0` 次。`smoke:no-api`、UI contracts、Voice chain contracts 全綠。
+- **完整套件例外**：`npm run test:launch` 在既有 `test_flashhead_router_core.py` Windows Bash dry-run 失敗；該測試與輸入檔均未被本分支修改，針對性與後續 UI 測試全綠。
+- **狀態**：`Voice staging deployed / live Avatar deployed / App-entry fake-phone 3/3 PASS / App E2E pending`。服務端卡頓、重複與連線保持 Gate 已通過；分支尚未合併、尚未包新 App。既有合成 WAV 只能證明整條聲音管線連續，不能冒充真人聲 ASR 或 exact-build iPhone PASS；仍需以經同意且無個資的固定真人錄音驗 ASR，合併後再由 exact-build iPhone 自動／實機 Gate 驗真麥克風與喇叭。
+
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-08-10 19:18 Asia/Taipei`（production Voice 為 `munea-voice-00099-him@e7fd0159`；App Store review lane 為 `1.0.55 (Build 529) WAITING_FOR_REVIEW`；current source 候選為 Build 530；installed-iPhone lane 尚無 Build 530 證據）
+Snapshot time: `2026-08-11 00:49 Asia/Taipei`（production Voice 為 `munea-voice-00103-suy@52a21fb7`；Gateway 為 `munea-call-control-00016-jeh@52a21fb7`；Avatar 為 `tw-06@23fe64ca`；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；current source 候選為 `1.0.62 (Build 533)`；installed-iPhone lane 尚無 Build 533 證據）
 
-Source reconciliation baseline: `origin/main@e7fd0159`; latest uploaded App Build 529 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
+Source reconciliation baseline: `codex/fix-call-audio-state-p0-20260810`; latest uploaded App Build 532 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
 
 ## 2026-08-10 開場卡頓／假斷線修復
 
@@ -47,9 +69,9 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.55 (Build 530)` | 下一個唯一候選 Build；包含 speaker echo 防誤判、Voice→Avatar 直連與 2026-08-10 正式 Voice revision。WebView cache identity 已更新為 `v1055`，避免舊 App bundle 沿用 Build 529 的語音程式 | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-10 19:18 +08:00 |
-| Latest uploaded App | `1.0.55 (Build 529)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 03:38 UTC；早於 2026-08-10 15:42 +08:00 的 echo 修復與 18:51 +08:00 的直連修復，因此不能代表 current source | App Store Connect API（權威）；Git commit timestamps | 2026-08-10 19:18 +08:00 |
-| App Store selected review lane | `1.0.55 (Build 529)` | `appStoreState=WAITING_FOR_REVIEW`；尚未核准、尚未公開。Build 530 尚未 Archive／上傳／選入審查，不能把 source-ready 當作 submitted | App Store Connect API | 2026-08-10 19:18 +08:00 |
+| Latest source | `1.0.62 (Build 533)` | 下一個唯一候選；App／Gateway／Voice 使用 `call_protocol=3`，App 會拒絕混接舊服務。WebView cache identity 已更新為 `v1062` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-11 00:49 +08:00 |
+| Latest uploaded App | `1.0.61 (Build 532)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 08:35 UTC；不含本輪三邊協議握手，不能代表 current source | App Store Connect API（權威） | 2026-08-11 00:49 +08:00 |
+| App Store selected review lane | `1.0.55 (Build 525)` | `appStoreState=WAITING_FOR_REVIEW`；權威 API 回讀 selected build 為 App 1.0.55 Build 525。1.0.61 Build 532 只有 uploaded／VALID，並未被這個審核版本選用 | App Store Connect API | 2026-08-11 00:49 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
@@ -58,9 +80,9 @@ Maintenance role: `Release / Platform` (`unassigned`)
 | Environment | Service | Serving identity observed from public endpoint | Interpretation | Evidence time |
 |---|---|---|---|---|
 | production | Brain | `1.0.53@2d5afa7d`, `munea-brain-00164-yuw` | `/healthz` 200、`ai.state=ok`。落後 main 的 11 筆全是語音／臉機／測試／App 端檔案，**管家腦自己的程式已是最新**，不需重新部署 | 2026-08-06 02:5X |
-| production | Voice | `1.0.53@7b0bac35`, `munea-voice-00087-suw` | `/healthz` 200。**與 main 同步**（main 只多兩筆純文件）；GPT Live 互動優化與 Avatar slot routing 修正皆在內。舊 App 仍走保留的 0.6 秒熱門檻插話判法，不會壞 | 2026-08-06 02:5X |
-| production | Call Control / Gateway | `munea-call-control-00015-dob` | 服務在；公開 `/health` 無憑證回 401，auth boundary 正常。release identity 未由公開端點證明 | 2026-08-06 02:5X |
-| production | Avatar (RunPod) | Pod `ejs3atc7md425x`，映像 digest `sha256:b5a97299…` | 2 processes／2 seats；02:16 隔離 WebRTC 驗收 a05／a06 皆收到 640×640 影像與音訊。回滾需由前版映像重起 Pod，不是即時切流量 | 2026-08-06 02:16 |
+| production | Voice | `munea-voice-00103-suy@52a21fb7` | 100% traffic；`MUNEA_CALL_PROTOCOL_REQUIRED=3`；正式預設入口假手機第一聲 `890ms`，underrun／重複／意外斷線皆 `0` | 2026-08-11 00:4X |
+| production | Call Control / Gateway | `munea-call-control-00016-jeh@52a21fb7` | 100% traffic；簽發 `call_protocol=3`；component release 不再終止 paired lease | 2026-08-11 00:4X |
+| production | Avatar (Glows) | worker `glows-tw06-resident`，runtime `23fe64ca` | 2 slots；`call_protocol=3`；音訊為 master clock，嘴型追到 audible PCM，跨停頓不重設 timeline | 2026-08-11 00:4X |
 | production | RunPod capacity controller | `munea-runpod-controller-00012-5xt` | `/health` `state=ok`、`mode=active`、`last_error` 空 | 2026-08-06 02:5X |
 | staging | Brain | `1.0.53@89eb2fa7`, `munea-brain-staging-00122-zow` | `/healthz` 200；`89eb2fa7` 在 main 裡但較舊 | 2026-08-06 02:5X |
 | staging | Voice | `1.0.53@f806406c`, `munea-voice-staging-00098-non` | ⚠ 吃流量那版跑的是**未合併的分支版**（`f806406c` 不在 main）；另有較新的 `munea-voice-staging-00102-bap` 已 Ready 但 0% 流量。下次拿測試機驗東西前要先收乾淨 | 2026-08-06 02:5X |

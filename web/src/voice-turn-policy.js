@@ -16,11 +16,14 @@
     // 的產品底線，不能為了擋回音把它犧牲掉——我第一版設 220 就被那條守門擋下來。
     // 取 150ms，再加 110ms duck-confirm；總停聲目標仍在 300ms 內。
     sustainMs: 150,
-    // Duck first, then require fresh post-duck evidence.  Three 48 kHz Web
-    // Audio callbacks are about 42.7ms, so 110ms usually captures 2-3 frames
-    // while keeping the stricter 190 + 110ms opening path within 300ms.
-    duckConfirmMs: 110,
-    duckEvidenceMs: 80,
+    // Duck first, then require fresh post-duck evidence. Three 48 kHz Web
+    // Audio callbacks are about 42.7ms; 128ms captures three frames while
+    // keeping the stricter 172 + 128ms opening path within 300ms.
+    // 兩格（約 85ms）在 iPhone 上仍可能只是喇叭 duck 尚未走完的殘響；正式事故
+    // 2026-08-10 就是在 post_duck_frames=2、RMS=0.051 時被誤接受。至少等三格
+    // 新鮮音訊（約 128ms），正常 150+128ms、開場 172+128ms 仍守在 300ms 內。
+    duckConfirmMs: 128,
+    duckEvidenceMs: 120,
     // 預捲必須「蓋得住」對應的持續人聲門檻，開頭的字才補得回來（2026-07-16 Edward「回長話第一句沒反應」）：
     // 一格 ≈ 42.7ms（2048 樣本 @48kHz）。平常取 12 格 ≈ 512ms 留餘裕；
     // 開場取 18 格 ≈ 768ms，含起音爬升與中途小停頓的餘裕。
@@ -31,8 +34,8 @@
     postSpeechGuardMs: 1800,
     // 開場前兩輪 iPhone 回音消除尚未收斂、回音殘留最強：插話所需持續人聲拉長一級。
     //
-    // 開場仍比平常嚴，但 190 + 100ms duck-confirm 不超過 300ms。
-    openingSustainMs: 190,
+    // 開場仍比平常嚴，但 172 + 128ms duck-confirm 不超過 300ms。
+    openingSustainMs: 172,
   });
 
   function createState(noiseFloor) {
@@ -76,5 +79,7 @@
     return Math.round(detection + stop);
   }
 
-  return { DEFAULTS, createState, thresholdFor, observe, localStopLatencyMs };
+  return {
+    DEFAULTS, createState, thresholdFor, observe, localStopLatencyMs,
+  };
 });

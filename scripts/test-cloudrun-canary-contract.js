@@ -36,6 +36,7 @@ assert.match(verify, /release_metadata_mismatch/);
 assert.match(verify, /revision=\$REVISION/);
 assert.match(verify, /MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT/);
 assert.match(verify, /MUNEA_CALL_CONTROL_REQUIRED/);
+assert.match(verify, /MUNEA_CALL_PROTOCOL_REQUIRED/);
 assert.match(verify, /locale_mode=\$LOCALE_MODE/);
 assert.match(verify, /production:brain.*munea-brain/s);
 assert.match(verify, /production:voice.*munea-voice/s);
