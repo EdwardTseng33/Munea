@@ -2508,3 +2508,11 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **實聲 canary**：Voice `munea-voice-staging-00112-siy`（0%）以真實 5 秒 PCM 經 ASR／Gemini 回話，再 server-to-server 送正式 GLOWS Avatar；實收 Voice reference WAV＋Avatar WebRTC WAV。Avatar ACK 成功、聲音包絡相關 0.9693、reference speech 329 個 20ms frame 中缺音 run=0、最大缺音=0ms；暫存證據 `munea-voice-avatar-7788e4ff-mic`。這證明 direct transport 的實聲連續性，不取代 exact-build iPhone 人耳 Gate。
 - **正式 Avatar 更新與實聲驗收（2026-08-10 18:27 台灣）**：GLOWS `tw-06` 已以 `3e7be525` 的 Avatar 候選檔更新並重啟，兩個 slot 約 47 秒完成冷啟動後 Ready；12 秒真實語音經正式 `/offer`＋`/audio`＋WebRTC 實收，640×640、430 影格、858 音訊包，包絡相關 0.9816，377 個 20ms 有聲 frame 缺音 run=0、最大缺音=0ms。正式 log 顯示語音輪開始為 `acc keep 0 samples`，結束後 session／capacity 正常釋放。此段是伺服器端更新，App 1.0.55 不需為這一段重包；direct Voice 路徑的 App wiring 尚未包入現有 App。
 - **驗收要求**：先完成單元、App call-path、Voice→Avatar 實際 WebRTC 收音與故障 fallback；再提供唯一 commit／版本／production profile 給 Edward 用 Mac 包版。未完成精確 build 真機長通話前不得宣稱完全修好。
+
+### 2026-08-11 Codex / Windows ✅ 1.0.62 回報後 P0 修復＋多輪假手機守門
+
+- **Call-path risk**：production App／Gateway／Voice／Glows Avatar direct audio、回合結束與 provider recovery。
+- **任務與修改範圍**：修正 Voice direct 發布設定、Avatar RTP pacing、Gemini 缺 `turn_complete` 的不斷線復原；修改 `engine/live_voice_server.py`、`engine/voice_turn_completion.py`、Glows 部署／FlashHead sender、`scripts/voice_avatar_direct_e2e.py`、對應測試與發布文件。PR #561 已合併。
+- **正式部署**：Voice `munea-voice-00105-roh@556dfd5d` 100%；Avatar `tw-06` PID `304535@ca614434`。舊 Voice `munea-voice-00103-suy` 保留回滾。App 1.0.62 不需因這次服務端修復重包。
+- **服務端驗收**：production zero-traffic candidate `6/6`、切正式後 `3/3`；另在同一張 lease／同一條 socket 連續送三次完整真人 PCM，三輪第一聲 `547／500／469ms`、ASR `1.0`、source underrun／有聲 RTP gap／缺波形／Avatar underrun／自主重複／意外斷線均 `0`。多輪證據：`.tmp/fake-phone-direct-f97deaba/evidence-prod-serving-556dfd5-multiturn-full/summary.json`。
+- **狀態**：`merged + deployed + server-side multi-turn verified + App E2E pending`。修復後尚無 exact installed iPhone 的真麥克風／喇叭／WebView 證據，不宣稱 fully verified 或 release-ready。

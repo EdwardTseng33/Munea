@@ -62,10 +62,14 @@ assert '"no_unsolicited_repeat"' in SOURCE and '"source_playout"' in SOURCE
 assert '"avatar_reported_underrun"' in SOURCE and '"avatar_health_after"' in SOURCE
 assert '"avatar_webrtc_speech_timing"' in SOURCE
 assert '"avatar_route": metrics.get("avatar_ack") is True' in SOURCE
+assert 'parser.add_argument("--turns", type=int, default=1)' in SOURCE
+assert 'for turn_number in range(1, self.args.turns + 1):' in SOURCE
+assert '"all_turns_completed"' in SOURCE and '"completed_turns"' in SOURCE
+assert 'raise RuntimeError("Voice disconnected after turn %d" % turn_number)' in SOURCE
 assert 'all(metrics["gates"].values())' in SOURCE
 
 WRAPPER = (ROOT / "scripts" / "fake_phone_e2e.py").read_text(encoding="utf-8")
 assert 'sys.argv.extend(["--runs", "3"])' in WRAPPER
 assert '"required_consecutive_runs"' in SOURCE and '"summary.json"' in SOURCE
 
-print("Fake phone contract PASS: real direct PCM, scored human ASR, latency and continuity gates")
+print("Fake phone contract PASS: direct PCM, ASR, latency, continuity and multi-turn state gates")
