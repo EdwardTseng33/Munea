@@ -747,11 +747,23 @@ class Feeder:
                 output_pcm = np.zeros(0, dtype=np.float32)
         if emit_audio:
             self.slot.audio_out.release_playout()
-        if emit_audio and self._round_pending:
-            self._round_pending = False
-            lat_ms = round((t_frames_ready - self.slot.round_start_ts) * 1000, 1)
+        round_marker = None
+        if emit_audio:
+            with self.lock:
+                # PCM ingress may begin a newer semantic round while this older
+                # GPU chunk is between frames-ready and metric recording. An
+                # older chunk must not consume that newer marker (the old code
+                # produced impossible negative first-frame latency). Leave it
+                # pending for the first chunk that actually started after the
+                # marker instead.
+                if self._round_pending and self.slot.round_start_ts <= t_chunk_ready:
+                    round_marker = (self.slot.round_count, self.slot.round_start_ts)
+                    self._round_pending = False
+        if round_marker is not None:
+            round_no, round_start_ts = round_marker
+            lat_ms = round((t_frames_ready - round_start_ts) * 1000, 1)
             self.slot.round_latencies.append(lat_ms)
-            print("[round] slot" + str(self.slot.index) + " #" + str(self.slot.round_count)
+            print("[round] slot" + str(self.slot.index) + " #" + str(round_no)
                   + " first-frame-latency " + str(lat_ms) + "ms", flush=True)
 
     def _loop(self):

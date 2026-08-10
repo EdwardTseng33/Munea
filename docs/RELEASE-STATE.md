@@ -7,6 +7,7 @@
 - **Avatar 根因與修正**：待機 GPU 工作可能在真 PCM 抵達後才完成，把舊待機幀排到新嘴型之前，並錯誤吃掉該輪 first-frame 標記；現在真 PCM 會使待機工作失效、清除舊視覺 queue 且保留原始 PCM 與共同播放時鐘。`/health` 新增負延遲計數與 idle invalidation，正式 Gate 必須確認負延遲為 0。
 - **正式 Gate 抓到並回退**：PR #563 已合併至 `main@414762e6`；第一次 Avatar 部署後，真 PCM 抵達時清空了模型必須維持固定長度的 `audio_dq`，第一輪即觸發 CUDA index out-of-bounds、slot unhealthy。正式三輪 Gate 因 Avatar 無有效語音能量而 FAIL，線上已立即回退至部署前 `flashhead_engine_core.py` SHA-256 `f530a1e8…` 並恢復雙槽 Ready。
 - **Hotfix**：`codex/fix-avatar-idle-context-p0-20260811` 保留固定長度中性 pre-roll，只使晚完成的待機輸出失效；新增回歸斷言，清空歷史的舊寫法會直接失敗。狀態為 `source hotfix tested + Avatar production rollback healthy + package/production synthetic/App E2E pending`。App source 候選仍為 `1.0.63 (Build 534)`；不得稱已修好或可送審。
+- **Hotfix 單輪正式證據**：PR #564 已合併並部署至 Avatar `c2cd4c2a…`；完整 7.2 秒真人錄音單輪 PASS：ASR `1.0`、首聲 `516ms`、Avatar 音訊 `18.78s`、包絡相關 `0.9697`、句中缺音／underrun／重複／斷線皆 `0`，且無 CUDA fault。監測仍出現不可能的 `-112ms` round latency，定位為舊 GPU chunk 在完成後誤吃新 round 起點；`codex/fix-avatar-round-marker-p0-20260811` 使新 marker 等到自己的 chunk 才計時。三輪 Gate 仍 pending。
 
 ## 2026-08-11 04:30 台灣｜1.0.62 回報後的正式聊聊 P0 修復
 
