@@ -3840,6 +3840,10 @@ const Avatar = {
     voiceCallFail('face_stream_stalled', 'no_new_frames_4s_while_audio', { rebuilds: this._faceRebuilds || 0 });
     try { trackProductEvent('face_stream_stalled', { rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
     try { this._diagNote(muneaT('avatar.forceFaceFrozen', '臉凍住(有聲4秒無新幀)'), true); } catch (e) {}
+    // 正式 Gateway 把 Voice+Avatar 綁在同一張 lease。通話中關閉一條仍然 connected
+    // 的 Avatar WebRTC，Avatar 會正確回報 component release，但舊總機會把整通標成
+    // stale_lease，接著 App 就失去麥克風。正式通話只能做保留 transport 的視覺降級。
+    if (CallControl.active) { this._fallbackVoiceOnly('stall_preserve_paired_lease'); return; }
     if ((this._faceRebuilds || 0) >= 2) { this._fallbackVoiceOnly('stall_after_rebuilds'); return; }   // 重建額度用完 → 降級純語音
     this._faceRebuilds = (this._faceRebuilds || 0) + 1;
     this._rebuildFace();
@@ -3859,7 +3863,8 @@ const Avatar = {
       }).catch(() => { try { Avatar._fallbackVoiceOnly('rebuild_failed'); } catch (e) {} });
     }, 800);
   },
-  // 第二次重建仍失敗/仍凍 → 降級成純語音繼續通話（不整通當掉）：同線聲音改走本地播放、收掉臉、立繪待機頂上。
+  // 降級成純語音繼續通話：同線聲音改走本地播放、隱藏活臉、立繪待機頂上。
+  // 注意：正式 paired lease 中不可 close Avatar transport；close 會被總機視為整通釋放。
   _fallbackVoiceOnly(reason) {
     if (this._faceFellBack) return;
     this._faceFellBack = true;
@@ -3874,8 +3879,18 @@ const Avatar = {
       }
     } catch (e) {}
     try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
-    try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
-    try { this.stop(); } catch (e) {}   // 收 WebRTC＋恢復照片層（stop 內含 _fhComposite(false)）
+    try {
+      const _fv = document.getElementById('faceVid');
+      if (_fv) {
+        _fv.muted = true;
+        _fhComposite(false, _fv);
+      }
+      const _bg = document.querySelector('#chat .face-bg');
+      if (_bg) _bg.classList.remove('livevid');
+    } catch (e) {}
+    try { clearInterval(this._faceWatchT); } catch (e) {} this._faceStallMs = 0;
+    // 故意不呼叫 this.stop()：保留 pc/ws/session，直到使用者真的掛斷才釋放 paired lease。
+    voiceCallMark('avatar_transport_preserved', 'pass', { reason: String(reason || '') });
     try { FaceIdle.start(); } catch (e) {}   // 立繪待機動畫頂上，不留凍格
     try { setLocalizedRuntimeHint('audioOnlyFallback'); } catch (e) {}
   },
@@ -4048,6 +4063,7 @@ const LiveVoice = {
     if (!pending) return;
     this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT);
+    this._recentUserPeakRms = Math.max(0, Number(pending.peakRms) || 0);
     try { trackProductEvent('voice_user_speech_recognized', { waitMs: Math.round(performance.now() - pending.startedAt), peakRms: +pending.peakRms.toFixed(4) }); } catch (e) {}
   },
   _takeAssistantAudio(data) {
@@ -4086,6 +4102,7 @@ const LiveVoice = {
     this._bargeSpeechOnsetAt = 0;
     this._duckPreRoll = [];
     this._duckPostRoll = [];
+    this._duckPostRms = [];
     this._duckConfirmState = null;
     this._duckConfirmPassed = false;
   },
@@ -4161,6 +4178,7 @@ const LiveVoice = {
     this._duckPendingAt = performance.now();
     this._duckPreRoll = Array.isArray(preRoll) ? preRoll.slice() : [];
     this._duckPostRoll = [];
+    this._duckPostRms = [];
     this._duckConfirmState = policy ? policy.createState(this._bargeState && this._bargeState.noiseFloor) : null;
     this._duckConfirmPassed = false;
     this._duckAssistantAudio();
@@ -4170,10 +4188,14 @@ const LiveVoice = {
     const confirmMs = policy ? policy.DEFAULTS.duckConfirmMs : 110;
     this._duckConfirmT = setTimeout(function(){
       self._duckPendingAt = 0;
+      const amplitudeConfirmed = policy && policy.confirmsPostDuck
+        ? policy.confirmsPostDuck(self._duckPostRms, threshold, self._recentUserPeakRms)
+        : self._duckPostRoll.length >= 3;
       var stillTalking = self._duckConfirmPassed
         && self._duckPostRoll.length > 0
         && self._duckConfirmState
-        && self._duckConfirmState.speechMs > 0;
+        && self._duckConfirmState.speechMs > 0
+        && amplitudeConfirmed;
       if (stillTalking) {
         const confirmedSpeechMs = self._bargeSpeechOnsetAt
           ? Math.max(0, performance.now() - self._bargeSpeechOnsetAt)
@@ -4566,7 +4588,9 @@ const LiveVoice = {
           // that a nearby user is still speaking.  The old path spliced these
           // frames away and later judged the original speaker-echo pre-roll.
           this._duckPostRoll.push(buf);
+          this._duckPostRms.push(rms);
           while (this._duckPostRoll.length > 6) this._duckPostRoll.shift();
+          while (this._duckPostRms.length > 6) this._duckPostRms.shift();
           const confirmed = policy.observe(
             this._duckConfirmState,
             rms,
@@ -4801,7 +4825,7 @@ const LiveVoice = {
     try { clearTimeout(this._slBoundaryFallbackT); } catch (e) {} this._slBoundaryFallbackT = null;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
-    this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
+    this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._recentUserPeakRms = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
@@ -8673,10 +8697,25 @@ function init() {
     FaceWave.stop();
     showView('home');
   });
-  // 滑掉/切走 App＝自動掛斷（Edward 2026-07-10）：離開畫面就走「結束通話」完整收線（停聲音/停臉/停計時/記點），不讓通話在背景白燒點數
-  const _hangupOnLeave = () => { try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {} };
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _hangupOnLeave(); });
-  window.addEventListener('pagehide', _hangupOnLeave);
+  // iOS WebView 在音訊路由／系統面板切換時可能短暫 hidden。舊版立刻 click 掛斷，會把
+  // 短暫切換誤當成使用者離開。改成穩定背景 5 秒才收線；回前景就取消。
+  let _hangupOnLeaveT = null;
+  const _cancelHangupOnLeave = () => { clearTimeout(_hangupOnLeaveT); _hangupOnLeaveT = null; };
+  const _hangupOnLeave = (source = 'visibility_hidden') => {
+    _cancelHangupOnLeave();
+    if (!(callConnected || callDialing || callPreflightPending)) return;
+    _hangupOnLeaveT = setTimeout(() => {
+      _hangupOnLeaveT = null;
+      if (document.visibilityState !== 'hidden') return;
+      try { trackProductEvent('voice_background_release', { source, hiddenMs: 5000 }); } catch (e) {}
+      try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {}
+    }, 5000);
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') _hangupOnLeave('visibility_hidden');
+    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} }
+  });
+  window.addEventListener('pagehide', () => _hangupOnLeave('pagehide'));
   // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；其餘＝知道了、收卡
   if ($('#busyCardBtn')) $('#busyCardBtn').addEventListener('click', () => {
     const card = $('#busyCard'); const action = card && card.dataset.action;

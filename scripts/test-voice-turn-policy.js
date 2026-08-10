@@ -85,14 +85,34 @@ assert.strictEqual(policy.localStopLatencyMs(openingDetection.state.speechMs, 3.
   'local stop metric must combine detected speech evidence and synchronous stop work');
 
 assert.strictEqual(
-  observeSeriesWith([0.055, 0.055], { sustainMs: policy.DEFAULTS.duckEvidenceMs }).shouldInterrupt,
+  observeSeriesWith([0.055, 0.055, 0.055], { sustainMs: policy.DEFAULTS.duckEvidenceMs }).shouldInterrupt,
   true,
-  'two fresh post-duck voice callbacks must confirm a real interruption',
+  'three fresh post-duck voice callbacks must confirm a real interruption',
 );
 assert.strictEqual(
   observeSeriesWith([0.055, 0.006, 0.006], { sustainMs: policy.DEFAULTS.duckEvidenceMs }).shouldInterrupt,
   false,
   'speaker residue that collapses after ducking must not confirm an interruption',
+);
+assert.strictEqual(
+  policy.confirmsPostDuck([0.051, 0.049], 0.028, 0.1602),
+  false,
+  'the production two-frame 0.051 RMS speaker echo must be rejected',
+);
+assert.strictEqual(
+  policy.confirmsPostDuck([0.051, 0.049, 0.047], 0.028, 0.1602),
+  false,
+  'speaker echo below the learned human baseline must stay rejected even after three frames',
+);
+assert.strictEqual(
+  policy.confirmsPostDuck([0.085, 0.082, 0.08], 0.028, 0.1602),
+  true,
+  'sustained post-duck speech above the learned user baseline must interrupt',
+);
+assert.strictEqual(
+  policy.confirmsPostDuck([0.04, 0.039, 0.038], 0.028, 0),
+  true,
+  'a soft first-turn user must still be able to interrupt before a personal baseline exists',
 );
 
 // 跨層順序契約：本地先停聲；伺服器進入證據緩衝；預捲送完；最後才提交裁決。
@@ -116,6 +136,8 @@ assert(beginBarge.includes("timing_basis: 'audio_callback_estimate'")
   && app.includes('this._bargeSpeechOnsetAt = observedAt - frameMs'),
   'local stop timing must use a monotonic audio-callback onset estimate and label its basis');
 assert(app.includes('this._duckPostRoll.push(buf)')
+  && app.includes('this._duckPostRms.push(rms)')
+  && app.includes('policy.confirmsPostDuck(self._duckPostRms')
   && app.includes('self._duckPreRoll.concat(self._duckPostRoll)')
   && app.includes('self._duckConfirmPassed')
   && app.includes('self._duckPostRoll.length > 0')
@@ -125,4 +147,4 @@ assert(app.includes('_ensureLocalPlaybackGain()')
   && app.includes('s.connect(this._ensureLocalPlaybackGain()'),
   'voice-only fallback must pass through the same duckable playback gain');
 
-console.log('Voice turn policy PASS: echo rejection, sustained barge-in, <=300ms local stop target, two-phase evidence ordering, pre-roll, post-speech guard, opening sustain');
+console.log('Voice turn policy PASS: learned echo rejection, three-frame barge-in, <=300ms local stop target, two-phase evidence ordering, pre-roll, post-speech guard, opening sustain');

@@ -282,5 +282,17 @@ expect(app.includes('(this._faceRebuilds || 0) >= 2'),
   'face stream rebuilds are not capped at two attempts before degrading');
 expect(app.includes("'face_fallback_voice_only'") && app.includes('LiveVoice._sameLineFellBack = true;'),
   'voice-only degradation is missing or leaves same-line audio dead when the face is torn down');
+const voiceOnlyStart = app.indexOf('_fallbackVoiceOnly(reason) {');
+const voiceOnlyEnd = app.indexOf('\n  stop() {', voiceOnlyStart);
+const voiceOnlyFallback = app.slice(voiceOnlyStart, voiceOnlyEnd);
+expect(voiceOnlyStart >= 0 && voiceOnlyEnd > voiceOnlyStart &&
+  !voiceOnlyFallback.includes('try { this.stop();') &&
+  voiceOnlyFallback.includes("voiceCallMark('avatar_transport_preserved'") &&
+  app.includes("if (CallControl.active) { this._fallbackVoiceOnly('stall_preserve_paired_lease'); return; }"),
+  'audio-only degradation can still close the paired Avatar transport and stale the whole call lease');
+expect(app.includes('let _hangupOnLeaveT = null;') &&
+  app.includes("if (document.visibilityState !== 'hidden') return;") &&
+  app.includes("else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio();"),
+  'a transient iOS WebView visibility change can still hang up an active call immediately');
 
 console.log('Voice launch policy PASS: buffering, language gate, tail guard, varied opening, and barge-in');
