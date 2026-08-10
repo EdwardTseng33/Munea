@@ -47,6 +47,10 @@ assert.strictEqual(quiet.shouldInterrupt, false, 'listening noise calibration ca
 assert(policy.DEFAULTS.postSpeechGuardMs >= 1500, 'post-speech guard must cover GLOWS 1.8-2s stalls');
 // 開場插話加嚴：所需持續人聲必須比平常長（回音消除未收斂期）
 assert(policy.DEFAULTS.openingSustainMs > policy.DEFAULTS.sustainMs, 'opening turns must demand longer sustained speech');
+assert(policy.DEFAULTS.sustainMs + policy.DEFAULTS.duckConfirmMs <= 300,
+  'normal barge-in detection plus duck confirmation must stay within 300ms');
+assert(policy.DEFAULTS.openingSustainMs + policy.DEFAULTS.duckConfirmMs <= 300,
+  'opening barge-in detection plus duck confirmation must stay within 300ms');
 
 function observeSeriesWith(levels, options) {
   let state = policy.createState();

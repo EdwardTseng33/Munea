@@ -200,12 +200,12 @@ class WiringContractTest(unittest.TestCase):
         self.assertIn("audience_from_birth_year", src)
         self.assertIn('hour=(context.get("now") or {}).get("hour")', src)
 
-    def test_voice_line_watches_user_captions_and_flushes_at_turn_gap(self):
+    def test_voice_line_watches_user_captions_without_unsolicited_followup(self):
         src = self._read("live_voice_server.py")
         self.assertIn("health_watch_user_text(cid, st)", src)
         self.assertIn("pending_health_cue", src)
-        # 衛教必須排在安全導引之後（安全永遠先講）
-        self.assertIn("衛教排在安全導引之後", src)
+        self.assertIn("healthkb.followup_suppressed", src)
+        self.assertNotIn('pending = pending + [health_cue]', src)
         # 每通上限：不把通話變衛教講座
         self.assertIn("MAX_TOPICS_PER_CALL", src)
         # 2026-07-29：聊聊是主戰場——語音線也要把「這個人是誰、幾點」傳進去，

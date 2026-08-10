@@ -289,35 +289,35 @@ def test_audio_prebuffer_starts_when_first_pcm_arrives():
 
 
 def test_audio_prebuffer_adapts_without_counting_natural_silence():
-    """Fast GPUs start sooner; slow chunks and real starvation add protection."""
+    """Only real starvation raises 200-350 ms; stable turns decay it."""
     original_time = fec.time.time
     clock = [200.0]
     fec.time.time = lambda: clock[0]
     try:
         audio = fec.AudioOutBuffer(
             OUTPUT_SAMPLE_RATE,
-            prebuffer_s=0.5,
-            adaptive_min_s=0.25,
-            adaptive_max_s=0.5,
+            prebuffer_s=0.2,
+            adaptive_min_s=0.2,
+            adaptive_max_s=0.35,
         )
         pcm = np.arange(audio.frame_samples, dtype=np.int16)
 
         for compute_ms in (450.0, 470.0, 480.0):
             audio.observe_generation(compute_ms, 960.0)
         audio.push(pcm)
-        assert audio.last_prebuffer_s == 0.25
+        assert audio.last_prebuffer_s == 0.2
 
-        clock[0] = 200.25
+        clock[0] = 200.2
         assert np.array_equal(audio.pop_frame(), pcm)
-        clock[0] = 200.27
+        clock[0] = 200.22
         audio.pop_frame()
         audio.pop_frame()
         assert audio.underrun_count == 1, "one starvation gap must be one event, not 20ms ticks"
 
-        clock[0] = 200.35
+        clock[0] = 200.30
         audio.push(pcm)
         assert list(audio.underrun_gap_ms)[-1] == 80.0
-        assert round(audio.adaptive_prebuffer_s, 2) == 0.33
+        assert round(audio.adaptive_prebuffer_s, 2) == 0.25
 
         audio.mark_input_complete()
         audio.pop_frame()
@@ -328,7 +328,14 @@ def test_audio_prebuffer_adapts_without_counting_natural_silence():
         for compute_ms in (900.0, 910.0, 920.0):
             audio.observe_generation(compute_ms, 960.0)
         audio.push(pcm)
-        assert 0.44 <= audio.last_prebuffer_s <= 0.46
+        assert audio.last_prebuffer_s == 0.25, "slow compute alone must not add fixed wait"
+
+        # Three genuinely stable turns remove the one underrun increment.
+        for _ in range(3):
+            audio.mark_input_complete()
+            audio.clear()
+            audio.push(pcm)
+        assert audio.adaptive_prebuffer_s == 0.2
 
         audio.clear()
         audio.arm_prebuffer(0.6)
@@ -338,13 +345,13 @@ def test_audio_prebuffer_adapts_without_counting_natural_silence():
         cold_start = fec.AudioOutBuffer(
             OUTPUT_SAMPLE_RATE,
             prebuffer_s=0.7,
-            adaptive_min_s=0.25,
-            adaptive_max_s=0.7,
+            adaptive_min_s=0.2,
+            adaptive_max_s=0.35,
         )
         for compute_ms in (1152.8, 465.0, 430.0, 440.0, 471.3, 450.0, 455.0, 460.0, 468.0):
             cold_start.observe_generation(compute_ms, 960.0)
         assert cold_start.generation_p95_ms == 471.3
-        assert cold_start.adaptive_prebuffer_s == 0.25, (
+        assert cold_start.adaptive_prebuffer_s == 0.2, (
             "one cold-start maximum must not erase the steady-state latency gain"
         )
     finally:

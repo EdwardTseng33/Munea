@@ -54,18 +54,10 @@ _RULES = {
     },
 }
 
-_DEFAULT_HOLD_MS_BY_REASON = {
-    "explicit_hold": 850,
-    "short_filler": 600,
-    "open_punctuation": 450,
-    "trailing_connector": 600,
-}
-_MIN_HOLD_MS_BY_REASON = {
-    "explicit_hold": 650,
-    "short_filler": 350,
-    "open_punctuation": 300,
-    "trailing_connector": 350,
-}
+FAST_TURN_MS = 650
+NORMAL_TURN_MS = 800
+PATIENT_TURN_MS = 1100
+_SLOW_CONTINUATION_MS = 700
 
 
 @dataclass(frozen=True)
@@ -98,28 +90,40 @@ class AdaptiveTurnPolicy:
     def observe_release(self):
         self.releases += 1
 
-    def hold_ms(self, hint):
-        baseline = semantic_hold_ms(hint)
+    def is_slow_caller(self):
+        return (
+            self.continuations >= 2
+            and self.continuation_ewma_ms is not None
+            and self.continuation_ewma_ms >= _SLOW_CONTINUATION_MS
+        )
+
+    def target_ms(self, hint):
+        """Return the total end-of-turn target, not an additive delay."""
+        if not hint or not hint.supported:
+            return NORMAL_TURN_MS
+        if hint.decision == "hold":
+            return PATIENT_TURN_MS
+        if hint.reason == "terminal_punctuation":
+            return FAST_TURN_MS
+        if self.is_slow_caller():
+            return PATIENT_TURN_MS
+        return NORMAL_TURN_MS
+
+    def hold_ms(self, hint, base_silence_ms=FAST_TURN_MS):
+        """Return only the grace still needed after provider VAD has waited.
+
+        Gemini's session-level AAD cannot be changed after every transcript.
+        We therefore run it at the 650 ms floor and gate the first PCM until
+        the selected 650/800/1100 ms *total* target.  This avoids the previous
+        800 ms provider wait plus another 350-850 ms semantic delay.
+        """
         operator_override = os.environ.get("MUNEA_VOICE_SEMANTIC_HOLD_MS", "").strip()
-        if (
-            not baseline
-            or operator_override
-            or not semantic_turn_adaptive_enabled()
-            or self.continuation_ewma_ms is None
-        ):
-            return baseline
-
-        # Leave a small reaction buffer after the learned continuation onset.
-        target = self.continuation_ewma_ms + 160.0
-        weight = min(0.65, 0.2 * self.continuations)
-        adjusted = (baseline * (1.0 - weight)) + (target * weight)
-
-        # Repeated releases indicate that the classifier may be too cautious for
-        # this caller.  Nudge down slowly; never erase the reason-specific floor.
-        release_excess = max(0, self.releases - self.continuations - 1)
-        adjusted -= min(120.0, release_excess * 30.0)
-        floor = _MIN_HOLD_MS_BY_REASON.get(hint.reason, 200)
-        return int(round(max(floor, min(1200.0, adjusted))))
+        if operator_override:
+            return semantic_hold_ms(hint, operator_override)
+        target = self.target_ms(hint)
+        if not semantic_turn_adaptive_enabled() and hint and hint.decision != "hold":
+            target = NORMAL_TURN_MS
+        return max(0, int(target) - max(0, int(base_silence_ms or 0)))
 
     def snapshot(self):
         return {
@@ -130,6 +134,7 @@ class AdaptiveTurnPolicy:
                 if self.continuation_ewma_ms is not None
                 else None
             ),
+            "slow_caller": self.is_slow_caller(),
         }
 
 
@@ -156,10 +161,14 @@ def semantic_turn_adaptive_enabled(value=None):
 
 
 def semantic_hold_ms(hint, value=None):
-    """Return a bounded grace period for a supported high-confidence hint."""
+    """Legacy operator override for additive semantic grace.
+
+    New code should use ``AdaptiveTurnPolicy.hold_ms`` so 650/800/1100 are
+    treated as total targets.  The helper remains for rollback compatibility.
+    """
     if not hint or not hint.supported or hint.decision != "hold":
         return 0
-    default = _DEFAULT_HOLD_MS_BY_REASON.get(hint.reason, 0)
+    default = PATIENT_TURN_MS - FAST_TURN_MS
     if not default:
         return 0
     raw = os.environ.get("MUNEA_VOICE_SEMANTIC_HOLD_MS", "") if value is None else value

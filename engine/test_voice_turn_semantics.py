@@ -87,7 +87,7 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
         hint = semantics.classify_turn_end("我今天其實是因為", "zh-TW")
         self.assertTrue(semantics.semantic_turn_active_enabled("1"))
         self.assertFalse(semantics.semantic_turn_active_enabled("off"))
-        self.assertEqual(600, semantics.semantic_hold_ms(hint))
+        self.assertEqual(450, semantics.semantic_hold_ms(hint))
         self.assertEqual(200, semantics.semantic_hold_ms(hint, "50"))
         self.assertEqual(1200, semantics.semantic_hold_ms(hint, "5000"))
         complete = semantics.classify_turn_end("我今天先休息。", "zh-TW")
@@ -96,11 +96,14 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
     def test_adaptive_policy_learns_per_call_without_storing_text(self):
         hint = semantics.classify_turn_end("我今天其實是因為", "zh-TW")
         policy = semantics.AdaptiveTurnPolicy()
-        self.assertEqual(600, policy.hold_ms(hint))
+        self.assertEqual(1100, policy.target_ms(hint))
+        self.assertEqual(450, policy.hold_ms(hint, 650))
         policy.observe_continuation(900)
         policy.observe_continuation(1000)
         policy.observe_continuation(850)
-        self.assertGreater(policy.hold_ms(hint), 600)
+        normal = semantics.classify_turn_end("我今天有去散步", "zh-TW")
+        self.assertEqual(1100, policy.target_ms(normal))
+        self.assertEqual(450, policy.hold_ms(normal, 650))
         snapshot = policy.snapshot()
         self.assertEqual(3, snapshot["continuations"])
         self.assertNotIn("text", snapshot)
@@ -111,11 +114,20 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
         policy = semantics.AdaptiveTurnPolicy()
         for _ in range(10):
             policy.observe_continuation(5000)
-        self.assertLessEqual(policy.hold_ms(hint), 1200)
+        self.assertEqual(450, policy.hold_ms(hint, 650))
         with mock.patch.dict(os.environ, {"MUNEA_VOICE_SEMANTIC_TURN_ADAPTIVE": "0"}):
-            self.assertEqual(600, policy.hold_ms(hint))
+            self.assertEqual(450, policy.hold_ms(hint, 650))
         with mock.patch.dict(os.environ, {"MUNEA_VOICE_SEMANTIC_HOLD_MS": "250"}):
             self.assertEqual(250, policy.hold_ms(hint))
+
+    def test_total_targets_are_650_800_1100_without_stacking(self):
+        policy = semantics.AdaptiveTurnPolicy()
+        complete = semantics.classify_turn_end("我沒有發燒。", "zh-TW")
+        normal = semantics.classify_turn_end("我沒有發燒但有痰", "zh-TW")
+        unfinished = semantics.classify_turn_end("可是", "zh-TW")
+        self.assertEqual((650, 0), (policy.target_ms(complete), policy.hold_ms(complete, 650)))
+        self.assertEqual((800, 150), (policy.target_ms(normal), policy.hold_ms(normal, 650)))
+        self.assertEqual((1100, 450), (policy.target_ms(unfinished), policy.hold_ms(unfinished, 650)))
 
     def test_live_server_wiring_is_finished_only_and_privacy_safe(self):
         source = (ENGINE_DIR / "live_voice_server.py").read_text(encoding="utf-8")
@@ -126,6 +138,7 @@ class VoiceTurnSemanticsTests(unittest.TestCase):
         self.assertIn('"node.semantic_turn_active_armed"', source)
         self.assertIn('"node.semantic_turn_active_resumed"', source)
         self.assertIn('"node.semantic_turn_adaptive_observed"', source)
+        self.assertIn('st["semantic_hold_last_voice_at"] = last_voice_at', source)
         self.assertNotIn('node.semantic_turn_shadow", transcript=', source)
 
 

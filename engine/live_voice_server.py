@@ -443,9 +443,31 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None):
             _diag(cid, "guardian.alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
-async def guardian_watch(cid, who, text, st, session):
+def _guardian_begin_real_user_turn(st):
+    """Re-arm hidden safety follow-ups only after a new microphone turn."""
+    turn_id = int(st.get("guardian_real_turn_id", 0)) + 1
+    st["guardian_real_turn_id"] = turn_id
+    st["guardian_internal_followup_active"] = False
+    st["guardian_internal_followup_sources"] = ()
+    for field in ("user_flagged", "ai_flagged"):
+        current = st.setdefault(field, set())
+        st[field] = {
+            key for key in current
+            if not (
+                isinstance(key, tuple) and key and isinstance(key[0], int)
+                and key[0] < turn_id - 1
+            )
+        }
+    return turn_id
+
+
+async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=None):
     """背景任務：非同步跑守護腦判讀 + 記錄/告警 +（high/critical）排隊安全導引。絕不擋音訊管線。"""
     try:
+        if turn_id is None:
+            turn_id = int(st.get("guardian_real_turn_id", 0))
+        if allow_cue is None:
+            allow_cue = not (who == "ai" and st.get("guardian_internal_followup_active"))
         result = await asyncio.to_thread(guardian_scan_text, text)
         if not result:
             return
@@ -473,7 +495,7 @@ async def guardian_watch(cid, who, text, st, session):
                     }
                     _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
                     await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result)
-                    key = ("semantic", scat)
+                    key = (turn_id, "semantic", scat)
                     if key not in st["user_flagged"]:
                         st["user_flagged"].add(key)
                         cue = guardian_redirect_cue((scat,), sem_result["risk"], sem_result["responsePolicy"])
@@ -481,13 +503,26 @@ async def guardian_watch(cid, who, text, st, session):
                             st["pending_cues"].append(cue)
             return
         flagged = st["user_flagged"] if who == "user" else st["ai_flagged"]
-        if categories in flagged:
+        key = (turn_id, categories)
+        if key in flagged:
             return
-        flagged.add(categories)
+        flagged.add(key)
         policy = (result or {}).get("responsePolicy") or {}
         _diag(cid, "guardian.hit", who=who, level=level, categories=",".join(categories) or "-",
               protection=risk.get("protectionEvent"), family=policy.get("familyNotificationCandidate"))
-        cue = (guardian_ai_correction_cue if who == "ai" else guardian_redirect_cue)(categories, risk, policy)
+        if not allow_cue:
+            _diag(
+                cid, "guardian.cue_suppressed",
+                reason="hidden_followup_no_recursive_turn",
+                turn=turn_id,
+                sources=",".join(st.get("guardian_internal_followup_sources") or ()) or "-",
+            )
+            return
+        cue = (
+            guardian_ai_correction_cue(categories, risk, policy)
+            if who == "ai"
+            else guardian_redirect_cue(categories, risk, policy)
+        )
         cues = st["pending_cues"]
         if len(cues) < 2:
             cues.append(cue)
@@ -603,11 +638,11 @@ def health_watch_user_text(cid, st):
 
 async def guardian_flush_pending_cue(cid, session, st):
     """在天然的輪替空檔（模型這一輪講完、turn_complete）送出排隊的安全導引，不是插話攔截正在講的這一句。"""
-    pending = st.get("pending_cues") or []
+    guardian_cues = list(st.get("pending_cues") or [])
+    pending = list(guardian_cues)
     st["pending_cues"] = []
     health_cue = st.get("pending_health_cue")
     st["pending_health_cue"] = None
-    health_record = st.get("pending_health_record")
     st["pending_health_record"] = None
     promise_cue = st.get("pending_promise_cue")
     st["pending_promise_cue"] = None
@@ -615,18 +650,27 @@ async def guardian_flush_pending_cue(cid, session, st):
         # 空頭承諾更正排最前面：長輩可能正準備坐下來等，這句要最快講
         pending = [promise_cue] + pending
     if health_cue:
-        pending = pending + [health_cue]  # 衛教排在安全導引之後：安全永遠先講、衛教只是配菜
+        # A routine topic match may be logged, but must not create a second
+        # model turn after the person has stopped speaking.
+        _diag(cid, "healthkb.followup_suppressed", reason="no_new_user_turn")
     if not pending:
         return
+    sources = []
+    if guardian_cues:
+        sources.append("guardian")
+    if promise_cue:
+        sources.append("promise")
+    st["guardian_internal_followup_active"] = True
+    st["guardian_internal_followup_sources"] = tuple(sources)
     try:
         await session.send_client_content(
             turns=types.Content(role="user", parts=[types.Part(text="\n".join(pending))]),
             turn_complete=True,
         )
         _diag(cid, "guardian.cue_sent", count=len(pending))
-        if health_cue and health_record:
-            _record_voice_recommendation(cid, st, *health_record)   # 送出去了才入帳
     except Exception as e:
+        st["guardian_internal_followup_active"] = False
+        st["guardian_internal_followup_sources"] = ()
         _diag(cid, "guardian.cue_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
@@ -1319,6 +1363,7 @@ _VOICE_PAUSE_PROFILES = {
     "responsive": 650,
     "balanced": 800,
     "patient": 1100,
+    "adaptive": 650,
 }
 
 
@@ -1331,7 +1376,7 @@ def _voice_pause_profile(raw):
 def _voice_silence_duration(explicit_ms=None, pause_profile=None):
     """解析 Gemini AAD 的尾端靜音窗，並防止錯誤設定把整通話卡死。
 
-    優先權：單通話毫秒值 → 單通話節奏檔 → 環境毫秒值 → 環境節奏檔 → 800ms。
+    優先權：單通話毫秒值 → 單通話節奏檔 → 環境毫秒值 → 環境節奏檔 → 650ms。
     毫秒值只接受 400~2000；超界或格式錯誤就退到下一層。這裡只做可控的
     pause patience，沒有宣稱能取代語意式 turn detection。
     """
@@ -1359,7 +1404,7 @@ def _voice_silence_duration(explicit_ms=None, pause_profile=None):
     env_profile = _voice_pause_profile(os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
     if env_profile:
         return _VOICE_PAUSE_PROFILES[env_profile]
-    return _VOICE_PAUSE_PROFILES["balanced"]
+    return _VOICE_PAUSE_PROFILES["adaptive"]
 
 
 def _voice_sensitivity_param(explicit, env_name, default_value, high_value, low_value):
@@ -1801,8 +1846,14 @@ def _new_call_state():
           # 包含全靜音）起算，量到的永遠是 7-38 毫秒＝等於沒在量。反應快慢要從
           # 「他講完」到「她出聲」，所以改用這個。
           "last_voice_at": 0.0,
+          "provider_silence_ms": voice_turn_semantics.FAST_TURN_MS,
+          "voice_turn_seq": 0, "voice_turn_id": 0,
+          "voice_turn_vad_pending": False, "voice_turn_vad_stop_at": 0.0,
+          "voice_turn_target_ms": voice_turn_semantics.NORMAL_TURN_MS,
           "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
+          "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
+          "guardian_internal_followup_sources": (),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
           "health_topics_sent": set(), "pending_health_cue": None, "pending_promise_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
 
@@ -1821,6 +1872,7 @@ def _new_call_state():
           "semantic_turn_policy": voice_turn_semantics.AdaptiveTurnPolicy(),
           "semantic_hold_until": 0.0, "semantic_hold_reason": None,
           "semantic_hold_started_at": 0.0, "semantic_hold_ms": 0,
+          "semantic_hold_last_voice_at": 0.0,
           "semantic_hold_resumed": False, "semantic_hold_voice_ms": 0.0,
           "semantic_hold_outcome_recorded": False,
           "semantic_hold_adaptation_recorded": False,
@@ -1916,9 +1968,15 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         observed_at = now if now is not None else time.monotonic()
         delay_ms = None
         if continued:
-            started_at = st.get("semantic_hold_started_at", 0.0)
-            if started_at:
-                delay_ms = max(0, round((observed_at - started_at) * 1000))
+            # Measure the caller's actual pause from their last audible voice,
+            # not merely the post-VAD grace window.  The latter is at most
+            # 450 ms, so it could never satisfy the 700 ms slow-caller rule.
+            pause_started_at = (
+                st.get("semantic_hold_last_voice_at", 0.0)
+                or st.get("semantic_hold_started_at", 0.0)
+            )
+            if pause_started_at:
+                delay_ms = max(0, round((observed_at - pause_started_at) * 1000))
             policy.observe_continuation(delay_ms or st.get("semantic_hold_ms") or 0)
         else:
             policy.observe_release()
@@ -1940,6 +1998,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         st["semantic_hold_reason"] = None
         st["semantic_hold_started_at"] = 0.0
         st["semantic_hold_ms"] = 0
+        st["semantic_hold_last_voice_at"] = 0.0
         st["semantic_hold_resumed"] = False
         st["semantic_hold_voice_ms"] = 0.0
 
@@ -2161,9 +2220,24 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         latency_ms, basis = reply_latency_ms(
             time.monotonic(), st.get("last_voice_at") or 0.0, st["last_in"])
         st["await_first"] = False
-        _diag(cid, "node.first_audio", latency_ms=latency_ms, source=source, basis=basis)
+        now = time.monotonic()
+        turn_id = int(st.get("voice_turn_id") or 0)
+        vad_stop_at = float(st.get("voice_turn_vad_stop_at") or 0.0)
+        after_vad_ms = round(max(0.0, now - vad_stop_at) * 1000) if vad_stop_at else None
+        _diag(
+            cid, "node.first_audio", latency_ms=latency_ms, source=source,
+            basis=basis, turn=turn_id, after_vad_ms=after_vad_ms,
+        )
         try:
-            await ws.send(json.dumps({"type": "diag", "firstAudioMs": latency_ms}))
+            await ws.send(json.dumps({
+                "type": "voice_turn_timing",
+                "stage": "voice_first_pcm",
+                "turn": turn_id,
+                "afterLastVoiceMs": latency_ms,
+                "afterVadMs": after_vad_ms,
+                "basis": basis,
+                "source": source,
+            }))
         except Exception:
             pass
 
@@ -2698,6 +2772,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         if it_pre and getattr(it_pre, "text", None):
                             if st.get("user_turn_started_at") is None:
                                 st["user_turn_started_at"] = time.monotonic()
+                                _guardian_begin_real_user_turn(st)
+                            st["voice_turn_vad_pending"] = True
                             current_profile = (
                                 st.get("voice_locale_profile")
                                 or voice_locale_session.current_profile()
@@ -2733,10 +2809,15 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         if (
                             it_pre
                             and getattr(it_pre, "finished", False)
-                            and st.get("semantic_turn_text")
+                            and st.get("voice_turn_vad_pending")
                         ):
-                            semantic_text = st.pop("semantic_turn_text")
+                            st["voice_turn_vad_pending"] = False
+                            semantic_text = st.pop("semantic_turn_text", "")
                             st["semantic_turn_text"] = ""
+                            vad_stop_at = time.monotonic()
+                            st["voice_turn_seq"] = int(st.get("voice_turn_seq") or 0) + 1
+                            st["voice_turn_id"] = st["voice_turn_seq"]
+                            st["voice_turn_vad_stop_at"] = vad_stop_at
                             _semantic_shadow = voice_turn_semantics.semantic_turn_shadow_enabled()
                             _semantic_active = voice_turn_semantics.semantic_turn_active_enabled()
                             if _semantic_shadow or _semantic_active:
@@ -2778,15 +2859,36 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                             chars=len(semantic_text),
                                             provider_finished=True,
                                         )
-                                    baseline_hold_ms = voice_turn_semantics.semantic_hold_ms(hint)
                                     policy = _semantic_policy()
-                                    hold_ms = policy.hold_ms(hint)
+                                    provider_ms = int(
+                                        st.get("provider_silence_ms")
+                                        or voice_turn_semantics.FAST_TURN_MS
+                                    )
+                                    target_ms = policy.target_ms(hint)
+                                    hold_ms = policy.hold_ms(hint, provider_ms)
+                                    st["voice_turn_target_ms"] = target_ms
+                                    last_voice_at = float(st.get("last_voice_at") or 0.0)
+                                    after_last_voice_ms = (
+                                        round(max(0.0, vad_stop_at - last_voice_at) * 1000)
+                                        if last_voice_at else None
+                                    )
+                                    await ws.send(json.dumps({
+                                        "type": "voice_turn_timing",
+                                        "stage": "vad_stop",
+                                        "turn": st["voice_turn_id"],
+                                        "afterLastVoiceMs": after_last_voice_ms,
+                                        "providerSilenceMs": provider_ms,
+                                        "targetMs": target_ms,
+                                        "class": hint.reason,
+                                        "slowCaller": policy.is_slow_caller(),
+                                    }))
                                     if hold_ms and _semantic_active:
                                         hold_started_at = time.monotonic()
                                         st["semantic_hold_until"] = hold_started_at + hold_ms / 1000.0
                                         st["semantic_hold_reason"] = hint.reason
                                         st["semantic_hold_started_at"] = hold_started_at
                                         st["semantic_hold_ms"] = hold_ms
+                                        st["semantic_hold_last_voice_at"] = last_voice_at
                                         st["semantic_hold_resumed"] = False
                                         st["semantic_hold_voice_ms"] = 0.0
                                         st["semantic_hold_outcome_recorded"] = False
@@ -2798,7 +2900,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                             "node.semantic_turn_active_armed",
                                             reason=hint.reason,
                                             hold_ms=hold_ms,
-                                            baseline_hold_ms=baseline_hold_ms,
+                                            total_target_ms=target_ms,
+                                            provider_silence_ms=provider_ms,
                                             adaptive_samples=(
                                                 adaptive["continuations"] + adaptive["releases"]
                                             ),
@@ -2835,7 +2938,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["blocked_output_text"] = (st["blocked_output_text"] + output_text)[-600:]
                             if (
                                 output_locale == "zh-TW"
-                                and localization.looks_like_taiwanese_hokkien(output_text)
+                                and localization.looks_like_taiwanese_hokkien_output(
+                                    st["blocked_output_text"]
+                                )
                             ):
                                 await _arm_language_block("model_output")
                             elif (
@@ -2960,7 +3065,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
-                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
+                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                                    cid, "ai", st["ai_buf"], st, session,
+                                    turn_id=st.get("guardian_real_turn_id", 0),
+                                    allow_cue=not st.get("guardian_internal_followup_active"),
+                                )))
                         it = getattr(sc, "input_transcription", None)
                         if it and getattr(it, "text", None):
                             user_text = localization.reconcile_context_transcription(
@@ -2970,7 +3079,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             )
                             await ws.send(json.dumps({"type": "caption", "who": "user", "text": user_text}))
                             st["user_buf"] = (st["user_buf"] + user_text)[-200:]
-                            st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
+                            st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                                cid, "user", st["user_buf"], st, session,
+                                turn_id=st.get("guardian_real_turn_id", 0), allow_cue=True,
+                            )))
                             health_watch_user_text(cid, st)  # B2 衛教：同一份字幕順手比對題庫（同步、零模型呼叫）
                         if getattr(sc, "interrupted", False) and not st.get("language_block"):
                             st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
@@ -2984,8 +3096,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     st["face_ws"] = None
                         if getattr(sc, "turn_complete", False):
                             ms = round(turn_out / (24000 * 2) * 1000)
-                            # max_gap_ms＝這一輪送聲音最久的一次空檔。播放端有 600-1100 毫秒
-                            # 的緩衝，所以偶爾一兩百毫秒沒關係；持續衝到接近或超過緩衝，
+                            # max_gap_ms＝這一輪送聲音最久的一次空檔。Avatar 播放端現在只有
+                            # 200-350 毫秒動態緩衝；持續衝到接近或超過緩衝，
                             # 就是使用者會聽到「卡一下／吃掉一個字」的那個瞬間，可以拿這個值追。
                             _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms,
                                   max_gap_ms=round(turn_max_gap_ms))
@@ -3062,8 +3174,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
                             st["user_buf"] = ""
                             st["ai_buf"] = ""
-                            st["user_flagged"] = set()
-                            st["ai_flagged"] = set()
+                            st["guardian_internal_followup_active"] = False
+                            st["guardian_internal_followup_sources"] = ()
                             if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if st.get("locale_reconnect_requested"):
@@ -3351,15 +3463,16 @@ async def handle(ws):
                 pause_profile=pause_profile,
                 resumption_handle=resumption_handle,
                 locale_profile=voice_locale_session.current_profile())
+            aad = cfg.realtime_input_config.automatic_activity_detection
+            st["provider_silence_ms"] = int(aad.silence_duration_ms)
             if first_connect:
-                aad = cfg.realtime_input_config.automatic_activity_detection
                 env_silence = os.environ.get("MUNEA_VOICE_SILENCE_MS", "").strip()
                 env_profile = _voice_pause_profile(
                     os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
                 pause_label = pause_profile
                 if not pause_label and env_silence == str(aad.silence_duration_ms):
                     pause_label = "custom"
-                pause_label = pause_label or env_profile or "balanced"
+                pause_label = pause_label or env_profile or "adaptive"
                 _diag(
                     cid,
                     "turn_taking_config",

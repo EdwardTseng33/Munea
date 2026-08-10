@@ -41,8 +41,8 @@ expect(app.includes('const base = (this._playbackTurn || 0) <= 1 ? 0.48 : 0.22')
   'first-turn playback buffer is not larger than steady-state buffering');
 expect(app.includes('Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08)'),
   'playback buffer does not adapt after an underrun');
-expect(app.includes('const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100 : 600'),
-  'same-line playback still blocks later user turns with the opening delay');
+expect(app.includes('Math.max(200, Math.min(350,') && app.includes('Number(Avatar._lastPrebufferMs)'),
+  'same-line playback accounting is not bounded to the measured 200-350ms Avatar prebuffer');
 expect(app.includes('const tailMs = sameLine ? 120 : 400'),
   'same-line speech tail does not release the microphone promptly');
 expect(app.includes('function preDialConnWarm') && app.includes("preDialConnWarm('boot')") && app.includes("preDialConnWarm('resume')"),
@@ -144,7 +144,7 @@ expect(voiceServer.includes('st["client_barge_in"] = True'),
 expect(voiceServer.includes('{"type": "barge_in_ack", "accepted": True') &&
   voiceServer.includes('{"type": "barge_in_ack", "accepted": False'),
   'local barge-in does not receive an explicit accepted/rejected acknowledgement');
-expect(voiceServer.includes('barge_cancelled and source in ("model_output", "mandarin_pronunciation")'),
+expect(voiceServer.includes('barge_cancelled and source == "model_output"'),
   'a cancelled model turn can replay language-correction audio after barge-in');
 expect(voiceServer.includes('localization.contains_unstable_mandarin_speech'),
   'user-verified Mandarin mispronunciations do not trigger safe TTS rewriting');
@@ -181,12 +181,13 @@ expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
 expect(avatarServer.includes('self.slot.audio_out.playout_held()'),
   'Avatar video can start consuming frames before the audio prebuffer releases');
-expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.6"') &&
+expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.35"') &&
        avatarServer.includes('OPENING_PREBUFFER_S = max(') &&
        avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
   'the first Avatar turn does not get the configurable post-PCM warmup buffer');
 expect(avatarServer.includes('MUNEA_FH_AUDIO_PREBUFFER_MIN_S') &&
        avatarServer.includes('MUNEA_FH_AUDIO_PREBUFFER_MAX_S') &&
+       avatarServer.includes('min(0.35') &&
        avatarServer.includes('adaptive_min_s=AUDIO_PREBUFFER_MIN_S') &&
        avatarServer.includes('adaptive_max_s=AUDIO_PREBUFFER_MAX_S'),
   'steady Avatar turns do not use the bounded adaptive prebuffer');

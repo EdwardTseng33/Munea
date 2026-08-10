@@ -121,32 +121,25 @@ WAV2VEC_DIR = os.environ.get(
 )
 
 SR_IN, SR_ENG = 24000, 16000
-# 2026-07-11 斷續根治（官方體檢：零起播緩衝→斷糧）：開口前先墊 0.5s、生成允許往前衝到 1.5s 存貨。
-# 原理：4090 生成比即時快~1.9倍，拔掉「卡即時節奏」的閘門後會自動囤到上限、形成抖動緩衝墊；
-# 偶爾一塊做慢也不會見底（斷糧）。代價＝首句慢約 0.5s（一次性、非累積），換整段不再斷斷續續。
-AUDIO_PREBUFFER_S = max(0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.5")))
-# 4090 的實測 chunk p95 明顯低於 960ms 播放預算時，不需要每一句固定多等
-# 0.5s。從 0.25s 起步，依 GPU rolling p95 自動補到最多 0.5s；若真的發生
-# mid-turn 斷糧，下一輪再立即增加 80ms。兩端仍共用同一個 start gate，嘴聲同步不變。
+# 每輪從 0.2s 起播；只有真的發生 mid-turn underrun 才逐級加到 0.35s。
+# GPU p95 繼續量測，但不再把偶發慢塊轉成每一句固定等待。
+AUDIO_PREBUFFER_S = min(
+    0.35, max(0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.2")))
+)
+# 兩端仍共用同一個 start gate，嘴聲同步不變；連續三輪穩定就逐步退回 0.2s。
 AUDIO_PREBUFFER_MIN_S = max(
-    0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.25"))
+    0.2, min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.2")))
 )
 AUDIO_PREBUFFER_MAX_S = max(
     AUDIO_PREBUFFER_MIN_S,
-    float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MAX_S", str(AUDIO_PREBUFFER_S))),
+    min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MAX_S", "0.35"))),
 )
-# 2026-08-08 Edward 真機：「文字先出來，聲音跟嘴巴過 1~2 秒才動」。
-# 這一格就是其中一段：開場比平常多囤一倍（1.0s vs 0.5s）才開口。
-# 那是 7/11 防斷音時給的額外保險，但它只在**第一句**收費，而第一句正是使用者
-# 盯著畫面等的那句——感受被放大到最痛。
-# 改成 0.6：仍比零緩衝安全（4090 生成比即時快約 1.9 倍，0.6s 存貨足夠吸收一塊做慢），
-# 但把等待砍掉 0.4 秒。**嘴聲同步完全不受影響**——聲音與影像仍走同一條線、
-# 同一個播放器，這裡調的只是「開口前先囤多少」，不是把兩者拆開（Edward 8/8 定調：
-# 無論如何嘴巴跟聲音要同時動，後續優化都必須守住）。
+# 開場最多先用 0.35s，避免冷線零緩衝；後續一樣由真 underrun 決定。
+# 聲音與影像仍由同一個 start gate 一起釋放，嘴聲同步不變。
 # 真機若聽到開場斷音，機器上設 MUNEA_FH_OPENING_PREBUFFER_S=1.0 即可一鍵退回。
 OPENING_PREBUFFER_S = max(
     AUDIO_PREBUFFER_S,
-    float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.6")),
+    min(0.35, float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.35"))),
 )
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
@@ -801,15 +794,32 @@ class FlashHead:
                 return
             await ws.accept()
             print("[audio] connected session=" + session[:8] + " slot" + str(slot.index), flush=True)
+            audio_turn = 0
+            first_pcm_pending = False
             try:
                 while True:
                     msg = await ws.receive()
                     if msg.get("bytes") is not None:
                         slot.feeder.push24k(msg["bytes"])
+                        if first_pcm_pending:
+                            first_pcm_pending = False
+                            await ws.send_json({
+                                "type": "avatar_pcm_received",
+                                "turn": audio_turn,
+                                "bytes": len(msg["bytes"]),
+                                "prebufferMs": round(slot.audio_out.last_prebuffer_s * 1000),
+                            })
                     elif msg.get("text") == "reset":
                         slot.feeder.reset()
                     elif msg.get("text") == "finish":
                         slot.feeder.finish()
+                    elif str(msg.get("text") or "").startswith("turn:"):
+                        try:
+                            audio_turn = max(0, int(str(msg["text"]).split(":", 1)[1]))
+                            first_pcm_pending = audio_turn > 0
+                        except (TypeError, ValueError):
+                            audio_turn = 0
+                            first_pcm_pending = False
                     elif msg.get("type") == "websocket.disconnect":
                         break
             except WebSocketDisconnect:

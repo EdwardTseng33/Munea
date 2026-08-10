@@ -94,7 +94,7 @@ class VoiceThinkingLevelLiveConfigTests(unittest.TestCase):
         deep = voice.live_config(char="寧寧", name="寧寧")
         for cfg in (base, deep):
             aad = cfg.realtime_input_config.automatic_activity_detection
-            self.assertEqual(aad.silence_duration_ms, 800)
+            self.assertEqual(aad.silence_duration_ms, 650)
             self.assertEqual(aad.prefix_padding_ms, 300)
         self.assertEqual(base.speech_config.language_code,
                          deep.speech_config.language_code)

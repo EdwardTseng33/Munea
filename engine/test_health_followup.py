@@ -222,14 +222,14 @@ class VoiceLineWiringTest(unittest.TestCase):
         self.assertIn('st["pending_health_record"] = (ids[0], said, _prof, _hour)', voice)
         self.assertIn('"/voice/health-recommended"', voice)
 
-    def test_nothing_is_booked_until_she_actually_says_it(self):
-        """提示是排在下一個輪替空檔送的；電話先掛就等於沒講過，記了會問空氣。"""
+    def test_routine_match_does_not_create_or_book_a_second_spoken_turn(self):
+        """例行健康命中只留診斷，不得在使用者停下後自己再講一輪或記成已建議。"""
         voice = self._read("live_voice_server.py")
-        self.assertIn("if health_cue and health_record:", voice)
-        self.assertIn("_record_voice_recommendation(cid, st, *health_record)", voice)
-        # 記帳只能發生在「已經送出去」之後
-        after_send = voice.split('_diag(cid, "guardian.cue_sent"', 1)[1]
-        self.assertIn("_record_voice_recommendation(cid, st, *health_record)", after_send)
+        self.assertIn('if health_cue:', voice)
+        self.assertIn('"healthkb.followup_suppressed"', voice)
+        flush = voice.split("async def guardian_flush_pending_cue", 1)[1].split(
+            "def _capture_call_turns", 1)[0]
+        self.assertNotIn("_record_voice_recommendation", flush)
         brain = self._read("server.py")
         self.assertIn("def voice_health_recommended_response(data)", brain)
         self.assertIn("health_followup.record_recommendation(person_id, topic_id, solutions)", brain)

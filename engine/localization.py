@@ -931,6 +931,26 @@ def looks_like_taiwanese_hokkien(text):
     return weak_hits >= 2
 
 
+def looks_like_taiwanese_hokkien_output(text):
+    """Require phrase-level evidence before replaying streamed model output.
+
+    Output transcription arrives in short fragments. A single marker can be
+    an unstable partial transcription; blocking that fragment makes the model
+    regenerate and users hear the whole answer again.
+    """
+    if taiwanese_hokkien_release_enabled():
+        return False
+    value = str(text or "")
+    if any(phrase in value for phrase in _TAIWANESE_HOKKIEN_STRONG_PHRASES):
+        return True
+    marker_hits = {
+        token for token in _TAIWANESE_HOKKIEN_EXCLUSIVE_MARKERS if token in value
+    }
+    if len(marker_hits) >= 2 or _TAIWANESE_HOKKIEN_CONTEXT_RE.search(value):
+        return True
+    return bool(re.search(r"(?:我|你|伊).{0,2}咧.{0,2}(?:等|講|食|做|看|想|去|來)", value))
+
+
 def requires_taiwanese_hokkien_fallback(text):
     return requests_taiwanese_hokkien(text) or looks_like_taiwanese_hokkien(text)
 
