@@ -4,10 +4,11 @@
 
 - **失敗實證**：正式 App 診斷自報 `1.0.60`（Build 尚未取得），2026-08-10 約 20:39–20:43 台灣時間走 production Gateway／Voice／GLOWS `tw-06`。觀測到喇叭殘響 RMS `0.051`、僅 2 個 post-duck frame 就被接受為插話；同線臉聲 lead `2652ms` 後 App 自動降級並關閉 Avatar WebRTC，Avatar component release 令整張 paired lease 變成 `stale_lease`，之後使用者失去麥克風且通話自行結束。
 - **正式止血**：`origin/main@9a0308a6`／production Voice `munea-voice-00101-yog@9a0308a6` 已把 Voice→Avatar direct route 預設關閉，回到 App relay。這是服務端 kill switch，不等於 App 故障已永久修好。
-- **App 候選**：`codex/fix-call-audio-state-p0-20260810`。降級只隱藏／靜音 Avatar 並切回本地聲音，不再關閉 paired transport；插話改為至少 3 個新鮮 post-duck frame，並用上一輪真人 RMS 學習回音門檻；`speechActive()` 只信 Voice PCM 播放水位，不再讓 Avatar idle 音軌底噪長時間關閉麥克風；iOS 短暫 hidden 改為 5 秒 grace。
-- **自動驗收**：插話／回音、啟動、Avatar direct kill switch、通話儀表、UI 契約與可執行狀態機均 PASS。正式 App 本地播放排程以 80 個 200ms PCM chunk、147ms 到貨間隔重播：`0 underrun`、`0 scheduling gap`；Avatar idle RMS `0.04` 連續模擬 3 分鐘：麥克風守門阻擋 `0` 次。
+- **App 候選**：`codex/fix-call-audio-state-p0-20260810`。降級只隱藏／靜音 Avatar 並切回本地聲音，不再關閉 paired transport；`speechActive()` 只信 Voice PCM 播放水位，不再讓 Avatar idle 音軌底噪長時間關閉麥克風；iOS 短暫 hidden 改為 5 秒 grace。App 插話邏輯降級為「候選觸發＋duck＋送證據」，不得自行停止 AI；只有 Voice 的 `decide_speaker_evidence()` 可以接受／拒絕，且不採信 App 傳來的 RMS 門檻。
+- **假手機 Gate**：新增 `python scripts/fake_phone_e2e.py`，預設走現役 App relay，取得真 Gateway lease／call token，連 Voice＋Avatar WebRTC，送入已知逐字稿的真人 PCM16 WAV，核對 ASR 字元召回、第一聲、Voice PCM 供給缺口、Avatar WebRTC 連續性、turn complete 後無自主第二段與連線保持。2026-08-10 首次用既有合成 WAV 做「不計分管線自測」時，現役 staging 在 `turn_complete` 後無新輸入又送出 `319230` bytes 及第二段字幕；假手機因此正確判 FAIL。branch source 已有 routine health follow-up suppression，但尚待部署無流量 staging canary 後重打。
+- **自動驗收**：插話／回音、啟動、Avatar direct kill switch、通話儀表、UI 契約、假手機契約與可執行狀態機均 PASS。正式 App 本地播放排程以 80 個 200ms PCM chunk、147ms 到貨間隔重播：`0 underrun`、`0 scheduling gap`；Avatar idle RMS `0.04` 連續模擬 3 分鐘：麥克風守門阻擋 `0` 次。`smoke:no-api`、UI contracts、Voice chain contracts 全綠。
 - **完整套件例外**：`npm run test:launch` 在既有 `test_flashhead_router_core.py` Windows Bash dry-run 失敗；該測試與輸入檔均未被本分支修改，針對性與後續 UI 測試全綠。
-- **狀態**：`tested / App E2E pending`。尚未合併、尚未包版、尚未送審。Chrome 外掛診斷顯示本機 native-host manifest 缺失，無法用已登入 Chrome 代替 iPhone Gate；也不能把桌面／合成／文字稿證據宣稱成 iPhone 真實聽感通過。
+- **狀態**：`tested / live fake-phone candidate pending / App E2E pending`。尚未合併、尚未包版、尚未送審。既有合成 WAV 只能證明假手機管線工作，不能冒充真人聲 PASS；需放入一份經同意、無個資、固定逐字稿的真人錄音，且無流量 staging canary 全門通過後，才輪到 exact-build iPhone Gate。
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
