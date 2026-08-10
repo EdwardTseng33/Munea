@@ -3,9 +3,9 @@
 > Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.54 (Build 524)`; version and build number read directly from App Store Connect (read-only), not estimated. Build 524 was uploaded 2026-08-01 09:41 UTC and is the binary now `WAITING_FOR_REVIEW`. Main has advanced 35 commits since that upload (including the GPT Live interaction work), so Build 524's evidence does not carry to current source. Run `node scripts/appstore/asc-read-release-state.mjs` before packaging.
+> **Current source:** `1.0.55 (Build 530)`; the next unique candidate containing the 2026-08-10 speaker-echo and Voice-to-Avatar continuity fixes. App Store Connect currently has `1.0.55 (Build 529)` in `WAITING_FOR_REVIEW`; Build 529 was uploaded before these fixes and cannot certify current source. Build 530 still needs Mac Archive, export, upload, exact-IPA identity checks, and installed-App acceptance.
 >
-> **Latest uploaded App:** `1.0.44 (Build 492)`; Apple processing completed and the Build was selected and saved for 1.0.44 at 17:31. It has not been submitted, approved or released.
+> **Latest uploaded App:** `1.0.55 (Build 529)`; App Store Connect reports `VALID`, uploaded 2026-08-10 03:38 UTC, and the 1.0.55 version is `WAITING_FOR_REVIEW`. It predates the complete voice fixes and must not certify Build 530.
 >
 > **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000. Existing App Store Product IDs stay unchanged.
 >
@@ -27,7 +27,7 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source | Current `1.0.44` source has advanced beyond the frozen Build 492 commit `72a0bd46`; no Archive／IPA evidence applies to the post-package source | `merged evidence; next Build not packaged` |
+| App source | Current `1.0.55 (Build 530)` metadata and cache identity are aligned; Build 529 predates the complete voice fixes, and no Archive／IPA evidence yet applies to Build 530 | `tested source; Build 530 not packaged` |
 | Uploaded App | `1.0.44 (Build 492)` was uploaded, processed and selected for 1.0.44; Edward iPhone install／launch／version readback pass; App E2E remains pending | `selected and installed, not submitted; human call gate pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |

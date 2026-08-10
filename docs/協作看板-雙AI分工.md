@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-10 Codex｜App 1.0.55 Build 530 語音修復候選（call-path risk）
+
+- **分支／範圍**：`codex/app-1.0.55-build530-20260810`；只調整 `package*.json`、`web/src/version.js`、`web/index.html`、Xcode version/build 與 current release authority 文件，不改 Voice／Avatar／Gateway 邏輯。
+- **原因**：App Store Connect 的 Build 529 於 03:38 UTC 上傳，早於同日 speaker echo 防誤判與 Voice→Avatar 直連合併，確定沒有完整修復。Build 530 是下一個唯一候選，WebView cache identity 一併升為 `v1055`。
+- **服務證據**：production Voice `munea-voice-00099-him`（`e7fd0159`）已於 19:12 +08:00 切 100%；正式 Gateway→Voice→GLOWS Avatar 兩輪實際媒體 gate 均為 missing speech runs `0`、max missing `0ms`，direct status ready、Avatar ACK true。
+- **Gate**：repository release checks 與 PR CI 通過後才交 Mac Archive；Build 530 尚未 Archive／上傳／安裝，不能沿用 Build 529 證據，`App E2E pending` 由 Codex 持續追蹤，不把使用者當測試員。
+
 ### 2026-08-10 Codex · P0 接通閃屏後誤顯忙線熱修（正式服務已修復）
 
 - **範圍／風險**：`codex/hotfix-call-lease-reconnect-20260810`，call-path risk；修改 `engine/live_voice_server.py`、`web/src/app.js`、Voice 啟動／收線測試、`scripts/voice_chain_probe.py`、`scripts/voice-chain-auth-probe.ps1` 與本看板。
