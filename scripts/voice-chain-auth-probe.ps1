@@ -96,11 +96,12 @@ function Assert-VoiceCanaryUrl($value) {
   try { $uri = [System.Uri]$value } catch { throw "VoiceCanaryUrl is not a valid URL" }
   $allowedSuffixes = @(
     "---munea-voice-staging-fiu65jd4da-de.a.run.app",
-    "---munea-voice-staging-491603544409.asia-east1.run.app"
+    "---munea-voice-staging-491603544409.asia-east1.run.app",
+    "---munea-voice-fiu65jd4da-de.a.run.app"
   )
   $allowedHost = $false
   foreach ($suffix in $allowedSuffixes) {
-    $hasCanaryTag = $uri.Host.StartsWith("canary-") -or $uri.Host.StartsWith("stg-")
+    $hasCanaryTag = $uri.Host.StartsWith("canary-") -or $uri.Host.StartsWith("stg-") -or $uri.Host.StartsWith("prod-")
     if ($hasCanaryTag -and $uri.Host.EndsWith($suffix)) {
       $allowedHost = $true
       break
@@ -109,7 +110,7 @@ function Assert-VoiceCanaryUrl($value) {
   if ($uri.Scheme -ne "wss" -or -not $uri.IsDefaultPort -or $uri.UserInfo -or
       $uri.Query -or $uri.Fragment -or $uri.AbsolutePath -notin @("", "/") -or
       -not $allowedHost) {
-    throw "VoiceCanaryUrl must be a query-free wss://canary-* or wss://stg-* tag for Munea staging Voice"
+    throw "VoiceCanaryUrl must be a query-free wss://canary-*, wss://stg-* or wss://prod-* tag for Munea Voice"
   }
   return $value.TrimEnd("/")
 }
@@ -265,11 +266,24 @@ try {
     --profile production `
     --gateway-url $GatewayUrl `
     --voice-canary-url $VoiceCanaryUrl `
+    --reconnect-check `
     --timeout $TimeoutSeconds
   if ($LASTEXITCODE -ne 0) {
     throw "Voice chain probe failed with exit code $LASTEXITCODE"
   }
   Pass "Gateway lease, Call Token and Voice canary handshake passed"
+
+  Step "Run serving production Voice reconnect probe"
+  & $python (Join-Path $root "scripts\voice_chain_probe.py") `
+    --profile production `
+    --gateway-url $GatewayUrl `
+    --reconnect-check `
+    --media-check `
+    --timeout $TimeoutSeconds
+  if ($LASTEXITCODE -ne 0) {
+    throw "Serving Voice reconnect probe failed with exit code $LASTEXITCODE"
+  }
+  Pass "Gateway-provided production Voice URL reconnect passed"
 } catch {
   $mainError = $_
 } finally {

@@ -262,8 +262,16 @@ expect(app.includes('(this._micRebuilds || 0) >= 2'),
   'uplink pipeline rebuilds are not capped at two attempts');
 expect(app.includes("this._armDeadLineWatch('ready_timeout', 10000)") &&
   app.includes("this._armDeadLineWatch('no_audio_both_ways', 5000)") &&
+  app.includes("if (phase === 'no_audio_both_ways')") &&
+  app.includes("'dead_line_kept_open'") &&
   app.includes("'dead_line_reconnect'"),
-  'a dead line can leave the user waiting for the 30-second readiness gate instead of auto-reconnecting');
+  'the ready-timeout reconnect or the zero-uplink keep-open recovery is missing');
+const zeroUplinkGuard = app.slice(
+  app.indexOf("if (phase === 'no_audio_both_ways')"),
+  app.indexOf("const sessionKey", app.indexOf("if (phase === 'no_audio_both_ways')")),
+);
+expect(zeroUplinkGuard.includes('return;') && !zeroUplinkGuard.includes('this.ws.close()'),
+  'a ready Voice socket can still be hard-closed solely because microphone packets are late');
 
 // ── 臉部影像流看門（2026-07-16 Edward 真機：嘴巴卡頓後畫面凍住不再動、ICE 未 failed 就沒人管）──
 expect(app.includes('Avatar._armFaceWatch();') && app.includes("'face_stream_stalled'"),

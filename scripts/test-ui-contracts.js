@@ -173,6 +173,23 @@ assert(app.includes("preparing = position <= 1") && busyCardFallbackBody.include
   'Position 1 must use a preparing narrative instead of the misleading "you are #1 in line" framing');
 assert(busyCardFallbackBody.includes("'voice.queue.note'"), 'The queue note must use the localized softened stay-on-screen phrasing instead of the old "leaving cancels the queue" warning');
 
+// 收音波紋（2026-08-10 Edward 拍板「點線」）：三條規矩，缺一條使用者就會看到不對的東西。
+//   ① 結構：波紋畫在 canvas 上（舊的九根 <i> 已退場，JS 找不到 canvas 就整條不見）
+//   ② 一接通就看得見：撥通中也要顯示，不能再等到聽/說狀態才出現
+//   ③ 只有長輩的聲音會讓它動：她出聲時歸零（反向守門——舊寫法 playLevel 必須永遠消失）
+assert(/<div class="cue face-wave"><canvas id="faceWaveCanvas"><\/canvas><\/div>/.test(html),
+  'The listening wave must be a canvas (#faceWaveCanvas) inside .face-wave — the renderer draws nothing without it');
+assert(/\[data-state="connecting"\][^{]*\.face-wave[^{]*\{[^}]*display:\s*inline-flex/.test(css.replace(/\s*\n\s*/g, ' ')),
+  'The wave must already be visible while connecting, so a connected call never shows an empty cue area');
+const faceWaveStarts = app.match(/FaceWave\.start\(/g) || [];
+const faceWaveStartsNoArgs = app.match(/FaceWave\.start\(\s*\)/g) || [];
+assert(faceWaveStarts.length > 0 && faceWaveStarts.length === faceWaveStartsNoArgs.length,
+  'FaceWave.start() must take no audio source — passing one (e.g. LiveVoice.playLevel) lets her own voice drive the listening wave');
+assert(/gate\(micLevel, herVoiceOn\) \{\s*if \(herVoiceOn\) return 0;/.test(app),
+  'FaceWave.gate must zero the wave whenever she is speaking');
+assert(app.includes('this.gate(mic, her)') && app.includes('speechActive()'),
+  'The wave level must be gated through speechActive(), the single source of truth for "is she speaking right now"');
+
 // 無聲失敗全部接上看得見的卡（2026-07-24 Edward 拍板 P0）：登入失效／帳號未就緒／服務設定異常／暖機超時／
 // 斷線重連失敗／連線逾時／影像席位全滿／拿不到麥克風，過去全部只寫進被藏起來的 #chatCaption，等於零回饋。
 assert(app.includes('function showCallStatusCard(stateOrOptions)'), 'A generic visible localized failure card function must exist for non-queue call failures');

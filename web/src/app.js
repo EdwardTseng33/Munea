@@ -4667,6 +4667,20 @@ const LiveVoice = {
         ? !!this.ready
         : ((this._micPackets || 0) > 0 || this._firstAudioRecorded);
       if (lineAlive) return;
+      // ready 已經證明 Voice socket 與模型都活著；此時只有麥克風上行尚未產生封包。
+      // 關 socket 會觸發 Voice 收線，再讓 Call Control 把整個 lease 結束，原本設計的
+      // 自動重連反而拿到 stale_lease、畫面閃一下後誤顯示忙線。收音管看門會繼續重建，
+      // 這裡保留已就緒的 Voice／Avatar 與席位，不再用「零上行」硬砍整通。
+      if (phase === 'no_audio_both_ways') {
+        voiceCallFail('dead_line_kept_open', 'microphone_uplink_pending', {
+          micPackets: this._micPackets || 0,
+          rebuilds: this._micRebuilds || 0,
+          audioState: this.ac && this.ac.state,
+        });
+        try { this._resumeAudio(); } catch (e) {}
+        setLocalizedRuntimeHint('microphonePermission');
+        return;
+      }
       const sessionKey = String((typeof activeChatSessionId !== 'undefined' && activeChatSessionId) || 'unknown');
       if (this._deadLineSessionId === sessionKey) {
         voiceCallFail('dead_line_reconnect', 'dead_line_persisted', { phase });
@@ -5141,42 +5155,103 @@ const AvSyncMeter = {
 };
 window.MuneaAvSyncMeter = AvSyncMeter;
 
-// 聲波波頻：收音／講話都跟著「真實音量」跳；沒聲音就低伏收攏，不再是常亮的假 loading
+/* 收音波紋（2026-08-10 改版「點線」· Edward 從三款提案挑的 C）
+   一次改三件他點名的事：
+   ① 一接通就看得見——撥通中就開始畫，沒收到聲音時是一排安靜的小點（「線通了、在等你說」），
+      不再是接通後畫面空一塊、直到有人開口才憑空冒出東西。
+   ② 只有長輩講話才會動——寧寧出聲時波紋一律歸零。她講話已經有嘴形＋聲音，
+      波紋再跳一次是重複；而且擴音的回音本來就會漏進麥克風，不擋就會變成「她在收自己的音」。
+   ③ 畫法改成細長條配一排小點（顆粒感），比舊的九根細棍看得清楚。
+   顏色只用品牌薄荷綠：橘色畫在暖膚色的立繪上會糊掉（8/10 三款提案實測截圖）。 */
 const FaceWave = {
-  bars: null, raf: 0, src: null, cur: 0,
+  canvas: null, ctx: null, raf: 0, cur: 0, w: 0, h: 0, dpr: 0, _tick: 0,
   // 靜音門檻（2026-08-01）：安靜房間的底噪經過 micLevel 放大約落在 0.05-0.1，
   // 低於這條線一律當作沒聲音＝波紋躺平不抖。調高＝更安靜但小聲說話會慢半拍才起波。
   QUIET_FLOOR: 0.12,
-  _init() { this.bars = Array.prototype.slice.call(document.querySelectorAll('.face-wave i')); },
-  start(getLevel) {
-    this.src = getLevel;                                     // 已在跑就只換來源（收音↔講話）
-    if (!this.bars || !this.bars.length) this._init();
+  // 波紋該跳多高：她在出聲就一律 0；否則看麥克風、扣掉底噪門檻。
+  // 拆成純函式方便驗（吃兩個數字、吐一個數字，不碰畫面）。
+  gate(micLevel, herVoiceOn) {
+    if (herVoiceOn) return 0;
+    const v = Math.max(0, Math.min(1, Number(micLevel) || 0));
+    return v < FaceWave.QUIET_FLOOR ? 0 : (v - FaceWave.QUIET_FLOOR) / (1 - FaceWave.QUIET_FLOOR);
+  },
+  level() {
+    let her = false;
+    try { her = typeof speechActive === 'function' && speechActive(); } catch (e) {}
+    const mic = (typeof LiveVoice !== 'undefined' && LiveVoice.micLevel) || 0;
+    return this.gate(mic, her);
+  },
+  _measure() {
+    const c = this.canvas; if (!c) return false;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (!w || !h) return false;                              // 還被藏著（display:none）→ 這格先不畫
+    const d = Math.min(window.devicePixelRatio || 1, 2.5);
+    if (w !== this.w || h !== this.h || d !== this.dpr) {
+      this.w = w; this.h = h; this.dpr = d;
+      c.width = Math.round(w * d); c.height = Math.round(h * d);
+      this.ctx.setTransform(d, 0, 0, d, 0, 0);
+    }
+    return true;
+  },
+  // 中間厚、兩側收到 0：波紋不會在畫面邊緣硬切一刀
+  _env(u) { return Math.pow(Math.sin(Math.PI * u), 1.4); },
+  _paint(t) {
+    const x = this.ctx, w = this.w, h = this.h, mid = h / 2, cur = this.cur;
+    x.clearRect(0, 0, w, h);
+    const g = x.createLinearGradient(0, 0, w, 0);
+    const a = 0.82 + 0.18 * cur;
+    g.addColorStop(0, 'rgba(62,212,194,0)');
+    g.addColorStop(0.16, 'rgba(62,212,194,' + a + ')');
+    g.addColorStop(0.5, 'rgba(22,196,174,1)');
+    g.addColorStop(0.84, 'rgba(62,212,194,' + a + ')');
+    g.addColorStop(1, 'rgba(62,212,194,0)');
+    // 全部形狀畫成同一條路徑、只填一次：陰影只算一遍（一格算 78 次陰影在舊手機上會掉格）
+    x.beginPath();
+    const n = Math.max(8, Math.floor(w / 6));
+    for (let i = 0; i < n; i++) {
+      const u = (i + 0.5) / n, px = u * w, env = this._env(u);
+      const wob = Math.sin(u * 14 + t * 2.2) * 0.5 + 0.5;
+      const barH = 3 + env * (h * 0.46) * cur * (0.45 + wob * 0.55);
+      this._cap(x, px - 1.4, mid - barH / 2, 2.8, barH);
+      // 點狀疊層：安靜時它跟細條疊在一起＝一排小點；有聲音就跑到柱子外面，變成一條游動的散點
+      // （0.40 是實測挑的：再小點會被柱子蓋住、看不出「點線」的個性）
+      const dotY = mid + Math.sin(u * 9 - t * 1.6) * env * (h * 0.40) * cur;
+      x.moveTo(px + 1.5, dotY);
+      x.arc(px, dotY, 1.5, 0, Math.PI * 2);
+    }
+    // 貼著形狀的一圈暗影：壓在暖膚色立繪上也讀得出來，又不會在臉上留一塊灰霧
+    x.shadowColor = 'rgba(4,14,12,.55)'; x.shadowBlur = 5; x.shadowOffsetY = 1;
+    x.fillStyle = g; x.fill();
+    x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
+  },
+  // roundRect 在舊 iOS Safari 沒有 → 沒有就退成方角，不讓整條波紋消失
+  _cap(x, left, top, w, h) {
+    const r = Math.min(1.4, h / 2);
+    if (typeof x.roundRect === 'function') { x.roundRect(left, top, w, h, r); return; }
+    x.rect(left, top, w, h);
+  },
+  // 撥通中就叫：先畫靜止狀態，音量自己會來
+  start() {
+    if (!this.canvas) {
+      this.canvas = document.getElementById('faceWaveCanvas');
+      if (!this.canvas) return;
+      this.ctx = this.canvas.getContext('2d');
+    }
     if (this.raf) return;
     const loop = () => {
-      const n = this.bars.length;
-      // 2026-08-01（Edward 真機：「待機時收音動畫一直閃爍，感覺很怪」）：
-      // 安靜的房間麥克風還是會收到底噪（音量 × 8 放大後約 0.05-0.1），舊算式沒有靜音門檻，
-      // 那點底噪乘上每根自己的擺動就變成「沒人講話卻一直抖」。加一道靜音門檻：
-      // 低於門檻一律當作沒聲音，波紋安靜躺平；真的有人開口才起來。
-      const raw = Math.max(0, Math.min(1, this.src ? (this.src() || 0) : 0));
-      const target = raw < FaceWave.QUIET_FLOOR ? 0 : (raw - FaceWave.QUIET_FLOOR) / (1 - FaceWave.QUIET_FLOOR);
-      this.cur += (target - this.cur) * 0.35;                // 平滑起落，不抖
-      const t = performance.now() / 1000;
-      const quiet = this.cur < 0.02;                         // 已經躺平：連擺動都不要算，維持靜止高度
-      for (let i = 0; i < n; i++) {
-        const shape = 1 - Math.abs(i - (n - 1) / 2) / n;     // 中間高、兩側低＝聲波形狀
-        const wob = 0.5 + 0.5 * Math.sin(t * (5.2 + (i % 4) * 1.9) + i * 1.9);  // 每根有自己的節奏＝顆粒感（Edward 7/9）
-        const h = quiet ? 0.2 : 0.2 + this.cur * (0.3 + shape * 0.55 + wob * 0.65);
-        this.bars[i].style.transform = 'scaleY(' + Math.min(1.8, h).toFixed(2) + ')';
-      }
       this.raf = requestAnimationFrame(loop);
+      // 尺寸每 30 格才量一次：量尺寸會逼瀏覽器重算版面，通話中每格都量太貴
+      if ((this._tick++ % 30) === 0 || !this.w) { if (!this._measure()) return; }
+      this.cur += (this.level() - this.cur) * 0.35;          // 平滑起落，不抖
+      if (this.cur < 0.004) this.cur = 0;                    // 收乾淨＝真的靜止，不留看不出來的殘抖
+      this._paint(performance.now() / 1000);
     };
     this.raf = requestAnimationFrame(loop);
   },
   stop() {
     if (this.raf) cancelAnimationFrame(this.raf);
-    this.raf = 0; this.src = null; this.cur = 0;
-    if (this.bars) this.bars.forEach(b => { b.style.transform = 'scaleY(0.16)'; });
+    this.raf = 0; this.cur = 0;
+    if (this.ctx && this.w) { try { this._paint(0); } catch (e) {} }   // 留一排靜止小點，不留半截波形
   },
 };
 window.MuneaFaceWave = FaceWave;
@@ -8136,7 +8211,8 @@ async function connectCall() {
     setLocalizedCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? 'firstWarmup' : 'connecting', true);
     trackProductEvent('voice_session_started', { locale: muneaLocale(), mode: 'live' });
     const chatEl = document.getElementById('chat');
-    if (chatEl) chatEl.dataset.state = 'connecting';   // 撥通中：待機動畫照播、收音波頻不出現
+    if (chatEl) chatEl.dataset.state = 'connecting';
+    FaceWave.start();   // 撥通中就先把波紋畫出來（靜止的一排小點）＝接通了畫面不是空的（Edward 8/10）
 
     // ===== 兩邊都就緒才開場（Edward 2026-07-09 二次拍板）=====
     let _voiceReady = false, _faceReady = false, _started = false, _activationInFlight = false;
@@ -8255,8 +8331,9 @@ async function connectCall() {
     LiveVoice.onReady = () => { _voiceReady = true; tryStart(); };   // 語音伺服器接上腦＝語音就緒
     LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setLocalizedCallHint('connecting', true); };
     // 開場後才顯示狀態（撥通中維持待機動畫、不搶戲）
-    const onListen = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setLocalizedCallHint('ready'); FaceWave.start(() => LiveVoice.micLevel); };
-    const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setLocalizedCallHint('speaking'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
+    const onListen = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setLocalizedCallHint('ready'); FaceWave.start(); };
+    // 她講話時波紋不跟著跳（Edward 8/10）——波紋只代表「我聽到你」；她在說話有嘴形＋聲音就夠了。
+    const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setLocalizedCallHint('speaking'); FaceWave.start(); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
     // 斷線自動接回：掉了就自動重連；多次失敗則收整通，不退成純語音。
     let _reconnects = 0;

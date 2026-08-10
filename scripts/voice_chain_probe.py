@@ -54,6 +54,8 @@ class Stage:
 class ProbeReport:
     profile: str
     started_at: str
+    require_reconnect: bool = False
+    require_media: bool = False
     stages: list[Stage] = field(default_factory=list)
 
     def add(self, name, status, started, detail="", endpoint=""):
@@ -76,10 +78,17 @@ class ProbeReport:
         """
         if self.profile == "development":
             return ("voice_ready", "avatar_health")
-        return (
+        required = (
             "gateway_health", "gateway_lease", "voice_ready",
             "avatar_health", "avatar_call_token_health", "gateway_release",
         )
+        if self.require_reconnect:
+            required = required[:-1] + (
+                "gateway_token_refresh", "voice_reconnect_ready", "gateway_release",
+            )
+        if self.require_media:
+            required = required[:-1] + ("voice_media_response", "gateway_release")
+        return required
 
     @property
     def passed(self):
@@ -166,6 +175,7 @@ def validate_voice_canary_url(value):
     allowed_suffixes = (
         "---munea-voice-staging-fiu65jd4da-de.a.run.app",
         "---munea-voice-staging-491603544409.asia-east1.run.app",
+        "---munea-voice-fiu65jd4da-de.a.run.app",
     )
     safe = (
         parsed.scheme == "wss"
@@ -175,13 +185,13 @@ def validate_voice_canary_url(value):
         and parsed.path in ("", "/")
         and not parsed.query
         and not parsed.fragment
-        and hostname.startswith(("canary-", "stg-"))
+        and hostname.startswith(("canary-", "stg-", "prod-"))
         and any(hostname.endswith(suffix) for suffix in allowed_suffixes)
     )
     if not safe:
         raise ValueError(
-            "Voice canary URL must be a query-free wss://canary-* or wss://stg-* tag "
-            "for this project's munea-voice-staging service"
+            "Voice canary URL must be a query-free wss://canary-*, wss://stg-* or "
+            "wss://prod-* tag for this project's Voice services"
         )
     return "wss://" + hostname
 
@@ -238,6 +248,187 @@ async def probe_voice_ready(report, voice_url, app_key, timeout, call_token=""):
         reason = getattr(error, "reason", "")
         detail = type(error).__name__ + (f" code={code}" if code else "") + (f" reason={reason}" if reason else "")
         report.add("voice_ready", "FAIL", started, detail, voice_url)
+
+
+async def probe_voice_preflight_reconnect(
+    report, voice_url, gateway_url, access_token, lease, timeout
+):
+    """Reproduce the installed App's zero-audio close and token refresh.
+
+    The App used to close a ready Voice socket after five seconds without any
+    microphone or assistant packets, then immediately refresh the same Gateway
+    lease before reconnecting. Voice must preserve that lease for this exact
+    preflight close; otherwise the refresh returns stale_lease and the App shows
+    a false busy line.
+    """
+
+    import websockets
+
+    async def connect_until_ready(token, stage_name):
+        started = time.monotonic()
+        try:
+            url = with_query(voice_url, token=token, char="撖批祐", user="?芸?撌⊥炎", fam="0")
+            async with websockets.connect(
+                url, open_timeout=timeout, close_timeout=2, max_size=None
+            ) as websocket:
+                while True:
+                    message = await asyncio.wait_for(websocket.recv(), timeout=timeout)
+                    if not isinstance(message, str):
+                        continue
+                    event = json.loads(message)
+                    if event.get("type") == "ready":
+                        report.add(
+                            stage_name, "PASS", started,
+                            "Voice reported ready with zero media packets", voice_url,
+                        )
+                        return True
+        except Exception as error:
+            code = getattr(error, "code", "")
+            reason = getattr(error, "reason", "")
+            detail = type(error).__name__ + (f" code={code}" if code else "") + (
+                f" reason={reason}" if reason else ""
+            )
+            report.add(stage_name, "FAIL", started, detail, voice_url)
+            return False
+
+    if not await connect_until_ready(lease["call_token"], "voice_ready"):
+        return
+
+    # Let Voice finish its normal-close teardown before exercising the refresh.
+    await asyncio.sleep(1.0)
+    started = time.monotonic()
+    try:
+        _, refreshed = await asyncio.to_thread(
+            post_json,
+            gateway_url.rstrip("/") + "/v1/calls/" + urllib.parse.quote(str(lease["call_id"])) + "/token",
+            {"lease_version": lease["lease_version"]},
+            timeout,
+            access_token,
+        )
+        if not isinstance(refreshed, dict) or refreshed.get("status") != "connect" or not refreshed.get("call_token"):
+            report.add(
+                "gateway_token_refresh", "FAIL", started,
+                str((refreshed or {}).get("reason") or "malformed refresh response"), gateway_url,
+            )
+            return
+        report.add(
+            "gateway_token_refresh", "PASS", started,
+            "same lease remained claimable after zero-audio Voice close", gateway_url,
+        )
+        lease.update(refreshed)
+    except urllib.error.HTTPError as error:
+        detail = f"HTTP {error.code}"
+        try:
+            payload = json.loads(error.read().decode("utf-8"))
+            detail += " " + str(payload.get("detail") or "")
+        except Exception:
+            pass
+        report.add("gateway_token_refresh", "FAIL", started, detail, gateway_url)
+        return
+    except Exception as error:
+        report.add("gateway_token_refresh", "FAIL", started, type(error).__name__, gateway_url)
+        return
+
+    await connect_until_ready(lease["call_token"], "voice_reconnect_ready")
+
+
+async def refresh_gateway_token(report, gateway_url, access_token, lease, timeout, stage_name):
+    started = time.monotonic()
+    try:
+        _, refreshed = await asyncio.to_thread(
+            post_json,
+            gateway_url.rstrip("/") + "/v1/calls/" + urllib.parse.quote(str(lease["call_id"])) + "/token",
+            {"lease_version": lease["lease_version"]},
+            timeout,
+            access_token,
+        )
+        if not isinstance(refreshed, dict) or refreshed.get("status") != "connect" or not refreshed.get("call_token"):
+            report.add(stage_name, "FAIL", started, "malformed refresh response", gateway_url)
+            return False
+        lease.update(refreshed)
+        report.add(stage_name, "PASS", started, "same lease issued a fresh call token", gateway_url)
+        return True
+    except Exception as error:
+        report.add(stage_name, "FAIL", started, type(error).__name__, gateway_url)
+        return False
+
+
+async def probe_voice_media_response(report, voice_url, lease, timeout, output_path=""):
+    """Send synthetic Mandarin speech and persist the returned PCM for listening."""
+    started = time.monotonic()
+    try:
+        engine_path = str(ROOT / "engine")
+        if engine_path not in sys.path:
+            sys.path.insert(0, engine_path)
+        import voice_s2s_probe as s2s
+        import wave
+
+        phrase = "請簡短回答，沒有發燒但有痰，今天應該注意什麼？"
+        pcm, source_rate = await asyncio.to_thread(s2s._synthetic_input, phrase)
+        pcm = s2s._resample_pcm16(pcm, source_rate)
+        url = with_query(
+            voice_url, token=lease["call_token"], char="撖批祐", user="自動聲音驗收", fam="0",
+        )
+        output = bytearray()
+        playback = bytearray()
+        user_caption = ""
+        assistant_caption = ""
+        completed = False
+        chunks = []
+        import websockets
+        async with websockets.connect(url, max_size=None, open_timeout=timeout, close_timeout=2) as ws:
+            while True:
+                message = await asyncio.wait_for(ws.recv(), timeout=timeout)
+                if isinstance(message, str) and json.loads(message).get("type") == "ready":
+                    break
+            sender = asyncio.create_task(s2s._stream_input(ws, pcm))
+            try:
+                while True:
+                    message = await asyncio.wait_for(ws.recv(), timeout=timeout)
+                    if isinstance(message, (bytes, bytearray)):
+                        output.extend(message)
+                        chunks.append((time.monotonic(), bytes(message)))
+                        continue
+                    event = json.loads(message)
+                    if event.get("type") == "caption" and event.get("who") == "user":
+                        user_caption += event.get("text") or ""
+                    elif event.get("type") == "caption" and event.get("who") == "nening":
+                        assistant_caption += event.get("text") or ""
+                    elif event.get("type") == "turn_complete":
+                        completed = True
+                        break
+            finally:
+                await sender
+
+        underruns_ms = []
+        if chunks:
+            first_arrival = chunks[0][0]
+            for arrived_at, chunk in chunks:
+                target_bytes = round((arrived_at - first_arrival) * s2s.OUTPUT_RATE * 2)
+                if target_bytes > len(playback):
+                    gap_bytes = target_bytes - len(playback)
+                    underruns_ms.append(round(gap_bytes / (s2s.OUTPUT_RATE * 2) * 1000))
+                    playback.extend(b"\x00" * gap_bytes)
+                playback.extend(chunk)
+        max_underrun_ms = max(underruns_ms, default=0)
+        if output_path and output:
+            path = Path(output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with wave.open(str(path), "wb") as wav:
+                wav.setnchannels(1)
+                wav.setsampwidth(2)
+                wav.setframerate(s2s.OUTPUT_RATE)
+                wav.writeframes(playback or output)
+        ok = completed and len(output) >= s2s.OUTPUT_RATE * 2 and bool(user_caption.strip())
+        detail = (
+            f"pcm_bytes={len(output)} chunks={len(chunks)} max_underrun_ms={max_underrun_ms} "
+            f"underruns_over_200ms={sum(1 for gap in underruns_ms if gap > 200)} "
+            f"asr_chars={len(user_caption.strip())} reply_chars={len(assistant_caption.strip())} "
+            f"audio_saved={bool(output_path and output)}"
+        )
+        report.add("voice_media_response", "PASS" if ok else "FAIL", started, detail, voice_url)
+    except Exception as error:
+        report.add("voice_media_response", "FAIL", started, type(error).__name__, voice_url)
 
 
 def resolve_serving_avatar_url(gateway_url, timeout):
@@ -406,7 +597,12 @@ async def run_probe(args):
     app_key = args.app_key or os.environ.get("MUNEA_APP_KEY") or config["app_key"]
     access_token = os.environ.get("MUNEA_ACCESS_TOKEN") or ""
     voice_canary_url = getattr(args, "voice_canary_url", "") or ""
-    report = ProbeReport(args.profile, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    report = ProbeReport(
+        args.profile,
+        time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        require_reconnect=bool(getattr(args, "reconnect_check", False)),
+        require_media=bool(getattr(args, "media_check", False)),
+    )
 
     lease = None
     try:
@@ -424,7 +620,21 @@ async def run_probe(args):
             if voice_canary_url:
                 started = time.monotonic()
                 report.add("voice_route", "PASS", started, "Gateway call token routed to explicit 0% canary", voice_url)
-            await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
+            if getattr(args, "reconnect_check", False):
+                await probe_voice_preflight_reconnect(
+                    report, voice_url, gateway_url, access_token, lease, args.timeout,
+                )
+                if args.media_check:
+                    await asyncio.sleep(1.0)
+                    if await refresh_gateway_token(
+                        report, gateway_url, access_token, lease, args.timeout,
+                        "gateway_media_token_refresh",
+                    ):
+                        await probe_voice_media_response(
+                            report, voice_url, lease, args.timeout, args.media_output,
+                        )
+            else:
+                await probe_voice_ready(report, voice_url, app_key, args.timeout, call_token=lease["call_token"])
         elif args.profile == "development":
             await probe_voice_ready(report, voice_url, app_key, args.timeout)
         else:
@@ -506,9 +716,18 @@ def main():
     parser.add_argument("--app-key", default="")
     parser.add_argument("--timeout", type=float, default=12.0)
     parser.add_argument("--json-output", default="")
+    parser.add_argument(
+        "--reconnect-check",
+        action="store_true",
+        help="Close the ready Voice socket with zero media, refresh the same lease, and reconnect",
+    )
+    parser.add_argument("--media-check", action="store_true", help="Send synthetic Mandarin and require returned PCM")
+    parser.add_argument("--media-output", default=os.environ.get("MUNEA_VOICE_PROBE_AUDIO_OUTPUT", ""))
     args = parser.parse_args()
     if args.voice_canary_url and args.profile != "production":
         parser.error("--voice-canary-url requires --profile production")
+    if args.media_check and not args.reconnect_check:
+        parser.error("--media-check requires --reconnect-check")
     try:
         args.voice_canary_url = validate_voice_canary_url(args.voice_canary_url)
     except ValueError as error:
