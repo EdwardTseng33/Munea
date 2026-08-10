@@ -3928,7 +3928,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
-  _faceDirect: false, _faceDirectRequested: false, _faceDirectSession: '',
+  _faceDirect: false, _faceDirectRequested: false, _faceDirectSession: '', _faceDirectTurn: 0,
   _requestFaceDirect() {
     const callToken = CallControl.active && CallControl.active.call_token;
     const session = Avatar._session || '';
@@ -4820,7 +4820,7 @@ const LiveVoice = {
       this.ws.onopen = async () => {
         voiceCallMark('voice_socket_open', 'pass', { endpoint: url });
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
-        this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = '';
+        this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = ''; this._faceDirectTurn = 0;
         this._sameLineWarmup = this._sameLine;
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
         this._requestFaceDirect();
@@ -4853,6 +4853,10 @@ const LiveVoice = {
             }
             if (o.type === 'avatar_pcm_received') {
               Avatar._handlePcmAck(o, 'voice_direct_avatar_ack');
+            }
+            if (o.type === 'faceaudio_turn' && Number(o.turn) > 0) {
+              this._faceDirectTurn = Number(o.turn);
+              if (this._sameLine && this._faceDirect) Avatar.beginDirectTurn(this._faceDirectTurn);
             }
             if (o.type === 'interrupted' && this.playCtx) {
               this._dropAssistantAudio = true;
@@ -4982,7 +4986,8 @@ const LiveVoice = {
           if (this._slFallbackAfterTurn && this._sameLineFellBack !== true) {
             this._sameLineFallBackNow(this._slFallbackAfterTurn);
           }
-          const timingTurn = this._voiceTurnId || ((this._localVoiceTurnId || 0) + 1);
+          const timingTurn = (this._sameLine && this._faceDirect && this._faceDirectTurn) ||
+            this._voiceTurnId || ((this._localVoiceTurnId || 0) + 1);
           this._localVoiceTurnId = timingTurn;
           if (this._sameLine && this._faceDirect) Avatar.beginDirectTurn(timingTurn);
           else Avatar.beginTurn(timingTurn);       // App relay 才由手機清上一輪；direct route 由 Voice 排序 reset→PCM
@@ -5092,7 +5097,7 @@ const LiveVoice = {
     this._duckPendingAt = 0;
     this._unduckAssistantAudio();   // 掛斷時把壓低的音量還原，否則下一通會小聲
     this._sameLineWarmup = false;
-    this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = '';
+    this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = ''; this._faceDirectTurn = 0;
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收

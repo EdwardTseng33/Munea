@@ -25,7 +25,9 @@ def between(source: str, start: str, end: str) -> str:
 def main() -> None:
     forward = between(VOICE, "async def _forward_audio(chunk):", "async def _mark_first_audio")
     assert 'fw.send("reset")' in forward
-    assert 'fw.send("turn:" + str(turn_id))' in forward
+    assert '"type": "faceaudio_turn", "turn": direct_turn' in forward
+    assert 'fw.send("turn:" + str(direct_turn))' in forward
+    assert 'int(st.get("face_audio_turn_seq") or 0) + 1' in forward
     assert "await asyncio.wait_for(fw.send(chunk), timeout=FACE_SEND_TIMEOUT_S)" in forward
     assert "await asyncio.wait_for(ready.wait(), timeout=FACE_SEND_TIMEOUT_S)" in forward
     assert '"type": "faceaudio_status", "on": False' in VOICE
@@ -49,6 +51,8 @@ def main() -> None:
     assert "const session = Avatar._session" in APP
     assert "token:" not in request, "the already-authenticated Voice socket owns the call token"
     assert "o.type === 'faceaudio_status'" in APP
+    assert "o.type === 'faceaudio_turn'" in APP
+    assert "Avatar.beginDirectTurn(this._faceDirectTurn)" in APP
     assert "Avatar.beginDirectTurn(timingTurn)" in APP
     assert "if (this._directAckTurn !== id) this._playoutArmedTurn = 0" in APP
     assert "if (!(this._sameLine && this._faceDirect)) Avatar.feed(audioData)" in APP

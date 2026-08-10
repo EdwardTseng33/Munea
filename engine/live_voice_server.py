@@ -1854,6 +1854,7 @@ def _new_call_state():
           "face_ws": None, "face_audio_url": None, "face_audio_session": None,
           "face_audio_reader": None, "face_audio_enabled": False,
           "face_audio_ready": None, "face_audio_turn_started": False,
+          "face_audio_turn_seq": 0, "face_audio_transport_turn": 0,
           # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
@@ -2314,12 +2315,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # the binary chunk so that exact chunk is relayed by the phone.
             try:
                 if not st.get("face_audio_turn_started"):
+                    # Provider input-transcription.finished can arrive after
+                    # first output (and occasionally not at all). Transport
+                    # evidence still needs a non-zero, unique turn id, so it
+                    # cannot depend solely on the semantic/VAD counter.
+                    direct_turn = max(
+                        int(st.get("face_audio_turn_seq") or 0) + 1,
+                        int(st.get("voice_turn_id") or 0),
+                    )
+                    st["face_audio_turn_seq"] = direct_turn
+                    st["face_audio_transport_turn"] = direct_turn
+                    await ws.send(json.dumps({
+                        "type": "faceaudio_turn", "turn": direct_turn,
+                    }))
                     await asyncio.wait_for(fw.send("reset"), timeout=FACE_SEND_TIMEOUT_S)
-                    turn_id = int(st.get("voice_turn_id") or 0)
-                    if turn_id:
-                        await asyncio.wait_for(
-                            fw.send("turn:" + str(turn_id)), timeout=FACE_SEND_TIMEOUT_S,
-                        )
+                    await asyncio.wait_for(
+                        fw.send("turn:" + str(direct_turn)), timeout=FACE_SEND_TIMEOUT_S,
+                    )
                     st["face_audio_turn_started"] = True
                 await asyncio.wait_for(fw.send(chunk), timeout=FACE_SEND_TIMEOUT_S)
             except asyncio.TimeoutError:
