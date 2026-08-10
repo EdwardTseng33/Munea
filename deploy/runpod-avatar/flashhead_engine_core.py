@@ -166,32 +166,93 @@ class AudioOutBuffer:
     第一批資料尚未到達前維持 hold；資料到達後才開始倒數，讓這段時間真的
     累積成播放存貨，而不是把模型生成時間誤算成預緩衝。
     """
-    def __init__(self, sample_rate, prebuffer_s=0.5):
+    def __init__(self, sample_rate, prebuffer_s=0.5, adaptive_min_s=None,
+                 adaptive_max_s=None):
         self.sample_rate = sample_rate
         self.prebuffer_s = prebuffer_s
         self.default_prebuffer_s = prebuffer_s
-        self.next_prebuffer_s = prebuffer_s
-        self.last_prebuffer_s = prebuffer_s
+        adaptive_min = prebuffer_s if adaptive_min_s is None else float(adaptive_min_s)
+        adaptive_max = prebuffer_s if adaptive_max_s is None else float(adaptive_max_s)
+        self.adaptive_min_s = max(0.0, min(adaptive_min, adaptive_max))
+        self.adaptive_max_s = max(self.adaptive_min_s, adaptive_max)
+        self.adaptive_prebuffer_s = self.adaptive_min_s
+        self.adaptive_target_s = self.adaptive_prebuffer_s
+        self.next_prebuffer_s = self.adaptive_prebuffer_s
+        self.last_prebuffer_s = self.adaptive_prebuffer_s
+        self.generation_compute_ms = collections.deque(maxlen=20)
+        self.generation_budget_ms = None
+        self.generation_p95_ms = None
         self.frame_samples = int(sample_rate * 0.02)
         self.lock = threading.Lock()
         self.buf = np.zeros(0, dtype=np.int16)
         self.underrun_count = 0
         self.underrun_gap_ms = collections.deque(maxlen=50)
+        self._underrun_started_ts = None
         self.last_push_ts = 0.0
         self.depth_samples = 0
         self.hold_until_ts = float("inf")
         self._awaiting_first_push = True
+        self._turn_complete = False
+        self._one_shot_prebuffer = False
+
+    def _raise_adaptive_prebuffer_locked(self, seconds):
+        if self.adaptive_max_s <= self.adaptive_min_s:
+            return
+        self.adaptive_prebuffer_s = min(
+            self.adaptive_max_s,
+            max(self.adaptive_prebuffer_s, self.adaptive_prebuffer_s + float(seconds)),
+        )
+        if self._awaiting_first_push and not self._one_shot_prebuffer:
+            self.next_prebuffer_s = self.adaptive_prebuffer_s
+
+    def observe_generation(self, compute_ms, budget_ms):
+        """Tune the next start gate from measured GPU headroom, never guesswork.
+
+        The first 75% of a chunk budget is treated as healthy headroom.  Work
+        above that threshold is converted into extra playout cushion, bounded
+        by the operator-controlled minimum and maximum.  Increases apply at
+        once; decreases move 20 ms at a time so a single fast chunk cannot
+        make the next turn fragile.
+        """
+        if compute_ms is None or budget_ms is None or budget_ms <= 0:
+            return
+        with self.lock:
+            self.generation_compute_ms.append(max(0.0, float(compute_ms)))
+            self.generation_budget_ms = float(budget_ms)
+            ordered = sorted(self.generation_compute_ms)
+            p95_index = max(0, int(np.ceil(len(ordered) * 0.95)) - 1)
+            self.generation_p95_ms = ordered[p95_index]
+            excess_ms = max(0.0, self.generation_p95_ms - self.generation_budget_ms * 0.75)
+            target = self.adaptive_min_s + excess_ms / 1000.0
+            self.adaptive_target_s = min(self.adaptive_max_s, max(self.adaptive_min_s, target))
+            if self.adaptive_target_s >= self.adaptive_prebuffer_s:
+                self.adaptive_prebuffer_s = self.adaptive_target_s
+            else:
+                self.adaptive_prebuffer_s = max(
+                    self.adaptive_target_s, self.adaptive_prebuffer_s - 0.02
+                )
+            if self._awaiting_first_push and not self._one_shot_prebuffer:
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
 
     def push(self, pcm_int16):
         with self.lock:
+            now = time.time()
+            if len(pcm_int16) and self._underrun_started_ts is not None:
+                gap_ms = round((now - self._underrun_started_ts) * 1000, 1)
+                self.underrun_gap_ms.append(gap_ms)
+                self._underrun_started_ts = None
+                # A real mid-turn starvation is stronger evidence than a
+                # compute-time estimate.  Add 80 ms of protection next turn.
+                self._raise_adaptive_prebuffer_locked(0.08)
             if len(pcm_int16) and self._awaiting_first_push:
                 delay = self.next_prebuffer_s
                 self.last_prebuffer_s = delay
-                self.next_prebuffer_s = self.default_prebuffer_s
-                self.hold_until_ts = time.time() + delay
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
+                self._one_shot_prebuffer = False
+                self.hold_until_ts = now + delay
                 self._awaiting_first_push = False
             self.buf = np.concatenate([self.buf, pcm_int16])
-            self.last_push_ts = time.time()
+            self.last_push_ts = now
             self.depth_samples = len(self.buf)
 
     def clear(self):
@@ -200,12 +261,22 @@ class AudioOutBuffer:
             self.depth_samples = 0
             self.hold_until_ts = float("inf")
             self._awaiting_first_push = True
-            self.next_prebuffer_s = self.default_prebuffer_s
+            self._turn_complete = False
+            self._one_shot_prebuffer = False
+            self._underrun_started_ts = None
+            self.next_prebuffer_s = self.adaptive_prebuffer_s
 
     def arm_prebuffer(self, seconds):
         """Use a one-shot playout delay for the next PCM turn only."""
         with self.lock:
             self.next_prebuffer_s = max(0.0, float(seconds))
+            self._one_shot_prebuffer = True
+
+    def mark_input_complete(self):
+        """Stop treating the natural end of a response as buffer starvation."""
+        with self.lock:
+            self._turn_complete = True
+            self._underrun_started_ts = None
 
     def playout_held(self):
         """True while audio and video must stay on their shared start gate."""
@@ -221,9 +292,9 @@ class AudioOutBuffer:
                 self.buf = self.buf[self.frame_samples:]
                 self.depth_samples = len(self.buf)
                 return chunk
-            self.underrun_count += 1
-            if self.last_push_ts:
-                self.underrun_gap_ms.append(round((time.time() - self.last_push_ts) * 1000, 1))
+            if not self._turn_complete and self._underrun_started_ts is None:
+                self.underrun_count += 1
+                self._underrun_started_ts = time.time()
             self.depth_samples = len(self.buf)
             return np.zeros(self.frame_samples, dtype=np.int16)
 
@@ -403,6 +474,8 @@ class Feeder:
         with self.lock:
             self._finish_pending = bool(len(self.acc))
             partial_samples = len(self.acc)
+        if self.slot.audio_out is not None:
+            self.slot.audio_out.mark_input_complete()
         if self._finish_pending:
             print("[feeder] slot" + str(self.slot.index) + " finish requested partial_samples="
                   + str(partial_samples), flush=True)
@@ -477,6 +550,9 @@ class Feeder:
         t_frames_ready = time.time()
         self.slot.last_gen_compute_ms = round((t_frames_ready - t_chunk_ready) * 1000, 1)
         self.slot.gen_compute_ms_hist.append(self.slot.last_gen_compute_ms)
+        budget_ms = (round(self.slot.slice_len / self.slot.tgt_fps * 1000, 1)
+                     if self.slot.slice_len and self.slot.tgt_fps else None)
+        self.slot.audio_out.observe_generation(self.slot.last_gen_compute_ms, budget_ms)
         with self.lock:
             if self._epoch != chunk_epoch:
                 print("[feeder] slot" + str(self.slot.index) + " stale chunk dropped (epoch "
@@ -723,6 +799,12 @@ def health_snapshot(slot, wake_ts=None):
             "prebuffer_s": ao.default_prebuffer_s if ao else None,
             "last_prebuffer_s": ao.last_prebuffer_s if ao else None,
             "next_prebuffer_s": ao.next_prebuffer_s if ao else None,
+            "adaptive_prebuffer_s": round(ao.adaptive_prebuffer_s, 3) if ao else None,
+            "adaptive_target_s": round(ao.adaptive_target_s, 3) if ao else None,
+            "adaptive_min_s": ao.adaptive_min_s if ao else None,
+            "adaptive_max_s": ao.adaptive_max_s if ao else None,
+            "generation_p95_ms": (round(ao.generation_p95_ms, 1)
+                                    if ao and ao.generation_p95_ms is not None else None),
         },
         "video_underrun": {"count": sink.underrun_count if sink else 0},
     }

@@ -181,10 +181,15 @@ expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
 expect(avatarServer.includes('self.slot.audio_out.playout_held()'),
   'Avatar video can start consuming frames before the audio prebuffer releases');
-expect((avatarServer.includes('OPENING_PREBUFFER_S = 1.0') ||
-        avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "1.0"')) &&
+expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.6"') &&
+       avatarServer.includes('OPENING_PREBUFFER_S = max(') &&
        avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
-  'the first Avatar turn does not get a one-second post-PCM warmup buffer');
+  'the first Avatar turn does not get the configurable post-PCM warmup buffer');
+expect(avatarServer.includes('MUNEA_FH_AUDIO_PREBUFFER_MIN_S') &&
+       avatarServer.includes('MUNEA_FH_AUDIO_PREBUFFER_MAX_S') &&
+       avatarServer.includes('adaptive_min_s=AUDIO_PREBUFFER_MIN_S') &&
+       avatarServer.includes('adaptive_max_s=AUDIO_PREBUFFER_MAX_S'),
+  'steady Avatar turns do not use the bounded adaptive prebuffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
 // 2026-07-29 更新：原版寫死「live_config 不准出現內建 Google 搜尋」——那是 7/17
