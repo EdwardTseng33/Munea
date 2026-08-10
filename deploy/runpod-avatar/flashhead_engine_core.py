@@ -513,8 +513,13 @@ class Feeder:
     def finish(self):
         with self.lock:
             self._finish_pending = bool(len(self.acc))
-            self._complete_pending = True
+            # Audible PCM is queued at ingress now, so input completion no
+            # longer depends on the last lip-render chunk finishing. Waiting
+            # for GPU tail work here mislabels natural end silence as an audio
+            # underrun even though the captured waveform is continuous.
+            self._complete_pending = False
             partial_samples = len(self.acc)
+        self.slot.audio_out.mark_input_complete()
         if self._finish_pending:
             print("[feeder] slot" + str(self.slot.index) + " finish requested partial_samples="
                   + str(partial_samples), flush=True)

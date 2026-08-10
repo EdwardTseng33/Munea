@@ -278,6 +278,21 @@ def test_audio_ingress_waits_for_video_once_then_stays_continuous():
     print("test_audio_ingress_waits_for_video_once_then_stays_continuous: PASS")
 
 
+def test_audio_finish_does_not_count_natural_tail_as_underrun():
+    slot = make_slot(0, "s0")
+    emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+    pcm = np.arange(slot.audio_out.frame_samples, dtype=np.int16)
+    feeder.push24k(pcm.tobytes())
+    slot.audio_out.release_playout()
+    feeder.finish()
+    assert np.array_equal(slot.audio_out.pop_frame(), pcm)
+    slot.audio_out.pop_frame()
+    assert slot.audio_out.underrun_count == 0
+    assert slot.audio_out._turn_complete is True
+    print("test_audio_finish_does_not_count_natural_tail_as_underrun: PASS")
+
+
 def test_audio_prebuffer_starts_when_first_pcm_arrives():
     """模型計算時間不能偷吃預緩衝；第一批 PCM 到達後才開始共同起播倒數。"""
     original_time = fec.time.time
@@ -597,6 +612,7 @@ def main():
     test_cross_slot_isolation()
     test_audible_output_keeps_original_24k_samples()
     test_audio_ingress_waits_for_video_once_then_stays_continuous()
+    test_audio_finish_does_not_count_natural_tail_as_underrun()
     test_audio_prebuffer_starts_when_first_pcm_arrives()
     test_audio_prebuffer_adapts_without_counting_natural_silence()
     test_fault_isolation_one_slot_does_not_crash_others()
