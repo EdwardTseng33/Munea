@@ -3424,17 +3424,17 @@ function faceSameLineOn() {
     return faceEngine() === 'flashhead';              // FlashHead 模式預設開同線（它天生兩軌同線）
   } catch (e) { return false; }
 }
-// 單一真相：「她現在正在出聲嗎」——所有喇叭出口（本地播放/臉那條線）都在這裡認，統一 0.015 門檻＋400ms 餘韻。
-// 以後新增任何聲音出口只改這一個函式（v5.4.24 教訓：4 處各自判斷=bug 再生產線）。
+// 單一真相：「她現在正在出聲嗎」——只信 Voice PCM 算出的實際播放水位。
+// Avatar analyser 只做觀測，絕不能反過來關麥克風：遠端 idle 音軌若長時間維持
+// 0.015 以上，舊版會把 speechActive 永遠續命，造成 48 秒甚至整通 in_bytes=0。
 function speechActive() {
   try {
     const now = performance.now();
-    const face = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
     const queued = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil);
-    if ((typeof LiveVoice !== 'undefined' && LiveVoice.speaking) || queued || face > 0.015) window.__muneaSpeechTs = now;
+    if (queued) window.__muneaSpeechTs = now;
     const sameLine = typeof LiveVoice !== 'undefined' && LiveVoice._sameLine && LiveVoice._sameLineFellBack !== true;
     const tailMs = sameLine ? 120 : 400;
-    return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs);
+    return !!(queued || (window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs));
   } catch (e) { return false; }
 }
 const Avatar = {

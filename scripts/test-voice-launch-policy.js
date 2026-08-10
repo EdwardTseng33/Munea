@@ -109,6 +109,13 @@ expect(styles.includes('.fh-frame') && !styles.includes('background: #0E1A17'),
   'the face frame still uses a near-black backdrop that reads as a black flash before art paints');
 expect(!app.includes('if (speechActive()) { this.micLevel = 0; return; }'),
   'assistant playback still disables microphone uplink unconditionally');
+const speechActiveStart = app.indexOf('function speechActive() {');
+const speechActiveEnd = app.indexOf('\n}', speechActiveStart) + 2;
+const speechActiveContract = app.slice(speechActiveStart, speechActiveEnd);
+expect(speechActiveStart >= 0 &&
+  speechActiveContract.includes('LiveVoice._playoutUntil') &&
+  !speechActiveContract.includes('_faceAudLevel'),
+  'raw Avatar idle audio can still keep speechActive true and suppress microphone uplink');
 expect(voiceServer.includes('localization.requires_taiwanese_hokkien_fallback(obj["text"])'),
   'explicit Hokkien text requests are not blocked before reaching the conversational model');
 expect(voiceServer.includes('await _arm_language_block("audio_input")'),

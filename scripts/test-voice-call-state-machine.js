@@ -13,6 +13,21 @@ function extract(startMarker, endMarker) {
   return app.slice(start, end);
 }
 
+function extractFunction(startMarker) {
+  const start = app.indexOf(startMarker);
+  assert(start >= 0, `Unable to isolate ${startMarker}`);
+  const open = app.indexOf('{', start + startMarker.length);
+  let depth = 0;
+  for (let index = open; index < app.length; index += 1) {
+    if (app[index] === '{') depth += 1;
+    else if (app[index] === '}') {
+      depth -= 1;
+      if (depth === 0) return app.slice(start, index + 1);
+    }
+  }
+  throw new Error(`Unbalanced function ${startMarker}`);
+}
+
 function runAvatarFallbackContract() {
   const method = extract('_fallbackVoiceOnly(reason) {', '\n  stop() {');
   let stopCalls = 0;
@@ -166,7 +181,40 @@ function runLocalPlaybackContinuityContract() {
   }
 }
 
+function runMicGateContinuityContract() {
+  const source = extractFunction('function speechActive()');
+  let now = 0;
+  const context = {
+    performance: { now() { return now; } },
+    window: { MuneaAvatar: { _faceAudLevel: 0.04 }, __muneaSpeechTs: 0 },
+    LiveVoice: { speaking: false, _playoutUntil: 0, _sameLine: true, _sameLineFellBack: false },
+  };
+  vm.createContext(context);
+  vm.runInContext(`${source}\nglobalThis.readSpeechActive = speechActive;`, context);
+
+  // A continuous Avatar idle track above the old 0.015 threshold must never
+  // close the microphone. Sample the full three-minute acceptance window.
+  let blockedIdleSamples = 0;
+  for (let second = 0; second <= 180; second += 1) {
+    now = second * 1000;
+    if (context.readSpeechActive()) blockedIdleSamples += 1;
+  }
+  assert.strictEqual(blockedIdleSamples, 0,
+    'Avatar idle audio kept speechActive true and would suppress microphone uplink');
+
+  now = 181000;
+  context.LiveVoice._playoutUntil = now + 1000;
+  assert.strictEqual(context.readSpeechActive(), true, 'Known Voice PCM playout was not recognized as assistant speech');
+  now += 900;
+  assert.strictEqual(context.readSpeechActive(), true, 'Known Voice PCM playout ended early');
+  now += 100;
+  assert.strictEqual(context.readSpeechActive(), true, 'Same-line 120ms echo tail disappeared too early');
+  now += 21;
+  assert.strictEqual(context.readSpeechActive(), false, 'Same-line echo tail kept the microphone closed too long');
+}
+
 runAvatarFallbackContract();
 runVisibilityContract();
 runLocalPlaybackContinuityContract();
-console.log('Voice call state machine PASS: paired lease preserved, transient iOS hiding tolerated, 147ms PCM jitter continuous');
+runMicGateContinuityContract();
+console.log('Voice call state machine PASS: paired lease preserved, transient iOS hiding tolerated, 147ms PCM jitter continuous, 3-minute mic gate open');
