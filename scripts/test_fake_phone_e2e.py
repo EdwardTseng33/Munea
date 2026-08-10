@@ -19,9 +19,9 @@ def load_functions(*names):
     return [namespace[name] for name in names]
 
 
-normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics = load_functions(
+normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics, webrtc_speech_gap_metrics = load_functions(
     "normalize_transcript", "transcript_char_recall", "source_playout_metrics",
-    "webrtc_frame_timing_metrics"
+    "webrtc_frame_timing_metrics", "webrtc_speech_gap_metrics"
 )
 
 assert normalize_transcript("我沒有發燒，但、有痰！") == "我沒有發燒但有痰"
@@ -43,6 +43,13 @@ timing_gap = webrtc_frame_timing_metrics([
     (0, 960, 48000, 0.00), (1920, 960, 48000, 0.04)
 ])
 assert not timing_gap["ok"] and timing_gap["max_pts_gap_ms"] == 20.0
+assert timing_gap["pts_gaps"] == [{"at_captured_ms": 20.0, "duration_ms": 20.0}]
+assert not webrtc_speech_gap_metrics(
+    timing_gap, {"speech_windows_ms": [[0, 100]]}
+)["ok"]
+assert webrtc_speech_gap_metrics(
+    timing_gap, {"speech_windows_ms": [[200, 300]]}
+)["ok"]
 
 # The release-facing path must default to App relay, require a scored human WAV,
 # and forward Voice binary PCM into Avatar's /audio websocket.
@@ -53,7 +60,7 @@ assert 'await self.avatar_feed.send("finish")' in SOURCE
 assert '"asr_char_recall"' in SOURCE and '"first_response"' in SOURCE
 assert '"no_unsolicited_repeat"' in SOURCE and '"source_playout"' in SOURCE
 assert '"avatar_reported_underrun"' in SOURCE and '"avatar_health_after"' in SOURCE
-assert '"avatar_webrtc_timing"' in SOURCE
+assert '"avatar_webrtc_speech_timing"' in SOURCE
 assert 'all(metrics["gates"].values())' in SOURCE
 
 WRAPPER = (ROOT / "scripts" / "fake_phone_e2e.py").read_text(encoding="utf-8")

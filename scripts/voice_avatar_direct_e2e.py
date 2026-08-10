@@ -87,28 +87,62 @@ def webrtc_frame_timing_metrics(frames) -> dict:
                 "max_pts_gap_ms": None, "max_receive_late_ms": None}
     pts_gaps = []
     receive_late = []
+    captured_samples = 0
     for previous, current in zip(frames, frames[1:]):
         prev_pts, prev_samples, prev_rate, prev_received = previous
         pts, _samples, rate, received = current
         rate = int(rate or prev_rate or 0)
+        captured_samples += int(prev_samples)
         if rate > 0 and pts is not None and prev_pts is not None:
             missing = int(pts) - (int(prev_pts) + int(prev_samples))
             if missing > 0:
-                pts_gaps.append(1000.0 * missing / rate)
+                pts_gaps.append({
+                    "at_captured_ms": 1000.0 * captured_samples / rate,
+                    "duration_ms": 1000.0 * missing / rate,
+                })
         expected_s = float(prev_samples) / max(1, int(prev_rate or rate or 1))
         late_ms = 1000.0 * ((float(received) - float(prev_received)) - expected_s)
         if late_ms > 0:
             receive_late.append(late_ms)
-    material_pts = [gap for gap in pts_gaps if gap >= 20.0]
+    material_pts = [gap for gap in pts_gaps if gap["duration_ms"] >= 20.0]
     max_receive = max(receive_late, default=0.0)
     return {
         "ok": not material_pts,
         "frame_count": len(frames),
         "gap_count": len(material_pts),
-        "max_pts_gap_ms": round(max(material_pts, default=0.0), 1),
+        "max_pts_gap_ms": round(max(
+            (gap["duration_ms"] for gap in material_pts), default=0.0
+        ), 1),
+        "pts_gaps": [{key: round(value, 1) for key, value in gap.items()}
+                     for gap in material_pts],
         # Diagnostic only: browser/aiortc jitter buffers can absorb wall-clock
         # delivery variance without an audible RTP timeline hole.
         "max_receive_late_ms": round(max_receive, 1),
+    }
+
+
+def webrtc_speech_gap_metrics(timing: dict, continuity: dict) -> dict:
+    """Fail only RTP holes that intersect captured assistant speech.
+
+    WebRTC can drop idle/poster silence before the Avatar begins speaking. That
+    remains diagnostic evidence, but it is not the audible in-sentence failure
+    this release gate is designed to block.
+    """
+    windows = continuity.get("speech_windows_ms") or []
+    material = []
+    for gap in timing.get("pts_gaps") or []:
+        at_ms = float(gap.get("at_captured_ms") or 0.0)
+        for start_ms, end_ms in windows:
+            if float(start_ms) - 20.0 <= at_ms <= float(end_ms) + 20.0:
+                material.append(gap)
+                break
+    return {
+        "ok": not material,
+        "speech_gap_count": len(material),
+        "max_speech_pts_gap_ms": round(max(
+            (float(gap.get("duration_ms") or 0.0) for gap in material), default=0.0
+        ), 1),
+        "speech_pts_gaps": material,
     }
 
 
@@ -190,6 +224,20 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
     else:
         envelope_correlation = 0.0
     max_gap_ms = max(material, default=0) * 20
+    speech_windows = []
+    speech_start = None
+    for index, value in enumerate(speech):
+        if value and speech_start is None:
+            speech_start = index
+        elif not value and speech_start is not None:
+            speech_windows.append([
+                int((out_start + speech_start) * 20), int((out_start + index) * 20)
+            ])
+            speech_start = None
+    if speech_start is not None:
+        speech_windows.append([
+            int((out_start + speech_start) * 20), int((out_start + len(speech)) * 20)
+        ])
     return {
         "ok": max_gap_ms <= 40 and len(material) == 0,
         "alignment_ms": lag * 20,
@@ -197,6 +245,7 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
         "reference_speech_frames": int(np.sum(speech)),
         "missing_speech_runs": len(material),
         "max_missing_speech_ms": int(max_gap_ms),
+        "speech_windows_ms": speech_windows,
     }
 
 
@@ -590,6 +639,9 @@ async def execute_run(args, output):
         wav_write(output / "voice-reference.wav", voice_pcm, 24000)
         wav_write(output / "avatar-webrtc.wav", avatar_pcm, run.avatar_rate)
         metrics["continuity"] = continuity_metrics(voice_pcm, avatar_pcm, run.avatar_rate)
+        metrics["avatar_webrtc_speech_timing"] = webrtc_speech_gap_metrics(
+            metrics.get("avatar_webrtc_timing", {}), metrics["continuity"]
+        )
         metrics["asr_expected"] = args.expected_text
         metrics["asr_char_recall"] = round(
             transcript_char_recall(args.expected_text, metrics.get("user_caption", "")), 4
@@ -607,8 +659,8 @@ async def execute_run(args, output):
                 and metrics.get("avatar_health_after", {}).get("ok") is True
                 and metrics.get("avatar_reported_underrun_delta") == 0
             ),
-            "avatar_webrtc_timing": bool(
-                metrics.get("avatar_webrtc_timing", {}).get("ok")
+            "avatar_webrtc_speech_timing": bool(
+                metrics.get("avatar_webrtc_speech_timing", {}).get("ok")
             ),
             "source_playout": (
                 metrics.get("source_playout", {}).get("max_underrun_ms") is not None
