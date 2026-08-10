@@ -5,7 +5,8 @@
 - **1.0.62 實機結論**：使用者確認仍有開場自我打斷、嘴型落後、查詢有聲無嘴，以及畫面仍在通話中但失去說話能力；因此 1.0.62 不得送審，也不沿用先前 synthetic PASS 作為品質結論。
 - **App 根因與修正**：舊版在 Voice 裁決插話前已先把 AI 音量壓到 6%，擴音回音即使最後被拒絕也已造成每句可聽中斷；現在候選期只蒐集證據，只有 Voice 明確接受後才停聲。慢起音／短暫停頓不再觸發 voice-only fallback，避免查詢回報把 Avatar 關掉。
 - **Avatar 根因與修正**：待機 GPU 工作可能在真 PCM 抵達後才完成，把舊待機幀排到新嘴型之前，並錯誤吃掉該輪 first-frame 標記；現在真 PCM 會使待機工作失效、清除舊視覺 queue 且保留原始 PCM 與共同播放時鐘。`/health` 新增負延遲計數與 idle invalidation，正式 Gate 必須確認負延遲為 0。
-- **目前階段**：`coded + targeted regression PASS + package/deploy/production synthetic/App E2E pending`。App source 候選為 `1.0.63 (Build 534)`；尚未合併、部署或封裝，不得稱已修好或可送審。
+- **正式 Gate 抓到並回退**：PR #563 已合併至 `main@414762e6`；第一次 Avatar 部署後，真 PCM 抵達時清空了模型必須維持固定長度的 `audio_dq`，第一輪即觸發 CUDA index out-of-bounds、slot unhealthy。正式三輪 Gate 因 Avatar 無有效語音能量而 FAIL，線上已立即回退至部署前 `flashhead_engine_core.py` SHA-256 `f530a1e8…` 並恢復雙槽 Ready。
+- **Hotfix**：`codex/fix-avatar-idle-context-p0-20260811` 保留固定長度中性 pre-roll，只使晚完成的待機輸出失效；新增回歸斷言，清空歷史的舊寫法會直接失敗。狀態為 `source hotfix tested + Avatar production rollback healthy + package/production synthetic/App E2E pending`。App source 候選仍為 `1.0.63 (Build 534)`；不得稱已修好或可送審。
 
 ## 2026-08-11 04:30 台灣｜1.0.62 回報後的正式聊聊 P0 修復
 

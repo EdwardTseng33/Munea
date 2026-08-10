@@ -309,7 +309,9 @@ def test_real_audio_invalidates_inflight_idle_frames():
 
     assert slot.sink.depth() == 0, "late idle frames must be discarded after real PCM arrives"
     assert slot.audio_out.depth_samples == len(real_pcm), "real PCM must remain queued"
-    assert len(slot.audio_dq) == 0, "idle embedding context must not soften the first real mouth frames"
+    assert len(slot.audio_dq) == slot.audio_dq.maxlen, (
+        "real input must preserve the model's fixed-length embedding context"
+    )
     assert feeder._round_pending is True, "idle work must not consume the real turn first-frame marker"
     assert slot.idle_invalidation_count == 1, "health gate must expose the handled idle/real race"
     print("test_real_audio_invalidates_inflight_idle_frames: PASS")
