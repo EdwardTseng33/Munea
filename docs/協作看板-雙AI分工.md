@@ -2464,4 +2464,5 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **預計修改**：`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_engine_core.py`、`web/src/app.js`、對應語音／Avatar／Web 合約測試與發布狀態文件。
 - **目前證據**：2026-08-10 正式真機仍整句多次卡頓；Voice/GLOWS 服務未斷線且 GPU 每塊約 0.4 秒；最近兩小時正式 Voice 無任何 `node.faceaudio_on`，確認現行 App 未啟用既有 direct route。
 - **本機 precheck**：direct-route／150ms fallback／Avatar idle／multi-slot／前端語法與 `release:check` 通過。完整 `test:launch` 跑到既有 Voice prompt budget 守門時停下（現行 prompt 分別超預算 145／140 字；本任務未改 prompt 組裝），其前置測試均通過；此項需另案收斂，不把它誤報成本次音訊回歸。
+- **實聲 canary**：Voice `munea-voice-staging-00112-siy`（0%）以真實 5 秒 PCM 經 ASR／Gemini 回話，再 server-to-server 送正式 GLOWS Avatar；實收 Voice reference WAV＋Avatar WebRTC WAV。Avatar ACK 成功、聲音包絡相關 0.9693、reference speech 329 個 20ms frame 中缺音 run=0、最大缺音=0ms；暫存證據 `munea-voice-avatar-7788e4ff-mic`。這證明 direct transport 的實聲連續性，不取代 exact-build iPhone 人耳 Gate。
 - **驗收要求**：先完成單元、App call-path、Voice→Avatar 實際 WebRTC 收音與故障 fallback；再提供唯一 commit／版本／production profile 給 Edward 用 Mac 包版。未完成精確 build 真機長通話前不得宣稱完全修好。
