@@ -4667,6 +4667,20 @@ const LiveVoice = {
         ? !!this.ready
         : ((this._micPackets || 0) > 0 || this._firstAudioRecorded);
       if (lineAlive) return;
+      // ready 已經證明 Voice socket 與模型都活著；此時只有麥克風上行尚未產生封包。
+      // 關 socket 會觸發 Voice 收線，再讓 Call Control 把整個 lease 結束，原本設計的
+      // 自動重連反而拿到 stale_lease、畫面閃一下後誤顯示忙線。收音管看門會繼續重建，
+      // 這裡保留已就緒的 Voice／Avatar 與席位，不再用「零上行」硬砍整通。
+      if (phase === 'no_audio_both_ways') {
+        voiceCallFail('dead_line_kept_open', 'microphone_uplink_pending', {
+          micPackets: this._micPackets || 0,
+          rebuilds: this._micRebuilds || 0,
+          audioState: this.ac && this.ac.state,
+        });
+        try { this._resumeAudio(); } catch (e) {}
+        setLocalizedRuntimeHint('microphonePermission');
+        return;
+      }
       const sessionKey = String((typeof activeChatSessionId !== 'undefined' && activeChatSessionId) || 'unknown');
       if (this._deadLineSessionId === sessionKey) {
         voiceCallFail('dead_line_reconnect', 'dead_line_persisted', { phase });

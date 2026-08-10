@@ -52,6 +52,14 @@ def test_hangup_always_releases_the_seat():
     check("出錯那條路仍有自己的原因（看得出是哪種收線）",
           'call_release_reason = "voice_error"' in srv)
     check("收尾仍然會通知總機釋放", "/release" in srv and "voice-release-" in srv)
+    check("準備期零收音重連不會誤釋放整通",
+          "_defer_control_release_for_reconnect(call_release_reason, st)" in srv
+          and 'node.control_release_deferred' in srv
+          and 'preflight_zero_audio_reconnect' in srv)
+    check("只有正常收線且雙向皆零才延後給 App／reaper 收席位",
+          'reason == "call_ended"' in srv
+          and 'get("in")' in srv
+          and 'get("out")' in srv)
     check("鑰匙空位照樣歸還", srv.count("_release_client(_key_idx)") >= 2)
 
     # 真正要守的行為：不管走哪條路收線，都要有一個非空的原因 → finally 才會送 release。
