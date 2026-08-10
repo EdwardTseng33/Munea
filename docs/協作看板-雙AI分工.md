@@ -11,6 +11,7 @@
 - **已定位三項結構缺陷**：App 在 Voice 接受插話前即把 AI 播放壓至 `0.06`，疑似回音也會造成可聽中斷；同線音訊微停頓偵測會呼叫 voice-only fallback，直接隱藏 Avatar，後續查詢自然只剩聲音；Avatar 待機 GPU 工作可能晚於真 PCM 完成並把舊幀插到嘴型前面。修復原則為伺服器單一裁決後才改播放、短暫微停頓只記錄不拆畫面、真 PCM 原子淘汰待機視覺工作。
 - **驗收責任**：插話、通話狀態機、Avatar 多槽／待機競態與完整 release gate 已 PASS；下一步為 PR／部署後正式假手機多輪、查詢與聲畫指標，再進 exact-build App Gate。狀態：`App E2E pending（Codex ownership）`，不得要求 Edward 代驗或在未完成前再次宣稱修好。
 - **正式 Gate／回退**：PR #563 合併後的第一次正式 Avatar Gate 在真語音抵達時觸發 CUDA index out-of-bounds；原因是清空了模型必須維持固定長度的 `audio_dq`。Gate 判 FAIL 後已回退至部署前 SHA `f530a1e8…`、雙槽重新 Ready。Hotfix 分支 `codex/fix-avatar-idle-context-p0-20260811` 改為保留固定長度中性歷史，只丟棄晚完成的待機輸出；未再通過正式 Gate 前不得包 1.0.63。
+- **單輪重新 Gate**：#564 合併部署後完整真人錄音 PASS（ASR 1.0、首聲 516ms、Avatar 18.78s、相關 0.9697、缺音／underrun／重複／斷線／CUDA fault 皆 0）。但 round latency 仍出現 `-112ms` 假值，證明舊 GPU chunk 會吃到後來才建立的新 round marker；分支 `codex/fix-avatar-round-marker-p0-20260811` 將 marker 與開始它的 chunk 綁定，三輪 Gate 尚未放行。
 
 ### 2026-08-11 Codex｜🚨 1.0.62 真機仍卡頓：Voice→Avatar 直連未啟用與候選 Gate 誤測舊 relay（進行中 · call-path risk）
 

@@ -349,6 +349,47 @@ def test_lip_timeline_survives_mid_turn_pause():
     print("test_lip_timeline_survives_mid_turn_pause: PASS")
 
 
+def test_new_round_marker_waits_for_its_own_gpu_chunk():
+    """An older GPU chunk must not consume a marker created after it started."""
+    original_time = fec.time.time
+    clock = [100.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        slot = make_slot(0, "s0")
+        emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+        feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+        base_sink = slot.sink
+
+        class MarkerInterleavingSink:
+            def depth(self):
+                return base_sink.depth()
+
+            def push_many(self, frames, ready_ts=None, fps=None):
+                base_sink.push_many(frames, ready_ts, fps)
+                # Simulate PCM ingress starting round 2 after this old chunk's
+                # t_frames_ready was captured but before its metric is recorded.
+                feeder._round_pending = True
+                slot.round_count = 2
+                slot.round_start_ts = 101.0
+
+        slot.sink = MarkerInterleavingSink()
+        feeder._round_pending = True
+        slot.round_count = 1
+        slot.round_start_ts = 99.0
+        feeder._gen_chunk(np.zeros(CHUNK_SAMPLES, dtype=np.float32), emit_audio=True)
+        assert list(slot.round_latencies) == [], "old chunk must not emit a negative latency"
+        assert feeder._round_pending is True, "newer marker must remain pending"
+
+        slot.sink = base_sink
+        clock[0] = 101.5
+        feeder._gen_chunk(np.zeros(CHUNK_SAMPLES, dtype=np.float32), emit_audio=True)
+        assert list(slot.round_latencies) == [500.0]
+        assert feeder._round_pending is False
+    finally:
+        fec.time.time = original_time
+    print("test_new_round_marker_waits_for_its_own_gpu_chunk: PASS")
+
+
 def test_audio_finish_does_not_count_natural_tail_as_underrun():
     slot = make_slot(0, "s0")
     emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
@@ -725,6 +766,7 @@ def main():
     test_real_audio_invalidates_inflight_idle_frames()
     test_lip_catchup_skips_only_expired_frames()
     test_lip_timeline_survives_mid_turn_pause()
+    test_new_round_marker_waits_for_its_own_gpu_chunk()
     test_audio_finish_does_not_count_natural_tail_as_underrun()
     test_audio_prebuffer_starts_when_first_pcm_arrives()
     test_audio_prebuffer_adapts_without_counting_natural_silence()
