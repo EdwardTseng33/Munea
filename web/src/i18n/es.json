@@ -1656,5 +1656,18 @@
   "activity.voteStateMine": "Votaste {opt}",
   "activity.voteStateTodo": "Aún no votaste",
   "home.care.emptyTitle": "Nada que avisarte por ahora",
-  "home.care.emptyBody": "Configura medicamentos o citas, o añade a tu familia: los avisos aparecerán aquí"
+  "home.care.emptyBody": "Configura medicamentos o citas, o añade a tu familia: los avisos aparecerán aquí",
+  "splash.tagline": "El asistente de cuidado con IA para toda la familia",
+  "onboarding.p1.titleLine1": "Por fin alguien",
+  "onboarding.p1.titleLine2": "recuerda su salud",
+  "onboarding.p1.body": "Munea tiene rostro y voz. Conversa con tus padres como en una videollamada y retoma justo donde quedó la última charla.",
+  "onboarding.p2.titleLine1": "Solo díselo",
+  "onboarding.p2.titleLine2": "y ella lo recuerda",
+  "onboarding.p2.body": "Medicamentos, citas médicas, preguntas para el doctor: basta con decirlo y queda guardado. El móvil te avisa cuando toca.",
+  "onboarding.p3.titleLine1": "No solo para tus padres,",
+  "onboarding.p3.titleLine2": "para toda la familia",
+  "onboarding.p3.body": "Añade a tu familia al círculo: la salud y el ánimo de todos quedan a la vista. Podéis comparar pasos y jugar juntos, y tú te preocupas menos desde lejos.",
+  "onboarding.next": "Siguiente",
+  "onboarding.start": "Empezar",
+  "onboarding.stepLabel": "Página {current} de {total}"
 }

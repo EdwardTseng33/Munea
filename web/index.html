@@ -16,6 +16,69 @@
   <link rel="stylesheet" href="src/styles.css?v=20260806-v1054" />
 </head>
 <body>
+
+<!-- ===== 啟動頁（Edward 2026-08-10 拍板 · 需求單 docs/開場與啟動頁-需求單-2026-08-10.md）=====
+     水滴落下 → 碰到水面 → 水波由內而外盪開。標誌用官方檔案拆成三層（水滴／內圈波／外圈波），
+     不是重畫的 SVG——品牌規範禁止自創標誌。
+     只在「第一次／把 App 滑掉重開／被登出後」出現；平常登入還在就直接進 App，不播。 -->
+<div class="boot-splash" id="bootSplash">
+  <div class="boot-inner">
+    <div class="boot-mark" aria-hidden="true">
+      <img class="boot-layer boot-wave-out" src="onboarding-assets/wave-outer.webp" alt="">
+      <img class="boot-layer boot-wave-in" src="onboarding-assets/wave-inner.webp" alt="">
+      <img class="boot-layer boot-drop" src="onboarding-assets/mark-drop.webp" alt="">
+    </div>
+    <!-- 品牌字照官網 app-site/warm.css 的 .logo / .logo-word b / .logo-zh 寫法，不得自創：
+         Mu 墨綠、nea 薄荷綠、沐寧小 0.78 倍。品牌名四語系都不翻譯。 -->
+    <div class="boot-lockup">
+      <div class="boot-word">Mu<b>nea</b><span class="boot-zh">沐寧</span></div>
+      <p class="boot-tagline" data-i18n="splash.tagline">全家人的健康陪伴AI照護管家</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 保險絲：啟動頁預設就是顯示的（不然會先看到首頁閃一下），
+   萬一 app.js 沒載入或中途出錯，它會一直蓋著＝App 打不開。
+   這段跟 app.js 無關、也不依賴任何函式，時間到就把它收掉。 */
+setTimeout(function () {
+  var s = document.getElementById('bootSplash');
+  if (s && !s.hidden) s.hidden = true;
+}, 6000);
+</script>
+
+<!-- ===== 開場三頁 =====
+     只有第一次出現，而且要三頁全部看完（按到「開始使用」）才算看過。
+     刻意不放「略過」：有「下一步」就不需要另一個出口（Edward 2026-08-10）。 -->
+<div class="onb" id="onboarding" hidden>
+  <div class="onb-inner">
+    <div class="onb-track" id="onbTrack">
+      <section class="onb-page">
+        <div class="onb-art"><img src="onboarding-assets/onboarding-1.webp" alt="" width="900" height="900"></div>
+        <h2 class="onb-title"><span data-i18n="onboarding.p1.titleLine1">家人的健康，</span><span data-i18n="onboarding.p1.titleLine2">終於有人一直記得</span></h2>
+        <p class="onb-body" data-i18n="onboarding.p1.body">沐寧有臉、有聲音，像視訊一樣陪爸媽聊天，這次從上次聊到的地方接著聊。</p>
+      </section>
+      <section class="onb-page">
+        <div class="onb-art"><img src="onboarding-assets/onboarding-2.webp" alt="" width="900" height="900" loading="lazy"></div>
+        <h2 class="onb-title"><span data-i18n="onboarding.p2.titleLine1">想記什麼，</span><span data-i18n="onboarding.p2.titleLine2">跟她說一聲就好</span></h2>
+        <p class="onb-body" data-i18n="onboarding.p2.body">吃藥、回診、要問醫生的事——用講的就記下來，時間到了手機會提醒你。</p>
+      </section>
+      <section class="onb-page">
+        <div class="onb-art"><img src="onboarding-assets/onboarding-3.webp" alt="" width="900" height="900" loading="lazy"></div>
+        <h2 class="onb-title"><span data-i18n="onboarding.p3.titleLine1">不只陪爸媽，</span><span data-i18n="onboarding.p3.titleLine2">是陪一家人</span></h2>
+        <p class="onb-body" data-i18n="onboarding.p3.body">把家人加進家庭圈，健康和心情互相看得見；一起比步數、玩機智問答，在外地的人也放得下心。</p>
+      </section>
+    </div>
+    <div class="onb-foot">
+      <div class="onb-dots" id="onbDots"><i class="on"></i><i></i><i></i></div>
+      <!-- 兩顆按鈕輪流出現，不是一顆按鈕換字：文案留在畫面檔、各自綁自己的鍵，
+           程式只切換誰顯示——這樣程式裡不會出現寫死的句子。 -->
+      <button class="onb-cta" id="onbNext" type="button" data-i18n="onboarding.next">下一步</button>
+      <button class="onb-cta is-last" id="onbStart" type="button" data-i18n="onboarding.start" hidden>開始使用</button>
+    </div>
+  </div>
+</div>
+
 <div class="app-shell">
 
   <!-- ===== 首頁 ===== -->

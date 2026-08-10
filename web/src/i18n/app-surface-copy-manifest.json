@@ -2,43 +2,528 @@
   "schema": "munea.i18n-app-surface-copy-manifest.v1",
   "catalogStatus": "complete-for-current-surface-inventory",
   "surfaces": [
-    {"state": "screen:home", "keyPrefixes": ["app.", "home.", "visit.", "event.", "tab.", "schedule.", "greet.", "weather.", "feed."], "requiredKeys": ["home.greetingEvening", "home.startChat", "home.profilePromptTitle", "home.profilePromptBody", "home.profilePromptAction", "home.care.familyRelayTitle", "home.care.walkTitle", "home.care.visitNote", "home.care.remove", "home.care.report", "visit.defaultTitle", "event.familyTitle", "tab.home"]},
-    {"state": "screen:status", "keyPrefixes": ["status.", "mood.", "health."], "requiredKeys": ["status.title", "status.moodMonitoring", "health.steps"]},
-    {"state": "screen:family", "keyPrefixes": ["family.", "interaction.", "demo.", "book."], "requiredKeys": ["family.title", "family.startActivity", "family.invite"]},
-    {"state": "screen:settings", "keyPrefixes": ["settings."], "requiredKeys": ["settings.title", "settings.profile", "settings.dataAndPrivacy"]},
-    {"state": "screen:connect", "keyPrefixes": ["connect.", "legacyUi.connect"], "requiredKeys": ["connect.title", "connect.privacy", "connect.medicalDisclaimer"]},
-    {"state": "chat:idle", "keyPrefixes": ["accessibility.", "credits."], "requiredKeys": ["voice.call.start", "voice.call.offline", "voice.caption.label", "voice.microphone.label", "accessibility.toggleCaptions", "accessibility.toggleMicrophone", "settings.creditsBalance"]},
-    {"state": "chat:connecting", "keyPrefixes": ["voice."], "requiredKeys": ["voice.connecting", "voice.call.dialing", "voice.call.firstWarmup", "voice.call.openingWarmup", "voice.queue.preparingWithCompanion", "voice.queue.etaPreparingSoon", "voice.queue.pending", "voice.queue.wait", "voice.queue.cancel"]},
-    {"state": "chat:queued", "keyPrefixes": ["voice.queue."], "requiredKeys": ["voice.queue.busyWithCompanion", "voice.queue.position", "voice.queue.etaWaitingMinutes", "voice.queue.note", "voice.queue.cancel"]},
-    {"state": "chat:active", "keyPrefixes": ["voice.call.", "voice.runtime.", "credits."], "requiredKeys": ["voice.ready", "voice.call.end", "voice.call.speaking", "voice.call.connectedCaption", "voice.call.listeningPrompt", "voice.call.goodbye", "voice.runtime.listening", "voice.runtime.microphonePermission", "voice.runtime.recoveredTitle", "voice.runtime.degradedTitle", "credits.lowTitle", "credits.lowBody", "credits.freeTrialOneMinute"]},
-    {"state": "chat:text-fallback", "keyPrefixes": ["textChat.", "chat."], "requiredKeys": ["textChat.title", "textChat.send", "textChat.exit"]},
-    {"state": "chat:error", "keyPrefixes": ["avatar."], "requiredKeys": ["voice.call.unavailable", "voice.call.retryLater", "voice.call.microphonePermissionTitle", "voice.call.authExpiredTitle", "voice.call.disconnectedTitle", "error.offline", "common.retry"]},
-    {"state": "cross-surface:error-and-empty", "keyPrefixes": ["common.", "error.", "locale.", "time."], "requiredKeys": ["error.generic", "common.retry", "locale.fallbackNotice"]},
-    {"state": "modal:quiz", "keyPrefixes": ["quiz.", "quiz."], "requiredKeys": ["quiz.title", "quiz.progress", "quiz.result"]},
-    {"state": "modal:challenge", "keyPrefixes": ["activity.", "legacyUi.activity"], "requiredKeys": ["activity.createTitle", "activity.type", "activity.sendInvite"]},
-    {"state": "modal:activity-detail", "keyPrefixes": ["activity.detail"], "requiredKeys": ["activity.detailTitle", "activity.participants", "activity.noParticipants", "activity.deadline", "activity.location"]},
-    {"state": "modal:feedback", "keyPrefixes": ["feedback.", "legacyUi.feedback"], "requiredKeys": ["feedback.title", "feedback.placeholder", "feedback.submit"]},
-    {"state": "modal:interests", "keyPrefixes": ["interests.", "legacyUi.topic."], "requiredKeys": ["interests.title", "interests.subtitle", "interests.save"]},
-    {"state": "modal:safety", "keyPrefixes": ["safety.", "legacyUi.safety"], "requiredKeys": ["safety.title", "safety.contacts", "safety.disclaimer"]},
-    {"state": "modal:companion", "keyPrefixes": ["companionPicker.", "companion.", "legacyUi.companion"], "requiredKeys": ["companionPicker.title", "companionPicker.memoryFollowsUser", "companionPicker.choose"]},
-    {"state": "modal:report", "keyPrefixes": ["report."], "requiredKeys": ["report.title", "report.share", "report.empty"]},
-    {"state": "modal:font", "keyPrefixes": ["font."], "requiredKeys": ["font.title", "font.standard", "font.extraLarge"]},
-    {"state": "reader:legal", "keyPrefixes": ["reader."], "requiredKeys": ["reader.privacyTitle", "reader.termsTitle", "reader.loadError"]},
-    {"state": "modal:data", "keyPrefixes": ["data."], "requiredKeys": ["data.title", "data.export", "data.delete"]},
-    {"state": "modal:profile", "keyPrefixes": ["profile.", "legacyUi.profile"], "requiredKeys": ["profile.title", "profile.cloudDisclosure", "profile.save"]},
-    {"state": "modal:family-circle", "keyPrefixes": ["familyCircle.", "legacyUi.family"], "requiredKeys": ["familyCircle.title", "familyCircle.invite", "familyCircle.leave"]},
-    {"state": "modal:invite-family", "keyPrefixes": ["invite.", "legacyUi.invite"], "requiredKeys": ["invite.title", "invite.share", "invite.expires"]},
-    {"state": "modal:join-circle", "keyPrefixes": ["join.", "legacyUi.join"], "requiredKeys": ["join.title", "join.join", "join.invalid"]},
-    {"state": "modal:top-up", "keyPrefixes": ["purchase.", "credits.", "paywall.", "legacyUi.topUp"], "requiredKeys": ["purchase.topUpTitle", "purchase.buyCredits", "purchase.restore", "credits.exhaustedTitle", "credits.exhaustedBody", "settings.topUpCredits", "common.notNow"]},
-    {"state": "reader:subscription", "keyPrefixes": ["subscription."], "requiredKeys": ["subscription.title", "subscription.currentPlanCta", "subscription.confirmFacts", "subscription.monthlyCreditsNote", "subscription.freeCreditsLeft", "subscription.freePlanNote", "subscription.creditRulesTitle", "subscription.manageInAppStore"]},
-    {"state": "modal:appointment", "keyPrefixes": ["appointment.", "legacyUi.appointment"], "requiredKeys": ["appointment.title", "appointment.add", "appointment.empty"]},
-    {"state": "modal:history", "keyPrefixes": ["history."], "requiredKeys": ["history.title", "history.saved", "history.empty"]},
-    {"state": "modal:consent", "keyPrefixes": ["consent."], "requiredKeys": ["consent.title", "consent.cloudProcessingBody", "consent.emergencyGeneric"]},
-    {"state": "modal:version", "keyPrefixes": ["version."], "requiredKeys": ["version.title", "version.subtitle", "version.close"]},
-    {"state": "modal:medication-reminder", "keyPrefixes": ["medicationReminder."], "requiredKeys": ["medicationReminder.title", "medicationReminder.dueSay", "medicationReminder.description", "medicationReminder.speech", "medicationReminder.taken", "medicationReminder.snooze"]},
-    {"state": "modal:medication-manager", "keyPrefixes": ["medicationManager.", "medication."], "requiredKeys": ["medicationManager.addMedicine", "medicationManager.scheduleMultiple", "medicationManager.emptySlot", "medicationManager.reminderTime", "medicationManager.removeSlot", "medicationManager.disclaimer"]},
-    {"state": "modal:auth", "keyPrefixes": ["auth."], "requiredKeys": ["auth.sheetTitle", "auth.aiProcessingDisclosure", "auth.cancelled"]},
-    {"state": "page:notification-settings", "keyPrefixes": ["notification."], "requiredKeys": ["notification.centerTitle", "notification.privacy", "notification.denied"]},
-    {"state": "modal:notification-inbox", "keyPrefixes": ["notification."], "requiredKeys": ["notification.inboxSubtitle", "notification.noItems", "notification.defaultTitle"]}
+    {
+      "state": "screen:home",
+      "keyPrefixes": [
+        "app.",
+        "home.",
+        "visit.",
+        "event.",
+        "tab.",
+        "schedule.",
+        "greet.",
+        "weather.",
+        "feed."
+      ],
+      "requiredKeys": [
+        "home.greetingEvening",
+        "home.startChat",
+        "home.profilePromptTitle",
+        "home.profilePromptBody",
+        "home.profilePromptAction",
+        "home.care.familyRelayTitle",
+        "home.care.walkTitle",
+        "home.care.visitNote",
+        "home.care.remove",
+        "home.care.report",
+        "visit.defaultTitle",
+        "event.familyTitle",
+        "tab.home"
+      ]
+    },
+    {
+      "state": "screen:status",
+      "keyPrefixes": [
+        "status.",
+        "mood.",
+        "health."
+      ],
+      "requiredKeys": [
+        "status.title",
+        "status.moodMonitoring",
+        "health.steps"
+      ]
+    },
+    {
+      "state": "screen:family",
+      "keyPrefixes": [
+        "family.",
+        "interaction.",
+        "demo.",
+        "book."
+      ],
+      "requiredKeys": [
+        "family.title",
+        "family.startActivity",
+        "family.invite"
+      ]
+    },
+    {
+      "state": "screen:settings",
+      "keyPrefixes": [
+        "settings."
+      ],
+      "requiredKeys": [
+        "settings.title",
+        "settings.profile",
+        "settings.dataAndPrivacy"
+      ]
+    },
+    {
+      "state": "screen:connect",
+      "keyPrefixes": [
+        "connect.",
+        "legacyUi.connect"
+      ],
+      "requiredKeys": [
+        "connect.title",
+        "connect.privacy",
+        "connect.medicalDisclaimer"
+      ]
+    },
+    {
+      "state": "chat:idle",
+      "keyPrefixes": [
+        "accessibility.",
+        "credits."
+      ],
+      "requiredKeys": [
+        "voice.call.start",
+        "voice.call.offline",
+        "voice.caption.label",
+        "voice.microphone.label",
+        "accessibility.toggleCaptions",
+        "accessibility.toggleMicrophone",
+        "settings.creditsBalance"
+      ]
+    },
+    {
+      "state": "chat:connecting",
+      "keyPrefixes": [
+        "voice."
+      ],
+      "requiredKeys": [
+        "voice.connecting",
+        "voice.call.dialing",
+        "voice.call.firstWarmup",
+        "voice.call.openingWarmup",
+        "voice.queue.preparingWithCompanion",
+        "voice.queue.etaPreparingSoon",
+        "voice.queue.pending",
+        "voice.queue.wait",
+        "voice.queue.cancel"
+      ]
+    },
+    {
+      "state": "chat:queued",
+      "keyPrefixes": [
+        "voice.queue."
+      ],
+      "requiredKeys": [
+        "voice.queue.busyWithCompanion",
+        "voice.queue.position",
+        "voice.queue.etaWaitingMinutes",
+        "voice.queue.note",
+        "voice.queue.cancel"
+      ]
+    },
+    {
+      "state": "chat:active",
+      "keyPrefixes": [
+        "voice.call.",
+        "voice.runtime.",
+        "credits."
+      ],
+      "requiredKeys": [
+        "voice.ready",
+        "voice.call.end",
+        "voice.call.speaking",
+        "voice.call.connectedCaption",
+        "voice.call.listeningPrompt",
+        "voice.call.goodbye",
+        "voice.runtime.listening",
+        "voice.runtime.microphonePermission",
+        "voice.runtime.recoveredTitle",
+        "voice.runtime.degradedTitle",
+        "credits.lowTitle",
+        "credits.lowBody",
+        "credits.freeTrialOneMinute"
+      ]
+    },
+    {
+      "state": "chat:text-fallback",
+      "keyPrefixes": [
+        "textChat.",
+        "chat."
+      ],
+      "requiredKeys": [
+        "textChat.title",
+        "textChat.send",
+        "textChat.exit"
+      ]
+    },
+    {
+      "state": "chat:error",
+      "keyPrefixes": [
+        "avatar."
+      ],
+      "requiredKeys": [
+        "voice.call.unavailable",
+        "voice.call.retryLater",
+        "voice.call.microphonePermissionTitle",
+        "voice.call.authExpiredTitle",
+        "voice.call.disconnectedTitle",
+        "error.offline",
+        "common.retry"
+      ]
+    },
+    {
+      "state": "cross-surface:error-and-empty",
+      "keyPrefixes": [
+        "common.",
+        "error.",
+        "locale.",
+        "time."
+      ],
+      "requiredKeys": [
+        "error.generic",
+        "common.retry",
+        "locale.fallbackNotice"
+      ]
+    },
+    {
+      "state": "modal:quiz",
+      "keyPrefixes": [
+        "quiz.",
+        "quiz."
+      ],
+      "requiredKeys": [
+        "quiz.title",
+        "quiz.progress",
+        "quiz.result"
+      ]
+    },
+    {
+      "state": "modal:challenge",
+      "keyPrefixes": [
+        "activity.",
+        "legacyUi.activity"
+      ],
+      "requiredKeys": [
+        "activity.createTitle",
+        "activity.type",
+        "activity.sendInvite"
+      ]
+    },
+    {
+      "state": "modal:activity-detail",
+      "keyPrefixes": [
+        "activity.detail"
+      ],
+      "requiredKeys": [
+        "activity.detailTitle",
+        "activity.participants",
+        "activity.noParticipants",
+        "activity.deadline",
+        "activity.location"
+      ]
+    },
+    {
+      "state": "modal:feedback",
+      "keyPrefixes": [
+        "feedback.",
+        "legacyUi.feedback"
+      ],
+      "requiredKeys": [
+        "feedback.title",
+        "feedback.placeholder",
+        "feedback.submit"
+      ]
+    },
+    {
+      "state": "modal:interests",
+      "keyPrefixes": [
+        "interests.",
+        "legacyUi.topic."
+      ],
+      "requiredKeys": [
+        "interests.title",
+        "interests.subtitle",
+        "interests.save"
+      ]
+    },
+    {
+      "state": "modal:safety",
+      "keyPrefixes": [
+        "safety.",
+        "legacyUi.safety"
+      ],
+      "requiredKeys": [
+        "safety.title",
+        "safety.contacts",
+        "safety.disclaimer"
+      ]
+    },
+    {
+      "state": "modal:companion",
+      "keyPrefixes": [
+        "companionPicker.",
+        "companion.",
+        "legacyUi.companion"
+      ],
+      "requiredKeys": [
+        "companionPicker.title",
+        "companionPicker.memoryFollowsUser",
+        "companionPicker.choose"
+      ]
+    },
+    {
+      "state": "modal:report",
+      "keyPrefixes": [
+        "report."
+      ],
+      "requiredKeys": [
+        "report.title",
+        "report.share",
+        "report.empty"
+      ]
+    },
+    {
+      "state": "modal:font",
+      "keyPrefixes": [
+        "font."
+      ],
+      "requiredKeys": [
+        "font.title",
+        "font.standard",
+        "font.extraLarge"
+      ]
+    },
+    {
+      "state": "reader:legal",
+      "keyPrefixes": [
+        "reader."
+      ],
+      "requiredKeys": [
+        "reader.privacyTitle",
+        "reader.termsTitle",
+        "reader.loadError"
+      ]
+    },
+    {
+      "state": "modal:data",
+      "keyPrefixes": [
+        "data."
+      ],
+      "requiredKeys": [
+        "data.title",
+        "data.export",
+        "data.delete"
+      ]
+    },
+    {
+      "state": "modal:profile",
+      "keyPrefixes": [
+        "profile.",
+        "legacyUi.profile"
+      ],
+      "requiredKeys": [
+        "profile.title",
+        "profile.cloudDisclosure",
+        "profile.save"
+      ]
+    },
+    {
+      "state": "modal:family-circle",
+      "keyPrefixes": [
+        "familyCircle.",
+        "legacyUi.family"
+      ],
+      "requiredKeys": [
+        "familyCircle.title",
+        "familyCircle.invite",
+        "familyCircle.leave"
+      ]
+    },
+    {
+      "state": "modal:invite-family",
+      "keyPrefixes": [
+        "invite.",
+        "legacyUi.invite"
+      ],
+      "requiredKeys": [
+        "invite.title",
+        "invite.share",
+        "invite.expires"
+      ]
+    },
+    {
+      "state": "modal:join-circle",
+      "keyPrefixes": [
+        "join.",
+        "legacyUi.join"
+      ],
+      "requiredKeys": [
+        "join.title",
+        "join.join",
+        "join.invalid"
+      ]
+    },
+    {
+      "state": "modal:top-up",
+      "keyPrefixes": [
+        "purchase.",
+        "credits.",
+        "paywall.",
+        "legacyUi.topUp"
+      ],
+      "requiredKeys": [
+        "purchase.topUpTitle",
+        "purchase.buyCredits",
+        "purchase.restore",
+        "credits.exhaustedTitle",
+        "credits.exhaustedBody",
+        "settings.topUpCredits",
+        "common.notNow"
+      ]
+    },
+    {
+      "state": "reader:subscription",
+      "keyPrefixes": [
+        "subscription."
+      ],
+      "requiredKeys": [
+        "subscription.title",
+        "subscription.currentPlanCta",
+        "subscription.confirmFacts",
+        "subscription.monthlyCreditsNote",
+        "subscription.freeCreditsLeft",
+        "subscription.freePlanNote",
+        "subscription.creditRulesTitle",
+        "subscription.manageInAppStore"
+      ]
+    },
+    {
+      "state": "modal:appointment",
+      "keyPrefixes": [
+        "appointment.",
+        "legacyUi.appointment"
+      ],
+      "requiredKeys": [
+        "appointment.title",
+        "appointment.add",
+        "appointment.empty"
+      ]
+    },
+    {
+      "state": "modal:history",
+      "keyPrefixes": [
+        "history."
+      ],
+      "requiredKeys": [
+        "history.title",
+        "history.saved",
+        "history.empty"
+      ]
+    },
+    {
+      "state": "modal:consent",
+      "keyPrefixes": [
+        "consent."
+      ],
+      "requiredKeys": [
+        "consent.title",
+        "consent.cloudProcessingBody",
+        "consent.emergencyGeneric"
+      ]
+    },
+    {
+      "state": "modal:version",
+      "keyPrefixes": [
+        "version."
+      ],
+      "requiredKeys": [
+        "version.title",
+        "version.subtitle",
+        "version.close"
+      ]
+    },
+    {
+      "state": "modal:medication-reminder",
+      "keyPrefixes": [
+        "medicationReminder."
+      ],
+      "requiredKeys": [
+        "medicationReminder.title",
+        "medicationReminder.dueSay",
+        "medicationReminder.description",
+        "medicationReminder.speech",
+        "medicationReminder.taken",
+        "medicationReminder.snooze"
+      ]
+    },
+    {
+      "state": "modal:medication-manager",
+      "keyPrefixes": [
+        "medicationManager.",
+        "medication."
+      ],
+      "requiredKeys": [
+        "medicationManager.addMedicine",
+        "medicationManager.scheduleMultiple",
+        "medicationManager.emptySlot",
+        "medicationManager.reminderTime",
+        "medicationManager.removeSlot",
+        "medicationManager.disclaimer"
+      ]
+    },
+    {
+      "state": "modal:auth",
+      "keyPrefixes": [
+        "auth."
+      ],
+      "requiredKeys": [
+        "auth.sheetTitle",
+        "auth.aiProcessingDisclosure",
+        "auth.cancelled"
+      ]
+    },
+    {
+      "state": "page:notification-settings",
+      "keyPrefixes": [
+        "notification."
+      ],
+      "requiredKeys": [
+        "notification.centerTitle",
+        "notification.privacy",
+        "notification.denied"
+      ]
+    },
+    {
+      "state": "modal:notification-inbox",
+      "keyPrefixes": [
+        "notification."
+      ],
+      "requiredKeys": [
+        "notification.inboxSubtitle",
+        "notification.noItems",
+        "notification.defaultTitle"
+      ]
+    },
+    {
+      "state": "screen:onboarding-intro",
+      "keyPrefixes": [
+        "onboarding.",
+        "splash."
+      ],
+      "requiredKeys": [
+        "onboarding.p1.titleLine1",
+        "onboarding.p2.titleLine1",
+        "onboarding.p3.titleLine1",
+        "onboarding.next",
+        "onboarding.start",
+        "splash.tagline"
+      ]
+    }
   ]
 }

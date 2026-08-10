@@ -19,7 +19,9 @@ const expectedPerLocale = surfaceManifest.surfaces.length
 assert.equal(worklist.schema, 'munea.i18n-visual-qa-worklist.v2');
 assert.deepEqual(worklist.locales, LOCALES);
 assert.equal(worklist.entryCount, expectedPerLocale * LOCALES.length);
-assert.equal(worklist.entryCount, 456);
+// 2026-08-10：468（原 456）＝39 個畫面 × 3 種機型 × 4 語系，新增 screen:onboarding-intro。
+// 這個數字跟上一行的推導重複驗一次是刻意的：加畫面就要來這裡改，總量才不會無聲漂移。
+assert.equal(worklist.entryCount, 468);
 assert.equal(worklist.approvalPolicy.automaticPassForbidden, true);
 assert.equal(worklist.approvalPolicy.currentRunScreenshotsOnly, true);
 assert.equal(worklist.approvalPolicy.exactInstalledAppRequired, true);

@@ -1656,5 +1656,18 @@
   "activity.voteStateMine": "{opt} に投票しました",
   "activity.voteStateTodo": "まだ投票していません",
   "home.care.emptyTitle": "今はお知らせすることはありません",
-  "home.care.emptyBody": "お薬や通院の予定を入れるか、ご家族を追加すると、ここでお知らせします"
+  "home.care.emptyBody": "お薬や通院の予定を入れるか、ご家族を追加すると、ここでお知らせします",
+  "splash.tagline": "家族みんなの健康に寄り添うAIケアパートナー",
+  "onboarding.p1.titleLine1": "家族の健康を、",
+  "onboarding.p1.titleLine2": "やっと覚えている人",
+  "onboarding.p1.body": "Muneaには顔と声があります。ビデオ通話のようにご両親の話し相手になり、前回の続きから自然に話しはじめます。",
+  "onboarding.p2.titleLine1": "伝えるだけで、",
+  "onboarding.p2.titleLine2": "覚えてくれます",
+  "onboarding.p2.body": "お薬、通院、お医者さんに聞きたいこと。話すだけで記録され、時間になるとスマホがお知らせします。",
+  "onboarding.p3.titleLine1": "ご両親だけでなく、",
+  "onboarding.p3.titleLine2": "家族みんなに",
+  "onboarding.p3.body": "ご家族を家族の輪に招くと、健康や気分がお互いに見えます。歩数をくらべたり、クイズで遊んだり。離れていても安心できます。",
+  "onboarding.next": "つぎへ",
+  "onboarding.start": "はじめる",
+  "onboarding.stepLabel": "{total} ページ中 {current} ページ目"
 }

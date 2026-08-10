@@ -215,7 +215,9 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .mpc-streak { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; display: flex; align-items: center; gap: 8px; color: var(--teal-d); font-size: 15px; font-weight: 600; }
 .mpc-streak .ic { width: 18px; height: 18px; }
 .med-actions { display: flex; gap: 12px; }
-.med-actions button { flex: 1; padding: 17px; border-radius: var(--radius-sm); font-family: var(--display); font-weight: 700; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* min-width: 0 是必要的（2026-08-10 全畫面驗收抓到）：並排的按鈕預設不會縮到比內容窄，
+   西班牙文＋最大字級時「稍後提醒」把按鈕整個推出畫面 11px。加了之後文字會換行而不是溢出。 */
+.med-actions button { flex: 1; min-width: 0; padding: 17px; border-radius: var(--radius-sm); font-family: var(--display); font-weight: 700; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .med-actions .taken { border: none; background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); flex: 1.4; }
 .med-actions .taken .ic { color: #fff; }
 .med-actions .snooze { border: 1.5px solid var(--line); background: #fff; color: var(--ink-2); line-height: 1.3; font-size: 15px; }
@@ -2845,7 +2847,10 @@ html:lang(en) .set-row .sr-main small,
 html:lang(es) .set-row .sr-main small { font-size: 12.5px; }
 
 html:lang(en) .task-title,
-html:lang(es) .task-title { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 2026-08-10 全畫面驗收抓到：原本強制不換行＋超出就切掉，西班牙文＋最大字級時
+   「Salir a caminar」只放得下 77px（需要 107px），使用者看到的是被切一半的任務名。
+   中文本來就是換行的，這裡讓英文與西班牙文比照——任務名要看得完整，比排成一行重要。 */
+html:lang(es) .task-title { font-size: 14.5px; overflow-wrap: anywhere; }
 html:lang(en) .task-sub,
 html:lang(es) .task-sub { font-size: 13px; }
 html:lang(en) .task-time,
@@ -3053,3 +3058,112 @@ html:lang(ja) {
 
 /* 心情卡的回應行：高度固定兩行，換心情時版面不跳 */
 .mood-note { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; margin-top: 3px; opacity: .9; min-height: 38px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   啟動頁與開場三頁（Edward 2026-08-10 拍板）
+   需求單：docs/開場與啟動頁-需求單-2026-08-10.md
+   守住的線：不自創標誌／不要陰影與漸層／深綠只當文字不當底／橘只做圖形不做文字
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── 啟動頁 ── 底色跟 App 同一個米黃，接得上不會閃 */
+.boot-splash, .onb {
+  position: fixed; inset: 0; z-index: 90;
+  display: flex; align-items: center; justify-content: center;
+}
+.boot-splash[hidden], .onb[hidden] { display: none; }
+.boot-splash { background: var(--cream); }
+.boot-splash.is-leaving { animation: bootLeave .5s ease-in both; }
+@keyframes bootLeave { to { opacity: 0; visibility: hidden; } }
+
+.boot-inner {
+  width: 100%; max-width: 400px; height: 100vh; height: 100dvh; max-height: 866px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 28px;
+}
+@media (max-width: 520px) { .boot-inner { max-height: none; } }
+
+.boot-mark { position: relative; width: 186px; height: 186px; flex: 0 0 auto; }
+.boot-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+
+/* 水滴：重力加速落下 → 碰到水面被壓扁 → 回彈定位 */
+.boot-drop { transform-origin: 50% 59%; animation: bootDrop .95s linear .25s both; }
+@keyframes bootDrop {
+  0%   { transform: translateY(-74px) scaleY(1.13) scaleX(.92); opacity: 0;
+         animation-timing-function: cubic-bezier(.55,.02,.86,.28); }
+  16%  { opacity: 1; }
+  72%  { transform: translateY(0) scaleY(1.05) scaleX(.97); opacity: 1;
+         animation-timing-function: cubic-bezier(.25,.7,.4,1); }
+  83%  { transform: translateY(3px) scaleY(.92) scaleX(1.06); opacity: 1; }
+  93%  { transform: translateY(-1px) scaleY(1.02) scaleX(.99); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+/* 水波：從水滴碰到水面的那一點爆開，由內而外、先快後慢 */
+.boot-wave-in, .boot-wave-out { transform-origin: 50% 59%; }
+.boot-wave-in  { animation: bootWave .78s cubic-bezier(.1,.86,.24,1) .93s both; }
+.boot-wave-out { animation: bootWave .96s cubic-bezier(.1,.86,.24,1) 1.06s both; }
+@keyframes bootWave {
+  0%   { transform: scale(.04); opacity: 0; }
+  22%  { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 品牌字與副標一開始就在，不延遲浮現（Edward 2026-08-10） */
+.boot-lockup { margin-top: 26px; text-align: center; animation: bootRise .6s ease-out both; }
+@keyframes bootRise { from { transform: translateY(7px); opacity: 0; } to { transform: none; opacity: 1; } }
+.boot-word {
+  font-family: var(--display); font-weight: 700; font-size: 34px;
+  letter-spacing: -.025em; color: var(--ink); line-height: 1;
+}
+.boot-word b { color: var(--teal); font-weight: 700; }
+.boot-zh { font-family: var(--sans); font-size: .78em; font-weight: 700; letter-spacing: .04em; margin-left: 9px; opacity: .95; }
+.boot-tagline { margin-top: 15px; font-family: var(--sans); font-weight: 400; font-size: 14.5px; color: var(--muted); letter-spacing: .03em; }
+
+/* ── 開場三頁 ── */
+.onb { background: var(--teal); }
+.onb-inner {
+  width: 100%; max-width: 400px; height: 100vh; height: 100dvh; max-height: 866px;
+  display: flex; flex-direction: column;
+  padding: calc(20px + env(safe-area-inset-top)) 0 calc(22px + env(safe-area-inset-bottom));
+}
+@media (max-width: 520px) { .onb-inner { max-height: none; } }
+
+/* 橫向捲動＋吸附＝手勢滑動免費拿到，按鈕再用捲動控制 */
+.onb-track {
+  flex: 1; display: flex; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+}
+.onb-page {
+  flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 26px; text-align: center;
+}
+.onb-art { width: 100%; max-width: 320px; }
+.onb-art img { width: 100%; height: auto; display: block; }
+.onb-title {
+  margin-top: 26px; font-family: var(--sans); font-weight: 700; font-size: 26px;
+  line-height: 1.42; color: #fff; letter-spacing: .01em;
+}
+.onb-title span { display: block; }
+.onb-body {
+  margin-top: 14px; font-family: var(--sans); font-weight: 500; font-size: 15px;
+  line-height: 1.75; color: #E9F8F5; max-width: 300px;
+}
+
+.onb-foot { flex: 0 0 auto; padding: 0 26px; }
+.onb-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+.onb-dots i { width: 6px; height: 6px; border-radius: 3px; background: #8FCFC9; transition: width .25s ease, background .25s ease; }
+.onb-dots i.on { width: 18px; background: #fff; }
+.onb-cta {
+  width: 100%; height: 54px; border-radius: 27px; border: 2px solid #BFE2DE;
+  background: transparent; color: #fff; font-family: var(--sans); font-weight: 700; font-size: 17px;
+  cursor: pointer;
+}
+.onb-cta.is-last { background: #fff; border-color: #fff; color: var(--teal-dd); }
+.onb-cta:active { transform: scale(.985); }
+.onb-cta:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-drop, .boot-wave-in, .boot-wave-out, .boot-lockup { animation: none; opacity: 1; transform: none; }
+  .boot-splash.is-leaving { animation: none; opacity: 0; visibility: hidden; }
+  .onb-track { scroll-behavior: auto; }
+}

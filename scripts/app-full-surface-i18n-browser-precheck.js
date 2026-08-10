@@ -235,6 +235,13 @@ async function resetAndPrepareState(page, state) {
       return modal;
     };
 
+    // 啟動頁在 index.html 裡預設就是顯示的（2026-08-10 新增；不然開 App 會先閃一下首頁）。
+    // 拍任何一張畫面之前都要先收掉它跟開場三頁，否則兩者會蓋在每一張截圖上面。
+    const bootSplashOverlay = $('#bootSplash');
+    if (bootSplashOverlay) bootSplashOverlay.hidden = true;
+    const onboardingOverlay = $('#onboarding');
+    if (onboardingOverlay) onboardingOverlay.hidden = true;
+
     document.querySelectorAll('.modal-mask.show').forEach((modal) => {
       modal.classList.remove('show');
       modal.setAttribute('aria-hidden', 'true');
@@ -249,6 +256,14 @@ async function resetAndPrepareState(page, state) {
     if (busy) busy.hidden = true;
     const textPanel = $('#textChatPanel');
     if (textPanel) textPanel.hidden = true;
+
+    // 開場三頁是蓋在最上層的覆蓋層，不是分頁裡的 .screen，所以不能走 setScreen
+    if (requestedState === 'screen:onboarding-intro') {
+      const intro = document.getElementById('onboarding');
+      if (!intro) throw new Error('Missing onboarding intro overlay');
+      intro.hidden = false;
+      return;
+    }
 
     if (requestedState.startsWith('screen:')) {
       setScreen(requestedState.slice('screen:'.length));
@@ -522,7 +537,9 @@ async function stateMetrics(page, surface, locale, catalogs) {
       .filter((child) => {
         const childStyle = getComputedStyle(child);
         if (childStyle.display === 'none' || childStyle.visibility === 'hidden') return false;
-        if (child.closest('.hscroll-wrap')) return false;
+        // 橫向捲動容器裡的內容本來就會排到畫面外等著被滑過來，不是版面爆掉
+        // （.onb-track＝開場三頁，2026-08-10 加入）
+        if (child.closest('.hscroll-wrap, .onb-track')) return false;
         const box = child.getBoundingClientRect();
         return (
           box.width > 0

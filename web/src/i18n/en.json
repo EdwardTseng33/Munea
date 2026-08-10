@@ -1656,5 +1656,18 @@
   "activity.voteStateMine": "You picked {opt}",
   "activity.voteStateTodo": "Not voted yet",
   "home.care.emptyTitle": "Nothing to flag right now",
-  "home.care.emptyBody": "Set up medications, appointments, or add family - this is where reminders will show"
+  "home.care.emptyBody": "Set up medications, appointments, or add family - this is where reminders will show",
+  "splash.tagline": "The AI care companion for the whole family",
+  "onboarding.p1.titleLine1": "Finally, someone",
+  "onboarding.p1.titleLine2": "remembers their health",
+  "onboarding.p1.body": "Munea has a face and a voice. She talks with your parents like a video call, and picks up right where the last conversation left off.",
+  "onboarding.p2.titleLine1": "Just say it,",
+  "onboarding.p2.titleLine2": "and she'll remember",
+  "onboarding.p2.body": "Medications, appointments, questions for the doctor — say them out loud and they're saved. Your phone reminds you when it's time.",
+  "onboarding.p3.titleLine1": "Not just for parents,",
+  "onboarding.p3.titleLine2": "for the whole family",
+  "onboarding.p3.body": "Add your family to the circle: everyone's health and mood stay visible. Compare steps, play quizzes together, and worry less from far away.",
+  "onboarding.next": "Next",
+  "onboarding.start": "Get started",
+  "onboarding.stepLabel": "Page {current} of {total}"
 }
