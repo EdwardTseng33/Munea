@@ -275,6 +275,8 @@ class EvidenceRun:
         voice_chunks = []
         voice_times = []
         statuses = []
+        user_caption = ""
+        assistant_caption = ""
         avatar_ack = False
         turn_complete = False
         async with websockets.connect(voice_url + "/?" + query, max_size=None, open_timeout=20) as voice:
@@ -329,6 +331,10 @@ class EvidenceRun:
                     statuses.append(event)
                 elif event.get("type") == "avatar_pcm_received":
                     avatar_ack = True
+                elif event.get("type") == "caption" and event.get("who") == "user":
+                    user_caption += str(event.get("text") or "")
+                elif event.get("type") == "caption" and event.get("who") == "nening":
+                    assistant_caption += str(event.get("text") or "")
                 elif event.get("type") == "turn_complete" and voice_chunks:
                     turn_complete = True
                     break
@@ -346,9 +352,13 @@ class EvidenceRun:
             "direct_status": "ready",
             "avatar_ack": avatar_ack,
             "voice_chunks": len(voice_chunks),
-            "voice_audio_ms": round(len(voice_pcm) / 24 / 2),
-            "voice_max_chunk_gap_ms": round(max(arrival_gaps, default=0), 1),
+            "voice_audio_ms": round(len(voice_pcm) / 24),
+            # This measures what the test laptop's event loop received. Avatar
+            # direct playout is judged separately against captured WebRTC PCM.
+            "client_receive_max_gap_ms": round(max(arrival_gaps, default=0), 1),
             "avatar_audio_ms": round(len(avatar_pcm) / self.avatar_rate * 1000),
+            "user_caption": user_caption,
+            "assistant_caption": assistant_caption,
         }
 
     def cleanup(self):
