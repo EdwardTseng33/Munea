@@ -125,6 +125,16 @@ SR_IN, SR_ENG = 24000, 16000
 # 原理：4090 生成比即時快~1.9倍，拔掉「卡即時節奏」的閘門後會自動囤到上限、形成抖動緩衝墊；
 # 偶爾一塊做慢也不會見底（斷糧）。代價＝首句慢約 0.5s（一次性、非累積），換整段不再斷斷續續。
 AUDIO_PREBUFFER_S = max(0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.5")))
+# 4090 的實測 chunk p95 明顯低於 960ms 播放預算時，不需要每一句固定多等
+# 0.5s。從 0.25s 起步，依 GPU rolling p95 自動補到最多 0.5s；若真的發生
+# mid-turn 斷糧，下一輪再立即增加 80ms。兩端仍共用同一個 start gate，嘴聲同步不變。
+AUDIO_PREBUFFER_MIN_S = max(
+    0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.25"))
+)
+AUDIO_PREBUFFER_MAX_S = max(
+    AUDIO_PREBUFFER_MIN_S,
+    float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MAX_S", str(AUDIO_PREBUFFER_S))),
+)
 # 2026-08-08 Edward 真機：「文字先出來，聲音跟嘴巴過 1~2 秒才動」。
 # 這一格就是其中一段：開場比平常多囤一倍（1.0s vs 0.5s）才開口。
 # 那是 7/11 防斷音時給的額外保險，但它只在**第一句**收費，而第一句正是使用者
@@ -335,7 +345,12 @@ class FlashHead:
         slot.gen_compute_ms_hist = collections.deque(maxlen=100)
         # Lip-sync inference stays at 16 kHz; WebRTC carries the untouched
         # 24 kHz Gemini audio for clearer speech and less resampling noise.
-        slot.audio_out = AudioOutBuffer(SR_IN, prebuffer_s=AUDIO_PREBUFFER_S)
+        slot.audio_out = AudioOutBuffer(
+            SR_IN,
+            prebuffer_s=AUDIO_PREBUFFER_S,
+            adaptive_min_s=AUDIO_PREBUFFER_MIN_S,
+            adaptive_max_s=AUDIO_PREBUFFER_MAX_S,
+        )
         slot.sink = FrameSink(slot.tgt_fps)
         slot.SYNC_BUFFER_MS = 350
         run_pipeline_for_slot = self._run_pipeline

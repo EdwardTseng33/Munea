@@ -288,6 +288,57 @@ def test_audio_prebuffer_starts_when_first_pcm_arrives():
     print("test_audio_prebuffer_starts_when_first_pcm_arrives: PASS")
 
 
+def test_audio_prebuffer_adapts_without_counting_natural_silence():
+    """Fast GPUs start sooner; slow chunks and real starvation add protection."""
+    original_time = fec.time.time
+    clock = [200.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        audio = fec.AudioOutBuffer(
+            OUTPUT_SAMPLE_RATE,
+            prebuffer_s=0.5,
+            adaptive_min_s=0.25,
+            adaptive_max_s=0.5,
+        )
+        pcm = np.arange(audio.frame_samples, dtype=np.int16)
+
+        for compute_ms in (450.0, 470.0, 480.0):
+            audio.observe_generation(compute_ms, 960.0)
+        audio.push(pcm)
+        assert audio.last_prebuffer_s == 0.25
+
+        clock[0] = 200.25
+        assert np.array_equal(audio.pop_frame(), pcm)
+        clock[0] = 200.27
+        audio.pop_frame()
+        audio.pop_frame()
+        assert audio.underrun_count == 1, "one starvation gap must be one event, not 20ms ticks"
+
+        clock[0] = 200.35
+        audio.push(pcm)
+        assert list(audio.underrun_gap_ms)[-1] == 80.0
+        assert round(audio.adaptive_prebuffer_s, 2) == 0.33
+
+        audio.mark_input_complete()
+        audio.pop_frame()
+        audio.pop_frame()
+        assert audio.underrun_count == 1, "natural response-end silence is not an underrun"
+
+        audio.clear()
+        for compute_ms in (900.0, 910.0, 920.0):
+            audio.observe_generation(compute_ms, 960.0)
+        audio.push(pcm)
+        assert 0.44 <= audio.last_prebuffer_s <= 0.46
+
+        audio.clear()
+        audio.arm_prebuffer(0.6)
+        audio.push(pcm)
+        assert audio.last_prebuffer_s == 0.6, "opening one-shot must override adaptation"
+    finally:
+        fec.time.time = original_time
+    print("test_audio_prebuffer_adapts_without_counting_natural_silence: PASS")
+
+
 def test_fault_isolation_one_slot_does_not_crash_others():
     """故障隔離：槽 A 的 pipeline 連續拋錯 -> 標 unhealthy、觸發 on_unhealthy 回調、
     但不拋例外炸掉呼叫者，且完全不影響槽 B（獨立物件，槽 B 的 feeder/sink 正常運作）。"""
@@ -496,6 +547,7 @@ def main():
     test_cross_slot_isolation()
     test_audible_output_keeps_original_24k_samples()
     test_audio_prebuffer_starts_when_first_pcm_arrives()
+    test_audio_prebuffer_adapts_without_counting_natural_silence()
     test_fault_isolation_one_slot_does_not_crash_others()
     test_switch_slot_char_isolation()
     test_health_snapshot_math()
