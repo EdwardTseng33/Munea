@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-11 Codex｜🚨 1.0.62 真機仍卡頓：Voice→Avatar 直連未啟用與候選 Gate 誤測舊 relay（進行中 · call-path risk）
+
+- **分支／範圍**：`codex/fix-voice-direct-live-p0-20260811`；只修改 Voice 受管控部署入口、零流量 revision 驗證、假手機直連 Gate 與對應契約測試／狀態文件。App 1.0.62 Build 533 不需重包。
+- **正式證據**：2026-08-11 02:56–02:59（台灣）三通安裝版皆為 `client_release=1.0.62+533 client_protocol=3`，但 Voice `munea-voice-00103-suy` 每通皆記錄 `node.faceaudio_direct_disabled`；正式 revision 無 `MUNEA_VOICE_FACE_DIRECT`，程式預設為關。候選假手機則明文 `default=relay`，所以先前 PASS 沒覆蓋新直連路徑。
+- **修復／Gate**：受管控的 staging、production Voice deploy 必須明確帶 `MUNEA_VOICE_FACE_DIRECT=1`；zero-traffic verify 缺值即失敗；release-facing fake phone 預設改走 direct，舊 relay 僅作 fallback 測試。先零流量 canary 連續 3/3，確認 direct ACK、可聽 PCM、無重複／斷線與連續性門檻，再決定是否切正式。
+- **驗證狀態**：`App E2E pending（Codex ownership）`。自動直連與服務證據只是上正式前置門，未完成 exact-build iPhone 真麥克風、真人聽感與掛斷釋放前，不得宣稱完全修好。
+
 ### 2026-08-11 Codex｜✅ 聊聊三邊協議對齊與 1.0.62 Build 533 候選（PR #558 已合併 `c4477ae3` · call-path risk）
 
 - **分支／範圍**：`codex/fix-call-audio-state-p0-20260810`；修改 App call control／speaker arbiter、Gateway paired-lease ownership、Voice protocol identity、Avatar 音訊／嘴型時間軸、部署腳本、假手機 Gate、版本與發行權威文件。與其他 active PR 無同檔競爭時才續作。

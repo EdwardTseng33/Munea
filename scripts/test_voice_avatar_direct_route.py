@@ -69,7 +69,11 @@ def main() -> None:
     assert "Avatar._handlePcmAck(o, 'voice_direct_avatar_ack')" in APP
 
     assert "emit_audio=False" in AVATAR
-    resume = between(AVATAR, "if todo is not None:", "self._gen_chunk(todo[0], todo[1], todo[2])")
+    resume = between(
+        AVATAR,
+        "if todo is not None:",
+        "self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])",
+    )
     assert "self.slot.audio_out.clear()" not in resume
 
     print("Voice -> Avatar direct route contract: PASS")

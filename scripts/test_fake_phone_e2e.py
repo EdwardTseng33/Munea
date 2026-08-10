@@ -51,9 +51,9 @@ assert webrtc_speech_gap_metrics(
     timing_gap, {"speech_windows_ms": [[200, 300]]}
 )["ok"]
 
-# The release-facing path must default to App relay, require a scored human WAV,
-# and forward Voice binary PCM into Avatar's /audio websocket.
-assert 'choices=("relay", "direct"), default="relay"' in SOURCE
+# The release-facing path must exercise Voice -> Avatar direct PCM by default.
+# Relay remains available as a fallback test, but cannot certify the primary route.
+assert 'choices=("relay", "direct"), default="direct"' in SOURCE
 assert 'parser.error("--expected-text is required with --mic-wav' in SOURCE
 assert 'await self.avatar_feed.send(bytes(message))' in SOURCE
 assert 'await self.avatar_feed.send("finish")' in SOURCE
@@ -61,10 +61,11 @@ assert '"asr_char_recall"' in SOURCE and '"first_response"' in SOURCE
 assert '"no_unsolicited_repeat"' in SOURCE and '"source_playout"' in SOURCE
 assert '"avatar_reported_underrun"' in SOURCE and '"avatar_health_after"' in SOURCE
 assert '"avatar_webrtc_speech_timing"' in SOURCE
+assert '"avatar_route": metrics.get("avatar_ack") is True' in SOURCE
 assert 'all(metrics["gates"].values())' in SOURCE
 
 WRAPPER = (ROOT / "scripts" / "fake_phone_e2e.py").read_text(encoding="utf-8")
 assert 'sys.argv.extend(["--runs", "3"])' in WRAPPER
 assert '"required_consecutive_runs"' in SOURCE and '"summary.json"' in SOURCE
 
-print("Fake phone contract PASS: real relay PCM, scored human ASR, latency and continuity gates")
+print("Fake phone contract PASS: real direct PCM, scored human ASR, latency and continuity gates")
