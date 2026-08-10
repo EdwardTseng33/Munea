@@ -4,7 +4,9 @@
 規則若被改掉或誤刪，這裡會亮紅燈。"""
 import os
 import importlib
+import re
 import sys
+import tempfile
 import unittest
 
 SRC = os.path.join(os.path.dirname(__file__), "live_voice_server.py")
@@ -262,25 +264,46 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     這不是把字數當品質；它防止已刪掉的重複規則、例句與互斥搜尋說明悄悄長回來。
     醫療、安全、權限與工具規則仍由上面的行為測試各自守住。
+
+    2026-08-10（Edward 拍板「先分節」）改成**只算內容、不算排版**：
+    說明書從一整段長文改成分節條列後，換行讓字數多了約 80——那些是排版、不是新規則。
+    照舊寫法，「把長文切成小節」這種只有好處的改動會被守門擋下來，而真正該擋的
+    重複規則反而可以靠刪掉幾個空白偷渡進來。改成把空白全部去掉再量，排版怎麼改都
+    不影響額度，長回來的規則一個字都躲不掉——比舊寫法更緊，不是更鬆。
     """
 
     @staticmethod
+    def _content_len(prompt):
+        """只算真正的內容：空白、換行、縮排一律不計。"""
+        return len(re.sub(r"\s+", "", prompt))
+
+    @staticmethod
     def _render(search_enabled, **kwargs):
-        old = os.environ.get("MUNEA_VOICE_LIVE_LOOKUP")
+        # 2026-08-10：量之前先把「今日簡報」隔開。那是**當天的資料**、不是規則，
+        # 而且它存在 engine/perception_snapshots.json——同一輪測試裡前面幾支會寫進去，
+        # 於是這支量到的長度會跟著前面跑過什麼而變（實測差 202 字），紅燈紅得莫名其妙。
+        # 這支守的是「刪掉的重複規則有沒有偷偷長回來」，所以只量規則、不量當天資料。
+        env_backup = {
+            key: os.environ.get(key)
+            for key in ("MUNEA_VOICE_LIVE_LOOKUP", "MUNEA_PERCEPTION_SNAPSHOTS_PATH")
+        }
         os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1" if search_enabled else "0"
+        os.environ["MUNEA_PERCEPTION_SNAPSHOTS_PATH"] = os.path.join(
+            tempfile.gettempdir(), "munea-prompt-budget-no-briefing.json")
         try:
             import live_voice_server
             module = importlib.reload(live_voice_server)
             return module.system_instruction(**kwargs)
         finally:
-            if old is None:
-                os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
-            else:
-                os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = old
+            for key, old in env_backup.items():
+                if old is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = old
 
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(len(prompt), 16500)
+        self.assertLessEqual(self._content_len(prompt), 16200)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -295,7 +318,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(len(prompt), 18400)
+        self.assertLessEqual(self._content_len(prompt), 17900)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -305,7 +328,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(len(prompt), 16800)
+        self.assertLessEqual(self._content_len(prompt), 16500)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)
