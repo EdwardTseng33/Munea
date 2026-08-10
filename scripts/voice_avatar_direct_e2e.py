@@ -80,6 +80,38 @@ def source_playout_metrics(chunks, arrival_times, prebuffer_ms=350.0) -> dict:
     }
 
 
+def webrtc_frame_timing_metrics(frames) -> dict:
+    """Detect RTP timeline holes separately from content-envelope comparison."""
+    if len(frames) < 2:
+        return {"ok": False, "frame_count": len(frames), "gap_count": 0,
+                "max_pts_gap_ms": None, "max_receive_late_ms": None}
+    pts_gaps = []
+    receive_late = []
+    for previous, current in zip(frames, frames[1:]):
+        prev_pts, prev_samples, prev_rate, prev_received = previous
+        pts, _samples, rate, received = current
+        rate = int(rate or prev_rate or 0)
+        if rate > 0 and pts is not None and prev_pts is not None:
+            missing = int(pts) - (int(prev_pts) + int(prev_samples))
+            if missing > 0:
+                pts_gaps.append(1000.0 * missing / rate)
+        expected_s = float(prev_samples) / max(1, int(prev_rate or rate or 1))
+        late_ms = 1000.0 * ((float(received) - float(prev_received)) - expected_s)
+        if late_ms > 0:
+            receive_late.append(late_ms)
+    material_pts = [gap for gap in pts_gaps if gap >= 20.0]
+    max_receive = max(receive_late, default=0.0)
+    return {
+        "ok": not material_pts,
+        "frame_count": len(frames),
+        "gap_count": len(material_pts),
+        "max_pts_gap_ms": round(max(material_pts, default=0.0), 1),
+        # Diagnostic only: browser/aiortc jitter buffers can absorb wall-clock
+        # delivery variance without an audible RTP timeline hole.
+        "max_receive_late_ms": round(max_receive, 1),
+    }
+
+
 def required(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
@@ -183,8 +215,27 @@ class EvidenceRun:
         self.avatar_feed_ack = False
         self.capture_tasks = []
         self.avatar_audio = []
+        self.avatar_frame_timing = []
         self.avatar_rate = 48000
         self.stop_capture = False
+
+    def avatar_health(self, base, token):
+        """Read only decision-useful Avatar counters; never persist the call token."""
+        try:
+            response = requests.get(
+                base.rstrip("/") + "/health", params={"token": token}, timeout=10
+            )
+            response.raise_for_status()
+            body = response.json()
+            return {
+                "ok": bool(body.get("ok")),
+                "round_count": body.get("round_count"),
+                "round_latencies_ms": body.get("round_latencies_ms", []),
+                "gen_compute_ms_rolling": body.get("gen_compute_ms_rolling", {}),
+                "audio_underrun": body.get("audio_underrun", {}),
+            }
+        except Exception as error:
+            return {"ok": False, "error": type(error).__name__}
 
     def service_headers(self, prefer=""):
         return self.store._service_headers(prefer)
@@ -273,6 +324,9 @@ class EvidenceRun:
                     array = array.reshape(-1, channels).astype(np.float32).mean(axis=1)
             self.avatar_audio.append(np.clip(array, -32768, 32767).astype(np.int16).reshape(-1))
             self.avatar_rate = int(frame.sample_rate)
+            self.avatar_frame_timing.append(
+                (frame.pts, frame.samples, frame.sample_rate, time.monotonic())
+            )
 
     async def connect_avatar(self):
         token = self.lease["call_token"]
@@ -341,6 +395,7 @@ class EvidenceRun:
         if not avatar_session:
             raise RuntimeError("Avatar session missing")
         token = self.lease["call_token"]
+        avatar_health_before = self.avatar_health(avatar_url, token)
         voice_url = self.args.voice_canary.rstrip("/").replace("https://", "wss://")
         query = urllib.parse.urlencode({
             "token": token, "char": "寧寧", "user": "自動聲音驗收", "fam": "0",
@@ -453,6 +508,13 @@ class EvidenceRun:
                 event = json.loads(message)
                 if event.get("type") == "caption" and event.get("who") == "nening":
                     unsolicited_caption += str(event.get("text") or "")
+        avatar_health_after = self.avatar_health(avatar_url, token)
+        before_underruns = int(
+            avatar_health_before.get("audio_underrun", {}).get("count") or 0
+        )
+        after_underruns = int(
+            avatar_health_after.get("audio_underrun", {}).get("count") or 0
+        )
         if not turn_complete:
             raise RuntimeError("Voice turn did not complete")
         if self.args.transport == "direct":
@@ -477,6 +539,7 @@ class EvidenceRun:
             "client_receive_max_gap_ms": round(max(arrival_gaps, default=0), 1),
             "source_playout": source_playout,
             "avatar_audio_ms": round(len(avatar_pcm) / self.avatar_rate * 1000),
+            "avatar_webrtc_timing": webrtc_frame_timing_metrics(self.avatar_frame_timing),
             "user_caption": user_caption,
             "assistant_caption": assistant_caption,
             "first_response_ms": round(1000 * (first_response_at - mic_finished_at))
@@ -484,6 +547,9 @@ class EvidenceRun:
             "unsolicited_audio_bytes": unsolicited_audio_bytes,
             "unsolicited_caption": unsolicited_caption,
             "disconnected_after_turn": disconnected_after_turn,
+            "avatar_health_before": avatar_health_before,
+            "avatar_health_after": avatar_health_after,
+            "avatar_reported_underrun_delta": max(0, after_underruns - before_underruns),
         }
 
     def cleanup(self):
@@ -514,27 +580,7 @@ class EvidenceRun:
                 print("cleanup auth warning:", type(error).__name__, file=sys.stderr)
 
 
-async def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--voice-canary", required=True)
-    parser.add_argument("--gateway", default="https://munea-call-control-491603544409.asia-east1.run.app")
-    parser.add_argument("--character", default="a05")
-    parser.add_argument("--timeout", type=float, default=60)
-    parser.add_argument("--out", required=True)
-    parser.add_argument("--transport", choices=("relay", "direct"), default="relay")
-    parser.add_argument("--mic-wav", default="")
-    parser.add_argument("--mic-seconds", type=float, default=5.0)
-    parser.add_argument("--expected-text", default="")
-    parser.add_argument("--min-asr-char-recall", type=float, default=0.80)
-    parser.add_argument("--max-first-response-ms", type=int, default=4500)
-    parser.add_argument("--min-avatar-audio-ms", type=int, default=1000)
-    parser.add_argument("--max-source-underrun-ms", type=int, default=250)
-    parser.add_argument("--post-turn-quiet-seconds", type=float, default=3.0)
-    parser.add_argument("--prompt", default="請只用自然台灣華語，連續清楚地說一段約十五秒的話，內容是今天精神還不錯、早餐吃得下、下午想在家休息；不要列點，也不要問問題。")
-    args = parser.parse_args()
-    if args.mic_wav and not args.expected_text.strip():
-        parser.error("--expected-text is required with --mic-wav; a fake phone must score what Voice heard")
-    output = Path(args.out).resolve()
+async def execute_run(args, output):
     output.mkdir(parents=True, exist_ok=True)
     run = EvidenceRun(args)
     try:
@@ -556,6 +602,14 @@ async def main():
                                and metrics["first_response_ms"] <= args.max_first_response_ms),
             "avatar_audio": metrics.get("avatar_audio_ms", 0) >= args.min_avatar_audio_ms,
             "continuity": bool(metrics["continuity"].get("ok")),
+            "avatar_reported_underrun": (
+                metrics.get("avatar_health_before", {}).get("ok") is True
+                and metrics.get("avatar_health_after", {}).get("ok") is True
+                and metrics.get("avatar_reported_underrun_delta") == 0
+            ),
+            "avatar_webrtc_timing": bool(
+                metrics.get("avatar_webrtc_timing", {}).get("ok")
+            ),
             "source_playout": (
                 metrics.get("source_playout", {}).get("max_underrun_ms") is not None
                 and metrics["source_playout"]["max_underrun_ms"] <= args.max_source_underrun_ms
@@ -567,11 +621,10 @@ async def main():
             "connection_held": not metrics.get("disconnected_after_turn"),
         }
         metrics["ok"] = all(metrics["gates"].values())
-        (output / "result.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps(metrics, ensure_ascii=False, indent=2))
-        print("evidence=" + str(output))
-        if not metrics["ok"]:
-            raise SystemExit(2)
+        (output / "result.json").write_text(
+            json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        return metrics
     finally:
         run.stop_capture = True
         if run.pc:
@@ -583,6 +636,61 @@ async def main():
         for task in run.capture_tasks:
             task.cancel()
         run.cleanup()
+
+
+async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--voice-canary", required=True)
+    parser.add_argument("--gateway", default="https://munea-call-control-491603544409.asia-east1.run.app")
+    parser.add_argument("--character", default="a05")
+    parser.add_argument("--timeout", type=float, default=60)
+    parser.add_argument("--out", required=True)
+    parser.add_argument("--transport", choices=("relay", "direct"), default="relay")
+    parser.add_argument("--mic-wav", default="")
+    parser.add_argument("--mic-seconds", type=float, default=5.0)
+    parser.add_argument("--expected-text", default="")
+    parser.add_argument("--min-asr-char-recall", type=float, default=0.80)
+    parser.add_argument("--max-first-response-ms", type=int, default=4500)
+    parser.add_argument("--min-avatar-audio-ms", type=int, default=1000)
+    parser.add_argument("--max-source-underrun-ms", type=int, default=250)
+    parser.add_argument("--post-turn-quiet-seconds", type=float, default=3.0)
+    parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--prompt", default="請只用自然台灣華語，連續清楚地說一段約十五秒的話，內容是今天精神還不錯、早餐吃得下、下午想在家休息；不要列點，也不要問問題。")
+    args = parser.parse_args()
+    if args.runs < 1:
+        parser.error("--runs must be at least 1")
+    if args.mic_wav and not args.expected_text.strip():
+        parser.error("--expected-text is required with --mic-wav; a fake phone must score what Voice heard")
+    output = Path(args.out).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    results = []
+    for index in range(args.runs):
+        run_output = output if args.runs == 1 else output / ("run-%02d" % (index + 1))
+        try:
+            metrics = await execute_run(args, run_output)
+        except Exception as error:
+            metrics = {"ok": False, "error": type(error).__name__}
+            run_output.mkdir(parents=True, exist_ok=True)
+            (run_output / "result.json").write_text(
+                json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        results.append(metrics)
+        print(json.dumps(metrics, ensure_ascii=False, indent=2))
+        print("evidence=" + str(run_output))
+    summary = {
+        "required_consecutive_runs": args.runs,
+        "passed_runs": sum(1 for result in results if result.get("ok") is True),
+        "ok": all(result.get("ok") is True for result in results),
+        "results": results,
+    }
+    (output / "summary.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(json.dumps({key: summary[key] for key in (
+        "required_consecutive_runs", "passed_runs", "ok"
+    )}, ensure_ascii=False))
+    if not summary["ok"]:
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":
