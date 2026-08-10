@@ -14,11 +14,13 @@
     // 門檻太鬆。但這裡加嚴有天花板：既有合約要求「持續 4 格（≈171ms）的
     // 近場人聲必須讓路」（scripts/test-voice-turn-policy.js），那是「真人插話要跟得上」
     // 的產品底線，不能為了擋回音把它犧牲掉——我第一版設 220 就被那條守門擋下來。
-    // 取 150ms，再加 100ms duck-confirm；總停聲目標仍在 300ms 內。
+    // 取 150ms，再加 110ms duck-confirm；總停聲目標仍在 300ms 內。
     sustainMs: 150,
-    // Duck first, then require another short slice of continuing speech.
-    // 150 + 100 ms keeps normal local stop below the 300 ms product target.
-    duckConfirmMs: 100,
+    // Duck first, then require fresh post-duck evidence.  Three 48 kHz Web
+    // Audio callbacks are about 42.7ms, so 110ms usually captures 2-3 frames
+    // while keeping the stricter 190 + 110ms opening path within 300ms.
+    duckConfirmMs: 110,
+    duckEvidenceMs: 80,
     // 預捲必須「蓋得住」對應的持續人聲門檻，開頭的字才補得回來（2026-07-16 Edward「回長話第一句沒反應」）：
     // 一格 ≈ 42.7ms（2048 樣本 @48kHz）。平常取 12 格 ≈ 512ms 留餘裕；
     // 開場取 18 格 ≈ 768ms，含起音爬升與中途小停頓的餘裕。

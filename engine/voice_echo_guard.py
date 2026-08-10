@@ -61,11 +61,47 @@ def guard_hot_multiplier():
         return 2.5
 
 
+def barge_evidence_hot_multiplier():
+    """Stricter multiplier for buffered two-phase barge-in evidence.
+
+    The regular uplink guard is intentionally tunable for microphone
+    sensitivity.  Buffered barge evidence is different: accepting it stops the
+    current assistant turn and suppresses all following PCM.  Keep that
+    destructive decision at least as strict as the proven 2.5x safe default,
+    unless a dedicated barge setting is explicitly supplied.
+    """
+    raw = os.environ.get("MUNEA_VOICE_BARGE_EVIDENCE_HOT_MULT")
+    if raw is None or str(raw).strip() == "":
+        return max(2.5, guard_hot_multiplier())
+    try:
+        return min(5.0, max(1.5, float(raw)))
+    except (TypeError, ValueError):
+        return max(2.5, guard_hot_multiplier())
+
+
 def hot_threshold(now, playout_head, base_threshold=None):
     """回傳此刻適用的門檻：她講話中＝base×倍率；殘響尾或沒在講＝base。"""
     base = guard_rms_threshold() if base_threshold is None else base_threshold
     if playout_head and now < playout_head:   # 水位還在前方＝句子還在播
         return base * guard_hot_multiplier()
+    return base
+
+
+def barge_evidence_threshold(client_threshold, playout_active):
+    """Return the acceptance threshold for buffered barge-in evidence.
+
+    The browser threshold follows its local noise floor and can be below the
+    server's known echo floor.  During active assistant playout, pre-duck
+    evidence must also cross the stricter barge multiplier; otherwise loud
+    speaker echo can cancel the assistant's own sentence.
+    """
+    try:
+        client = max(0.0, float(client_threshold))
+    except (TypeError, ValueError):
+        client = 0.0
+    base = max(float(guard_rms_threshold()), client)
+    if playout_active:
+        return base * barge_evidence_hot_multiplier()
     return base
 
 
@@ -84,7 +120,7 @@ def normalized_rms_to_pcm16(value, default=0.028):
     return normalized * 32768.0
 
 
-def sustained_voice_evidence(level_frames, threshold, sustain_ms):
+def sustained_voice_evidence(level_frames, threshold, sustain_ms, minimum_ms=120.0):
     """Mirror the browser sustain rule over buffered ``(rms, frame_ms)`` pairs.
 
     Returns ``(accepted, strongest_run_ms, onset_index)``. The onset points to
@@ -96,7 +132,11 @@ def sustained_voice_evidence(level_frames, threshold, sustain_ms):
         required = float(sustain_ms or 0.0)
     except (TypeError, ValueError):
         required = 150.0
-    required = min(350.0, max(120.0, required))
+    try:
+        minimum = min(120.0, max(60.0, float(minimum_ms)))
+    except (TypeError, ValueError):
+        minimum = 120.0
+    required = min(350.0, max(minimum, required))
     run_ms = 0.0
     strongest_ms = 0.0
     run_start = 0

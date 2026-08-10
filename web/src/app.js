@@ -4045,6 +4045,10 @@ const LiveVoice = {
     this._bargePreRoll = [];
     this._bargeInActive = false;
     this._bargeSpeechOnsetAt = 0;
+    this._duckPreRoll = [];
+    this._duckPostRoll = [];
+    this._duckConfirmState = null;
+    this._duckConfirmPassed = false;
   },
   _stopAssistantPlayback() {
     clearTimeout(this._speakTimer);
@@ -4061,6 +4065,17 @@ const LiveVoice = {
     this._setFaceAudioMuted(true);
     Avatar.reset();
   },
+  _ensureLocalPlaybackGain() {
+    if (!this.playCtx || this.playCtx.state === 'closed') return null;
+    if (this._playGain && this._playGain.context === this.playCtx) return this._playGain;
+    try {
+      const gain = this.playCtx.createGain();
+      gain.gain.value = 1;
+      gain.connect(this._avAnalyser || this.playCtx.destination);
+      this._playGain = gain;
+      return gain;
+    } catch (e) { return null; }
+  },
   // 先把音量壓小、看你是不是真的在講，再決定要不要把她的話砍掉（2026-08-09）。
   //
   // 為什麼要多這一關：Edward 8/8 真機「整句話頻繁出現斷字、卡住一個字跳針」。
@@ -4076,6 +4091,13 @@ const LiveVoice = {
       var p=document.getElementById('faceVid');
       if(p && !this._duckPrevVolume){ this._duckPrevVolume=(p.volume===0?1:p.volume); p.volume=0.06; }   // 0.06 ≈ −24dB
     } catch (e) {}
+    try {
+      const gain = this._ensureLocalPlaybackGain();
+      if (gain && !this._duckPrevGain) {
+        this._duckPrevGain = gain.gain.value || 1;
+        gain.gain.setTargetAtTime(0.06, this.playCtx.currentTime, 0.01);
+      }
+    } catch (e) {}
   },
   _unduckAssistantAudio() {
     try {
@@ -4083,25 +4105,45 @@ const LiveVoice = {
       if(p && this._duckPrevVolume){ p.volume=this._duckPrevVolume; }
     } catch (e) {}
     this._duckPrevVolume=0;
+    try {
+      const gain = this._playGain;
+      if (gain && this.playCtx && this.playCtx.state !== 'closed') {
+        const value = this._duckPrevGain || 1;
+        gain.gain.cancelScheduledValues(this.playCtx.currentTime);
+        gain.gain.setTargetAtTime(value, this.playCtx.currentTime, 0.01);
+      }
+    } catch (e) {}
+    this._duckPrevGain=0;
   },
   _maybeBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs) {
     if (this._bargeInActive || this._duckPendingAt) return;
+    const policy = window.MuneaVoiceTurnPolicy;
     // 第一步：只壓音量，不砍話、不清緩衝
     this._duckPendingAt = performance.now();
+    this._duckPreRoll = Array.isArray(preRoll) ? preRoll.slice() : [];
+    this._duckPostRoll = [];
+    this._duckConfirmState = policy ? policy.createState(this._bargeState && this._bargeState.noiseFloor) : null;
+    this._duckConfirmPassed = false;
     this._duckAssistantAudio();
     voiceCallMark('barge_in_ducked', 'pass', { rms: Math.round(rms*1000)/1000, sustainMs });
     var self=this;
     // 第二步：再看短暫確認窗。真人插話會持續講；回音殘響撐不了那麼久。
-    const policy = window.MuneaVoiceTurnPolicy;
-    const confirmMs = policy ? policy.DEFAULTS.duckConfirmMs : 100;
+    const confirmMs = policy ? policy.DEFAULTS.duckConfirmMs : 110;
     this._duckConfirmT = setTimeout(function(){
       self._duckPendingAt = 0;
-      var stillTalking = self._bargeState && self._bargeState.speechMs > 0;
+      var stillTalking = self._duckConfirmPassed
+        && self._duckPostRoll.length > 0
+        && self._duckConfirmState
+        && self._duckConfirmState.speechMs > 0;
       if (stillTalking) {
         const confirmedSpeechMs = self._bargeSpeechOnsetAt
           ? Math.max(0, performance.now() - self._bargeSpeechOnsetAt)
           : Math.max(0, Number(detectedSpeechMs) || 0) + confirmMs;
-        self._beginBargeIn(rms, threshold, sustainMs, preRoll, confirmedSpeechMs);   // 真的是你 → 讓路
+        const evidence = self._duckPreRoll.concat(self._duckPostRoll);
+        self._beginBargeIn(
+          rms, threshold, sustainMs, evidence, confirmedSpeechMs,
+          self._duckPostRoll.length,
+        );   // duck 後仍持續才是真插話
       } else {
         self._unduckAssistantAudio();                                               // 誤判 → 音量還原，話沒斷
         voiceCallMark('barge_in_false_alarm', 'pass', { recoveredMs: confirmMs });
@@ -4109,12 +4151,13 @@ const LiveVoice = {
       }
     }, confirmMs);
   },
-  _beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs) {
+  _beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs, postDuckFrames = 0) {
     if (this._bargeInActive) return;
     this._bargeInActive = true;
     this._dropAssistantAudio = true;
     try { clearTimeout(this._duckConfirmT); } catch (e) {}
-    this._duckPendingAt = 0; this._duckPrevVolume = 0;
+    this._duckPendingAt = 0;
+    this._unduckAssistantAudio();
     const stopStartedAt = performance.now();
     this._stopAssistantPlayback();
     const stopOperationMs = Math.max(0, performance.now() - stopStartedAt);
@@ -4131,6 +4174,8 @@ const LiveVoice = {
       threshold: +threshold.toFixed(4),
       sustain_ms: Math.max(0, Number(sustainMs) || 0),
       evidence_frames: evidence.length,
+      post_duck_frames: Math.max(0, Number(postDuckFrames) || 0),
+      post_duck_sustain_ms: policy ? policy.DEFAULTS.duckEvidenceMs : 80,
       detected_speech_ms: Math.round(Math.max(0, Number(detectedSpeechMs) || 0)),
       stop_operation_ms: Math.round(stopOperationMs),
       local_stop_ms: localStopMs,
@@ -4477,6 +4522,23 @@ const LiveVoice = {
       }
       if (speakerActive && policy) {
         this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
+        if (this._duckPendingAt) {
+          // Only fresh frames captured after the speaker was ducked can prove
+          // that a nearby user is still speaking.  The old path spliced these
+          // frames away and later judged the original speaker-echo pre-roll.
+          this._duckPostRoll.push(buf);
+          while (this._duckPostRoll.length > 6) this._duckPostRoll.shift();
+          const confirmed = policy.observe(
+            this._duckConfirmState,
+            rms,
+            frameMs,
+            true,
+            { sustainMs: policy.DEFAULTS.duckEvidenceMs },
+          );
+          this._duckConfirmState = confirmed.state;
+          if (confirmed.shouldInterrupt) this._duckConfirmPassed = true;
+          return;
+        }
         this._bargePreRoll.push(buf);
         while (this._bargePreRoll.length > _preFrames) this._bargePreRoll.shift();
         const observedAt = performance.now();
@@ -4734,12 +4796,14 @@ const LiveVoice = {
                 trackProductEvent(o.accepted === false ? 'voice_barge_in_rejected' : 'voice_barge_in_accepted', {
                   reason: o.reason || null,
                   evidenceMs: Number(o.evidence_ms) || 0,
+                  evidenceBasis: o.evidence_basis || '',
                 });
               } catch (e) {}
               voiceCallMark('barge_in_server_ack', 'pass', {
                 accepted: o.accepted !== false,
                 reason: o.reason || '',
                 evidenceMs: Number(o.evidence_ms) || 0,
+                evidenceBasis: o.evidence_basis || '',
               });
               this._dropAssistantAudio = false;
               this._capBuf = '';
@@ -4907,7 +4971,7 @@ const LiveVoice = {
           return;                                                  // 不本地排程（聲音由 faceAud 出）
         }
         const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
-        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._avAnalyser || this.playCtx.destination);   // 延遲量測開時串一顆分析器（透明、不改聲音）
+        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._ensureLocalPlaybackGain() || this._avAnalyser || this.playCtx.destination);   // 共用 gain 讓同線退回／純語音也能真的 duck
         const now = this.playCtx.currentTime;
         // 有會動的臉在跑時，聲音多等一下跟臉對齊（臉要往返雲端、比聲音慢約 1 秒）→ 聲音+嘴一起出、不再話先出嘴慢半拍（Edward 2026-07-10）。
         // 純語音不接臉＝維持 0.18 秒快起播。等多久可在手機上微調：localStorage['munea.faceSyncMs']（毫秒、預設 900、0~3000）。
@@ -4975,6 +5039,7 @@ const LiveVoice = {
     try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
     try { if (window.MuneaAvSyncMeter) MuneaAvSyncMeter.stop(); } catch (e) {}   // 延遲量測器一起收
     this._avAnalyser = null;                                                      // playCtx 關了→分析器作廢，下通重建
+    this._playGain = null; this._duckPrevGain = 0;
     this.ws = this.ac = this.mic = this.proc = this._micSrc = this.playCtx = null;
   },
 };
