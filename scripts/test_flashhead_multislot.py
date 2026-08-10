@@ -272,10 +272,21 @@ def test_audio_ingress_waits_for_video_once_then_stays_continuous():
         clock[0] += slot.audio_out.last_prebuffer_s
         first = slot.audio_out.pop_frame()
         assert np.array_equal(first, pcm[:slot.audio_out.frame_samples])
+        assert slot.audio_out.played_samples == slot.audio_out.frame_samples
         assert slot.audio_out.underrun_count == 0
+        slot.audio_out.clear()
+        assert slot.audio_out.played_samples == 0
     finally:
         fec.time.time = original_time
     print("test_audio_ingress_waits_for_video_once_then_stays_continuous: PASS")
+
+
+def test_lip_catchup_skips_only_expired_frames():
+    assert fec.lip_catchup_frame_count(0.0, 0.0, 0.0, 24, 25) == 0
+    assert fec.lip_catchup_frame_count(1.0, 0.2, 0.4, 24, 25) == 20
+    assert fec.lip_catchup_frame_count(10.0, 0.0, 0.0, 8, 25) == 6
+    assert fec.lip_catchup_frame_count(1.0, 0.0, None, 8, 25) == 0
+    print("test_lip_catchup_skips_only_expired_frames: PASS")
 
 
 def test_audio_finish_does_not_count_natural_tail_as_underrun():
@@ -516,6 +527,11 @@ def test_health_snapshot_math():
     assert body["frames"] == 0
     assert body["output_resolution"] == {"width": 768, "height": 768}
     assert body["video_underrun"]["count"] == 0
+    assert body["video_sync"] == {
+        "catchup_events": 0,
+        "catchup_frames": 0,
+        "audio_played_ms": 0.0,
+    }
     print("test_health_snapshot_math: PASS")
 
 
@@ -612,6 +628,7 @@ def main():
     test_cross_slot_isolation()
     test_audible_output_keeps_original_24k_samples()
     test_audio_ingress_waits_for_video_once_then_stays_continuous()
+    test_lip_catchup_skips_only_expired_frames()
     test_audio_finish_does_not_count_natural_tail_as_underrun()
     test_audio_prebuffer_starts_when_first_pcm_arrives()
     test_audio_prebuffer_adapts_without_counting_natural_silence()

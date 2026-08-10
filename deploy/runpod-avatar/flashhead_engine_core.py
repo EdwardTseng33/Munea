@@ -190,6 +190,9 @@ class AudioOutBuffer:
         self._underrun_started_ts = None
         self.last_push_ts = 0.0
         self.depth_samples = 0
+        # Counts only PCM frames actually handed to WebRTC. Held/underrun
+        # zeroes are excluded so lip catch-up follows the audible timeline.
+        self.played_samples = 0
         self.hold_until_ts = float("inf")
         self._awaiting_first_push = True
         self._turn_complete = False
@@ -280,6 +283,7 @@ class AudioOutBuffer:
         with self.lock:
             self.buf = np.zeros(0, dtype=np.int16)
             self.depth_samples = 0
+            self.played_samples = 0
             self.hold_until_ts = float("inf")
             self._awaiting_first_push = True
             self._turn_complete = False
@@ -325,6 +329,7 @@ class AudioOutBuffer:
                 chunk = self.buf[:self.frame_samples]
                 self.buf = self.buf[self.frame_samples:]
                 self.depth_samples = len(self.buf)
+                self.played_samples += len(chunk)
                 return chunk
             if not self._turn_complete and self._underrun_started_ts is None:
                 self.underrun_count += 1
@@ -377,6 +382,8 @@ class Slot:
         self.round_latencies = collections.deque(maxlen=20)
         self.last_gen_compute_ms = None
         self.gen_compute_ms_hist = collections.deque(maxlen=100)
+        self.video_catchup_events = 0
+        self.video_catchup_frames = 0
         # ---- 准入/佔用（SlotPool 管）----
         self.active_session = None
         self.active_pc = None
@@ -385,6 +392,22 @@ class Slot:
         self.healthy = True
         self.fault_count = 0
         self.last_fault = None
+
+
+def lip_catchup_frame_count(audio_played_s, queued_video_s, timeline_start_s,
+                            frame_count, fps, keep_frames=2):
+    """Return how many already-expired lip frames may be skipped safely.
+
+    Audio remains the master clock. The final ``keep_frames`` are retained so
+    a slow GPU produces a short mouth freeze/catch-up instead of an empty video
+    queue or delaying audible PCM.
+    """
+    if not frame_count or not fps or timeline_start_s is None:
+        return 0
+    expired_s = max(0.0, float(audio_played_s) + float(queued_video_s)
+                    - float(timeline_start_s))
+    expired_frames = int(expired_s * float(fps))
+    return min(max(0, int(frame_count) - max(1, int(keep_frames))), expired_frames)
 
 
 def switch_slot_char(slot, char, char_src_map, get_base_data_fn, load_poster_fn):
@@ -566,7 +589,7 @@ class Feeder:
         return frames
 
     def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None,
-                   emit_audio=True):
+                   emit_audio=True, timeline_start_s=None):
         t_chunk_ready = time.time()
         with self.lock:
             chunk_epoch = self._epoch
@@ -603,6 +626,27 @@ class Feeder:
                 print("[feeder] slot" + str(self.slot.index) + " stale chunk dropped (epoch "
                       + str(chunk_epoch) + " -> " + str(self._epoch) + ")", flush=True)
                 return
+        if emit_audio and timeline_start_s is not None and len(frames):
+            queued_video_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
+            audio_played_s = (self.slot.audio_out.played_samples
+                              / max(1, self.slot.audio_out.sample_rate))
+            drop_count = lip_catchup_frame_count(
+                audio_played_s,
+                queued_video_s,
+                timeline_start_s,
+                len(frames),
+                self.slot.tgt_fps,
+            )
+            if drop_count:
+                frames = frames[drop_count:]
+                self.slot.video_catchup_events += 1
+                self.slot.video_catchup_frames += drop_count
+                print("[video-sync] slot" + str(self.slot.index)
+                      + " drop=" + str(drop_count)
+                      + " audio=" + str(round(audio_played_s, 3)) + "s"
+                      + " queued=" + str(round(queued_video_s, 3)) + "s"
+                      + " source=" + str(round(timeline_start_s, 3)) + "s",
+                      flush=True)
         if ANTIFLICKER:
             frames = self._stabilize(frames, chunk_epoch)
         self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
@@ -641,7 +685,9 @@ class Feeder:
                     ahead_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
                     if ahead_s < self.max_ahead_s:
                         output_samples = min(len(self.acc_out), int(round(cs * self.sr_in / self.sr_eng)))
-                        todo = (self.acc[:cs].copy(), cs, self.acc_out[:output_samples].copy())
+                        timeline_start_s = self.consumed / max(1, self.sr_eng)
+                        todo = (self.acc[:cs].copy(), cs,
+                                self.acc_out[:output_samples].copy(), timeline_start_s)
                         self.acc = self.acc[cs:]
                         self.acc_out = self.acc_out[output_samples:]
                         self.consumed += cs
@@ -660,8 +706,9 @@ class Feeder:
                     self.acc = np.zeros(0, dtype=np.float32)
                     self.acc_out = self.acc_out[output_samples:]
                     self._finish_pending = False
+                    timeline_start_s = self.consumed / max(1, self.sr_eng)
                     self.consumed += valid
-                    todo = (padded, valid, output_pcm)
+                    todo = (padded, valid, output_pcm, timeline_start_s)
                 if todo is None and self._complete_pending and len(self.acc) == 0:
                     self._complete_pending = False
                     complete_now = True
@@ -678,7 +725,7 @@ class Feeder:
                     self.slot.sink.clear()
                     print("[feeder] slot" + str(self.slot.index)
                           + " real audio arrived, stop idle feed", flush=True)
-                self._gen_chunk(todo[0], todo[1], todo[2])
+                self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])
                 continue
             now = time.time()
             with self.lock:
@@ -871,6 +918,12 @@ def health_snapshot(slot, wake_ts=None):
                                     if ao and ao.generation_p95_ms is not None else None),
         },
         "video_underrun": {"count": sink.underrun_count if sink else 0},
+        "video_sync": {
+            "catchup_events": slot.video_catchup_events,
+            "catchup_frames": slot.video_catchup_frames,
+            "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
+                                if ao else 0),
+        },
     }
 
 
