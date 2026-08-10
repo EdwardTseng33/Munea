@@ -12,11 +12,11 @@
  * 一個新功能面板算「小功能」，走最後一碼；要跳中間碼請先問 Edward。
  */
 window.MuneaVersion = {
-  current: '1.0.54',
+  current: '1.0.55',
   channel: '',
   changelog: [
     {
-      version: '1.0.54',
+      version: '1.0.55',
       date: '2026-08-01',
       title: '家人的話直接送到眼前；寧寧會四國語言，也更懂怎麼把話說對',
       items: [

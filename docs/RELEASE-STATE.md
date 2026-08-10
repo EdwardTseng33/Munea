@@ -2,9 +2,16 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-08-06 03:1X Asia/Taipei`（Voice／Avatar 正式環境為 `origin/main@7b0bac35`；App lane 已以 App Store Connect 唯讀查詢回填為 `1.0.54 (Build 524) WAITING_FOR_REVIEW`；installed-iPhone lane 仍沿用下表既有證據）
+Snapshot time: `2026-08-10 19:18 Asia/Taipei`（production Voice 為 `munea-voice-00099-him@e7fd0159`；App Store review lane 為 `1.0.55 (Build 529) WAITING_FOR_REVIEW`；current source 候選為 Build 530；installed-iPhone lane 尚無 Build 530 證據）
 
-Source reconciliation baseline: `origin/main@7b0bac35`; frozen uploaded App source: `72a0bd46` (parent `5d2008c`)
+Source reconciliation baseline: `origin/main@e7fd0159`; latest uploaded App Build 529 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
+
+## 2026-08-10 開場卡頓／假斷線修復
+
+- Production Voice 已切到 `munea-voice-00099-him`（`1.0.54@e7fd0159`）100%；上一版 `munea-voice-00097-sag` 可一鍵回滾。
+- 正式 Gateway→Voice→GLOWS Avatar 實際音訊鏈重跑兩次，Voice→Avatar direct status `ready`、Avatar ACK `true`，missing speech runs 皆 `0`、max missing speech 皆 `0ms`；這證明服務端傳輸連續，不等於舊 App 已修好。
+- App Store Connect 的 Build 529 上傳於 03:38 UTC，早於同日 `5db648a6` echo 修復與 `32ac2aac` 直連修復，確定未包含完整客戶端半邊。下一個唯一候選為 `1.0.55 (Build 530)`。
+- Build 530 尚未 Mac Archive／上傳／安裝，最高狀態是 `tested source + deployed service`，仍不可稱 exact-build App verified。
 
 > ✅ **版號回填缺口已補（2026-08-06 · Edward「app 與送審都已經是 1.0.54，你們自己要同步更新好」）**：這次不用估——直接用 App 管理鑰匙唯讀問 App Store Connect。權威回答：**`1.0.54` 狀態 `WAITING_FOR_REVIEW`、綁 Build 524**（上傳 2026-08-01 09:41 UTC ＝台灣 8/1 17:41），釋出方式 `AFTER_APPROVAL`；商店上架中的仍是最早的 `1.0`（Build 49）。repo 先前停在 `1.0.53 (Build 523)`——523 於台灣 8/1 06:59 上傳，**同一天就被 524 取代、從未送審、沒有任何使用者跑過**，所以把 1.0.53 的更新說明併進 1.0.54（使用者會看到的就是這一份），並補上 Build 523→524 之間 12 筆裡使用者看得到的三件事。
 >
@@ -40,9 +47,9 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.54 (Build 524)` | 對齊 App Store Connect 的權威事實（唯讀 API 查得：1.0.54／Build 524／`WAITING_FOR_REVIEW`）。1.0.53 的更新說明併入 1.0.54（Build 523 同日被取代、從未送審），另補 Build 523→524 之間使用者看得到的三件事；四個 WebView cache identity 一併對齊 `v1054` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project; App Store Connect API | 2026-08-06 03:1X |
-| Latest uploaded App | `1.0.54 (Build 524)` | 唯讀查 App Store Connect：Build 524 `VALID`，上傳 2026-08-01 09:41 UTC。同帳號另有 Build 523（同日稍早）與 492 等歷史 Build，皆 `VALID` | App Store Connect API（權威）；`scripts/appstore/README.md` 的 app-manager 鑰匙 | 2026-08-06 03:1X |
-| App Store selected review lane | `1.0.54 (Build 524)` | **已送審**：`appStoreState=WAITING_FOR_REVIEW`，釋出方式 `AFTER_APPROVAL`（核准後自動上架）。尚未核准、尚未公開發佈；商店上架中的仍是 `1.0`（Build 49） | App Store Connect API | 2026-08-06 03:1X |
+| Latest source | `1.0.55 (Build 530)` | 下一個唯一候選 Build；包含 speaker echo 防誤判、Voice→Avatar 直連與 2026-08-10 正式 Voice revision。WebView cache identity 已更新為 `v1055`，避免舊 App bundle 沿用 Build 529 的語音程式 | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-10 19:18 +08:00 |
+| Latest uploaded App | `1.0.55 (Build 529)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 03:38 UTC；早於 2026-08-10 15:42 +08:00 的 echo 修復與 18:51 +08:00 的直連修復，因此不能代表 current source | App Store Connect API（權威）；Git commit timestamps | 2026-08-10 19:18 +08:00 |
+| App Store selected review lane | `1.0.55 (Build 529)` | `appStoreState=WAITING_FOR_REVIEW`；尚未核准、尚未公開。Build 530 尚未 Archive／上傳／選入審查，不能把 source-ready 當作 submitted | App Store Connect API | 2026-08-10 19:18 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
 | Draft call／purchase／QA fixes | #174 → #175 → #188，目標 `1.0.43 (Build 48)` | 三張 Draft 目前 merge state CLEAN 且 CI 綠；#175 stacked on #174、#188 stacked on #175。這仍只代表可整合，尚未 merged／packaged／iPhone verified | PR #174; PR #175; PR #188 | 2026-07-20 |
 
