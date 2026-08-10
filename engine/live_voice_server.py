@@ -122,6 +122,17 @@ def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
 FACE_SEND_TIMEOUT_S = float(os.environ.get("MUNEA_VOICE_FACE_SEND_TIMEOUT_S", "0.15"))
 
 
+def face_direct_enabled():
+    """臉的聲音「伺服器直送」總開關（2026-08-10 晚 · 1.0.60 實測災情後裝）。
+
+    直送路（#551）要三邊同時到位：這台伺服器＋手機 App＋顯卡上的臉引擎。
+    8/10 一天四次上線後 Edward 實測整組崩（她開口卡住、通話中段 48 秒聽不到使用者、
+    臉凍住、自己斷線），三邊版本沒對齊是主嫌。**預設關**＝App 問「可以直送嗎」一律回
+    不行，App 自動退回舊走法（聲音繞手機轉送臉機、跟 8/9 一樣）。等三邊在測試機上
+    驗齊了，設 MUNEA_VOICE_FACE_DIRECT=1 再開。每通電話開場問一次、不必重啟。"""
+    return os.environ.get("MUNEA_VOICE_FACE_DIRECT", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def verify_family_relay_proof(relay):
     if not isinstance(relay, dict):
         return False
@@ -2914,7 +2925,18 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                           threshold_pcm=round(_evidence_threshold))
                 elif t == "faceaudio":
                     # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
-                    if obj.get("on"):
+                    if obj.get("on") and not face_direct_enabled():
+                        # 直送路總開關（2026-08-10 晚 · Edward 1.0.60 實測災情後裝）：
+                        # 直送要三邊同時到位（伺服器＋App＋顯卡上的臉引擎），任何一邊沒跟上就會
+                        # 「她要講話卡住／聲音斷／臉凍住／使用者講話沒人聽」。關掉時明白回
+                        # on:false，App 會自動退回舊走法（聲音繞手機轉送臉機）——
+                        # 不用重包 App、不用動顯卡。等三邊都驗齊再開回來。
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": False,
+                            "reason": "direct_disabled",
+                        }))
+                        _diag(cid, "node.faceaudio_direct_disabled")
+                    elif obj.get("on"):
                         direct_on = await _face_audio_on(
                             obj.get("url") or "",
                             obj.get("session") or "",

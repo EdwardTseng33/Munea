@@ -46,6 +46,15 @@ def main() -> None:
     ready_set = face_control.index("ready.set()")
     assert status_send < ready_set, "App direct-ready status must be sent before PCM is released"
 
+    # 直送總開關（2026-08-10 晚）：關著時 App 一問就要收到 on:false（App 才會退回舊走法），
+    # 而且伺服器絕不能偷偷連臉機。預設必須是關——三邊（伺服器/App/顯卡）驗齊前不冒險。
+    assert "def face_direct_enabled():" in VOICE
+    assert '"MUNEA_VOICE_FACE_DIRECT", "0"' in VOICE, "kill switch must default OFF"
+    assert 'if obj.get("on") and not face_direct_enabled():' in face_control
+    disabled_branch = between(face_control, 'not face_direct_enabled():', 'elif obj.get("on"):')
+    assert '"reason": "direct_disabled"' in disabled_branch
+    assert "_face_audio_on" not in disabled_branch, "disabled switch must never dial the face machine"
+
     request = between(APP, "type: 'faceaudio', on: true", "voice_face_direct_requested")
     assert "session }" in request
     assert "const session = Avatar._session" in APP
