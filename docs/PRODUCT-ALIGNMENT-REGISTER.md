@@ -20,11 +20,11 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | `1.0.55 (Build 530)`；下一個唯一候選，版號與 Build 已通過 repository release consistency gate | App Store Connect 最新上傳／送審是 `1.0.55 (Build 529)`；其上傳早於 echo 與 Voice→Avatar 直連修復，故 529 的證據不適用 current source | `partial` | Build 530 通過完整發行檢查後，由 Mac Archive／Export／上傳；選入審查前核對 IPA 內嵌 commit |
-| App Store lane | latest uploaded／selected `1.0.55 (Build 529)` | Build 529 `VALID`；1.0.55 為 `WAITING_FOR_REVIEW`，但上傳早於完整語音修復；尚未核准／公開 | `partial` | Build 530 上傳後核對 exact IPA identity，再決定替換審查 Build |
+| App source lane | `1.0.62 (Build 533)`；下一個唯一候選，加入三邊 `call_protocol=3` 身分握手與拒絕混版 | App Store Connect 最新上傳是 `1.0.61 (Build 532)`；current review lane 則是 `1.0.55 (Build 525)`，兩者都不是 current source | `partial` | Build 533 通過完整發行檢查後，由 Mac Archive／Export／上傳；選入審查前核對 IPA 內嵌 commit |
+| App Store lane | latest uploaded `1.0.61 (Build 532)`；selected review `1.0.55 (Build 525)` | Build 532 `VALID` 但未被 1.0.55 審核版本選用；1.0.55 為 `WAITING_FOR_REVIEW`，尚未核准／公開 | `partial` | Build 533 上傳後核對 exact IPA identity，再決定建立／替換審核版本 |
 | Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |
-| Production Voice | current source 含 speaker echo 防誤判與 Voice→Avatar direct route | `munea-voice-00099-him@e7fd0159` 100%；兩輪正式媒體 gate missing speech `0` | `partial` | Build 530 exact installed-iPhone Voice Gate |
+| Production Voice | current source 含 speaker echo 防誤判、單一 speaker arbiter 與 `call_protocol=3` | `munea-voice-00103-suy@52a21fb7` 100%；正式預設入口第一聲 `890ms`，underrun／自主重複／意外斷線 `0` | `partial` | Build 533 exact installed-iPhone Voice Gate |
 | Production Gateway | App 正式路徑要求 Gateway | auth boundary 可觀察；release identity／真 client trace 未知 | `partial` | release identity＋lease／ready／cleanup trace |
 | Staging Brain／Voice | current main `1.0.41` | 02:10 manifest：兩者皆 `1.0.34@136dc81`；Cloud Run metadata Ready | `runtime-behind` | 僅在有核准變更時 canary；驗證 exact commit |
 | Avatar fleet | FlashHead／Call Control contract 存在 | serving worker identity、capacity freshness與真 App path 未列入 release snapshot | `unknown` | Gateway-to-worker identity＋長聊／故障 Gate |

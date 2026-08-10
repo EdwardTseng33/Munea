@@ -37,16 +37,36 @@ const versions = await api(
 console.log('== 蘋果那邊的版本 ==');
 for (const v of versions.data) {
   const a = v.attributes;
-  console.log(`  ${a.versionString}  狀態=${a.appStoreState}  建立=${(a.createdDate || '').slice(0, 16)}`);
+  const selected = await api(
+    `/v1/appStoreVersions/${v.id}/build?fields[builds]=version,uploadedDate,processingState`,
+  );
+  const selectedPrerelease = selected.data
+    ? await api(`/v1/builds/${selected.data.id}/preReleaseVersion?fields[preReleaseVersions]=version`)
+    : null;
+  const selectedLabel = selected.data
+    ? `  選用=App ${selectedPrerelease?.data?.attributes?.version || 'unknown'} Build ${selected.data.attributes.version}`
+    : '  選用=尚未選 Build';
+  console.log(
+    `  ${a.versionString}  狀態=${a.appStoreState}  建立=${(a.createdDate || '').slice(0, 16)}${selectedLabel}`,
+  );
 }
 
 const builds = await api(
-  `/v1/builds?filter[app]=${APP_ID}&limit=8&sort=-version&fields[builds]=version,uploadedDate,processingState,expired`,
+  `/v1/builds?filter[app]=${APP_ID}&limit=8&sort=-version`
+    + '&fields[builds]=version,uploadedDate,processingState,expired,preReleaseVersion'
+    + '&fields[preReleaseVersions]=version&include=preReleaseVersion',
+);
+const prereleaseVersions = new Map(
+  (builds.included || [])
+    .filter((item) => item.type === 'preReleaseVersions')
+    .map((item) => [item.id, item.attributes.version]),
 );
 console.log('\n== 上傳過的 Build（新到舊）==');
 for (const b of builds.data) {
   const a = b.attributes;
+  const prereleaseId = b.relationships?.preReleaseVersion?.data?.id;
+  const appVersion = prereleaseVersions.get(prereleaseId) || 'unknown';
   console.log(
-    `  Build ${a.version}  ${a.processingState}  上傳=${(a.uploadedDate || '').slice(0, 16)}${a.expired ? '  [已過期]' : ''}`,
+    `  App ${appVersion}  Build ${a.version}  ${a.processingState}  上傳=${(a.uploadedDate || '').slice(0, 16)}${a.expired ? '  [已過期]' : ''}`,
   );
 }
