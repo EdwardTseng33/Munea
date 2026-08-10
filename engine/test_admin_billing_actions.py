@@ -285,7 +285,11 @@ class AdminSetPlanTests(unittest.TestCase):
         self.assertEqual(result["previousPlan"], "plus")
         self.assertEqual(result["activePlan"], "free")
         self.assertEqual(billing_state["store"]["activePlan"], "free")
-        self.assertFalse(billing_state["store"]["entitlements"]["familyCircleInvite"])
+        # 2026-07-31 Edward 拍板「免費也給 1 位家人」之後，降回免費不再關掉家庭圈——
+        # 付費牆在點數（免費只有一次 5 分鐘），不在人數。這條原本寫 assertFalse，
+        # 是改版前的舊期待，程式改了測試沒跟上，紅了十天沒人動。
+        self.assertTrue(billing_state["store"]["entitlements"]["familyCircleInvite"])
+        self.assertEqual(billing_state["store"]["entitlements"]["familyMembersMax"], 2)
         included = next(w for w in credits_state["store"]["wallets"] if w["type"] == "included_monthly")
         self.assertEqual(included["status"], "closed")
         self.assertEqual(included["balance"], 0)
