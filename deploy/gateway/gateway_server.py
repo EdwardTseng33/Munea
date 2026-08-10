@@ -273,6 +273,12 @@ def _decorate_connect(result: dict, user_id: str, store: SupabaseCallStore) -> d
     result["call_token"] = issue_call_token(token_payload, _CALL_TOKEN_SECRET, ttl_seconds=90)
     result["token_expires_in"] = 90
     result["call_protocol"] = 3
+    result["gateway_identity"] = {
+        "revision": os.environ.get("K_REVISION", ""),
+        "version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
+        "commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
+        "call_protocol": 3,
+    }
     return result
 
 

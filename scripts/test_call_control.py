@@ -222,6 +222,7 @@ def test_http_v2_contract():
     assert token_payload["locale_context"]["safetyRegion"] == "JP"
     assert token_payload["call_protocol"] == 3
     assert body["call_protocol"] == 3
+    assert body["gateway_identity"]["call_protocol"] == 3
 
     queued = client.post("/v1/calls", headers=auth, json={
         "character_id": "a05", "idempotency_key": "queued",

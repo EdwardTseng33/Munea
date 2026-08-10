@@ -3166,6 +3166,7 @@ const CallControl = {
         throw new Error('call_cancelled');
       }
       if (result.status === 'connect') {
+        voiceCallMark('gateway_service_identity', 'pass', result.gateway_identity || {});
         if (clientRelease.protocol && Number(result.call_protocol || 0) !== clientRelease.protocol) {
           await this._disposeResult(result, 'incompatible_call_protocol');
           throw new Error('incompatible_call_protocol');

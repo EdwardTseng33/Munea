@@ -628,6 +628,8 @@ class FlashHead:
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
                          "call_protocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
+                         "release_version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
+                         "release_commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
                          "avatar_render_contract": avatar_render_contract(primary.char),
                          "capacity": snap,
                          # 2026-07-23 STATUS 125 防線 2：機器自報時鐘（機房控制、容器內無權校時）。

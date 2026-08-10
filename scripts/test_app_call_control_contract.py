@@ -126,6 +126,7 @@ def test_app_rejects_mixed_call_protocols() -> None:
     assert "client_protocol: clientRelease.protocol" in APP
     assert "Number(result.call_protocol || 0) !== clientRelease.protocol" in APP
     assert "throw new Error('incompatible_call_protocol')" in APP
+    assert "gateway_service_identity" in APP
     assert "o.type === 'service_identity'" in APP
     assert "voice_protocol_mismatch" in APP
 
