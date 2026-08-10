@@ -29,7 +29,7 @@ def main() -> None:
     assert "(now - self.last_in) > 1.0 and len(self.acc) < cs" in source
     resume_block = source[
         source.index("if todo is not None:") :
-        source.index("self._gen_chunk(todo[0], todo[1], todo[2])")
+        source.index("self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])")
     ]
     assert "self.slot.audio_out.clear()" not in resume_block, (
         "idle-to-speech must not reset the audio clock or re-arm a mid-turn prebuffer"

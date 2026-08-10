@@ -34,9 +34,15 @@ function Resolve-Python {
   foreach ($candidate in @("python3", "python", "python.exe")) {
     $pythonCommand = Get-Command $candidate -ErrorAction SilentlyContinue
     if ($pythonCommand) {
-      & $pythonCommand.Source --version | Out-Null
-      if ($LASTEXITCODE -eq 0) {
-        return $pythonCommand.Source
+      try {
+        & $pythonCommand.Source --version 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+          return $pythonCommand.Source
+        }
+      } catch {
+        # Windows App Execution Aliases can resolve even when their launcher
+        # cannot run. Continue to the real python.exe instead of failing the gate.
+        continue
       }
     }
   }

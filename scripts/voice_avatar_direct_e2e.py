@@ -282,6 +282,7 @@ class EvidenceRun:
                 "round_latencies_ms": body.get("round_latencies_ms", []),
                 "gen_compute_ms_rolling": body.get("gen_compute_ms_rolling", {}),
                 "audio_underrun": body.get("audio_underrun", {}),
+                "audio_sender": body.get("audio_sender", {}),
             }
         except Exception as error:
             return {"ok": False, "error": type(error).__name__}
