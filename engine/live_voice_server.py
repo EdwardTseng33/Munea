@@ -1808,6 +1808,9 @@ def _new_call_state():
 
           "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
+          # 唸不準只記次數、不攔話（2026-08-10）。留著數字是為了看她到底多常講到那幾個詞，
+          # 若真的很頻繁，正解是回頭調說明書的用詞提醒，不是再把整段話攔下來。
+          "mandarin_pronunciation_seen": 0,
           "blocked_output_text": "", "language_retry_count": 0,
           "client_barge_in": False, "pending_barge_in": None, "asr_turns": 0, "asr_chars": 0,
           "semantic_turn_text": "", "semantic_turn_shadow_total": 0,
@@ -2390,31 +2393,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         await ws.send(json.dumps({"type": "turn_complete"}))
         _diag(cid, "node.language_fallback", source=source, out_bytes=len(pcm))
 
-    async def _send_safe_mandarin_tts(text, source):
-        caption = localization.display_text(localization.speech_text(text, "zh-TW"), "zh-TW").strip()
-        if not caption:
-            caption = "我換個比較清楚的說法。"
-        await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption}))
-        try:
-            pcm = await asyncio.to_thread(_gemini_tts_pcm, caption, char)
-            if not pcm:
-                encoded = await asyncio.to_thread(server.tts_b64, caption, char, "zh-TW")
-                with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-                    pcm = wav.readframes(wav.getnframes())
-        except Exception as e:
-            pcm = b""
-            _diag(cid, "node.safe_mandarin_tts_err", err=f"{type(e).__name__}:{str(e)[:60]}")
-        first = True
-        for offset in range(0, len(pcm), 4800):
-            await _forward_audio(pcm[offset:offset + 4800])
-            if first:
-                first = False
-            else:
-                await asyncio.sleep(0.08)   # 配速同過場音：不灌爆同線聲畫節拍
-        if pcm:
-            await _send_turn_tail()
-        await ws.send(json.dumps({"type": "turn_complete"}))
-        _diag(cid, "node.safe_mandarin_tts", source=source, out_bytes=len(pcm))
+    # 2026-08-10 移除 _send_safe_mandarin_tts()：它是「唸不準就換一個安全配音把整段
+    # 重唸一次」的最後手段，唯一呼叫點是 mandarin_pronunciation 那條路。那條路已經改成
+    # 只記錄不攔（見下方 node.mandarin_pronunciation_seen），所以這支永遠不會再被呼叫。
+    # 留著只會讓下一個讀的人以為系統還會換聲線——Edward 8/10 真機聽到的
+    #「突然跳出一個不同聲音的人」就是它。台語輸出的收尾走 _send_hokkien_fallback()，不受影響。
 
     async def _retry_mandarin_output():
         cue = (
@@ -2840,7 +2823,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 output_locale == "zh-TW"
                                 and localization.contains_unstable_mandarin_speech(output_text)
                             ):
-                                await _arm_language_block("mandarin_pronunciation")
+                                # 2026-08-10：這裡以前跟台語走同一條路——攔下整段、
+                                # 叫她重講、再用備用配音唸出來。Edward 真機問「最近有什麼
+                                # 電影」踩到：她說「看你的興趣」就中招，結果
+                                #   · 她的聲音被整包丟掉 77 次 ≈ 21.5 秒的話
+                                #   · 系統叫她重講，一輪要重生 20 秒 → 第一聲等了 26 秒
+                                #   · 備用配音（不是寧寧的聲音）把答案唸完 → 使用者聽到
+                                #     「突然跳出一個不同聲音的人」
+                                # 藥比病重太多：一個詞唸得怪，代價卻是整段話消失＋換人講話。
+                                # 台語那道是產品規則（還沒開放）必須攔；唸不準只是好聽與否，
+                                # 改成只記錄不攔。要她少用那幾個詞，靠說明書那句提醒就好。
+                                st["mandarin_pronunciation_seen"] = (
+                                    st.get("mandarin_pronunciation_seen", 0) + 1
+                                )
+                                _diag(
+                                    cid, "node.mandarin_pronunciation_seen",
+                                    count=st["mandarin_pronunciation_seen"],
+                                )
                     data = getattr(msg, "data", None)
                     if data and not st.get("language_block") and not st.get("client_barge_in"):
                         _semantic_reason = st.get("semantic_hold_reason")
@@ -3015,15 +3014,16 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 # Clear the cancelled turn on the App before
                                 # sending a safe replacement turn.
                                 await ws.send(json.dumps({"type": "turn_complete"}))
-                                if barge_cancelled and source in ("model_output", "mandarin_pronunciation"):
+                                if barge_cancelled and source == "model_output":
                                     _diag(cid, "node.language_replacement_skipped", reason="barge_in", source=source)
-                                elif source in ("model_output", "mandarin_pronunciation") and st.get("language_retry_count", 0) < 1:
-                                    # 病歷 d（聲線變）：先讓模型用「她自己的聲音」重講國語版；
-                                    # 重講仍被攔才換安全配音（不同引擎、聲線不同＝最後手段）。
+                                elif source == "model_output" and st.get("language_retry_count", 0) < 1:
+                                    # 病歷 d（聲線變）：先讓模型用「她自己的聲音」重講國語版。
+                                    # 2026-08-10：mandarin_pronunciation 不再走到這裡（唸不準
+                                    # 改成只記錄不攔），所以「重講仍被攔就換安全配音」那條
+                                    # 分支也一併移除——台語輸出第二次仍被攔會落到下面的
+                                    # 台語罐頭句，那本來就是對的收尾，不需要換一個陌生聲線。
                                     st["language_retry_count"] = st.get("language_retry_count", 0) + 1
                                     await _retry_mandarin_output()
-                                elif source == "mandarin_pronunciation":
-                                    await _send_safe_mandarin_tts(blocked_text, source)
                                 else:
                                     await _send_hokkien_fallback(source)
                             else:
