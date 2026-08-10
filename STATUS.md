@@ -1,6 +1,11 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 📦 **2026-08-10 最新包版：`1.0.61 (Build 532)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@d9222c89`（#556~#559 共 5 筆）、存檔點 `b309f40f`。手機回讀 `1.0.61 (532)`、啟動存活；Apple 回 `Uploaded App`。**測試 100% 綠（612 項）**、七道防漏全 PASS。
+> 📦 **2026-08-11 最新包版：`1.0.62 (Build 533)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@8c51f3d2`（#560 一批 21 筆）、存檔點 `24c18e76`。手機回讀 `1.0.62 (533)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS、413 項綠。**版號沿用主線自訂的 1.0.62 (533)，未另跳號**。
+> - **這版重點**：影像通話的嘴型與聲音重新對齊——說話停頓時嘴型不中斷、嘴型追到真正出聲的音訊、輸入結束時正確收尾；三方通話的身分與協定歸屬釐清。
+> - 🔴 **新紅燈（主線既有、非本包造成）**：`scripts/test_voice_avatar_direct_route.py` 找不到它要比對的程式片段（`ValueError: substring not found`）——這批大修改寫了那段程式、守門沒跟上。**已用乾淨 `origin/main` 單獨驗證同樣紅**。屬守門過期、非功能故障；宜由做這批改動的另一台更新守門。
+> - 🔴 **看板仍推不上去**（積壓 20 筆）：`git push` 再次失敗。待 Edward 於 Mac 終端機 `gh auth login -h github.com`。
+>
+> 📦 **2026-08-10 前一包版：`1.0.61 (Build 532)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@d9222c89`（#556~#559 共 5 筆）、存檔點 `b309f40f`。手機回讀 `1.0.61 (532)`、啟動存活；Apple 回 `Uploaded App`。**測試 100% 綠（612 項）**、七道防漏全 PASS。
 > - **這版重點**：臉的聲音直送加上總開關並**預設關閉、退回前一版較穩的走法**（另一台實機發現災情後的處置）；評分視窗問過一次就不再重問，不會每更新一版又跳。
 > - 🔴 **看板仍推不上去**（第 19 筆積壓）：本輪包版後再次 `git push` 失敗。待 Edward 於 Mac 終端機 `gh auth login -h github.com`。
 >
