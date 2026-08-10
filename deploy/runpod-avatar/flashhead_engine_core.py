@@ -426,6 +426,7 @@ class Feeder:
         self._idle_on = False
         self._round_pending = False
         self._finish_pending = False
+        self._complete_pending = False
         # 世代號——每次 reset() +1。GPU 上跑到一半的舊塊完成時比對世代號，
         # 變了就整塊丟棄，不讓上一輪聲畫漏進新一輪（治「掛斷重撥她一接通就
         # 繼續講上一段」「插話後又冒半句舊話」）。
@@ -467,6 +468,7 @@ class Feeder:
             self.consumed = 0
             self._epoch += 1
             self._finish_pending = False
+            self._complete_pending = False
             self._prev_frame = None
             if self.slot.audio_dq is not None:
                 self.slot.audio_dq.extend([0.0] * self.slot.audio_dq.maxlen)
@@ -480,9 +482,8 @@ class Feeder:
     def finish(self):
         with self.lock:
             self._finish_pending = bool(len(self.acc))
+            self._complete_pending = True
             partial_samples = len(self.acc)
-        if self.slot.audio_out is not None:
-            self.slot.audio_out.mark_input_complete()
         if self._finish_pending:
             print("[feeder] slot" + str(self.slot.index) + " finish requested partial_samples="
                   + str(partial_samples), flush=True)
@@ -528,7 +529,8 @@ class Feeder:
                 self._prev_frame = prev.copy()
         return frames
 
-    def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None):
+    def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None,
+                   emit_audio=True):
         t_chunk_ready = time.time()
         with self.lock:
             chunk_epoch = self._epoch
@@ -580,8 +582,9 @@ class Feeder:
                 ).astype(np.float32)
             else:
                 output_pcm = np.zeros(0, dtype=np.float32)
-        pcm_out = np.clip(output_pcm * 32768.0, -32768, 32767).astype(np.int16)
-        self.slot.audio_out.push(pcm_out)
+        if emit_audio:
+            pcm_out = np.clip(output_pcm * 32768.0, -32768, 32767).astype(np.int16)
+            self.slot.audio_out.push(pcm_out)
         if self._round_pending:
             self._round_pending = False
             lat_ms = round((t_frames_ready - self.slot.round_start_ts) * 1000, 1)
@@ -593,6 +596,7 @@ class Feeder:
         cs = self.slot.chunk_samples
         while True:
             todo = None
+            complete_now = False
             with self.lock:
                 if len(self.acc) >= cs and self.t0 is not None:
                     ahead_s = self.slot.audio_out.depth_samples / self.slot.audio_out.sample_rate
@@ -619,11 +623,20 @@ class Feeder:
                     self._finish_pending = False
                     self.consumed += valid
                     todo = (padded, valid, output_pcm)
+                if todo is None and self._complete_pending and len(self.acc) == 0:
+                    self._complete_pending = False
+                    complete_now = True
+            if complete_now:
+                # "finish" means no more input will arrive, not that every
+                # queued/model chunk has already reached playout. Mark the turn
+                # complete only after this feeder has produced its final chunk;
+                # otherwise a real mid-turn underrun is hidden as natural tail
+                # silence and the adaptive prebuffer never learns from it.
+                self.slot.audio_out.mark_input_complete()
             if todo is not None:
                 if self._idle_on:
                     self._idle_on = False
                     self.slot.sink.clear()
-                    self.slot.audio_out.clear()
                     print("[feeder] slot" + str(self.slot.index)
                           + " real audio arrived, stop idle feed", flush=True)
                 self._gen_chunk(todo[0], todo[1], todo[2])
@@ -640,7 +653,12 @@ class Feeder:
                     self._idle_on = True
                     print("[feeder] slot" + str(self.slot.index)
                           + " real silence, connection alive, start idle feed", flush=True)
-                self._gen_chunk(np.zeros(cs, dtype=np.float32))
+                # WebRTC already emits zero PCM while speech is absent. Queueing
+                # another 960 ms of generated silence here makes the next real
+                # phrase clear/re-arm the audio buffer and inserts a new
+                # 200-350 ms start gate inside one conversational turn. Idle
+                # generation is video-only; real PCM keeps one continuous clock.
+                self._gen_chunk(np.zeros(cs, dtype=np.float32), emit_audio=False)
                 self._idle_due = now + cs / self.sr_eng
             else:
                 time.sleep(0.02)

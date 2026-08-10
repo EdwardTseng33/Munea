@@ -540,7 +540,11 @@ class FlashHead:
                 # AudioOutBuffer owns the shared start gate. Keep the poster on
                 # screen without consuming generated frames until audio has a
                 # real prebuffer, then release both tracks on the same clock.
-                if self.slot.audio_out.playout_held():
+                # Idle motion is video-only. It may play while the next real
+                # speech turn is still waiting for its first PCM/prebuffer;
+                # real speech keeps the shared audio/video start gate.
+                if (self.slot.audio_out.playout_held()
+                        and not getattr(self.slot.feeder, "_idle_on", False)):
                     fr = None
                     self.last = self.slot.poster
                     self._active_ts = 0.0

@@ -2457,3 +2457,11 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **新增 `scripts/appstore/asc-read-release-state.mjs`**（唯讀）：三十秒問出「現在是哪一版、哪個 Build、什麼狀態」。包版前與回填狀態文件前先跑這支，別再寫「估計值」。
 - **同步更新**：`docs/RELEASE-STATE.md` 的版號段、App lanes 三列、以及過期到 7/27 的「線上服務」整張表（改成 2026-08-06 實地查的七台）。
 - **⚠ 範圍**：版號、快取記號、文件。**沒有動任何產品行為**；不需重新部署。
+### 2026-08-10 Codex / Windows 🔄 開發中：聊聊同線音訊卡頓 P0
+
+- **Call-path risk**：Voice、Avatar/GPU、App WebView 同線音訊與 fallback 路徑。
+- **任務**：把既有但未啟用的 Voice → Avatar server-to-server 音訊路徑接通，移除手機中繼造成的第二次上行抖動；Avatar idle 不再排入或清空靜音 PCM；direct route 失敗時在同一塊聲音前切回 App relay。
+- **預計修改**：`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_engine_core.py`、`web/src/app.js`、對應語音／Avatar／Web 合約測試與發布狀態文件。
+- **目前證據**：2026-08-10 正式真機仍整句多次卡頓；Voice/GLOWS 服務未斷線且 GPU 每塊約 0.4 秒；最近兩小時正式 Voice 無任何 `node.faceaudio_on`，確認現行 App 未啟用既有 direct route。
+- **本機 precheck**：direct-route／150ms fallback／Avatar idle／multi-slot／前端語法與 `release:check` 通過。完整 `test:launch` 跑到既有 Voice prompt budget 守門時停下（現行 prompt 分別超預算 145／140 字；本任務未改 prompt 組裝），其前置測試均通過；此項需另案收斂，不把它誤報成本次音訊回歸。
+- **驗收要求**：先完成單元、App call-path、Voice→Avatar 實際 WebRTC 收音與故障 fallback；再提供唯一 commit／版本／production profile 給 Edward 用 Mac 包版。未完成精確 build 真機長通話前不得宣稱完全修好。
