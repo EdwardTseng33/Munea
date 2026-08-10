@@ -97,7 +97,7 @@ assert(indexSource.indexOf('src/voice-call-diagnostics.js') < indexSource.indexO
   'dead_line_reconnect',
   'face_stream_stalled',
   'face_fallback_voice_only',
-  'barge_in_local_stop',
+  'barge_in_candidate_sent',
   'barge_in_server_ack',
   'voice_turn_avatar_pcm',
   'voice_turn_webrtc_playout',

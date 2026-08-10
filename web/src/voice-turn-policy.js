@@ -79,27 +79,7 @@
     return Math.round(detection + stop);
   }
 
-  function postDuckThreshold(baseThreshold, recentUserPeak) {
-    const base = Math.max(0, Number(baseThreshold) || DEFAULTS.minRms);
-    const recent = Math.max(0, Number(recentUserPeak) || 0);
-    // 有上一輪真人音量時，用他的聲音當這支手機的基準；第一輪沒有真人基準時
-    // 只靠三格持續證據與動態噪音門檻，不能把小聲長輩的插話硬擋掉。
-    // 上限 0.08 避免上一句喊得很大聲後，正常插話永遠進不來。
-    const learned = recent > 0 ? Math.min(0.08, recent * 0.35) : base * 1.15;
-    return Math.max(base * 1.15, learned);
-  }
-
-  function confirmsPostDuck(levels, baseThreshold, recentUserPeak) {
-    const fresh = Array.isArray(levels)
-      ? levels.map(value => Math.max(0, Number(value) || 0)).filter(Number.isFinite)
-      : [];
-    if (fresh.length < 3) return false;
-    const threshold = postDuckThreshold(baseThreshold, recentUserPeak);
-    return fresh.slice(-3).every(level => level >= threshold);
-  }
-
   return {
     DEFAULTS, createState, thresholdFor, observe, localStopLatencyMs,
-    postDuckThreshold, confirmsPostDuck,
   };
 });

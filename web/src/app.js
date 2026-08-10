@@ -4063,7 +4063,6 @@ const LiveVoice = {
     if (!pending) return;
     this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT);
-    this._recentUserPeakRms = Math.max(0, Number(pending.peakRms) || 0);
     try { trackProductEvent('voice_user_speech_recognized', { waitMs: Math.round(performance.now() - pending.startedAt), peakRms: +pending.peakRms.toFixed(4) }); } catch (e) {}
   },
   _takeAssistantAudio(data) {
@@ -4099,12 +4098,10 @@ const LiveVoice = {
     this._bargeState = policy ? policy.createState(floor) : null;
     this._bargePreRoll = [];
     this._bargeInActive = false;
+    this._bargeProposalPending = false;
     this._bargeSpeechOnsetAt = 0;
     this._duckPreRoll = [];
     this._duckPostRoll = [];
-    this._duckPostRms = [];
-    this._duckConfirmState = null;
-    this._duckConfirmPassed = false;
   },
   _stopAssistantPlayback() {
     clearTimeout(this._speakTimer);
@@ -4178,9 +4175,6 @@ const LiveVoice = {
     this._duckPendingAt = performance.now();
     this._duckPreRoll = Array.isArray(preRoll) ? preRoll.slice() : [];
     this._duckPostRoll = [];
-    this._duckPostRms = [];
-    this._duckConfirmState = policy ? policy.createState(this._bargeState && this._bargeState.noiseFloor) : null;
-    this._duckConfirmPassed = false;
     this._duckAssistantAudio();
     voiceCallMark('barge_in_ducked', 'pass', { rms: Math.round(rms*1000)/1000, sustainMs });
     var self=this;
@@ -4188,15 +4182,9 @@ const LiveVoice = {
     const confirmMs = policy ? policy.DEFAULTS.duckConfirmMs : 110;
     this._duckConfirmT = setTimeout(function(){
       self._duckPendingAt = 0;
-      const amplitudeConfirmed = policy && policy.confirmsPostDuck
-        ? policy.confirmsPostDuck(self._duckPostRms, threshold, self._recentUserPeakRms)
-        : self._duckPostRoll.length >= 3;
-      var stillTalking = self._duckConfirmPassed
-        && self._duckPostRoll.length > 0
-        && self._duckConfirmState
-        && self._duckConfirmState.speechMs > 0
-        && amplitudeConfirmed;
-      if (stillTalking) {
+      // This is only a proposal trigger. The App never decides who spoke and
+      // never cuts playback here; the Voice speaker arbiter owns the verdict.
+      if (self._duckPostRoll.length >= 3) {
         const confirmedSpeechMs = self._bargeSpeechOnsetAt
           ? Math.max(0, performance.now() - self._bargeSpeechOnsetAt)
           : Math.max(0, Number(detectedSpeechMs) || 0) + confirmMs;
@@ -4204,57 +4192,42 @@ const LiveVoice = {
         self._beginBargeIn(
           rms, threshold, sustainMs, evidence, confirmedSpeechMs,
           self._duckPostRoll.length,
-        );   // duck 後仍持續才是真插話
+        );   // 送候選；是否為真人插話只由 Voice 裁決
       } else {
-        self._unduckAssistantAudio();                                               // 誤判 → 音量還原，話沒斷
-        voiceCallMark('barge_in_false_alarm', 'pass', { recoveredMs: confirmMs });
-        try { trackProductEvent('voice_barge_in_false_alarm', {}); } catch (e) {}
+        self._unduckAssistantAudio();
+        voiceCallMark('barge_in_candidate_abandoned', 'pass', { recoveredMs: confirmMs });
       }
     }, confirmMs);
   },
   _beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs, postDuckFrames = 0) {
-    if (this._bargeInActive) return;
-    this._bargeInActive = true;
-    this._dropAssistantAudio = true;
+    if (this._bargeInActive || this._bargeProposalPending) return;
+    this._bargeProposalPending = true;
     try { clearTimeout(this._duckConfirmT); } catch (e) {}
     this._duckPendingAt = 0;
-    this._unduckAssistantAudio();
-    const stopStartedAt = performance.now();
-    this._stopAssistantPlayback();
-    const stopOperationMs = Math.max(0, performance.now() - stopStartedAt);
     const policy = window.MuneaVoiceTurnPolicy;
-    const localStopMs = policy && policy.localStopLatencyMs
-      ? policy.localStopLatencyMs(detectedSpeechMs, stopOperationMs)
-      : Math.round(Math.max(0, Number(detectedSpeechMs) || Number(sustainMs) || 0) + stopOperationMs);
     // Two-phase barge-in: ask the server to buffer the following evidence,
     // deliver the retained microphone onset, then commit the interruption.
     // WebSocket ordering guarantees the server judges after hearing evidence.
     const evidence = Array.isArray(preRoll) ? preRoll : [];
     const payload = {
       rms: +rms.toFixed(4),
-      threshold: +threshold.toFixed(4),
+      candidate_threshold: +threshold.toFixed(4),
       sustain_ms: Math.max(0, Number(sustainMs) || 0),
       evidence_frames: evidence.length,
       post_duck_frames: Math.max(0, Number(postDuckFrames) || 0),
       post_duck_sustain_ms: policy ? policy.DEFAULTS.duckEvidenceMs : 80,
       detected_speech_ms: Math.round(Math.max(0, Number(detectedSpeechMs) || 0)),
-      stop_operation_ms: Math.round(stopOperationMs),
-      local_stop_ms: localStopMs,
       timing_basis: 'audio_callback_estimate',
     };
     try { this.ws.send(JSON.stringify({ type: 'barge_in_start', ...payload })); } catch (e) {}
     evidence.forEach(frame => this._sendMicBuffer(frame));
     try { this.ws.send(JSON.stringify({ type: 'barge_in', ...payload })); } catch (e) {}
-    try { trackProductEvent('voice_barge_in_local', payload); } catch (e) {}
-    voiceCallMark('barge_in_local_stop', 'pass', {
-      localStopMs,
+    try { trackProductEvent('voice_barge_in_candidate', payload); } catch (e) {}
+    voiceCallMark('barge_in_candidate_sent', 'pass', {
       detectedSpeechMs: payload.detected_speech_ms,
-      stopOperationMs: payload.stop_operation_ms,
-      within300Ms: localStopMs <= 300,
       openingGuard: payload.sustain_ms > ((policy && policy.DEFAULTS.sustainMs) || 150),
       timingBasis: payload.timing_basis,
     });
-    if (this.onListen) this.onListen();
   },
   // 2026-08-08 Edward 拍板：「讓她放棄主動打招呼，改由用戶先說第一句話她才開始回話」。
   //
@@ -4608,25 +4581,16 @@ const LiveVoice = {
         this._sendMicBuffer(buf);
         return;
       }
+      if (speakerActive && this._bargeProposalPending) return;
       if (speakerActive && policy) {
         this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
         if (this._duckPendingAt) {
           // Only fresh frames captured after the speaker was ducked can prove
           // that a nearby user is still speaking.  The old path spliced these
           // frames away and later judged the original speaker-echo pre-roll.
+          // These are evidence only. Voice owns the sole speaker verdict.
           this._duckPostRoll.push(buf);
-          this._duckPostRms.push(rms);
           while (this._duckPostRoll.length > 6) this._duckPostRoll.shift();
-          while (this._duckPostRms.length > 6) this._duckPostRms.shift();
-          const confirmed = policy.observe(
-            this._duckConfirmState,
-            rms,
-            frameMs,
-            true,
-            { sustainMs: policy.DEFAULTS.duckEvidenceMs },
-          );
-          this._duckConfirmState = confirmed.state;
-          if (confirmed.shouldInterrupt) this._duckConfirmPassed = true;
           return;
         }
         this._bargePreRoll.push(buf);
@@ -4852,7 +4816,7 @@ const LiveVoice = {
     try { clearTimeout(this._slBoundaryFallbackT); } catch (e) {} this._slBoundaryFallbackT = null;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
-    this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._recentUserPeakRms = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
+    this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     this.onListen = onListen; this.onSpeak = onSpeak; this.onDrop = onDrop; this.speaking = false; this._speakTimer = null;
@@ -4914,8 +4878,21 @@ const LiveVoice = {
               this._stopAssistantPlayback();
             }
             if (o.type === 'barge_in_ack') {
-              // The server owns suppression of the cancelled model turn. This
-              // also covers audio that had already queued locally on the phone.
+              // Voice is the sole speaker arbiter. The App only ducks and sends
+              // evidence; playback may stop only after this accepted verdict.
+              const accepted = o.accepted !== false;
+              this._bargeProposalPending = false;
+              if (accepted) {
+                this._bargeInActive = true;
+                this._dropAssistantAudio = true;
+                this._unduckAssistantAudio();
+                this._stopAssistantPlayback();
+                if (this.onListen) this.onListen();
+              } else {
+                this._dropAssistantAudio = false;
+                this._unduckAssistantAudio();
+                this._resetBargeInDetector();
+              }
               try {
                 trackProductEvent(o.accepted === false ? 'voice_barge_in_rejected' : 'voice_barge_in_accepted', {
                   reason: o.reason || null,
@@ -4929,9 +4906,7 @@ const LiveVoice = {
                 evidenceMs: Number(o.evidence_ms) || 0,
                 evidenceBasis: o.evidence_basis || '',
               });
-              this._dropAssistantAudio = false;
               this._capBuf = '';
-              this._resetBargeInDetector();
             }
             if (o.type === 'voice_turn_timing' && Number(o.turn) > 0) {
               const turn = Number(o.turn);

@@ -15,8 +15,8 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
-                              normalized_rms_to_pcm16, sustained_voice_evidence,
-                              barge_evidence_threshold)
+                              sustained_voice_evidence, speaker_threshold,
+                              decide_speaker_evidence)
 
 FAILS = []
 
@@ -51,32 +51,32 @@ def main():
     check("她沒講話+低能量→放行", should_drop_uplink_frame(10.0, 5.0, 300, enabled=True, tail_ms=1500, threshold=700) is False)
     check("濾網關閉→一律放行", should_drop_uplink_frame(10.0, 9.9, 0, enabled=False, tail_ms=1500, threshold=700) is False)
 
-    # 兩階段插話證據：瀏覽器的 normalized RMS 必須用同一把尺在伺服器重判，
-    # 不能因 client 0.055 通過、server 熱門檻 0.088 才通過而互相打架。
-    client_threshold = normalized_rms_to_pcm16(0.04)
-    accepted, evidence_ms, onset = sustained_voice_evidence(
+    # App 只送候選；Voice 的單一裁決器用自己的門檻判斷，完全不信 client threshold。
+    verdict = decide_speaker_evidence(
         [(300, 42.7), (1802, 42.7), (1802, 42.7), (1802, 42.7), (1802, 42.7)],
-        client_threshold, 150,
+        playout_active=False, after_duck=True, sustain_ms=150,
     )
-    check("瀏覽器持續人聲證據可在伺服器同尺度通過", accepted is True)
-    check("插話證據保留真正起音位置", onset == 1 and evidence_ms >= 150)
-    rejected, _, _ = sustained_voice_evidence(
+    check("Voice 單一裁決器接受持續真人聲", verdict["accepted"] is True)
+    check("插話證據保留真正起音位置",
+          verdict["onset_index"] == 1 and verdict["evidence_ms"] >= 150)
+    rejected = decide_speaker_evidence(
         [(1802, 42.7), (200, 42.7), (1802, 42.7), (200, 42.7)],
-        client_threshold, 150,
-    )
+        playout_active=False, after_duck=True, sustain_ms=150,
+    )["accepted"]
     check("零星回音尖峰不會被誤判成持續插話", rejected is False)
-    check("瀏覽器門檻不可把伺服器降成永遠放行", normalized_rms_to_pcm16(0) >= 0.028 * 32768)
+    check("瀏覽器門檻函式已從 Voice 裁決移除",
+          "normalized_rms_to_pcm16" not in open(
+              os.path.join(os.path.dirname(__file__), "voice_echo_guard.py"), encoding="utf-8"
+          ).read())
 
     # 預設值鎖（7/16 首晚實戰調參：700/1500 攔不住大聲外放）
     # A destructive two-phase interruption must not reuse the browser's low
     # adaptive threshold while the assistant is still playing. Production's
-    # regular uplink multiplier may be tuned lower; buffered barge evidence
-    # keeps the independent 2.5x safety floor.
+    # regular uplink and interruption evidence now share one threshold policy.
     os.environ["MUNEA_VOICE_ECHO_GUARD_HOT_MULT"] = "1.7"
-    os.environ.pop("MUNEA_VOICE_BARGE_EVIDENCE_HOT_MULT", None)
-    pre_duck_threshold = barge_evidence_threshold(client_threshold, playout_active=True)
-    check("pre-duck barge evidence keeps the 2.5x safety floor",
-          pre_duck_threshold >= client_threshold * 2.5)
+    pre_duck_threshold = speaker_threshold(playout_active=True)
+    check("播放中只讀單一裁決器的熱門檻",
+          pre_duck_threshold == 1150 * 1.7)
     false_echo, _, _ = sustained_voice_evidence(
         [(1802, 42.7)] * 4, pre_duck_threshold, 150,
     )
@@ -89,7 +89,7 @@ def main():
     # New clients submit a dedicated post-duck tail. Two fresh callbacks are
     # enough for the 80ms confirmation while the original pre-roll remains
     # available only for first-syllable replay.
-    post_duck_threshold = barge_evidence_threshold(client_threshold, playout_active=False)
+    post_duck_threshold = speaker_threshold(playout_active=False, after_duck=True)
     post_duck_voice, post_duck_ms, _ = sustained_voice_evidence(
         [(1802, 42.7)] * 2,
         post_duck_threshold,
@@ -139,10 +139,10 @@ def main():
 
     check("server stores playout state at evidence start",
           '"playout_active": in_playout_window' in srv)
-    check("server judges a declared post-duck tail separately",
-          'evidence_basis = "post_duck"' in srv and '_decision_levels = _levels[-_post_duck_frames:]' in srv)
-    check("legacy clients use the hot buffered-evidence threshold",
-          'barge_evidence_threshold(' in srv and 'evidence_basis = "pre_duck_hot"' in srv)
+    check("server judges a declared post-duck tail through the sole arbiter",
+          'decide_speaker_evidence(' in srv and '_decision_levels = _levels[-_post_duck_frames:]' in srv)
+    check("server ignores browser amplitude thresholds",
+          'normalized_rms_to_pcm16(obj.get("threshold"))' not in srv)
 
     import voice_echo_guard as g
     head = 0.0

@@ -61,63 +61,36 @@ def guard_hot_multiplier():
         return 2.5
 
 
-def barge_evidence_hot_multiplier():
-    """Stricter multiplier for buffered two-phase barge-in evidence.
+def speaker_threshold(playout_active=False, after_duck=False):
+    """The sole server-side amplitude policy for deciding who is speaking.
 
-    The regular uplink guard is intentionally tunable for microphone
-    sensitivity.  Buffered barge evidence is different: accepting it stops the
-    current assistant turn and suppresses all following PCM.  Keep that
-    destructive decision at least as strict as the proven 2.5x safe default,
-    unless a dedicated barge setting is explicitly supplied.
+    App-side RMS is only a cheap candidate trigger and is never trusted as a
+    verdict. All destructive interruption and ordinary uplink filtering use
+    this function. During unducked assistant playout the same base threshold is
+    raised by the one echo multiplier; after ducking it returns to the base.
     """
-    raw = os.environ.get("MUNEA_VOICE_BARGE_EVIDENCE_HOT_MULT")
-    if raw is None or str(raw).strip() == "":
-        return max(2.5, guard_hot_multiplier())
-    try:
-        return min(5.0, max(1.5, float(raw)))
-    except (TypeError, ValueError):
-        return max(2.5, guard_hot_multiplier())
-
-
-def hot_threshold(now, playout_head, base_threshold=None):
-    """回傳此刻適用的門檻：她講話中＝base×倍率；殘響尾或沒在講＝base。"""
-    base = guard_rms_threshold() if base_threshold is None else base_threshold
-    if playout_head and now < playout_head:   # 水位還在前方＝句子還在播
+    base = float(guard_rms_threshold())
+    if playout_active and not after_duck:
         return base * guard_hot_multiplier()
     return base
 
 
-def barge_evidence_threshold(client_threshold, playout_active):
-    """Return the acceptance threshold for buffered barge-in evidence.
-
-    The browser threshold follows its local noise floor and can be below the
-    server's known echo floor.  During active assistant playout, pre-duck
-    evidence must also cross the stricter barge multiplier; otherwise loud
-    speaker echo can cancel the assistant's own sentence.
-    """
-    try:
-        client = max(0.0, float(client_threshold))
-    except (TypeError, ValueError):
-        client = 0.0
-    base = max(float(guard_rms_threshold()), client)
-    if playout_active:
-        return base * barge_evidence_hot_multiplier()
-    return base
-
-
-def normalized_rms_to_pcm16(value, default=0.028):
-    """Convert the browser's normalized RMS threshold to the server PCM16 scale.
-
-    The browser detector intentionally adapts between 0.028 and 0.07. Clamp the
-    value to that same contract so a malformed or stale client cannot turn the
-    server-side echo judge into an always-accept switch.
-    """
-    try:
-        normalized = float(value)
-    except (TypeError, ValueError):
-        normalized = default
-    normalized = min(0.07, max(0.028, normalized))
-    return normalized * 32768.0
+def decide_speaker_evidence(level_frames, playout_active, after_duck,
+                            sustain_ms, minimum_ms=120.0):
+    """Return one authoritative speaker verdict plus auditable evidence."""
+    threshold = speaker_threshold(playout_active, after_duck)
+    accepted, evidence_ms, onset_index = sustained_voice_evidence(
+        level_frames, threshold, sustain_ms, minimum_ms=minimum_ms,
+    )
+    return {
+        "accepted": bool(accepted),
+        "evidence_ms": evidence_ms,
+        "onset_index": onset_index,
+        "threshold": threshold,
+        "basis": "post_duck" if after_duck else (
+            "pre_duck_hot" if playout_active else "pre_duck_idle"
+        ),
+    }
 
 
 def sustained_voice_evidence(level_frames, threshold, sustain_ms, minimum_ms=120.0):

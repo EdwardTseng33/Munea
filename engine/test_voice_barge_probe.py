@@ -54,7 +54,7 @@ async def _test_two_phase_order():
     assert commit == {"type": "barge_in", **payload}
     assert payload["evidence_frames"] >= 8
     assert payload["sustain_ms"] == 150
-    assert payload["threshold"] == 0.04
+    assert payload["candidate_threshold"] == 0.04
     assert websocket.messages[1] == quiet[0], "retained evidence must preserve speech onset margin"
     assert any(isinstance(message, bytes) for message in websocket.messages[commit_index + 1:])
 

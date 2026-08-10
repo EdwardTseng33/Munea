@@ -16,7 +16,7 @@ from pathlib import Path
 import websockets
 
 import localization
-from voice_echo_guard import frame_rms, normalized_rms_to_pcm16, sustained_voice_evidence
+from voice_echo_guard import frame_rms, sustained_voice_evidence
 from voice_s2s_probe import (
     INPUT_RATE,
     OUTPUT_RATE,
@@ -50,7 +50,7 @@ def _barge_frames(pcm, threshold, sustain_ms, pre_roll_ms):
         raise RuntimeError("barge-in PCM is empty")
     levels = [(frame_rms(frame), len(frame) / float(INPUT_RATE * 2) * 1000.0) for frame in frames]
     accepted, evidence_ms, onset = sustained_voice_evidence(
-        levels, normalized_rms_to_pcm16(threshold), sustain_ms,
+        levels, min(0.07, max(0.028, float(threshold))) * 32768.0, sustain_ms,
     )
     if not accepted:
         peak = max((rms for rms, _ in levels), default=0.0) / 32768.0
@@ -73,7 +73,7 @@ async def _stream_two_phase_barge(ws, pcm, threshold, sustain_ms, pre_roll_ms,
     evidence, remainder, peak = _barge_frames(pcm, threshold, sustain_ms, pre_roll_ms)
     payload = {
         "rms": round(peak, 4),
-        "threshold": round(float(threshold), 4),
+        "candidate_threshold": round(float(threshold), 4),
         "sustain_ms": round(float(sustain_ms)),
         "evidence_frames": len(evidence),
     }

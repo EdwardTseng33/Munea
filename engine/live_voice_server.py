@@ -33,10 +33,10 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
-from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame, hot_threshold,
+from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
                               note_playout, in_playout_window, guard_enabled, guard_rms_threshold,
-                              normalized_rms_to_pcm16, sustained_voice_evidence,
-                              barge_evidence_threshold)
+                              sustained_voice_evidence, speaker_threshold,
+                              decide_speaker_evidence)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -2669,7 +2669,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # 2026-07-30 熱門檻：她講話中（水位在前方）要求更大聲才算真插話——
                 # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
                 _eg_rms = frame_rms(message)
-                _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
+                _eg_hot = speaker_threshold(playout_active=bool(
+                    st.get("playout_head") and _eg_now < st.get("playout_head")
+                ))
                 _voice_frame_ms = len(message) / float(16000 * 2) * 1000.0
                 _above_voice_threshold = _eg_rms >= _eg_hot
 
@@ -2812,7 +2814,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         _post_duck_sustain_ms = 80
                     st["pending_barge_in"] = {
                         "started_at": _bi_started_at,
-                        "threshold_pcm": normalized_rms_to_pcm16(obj.get("threshold")),
                         "sustain_ms": obj.get("sustain_ms", 150),
                         "playout_active": in_playout_window(_bi_started_at, st.get("playout_head")),
                         "post_duck_frames": _post_duck_frames,
@@ -2838,7 +2839,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     _evidence_threshold = 0.0
                     if _pending_barge:
                         _levels = [(rms, frame_ms) for _, rms, frame_ms in _pending_barge["frames"]]
-                        _client_threshold = _pending_barge["threshold_pcm"]
                         _post_duck_frames = min(
                             len(_levels),
                             max(0, int(_pending_barge.get("post_duck_frames") or 0)),
@@ -2849,11 +2849,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             # real nearby speech continues, speaker echo collapses.
                             _decision_levels = _levels[-_post_duck_frames:]
                             _decision_sustain_ms = _pending_barge.get("post_duck_sustain_ms", 80)
-                            _evidence_threshold = barge_evidence_threshold(
-                                _client_threshold, playout_active=False,
-                            )
-                            _evidence_basis = "post_duck"
                             _minimum_evidence_ms = 60.0
+                            _verdict = decide_speaker_evidence(
+                                _decision_levels,
+                                playout_active=False,
+                                after_duck=True,
+                                sustain_ms=_decision_sustain_ms,
+                                minimum_ms=_minimum_evidence_ms,
+                            )
                         else:
                             # Existing installed clients only send pre-duck
                             # pre-roll.  Their adaptive threshold is not safe for
@@ -2862,30 +2865,36 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             _decision_levels = _levels
                             _decision_sustain_ms = _pending_barge["sustain_ms"]
                             _playout_active = bool(_pending_barge.get("playout_active"))
-                            _evidence_threshold = barge_evidence_threshold(
-                                _client_threshold, playout_active=_playout_active,
-                            )
-                            _evidence_basis = "pre_duck_hot" if _playout_active else "pre_duck_idle"
                             _minimum_evidence_ms = 120.0
-                        _accepted, _evidence_ms, _onset_index = sustained_voice_evidence(
-                            _decision_levels,
-                            _evidence_threshold,
-                            _decision_sustain_ms,
-                            minimum_ms=_minimum_evidence_ms,
-                        )
+                            _verdict = decide_speaker_evidence(
+                                _decision_levels,
+                                playout_active=_playout_active,
+                                after_duck=False,
+                                sustain_ms=_decision_sustain_ms,
+                                minimum_ms=_minimum_evidence_ms,
+                            )
+                        _accepted = _verdict["accepted"]
+                        _evidence_ms = _verdict["evidence_ms"]
+                        _onset_index = _verdict["onset_index"]
+                        _evidence_threshold = _verdict["threshold"]
+                        _evidence_basis = _verdict["basis"]
                         # Acceptance uses the safe decision slice above, but
                         # replay still starts at the original speech onset so a
                         # genuine interruption does not lose its first syllable.
                         _, _, _onset_index = sustained_voice_evidence(
                             _levels,
-                            _client_threshold,
+                            speaker_threshold(
+                                playout_active=bool(_pending_barge.get("playout_active")),
+                                after_duck=False,
+                            ),
                             _pending_barge["sustain_ms"],
                         )
                     else:
-                        _accepted = not (
-                            in_playout_window(_bi_now, st.get("playout_head"))
-                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6
-                        )
+                        # Evidence-free legacy clients cannot obtain a second,
+                        # hidden speaker verdict. Reject the destructive action;
+                        # current clients always use start -> PCM -> commit.
+                        _accepted = False
+                        _evidence_basis = "legacy_missing_evidence"
                     if not _accepted:
                         st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
                         _diag(cid, "node.barge_in_rejected_echo",
