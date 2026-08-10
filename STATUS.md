@@ -1,6 +1,10 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 📦 **2026-08-09 最新包版：`1.0.57 (Build 527)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@4f9dd4cb`（#534、#535）、精確包版存檔點 `f1e65ade`。手機回讀 `1.0.57 (527)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS、447 項綠。
+> 📦 **2026-08-10 最新包版：`1.0.58 (Build 528)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@ad1cdb89`（#536 · 僅一支首字時間量測工具）、存檔點 `663f6126`。手機回讀 `1.0.58 (528)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS、447 項綠。
+> - ⚠️ **本版對使用者無畫面變更**（已在 changelog 如實寫明）：主線這批只新增開發用量測工具，App 使用體驗與 1.0.57 相同。包版前已先告知 Edward。
+> - 🔴 **同一條紅燈續留**：影像通話 1 秒暖機守門仍不過（主線既有、追蹤中）。
+>
+> 📦 **2026-08-09 前一包版：`1.0.57 (Build 527)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@4f9dd4cb`（#534、#535）、精確包版存檔點 `f1e65ade`。手機回讀 `1.0.57 (527)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS、447 項綠。
 > - **這版重點**：通話改成「**你先開口她才回**」——順帶治好偶爾講不出話、講到一半被系統掛斷；她誤判你插話時會**先把自己音量壓小、確認真的是你在講才停**，不再硬切。
 > - 🔴 **同一條紅燈續留**：`test-voice-launch-policy.js` 影像通話 1 秒暖機守門仍不過（主線既有、乾淨 main 亦紅，見 1.0.56 段）。Edward 已拍板照包，追蹤中。
 >
