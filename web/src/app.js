@@ -12155,20 +12155,39 @@ function init() {
   if (window.MuneaStore && typeof window.MuneaStore.requestReview === 'function' && window.MuneaStore.available()) {
     window.__muneaRequestReview = function () { return window.MuneaStore.requestReview(); };
   }
+  // 問過就不再問——這是一輩子一次的章，不是「每版一次」。
+  // 2026-08-10 Edward：「評分那個彈窗不要一直跳！用戶不想填跳過了就不要再出現。」
+  // 舊版蓋的章是 munea.reviewAsked.<版號>，所以每出一版就重新問一次；他測版本測得勤，
+  // 感覺就是一直跳。而且蘋果那個視窗**不會回報使用者按了什麼**——我們無從分辨
+  // 「給了五顆星」還是「滑掉不想理」，那就一律當成不想再被打擾。
+  const REVIEW_ASKED_KEY = 'munea.reviewAsked.forever';
+  function reviewAlreadyAsked() {
+    try {
+      if (localStorage.getItem(REVIEW_ASKED_KEY)) return true;
+      // 已經被舊規矩問過的人，不要因為換了新規矩又被問一次。
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('munea.reviewAsked.') === 0) {
+          localStorage.setItem(REVIEW_ASKED_KEY, '1');
+          return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
   window.__muneaMaybeAskReview = function (moment) {
     try {
-      const ver = (window.MuneaVersion && window.MuneaVersion.current) || '0';
-      if (localStorage.getItem('munea.reviewAsked.' + ver)) return;               // 每版最多一次
+      if (reviewAlreadyAsked()) return;                                          // 一輩子最多一次
       if (localStorage.getItem('munea.reviewCoolOff') === '1') return;            // 負面情境冷卻（斷線/錯誤後設）
       const chats = +(localStorage.getItem('munea.stat.chatsCompleted') || 0);
       const okMoment = (moment === 'chat_completed' && chats >= 3) || moment === 'activity_done';
       if (!okMoment) return;
-      // 原生沒接上就直接退場、不蓋「這版問過了」的章——否則這一版的機會會被白白燒掉（2026-07-29 修）
+      // 原生沒接上就直接退場、不蓋「問過了」的章——否則補好原生也叫不動已裝機的人（2026-07-29 修）
       if (typeof window.__muneaRequestReview !== 'function') {
         trackProductEvent('review_prompt_skipped', { moment: moment, reason: 'native_unavailable' });
         return;
       }
-      localStorage.setItem('munea.reviewAsked.' + ver, '1');
+      localStorage.setItem(REVIEW_ASKED_KEY, '1');
       trackProductEvent('review_prompt_shown', { moment: moment });
       window.__muneaRequestReview();
     } catch (e) {}
