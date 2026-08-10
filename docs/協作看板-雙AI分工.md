@@ -12,6 +12,8 @@
 - **驗收責任**：插話、通話狀態機、Avatar 多槽／待機競態與完整 release gate 已 PASS；下一步為 PR／部署後正式假手機多輪、查詢與聲畫指標，再進 exact-build App Gate。狀態：`App E2E pending（Codex ownership）`，不得要求 Edward 代驗或在未完成前再次宣稱修好。
 - **正式 Gate／回退**：PR #563 合併後的第一次正式 Avatar Gate 在真語音抵達時觸發 CUDA index out-of-bounds；原因是清空了模型必須維持固定長度的 `audio_dq`。Gate 判 FAIL 後已回退至部署前 SHA `f530a1e8…`、雙槽重新 Ready。Hotfix 分支 `codex/fix-avatar-idle-context-p0-20260811` 改為保留固定長度中性歷史，只丟棄晚完成的待機輸出；未再通過正式 Gate 前不得包 1.0.63。
 - **單輪重新 Gate**：#564 合併部署後完整真人錄音 PASS（ASR 1.0、首聲 516ms、Avatar 18.78s、相關 0.9697、缺音／underrun／重複／斷線／CUDA fault 皆 0）。但 round latency 仍出現 `-112ms` 假值，證明舊 GPU chunk 會吃到後來才建立的新 round marker；分支 `codex/fix-avatar-round-marker-p0-20260811` 將 marker 與開始它的 chunk 綁定，三輪 Gate 尚未放行。
+- **最終服務 Gate**：#565 已合併至 `main@a0a06e5f` 並部署 Avatar `421200d3…`。正式 Gateway／Voice／Avatar 同線三輪真人錄音 PASS：首聲 `485／812／782ms`、ASR `1.0`、聲嘴包絡相關 `0.9757`，缺音／Voice 與 Avatar underrun／有聲 RTP gap／重複／斷線／CUDA fault／負 round latency 皆 `0`。兩輪查詢型長回覆即使中途等待約 `2.6s`，恢復後仍有 Avatar 畫面，相關 `0.9683／0.9662`、缺嘴 `0`；惟 `native_searches=0`，只算長等待聲畫 Gate，不算真正工具搜尋 Gate。
+- **下一步**：`1.0.63 (Build 534)` 已達 Mac Archive／安裝候選門檻；不得直接送審。Archive 後由 Codex 延續 exact-build iPhone Gate，覆蓋開場喇叭回音、三輪真麥克風、查詢後對嘴、持續可說話及掛斷釋位；通過前仍標 `App E2E pending`。
 
 ### 2026-08-11 Codex｜🚨 1.0.62 真機仍卡頓：Voice→Avatar 直連未啟用與候選 Gate 誤測舊 relay（進行中 · call-path risk）
 

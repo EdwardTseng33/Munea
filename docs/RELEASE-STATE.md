@@ -8,6 +8,9 @@
 - **正式 Gate 抓到並回退**：PR #563 已合併至 `main@414762e6`；第一次 Avatar 部署後，真 PCM 抵達時清空了模型必須維持固定長度的 `audio_dq`，第一輪即觸發 CUDA index out-of-bounds、slot unhealthy。正式三輪 Gate 因 Avatar 無有效語音能量而 FAIL，線上已立即回退至部署前 `flashhead_engine_core.py` SHA-256 `f530a1e8…` 並恢復雙槽 Ready。
 - **Hotfix**：`codex/fix-avatar-idle-context-p0-20260811` 保留固定長度中性 pre-roll，只使晚完成的待機輸出失效；新增回歸斷言，清空歷史的舊寫法會直接失敗。狀態為 `source hotfix tested + Avatar production rollback healthy + package/production synthetic/App E2E pending`。App source 候選仍為 `1.0.63 (Build 534)`；不得稱已修好或可送審。
 - **Hotfix 單輪正式證據**：PR #564 已合併並部署至 Avatar `c2cd4c2a…`；完整 7.2 秒真人錄音單輪 PASS：ASR `1.0`、首聲 `516ms`、Avatar 音訊 `18.78s`、包絡相關 `0.9697`、句中缺音／underrun／重複／斷線皆 `0`，且無 CUDA fault。監測仍出現不可能的 `-112ms` round latency，定位為舊 GPU chunk 在完成後誤吃新 round 起點；`codex/fix-avatar-round-marker-p0-20260811` 使新 marker 等到自己的 chunk 才計時。三輪 Gate 仍 pending。
+- **最終 Avatar hotfix 與正式多輪 Gate**：PR #565 已合併至 `main@a0a06e5f`，Avatar production 已部署 `flashhead_engine_core.py` SHA-256 `421200d3…`。同一張正式 Gateway lease／同一條 Voice WebSocket 連續三輪完整 7.2 秒真人錄音 PASS：首聲 `485／812／782ms`、ASR `1.0`、Avatar 有效音訊 `19.0s`、包絡相關 `0.9757`；缺音、Voice source underrun、Avatar underrun、有聲 RTP gap、自主重複與意外斷線皆 `0`。六筆 round latency `742.7–1282.5ms` 且全為正值，無 CUDA fault／slot unhealthy。
+- **查詢型長等待聲畫 Gate**：正式 Gateway／Voice／Avatar 以兩輪查詢型長回覆驗證，首聲 `610／1312ms`，中途最長接收等待約 `2.6s`，後續仍分別輸出 `11.72／12.50s` Avatar 說話畫面；包絡相關 `0.9683／0.9662`，缺嘴、underrun、有聲 RTP gap、重複與斷線皆 `0`。但 Voice 診斷的 `native_searches=0`，表示模型沒有留下真正搜尋工具事件；這兩輪只證明「長等待後恢復語音仍有嘴型」，不得冒充真搜尋資料 Gate。
+- **放行邊界**：`source merged + Avatar production deployed + repository/CI PASS + production service prechecks PASS + App E2E pending`。`1.0.63 (Build 534)` 現在可進 Mac Archive／安裝候選，但不可直接送審；只有 exact Build 534 在 iPhone 完成真喇叭回音、開場、三輪真麥克風、查詢後聲畫、掛斷釋位後，才能稱修好與 release-ready。
 
 ## 2026-08-11 04:30 台灣｜1.0.62 回報後的正式聊聊 P0 修復
 
