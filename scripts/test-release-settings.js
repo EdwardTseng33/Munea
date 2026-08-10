@@ -222,6 +222,7 @@ expect(canaryDeploy.includes('MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:
 // 收緊回 1 的時機＝App 全面走總機領證的包出貨且真人驗過、Edward 再拍板（屆時改回此鎖）。
 expect(canaryDeploy.includes('MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest') && canaryDeploy.includes('MUNEA_VOICE_CALL_CONTROL_REQUIRED:-0') && canaryDeploy.includes('MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED'), 'Voice canary deploy is missing dual-door Call Control default (STATUS 102-5)');
 expect(canaryDeploy.includes('MUNEA_CALL_PROTOCOL_REQUIRED=3') && prodDeploy.includes('MUNEA_CALL_PROTOCOL_REQUIRED=3'), 'Voice deploys must pin the three-side call protocol');
+expect(canaryDeploy.includes('MUNEA_VOICE_FACE_DIRECT=1') && prodDeploy.includes('MUNEA_VOICE_FACE_DIRECT=1'), 'Voice deploys must enable the primary Voice-to-Avatar direct route');
 expect(canaryDeploy.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01'), 'Voice canary deploy is not aligned with the formal Gateway shard');
 expect(canaryDeploy.includes('RELEASE_COMMIT="$(git rev-parse HEAD)"') && canaryDeploy.includes('git archive --format=tar "$RELEASE_COMMIT"'), 'canary deploy release commit is not tied to its source archive');
 expect(canaryDeploy.includes('require(process.argv[1]).version') && (canaryDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length === 2, 'canary deploy does not inject the committed package version into Brain and Voice');
@@ -229,6 +230,7 @@ expect((canaryDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).leng
 expect(prodDeploy.includes('RELEASE_COMMIT="$(git rev-parse HEAD)"') && prodDeploy.includes('git archive --format=tar "$RELEASE_COMMIT"'), 'production deploy release commit is not tied to its source archive');
 expect(prodDeploy.includes('require(process.argv[1]).version') && (prodDeploy.match(/MUNEA_RELEASE_VERSION=\$RELEASE_VERSION/g) || []).length === 2, 'production deploy does not inject the committed package version into Brain and Voice');
 expect((prodDeploy.match(/MUNEA_RELEASE_COMMIT=\$RELEASE_COMMIT/g) || []).length === 2 && !/^\s*--set-env-vars/m.test(prodDeploy), 'production deploy does not safely merge the source commit into Brain and Voice');
+expect(cloudRunDeploy.includes('MUNEA_VOICE_FACE_DIRECT=1'), 'PowerShell Voice deploy must enable the primary Voice-to-Avatar direct route');
 expect(
   /canary-verify\.sh[\s\S]*"\$WHAT" "\$TAG" production "\$RELEASE_VERSION" "\$RELEASE_COMMIT"[\s\S]*"\$VERIFY_LOCALE_MODE"/.test(prodDeploy),
   'production deploy does not verify zero-traffic release metadata and the expected locale mode'

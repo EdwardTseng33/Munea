@@ -14,6 +14,9 @@ APP = (ROOT / "web" / "src" / "app.js").read_text(encoding="utf-8")
 AVATAR = (ROOT / "deploy" / "runpod-avatar" / "flashhead_engine_core.py").read_text(
     encoding="utf-8"
 )
+AVATAR_SERVER = (ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py").read_text(
+    encoding="utf-8"
+)
 
 
 def between(source: str, start: str, end: str) -> str:
@@ -69,7 +72,15 @@ def main() -> None:
     assert "Avatar._handlePcmAck(o, 'voice_direct_avatar_ack')" in APP
 
     assert "emit_audio=False" in AVATAR
-    resume = between(AVATAR, "if todo is not None:", "self._gen_chunk(todo[0], todo[1], todo[2])")
+    audio_track = between(AVATAR_SERVER, "class FlashHeadAudioTrack", "@api.post(\"/demo/session\")")
+    assert "time.monotonic()" in audio_track
+    assert "pace_audio_sender_clock(" in audio_track
+    assert "audio_sender_rebase_count += 1" in audio_track
+    resume = between(
+        AVATAR,
+        "if todo is not None:",
+        "self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])",
+    )
     assert "self.slot.audio_out.clear()" not in resume
 
     print("Voice -> Avatar direct route contract: PASS")

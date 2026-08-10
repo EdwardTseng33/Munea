@@ -74,6 +74,7 @@ from flash_head.inference import (get_audio_embedding, get_base_data,
 from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
                                     env_flag_enabled, health_snapshot,
                                     make_slot_stream_run_pipeline, parse_frame_size,
+                                    pace_audio_sender_clock,
                                     slot_summary, switch_slot_char)
 
 # ===== 正式線 / 展示間分家（2026-07-21）=====
@@ -577,9 +578,20 @@ class FlashHead:
             async def recv(self):
                 sr = self.slot.audio_out.sample_rate
                 if self._started is None:
-                    self._started = time.time()
+                    self._started = time.monotonic()
+                now = time.monotonic()
+                self._started, late_ms, rebased = pace_audio_sender_clock(
+                    self._started, self._next_pts, sr, now
+                )
+                if rebased:
+                    self.slot.audio_sender_rebase_count += 1
+                    self.slot.audio_sender_max_late_ms = max(
+                        self.slot.audio_sender_max_late_ms, late_ms
+                    )
+                    self.slot.audio_sender_recent_late_ms.append(late_ms)
+                    print("[audio-sender] slot" + str(self.slot.index)
+                          + " late=" + str(late_ms) + "ms rebase clock", flush=True)
                 target_t = self._started + self._next_pts / sr
-                now = time.time()
                 if target_t > now:
                     await asyncio.sleep(target_t - now)
                 chunk = self.slot.audio_out.pop_frame()

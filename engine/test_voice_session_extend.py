@@ -132,7 +132,48 @@ class _FakeSession:
         self.tool_responses.append(kwargs)
 
 
+class _StalledTurnSession(_FakeSession):
+    async def receive(self):
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x01\x00" * 24000,
+            tool_call=None,
+        )
+        await asyncio.Event().wait()
+
+
 class RunVoiceSessionGoAwayReconnectTests(unittest.IsolatedAsyncioTestCase):
+    async def test_missing_turn_complete_finishes_client_turn_and_reconnects_fresh(self):
+        previous = os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS")
+        os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = "50"
+        try:
+            session = _StalledTurnSession([])
+            ws = _FakeWs()
+            st = voice._new_call_state()
+
+            call_ended, handle = await voice._run_voice_session(
+                session, cli=None, ws=ws, cid=3, t0=0.0, st=st, char="a05",
+                location=None, topics=None, fam=0, day_call=None,
+                call_payload=None, gate_key="", call_token="",
+                asr_context_terms=["a05"], first_connect=False,
+                resumption_handle="orphaned-handle",
+                voice_locale_session=VoiceLocaleSession({}),
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("MUNEA_VOICE_TURN_STALL_IDLE_MS", None)
+            else:
+                os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = previous
+
+        self.assertFalse(call_ended)
+        self.assertIsNone(handle)
+        self.assertIsNone(st.get("resumption_handle"))
+        self.assertFalse(st["provider_turn_active"])
+        events = [item for item in ws.sent if isinstance(item, str)]
+        self.assertTrue(any('"turn_complete"' in item and '"recovered": true' in item for item in events))
+
     async def test_goaway_then_turn_complete_returns_reconnect_with_handle(self):
         go_away = _msg(go_away=_msg(time_left="5s"))
         resumption = _msg(session_resumption_update=_msg(new_handle="handle-xyz", resumable=True))

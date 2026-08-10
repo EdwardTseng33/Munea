@@ -551,12 +551,39 @@ def test_health_snapshot_math():
     assert body["frames"] == 0
     assert body["output_resolution"] == {"width": 768, "height": 768}
     assert body["video_underrun"]["count"] == 0
+    assert body["audio_sender"] == {
+        "rebase_count": 0,
+        "max_late_ms": 0.0,
+        "recent_late_ms": [],
+    }
     assert body["video_sync"] == {
         "catchup_events": 0,
         "catchup_frames": 0,
         "audio_played_ms": 0.0,
     }
     print("test_health_snapshot_math: PASS")
+
+
+def test_audio_sender_late_wakeup_rebases_without_skipping_pts():
+    started = 10.0
+    sample_rate = 24000
+    next_pts = 4800
+    target = started + next_pts / sample_rate
+
+    unchanged, late_ms, rebased = fec.pace_audio_sender_clock(
+        started, next_pts, sample_rate, target + 0.02
+    )
+    assert unchanged == started and late_ms == 20.0 and not rebased
+
+    adjusted, late_ms, rebased = fec.pace_audio_sender_clock(
+        started, next_pts, sample_rate, target + 0.10
+    )
+    assert rebased and late_ms == 100.0
+    assert round(adjusted + next_pts / sample_rate, 6) == round(target + 0.10, 6)
+    # PTS remains next_pts; only the wall-clock anchor moves, so the next 20 ms
+    # frame is paced 20 ms later instead of being returned immediately.
+    assert round(adjusted + (next_pts + 480) / sample_rate, 6) == round(target + 0.12, 6)
+    print("test_audio_sender_late_wakeup_rebases_without_skipping_pts: PASS")
 
 
 def test_frame_size_contract():
@@ -660,6 +687,7 @@ def main():
     test_fault_isolation_one_slot_does_not_crash_others()
     test_switch_slot_char_isolation()
     test_health_snapshot_math()
+    test_audio_sender_late_wakeup_rebases_without_skipping_pts()
     test_frame_size_contract()
     test_force_release_slot_used_by_unhealthy_path()
     test_antiflicker_freezes_static_background_keeps_motion()

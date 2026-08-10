@@ -384,6 +384,13 @@ class Slot:
         self.gen_compute_ms_hist = collections.deque(maxlen=100)
         self.video_catchup_events = 0
         self.video_catchup_frames = 0
+        # WebRTC audio sender scheduling is separate from PCM availability.
+        # A busy event loop can wake the 20 ms sender late even while audio_out
+        # still has plenty of buffered PCM. Track that independently so an RTP
+        # playout hole cannot hide behind audio_underrun=0.
+        self.audio_sender_rebase_count = 0
+        self.audio_sender_max_late_ms = 0.0
+        self.audio_sender_recent_late_ms = collections.deque(maxlen=20)
         # ---- 准入/佔用（SlotPool 管）----
         self.active_session = None
         self.active_pc = None
@@ -408,6 +415,25 @@ def lip_catchup_frame_count(audio_played_s, queued_video_s, timeline_start_s,
                     - float(timeline_start_s))
     expired_frames = int(expired_s * float(fps))
     return min(max(0, int(frame_count) - max(1, int(keep_frames))), expired_frames)
+
+
+def pace_audio_sender_clock(started, next_pts, sample_rate, now,
+                            rebase_after_s=0.04):
+    """Keep late WebRTC audio frames paced instead of sending a catch-up burst.
+
+    aiortc asks ``recv`` for one media frame at a time. If the event loop wakes
+    100 ms late, retaining the original wall-clock anchor makes the next five
+    20 ms frames return immediately. Receivers can discard that burst as late
+    RTP, creating an audible hole even though PCM never underruns. Move only
+    the wall-clock anchor forward; RTP PTS and every audio sample stay intact.
+    """
+    if not sample_rate:
+        return started, 0.0, False
+    target = float(started) + float(next_pts) / float(sample_rate)
+    late_s = max(0.0, float(now) - target)
+    if late_s <= float(rebase_after_s):
+        return started, round(late_s * 1000, 1), False
+    return float(started) + late_s, round(late_s * 1000, 1), True
 
 
 def switch_slot_char(slot, char, char_src_map, get_base_data_fn, load_poster_fn):
@@ -931,6 +957,11 @@ def health_snapshot(slot, wake_ts=None):
             "adaptive_max_s": ao.adaptive_max_s if ao else None,
             "generation_p95_ms": (round(ao.generation_p95_ms, 1)
                                     if ao and ao.generation_p95_ms is not None else None),
+        },
+        "audio_sender": {
+            "rebase_count": slot.audio_sender_rebase_count,
+            "max_late_ms": round(slot.audio_sender_max_late_ms, 1),
+            "recent_late_ms": list(slot.audio_sender_recent_late_ms),
         },
         "video_underrun": {"count": sink.underrun_count if sink else 0},
         "video_sync": {

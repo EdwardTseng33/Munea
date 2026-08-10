@@ -158,6 +158,7 @@ def test_retired_agent_lock_script_is_not_exposed() -> None:
 def test_voice_deploy_wires_call_control_without_breaking_old_app() -> None:
     assert "MUNEA_CALL_CONTROL_URL=$CallControlUrl" in VOICE_DEPLOY
     assert "MUNEA_CALL_PROTOCOL_REQUIRED=3" in VOICE_DEPLOY
+    assert "MUNEA_VOICE_FACE_DIRECT=1" in VOICE_DEPLOY
     assert "MUNEA_GATEWAY_ADMIN_KEY=$($GatewayAdminSecret):latest" in VOICE_DEPLOY
     assert "MUNEA_CALL_TOKEN_SECRET=$($CallTokenSecret):latest" in VOICE_DEPLOY
     assert "MUNEA_VOICE_SHARD_ID=$VoiceShardId" in VOICE_DEPLOY

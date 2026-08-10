@@ -3,10 +3,10 @@
 
 This is the automated gate that runs before a human receives a candidate. It
 creates an isolated test account, obtains a real Gateway lease/call token,
-streams a recorded human WAV into Voice, relays Voice PCM to Avatar exactly as
-the current App does, captures Avatar WebRTC audio, scores the ASR transcript,
-and deletes the test account. ``--transport direct`` remains available for the
-separate server-to-server experiment; release candidates use ``relay``.
+streams a recorded human WAV into Voice, requires Voice to send PCM directly to
+Avatar, captures Avatar WebRTC audio, scores the ASR transcript, and deletes the
+test account. ``--transport relay`` remains available to verify the fallback,
+but cannot certify the release candidate's primary audio route.
 
 It still does not certify iOS permissions, WebView audio routing, or an exact
 installed build. Those remain the final device gate after this fake phone has
@@ -282,6 +282,7 @@ class EvidenceRun:
                 "round_latencies_ms": body.get("round_latencies_ms", []),
                 "gen_compute_ms_rolling": body.get("gen_compute_ms_rolling", {}),
                 "audio_underrun": body.get("audio_underrun", {}),
+                "audio_sender": body.get("audio_sender", {}),
             }
         except Exception as error:
             return {"ok": False, "error": type(error).__name__}
@@ -648,6 +649,7 @@ async def execute_run(args, output):
         ) if args.expected_text else None
         metrics["gates"] = {
             "transport": metrics.get("transport_status") == "ready",
+            "avatar_route": metrics.get("avatar_ack") is True,
             "asr": (metrics["asr_char_recall"] is None
                     or metrics["asr_char_recall"] >= args.min_asr_char_recall),
             "first_response": (metrics.get("first_response_ms") is not None
@@ -697,7 +699,7 @@ async def main():
     parser.add_argument("--character", default="a05")
     parser.add_argument("--timeout", type=float, default=60)
     parser.add_argument("--out", required=True)
-    parser.add_argument("--transport", choices=("relay", "direct"), default="relay")
+    parser.add_argument("--transport", choices=("relay", "direct"), default="direct")
     parser.add_argument("--mic-wav", default="")
     parser.add_argument("--mic-seconds", type=float, default=5.0)
     parser.add_argument("--expected-text", default="")
