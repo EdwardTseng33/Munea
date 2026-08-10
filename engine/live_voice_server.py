@@ -1831,6 +1831,8 @@ def _new_call_state():
           "opening_window_complete": False,
           "user_turn_started_at": None,
           "lookup_count": 0, "lookup_sources": 0, "lookup_failures": 0,
+          # 她自己查（native）的帳：這一輪有沒有真的去查、查了幾句、拿回幾個來源。
+          "native_search_turns": 0, "native_search_queries": 0, "native_search_sources": 0,
           "lookup_requested_at": None, "lookup_result_at": None,
           "lookup_waiting_answer": False, "lookup_cue_task": None,
           "lookup_cue_at": 0.0, "lookup_fail_streak": 0, "lookup_block_until": 0.0,
@@ -2802,6 +2804,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                             ),
                                             chars=len(semantic_text),
                                         )
+                        # 她自己查（native）留下的憑證。2026-08-10 之前完全沒讀，
+                        # 所以「她說我幫你查一下、結果憑印象亂講」跟「她真的查了」
+                        # 在日誌上長得一模一樣——誠實紅線最需要證據的地方反而是空的。
+                        # 這裡只記數量，不留查詢內容本身。
+                        gm = getattr(sc, "grounding_metadata", None)
+                        if gm is not None:
+                            _queries = list(getattr(gm, "web_search_queries", None) or [])
+                            _chunks = list(getattr(gm, "grounding_chunks", None) or [])
+                            if _queries or _chunks:
+                                st["native_search_turns"] += 1
+                                st["native_search_queries"] += len(_queries)
+                                st["native_search_sources"] += len(_chunks)
+                                _diag(
+                                    cid, "node.native_search",
+                                    queries=len(_queries), sources=len(_chunks),
+                                )
+
                         ot_pre = getattr(sc, "output_transcription", None)
                         if ot_pre and getattr(ot_pre, "text", None):
                             current_profile = (
@@ -3472,6 +3491,13 @@ async def handle(ws):
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
             lookup_failures=st["lookup_failures"],
             tool_wait_interrupts=st["tool_wait_interrupts"],
+            # 她自己查那條路的帳（2026-08-10）。上面的 lookups 只算「我們代查」那條，
+            # 正式機走的是 native＝她自己查——以前這條完全沒有帳，所以
+            #「她說我幫你查一下、然後憑印象亂講」跟「她真的查了」在日誌上長得一模一樣。
+            native_searches=st["native_search_turns"],
+            native_search_queries=st["native_search_queries"],
+            native_search_sources=st["native_search_sources"],
+            mandarin_pronunciation_seen=st["mandarin_pronunciation_seen"],
         )
 
 

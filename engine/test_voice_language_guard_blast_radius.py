@@ -99,6 +99,34 @@ class PronunciationGuardMustNotBlock(unittest.TestCase):
         )
 
 
+class NativeSearchMustLeaveEvidence(unittest.TestCase):
+    """她自己查的時候要留下憑證——不然「真的查了」跟「憑印象講」在日誌上一模一樣。
+
+    正式機走的是 native（她自己查），而 `lookups=` 那個數字只算舊的「我們代查」那條路，
+    所以 8/10 Edward 問電影那通收尾寫 `lookups=0`——看起來像沒查，其實只是沒有帳。
+    誠實紅線（「這是誰告訴我的」）最需要證據的地方反而是空的。
+    """
+
+    def test_grounding_metadata_is_read(self):
+        src = _src()
+        self.assertIn(
+            'getattr(sc, "grounding_metadata", None)', src,
+            "沒有讀她自己查留下的憑證——就查不出她到底有沒有真的去查",
+        )
+        self.assertIn("web_search_queries", src)
+        self.assertIn("grounding_chunks", src)
+        self.assertIn("node.native_search", src)
+
+    def test_call_summary_reports_native_search(self):
+        """收尾總帳要看得到——那是查一通電話最快的入口。"""
+        src = _src()
+        at = src.index("lookups=st[\"lookup_count\"]")
+        after = src[at:at + 900]
+        for field in ("native_searches=", "native_search_sources="):
+            with self.subTest(field=field):
+                self.assertIn(field, after, f"收尾總帳少了 {field}")
+
+
 class MandarinWordsMustNotLookLikeHokkien(unittest.TestCase):
     """台灣人講國語會用到的字，單獨出現不准被當成台語。"""
 
