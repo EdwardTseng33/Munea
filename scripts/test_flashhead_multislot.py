@@ -334,6 +334,19 @@ def test_audio_prebuffer_adapts_without_counting_natural_silence():
         audio.arm_prebuffer(0.6)
         audio.push(pcm)
         assert audio.last_prebuffer_s == 0.6, "opening one-shot must override adaptation"
+
+        cold_start = fec.AudioOutBuffer(
+            OUTPUT_SAMPLE_RATE,
+            prebuffer_s=0.7,
+            adaptive_min_s=0.25,
+            adaptive_max_s=0.7,
+        )
+        for compute_ms in (1152.8, 465.0, 430.0, 440.0, 471.3, 450.0, 455.0, 460.0, 468.0):
+            cold_start.observe_generation(compute_ms, 960.0)
+        assert cold_start.generation_p95_ms == 471.3
+        assert cold_start.adaptive_prebuffer_s == 0.25, (
+            "one cold-start maximum must not erase the steady-state latency gain"
+        )
     finally:
         fec.time.time = original_time
     print("test_audio_prebuffer_adapts_without_counting_natural_silence: PASS")

@@ -220,8 +220,14 @@ class AudioOutBuffer:
             self.generation_compute_ms.append(max(0.0, float(compute_ms)))
             self.generation_budget_ms = float(budget_ms)
             ordered = sorted(self.generation_compute_ms)
-            p95_index = max(0, int(np.ceil(len(ordered) * 0.95)) - 1)
+            # Match health_snapshot's operational p95: with a short rolling
+            # window, do not let one cold-compile maximum dominate every
+            # subsequent turn.  Real starvation still takes the separate
+            # immediate +80ms path in push().
+            p95_index = max(0, int(len(ordered) * 0.95) - 1)
             self.generation_p95_ms = ordered[p95_index]
+            if len(ordered) < 3:
+                return
             excess_ms = max(0.0, self.generation_p95_ms - self.generation_budget_ms * 0.75)
             target = self.adaptive_min_s + excess_ms / 1000.0
             self.adaptive_target_s = min(self.adaptive_max_s, max(self.adaptive_min_s, target))
