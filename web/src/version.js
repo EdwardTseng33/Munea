@@ -12,11 +12,21 @@
  * 一個新功能面板算「小功能」，走最後一碼；要跳中間碼請先問 Edward。
  */
 window.MuneaVersion = {
-  current: '1.0.62',
+  current: '1.0.63',
   callProtocol: 3,
   voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
+    {
+      version: '1.0.63',
+      date: '2026-08-11',
+      title: '聊聊聲音與嘴型同步修復',
+      items: [
+        '插話候選期間不再壓低或切斷 AI 聲音，避免擴音回音讓開場反覆卡住。',
+        '待機畫面不再插到真正語音前面，查詢回報也會保留同一條 Avatar 對嘴。',
+        '正常的慢起音與短暫停頓只做紀錄，不再自動切成只有聲音沒有嘴型。',
+      ],
+    },
     {
       version: '1.0.62',
       date: '2026-08-11',

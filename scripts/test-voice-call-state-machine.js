@@ -187,6 +187,7 @@ function runMicGateContinuityContract() {
   const context = {
     performance: { now() { return now; } },
     window: { MuneaAvatar: { _faceAudLevel: 0.04 }, __muneaSpeechTs: 0 },
+    Avatar: { _faceAudLevel: 0.04 },
     LiveVoice: { speaking: false, _playoutUntil: 0, _sameLine: true, _sameLineFellBack: false },
   };
   vm.createContext(context);

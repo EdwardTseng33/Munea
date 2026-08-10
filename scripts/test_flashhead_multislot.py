@@ -281,6 +281,40 @@ def test_audio_ingress_waits_for_video_once_then_stays_continuous():
     print("test_audio_ingress_waits_for_video_once_then_stays_continuous: PASS")
 
 
+def test_real_audio_invalidates_inflight_idle_frames():
+    """待機 GPU 還在跑時真語音抵達，晚到的待機畫格不得插在嘴型前面。"""
+    slot = make_slot(0, "s0")
+    feeder_holder = {}
+    real_pcm = np.full(2400, 1200, dtype=np.int16)
+
+    def emb_fn(pipeline, arr, start_idx, end_idx):
+        return {"pipeline_tag": pipeline["tag"]}
+
+    def run_fn(pipeline, emb):
+        feeder_holder["feeder"].push24k(real_pcm.tobytes())
+        video = np.full((FRAME_NUM, 2, 2, 3), 77, dtype=np.uint8)
+        return FakeTensor(video)
+
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+    feeder_holder["feeder"] = feeder
+    slot.feeder = feeder
+    feeder._idle_on = True
+    idle_seq = feeder._real_input_seq
+
+    feeder._gen_chunk(
+        np.zeros(CHUNK_SAMPLES, dtype=np.float32),
+        emit_audio=False,
+        idle_input_seq=idle_seq,
+    )
+
+    assert slot.sink.depth() == 0, "late idle frames must be discarded after real PCM arrives"
+    assert slot.audio_out.depth_samples == len(real_pcm), "real PCM must remain queued"
+    assert len(slot.audio_dq) == 0, "idle embedding context must not soften the first real mouth frames"
+    assert feeder._round_pending is True, "idle work must not consume the real turn first-frame marker"
+    assert slot.idle_invalidation_count == 1, "health gate must expose the handled idle/real race"
+    print("test_real_audio_invalidates_inflight_idle_frames: PASS")
+
+
 def test_lip_catchup_skips_only_expired_frames():
     assert fec.lip_catchup_frame_count(0.0, 0.0, 0.0, 24, 25) == 0
     assert fec.lip_catchup_frame_count(1.0, 0.2, 0.4, 24, 25) == 20
@@ -538,6 +572,8 @@ def test_health_snapshot_math():
     slot.frame_width = 768
     slot.frame_height = 768
     slot.round_count = 3
+    slot.round_latencies.extend([480.0, 520.0])
+    slot.idle_invalidation_count = 2
     body = fec.health_snapshot(slot, wake_ts=time.time() - 10)
     assert body["gen_compute_ms_rolling"]["budget_ms"] == 960.0
     assert body["gen_compute_ms_rolling"]["n_samples"] == 5
@@ -548,6 +584,10 @@ def test_health_snapshot_math():
     assert body["gen_compute_ms_rolling"]["headroom_p95_pct"] == expect_headroom
     assert 9.9 <= body["uptime_s"] <= 10.5
     assert body["round_count"] == 3
+    assert body["round_latency_integrity"] == {
+        "negative_count": 0,
+        "min_ms": 480.0,
+    }
     assert body["frames"] == 0
     assert body["output_resolution"] == {"width": 768, "height": 768}
     assert body["video_underrun"]["count"] == 0
@@ -559,6 +599,7 @@ def test_health_snapshot_math():
     assert body["video_sync"] == {
         "catchup_events": 0,
         "catchup_frames": 0,
+        "idle_invalidations": 2,
         "audio_played_ms": 0.0,
     }
     print("test_health_snapshot_math: PASS")
@@ -679,6 +720,7 @@ def main():
     test_cross_slot_isolation()
     test_audible_output_keeps_original_24k_samples()
     test_audio_ingress_waits_for_video_once_then_stays_continuous()
+    test_real_audio_invalidates_inflight_idle_frames()
     test_lip_catchup_skips_only_expired_frames()
     test_lip_timeline_survives_mid_turn_pause()
     test_audio_finish_does_not_count_natural_tail_as_underrun()

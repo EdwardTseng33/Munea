@@ -3455,17 +3455,21 @@ function faceSameLineOn() {
     return faceEngine() === 'flashhead';              // FlashHead 模式預設開同線（它天生兩軌同線）
   } catch (e) { return false; }
 }
-// 單一真相：「她現在正在出聲嗎」——只信 Voice PCM 算出的實際播放水位。
-// Avatar analyser 只做觀測，絕不能反過來關麥克風：遠端 idle 音軌若長時間維持
-// 0.015 以上，舊版會把 speechActive 永遠續命，造成 48 秒甚至整通 in_bytes=0。
+// 單一真相：「她現在正在出聲嗎」——Voice PCM 算出的播放水位是主時鐘；同線實際
+// 解碼音量只准在預估句尾後的 bounded grace 內補正。Avatar 要先算嘴型才真正起播，
+// 單靠 PCM 到達時間會提早約 0.4-0.9 秒開麥，喇叭尾音就會被當成使用者插話。
+// grace 嚴格封頂 1.5 秒，避免遠端 idle 音軌的底噪再次把麥克風永久鎖死。
 function speechActive() {
   try {
     const now = performance.now();
     const queued = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil);
-    if (queued) window.__muneaSpeechTs = now;
     const sameLine = typeof LiveVoice !== 'undefined' && LiveVoice._sameLine && LiveVoice._sameLineFellBack !== true;
+    const predictedEnd = Number((typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil) || 0);
+    const decodedTail = !!(sameLine && predictedEnd && now <= predictedEnd + 1500
+      && Number(Avatar && Avatar._faceAudLevel || 0) >= 0.06);
+    if (queued || decodedTail) window.__muneaSpeechTs = now;
     const tailMs = sameLine ? 120 : 400;
-    return !!(queued || (window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs));
+    return !!(queued || decodedTail || (window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs));
   } catch (e) { return false; }
 }
 const Avatar = {
@@ -4160,54 +4164,24 @@ const LiveVoice = {
       return gain;
     } catch (e) { return null; }
   },
-  // 先把音量壓小、看你是不是真的在講，再決定要不要把她的話砍掉（2026-08-09）。
+  // 收集一小段持續人聲，再交給 Voice 判斷是不是插話（2026-08-11）。
   //
   // 為什麼要多這一關：Edward 8/8 真機「整句話頻繁出現斷字、卡住一個字跳針」。
   // 舊行為＝一判定你插話就硬停播放＋清空臉那邊的緩衝，代價是**要重新囤半秒才出得了聲**。
   // 判對了沒事（你本來就要講話），**判錯了就是斷字**——而在手機開擴音的情況下，
   // 她自己的聲音繞回麥克風本來就容易被誤判。
   //
-  // 業界 2026 的做法不是砍，是**把她的音量壓低約 24 分貝**（audio ducking）：
-  // 判錯了也只是音量抖一下、聽起來像禮讓；判對了再真的停。
-  // 這一關把「誤判的代價」從斷字降成音量抖一下。
-  _duckAssistantAudio() {
-    try {
-      var p=document.getElementById('faceVid');
-      if(p && !this._duckPrevVolume){ this._duckPrevVolume=(p.volume===0?1:p.volume); p.volume=0.06; }   // 0.06 ≈ −24dB
-    } catch (e) {}
-    try {
-      const gain = this._ensureLocalPlaybackGain();
-      if (gain && !this._duckPrevGain) {
-        this._duckPrevGain = gain.gain.value || 1;
-        gain.gain.setTargetAtTime(0.06, this.playCtx.currentTime, 0.01);
-      }
-    } catch (e) {}
-  },
-  _unduckAssistantAudio() {
-    try {
-      var p=document.getElementById('faceVid');
-      if(p && this._duckPrevVolume){ p.volume=this._duckPrevVolume; }
-    } catch (e) {}
-    this._duckPrevVolume=0;
-    try {
-      const gain = this._playGain;
-      if (gain && this.playCtx && this.playCtx.state !== 'closed') {
-        const value = this._duckPrevGain || 1;
-        gain.gain.cancelScheduledValues(this.playCtx.currentTime);
-        gain.gain.setTargetAtTime(value, this.playCtx.currentTime, 0.01);
-      }
-    } catch (e) {}
-    this._duckPrevGain=0;
-  },
+  // 1.0.62 證明「先壓低 24dB」仍是可聽的斷字：手機擴音的回音會反覆觸發候選，
+  // 即使 Voice 最後拒絕，使用者已經先聽到每句被壓扁。候選期不准碰播放；只有
+  // Voice 回 barge_in_ack accepted 後才停止聲音，讓伺服器成為唯一裁決者。
   _maybeBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs) {
     if (this._bargeInActive || this._duckPendingAt) return;
     const policy = window.MuneaVoiceTurnPolicy;
-    // 第一步：只壓音量，不砍話、不清緩衝
+    // 第一步只收證據，不壓音量、不砍話、不清緩衝。
     this._duckPendingAt = performance.now();
     this._duckPreRoll = Array.isArray(preRoll) ? preRoll.slice() : [];
     this._duckPostRoll = [];
-    this._duckAssistantAudio();
-    voiceCallMark('barge_in_ducked', 'pass', { rms: Math.round(rms*1000)/1000, sustainMs });
+    voiceCallMark('barge_in_candidate_observing', 'pass', { rms: Math.round(rms*1000)/1000, sustainMs, playbackChanged: false });
     var self=this;
     // 第二步：再看短暫確認窗。真人插話會持續講；回音殘響撐不了那麼久。
     const confirmMs = policy ? policy.DEFAULTS.duckConfirmMs : 110;
@@ -4225,7 +4199,6 @@ const LiveVoice = {
           self._duckPostRoll.length,
         );   // 送候選；是否為真人插話只由 Voice 裁決
       } else {
-        self._unduckAssistantAudio();
         voiceCallMark('barge_in_candidate_abandoned', 'pass', { recoveredMs: confirmMs });
       }
     }, confirmMs);
@@ -4245,10 +4218,15 @@ const LiveVoice = {
       candidate_threshold: +threshold.toFixed(4),
       sustain_ms: Math.max(0, Number(sustainMs) || 0),
       evidence_frames: evidence.length,
-      post_duck_frames: Math.max(0, Number(postDuckFrames) || 0),
+      // Candidate observation no longer ducks playback. Declaring these as
+      // post-duck evidence would make Voice use the lower quiet-room threshold
+      // on loudspeaker echo and recreate the self-interruption server-side.
+      post_duck_frames: 0,
+      candidate_tail_frames: Math.max(0, Number(postDuckFrames) || 0),
       post_duck_sustain_ms: policy ? policy.DEFAULTS.duckEvidenceMs : 80,
       detected_speech_ms: Math.round(Math.max(0, Number(detectedSpeechMs) || 0)),
       timing_basis: 'audio_callback_estimate',
+      playback_unchanged: true,
     };
     try { this.ws.send(JSON.stringify({ type: 'barge_in_start', ...payload })); } catch (e) {}
     evidence.forEach(frame => this._sendMicBuffer(frame));
@@ -4450,9 +4428,11 @@ const LiveVoice = {
     }
   },
   _queueSameLineBoundaryFallback(reason, detail) {
-    if (!this._sameLine || this._sameLineFellBack === true || this._slFallbackAfterTurn) return;
-    this._slFallbackAfterTurn = String(reason || 'quality');
-    try { trackProductEvent('sameline_fallback_queued', { reason: this._slFallbackAfterTurn, ...(detail || {}) }); } catch (e) {}
+    // 位元組統計的短停頓只能觀測，不能拆掉本通 Avatar。1.0.62 的查詢「有聲無嘴」
+    // 就是這個 heuristic 在第二次 microstall 後排程 voice-only fallback。真正 4 秒
+    // 無影格的硬故障仍由 Avatar._faceWatchTick 處理，兩者不得混為一談。
+    if (!this._sameLine || this._sameLineFellBack === true) return;
+    try { trackProductEvent('sameline_fallback_suppressed', { reason: String(reason || 'quality'), ...(detail || {}) }); } catch (e) {}
   },
   _scheduleSameLineBoundaryFallback() {
     const reason = this._slFallbackAfterTurn;
@@ -4521,7 +4501,7 @@ const LiveVoice = {
           this._slStalls += 1;
           try { trackProductEvent('sameline_audio_stall', { count: this._slStalls, durationMs: 400, byteDelta, turn: this._playbackTurn || 0 }); } catch (e) {}
           try { trackProductEvent('sameline_audio_microstall', { count: this._slStalls, durationMs: 400, byteDelta, turn: this._playbackTurn || 0 }); } catch (e) {}
-          // 2026-07-30 深夜降級為「只記錄、不動手」：這偵測器在真機上每通誤觸發——
+          // 只記錄、不動手：這偵測器在真機上每通可能誤觸發——
           // 她每輪開口前臉機要 1-2 秒處理，那段「該講卻沒聲」被誤算成斷流（turn 2/3/7
           // 的 telemetry 全是這型）。自動切換帶來的雪崩（忽大忽小/臉不同步/回音自斷）
           // 比它要治的斷續傷害大得多（Edward 7/30 親測退步）。保留計數與事件、
@@ -4929,12 +4909,10 @@ const LiveVoice = {
               if (accepted) {
                 this._bargeInActive = true;
                 this._dropAssistantAudio = true;
-                this._unduckAssistantAudio();
                 this._stopAssistantPlayback();
                 if (this.onListen) this.onListen();
               } else {
                 this._dropAssistantAudio = false;
-                this._unduckAssistantAudio();
                 this._resetBargeInDetector();
               }
               try {
@@ -5147,7 +5125,6 @@ const LiveVoice = {
     this.micOpen = false; this._openMicAfterGreet = false;
     try { clearTimeout(this._duckConfirmT); } catch (e) {}
     this._duckPendingAt = 0;
-    this._unduckAssistantAudio();   // 掛斷時把壓低的音量還原，否則下一通會小聲
     this._sameLineWarmup = false;
     this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = ''; this._faceDirectTurn = 0;
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
@@ -5167,7 +5144,7 @@ const LiveVoice = {
     try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
     try { if (window.MuneaAvSyncMeter) MuneaAvSyncMeter.stop(); } catch (e) {}   // 延遲量測器一起收
     this._avAnalyser = null;                                                      // playCtx 關了→分析器作廢，下通重建
-    this._playGain = null; this._duckPrevGain = 0;
+    this._playGain = null;
     this.ws = this.ac = this.mic = this.proc = this._micSrc = this.playCtx = null;
   },
 };

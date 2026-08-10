@@ -33,9 +33,10 @@ def _src():
 def test_mic_opens_on_ready_not_after_greeting():
     """麥克風要掛在 ready 事件（最早、沒有分支繞得過去），不是接通那條路的尾巴。"""
     src = _src()
-    ready = re.search(r"if \(o\.type === 'ready'\) \{(.{0,1200}?)\n\s{12}\}", src, re.S)
-    assert ready, "找不到 ready 事件那段"
-    body = ready.group(1)
+    start = src.find("if (o.type === 'ready') {")
+    end = src.find("if (o.type === 'caption' && o.who === 'user'", start)
+    assert start >= 0 and end > start, "找不到 ready 事件那段"
+    body = src[start:end]
     assert "_setMicOpen(true)" in body, (
         "ready 事件沒有開麥——開麥若只掛在接通那條路的尾巴，"
         "路上兩道提早離開的檢查一命中就整段跳過（8/8 間歇性講不了話的根因）"
@@ -91,44 +92,61 @@ def test_silence_does_not_hang_up():
 GUESS_FREE_DUCK = "誤判插話不准再把她的話砍掉（2026-08-09）"
 
 
-def test_barge_in_ducks_before_cutting():
-    """判定插話要先壓音量、確認過才砍——不能一偵測就硬停。
+def test_barge_in_candidate_does_not_touch_playback_before_server_verdict():
+    """候選插話只能收證據；Voice 接受前不准壓音量或停聲。
 
     Edward 8/8 真機「整句話頻繁斷字、卡住一個字跳針」。舊行為＝一判定就硬停播放
-    ＋清空臉那邊的緩衝，代價是要重新囤半秒才出得了聲。判對了沒事，**判錯就是斷字**。
-    業界 2026 的做法是先把音量壓低約 24 分貝，判錯只是音量抖一下。
+    ＋清空臉那邊的緩衝；1.0.62 改成先壓低 24dB 後，擴音回音仍會反覆讓每句變小，
+    使用者聽起來一樣是中斷。唯一安全邊界是 server accepted 前完全不改播放。
     """
     src = _src()
-    assert "_maybeBargeIn" in src, "少了「先壓音量再確認」那一關"
-    assert "_duckAssistantAudio" in src and "_unduckAssistantAudio" in src, (
-        "少了壓音量／還原音量的動作"
+    maybe = re.search(r"\n  _maybeBargeIn\(.*?\n  \},", src, re.S)
+    assert maybe, "找不到插話候選觀察窗"
+    body = maybe.group(0)
+    assert "_duckAssistantAudio()" not in body, (
+        "Voice 裁決前仍會壓低播放——擴音回音會讓 AI 每句自我中斷"
+    )
+    assert "_stopAssistantPlayback()" not in body, "候選期不准自行停聲"
+    assert "playbackChanged: false" in body, "候選事件必須明示播放未被改動"
+    begin = re.search(r"\n  _beginBargeIn\(.*?\n  \},", src, re.S).group(0)
+    assert "post_duck_frames: 0" in begin and "playback_unchanged: true" in begin, (
+        "播放未 duck 卻仍宣稱 post-duck，Voice 會用過低門檻接受喇叭回音"
     )
     caller = re.search(r"this\.(_maybeBargeIn|_beginBargeIn)\(rms, observed\.threshold", src)
     assert caller and caller.group(1) == "_maybeBargeIn", (
-        "偵測到插話還是直接砍話——要先走 _maybeBargeIn 壓音量觀察"
+        "偵測到插話仍直接砍話——要先走 _maybeBargeIn 收證據"
     )
 
 
-def test_false_alarm_restores_audio():
-    """確認不是真的插話時，音量要還原，而且要留下紀錄（不然誤判率永遠量不到）。"""
+def test_sameline_quality_heuristics_never_disable_lip_sync():
+    """短停頓／慢起播只能記錄，不能把 Avatar 整通切成無對嘴模式。"""
     src = _src()
-    assert "barge_in_false_alarm" in src, "誤判沒有留下紀錄，就沒辦法量誤判率"
-    assert "voice_barge_in_false_alarm" in src, "誤判沒有回報，看不到改善幅度"
-
-
-def test_hangup_restores_volume():
-    """掛斷要把壓低的音量還原，否則下一通會整通小聲。"""
-    src = _src()
-    # 兩個坑都踩過，這裡一次講清楚：
-    #  ① 不能用「抓到下一個 }」框範圍——stop() 裡有巢狀括號，比對式會提早結束、
-    #     明明有寫卻報沒有（2026-08-01 同一個坑）。
-    #  ② app.js 裡有五個 stop()，要的是掛斷通話那一個（收掉收音管與看門的那個），
-    #     不是最前面那個。用它獨有的內容定位。
-    at = src.index("clearTimeout(this._uplinkWatchT); clearTimeout(this._deadLineWatchT);")
-    body = src[at:at + 1200]
-    assert "_unduckAssistantAudio" in body, (
-        "掛斷沒有還原音量——下一通會小聲"
+    queue = re.search(r"\n  _queueSameLineBoundaryFallback\(.*?\n  \},", src, re.S)
+    assert queue, "找不到同線品質降級守門"
+    body = queue.group(0)
+    assert "_slFallbackAfterTurn =" not in body, (
+        "品質 heuristic 仍在排程 voice-only fallback——查詢回覆會有聲無嘴"
     )
+    assert "sameline_fallback_suppressed" in body
+
+
+def test_false_alarm_is_recorded_without_playback_recovery():
+    """候選放棄與伺服器拒絕都要留紀錄，但不應有音量復原需求。"""
+    src = _src()
+    assert "barge_in_candidate_abandoned" in src, "候選放棄沒有留下紀錄"
+    assert "voice_barge_in_rejected" in src, "Voice 拒絕沒有回報，看不到誤判率"
+    maybe = re.search(r"\n  _maybeBargeIn\(.*?\n  \},", src, re.S).group(0)
+    assert "_unduckAssistantAudio()" not in maybe, (
+        "候選放棄仍需恢復音量，代表候選期其實動過播放"
+    )
+
+
+def test_no_client_playback_duck_implementation_remains():
+    """App 不只不能呼叫 duck，也不應保留可誤接回去的播放突變方法。"""
+    src = _src()
+    assert "_duckAssistantAudio()" not in src
+    assert "_unduckAssistantAudio()" not in src
+    assert "p.volume=0.06" not in src
 
 
 if __name__ == "__main__":

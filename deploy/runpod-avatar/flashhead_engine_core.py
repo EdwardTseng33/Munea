@@ -384,6 +384,10 @@ class Slot:
         self.gen_compute_ms_hist = collections.deque(maxlen=100)
         self.video_catchup_events = 0
         self.video_catchup_frames = 0
+        # Real speech must invalidate any idle GPU work that is still in flight.
+        # Expose this count so the production gate can prove that the race was
+        # handled instead of inferring it from negative first-frame timings.
+        self.idle_invalidation_count = 0
         # WebRTC audio sender scheduling is separate from PCM availability.
         # A busy event loop can wake the 20 ms sender late even while audio_out
         # still has plenty of buffered PCM. Track that independently so an RTP
@@ -504,6 +508,9 @@ class Feeder:
         self._round_pending = False
         self._finish_pending = False
         self._complete_pending = False
+        # 每次真 PCM 進來都推進；待機 GPU 工作用它確認計算期間沒有真語音抵達。
+        # 否則晚完成的待機畫格會插到新一輪嘴型前面，造成首句嘴慢甚至完全沒動。
+        self._real_input_seq = 0
         # 世代號——每次 reset() +1。GPU 上跑到一半的舊塊完成時比對世代號，
         # 變了就整塊丟棄，不讓上一輪聲畫漏進新一輪（治「掛斷重撥她一接通就
         # 繼續講上一段」「插話後又冒半句舊話」）。
@@ -527,8 +534,21 @@ class Feeder:
             return
         xq = np.interp(np.linspace(0, 1, n_out, endpoint=False),
                         np.linspace(0, 1, len(x), endpoint=False), x).astype(np.float32)
+        stop_idle = False
         with self.lock:
             now = time.time()
+            self._real_input_seq += 1
+            if self._idle_on:
+                # 讓已在 GPU 上的待機工作以 epoch 判定作廢；只清畫面，不碰已排入的
+                # 原始 PCM／共同播放時鐘。真嘴型完成前仍由 poster 保持畫面。
+                self._idle_on = False
+                self._epoch += 1
+                self._prev_frame = None
+                # Idle chunks are zero-valued context only. Do not let their
+                # history soften the first mouth movement of the real turn.
+                self.slot.audio_dq.clear()
+                self.slot.idle_invalidation_count += 1
+                stop_idle = True
             if self.t0 is None or (now - self.last_in) > 0.8:
                 self.t0 = now
                 self.consumed = 0
@@ -551,6 +571,10 @@ class Feeder:
             self.acc = np.concatenate([self.acc, xq])
             self.acc_out = np.concatenate([self.acc_out, x])
             self.last_in = now
+        if stop_idle and self.slot.sink is not None:
+            self.slot.sink.clear()
+            print("[feeder] slot" + str(self.slot.index)
+                  + " real audio invalidated in-flight idle frames", flush=True)
 
     def reset(self):
         with self.lock:
@@ -628,9 +652,11 @@ class Feeder:
         return frames
 
     def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None,
-                   emit_audio=True, timeline_start_s=None):
+                   emit_audio=True, timeline_start_s=None, idle_input_seq=None):
         t_chunk_ready = time.time()
         with self.lock:
+            if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
+                return
             chunk_epoch = self._epoch
             self.slot.audio_dq.extend(chunk_16k.tolist())
             arr = np.array(self.slot.audio_dq)
@@ -665,6 +691,10 @@ class Feeder:
                 print("[feeder] slot" + str(self.slot.index) + " stale chunk dropped (epoch "
                       + str(chunk_epoch) + " -> " + str(self._epoch) + ")", flush=True)
                 return
+            if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
+                print("[feeder] slot" + str(self.slot.index)
+                      + " stale idle chunk dropped (real input arrived)", flush=True)
+                return
         if emit_audio and timeline_start_s is not None and len(frames):
             queued_video_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
             audio_played_s = (self.slot.audio_out.played_samples
@@ -688,7 +718,19 @@ class Feeder:
                       flush=True)
         if ANTIFLICKER:
             frames = self._stabilize(frames, chunk_epoch)
-        self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
+        # Keep the final generation check and queue insertion atomic with
+        # push24k's epoch bump + sink.clear(). Otherwise real input can arrive
+        # after the check but before this push and stale idle frames still win.
+        with self.lock:
+            if self._epoch != chunk_epoch:
+                print("[feeder] slot" + str(self.slot.index)
+                      + " stale chunk dropped before sink push", flush=True)
+                return
+            if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
+                print("[feeder] slot" + str(self.slot.index)
+                      + " stale idle chunk dropped before sink push", flush=True)
+                return
+            self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
         if valid_samples is None:
             valid_samples = len(chunk_16k)
         if output_pcm is None:
@@ -703,7 +745,7 @@ class Feeder:
                 output_pcm = np.zeros(0, dtype=np.float32)
         if emit_audio:
             self.slot.audio_out.release_playout()
-        if self._round_pending:
+        if emit_audio and self._round_pending:
             self._round_pending = False
             lat_ms = round((t_frames_ready - self.slot.round_start_ts) * 1000, 1)
             self.slot.round_latencies.append(lat_ms)
@@ -715,6 +757,7 @@ class Feeder:
         while True:
             todo = None
             complete_now = False
+            idle_input_seq = None
             with self.lock:
                 if len(self.acc) >= cs and self.t0 is not None:
                     # The audio queue now holds ingress PCM before GPU work.
@@ -773,11 +816,22 @@ class Feeder:
                 real_silent = ((now - self.last_in) > 1.0 and len(self.acc) < cs
                                 and self.slot.audio_out.depth_samples == 0
                                 and self.slot.sink.depth() == 0)
+                if real_silent:
+                    idle_input_seq = self._real_input_seq
             has_conn = any(pc.connectionState in ("new", "connecting", "connected")
                            for pc in self.slot.pcs)
             if has_conn and real_silent and now >= self._idle_due and self.slot.healthy:
-                if not self._idle_on:
-                    self._idle_on = True
+                idle_started = False
+                with self.lock:
+                    idle_still_valid = (self._real_input_seq == idle_input_seq
+                                        and (time.time() - self.last_in) > 1.0
+                                        and len(self.acc) < cs)
+                    if idle_still_valid and not self._idle_on:
+                        self._idle_on = True
+                        idle_started = True
+                if not idle_still_valid:
+                    continue
+                if idle_started:
                     print("[feeder] slot" + str(self.slot.index)
                           + " real silence, connection alive, start idle feed", flush=True)
                 # WebRTC already emits zero PCM while speech is absent. Queueing
@@ -785,7 +839,10 @@ class Feeder:
                 # phrase clear/re-arm the audio buffer and inserts a new
                 # 200-350 ms start gate inside one conversational turn. Idle
                 # generation is video-only; real PCM keeps one continuous clock.
-                self._gen_chunk(np.zeros(cs, dtype=np.float32), emit_audio=False)
+                self._gen_chunk(
+                    np.zeros(cs, dtype=np.float32), emit_audio=False,
+                    idle_input_seq=idle_input_seq,
+                )
                 self._idle_due = now + cs / self.sr_eng
             else:
                 time.sleep(0.02)
@@ -921,6 +978,7 @@ def health_snapshot(slot, wake_ts=None):
         gen_p95 = round(srt[max(0, int(len(srt) * 0.95) - 1)], 1)
     ao = slot.audio_out
     sink = slot.sink
+    round_latencies = list(slot.round_latencies)
     return {
         "frames": sink.count if sink else 0,
         "output_resolution": {
@@ -929,7 +987,11 @@ def health_snapshot(slot, wake_ts=None):
         },
         "load": slot.load_report,
         "round_count": slot.round_count,
-        "round_latencies_ms": list(slot.round_latencies),
+        "round_latencies_ms": round_latencies,
+        "round_latency_integrity": {
+            "negative_count": sum(1 for value in round_latencies if value < 0),
+            "min_ms": min(round_latencies) if round_latencies else None,
+        },
         "uptime_s": round(time.time() - (wake_ts if wake_ts else time.time()), 1),
         "sink_depth": len(sink.q) if sink else 0,
         "latency_ms": {
@@ -967,6 +1029,7 @@ def health_snapshot(slot, wake_ts=None):
         "video_sync": {
             "catchup_events": slot.video_catchup_events,
             "catchup_frames": slot.video_catchup_frames,
+            "idle_invalidations": slot.idle_invalidation_count,
             "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
                                 if ao else 0),
         },
