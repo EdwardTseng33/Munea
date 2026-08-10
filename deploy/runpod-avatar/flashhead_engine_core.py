@@ -227,27 +227,54 @@ class AudioOutBuffer:
             p95_index = max(0, int(len(ordered) * 0.95) - 1)
             self.generation_p95_ms = ordered[p95_index]
 
-    def push(self, pcm_int16):
+    def _queue_locked(self, pcm_int16):
+        now = time.time()
+        if len(pcm_int16) and self._underrun_started_ts is not None:
+            gap_ms = round((now - self._underrun_started_ts) * 1000, 1)
+            self.underrun_gap_ms.append(gap_ms)
+            self._underrun_started_ts = None
+            # Only observed starvation raises the next-turn cushion.
+            self._turn_underrun_seen = True
+            self.stable_turns = 0
+            self._raise_adaptive_prebuffer_locked(0.05)
+        self.buf = np.concatenate([self.buf, pcm_int16])
+        self.last_push_ts = now
+        self.depth_samples = len(self.buf)
+
+    def queue(self, pcm_int16):
+        """Queue original Voice PCM immediately, without waiting for lip rendering.
+
+        Playout remains held until ``release_playout`` sees the first rendered
+        video chunk. GPU variance may then freeze video, but it can no longer
+        starve the audible PCM queue every model chunk.
+        """
         with self.lock:
-            now = time.time()
-            if len(pcm_int16) and self._underrun_started_ts is not None:
-                gap_ms = round((now - self._underrun_started_ts) * 1000, 1)
-                self.underrun_gap_ms.append(gap_ms)
-                self._underrun_started_ts = None
-                # Only observed starvation raises the next-turn cushion.
-                self._turn_underrun_seen = True
-                self.stable_turns = 0
-                self._raise_adaptive_prebuffer_locked(0.05)
-            if len(pcm_int16) and self._awaiting_first_push:
+            self._queue_locked(np.asarray(pcm_int16, dtype=np.int16).reshape(-1))
+
+    def release_playout(self):
+        """Open the shared audio/video start gate after first video is ready."""
+        with self.lock:
+            if len(self.buf) and self._awaiting_first_push:
+                now = time.time()
                 delay = self.next_prebuffer_s
                 self.last_prebuffer_s = delay
                 self.next_prebuffer_s = self.adaptive_prebuffer_s
                 self._one_shot_prebuffer = False
                 self.hold_until_ts = now + delay
                 self._awaiting_first_push = False
-            self.buf = np.concatenate([self.buf, pcm_int16])
-            self.last_push_ts = now
-            self.depth_samples = len(self.buf)
+
+    def push(self, pcm_int16):
+        """Backward-compatible queue-and-release path for local callers/tests."""
+        with self.lock:
+            self._queue_locked(np.asarray(pcm_int16, dtype=np.int16).reshape(-1))
+            if len(self.buf) and self._awaiting_first_push:
+                now = time.time()
+                delay = self.next_prebuffer_s
+                self.last_prebuffer_s = delay
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
+                self._one_shot_prebuffer = False
+                self.hold_until_ts = now + delay
+                self._awaiting_first_push = False
 
     def clear(self):
         with self.lock:
@@ -440,7 +467,11 @@ class Feeder:
             threading.Thread(target=self._loop, daemon=True).start()
 
     def push24k(self, pcm_bytes):
-        x = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        pcm_int16 = np.frombuffer(pcm_bytes, dtype=np.int16).copy()
+        # Audible PCM takes the direct ingress path. Lip generation consumes a
+        # resampled copy, but never becomes the clock that feeds the speaker.
+        self.slot.audio_out.queue(pcm_int16)
+        x = pcm_int16.astype(np.float32) / 32768.0
         n_out = int(len(x) * self.sr_eng / self.sr_in)
         if n_out <= 0:
             return
@@ -583,8 +614,7 @@ class Feeder:
             else:
                 output_pcm = np.zeros(0, dtype=np.float32)
         if emit_audio:
-            pcm_out = np.clip(output_pcm * 32768.0, -32768, 32767).astype(np.int16)
-            self.slot.audio_out.push(pcm_out)
+            self.slot.audio_out.release_playout()
         if self._round_pending:
             self._round_pending = False
             lat_ms = round((t_frames_ready - self.slot.round_start_ts) * 1000, 1)
@@ -599,7 +629,11 @@ class Feeder:
             complete_now = False
             with self.lock:
                 if len(self.acc) >= cs and self.t0 is not None:
-                    ahead_s = self.slot.audio_out.depth_samples / self.slot.audio_out.sample_rate
+                    # The audio queue now holds ingress PCM before GPU work.
+                    # Throttle only generated video depth; using audio depth
+                    # here would postpone lip rendering until speech nearly
+                    # finished and defeat the shared start gate.
+                    ahead_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
                     if ahead_s < self.max_ahead_s:
                         output_samples = min(len(self.acc_out), int(round(cs * self.sr_in / self.sr_eng)))
                         todo = (self.acc[:cs].copy(), cs, self.acc_out[:output_samples].copy())

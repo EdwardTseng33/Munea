@@ -811,7 +811,7 @@ class FlashHead:
                                 "type": "avatar_pcm_received",
                                 "turn": audio_turn,
                                 "bytes": len(msg["bytes"]),
-                                "prebufferMs": round(slot.audio_out.last_prebuffer_s * 1000),
+                                "prebufferMs": round(slot.audio_out.next_prebuffer_s * 1000),
                             })
                     elif msg.get("text") == "reset":
                         slot.feeder.reset()

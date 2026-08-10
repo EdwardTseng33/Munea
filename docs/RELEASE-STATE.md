@@ -6,9 +6,12 @@
 - **正式止血**：`origin/main@9a0308a6`／production Voice `munea-voice-00101-yog@9a0308a6` 已把 Voice→Avatar direct route 預設關閉，回到 App relay。這是服務端 kill switch，不等於 App 故障已永久修好。
 - **App 候選**：`codex/fix-call-audio-state-p0-20260810`。降級只隱藏／靜音 Avatar 並切回本地聲音，不再關閉 paired transport；`speechActive()` 只信 Voice PCM 播放水位，不再讓 Avatar idle 音軌底噪長時間關閉麥克風；iOS 短暫 hidden 改為 5 秒 grace。App 插話邏輯降級為「候選觸發＋duck＋送證據」，不得自行停止 AI；只有 Voice 的 `decide_speaker_evidence()` 可以接受／拒絕，且不採信 App 傳來的 RMS 門檻。
 - **假手機 Gate**：新增 `python scripts/fake_phone_e2e.py`，預設走現役 App relay，取得真 Gateway lease／call token，連 Voice＋Avatar WebRTC，送入已知逐字稿的真人 PCM16 WAV，核對 ASR 字元召回、第一聲、Voice PCM 供給缺口、Avatar WebRTC 連續性、turn complete 後無自主第二段與連線保持。2026-08-10 首次用既有合成 WAV 做「不計分管線自測」時，現役 staging 在 `turn_complete` 後無新輸入又送出 `319230` bytes 及第二段字幕；假手機因此正確判 FAIL。branch source 已有 routine health follow-up suppression，但尚待部署無流量 staging canary 後重打。
+- **零流量 canary 實證**：Voice revision `munea-voice-staging-00114-yuf@3ebd91d4`（tag `stg-0810-220410-3ebd91d`，0% traffic）三次兩階段插話皆 PASS：Voice 裁決 ACK `15–16ms`、AI 停聲 `110–125ms`、送入證據 `200ms`、舊聲外漏 `0B`。canary 也已壓住 routine health 自主第二輪，五次假手機皆為 `unsolicited_audio_bytes=0`、連線保持。
+- **間歇卡頓已由假手機重現**：正式入口預設連打三通；2026-08-10 22:33 台灣的三通管線驗證只過 `1/3`。失敗兩通 Voice 來源 queue 均為 `0 underrun`，但 Glows Avatar 內部 `audio_underrun` 分別增加 `3`／`2`，波形缺口最長 `140ms`／`200ms`；WebRTC RTP timeline 無跳號。根因位於 FlashHead 把原始 PCM 等到每塊嘴型 GPU 完成後才推入播放 queue，GPU 區塊抖動會直接抽乾聲音。
+- **Avatar 候選手術**：`flashhead_engine_core.py` 改成原始 Voice PCM 抵達即進連續音訊 queue，第一批嘴型 ready 後只開一次共同起播門；後續 GPU 慢只允許畫面停格，不得再阻塞聲音。多槽、待機、GPU stream、原始 PCM 不重複／不消耗與共同起播單元測試 PASS。Glows 目前只有「主要服務顯卡01」，候選尚未部署／重啟正式 worker；需隔離 GPU worker 或維護窗口重打三通後才可推進。
 - **自動驗收**：插話／回音、啟動、Avatar direct kill switch、通話儀表、UI 契約、假手機契約與可執行狀態機均 PASS。正式 App 本地播放排程以 80 個 200ms PCM chunk、147ms 到貨間隔重播：`0 underrun`、`0 scheduling gap`；Avatar idle RMS `0.04` 連續模擬 3 分鐘：麥克風守門阻擋 `0` 次。`smoke:no-api`、UI contracts、Voice chain contracts 全綠。
 - **完整套件例外**：`npm run test:launch` 在既有 `test_flashhead_router_core.py` Windows Bash dry-run 失敗；該測試與輸入檔均未被本分支修改，針對性與後續 UI 測試全綠。
-- **狀態**：`tested / live fake-phone candidate pending / App E2E pending`。尚未合併、尚未包版、尚未送審。既有合成 WAV 只能證明假手機管線工作，不能冒充真人聲 PASS；需放入一份經同意、無個資、固定逐字稿的真人錄音，且無流量 staging canary 全門通過後，才輪到 exact-build iPhone Gate。
+- **狀態**：`Voice canary tested / Avatar candidate code-tested / live Avatar fake-phone FAIL / App E2E pending`。尚未合併、尚未包版、尚未送審、尚未更新正式 Avatar。既有合成 WAV 只能證明管線與卡頓 Gate 工作，不能冒充真人聲 ASR PASS；需隔離 GPU 驗三通、再用經同意且無個資的固定真人錄音通過，最後才輪到 exact-build iPhone Gate。
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
