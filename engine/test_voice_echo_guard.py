@@ -8,6 +8,7 @@
 跑法：python engine/test_voice_echo_guard.py
 """
 import os
+import re
 import struct
 import sys
 
@@ -112,13 +113,21 @@ def main():
     # 2026-07-29：原本寫死比對 `st["last_out"] = time.monotonic()` 出現幾次，但主聲道那處
     # 為了順便量抖動改成先取一次 now 再指派（功能完全一樣）。改成檢查「有幾個地方在更新
     # 出聲時間」這個行為本身，不綁特定寫法——回音濾網要靠它判斷她此刻在不在講話。
-    check("模型主聲道記出聲時間", srv.count('st["last_out"] = ') >= 2)
+    forward_match = re.search(
+        r"async def _forward_audio\(chunk\):(?P<body>.*?)(?=\n    async def )",
+        srv,
+        re.DOTALL,
+    )
+    forward_body = forward_match.group("body") if forward_match else ""
+    check("唯一音訊出口記出聲時間",
+          'st["last_out"] = ' in forward_body and srv.count("await _forward_audio(") >= 4)
 
     # 回音窗 v2（2026-07-29 · Edward 點名「自問自答」後抓到的結構性漏洞）：
     # Gemini 送資料比講話快——一句 10 秒的話伺服器 2 秒送完，舊窗（送出時間+2.5秒）
     # 在她才播到第 5 秒時就關了，句子後半的回音全放行＝她回答自己。
     # v2 鏡射 App 播放節奏推「手機大概播到哪」的水位，窗蓋到播完+殘響。
-    check("每送一塊聲音就推進播放水位（兩條送聲路都要）", srv.count("note_playout(") >= 2)
+    check("唯一音訊出口每塊都推進播放水位",
+          'st["playout_head"] = note_playout(' in forward_body)
     check("回音判定以播放水位為主", "in_playout_window(_eg_now" in srv)
     check("送出時間窗留著當後備", "or in_output_window(_eg_now" in srv)
     check("用戶插話→水位歸零（App 已清掉未播聲音，窗立刻收、不吃真人聲）",

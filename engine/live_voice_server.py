@@ -1851,7 +1851,11 @@ def _new_call_state():
           "voice_turn_seq": 0, "voice_turn_id": 0,
           "voice_turn_vad_pending": False, "voice_turn_vad_stop_at": 0.0,
           "voice_turn_target_ms": voice_turn_semantics.NORMAL_TURN_MS,
-          "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
+          "face_ws": None, "face_audio_url": None, "face_audio_session": None,
+          "face_audio_reader": None, "face_audio_enabled": False,
+          "face_audio_ready": None, "face_audio_turn_started": False,
+          "face_audio_turn_seq": 0, "face_audio_transport_turn": 0,
+          # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
           "guardian_internal_followup_sources": (),
@@ -2161,10 +2165,36 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         except Exception:
             pass
 
+    async def _face_audio_read(w):
+        """Forward Avatar's first-PCM ACK to the App diagnostics channel."""
+        try:
+            async for message in w:
+                if not isinstance(message, str):
+                    continue
+                try:
+                    payload = json.loads(message)
+                except Exception:
+                    continue
+                if payload.get("type") == "avatar_pcm_received":
+                    await ws.send(message)
+        except Exception:
+            pass
+
     async def _face_audio_off():
         fw = st.get("face_ws")
+        reader = st.get("face_audio_reader")
+        ready = st.get("face_audio_ready")
         st["face_ws"] = None
         st["face_audio_url"] = None
+        st["face_audio_session"] = None
+        st["face_audio_reader"] = None
+        st["face_audio_enabled"] = False
+        st["face_audio_ready"] = None
+        st["face_audio_turn_started"] = False
+        if ready:
+            ready.set()
+        if reader:
+            reader.cancel()
         if fw:
             asyncio.create_task(_face_audio_close(fw))
             _diag(cid, "node.faceaudio_off")
@@ -2175,9 +2205,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         # 連不上/斷了都不能拖累語音對話：任何失敗都吞掉，對話照常，只是臉那次不會動（等下一次 on 訊息重試）。
         url = (url or "").strip().rstrip("/")
         if not url:
-            return
-        if st.get("face_ws") is not None and st.get("face_audio_url") == url:
-            return   # 同一顆網址已經開著，不重連（避免重複 on 事件疊連線）
+            return False
+        if (st.get("face_ws") is not None
+                and st.get("face_audio_url") == url
+                and st.get("face_audio_session") == session_id):
+            return True   # 同一顆網址已經開著，不重連（避免重複 on 事件疊連線）
         await _face_audio_off()   # 先收掉舊的（網址換了，或上一輪殘留）
         try:
             ws_url = url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
@@ -2190,11 +2222,76 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             fw = await websockets.connect(ws_url, max_size=None, open_timeout=5)
             st["face_ws"] = fw
             st["face_audio_url"] = url
+            st["face_audio_session"] = session_id
+            st["face_audio_enabled"] = False
+            st["face_audio_ready"] = asyncio.Event()
+            st["face_audio_turn_started"] = False
+            st["face_audio_reader"] = asyncio.create_task(_face_audio_read(fw))
             _diag(cid, "node.faceaudio_on", url=url)
+            return True
         except Exception as e:
             st["face_ws"] = None
             st["face_audio_url"] = None
+            st["face_audio_session"] = None
+            st["face_audio_reader"] = None
+            st["face_audio_enabled"] = False
+            st["face_audio_ready"] = None
+            st["face_audio_turn_started"] = False
             _diag(cid, "node.faceaudio_err", err=f"{type(e).__name__}:{str(e)[:60]}")
+            return False
+
+    async def _face_audio_failed(fw, reason):
+        reader = st.get("face_audio_reader")
+        ready = st.get("face_audio_ready")
+        st["face_ws"] = None
+        st["face_audio_url"] = None
+        st["face_audio_session"] = None
+        st["face_audio_reader"] = None
+        st["face_audio_enabled"] = False
+        st["face_audio_ready"] = None
+        st["face_audio_turn_started"] = False
+        if ready:
+            ready.set()
+        if reader:
+            reader.cancel()
+        asyncio.create_task(_face_audio_close(fw))
+        try:
+            await ws.send(json.dumps({
+                "type": "faceaudio_status", "on": False, "reason": reason,
+                "turn": int(st.get("voice_turn_id") or 0),
+            }))
+        except Exception:
+            pass
+
+    async def _finish_face_audio_turn():
+        fw = st.get("face_ws")
+        if (fw is None or not st.get("face_audio_enabled")
+                or not st.get("face_audio_turn_started")):
+            return
+        try:
+            await asyncio.wait_for(fw.send("finish"), timeout=FACE_SEND_TIMEOUT_S)
+            st["face_audio_turn_started"] = False
+        except asyncio.TimeoutError:
+            _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S,
+                  path="finish")
+            await _face_audio_failed(fw, "finish_timeout")
+        except Exception:
+            await _face_audio_failed(fw, "finish_error")
+
+    async def _reset_face_audio_turn(reason):
+        fw = st.get("face_ws")
+        if fw is None or not st.get("face_audio_enabled"):
+            st["face_audio_turn_started"] = False
+            return
+        try:
+            await asyncio.wait_for(fw.send("reset"), timeout=FACE_SEND_TIMEOUT_S)
+            st["face_audio_turn_started"] = False
+        except asyncio.TimeoutError:
+            _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S,
+                  path="reset", reason=reason)
+            await _face_audio_failed(fw, "reset_timeout")
+        except Exception:
+            await _face_audio_failed(fw, "reset_error")
 
     async def _forward_audio(chunk):
         if not chunk:
@@ -2203,18 +2300,46 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         _fa_now = time.monotonic()
         st["last_out"] = _fa_now
         st["playout_head"] = note_playout(st.get("playout_head"), _fa_now, len(chunk))
-        await ws.send(chunk)
         fw = st.get("face_ws")
-        if fw is not None:
-            # 同主聲道（2026-07-29）：臉那條線慢就放掉，不能回頭卡住聲音。
+        ready = st.get("face_audio_ready")
+        if fw is not None and ready is not None and not ready.is_set():
             try:
+                await asyncio.wait_for(ready.wait(), timeout=FACE_SEND_TIMEOUT_S)
+            except asyncio.TimeoutError:
+                await _face_audio_failed(fw, "arm_timeout")
+            fw = st.get("face_ws")
+        if fw is not None and st.get("face_audio_enabled"):
+            # Direct route sends to Avatar before publishing the same chunk to
+            # the App. Normal websocket writes return immediately; if the face
+            # route blocks for 150 ms, disable it and notify the App *before*
+            # the binary chunk so that exact chunk is relayed by the phone.
+            try:
+                if not st.get("face_audio_turn_started"):
+                    # Provider input-transcription.finished can arrive after
+                    # first output (and occasionally not at all). Transport
+                    # evidence still needs a non-zero, unique turn id, so it
+                    # cannot depend solely on the semantic/VAD counter.
+                    direct_turn = max(
+                        int(st.get("face_audio_turn_seq") or 0) + 1,
+                        int(st.get("voice_turn_id") or 0),
+                    )
+                    st["face_audio_turn_seq"] = direct_turn
+                    st["face_audio_transport_turn"] = direct_turn
+                    await ws.send(json.dumps({
+                        "type": "faceaudio_turn", "turn": direct_turn,
+                    }))
+                    await asyncio.wait_for(fw.send("reset"), timeout=FACE_SEND_TIMEOUT_S)
+                    await asyncio.wait_for(
+                        fw.send("turn:" + str(direct_turn)), timeout=FACE_SEND_TIMEOUT_S,
+                    )
+                    st["face_audio_turn_started"] = True
                 await asyncio.wait_for(fw.send(chunk), timeout=FACE_SEND_TIMEOUT_S)
             except asyncio.TimeoutError:
-                st["face_ws"] = None
                 _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S, path="forward")
-                asyncio.create_task(_face_audio_close(fw))
+                await _face_audio_failed(fw, "forward_timeout")
             except Exception:
-                st["face_ws"] = None
+                await _face_audio_failed(fw, "forward_error")
+        await ws.send(chunk)
 
     async def _mark_first_audio(source):
         if not st.get("await_first") or st.get("last_in") is None:
@@ -2469,6 +2594,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 await _forward_audio(chunk)
                 await asyncio.sleep(0)
             await _send_turn_tail()
+            await _finish_face_audio_turn()
         await ws.send(json.dumps({"type": "turn_complete"}))
         _diag(cid, "node.language_fallback", source=source, out_bytes=len(pcm))
 
@@ -2498,12 +2624,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         st["language_block_source"] = source
         st["language_block_count"] += 1
         await ws.send(json.dumps({"type": "interrupted"}))
-        fw = st.get("face_ws")
-        if fw is not None:
-            try:
-                await fw.send("reset")
-            except Exception:
-                st["face_ws"] = None
+        await _reset_face_audio_turn("language_block")
         _diag(cid, "node.language_block", source=source)
 
     async def from_browser():
@@ -2787,25 +2908,32 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     await ws.send(json.dumps({"type": "barge_in_ack", "accepted": True,
                                               "evidence_ms": round(_evidence_ms),
                                               "evidence_basis": _evidence_basis}))
-                    fw = st.get("face_ws")
-                    if fw is not None:
-                        try:
-                            await fw.send("reset")
-                        except Exception:
-                            st["face_ws"] = None
+                    await _reset_face_audio_turn("client_barge_in")
                     _diag(cid, "node.client_barge_in", evidence_ms=round(_evidence_ms),
                           evidence_basis=_evidence_basis,
                           threshold_pcm=round(_evidence_threshold))
                 elif t == "faceaudio":
                     # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
                     if obj.get("on"):
-                        await _face_audio_on(
+                        direct_on = await _face_audio_on(
                             obj.get("url") or "",
                             obj.get("session") or "",
                             obj.get("token") or call_token,
                         )
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": bool(direct_on),
+                            "reason": "ready" if direct_on else "connect_failed",
+                        }))
+                        st["face_audio_enabled"] = bool(direct_on)
+                        ready = st.get("face_audio_ready")
+                        if ready:
+                            ready.set()
                     else:
                         await _face_audio_off()
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": False,
+                            "reason": "client_disabled",
+                        }))
 
     async def from_live():
         # session.receive() 每輪結束就收（SDK 行為）；外層 while 讓「一輪接完再等下一輪」＝多輪對話不斷。
@@ -2814,6 +2942,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         # "reconnect" 交給外層換一條底層連線接著講，"ended" 才是這通真的結束了。
         try:
             while True:
+                st["face_audio_turn_started"] = False
                 turn_out = 0
                 turn_max_gap_ms = 0.0   # 這一輪送聲音時，相鄰兩塊之間最久的一次空檔（抖動指標）
                 turn_last_out = None    # 這一輪送出的上一塊聲音是幾點（2026-08-01：抖動只跟同一輪比）
@@ -3076,7 +3205,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 after_result_ms=round((now - result_at) * 1000),
                             )
                             st["lookup_waiting_answer"] = False
-                        st["out"] += len(data)
                         turn_out += len(data)
                         # 2026-07-29：量「送聲音的手抖不抖」。Edward 7/28 回報「句尾的最後一句
                         # 會卡其中某個字」，但體感沒有數字就查不動——這裡記下相鄰兩塊聲音之間
@@ -3087,26 +3215,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         _now_out = time.monotonic()
                         turn_max_gap_ms, _ = note_turn_gap(_now_out, turn_last_out, turn_max_gap_ms)
                         turn_last_out = _now_out
-                        st["last_out"] = _now_out
-                        # 回音窗 v2（2026-07-29）：鏡射 App 播放節奏、推進「手機大概播到哪」。
-                        # Gemini 送資料比講話快，只看送出時間會讓句子後半的回音落在窗外＝自問自答。
-                        st["playout_head"] = note_playout(st.get("playout_head"), _now_out, len(data))
-                        await ws.send(data)
-                        fw = st.get("face_ws")
-                        if fw is not None:
-                            # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）。
-                            # 加了逾時（2026-07-29）：臉那條線慢的時候，原本會回頭卡住下一塊
-                            # 聲音＝使用者聽到「卡一下」。臉是加分、聲音是必須，所以慢就放掉臉，
-                            # 這通剩下的時間臉不動、但聲音全程順（App 下次送 on 訊息會重連）。
-                            try:
-                                await asyncio.wait_for(fw.send(data), timeout=FACE_SEND_TIMEOUT_S)
-                            except asyncio.TimeoutError:
-                                st["face_ws"] = None
-                                _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S)
-                                asyncio.create_task(_face_audio_close(fw))
-                            except Exception as e:
-                                st["face_ws"] = None
-                                _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
+                        # 唯一音訊出口：先嘗試 Voice→Avatar 直送，再把同一塊送給 App 播放。
+                        # 直送若逾時，_forward_audio 會先通知 App 切回 relay，確保這一塊不遺失。
+                        await _forward_audio(data)
                     elif data:
                         reason = "language" if st.get("language_block") else "barge_in"
                         _diag(cid, "node.audio_suppressed", reason=reason, out_bytes=len(data))
@@ -3156,12 +3267,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
                             _diag(cid, "node.interrupted")
                             await ws.send(json.dumps({"type": "interrupted"}))
-                            fw = st.get("face_ws")
-                            if fw is not None:
-                                try:
-                                    await fw.send("reset")   # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）
-                                except Exception:
-                                    st["face_ws"] = None
+                            # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）。
+                            await _reset_face_audio_turn("model_interrupted")
                         if getattr(sc, "turn_complete", False):
                             ms = round(turn_out / (24000 * 2) * 1000)
                             # max_gap_ms＝這一輪送聲音最久的一次空檔。Avatar 播放端現在只有
@@ -3198,6 +3305,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 st["lookup_waiting_answer"] = False
                             if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
                                 await _send_turn_tail()
+                            await _finish_face_audio_turn()
                             turn_out = 0
                             # 2026-08-01：這兩個原本只在 while 外層歸零，同一條連線第二輪
                             # 以後會沿用上一輪的最大值＝越報越大、且永遠是舊帳。

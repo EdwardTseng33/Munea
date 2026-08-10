@@ -31,7 +31,18 @@ def main() -> None:
         source.index("if todo is not None:") :
         source.index("self._gen_chunk(todo[0], todo[1], todo[2])")
     ]
-    assert "self.slot.audio_out.clear()" in resume_block
+    assert "self.slot.audio_out.clear()" not in resume_block, (
+        "idle-to-speech must not reset the audio clock or re-arm a mid-turn prebuffer"
+    )
+    assert "emit_audio=False" in source, (
+        "idle motion must not enqueue generated silence into the speech buffer"
+    )
+    finish_block = source[source.index("def finish(self):") : source.index("def _on_fault", source.index("def finish(self):"))]
+    assert "mark_input_complete" not in finish_block, (
+        "input EOF must not hide underruns while final model chunks are still generating"
+    )
+    assert "self._complete_pending = True" in finish_block
+    assert "if complete_now:" in source and "self.slot.audio_out.mark_input_complete()" in source
     print("FlashHead idle contract: PASS")
 
 

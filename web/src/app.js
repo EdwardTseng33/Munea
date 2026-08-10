@@ -3447,6 +3447,24 @@ const Avatar = {
     this._diagNote('影像+聲音上行都就緒');
     voiceCallMark('avatar_ready', 'pass');
     if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
+    try {
+      if (typeof LiveVoice !== 'undefined' && LiveVoice.on) LiveVoice._requestFaceDirect();
+    } catch (e) {}
+  },
+  _handlePcmAck(msg, basis = 'avatar_audio_ws_ack') {
+    if (!msg || msg.type !== 'avatar_pcm_received' || Number(msg.turn) <= 0) return;
+    const turn = Number(msg.turn);
+    if (Number.isFinite(Number(msg.prebufferMs))) {
+      this._lastPrebufferMs = Math.max(200, Math.min(350, Number(msg.prebufferMs)));
+    }
+    if (window.MuneaVoiceDiagnostics) window.MuneaVoiceDiagnostics.markTurn(
+      turn, 'avatar_pcm_received', { basis, bytes: Number(msg.bytes) || 0,
+        prebufferMs: this._lastPrebufferMs || 0 }
+    );
+    this._playoutArmedTurn = turn;
+    this._directAckTurn = turn;
+    this._playoutStatsBaseline = null;
+    voiceCallMark('voice_turn_avatar_pcm', 'pass', { turn, bytes: Number(msg.bytes) || 0, basis });
   },
   showLiveFrame() {
     if (!this._videoReady) return false;
@@ -3659,19 +3677,7 @@ const Avatar = {
       this.ws.onmessage = event => {
         try {
           const msg = JSON.parse(String(event.data || ''));
-          if (msg.type === 'avatar_pcm_received' && Number(msg.turn) > 0) {
-            const turn = Number(msg.turn);
-            if (Number.isFinite(Number(msg.prebufferMs))) {
-              this._lastPrebufferMs = Math.max(200, Math.min(350, Number(msg.prebufferMs)));
-            }
-            if (window.MuneaVoiceDiagnostics) window.MuneaVoiceDiagnostics.markTurn(
-              turn, 'avatar_pcm_received', { basis: 'avatar_audio_ws_ack', bytes: Number(msg.bytes) || 0,
-                prebufferMs: this._lastPrebufferMs || 0 }
-            );
-            this._playoutArmedTurn = turn;
-            this._playoutStatsBaseline = null;
-            voiceCallMark('voice_turn_avatar_pcm', 'pass', { turn, bytes: Number(msg.bytes) || 0 });
-          }
+          this._handlePcmAck(msg);
         } catch (e) {}
       };
       await new Promise((resolve, reject) => {
@@ -3701,9 +3707,20 @@ const Avatar = {
       this._pendingPlayoutTurn = id;
       this._audioTurn = id;
       this._playoutArmedTurn = 0;
+      this._directAckTurn = 0;
       this._playoutStatsBaseline = null;
       if (id) this.ws.send('turn:' + id);
     } catch (e) {}
+  },
+  beginDirectTurn(turn) {
+    const id = Math.max(0, Number(turn) || 0);
+    this._pendingPlayoutTurn = id;
+    this._audioTurn = id;
+    // Avatar ACK travels back on a different websocket and can beat the Voice
+    // PCM event by a few milliseconds. Preserve that ACK for the same turn;
+    // otherwise diagnostics would miss the real first WebRTC playout.
+    if (this._directAckTurn !== id) this._playoutArmedTurn = 0;
+    this._playoutStatsBaseline = null;
   },
   feed(buf) { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send(buf); } catch (e) {} },
   reset() { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send('reset'); } catch (e) {} },
@@ -3864,7 +3881,7 @@ const Avatar = {
   },
   stop() {
     this.on = false;
-    this._pendingPlayoutTurn = 0; this._audioTurn = 0; this._playoutArmedTurn = 0;
+    this._pendingPlayoutTurn = 0; this._audioTurn = 0; this._playoutArmedTurn = 0; this._directAckTurn = 0;
     this._playoutStatsBaseline = null; this._playoutStatsBusy = false; this._playoutStatsAt = 0;
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     try { clearInterval(this._faceWatchT); } catch (e) {} this._faceStallMs = 0;   // 臉部看門一起收
@@ -3911,6 +3928,28 @@ document.addEventListener('DOMContentLoaded', () => {
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
+  _faceDirect: false, _faceDirectRequested: false, _faceDirectSession: '', _faceDirectTurn: 0,
+  _requestFaceDirect() {
+    const callToken = CallControl.active && CallControl.active.call_token;
+    const session = Avatar._session || '';
+    const url = getAvatarUrl();
+    if (!this._sameLine || !callToken || !Avatar.on || !session || !url ||
+        !this.ws || this.ws.readyState !== 1) return false;
+    if (this._faceDirectRequested && this._faceDirectSession === session) return true;
+    try {
+      this._faceDirect = false;
+      this._faceDirectRequested = true;
+      this._faceDirectSession = session;
+      this.ws.send(JSON.stringify({ type: 'faceaudio', on: true, url, session }));
+      voiceCallMark('voice_face_direct_requested', 'pass', { endpoint: url });
+      return true;
+    } catch (e) {
+      this._faceDirectRequested = false;
+      this._faceDirectSession = '';
+      voiceCallFail('voice_face_direct_requested', e);
+      return false;
+    }
+  },
   prime() {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -4781,8 +4820,10 @@ const LiveVoice = {
       this.ws.onopen = async () => {
         voiceCallMark('voice_socket_open', 'pass', { endpoint: url });
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
+        this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = ''; this._faceDirectTurn = 0;
         this._sameLineWarmup = this._sameLine;
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
+        this._requestFaceDirect();
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
         const micSetup = await micPipelineReady;   // 管線多半早就建好了，這裡只是收結果
         if (!micSetup.ok) {
@@ -4799,6 +4840,24 @@ const LiveVoice = {
         if (typeof ev.data === 'string') {
           try {
             const o = JSON.parse(ev.data);
+            if (o.type === 'faceaudio_status') {
+              const wasDirect = this._faceDirect === true;
+              this._faceDirect = o.on === true;
+              if (wasDirect && !this._faceDirect) this._newAvatarTurn = true;
+              voiceCallMark('voice_face_direct_status', this._faceDirect ? 'pass' : 'fallback', {
+                reason: o.reason || '', turn: Number(o.turn) || 0,
+              });
+              try { trackProductEvent('voice_face_direct_status', {
+                result: this._faceDirect ? 'direct' : 'app_relay', reason: o.reason || '',
+              }); } catch (e) {}
+            }
+            if (o.type === 'avatar_pcm_received') {
+              Avatar._handlePcmAck(o, 'voice_direct_avatar_ack');
+            }
+            if (o.type === 'faceaudio_turn' && Number(o.turn) > 0) {
+              this._faceDirectTurn = Number(o.turn);
+              if (this._sameLine && this._faceDirect) Avatar.beginDirectTurn(this._faceDirectTurn);
+            }
             if (o.type === 'interrupted' && this.playCtx) {
               this._dropAssistantAudio = true;
               this._stopAssistantPlayback();
@@ -4890,7 +4949,7 @@ const LiveVoice = {
                 this._userTurn = '';
               } } catch (eT) {}
               if (interruptedTurn) Avatar.reset();
-              else Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
+              else if (!this._faceDirect) Avatar.finish(); // direct route 由 Voice 在最後 PCM 後送 finish，避免跨 WS 亂序
               if (!interruptedTurn && this._slFallbackAfterTurn) this._scheduleSameLineBoundaryFallback();
               this._newAvatarTurn = true;
               this._resetAssistantAudioGate();
@@ -4927,9 +4986,11 @@ const LiveVoice = {
           if (this._slFallbackAfterTurn && this._sameLineFellBack !== true) {
             this._sameLineFallBackNow(this._slFallbackAfterTurn);
           }
-          const timingTurn = this._voiceTurnId || ((this._localVoiceTurnId || 0) + 1);
+          const timingTurn = (this._sameLine && this._faceDirect && this._faceDirectTurn) ||
+            this._voiceTurnId || ((this._localVoiceTurnId || 0) + 1);
           this._localVoiceTurnId = timingTurn;
-          Avatar.beginTurn(timingTurn);            // 清上一輪並標記本輪，Avatar 回 ACK 才算真正收到 PCM
+          if (this._sameLine && this._faceDirect) Avatar.beginDirectTurn(timingTurn);
+          else Avatar.beginTurn(timingTurn);       // App relay 才由手機清上一輪；direct route 由 Voice 排序 reset→PCM
           this._slFaceStarted = false; this._slTurnStartAt = 0; this._slPrevBytes = -1; this._slStallStreak = 0;
           if (this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true) this._setFaceAudioMuted(false);
           if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
@@ -4941,7 +5002,7 @@ const LiveVoice = {
         }
         this._notePlayout(audioData.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
-        Avatar.feed(audioData);                                    // 同一份聲音餵給雲端臉（對嘴）
+        if (!(this._sameLine && this._faceDirect)) Avatar.feed(audioData); // direct route 不再繞手機二次上行
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(audioData), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
@@ -5036,6 +5097,7 @@ const LiveVoice = {
     this._duckPendingAt = 0;
     this._unduckAssistantAudio();   // 掛斷時把壓低的音量還原，否則下一通會小聲
     this._sameLineWarmup = false;
+    this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = ''; this._faceDirectTurn = 0;
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
