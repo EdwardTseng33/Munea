@@ -36,18 +36,26 @@ def update_env(path: Path, values: dict[str, str]) -> list[str]:
         raise ValueError("unsupported settings: " + ", ".join(unexpected))
 
     lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    export_style = any(line.lstrip().startswith("export ") for line in lines)
     updated: list[str] = []
     seen: set[str] = set()
     for line in lines:
-        key = line.split("=", 1)[0] if "=" in line else ""
+        assignment = line.lstrip()
+        if assignment.startswith("export "):
+            assignment = assignment[len("export "):]
+        key = assignment.split("=", 1)[0].strip() if "=" in assignment else ""
         if key in values:
-            updated.append(f"{key}={values[key]}")
+            if key in seen:
+                continue
+            prefix = "export " if export_style else ""
+            updated.append(f"{prefix}{key}={values[key]}")
             seen.add(key)
         else:
             updated.append(line)
     for key, value in values.items():
         if key not in seen:
-            updated.append(f"{key}={value}")
+            prefix = "export " if export_style else ""
+            updated.append(f"{prefix}{key}={value}")
     path.write_text("\n".join(updated) + "\n", encoding="utf-8")
     return sorted(values)
 
