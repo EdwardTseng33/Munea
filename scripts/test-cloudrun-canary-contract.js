@@ -22,6 +22,10 @@ assert.match(
   /canary-verify\.sh[\s\S]*"\$WHAT" "\$TAG" production "\$RELEASE_VERSION" "\$RELEASE_COMMIT"[\s\S]*"\$VERIFY_LOCALE_MODE"/
 );
 assert.match(prodDeploy, /--no-traffic/);
+assert.match(
+  prodDeploy,
+  /--remove-env-vars "MUNEA_VOICE_SILENCE_MS"[\s\S]*--update-env-vars "MUNEA_SERVICE=voice,/
+);
 
 assert.match(verify, /\[ "\$PERCENT" = "0" \]/);
 assert.match(verify, /item\.get\("type"\) == "Ready"/);
