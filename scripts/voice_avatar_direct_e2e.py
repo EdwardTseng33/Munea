@@ -463,6 +463,7 @@ class EvidenceRun:
         first_response_at = None
         mic_finished_at = None
         relay_turn_started = False
+        turn_results = []
         if self.args.transport == "relay":
             await self.connect_avatar_feed(avatar_url, avatar_session, token)
         async with websockets.connect(voice_url + "/?" + query, max_size=None, open_timeout=20) as voice:
@@ -486,6 +487,7 @@ class EvidenceRun:
                         if event.get("on") is True:
                             break
                         raise RuntimeError("Voice direct route failed: " + str(event.get("reason")))
+            mic_pcm = None
             if self.args.mic_wav:
                 with wave.open(self.args.mic_wav, "rb") as source:
                     if source.getnchannels() != 1 or source.getsampwidth() != 2:
@@ -498,66 +500,103 @@ class EvidenceRun:
                         resample_poly(mic_pcm.astype(np.float32), 16000, input_rate),
                         -32768, 32767,
                     ).astype(np.int16)
-                frame_samples = 320
-                next_send = time.monotonic()
-                for offset in range(0, len(mic_pcm), frame_samples):
-                    await voice.send(mic_pcm[offset:offset + frame_samples].tobytes())
-                    next_send += 0.020
-                    await asyncio.sleep(max(0.0, next_send - time.monotonic()))
-                await voice.send(json.dumps({"type": "audio_end"}))
-                mic_finished_at = time.monotonic()
-            else:
-                await voice.send(json.dumps({"type": "text", "text": self.args.prompt}, ensure_ascii=False))
-                mic_finished_at = time.monotonic()
-            deadline = time.monotonic() + self.args.timeout
-            while time.monotonic() < deadline:
-                message = await asyncio.wait_for(voice.recv(), timeout=20)
-                if isinstance(message, (bytes, bytearray)):
-                    if first_response_at is None:
-                        first_response_at = time.monotonic()
-                    voice_chunks.append(bytes(message))
-                    voice_times.append(time.monotonic())
-                    if self.args.transport == "relay":
-                        if not relay_turn_started:
-                            await self.avatar_feed.send("reset")
-                            await self.avatar_feed.send("turn:1")
-                            relay_turn_started = True
-                        await self.avatar_feed.send(bytes(message))
-                    continue
-                event = json.loads(message)
-                if event.get("type") == "faceaudio_status":
-                    statuses.append(event)
-                elif event.get("type") == "avatar_pcm_received":
-                    avatar_ack = True
-                elif event.get("type") == "caption" and event.get("who") == "user":
-                    user_caption += str(event.get("text") or "")
-                elif event.get("type") == "caption" and event.get("who") == "nening":
-                    assistant_caption += str(event.get("text") or "")
-                elif event.get("type") == "turn_complete" and voice_chunks:
-                    if self.args.transport == "relay":
-                        await self.avatar_feed.send("finish")
-                    turn_complete = True
-                    break
-            # A completed user turn must stay quiet until another user input.
-            # This catches the production failure where the same answer starts
-            # again by itself, as well as a socket that silently drops afterward.
-            quiet_deadline = time.monotonic() + self.args.post_turn_quiet_seconds
-            while time.monotonic() < quiet_deadline:
-                try:
-                    message = await asyncio.wait_for(
-                        voice.recv(), timeout=max(0.05, quiet_deadline - time.monotonic())
-                    )
-                except asyncio.TimeoutError:
-                    break
-                except Exception:
-                    disconnected_after_turn = True
-                    break
-                if isinstance(message, (bytes, bytearray)):
-                    unsolicited_audio_bytes += len(message)
-                    continue
-                event = json.loads(message)
-                if event.get("type") == "caption" and event.get("who") == "nening":
-                    unsolicited_caption += str(event.get("text") or "")
+
+            for turn_number in range(1, self.args.turns + 1):
+                voice_chunks = []
+                voice_times = []
+                self.avatar_audio = []
+                self.avatar_frame_timing = []
+                turn_user_caption = ""
+                turn_assistant_caption = ""
+                turn_complete = False
+                first_response_at = None
+                relay_turn_started = False
+                if mic_pcm is not None:
+                    frame_samples = 320
+                    next_send = time.monotonic()
+                    for offset in range(0, len(mic_pcm), frame_samples):
+                        await voice.send(mic_pcm[offset:offset + frame_samples].tobytes())
+                        next_send += 0.020
+                        await asyncio.sleep(max(0.0, next_send - time.monotonic()))
+                    await voice.send(json.dumps({"type": "audio_end"}))
+                    mic_finished_at = time.monotonic()
+                else:
+                    await voice.send(json.dumps({"type": "text", "text": self.args.prompt}, ensure_ascii=False))
+                    mic_finished_at = time.monotonic()
+
+                deadline = time.monotonic() + self.args.timeout
+                while time.monotonic() < deadline:
+                    message = await asyncio.wait_for(voice.recv(), timeout=20)
+                    if isinstance(message, (bytes, bytearray)):
+                        if first_response_at is None:
+                            first_response_at = time.monotonic()
+                        voice_chunks.append(bytes(message))
+                        voice_times.append(time.monotonic())
+                        if self.args.transport == "relay":
+                            if not relay_turn_started:
+                                await self.avatar_feed.send("reset")
+                                await self.avatar_feed.send("turn:%d" % turn_number)
+                                relay_turn_started = True
+                            await self.avatar_feed.send(bytes(message))
+                        continue
+                    event = json.loads(message)
+                    if event.get("type") == "faceaudio_status":
+                        statuses.append(event)
+                    elif event.get("type") == "avatar_pcm_received":
+                        avatar_ack = True
+                    elif event.get("type") == "caption" and event.get("who") == "user":
+                        turn_user_caption += str(event.get("text") or "")
+                    elif event.get("type") == "caption" and event.get("who") == "nening":
+                        turn_assistant_caption += str(event.get("text") or "")
+                    elif event.get("type") == "turn_complete" and voice_chunks:
+                        if self.args.transport == "relay":
+                            await self.avatar_feed.send("finish")
+                        turn_complete = True
+                        break
+                if not turn_complete:
+                    raise RuntimeError("Voice turn %d did not complete" % turn_number)
+
+                user_caption += turn_user_caption
+                assistant_caption += turn_assistant_caption
+                turn_first_response_ms = (
+                    round(1000 * (first_response_at - mic_finished_at))
+                    if first_response_at and mic_finished_at else None
+                )
+                turn_results.append({
+                    "turn": turn_number,
+                    "turn_complete": True,
+                    "first_response_ms": turn_first_response_ms,
+                    "voice_audio_ms": round(len(np.frombuffer(b"".join(voice_chunks), dtype=np.int16)) / 24),
+                    "user_caption": turn_user_caption,
+                    "assistant_caption": turn_assistant_caption,
+                    "source_playout": source_playout_metrics(voice_chunks, voice_times),
+                })
+
+                # Between turns this is the exact risk gate: the same socket must
+                # stay quiet, survive provider recovery, and accept fresh mic PCM.
+                quiet_seconds = (
+                    self.args.post_turn_quiet_seconds
+                    if turn_number == self.args.turns else self.args.between_turn_seconds
+                )
+                quiet_deadline = time.monotonic() + quiet_seconds
+                while time.monotonic() < quiet_deadline:
+                    try:
+                        message = await asyncio.wait_for(
+                            voice.recv(), timeout=max(0.05, quiet_deadline - time.monotonic())
+                        )
+                    except asyncio.TimeoutError:
+                        break
+                    except Exception:
+                        disconnected_after_turn = True
+                        break
+                    if isinstance(message, (bytes, bytearray)):
+                        unsolicited_audio_bytes += len(message)
+                        continue
+                    event = json.loads(message)
+                    if event.get("type") == "caption" and event.get("who") == "nening":
+                        unsolicited_caption += str(event.get("text") or "")
+                if disconnected_after_turn:
+                    raise RuntimeError("Voice disconnected after turn %d" % turn_number)
         avatar_health_after = self.avatar_health(avatar_url, token)
         before_underruns = int(
             avatar_health_before.get("audio_underrun", {}).get("count") or 0
@@ -565,8 +604,8 @@ class EvidenceRun:
         after_underruns = int(
             avatar_health_after.get("audio_underrun", {}).get("count") or 0
         )
-        if not turn_complete:
-            raise RuntimeError("Voice turn did not complete")
+        if len(turn_results) != self.args.turns:
+            raise RuntimeError("Voice did not complete every requested turn")
         if self.args.transport == "direct":
             if not avatar_ack:
                 raise RuntimeError("Avatar did not ACK direct PCM")
@@ -592,8 +631,14 @@ class EvidenceRun:
             "avatar_webrtc_timing": webrtc_frame_timing_metrics(self.avatar_frame_timing),
             "user_caption": user_caption,
             "assistant_caption": assistant_caption,
-            "first_response_ms": round(1000 * (first_response_at - mic_finished_at))
-            if first_response_at and mic_finished_at else None,
+            "first_response_ms": max(
+                (item["first_response_ms"] for item in turn_results
+                 if item.get("first_response_ms") is not None),
+                default=None,
+            ),
+            "requested_turns": self.args.turns,
+            "completed_turns": len(turn_results),
+            "turns": turn_results,
             "unsolicited_audio_bytes": unsolicited_audio_bytes,
             "unsolicited_caption": unsolicited_caption,
             "disconnected_after_turn": disconnected_after_turn,
@@ -673,6 +718,17 @@ async def execute_run(args, output):
                 and not metrics.get("unsolicited_caption")
             ),
             "connection_held": not metrics.get("disconnected_after_turn"),
+            "all_turns_completed": (
+                metrics.get("completed_turns") == metrics.get("requested_turns")
+                and all(item.get("turn_complete") is True for item in metrics.get("turns", []))
+                and all(
+                    item.get("first_response_ms") is not None
+                    and item["first_response_ms"] <= args.max_first_response_ms
+                    and item.get("source_playout", {}).get("max_underrun_ms") is not None
+                    and item["source_playout"]["max_underrun_ms"] <= args.max_source_underrun_ms
+                    for item in metrics.get("turns", [])
+                )
+            ),
         }
         metrics["ok"] = all(metrics["gates"].values())
         (output / "result.json").write_text(
@@ -708,11 +764,15 @@ async def main():
     parser.add_argument("--min-avatar-audio-ms", type=int, default=1000)
     parser.add_argument("--max-source-underrun-ms", type=int, default=250)
     parser.add_argument("--post-turn-quiet-seconds", type=float, default=3.0)
+    parser.add_argument("--between-turn-seconds", type=float, default=1.2)
+    parser.add_argument("--turns", type=int, default=1)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--prompt", default="請只用自然台灣華語，連續清楚地說一段約十五秒的話，內容是今天精神還不錯、早餐吃得下、下午想在家休息；不要列點，也不要問問題。")
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be at least 1")
+    if args.turns < 1:
+        parser.error("--turns must be at least 1")
     if args.mic_wav and not args.expected_text.strip():
         parser.error("--expected-text is required with --mic-wav; a fake phone must score what Voice heard")
     output = Path(args.out).resolve()
@@ -723,7 +783,11 @@ async def main():
         try:
             metrics = await execute_run(args, run_output)
         except Exception as error:
-            metrics = {"ok": False, "error": type(error).__name__}
+            metrics = {
+                "ok": False,
+                "error": type(error).__name__,
+                "error_message": str(error),
+            }
             run_output.mkdir(parents=True, exist_ok=True)
             (run_output / "result.json").write_text(
                 json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"

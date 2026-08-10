@@ -1,5 +1,14 @@
 # Munea Release State
 
+## 2026-08-11 04:30 台灣｜1.0.62 回報後的正式聊聊 P0 修復
+
+- **使用者回報**：已安裝的 production `1.0.62 (Build 533)` 仍出現開場卡住、整句斷續／重複、講一講後不能再說但畫面仍在通話中。這是修復前的 exact App 實機失敗證據，不能用先前單輪假手機 PASS 覆蓋。
+- **三個服務端根因已修**：正式 Voice 原先未啟用 Voice→Avatar direct route；Avatar 音訊 sender 在事件迴圈變慢後會用 burst 追趕，接收端可能丟棄過晚 RTP；Gemini 偶發輸出聲音後不送 `turn_complete`，使 App 留在 AI 說話狀態。PR #561 已合併到 `main@556dfd5d`；Voice 現在只在真的送出至少 200ms 聲音、連續 2.5 秒無新聲音且不是工具／查詢／插話時，補發回合結束並以新 session 背景重連，不關閉 App socket 或 Gateway lease。
+- **正式 runtime**：Voice `munea-voice-00105-roh@556dfd5d` 已承接 100% traffic，`MUNEA_VOICE_FACE_DIRECT=1`；Glows `tw-06` Avatar PID `304535` 跑 `ca614434`、protocol 3。Voice 上一版 `munea-voice-00103-suy` 保留為即時回滾目標；本次是服務端修復，**不需要重新包 App**。
+- **單輪正式服務 Gate**：zero-traffic production candidate 連續 `6/6 PASS`，切 100% 後再由正式 service URL `3/3 PASS`。切流量後第一聲 `516／453／500ms`；三通 ASR 字元召回 `1.0`，Voice source underrun、Avatar WebRTC 有聲區 RTP gap、缺波形、Avatar underrun、自主重複與意外斷線全為 `0`。
+- **新增同線多輪 Gate**：同一張 Gateway lease／同一條 Voice WebSocket 連續送三次完整 7.16 秒真人 PCM；三輪 ASR 皆完整，第一聲 `547／500／469ms`，三輪皆收到聲音與 `turn_complete`，source underrun `0`、有聲區 RTP gap `0`、缺波形 `0`、自主重複 `0B`、連線保持。證據：`.tmp/fake-phone-direct-f97deaba/evidence-prod-serving-556dfd5-multiturn-full/summary.json`。驗收工具已新增 `--turns` 與 `all_turns_completed`，以後不得再用單輪成功推論「後面仍可講話」。
+- **狀態邊界**：`source merged + Voice/Avatar deployed + production synthetic audio 10 calls / 12 turns PASS + App E2E pending`。自動客戶端已驗正式 Gateway／Voice／Avatar 的真人 PCM、實際回傳聲音與三輪狀態；尚未在修復後的 exact installed iPhone 取得真麥克風／喇叭／WebView 證據，因此仍不稱 fully verified 或 release-ready，也不把使用者當人工驗收員。
+
 ## 2026-08-11 00:49 台灣｜聊聊三邊協議版 1.0.62 Build 533
 
 - **三邊一起換的根因**：1.0.61 實機當時連到舊 production Voice、新 Avatar 與未具版本握手的 App／Gateway，造成開場自我插話、paired lease 被 Avatar component release 提前結束，以及聲音已播放但嘴型 GPU queue 落後。版本字串本身無法證明三邊程式一致。
