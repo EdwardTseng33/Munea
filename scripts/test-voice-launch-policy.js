@@ -200,8 +200,8 @@ expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_
 expect([voiceCanaryDeploy, voiceProdDeploy].every((deployScript) =>
   deployScript.includes('MUNEA_VOICE_ENGINE=vertex25') &&
   deployScript.includes('MUNEA_VERTEX_LOCATION=us-central1') &&
-  deployScript.includes('MUNEA_VOICE_SHARD_ID=gemini-live-us-central1-01')),
-  'Voice deploy can silently fall back to the depleted Developer API or the wrong region');
+  deployScript.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01')),
+  'Voice deploy can silently fall back to the depleted Developer API or break the Gateway shard identity');
 expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.35"') &&
        avatarServer.includes('OPENING_PREBUFFER_S = max(') &&
        avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
