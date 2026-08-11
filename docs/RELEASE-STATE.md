@@ -1,5 +1,12 @@
 # Munea Release State
 
+## 2026-08-12 01:02 台灣｜1.0.65 Build 536 正式 Voice 已部署，放行包版前 Gate
+
+- **合併／部署**：PR #573 已合併為 `main@5c100c87`；正式 Voice revision `munea-voice-00115-hip` 正以 100% 流量服務，release identity 為 `1.0.65@5c100c877733`。
+- **升流量前 Gate**：0% production candidate 短音 3/3 PASS；正常中文一通三輪 117 秒 PASS。ASR recall 1.0，聲嘴落在 `−109～+172ms`（短音）及 `−31～+47ms`（正常輪），有聲 RTP gap、underrun、自主重播、斷線皆 0。
+- **升流量後 Gate**：正式入口第一通短音聲嘴 `+265ms`，比 250ms 門檻慢 15ms，已保留為失敗證據；其後短音連續 3/3 為 `−62～+140ms`。正式入口中文三輪 98 秒 PASS，首聲 `2312/2531/2516ms`、聲嘴 `−62/−31/+15ms`、ASR recall 1.0，缺音、重播與斷線皆 0。
+- **發布決策**：服務層允許 Mac Archive／安裝 exact `1.0.65 (536)`；不得直接送審。只有安裝該 exact build 後通過 iPhone 真麥克風、喇叭回音、首句只說一次、三輪、查詢對嘴、六分鐘與掛斷釋位，才可把 `App E2E pending` 改為 release-ready。
+
 ## 2026-08-12 00:32 台灣｜1.0.65 Build 536 首句短音復原 Gate
 
 - **實際根因證據**：真人約兩秒開場音訊已完整送達 Vertex（有聲 PCM＋`audio_end`），但 provider 偶發不產生 ASR 或回答；增加語言提示及把尾端靜音由 900ms 拉到 1200ms 都不能修復，因此部署契約明確鎖回 900ms，不再增加每輪固定延遲。
