@@ -73,13 +73,16 @@ FIRST_CHUNK_SPEECH_RMS = float(
     os.environ.get("MUNEA_FH_FIRST_CHUNK_SPEECH_RMS", "0.02")
 )
 FIRST_CHUNK_MOUTH_MOTION = float(
-    os.environ.get("MUNEA_FH_FIRST_CHUNK_MOUTH_MOTION", "0.008")
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_MOUTH_MOTION", "0.015")
 )
 FIRST_CHUNK_MAX_SKEW_MS = float(
     os.environ.get("MUNEA_FH_FIRST_CHUNK_MAX_SKEW_MS", "160")
 )
 FIRST_CHUNK_RETRY_CANDIDATES = max(
     1, min(3, int(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_CANDIDATES", "3")))
+)
+FIRST_CHUNK_RETRY_PREBUFFER_S = max(
+    0.0, min(0.5, float(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_PREBUFFER_S", "0.35")))
 )
 
 
@@ -855,6 +858,14 @@ class Feeder:
                         if final_skew is not None and final_skew <= FIRST_CHUNK_MAX_SKEW_MS:
                             break
                     if attempts:
+                        # A regenerated first chunk takes a different GPU path
+                        # and receiver evidence can add about 300ms after the
+                        # model-local onset. Give only that rare turn an extra
+                        # 80ms A/V co-release margin; ordinary turns keep the
+                        # lower steady-state prebuffer.
+                        self.slot.audio_out.arm_prebuffer(
+                            FIRST_CHUNK_RETRY_PREBUFFER_S
+                        )
                         if final_skew is None or final_skew > FIRST_CHUNK_MAX_SKEW_MS:
                             self.slot.first_chunk_retry_failures += 1
                         print("[mouth-quality] slot" + str(self.slot.index)

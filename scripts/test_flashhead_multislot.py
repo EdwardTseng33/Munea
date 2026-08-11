@@ -818,6 +818,12 @@ def test_first_chunk_quality_metrics_detect_static_speech():
     print("test_first_chunk_quality_metrics_detect_static_speech: PASS")
 
 
+def test_retry_prebuffer_is_bounded_and_stricter_than_steady_state():
+    assert 0.27 < fec.FIRST_CHUNK_RETRY_PREBUFFER_S <= 0.5
+    assert fec.FIRST_CHUNK_MOUTH_MOTION >= 0.015
+    print("test_retry_prebuffer_is_bounded_and_stricter_than_steady_state: PASS")
+
+
 def main():
     test_admission_find_free_and_full()
     test_admission_release_and_reclaim()
@@ -842,8 +848,9 @@ def main():
     test_force_release_slot_used_by_unhealthy_path()
     test_antiflicker_freezes_static_background_keeps_motion()
     test_turn_reset_restores_model_motion_seed_once()
-    test_first_chunk_quality_metrics_detect_static_speech()
-    print("FlashHead multi-slot smoke test: ALL PASS")
+test_first_chunk_quality_metrics_detect_static_speech()
+test_retry_prebuffer_is_bounded_and_stricter_than_steady_state()
+print("FlashHead multi-slot smoke test: ALL PASS")
 
 
 if __name__ == "__main__":
