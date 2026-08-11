@@ -962,6 +962,13 @@ async def execute_run(args, output):
             json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         return metrics
+    except Exception as error:
+        # Preserve a non-secret correlation handle when the media loop times
+        # out before it can write normal metrics. This lets operators inspect
+        # only the exact failed synthetic call instead of broad Voice logs.
+        setattr(error, "munea_call_id", str((run.lease or {}).get("call_id") or ""))
+        setattr(error, "munea_run_id", run.run_id)
+        raise
     finally:
         run.stop_capture = True
         if run.pc:
@@ -1041,6 +1048,8 @@ async def main():
                 "ok": False,
                 "error": type(error).__name__,
                 "error_message": str(error),
+                "call_id": str(getattr(error, "munea_call_id", "") or ""),
+                "run_id": str(getattr(error, "munea_run_id", "") or ""),
             }
             run_output.mkdir(parents=True, exist_ok=True)
             (run_output / "result.json").write_text(

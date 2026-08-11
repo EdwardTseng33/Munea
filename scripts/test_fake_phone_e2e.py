@@ -129,6 +129,7 @@ assert 'for turn_number in range(1, self.args.turns + 1):' in SOURCE
 assert 'await self.wait_for_avatar_playout(' in SOURCE
 assert '"avatar_playout_complete": avatar_playout_complete_for_turn' in SOURCE
 assert '"avatar_playout": bool(metrics.get("turns"))' in SOURCE
+assert '"call_id": str(getattr(error, "munea_call_id", "") or "")' in SOURCE
 assert '"all_turns_completed"' in SOURCE and '"completed_turns"' in SOURCE
 assert '"minimum_call_duration"' in SOURCE and '"call_duration_ms"' in SOURCE
 assert 'self.args.turn_prompts[turn_number - 1]' in SOURCE

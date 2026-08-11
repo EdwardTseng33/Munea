@@ -693,7 +693,10 @@ class LocalizationTests(unittest.TestCase):
         )
 
     def test_live_asr_hints_follow_conversation_locale(self):
-        self.assertEqual(localization.asr_language_hints("zh-TW"), ["cmn-Hant-TW"])
+        self.assertEqual(
+            localization.asr_language_hints("zh-TW"),
+            ["cmn-Hant-TW", "en-US"],
+        )
         self.assertEqual(localization.asr_language_hints("en-US"), ["en-US"])
         self.assertEqual(localization.asr_language_hints("ja"), ["ja-JP"])
         self.assertEqual(localization.asr_language_hints("es-MX"), ["es-ES"])

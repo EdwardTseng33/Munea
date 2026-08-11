@@ -17,7 +17,7 @@ except ModuleNotFoundError:
 class LiveVoiceLocaleWiringTests(unittest.TestCase):
     def test_live_config_uses_each_verified_session_language(self):
         expected = {
-            "zh-TW": ("cmn-TW", ["cmn-Hant-TW"]),
+            "zh-TW": ("cmn-TW", ["cmn-Hant-TW", "en-US"]),
             "en": ("en-US", ["en-US"]),
             "ja": ("ja-JP", ["ja-JP"]),
             "es": ("es-ES", ["es-ES"]),
