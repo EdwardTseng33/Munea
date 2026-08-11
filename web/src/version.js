@@ -12,13 +12,13 @@
  * 一個新功能面板算「小功能」，走最後一碼；要跳中間碼請先問 Edward。
  */
 window.MuneaVersion = {
-  current: '1.0.64',
+  current: '1.0.65',
   callProtocol: 3,
   voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
     {
-      version: '1.0.64',
+      version: '1.0.65',
       date: '2026-08-11',
       title: '聊聊開場、聲音連續與嘴型穩定修復',
       items: [

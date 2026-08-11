@@ -77,7 +77,7 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.64 (Build 535)`；為下一個唯一候選，移除 App 開場假音訊回合、加入接收緩衝，並對齊 Voice／Avatar 的連續聲畫。尚未封裝或真機驗證 |
+| Latest source | `1.0.65 (Build 536)`；為下一個唯一候選，在首句預捲上加入本機句尾封口與明確 `audio_end`，避免重播等待 Voice 的長靜音；Avatar 採原生 512。尚未封裝或真機驗證 |
 | Latest uploaded App | `1.0.61 (Build 532)`；App Store Connect 回報 `VALID`，上傳時間 2026-08-10 08:35 UTC；不含本輪三邊協議，不能代表 Build 533 |
 | App Store | 1.0.55 狀態 `WAITING_FOR_REVIEW`，實際選用 App 1.0.55 Build 525；1.0.61 Build 532 未被該審核版本選用；Build 533 尚未上傳、選入、核准或公開 |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
