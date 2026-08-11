@@ -531,6 +531,20 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
                 sources=",".join(st.get("guardian_internal_followup_sources") or ()) or "-",
             )
             return
+        if who == "ai":
+            # AI 字幕監看只做稽核／告警，不得在使用者沉默時自己再開一輪。
+            # 關鍵字分類器會把「沒有胸痛」「如果喘要就醫」這類安全覆述也判成
+            # medical emergency；舊行為因此在每輪結束後自動塞 hidden prompt，
+            # 造成使用者聽到寧寧無故多講一次。已播出的句子也無法靠第二輪收回，
+            # 所以保留記錄與人工告警，取消自主語音更正。
+            _diag(
+                cid,
+                "guardian.ai_cue_suppressed",
+                reason="no_autonomous_ai_correction",
+                turn=turn_id,
+                categories=",".join(categories) or "-",
+            )
+            return
         cue = (
             guardian_ai_correction_cue(categories, risk, policy)
             if who == "ai"
