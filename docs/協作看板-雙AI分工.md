@@ -5,9 +5,10 @@
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
 ### 2026-08-11 Codex｜🚨 1.0.65 Build 536：首句等待靜音二次播放收斂（進行中 · call-path risk）
-- **分支／範圍**：`codex/fix-live-opening-av-20260811`；修改 `web/src/voice-turn-policy.js`、`web/src/app.js`、`engine/live_voice_server.py`、首句契約測試、App 版號與發布狀態。PR #571 已修「ready 前人聲被換成靜音」，本輪補它未涵蓋的「人已講完但 Voice 尚未 ready」窗口。
+- **分支／範圍**：`codex/fix-live-opening-av-20260811`／Draft PR #573；修改 `web/src/voice-turn-policy.js`、`web/src/app.js`、`engine/live_voice_server.py`、Cloud Run Voice 部署設定、首句契約測試、App 版號與發布狀態。PR #571 已修「ready 前人聲被換成靜音」，本輪補它未涵蓋的「人已講完但 Voice 尚未 ready」窗口。
 - **1.0.64 實機證據**：使用者確認第一聲 HELLO 仍常無回應，需重複數次；延遲回覆又會被後一聲 HELLO 當成真插話打斷。1.0.64 已有安裝實機失敗證據，不能再沿用 1.0.64／535 身分重包後稱同一候選，故唯一下一版升為 `1.0.65 (Build 536)`。
 - **根因／修復**：原 opening capture 最多保留 2.2 秒，連使用者講完後等待 Voice ready 的長靜音也一起重播，provider 因而再等一次端點。現在 650ms 安靜即凍結首句，只保留 160ms 句尾；Voice ready 後先依序送出首句與 `audio_end(opening_local_boundary)`，再打開正常即時麥克風。正常 barge-in、回音裁決與後續回合不變。
+- **供應者設定收斂**：正式 Voice 已是 Vertex 2.5，但 staging 只留 `MUNEA_VERTEX_LOCATION`、缺 `MUNEA_VOICE_ENGINE`，後續部署可能退回已耗盡額度的 Developer API。production／staging Voice 部署入口現在都明確固定 `vertex25`、`us-central1` 與對應 shard，並納入自動契約。
 - **Gate／責任**：策略、launch、JS syntax、Voice compile 後，建立 Voice 0% 候選並跑 production Gateway→Voice→512 Avatar 真聲音／真嘴部至少 3/3；CI、合併、正式服務 identity 全對齊後才通知 Mac 包 Build 536。exact-build iPhone 首句只說一次、三輪、查詢對嘴、六分鐘與掛斷釋位通過前維持 `App E2E pending（Codex ownership）`。
 
 ### 2026-08-11 Codex｜🚨 首句 HELLO 被接通守門丟棄（PR #571 已合併／服務 3/3／App E2E pending · call-path risk）
