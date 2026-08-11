@@ -11,6 +11,12 @@
 - **已定位根因**：App 在麥克風管線建立後到 Voice `ready` 前，把真實收音直接換成每 500ms 一包靜音；畫面已讓人感覺能說話，但這個窗口內的第一句不會進模型。這是舊「AI 先招呼、使用者後開麥」規則的殘留，與目前「使用者先說」產品規則衝突。
 - **修復／Gate**：只在接通窗口本地保留有持續人聲證據的短預捲，Voice ready 後依序送出並立刻顯示「我聽見了」；不關閉正常 barge-in、不把底噪當成一輪。加入 App 偵測／緩衝／送出與 Voice 首個非靜音 PCM 的逐段碼錶。首句、底噪、插話、回音、狀態機、長連線回合、假手機契約與完整 `release:check` 已 PASS，GitHub 四道 CI 全綠。staging 0% canary 以完整真人錄音走 Gateway→Voice→Glows Avatar 連打 3/3，ASR 1.0、首個可聽回覆 `609／610／703ms`、聲嘴 `0／+15／+15ms`，無缺音、speech RTP gap、underrun、重播或斷線。另修正假手機預設只送 WAV 前 5 秒的驗收陷阱，改為預設完整播放；exact-build iPhone 真麥克風未過前維持 `App E2E pending（Codex ownership）`。Build 535 尚未 Archive，本修復直接納入同一候選，不另增包版。
 
+### 2026-08-11 Codex｜🚨 Avatar 間歇性有聲無嘴：說話期停用背景防閃（進行中 · call-path risk）
+- **分支／任務**：`codex/fix-avatar-speech-antiflicker-20260811`；PR #568 合併後的 0% Voice `munea-voice-00112-sar@f8caf62e` 三輪真實 A/V Gate 在第 2 輪擋下 `no_mouth_motion`，因此未切正式流量。
+- **證據與根因**：該輪 Voice 有完整 8.32 秒音訊、Avatar direct ACK、WebRTC speech gap／underrun／缺音皆 0，但 140 張影像的嘴部 motion peak 僅 0.014；第 1／3 輪正常且上下文正確。這排除 Voice、網路與斷線，指向逐像素 antiflicker 在說話時仍抑制安靜音素的小嘴型。
+- **預計範圍**：`deploy/runpod-avatar/flashhead_engine_core.py`、`deploy/runpod-avatar/flashhead_server.py`、`scripts/test_flashhead_slot_stream.py` 與發布狀態文件。防閃只套待機幀；說話幀不做像素凍結，但持續更新穩定器基準，避免說完回待機時跳畫面。
+- **Gate**：單元／render contract 後先在 Glows 重跑相同 3 輪至少 3/3，再跑包含安靜語氣的連續 Gate；每輪都必須有嘴、聲嘴 <=250ms、缺音／RTP gap／underrun／重播／斷線為 0。未通過不 promote Voice，仍為 `App E2E pending（Codex ownership）`。
+
 ### 2026-08-11 Codex｜✅ 1.0.64 穩定版收斂：首句＋連續音訊＋嘴聲（服務上線／App E2E pending · call-path risk）
 - **分支／PR**：`codex/stabilize-chat-av-opening-20260811`／Draft PR #568；App 候選升為 `1.0.64 (Build 535)`，避免沿用不含接收端開場修復的 1.0.63／534。
 - **根因與修復**：App 移除開場約 1 秒的假零聲音回合，只預備接收器並啟用 160ms WebRTC jitter buffer；Voice 隔離 watchdog 後晚到的 PCM／字幕，禁止 AI 自己觸發守護追問；Avatar 加入 Opus FEC、40ms 影像提前及安靜音素防閃動門檻 1／8。驗收器改為直接接收正式 Avatar WebRTC 音訊與影像，逐輪記錄首聲、嘴型、RTP 空洞、缺音、重播、連線與上下文。

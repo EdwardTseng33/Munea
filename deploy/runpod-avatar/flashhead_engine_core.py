@@ -61,6 +61,18 @@ ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "1"))
 ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 
 
+def should_apply_antiflicker(emit_audio):
+    """Background stabilization is safe only for video-only idle chunks.
+
+    Speech frames must preserve even quiet phoneme motion.  Production A/V
+    evidence caught a full 8.3-second audible response whose small mouth
+    changes were flattened by the same pixel hold intended for idle
+    background flicker.  Keep the stabilizer's reference frame updated during
+    speech, but never filter speech pixels.
+    """
+    return ANTIFLICKER and not emit_audio
+
+
 def stabilize_frame(prev, cur, cv2mod):
     """單張時間穩定：跟上一張輸出 prev 比，回傳處理後的 cur。
 
@@ -644,7 +656,7 @@ class Feeder:
                     print("[feeder] slot" + str(self.slot.index)
                           + " on_unhealthy callback error: " + repr(cb_err), flush=True)
 
-    def _stabilize(self, frames, chunk_epoch):
+    def _stabilize(self, frames, chunk_epoch, apply_filter=True):
         """時間穩定器：逐張跟上一張輸出比，幾乎沒變的像素沿用上一張。
 
         cv2 快路徑實測 768² 約 3.5-4.7ms/張（26 張一包約 0.1s、佔 0.96s
@@ -656,12 +668,18 @@ class Feeder:
         except ImportError:
             cv2mod = None
         prev = self._prev_frame
-        for i in range(frames.shape[0]):
-            cur = frames[i]
-            if prev is not None and prev.shape == cur.shape:
-                cur = stabilize_frame(prev, cur, cv2mod)
-                frames[i] = cur
-            prev = cur
+        if apply_filter:
+            for i in range(frames.shape[0]):
+                cur = frames[i]
+                if prev is not None and prev.shape == cur.shape:
+                    cur = stabilize_frame(prev, cur, cv2mod)
+                    frames[i] = cur
+                prev = cur
+        elif len(frames):
+            # Speech uses the unfiltered model frames, while the last frame is
+            # still remembered so the next idle chunk does not jump back to a
+            # stale pre-speech reference.
+            prev = frames[-1]
         # 只有世代號沒變才更新基準——reset()/換角色後不可拿舊世代的畫面當基準
         with self.lock:
             if self._epoch == chunk_epoch and prev is not None:
@@ -734,7 +752,10 @@ class Feeder:
                       + " source=" + str(round(timeline_start_s, 3)) + "s",
                       flush=True)
         if ANTIFLICKER:
-            frames = self._stabilize(frames, chunk_epoch)
+            frames = self._stabilize(
+                frames, chunk_epoch,
+                apply_filter=should_apply_antiflicker(emit_audio),
+            )
         # Keep the final generation check and queue insertion atomic with
         # push24k's epoch bump + sink.clear(). Otherwise real input can arrive
         # after the check but before this push and stale idle frames still win.
