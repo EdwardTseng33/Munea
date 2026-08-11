@@ -190,7 +190,7 @@ expect(everyVoiceStyleBookHas('energy'),
 expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
 expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_S)') &&
-       avatarServer.includes('MUNEA_FH_VIDEO_LEAD_MS", "80"'),
+       avatarServer.includes('MUNEA_FH_VIDEO_LEAD_MS", "40"'),
   'Avatar video is not held on the real turn gate with bounded measured lead');
 expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.35"') &&
        avatarServer.includes('OPENING_PREBUFFER_S = max(') &&

@@ -143,10 +143,12 @@ OPENING_PREBUFFER_S = max(
     min(0.35, float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.35"))),
 )
 # Formal A/V receiver evidence shows the video track reaches the client about
-# 78ms after audio even when both leave the same gate. Let one/two video frames
+# 78ms after audio even when both leave the same gate. The first 80ms trial
+# over-corrected to -78ms, so use one 25fps frame (40ms) as the measured midpoint.
+# Let one video frame
 # lead instead of delaying the whole answer. Bounded rollback: set to 0.
 VIDEO_LEAD_S = min(
-    0.12, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "80")) / 1000.0)
+    0.12, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "40")) / 1000.0)
 )
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。

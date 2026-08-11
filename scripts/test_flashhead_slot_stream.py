@@ -116,9 +116,9 @@ def test_video_gate_leads_audio_without_escaping_empty_turn():
     assert out.playout_held(), "audio must keep the configured prebuffer"
     remaining = out.hold_until_ts - time.time()
     assert 0.15 <= remaining <= 0.21
-    time.sleep(0.13)
-    assert out.playout_held() and not out.video_playout_held(0.08), (
-        "video should open about 80ms before audio"
+    time.sleep(0.17)
+    assert out.playout_held() and not out.video_playout_held(0.04), (
+        "video should open about 40ms before audio"
     )
     print("test_video_gate_leads_audio_without_escaping_empty_turn: PASS")
 
