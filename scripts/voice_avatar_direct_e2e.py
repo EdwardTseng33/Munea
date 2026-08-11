@@ -160,10 +160,27 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
     """
     import statistics
 
+    # Native voices do not share one fixed loudness.  Vertex can begin a calm
+    # Mandarin sentence around 0.02 RMS while the AI Studio voice commonly
+    # starts above 0.045.  A fixed 0.045 threshold mislabeled captured speech
+    # (with valid captions and multi-second PCM) as ``no_audio_onset``.  Scale
+    # from this turn's observed peak but retain an absolute noise floor so idle
+    # WebRTC comfort noise cannot certify an onset.
+    peak_audio_rms = max((float(rms) for _, rms in audio_levels), default=0.0)
+    audio_threshold = max(0.012, min(0.045, peak_audio_rms * 0.35))
     audio_on = next((float(stamp) for stamp, rms in audio_levels
-                     if float(rms) >= 0.045), None)
+                     if float(rms) >= audio_threshold), None)
     if audio_on is None:
-        return {"ok": False, "reason": "no_audio_onset", "skew_ms": None}
+        return {
+            "ok": False,
+            "reason": "no_audio_onset",
+            "skew_ms": None,
+            "audio_diagnostics": {
+                "peak_rms": round(peak_audio_rms, 4),
+                "threshold": round(audio_threshold, 4),
+                "samples": len(audio_levels),
+            },
+        }
     # FlashHead 的待機呼吸與微小頭動也會讓影格越過弱門檻；前版因此要求
     # 兩格持續變化，但 WebRTC 視訊實測只有約 12.5fps，短音節常只在一格出現
     # 0.03+ 的明確嘴型跳動而被誤判「嘴沒動」。把搜尋窗縮到聲音前 150ms／
@@ -229,8 +246,45 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
         "skew_ms": round(skew_ms, 1),
         "mouth_motion": round(peak, 4),
         "max_skew_ms": round(limit, 1),
+        "audio_diagnostics": {
+            "peak_rms": round(peak_audio_rms, 4),
+            "threshold": round(audio_threshold, 4),
+            "samples": len(audio_levels),
+        },
         "motion_diagnostics": motion_diagnostics,
     }
+
+
+def avatar_playout_complete(audio_levels, expected_audio_ms, now, tail_s=0.35) -> bool:
+    """Return true after the captured Avatar has audibly played this turn.
+
+    Voice ``turn_complete`` means provider output is finished, not that the
+    independently buffered Avatar WebRTC track has reached the listener.  The
+    old fake phone scored and cleared per-turn capture immediately, so turn 1
+    could look silent while its real audio was measured as turn 2.
+    """
+    onset = next((float(stamp) for stamp, rms in audio_levels
+                  if float(rms) >= 0.012), None)
+    if onset is None:
+        return False
+    return float(now) >= (
+        onset + max(0.0, float(expected_audio_ms)) / 1000.0 + max(0.0, float(tail_s))
+    )
+
+
+def avatar_mouth_roi(image):
+    """Return the actual mouth region shared by the production square portraits.
+
+    Both a05 and a06 place the lips around y=0.62 of the 640x640 frame.  The
+    previous y=0.33..0.50 box measured eyes/nose and could report head motion
+    as lip-sync evidence.  Keep the box narrow enough to exclude the eyes and
+    most shoulders while allowing normal jaw motion.
+    """
+    height, width = image.shape[:2]
+    return image[
+        int(height * 0.55):max(int(height * 0.72), int(height * 0.55) + 1),
+        int(width * 0.33):max(int(width * 0.67), int(width * 0.33) + 1),
+    ]
 
 
 def required(name: str) -> str:
@@ -455,10 +509,7 @@ class EvidenceRun:
                     return
                 image = frame.to_ndarray(format="gray")
                 height, width = image.shape[:2]
-                mouth = image[
-                    int(height * 0.33):max(int(height * 0.50), int(height * 0.33) + 1),
-                    int(width * 0.30):max(int(width * 0.70), int(width * 0.30) + 1),
-                ][::3, ::3].astype(np.float32)
+                mouth = avatar_mouth_roi(image)[::3, ::3].astype(np.float32)
                 motion = 0.0
                 if (self._avatar_video_previous is not None
                         and self._avatar_video_previous.shape == mouth.shape):
@@ -531,6 +582,16 @@ class EvidenceRun:
         if self.pc.connectionState != "connected":
             raise RuntimeError("Avatar WebRTC did not connect")
         return base, str(answer.get("session") or "")
+
+    async def wait_for_avatar_playout(self, expected_audio_ms):
+        timeout_s = min(15.0, max(5.0, float(expected_audio_ms) / 1000.0 + 4.0))
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            if avatar_playout_complete(
+                    self.avatar_audio_levels, expected_audio_ms, time.monotonic()):
+                return True
+            await asyncio.sleep(0.02)
+        return False
 
     async def read_avatar_feed(self):
         try:
@@ -687,11 +748,17 @@ class EvidenceRun:
                     round(1000 * (first_response_at - mic_finished_at))
                     if first_response_at and mic_finished_at else None
                 )
+                turn_voice_audio_ms = round(
+                    len(np.frombuffer(b"".join(voice_chunks), dtype=np.int16)) / 24
+                )
+                avatar_playout_complete_for_turn = await self.wait_for_avatar_playout(
+                    turn_voice_audio_ms
+                )
                 turn_results.append({
                     "turn": turn_number,
                     "turn_complete": True,
                     "first_response_ms": turn_first_response_ms,
-                    "voice_audio_ms": round(len(np.frombuffer(b"".join(voice_chunks), dtype=np.int16)) / 24),
+                    "voice_audio_ms": turn_voice_audio_ms,
                     "user_caption": turn_user_caption,
                     "assistant_caption": turn_assistant_caption,
                     "source_playout": source_playout_metrics(voice_chunks, voice_times),
@@ -699,6 +766,7 @@ class EvidenceRun:
                         self.avatar_audio_levels, self.avatar_video_motion,
                         self.args.max_av_skew_ms,
                     ),
+                    "avatar_playout_complete": avatar_playout_complete_for_turn,
                     "avatar_video_frames": self.avatar_video_frames,
                 })
 
@@ -852,6 +920,10 @@ async def execute_run(args, output):
             ),
             "avatar_webrtc_speech_timing": bool(
                 metrics.get("avatar_webrtc_speech_timing", {}).get("ok")
+            ),
+            "avatar_playout": bool(metrics.get("turns")) and all(
+                item.get("avatar_playout_complete") is True
+                for item in metrics.get("turns", [])
             ),
             "avatar_av_sync": bool(metrics.get("avatar_av_sync", {}).get("ok")),
             "source_playout": (

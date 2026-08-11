@@ -1,5 +1,13 @@
 # Munea Release State
 
+## 2026-08-11 21:15 台灣｜1.0.64 實機回報後的 Avatar 512 原生推論修復
+
+- **1.0.64 實機紅燈**：使用者確認開頭需重複多次 HELLO 才回應，且聲音再次比嘴巴快；因此 1.0.64／535 不得沿用舊 synthetic PASS 稱為穩定版或直接送審。開頭漏聽與嘴型是兩個獨立根因。
+- **嘴型根因**：正式 Avatar 原先以 640 執行超出 FlashHead 官方 512 原生推論尺寸。640 的 Voice 音訊、direct route、RTP 與 underrun 都正常，但部分回合前 750ms 的實際嘴部 ROI 幾乎沒有動態；把 motion latent 改成跨輪保留仍失敗，已回退。切回 512 後嘴部動態恢復，GPU 首批畫格約 `689–823ms`，並保留 220ms video lead／220ms audio prebuffer。
+- **正式 3×3 Gate**：production Gateway→Vertex Voice→Glows Avatar 連續 3 通、每通 3 輪全數 PASS。9 輪首聲 `797–1766ms`，聲嘴偏移 `−93～+250ms`；Voice／Avatar 音訊缺口、RTP gap、Avatar underrun、自主重播與斷線皆 0，多輪內容沒有再問「吃飯了沒」。Glows 持久環境現為 `MUNEA_FH_FRAME_SIZE=512`；`/root/munea-face.env.rollback-frame640-20260811` 與 server/core rollback 檔均保留。
+- **Voice 供應者復原**：原 Gemini Developer API 正式與 staging 金鑰均回報 `prepayment credits are depleted`，已將 production Voice 100% 切到 `munea-voice-00113-zok` 的 Vertex AI `gemini-live-2.5-flash-native-audio`；舊 revision 保留 0%。正式多輪 Gate 無 provider 斷線，但這是故障復原，不等於 GPT Live 體驗已達標。
+- **放行邊界**：Avatar 與 Voice 服務 precheck 已通過；1.0.64 的開頭漏聽仍未由已安裝 App 修復。App 端等待靜音裁切修正需新 build，完成 source／CI／服務 Gate 後才可通知 Mac 包版；exact-build iPhone 真麥克風、喇叭、首句、三輪、查詢對嘴與掛斷釋位通過前仍為 `App E2E pending`。
+
 ## 2026-08-11 台灣｜1.0.64 Build 535 聊聊穩定候選
 
 - **候選內容**：App 移除開場假零聲音回合，只做接收端預備並設定 160ms WebRTC jitter buffer；另由 PR #571 修正 Voice `ready` 前第一句被靜音守門丟棄：只在手機本地保留有持續人聲證據的短預捲（上限 2.2 秒），ready 後依序送出，並立即顯示「我聽見了」。Voice 將 watchdog 恢復後的晚到 PCM／字幕隔離，且 AI 輸出不再建立隱藏守護追問；Avatar 啟用 Opus FEC、40ms 影像提前與 1／8 安靜音素防閃門檻。正常插話仍由 Voice 單一裁決，沒有為首句放寬 barge-in。

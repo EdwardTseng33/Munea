@@ -108,18 +108,22 @@ def test_slot_cuda_stream_defaults_to_none():
 
 
 def test_video_gate_leads_audio_without_escaping_empty_turn():
-    out = fec.AudioOutBuffer(48000, prebuffer_s=0.2)
-    assert out.playout_held() and out.video_playout_held(0.08), (
+    server_source = (ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py").read_text(
+        encoding="utf-8"
+    )
+    out = fec.AudioOutBuffer(48000, prebuffer_s=0.22)
+    assert out.playout_held() and out.video_playout_held(0.22), (
         "an empty turn must hold both tracks"
     )
     out.push([1] * 960)
     assert out.playout_held(), "audio must keep the configured prebuffer"
     remaining = out.hold_until_ts - time.time()
-    assert 0.15 <= remaining <= 0.21
-    time.sleep(0.17)
-    assert out.playout_held() and not out.video_playout_held(0.04), (
-        "video should open about 40ms before audio"
+    assert 0.17 <= remaining <= 0.23
+    assert not out.video_playout_held(0.22), (
+        "video should consume the generated 220ms hold before audio"
     )
+    assert 'MUNEA_FH_AUDIO_PREBUFFER_S", "0.22"' in server_source
+    assert 'MUNEA_FH_VIDEO_LEAD_MS", "220"' in server_source
     print("test_video_gate_leads_audio_without_escaping_empty_turn: PASS")
 
 

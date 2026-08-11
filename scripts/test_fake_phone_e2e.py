@@ -19,9 +19,10 @@ def load_functions(*names):
     return [namespace[name] for name in names]
 
 
-normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics, webrtc_speech_gap_metrics, avatar_av_sync_metrics = load_functions(
+normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics, webrtc_speech_gap_metrics, avatar_av_sync_metrics, avatar_playout_complete, avatar_mouth_roi = load_functions(
     "normalize_transcript", "transcript_char_recall", "source_playout_metrics",
-    "webrtc_frame_timing_metrics", "webrtc_speech_gap_metrics", "avatar_av_sync_metrics"
+    "webrtc_frame_timing_metrics", "webrtc_speech_gap_metrics", "avatar_av_sync_metrics",
+    "avatar_playout_complete", "avatar_mouth_roi",
 )
 
 assert normalize_transcript("我沒有發燒，但、有痰！") == "我沒有發燒但有痰"
@@ -84,6 +85,26 @@ av_quiet_syllable = avatar_av_sync_metrics(
     max_skew_ms=250,
 )
 assert av_quiet_syllable["ok"] and av_quiet_syllable["skew_ms"] == -141.0
+av_quiet_voice = avatar_av_sync_metrics(
+    [(6.00, 0.003), (6.02, 0.018), (6.04, 0.024)],
+    [(6.00, 0.001), (6.04, 0.018), (6.08, 0.017)],
+    max_skew_ms=250,
+)
+assert av_quiet_voice["ok"] and av_quiet_voice["skew_ms"] == 20.0
+assert av_quiet_voice["audio_diagnostics"]["threshold"] == 0.012
+av_comfort_noise_only = avatar_av_sync_metrics(
+    [(7.00, 0.003), (7.02, 0.008), (7.04, 0.009)],
+    [(7.00, 0.02), (7.04, 0.02)],
+    max_skew_ms=250,
+)
+assert not av_comfort_noise_only["ok"]
+assert av_comfort_noise_only["reason"] == "no_audio_onset"
+assert not avatar_playout_complete([(8.0, 0.08)], 2000, 10.2)
+assert avatar_playout_complete([(8.0, 0.08)], 2000, 10.35)
+assert not avatar_playout_complete([(8.0, 0.008)], 2000, 20.0)
+fake_portrait = __import__("numpy").zeros((640, 640), dtype="uint8")
+mouth_roi = avatar_mouth_roi(fake_portrait)
+assert mouth_roi.shape == (108, 217)
 
 # The release-facing path must exercise Voice -> Avatar direct PCM by default.
 # Relay remains available as a fallback test, but cannot certify the primary route.
@@ -105,6 +126,9 @@ assert 'parser.add_argument("--prompts-json", default="")' in SOURCE
 assert 'parser.add_argument("--prompts-b64", default="")' in SOURCE
 assert 'parser.add_argument("--min-call-seconds", type=float, default=0)' in SOURCE
 assert 'for turn_number in range(1, self.args.turns + 1):' in SOURCE
+assert 'await self.wait_for_avatar_playout(' in SOURCE
+assert '"avatar_playout_complete": avatar_playout_complete_for_turn' in SOURCE
+assert '"avatar_playout": bool(metrics.get("turns"))' in SOURCE
 assert '"all_turns_completed"' in SOURCE and '"completed_turns"' in SOURCE
 assert '"minimum_call_duration"' in SOURCE and '"call_duration_ms"' in SOURCE
 assert 'self.args.turn_prompts[turn_number - 1]' in SOURCE
