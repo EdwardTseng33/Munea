@@ -1,5 +1,10 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜✅ 1.0.65 Build 536 首句修復合併＋正式服務驗收（App E2E pending · call-path risk）
+- **交付**：PR #573 已合併為 `main@5c100c87`；Voice `munea-voice-00115-hip` 已由 0% 候選升為正式 100%，exact identity `1.0.65@5c100c877733`。
+- **實際聲音／畫面 Gate**：升流量前短音 3/3、正常中文三輪 117 秒均 PASS；升流量後第一通短音 A/V `+265ms` 曾超標 15ms，保留紅燈後連續三通 `+94/+140/−62ms` PASS；中文三輪 98 秒為 `−62/−31/+15ms`，ASR recall 1.0，Voice→Avatar→WebRTC 有聲缺口、underrun、自主重播、斷線均 0。
+- **邊界／下一步**：服務層 Gate 已完成，通知 Mac 只 Archive／安裝 `1.0.65 (536)`。exact installed-iPhone 的首句只說一次、真麥克風／喇叭回音、三輪、真查詢後對嘴、六分鐘與掛斷釋位由 Codex 接續驗收；未過前維持 `App E2E pending`，不得送審或稱完全修好。
+
 ### 2026-08-12 Codex｜🧪 1.0.65 Build 536 首句短音復原（PR #573 · 0% 全鏈 PASS · call-path risk）
 
 - **範圍**：`codex/fix-live-opening-av-20260811` / PR #573；本輪實際修改 `engine/live_voice_server.py`、短開場回歸、假手機 Gate 與 Voice 部署契約。App 候選身分維持唯一的 `1.0.65 (Build 536)`，未再加版。
