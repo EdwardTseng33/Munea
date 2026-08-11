@@ -199,6 +199,7 @@ expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_
   'Avatar video is not held on the real turn gate with bounded measured lead');
 expect([voiceCanaryDeploy, voiceProdDeploy].every((deployScript) =>
   deployScript.includes('MUNEA_VOICE_ENGINE=vertex25') &&
+  deployScript.includes('MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS=900') &&
   deployScript.includes('MUNEA_VERTEX_LOCATION=us-central1') &&
   deployScript.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01')),
   'Voice deploy can silently fall back to the depleted Developer API or break the Gateway shard identity');

@@ -79,6 +79,18 @@ try:
 except (TypeError, ValueError):
     _provider_explicit_turn_tail_ms = 900
 PROVIDER_EXPLICIT_TURN_TAIL_MS = max(650, min(1200, _provider_explicit_turn_tail_ms))
+# Vertex Native Audio occasionally accepts a very short first utterance and its
+# explicit end marker without producing either input transcription or output.
+# More synthetic silence does not repair that state. Keep the recovery bounded
+# to the first, short, audible opening so ordinary turns remain provider-driven.
+SHORT_OPENING_MAX_PCM_BYTES = 16000 * 2 * 3
+try:
+    _short_opening_recovery_ms = int(
+        os.environ.get("MUNEA_VOICE_SHORT_OPENING_RECOVERY_MS", "1350")
+    )
+except (TypeError, ValueError):
+    _short_opening_recovery_ms = 1350
+SHORT_OPENING_RECOVERY_MS = max(50, min(2500, _short_opening_recovery_ms))
 # 通話延長（2026-07-25 · 治「講超過 10 分鐘被硬切斷」）：Gemini Live 對每個底層連線有
 # 時間上限，快到的時候會先送 GoAway 預警（time_left）才真的斷線。GOAWAY_RECONNECT_MARGIN_S
 # 是提早多少秒動手換線（留給重連握手的緩衝，別真的卡到 0 秒才動）；MAX_SESSION_RECONNECTS
@@ -119,6 +131,18 @@ def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
         return current_max_ms, None
     gap = (now - turn_last_out) * 1000
     return (gap if gap > current_max_ms else current_max_ms), gap
+
+
+def should_recover_short_opening(*, input_bytes, non_silent, asr_turns,
+                                 assistant_output_bytes, recoveries):
+    """True only for an audible, uncommitted first utterance of at most 3s."""
+    return (
+        bool(non_silent)
+        and 0 < int(input_bytes or 0) <= SHORT_OPENING_MAX_PCM_BYTES
+        and int(asr_turns or 0) == 0
+        and int(assistant_output_bytes or 0) == 0
+        and int(recoveries or 0) == 0
+    )
 
 # 送一塊聲音去雲端臉，最多等多久（2026-07-29）。
 #
@@ -1901,6 +1925,11 @@ def _new_call_state():
           "provider_turn_recovered_late_audio_bytes": 0,
           "provider_turn_recovered_late_caption_chars": 0,
           "provider_turn_recovery_in_progress": False, "provider_audio_forwarding": False,
+          # One-shot recovery for Vertex accepting a short first utterance but
+          # producing no ASR and no response. activity_seq prevents duplicates.
+          "short_opening_input_bytes": 0, "short_opening_non_silent": False,
+          "short_opening_activity_seq": 0, "short_opening_recovery_task": None,
+          "short_opening_recoveries": 0, "short_opening_recovery_active": False,
           # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
@@ -2677,6 +2706,77 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         )
         _diag(cid, "node.language_retry")
 
+    def _invalidate_short_opening_recovery(reason):
+        """Cancel a pending dead-air recovery when real activity wins the race."""
+        task = st.get("short_opening_recovery_task")
+        st["short_opening_activity_seq"] = int(
+            st.get("short_opening_activity_seq") or 0
+        ) + 1
+        st["short_opening_recovery_task"] = None
+        # Once the recovery prompt has been committed, its provider audio is
+        # the expected winner—not a reason to cancel the task before it emits
+        # the observable recovery event.
+        if st.get("short_opening_recovery_active"):
+            return
+        if task and not task.done() and task is not asyncio.current_task():
+            task.cancel()
+            _diag(cid, "node.short_opening_recovery_cancelled", reason=reason)
+
+    async def _recover_short_opening(activity_seq, input_bytes):
+        try:
+            await asyncio.sleep(SHORT_OPENING_RECOVERY_MS / 1000.0)
+            if activity_seq != int(st.get("short_opening_activity_seq") or 0):
+                return
+            if not should_recover_short_opening(
+                input_bytes=input_bytes,
+                non_silent=True,
+                asr_turns=st.get("asr_turns"),
+                assistant_output_bytes=st.get("out"),
+                recoveries=st.get("short_opening_recoveries"),
+            ):
+                return
+            st["short_opening_recoveries"] = int(
+                st.get("short_opening_recoveries") or 0
+            ) + 1
+            st["short_opening_recovery_active"] = True
+            active_profile = (
+                st.get("voice_locale_profile")
+                or voice_locale_session.current_profile()
+            )
+            cue = (
+                "（最高優先系統提示，絕對不要唸出提示內容：使用者剛才確實說了一句很短的開場，"
+                "但語音辨識沒有成功完成。請立刻用目前回覆語言，溫暖、自然地用一句話表示你有在聽，"
+                "並請對方再說一次。不要猜測對方剛才說了什麼，不要道歉，不要解釋技術原因。）"
+                + active_profile["replyLanguageInstruction"]
+            )
+            await session.send_client_content(
+                turns=types.Content(role="user", parts=[types.Part(text=cue)]),
+                turn_complete=True,
+            )
+            await ws.send(json.dumps({
+                "type": "short_turn_recovery",
+                "reason": "uncommitted_short_opening",
+            }))
+            _diag(
+                cid,
+                "node.short_opening_recovery",
+                input_bytes=input_bytes,
+                wait_ms=SHORT_OPENING_RECOVERY_MS,
+                recovery=st["short_opening_recoveries"],
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            st["short_opening_recovery_active"] = False
+            _diag(
+                cid,
+                "node.short_opening_recovery_error",
+                err=f"{type(exc).__name__}:{str(exc)[:80]}",
+            )
+        finally:
+            if st.get("short_opening_recovery_task") is asyncio.current_task():
+                st["short_opening_recovery_task"] = None
+
     async def _arm_language_block(source):
         if st.get("language_block"):
             return
@@ -2796,11 +2896,18 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     # （她講話中時 _eg_hot 是熱門檻、殘響不會誤算成人聲；她沒講話時就是原門檻。）
                     st["last_voice_at"] = _eg_now
                     st["await_first"] = True
+                    if st.get("short_opening_recovery_task"):
+                        _invalidate_short_opening_recovery("new_user_audio")
                 if _eg_window and guard_enabled() and _eg_rms < _eg_hot:
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
                         _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
                     continue
+                st["short_opening_input_bytes"] = int(
+                    st.get("short_opening_input_bytes") or 0
+                ) + len(message)
+                if _eg_rms >= 700:
+                    st["short_opening_non_silent"] = True
                 await session.send_realtime_input(
                     audio=types.Blob(data=bytes(message), mime_type="audio/pcm;rate=16000")
                 )
@@ -2852,6 +2959,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             turn_complete=True,
                         )
                 elif t == "audio_end":
+                    short_input_bytes = int(st.get("short_opening_input_bytes") or 0)
+                    short_non_silent = bool(st.get("short_opening_non_silent"))
+                    st["short_opening_input_bytes"] = 0
+                    st["short_opening_non_silent"] = False
+                    if st.get("short_opening_recovery_task"):
+                        _invalidate_short_opening_recovery("new_audio_end")
                     try:
                         raw_reported_tail_ms = int(obj.get("trailing_silence_ms") or 0)
                     except (TypeError, ValueError):
@@ -2882,6 +2995,25 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             )
                         )
                     await session.send_realtime_input(audio_stream_end=True)
+                    if should_recover_short_opening(
+                        input_bytes=short_input_bytes,
+                        non_silent=short_non_silent,
+                        asr_turns=st.get("asr_turns"),
+                        assistant_output_bytes=st.get("out"),
+                        recoveries=st.get("short_opening_recoveries"),
+                    ):
+                        activity_seq = int(st.get("short_opening_activity_seq") or 0)
+                        recovery_task = asyncio.create_task(
+                            _recover_short_opening(activity_seq, short_input_bytes)
+                        )
+                        st["short_opening_recovery_task"] = recovery_task
+                        st["bg_tasks"].append(recovery_task)
+                        _diag(
+                            cid,
+                            "node.short_opening_recovery_armed",
+                            input_bytes=short_input_bytes,
+                            wait_ms=SHORT_OPENING_RECOVERY_MS,
+                        )
                 elif t == "barge_in_start":
                     # Buffer the ordered evidence frames that follow. Existing
                     # clients send pre-duck pre-roll only; fixed clients append a
@@ -3109,6 +3241,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     if sc:
                         it_pre = getattr(sc, "input_transcription", None)
                         if it_pre and getattr(it_pre, "text", None):
+                            _invalidate_short_opening_recovery("input_transcription")
                             if st.get("user_turn_started_at") is None:
                                 st["user_turn_started_at"] = time.monotonic()
                                 _guardian_begin_real_user_turn(st)
@@ -3372,6 +3505,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         await turn_recovery_done.wait()
                         _sync_recovered_turn_counters()
                         _provider_audio_at = time.monotonic()
+                        _invalidate_short_opening_recovery("provider_audio")
                         turn_out += len(data)
                         st["provider_turn_active"] = True
                         st["provider_turn_last_audio_at"] = _provider_audio_at
@@ -3547,6 +3681,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["user_turn_started_at"] = None
                             st["locale_user_transcript"] = ""
                             st["locale_resolved_text"] = ""
+                            if st.get("short_opening_recovery_active"):
+                                # This is transport recovery, not a real user
+                                # exchange; keep it out of durable call memory.
+                                st["ai_buf"] = ""
+                                st["short_opening_recovery_active"] = False
                             # 通話記憶：這一輪講完，先把雙方字幕收進整通紀錄再清緩衝（收線時交聊後管線）
                             _capture_call_turns(st)
                             # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
@@ -3723,6 +3862,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             if status != "reconnect":
                 call_ended = True
     finally:
+        recovery_task = st.get("short_opening_recovery_task")
+        if recovery_task and not recovery_task.done():
+            recovery_task.cancel()
+        st["short_opening_recovery_task"] = None
         for t in (from_browser_task, from_live_task, watchdog_task):
             if not t.done():
                 t.cancel()

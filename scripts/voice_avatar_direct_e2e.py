@@ -698,6 +698,7 @@ class EvidenceRun:
                 turn_user_caption = ""
                 turn_assistant_caption = ""
                 turn_complete = False
+                turn_short_recovery = False
                 first_response_at = None
                 relay_turn_started = False
                 if mic_pcm is not None:
@@ -741,6 +742,8 @@ class EvidenceRun:
                         turn_user_caption += str(event.get("text") or "")
                     elif event.get("type") == "caption" and event.get("who") == "nening":
                         turn_assistant_caption += str(event.get("text") or "")
+                    elif event.get("type") == "short_turn_recovery":
+                        turn_short_recovery = True
                     elif event.get("type") == "turn_complete" and voice_chunks:
                         if self.args.transport == "relay":
                             await self.avatar_feed.send("finish")
@@ -768,6 +771,7 @@ class EvidenceRun:
                     "voice_audio_ms": turn_voice_audio_ms,
                     "user_caption": turn_user_caption,
                     "assistant_caption": turn_assistant_caption,
+                    "short_turn_recovery": turn_short_recovery,
                     "source_playout": source_playout_metrics(voice_chunks, voice_times),
                     "avatar_av_sync": avatar_av_sync_metrics(
                         self.avatar_audio_levels, self.avatar_video_motion,
@@ -847,6 +851,9 @@ class EvidenceRun:
             "requested_turns": self.args.turns,
             "completed_turns": len(turn_results),
             "turns": turn_results,
+            "short_turn_recovery": any(
+                item.get("short_turn_recovery") is True for item in turn_results
+            ),
             "avatar_av_sync": {
                 "ok": bool(turn_results) and all(
                     item.get("avatar_av_sync", {}).get("ok") is True
@@ -914,8 +921,13 @@ async def execute_run(args, output):
         metrics["gates"] = {
             "transport": metrics.get("transport_status") == "ready",
             "avatar_route": metrics.get("avatar_ack") is True,
-            "asr": (metrics["asr_char_recall"] is None
+            "asr": (args.expect_short_recovery
+                    or metrics["asr_char_recall"] is None
                     or metrics["asr_char_recall"] >= args.min_asr_char_recall),
+            "short_turn_recovery": (
+                not args.expect_short_recovery
+                or metrics.get("short_turn_recovery") is True
+            ),
             "first_response": (metrics.get("first_response_ms") is not None
                                and metrics["first_response_ms"] <= args.max_first_response_ms),
             "avatar_audio": metrics.get("avatar_audio_ms", 0) >= args.min_avatar_audio_ms,
@@ -996,6 +1008,10 @@ async def main():
         help="maximum WAV seconds to play; 0 (default) plays the complete fixture",
     )
     parser.add_argument("--expected-text", default="")
+    parser.add_argument(
+        "--expect-short-recovery", action="store_true",
+        help="require the one-shot uncommitted short-opening recovery event",
+    )
     parser.add_argument("--min-asr-char-recall", type=float, default=0.80)
     parser.add_argument("--max-first-response-ms", type=int, default=4500)
     parser.add_argument("--min-avatar-audio-ms", type=int, default=1000)
@@ -1034,7 +1050,7 @@ async def main():
             or not all(isinstance(item, str) and item.strip() for item in args.turn_prompts)
         ):
             parser.error("--prompts-json must contain exactly --turns non-empty strings")
-    if args.mic_wav and not args.expected_text.strip():
+    if args.mic_wav and not args.expected_text.strip() and not args.expect_short_recovery:
         parser.error("--expected-text is required with --mic-wav; a fake phone must score what Voice heard")
     output = Path(args.out).resolve()
     output.mkdir(parents=True, exist_ok=True)
