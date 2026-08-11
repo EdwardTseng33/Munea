@@ -1,5 +1,12 @@
 # Munea Release State
 
+## 2026-08-12 00:32 台灣｜1.0.65 Build 536 首句短音復原 Gate
+
+- **實際根因證據**：真人約兩秒開場音訊已完整送達 Vertex（有聲 PCM＋`audio_end`），但 provider 偶發不產生 ASR 或回答；增加語言提示及把尾端靜音由 900ms 拉到 1200ms 都不能修復，因此部署契約明確鎖回 900ms，不再增加每輪固定延遲。
+- **候選修復**：PR #573 / `f84a1781` 只對第一個、≤3 秒、有聲、沒有任何 ASR 或 AI 輸出的開場啟動一次性復原；等待 1350ms 期間一旦收到 ASR、AI 音訊或新使用者人聲立即取消，且整通最多一次。復原採原本 Native Audio 聲線，不重播或猜測未辨識內容，也不寫入長期記憶。
+- **0% 全鏈證據**：Voice `munea-voice-staging-00133-kup` 仍為 0%。正式 Gateway→候選 Voice→Glows FlashHead 512→WebRTC 的真人短句 3/3 PASS：首聲 `2203/2219ms`，聲嘴 `-109/+125/+63ms`；正常中文 3 calls × 3 turns = 9/9 PASS：ASR recall `1.0`、首聲 `1172–2422ms`、聲嘴 `-62～+109ms`、Voice/Avatar underrun、有聲 RTP gap、非預期重播、斷線與復原誤觸均為 `0`。repository `release:check` PASS。
+- **放行邊界**：目前為 `source tested + pushed + staging 0% verified + PR pending + production unchanged + App E2E pending`。合併及 exact production identity／正式假手機 Gate 通過前不通知 Mac 包版；exact `1.0.65 (536)` 安裝版 iPhone 完成真麥克風、喇叭、第一句一次成功、三輪上下文、查詢對嘴、六分鐘連線與掛斷釋位前不得送審或稱 release-ready。
+
 ## 2026-08-11 21:30 台灣｜1.0.65 Build 536 首句最終候選
 
 - **版本決策**：使用者已在安裝版 1.0.64 重現「第一聲 HELLO 無回應、需重複數次，晚到回覆又被第二聲打斷」；因此不重用 1.0.64／535 身分。唯一下一個 App 候選升為 `1.0.65 (Build 536)`，cache identity `20260811-opening-b536-v1065`。

@@ -1,5 +1,12 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜🧪 1.0.65 Build 536 首句短音復原（PR #573 · 0% 全鏈 PASS · call-path risk）
+
+- **範圍**：`codex/fix-live-opening-av-20260811` / PR #573；本輪實際修改 `engine/live_voice_server.py`、短開場回歸、假手機 Gate 與 Voice 部署契約。App 候選身分維持唯一的 `1.0.65 (Build 536)`，未再加版。
+- **根因／修復**：真人約兩秒開場可到達 Vertex 卻偶發沒有 ASR／輸出，增加靜音無效。只對第一個 ≤3 秒有聲開場加同聲線一次性復原；ASR、AI 音訊或第二句會取消，整通最多一次。Voice 尾端明確鎖回 900ms，避免測試環境的 1200ms 污染後續部署。
+- **證據**：`f84a1781` / `munea-voice-staging-00133-kup` 0% 候選經 production Gateway→Voice→Glows Avatar→WebRTC，短句 3/3 與正常中文 3×3 共 12 輪全過；正常 ASR 1.0、聲嘴全部在 ±125ms、underrun／有聲 RTP gap／自主重播／斷線／復原誤觸均 0，完整 `release:check` PASS。
+- **下一關**：PR／CI→合併→同提交正式 Voice→正式假手機回驗；完成前 production unchanged。Mac 只在上述全綠後包一次 Build 536。exact installed iPhone Gate 前維持 `App E2E pending（Codex ownership）`，不得送審。
+
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
