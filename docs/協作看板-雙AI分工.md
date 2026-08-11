@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-11 Codex｜🚨 首句 HELLO 被接通守門丟棄（PR #571 CI 全綠／App E2E pending · call-path risk）
+
+- **分支／PR**：`codex/fix-first-utterance-buffer-20260811`／Draft PR #571；修改 `web/src/voice-turn-policy.js`、`web/src/app.js`、`engine/live_voice_server.py`、語音契約測試與狀態文件。與 Avatar 防閃 PR #570 分開，不混成同一支修改。
+- **實機症狀**：通話開啟後第一聲 HELLO 常無反應；2–3 秒後再說一次，延遲到來的第一個回覆又正好被第二聲插話打斷。
+- **已定位根因**：App 在麥克風管線建立後到 Voice `ready` 前，把真實收音直接換成每 500ms 一包靜音；畫面已讓人感覺能說話，但這個窗口內的第一句不會進模型。這是舊「AI 先招呼、使用者後開麥」規則的殘留，與目前「使用者先說」產品規則衝突。
+- **修復／Gate**：只在接通窗口本地保留有持續人聲證據的短預捲，Voice ready 後依序送出並立刻顯示「我聽見了」；不關閉正常 barge-in、不把底噪當成一輪。加入 App 偵測／緩衝／送出與 Voice 首個非靜音 PCM 的逐段碼錶。首句、底噪、插話、回音、狀態機、長連線回合、假手機契約與完整 `release:check` 已 PASS，GitHub 四道 CI 全綠；exact-build iPhone 真麥克風未過前維持 `App E2E pending（Codex ownership）`。Build 535 尚未 Archive，本修復直接納入同一候選，不另增包版。
+
 ### 2026-08-11 Codex｜✅ 1.0.64 穩定版收斂：首句＋連續音訊＋嘴聲（服務上線／App E2E pending · call-path risk）
 - **分支／PR**：`codex/stabilize-chat-av-opening-20260811`／Draft PR #568；App 候選升為 `1.0.64 (Build 535)`，避免沿用不含接收端開場修復的 1.0.63／534。
 - **根因與修復**：App 移除開場約 1 秒的假零聲音回合，只預備接收器並啟用 160ms WebRTC jitter buffer；Voice 隔離 watchdog 後晚到的 PCM／字幕，禁止 AI 自己觸發守護追問；Avatar 加入 Opus FEC、40ms 影像提前及安靜音素防閃動門檻 1／8。驗收器改為直接接收正式 Avatar WebRTC 音訊與影像，逐輪記錄首聲、嘴型、RTP 空洞、缺音、重播、連線與上下文。

@@ -267,6 +267,14 @@ expect(app.includes('nowMs - this._silentKeepaliveAt >= 500'),
   'gated-mic keepalive is not rate-limited to one small packet per 500ms (full-rate silence burns Gemini input tokens during opening/mute)');
 expect(!app.includes('if (!this.micOpen) { this.micLevel = 0; return; }'),
   'the microphone pipeline waits for the greeting again instead of sending silent standby frames');
+expect(app.includes('this._captureOpeningMicFrame(openingBuf, openingRms, openingFrameMs)') &&
+  app.includes('const openingCapture = this._drainOpeningMicCapture()') &&
+  app.includes('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))'),
+  'the first user utterance is still discarded while Voice is becoming ready');
+expect(app.includes("this._markOpeningHeard('pre_ready_buffer'") &&
+  app.includes("this._markOpeningHeard('live_microphone'") &&
+  app.includes("setLocalizedRuntimeHint('heard')"),
+  'the user gets no immediate acknowledgement that the first utterance was heard');
 expect(app.includes('const micPipelineReady = this._setupMicPipeline(micPromise);') &&
   app.indexOf('const micPipelineReady = this._setupMicPipeline(micPromise);') < app.indexOf('this.ws = new WebSocket(url)'),
   'the microphone pipeline is no longer built in parallel with (before) the WebSocket handshake');

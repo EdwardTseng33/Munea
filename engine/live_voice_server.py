@@ -1867,7 +1867,7 @@ def _new_call_state():
     """一通電話的可變狀態（st）。2026-07-25 抽成獨立函式：①讓 handle() 讀起來清楚
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
-    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False,
+    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False, "first_non_silent_mic": False,
           # last_voice_at＝最後一次「真的聽到人在講話」的時刻（音量過門檻的那一格）。
           # 2026-08-01 新增：first_audio 原本從 last_in（每一格麥克風封包都會刷新，
           # 包含全靜音）起算，量到的永遠是 7-38 毫秒＝等於沒在量。反應快慢要從
@@ -2706,6 +2706,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 ))
                 _voice_frame_ms = len(message) / float(16000 * 2) * 1000.0
                 _above_voice_threshold = _eg_rms >= _eg_hot
+                if not st.get("first_non_silent_mic") and _eg_rms >= 700:
+                    st["first_non_silent_mic"] = True
+                    _diag(
+                        cid, "node.first_non_silent_mic",
+                        ms=round((_eg_now - t0) * 1000), rms=round(_eg_rms),
+                    )
 
                 # A semantic hold is only converted into a real continuation
                 # after sustained microphone evidence. One loud frame is not
