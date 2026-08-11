@@ -63,8 +63,14 @@ assert '"avatar_reported_underrun"' in SOURCE and '"avatar_health_after"' in SOU
 assert '"avatar_webrtc_speech_timing"' in SOURCE
 assert '"avatar_route": metrics.get("avatar_ack") is True' in SOURCE
 assert 'parser.add_argument("--turns", type=int, default=1)' in SOURCE
+assert 'parser.add_argument("--prompts-json", default="")' in SOURCE
+assert 'parser.add_argument("--prompts-b64", default="")' in SOURCE
+assert 'parser.add_argument("--min-call-seconds", type=float, default=0)' in SOURCE
 assert 'for turn_number in range(1, self.args.turns + 1):' in SOURCE
 assert '"all_turns_completed"' in SOURCE and '"completed_turns"' in SOURCE
+assert '"minimum_call_duration"' in SOURCE and '"call_duration_ms"' in SOURCE
+assert 'self.args.turn_prompts[turn_number - 1]' in SOURCE
+assert 'base64.b64decode(args.prompts_b64).decode("utf-8")' in SOURCE
 assert 'raise RuntimeError("Voice disconnected after turn %d" % turn_number)' in SOURCE
 assert 'all(metrics["gates"].values())' in SOURCE
 

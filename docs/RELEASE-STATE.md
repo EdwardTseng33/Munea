@@ -1,5 +1,13 @@
 # Munea Release State
 
+## 2026-08-11 13:35 台灣｜1.0.63 多輪上下文與五分鐘 Avatar 停止 P0
+
+- **實機根因證據**：安裝版 `1.0.63 (Build 534)` 正式通話 `c17` 在約 3 分鐘內，provider 每輪漏 `turn_complete` 後都走 `finish_and_reconnect`；共建立 9 條新的 Gemini Live session，全部沒有 resumption handle，最後達 `reconnect_limit_reached attempts=9` 並觸發 Gateway `avatar_disconnected`。因此模型每輪忘記前文、反覆問「吃飯了沒」，額度耗盡後只剩聲音而 Avatar 不動。
+- **修復**：PR #567／Voice commit `3341f961` 將漏訊號改為同一 Live session 內補 App／Avatar 回合收尾，晚到的 provider `turn_complete` 去重，下一塊 PCM 等舊 Avatar 回合收乾淨再進；不再清除 resumption handle，也不消耗真正 GoAway 的重連額度。每通新增 `provider_turn_recoveries` 與逐輪最大供給空檔證據。
+- **三輪真人音訊 Gate**：0% production candidate `munea-voice-00107-jiy` 經正式 Gateway／Call Token／tw-06 Avatar，連續三輪送入同一份 7.16 秒 QA 真人 WAV；ASR 3/3 完整、首聲 `594／766／531ms`、Voice source underrun 0、Avatar 有聲 RTP gap／缺波形／underrun 0、包絡相關 `0.9746`、自主重播與斷線 0。
+- **五分鐘上下文 Gate**：同一張 lease／同一 Voice socket／同一 Avatar 連續 `354.093s`、15 輪，每輪後留 20 秒安靜監測；15/15 收到聲音與 turn complete，首聲 `578–891ms`，自主音訊／字幕重播 0、斷線 0、Avatar underrun／有聲 RTP gap／缺波形 0、包絡相關 `0.9733`。provider 仍漏了 9 次 turn complete，但全部記為 `turn_complete_recovered_in_place session_preserved=True`，`session_reconnected`／`reconnect_limit_reached`／`avatar_disconnected` 皆 0；第 15 輪仍正確回答「晚餐吃外送便當，藍色毛巾在沙發上」。
+- **放行邊界**：PR #567 最新 Smoke／Product alignment CI 全綠；候選仍為 0% 流量，待合併後才可依 exact tag 升為 production。此修復只改 Voice server，正式切換後現有 `1.0.63` 不需重包。它證明多輪失憶與五分鐘 Avatar 停止的服務根因已修，不代表開頭第一句卡頓或輕微嘴慢已由 iPhone 真機通過；後兩項仍為 `App E2E pending（Codex ownership）`。
+
 ## 2026-08-11 台灣｜1.0.63 Build 534 聲音裁決與 Avatar 同步候選
 
 - **1.0.62 實機結論**：使用者確認仍有開場自我打斷、嘴型落後、查詢有聲無嘴，以及畫面仍在通話中但失去說話能力；因此 1.0.62 不得送審，也不沿用先前 synthetic PASS 作為品質結論。
