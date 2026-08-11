@@ -68,6 +68,17 @@ else:
     MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
+# Vertex Live currently needs actual PCM silence to close an explicit audio
+# turn reliably; audio_stream_end alone does not substitute for AAD silence.
+# This padding is sent immediately (no wall-clock sleep), and the App reports
+# how much real tail it already retained so the provider receives 900ms total.
+try:
+    _provider_explicit_turn_tail_ms = int(
+        os.environ.get("MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS", "900")
+    )
+except (TypeError, ValueError):
+    _provider_explicit_turn_tail_ms = 900
+PROVIDER_EXPLICIT_TURN_TAIL_MS = max(650, min(1200, _provider_explicit_turn_tail_ms))
 # 通話延長（2026-07-25 · 治「講超過 10 分鐘被硬切斷」）：Gemini Live 對每個底層連線有
 # 時間上限，快到的時候會先送 GoAway 預警（time_left）才真的斷線。GOAWAY_RECONNECT_MARGIN_S
 # 是提早多少秒動手換線（留給重連握手的緩衝，別真的卡到 0 秒才動）；MAX_SESSION_RECONNECTS
@@ -2835,12 +2846,35 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             turn_complete=True,
                         )
                 elif t == "audio_end":
+                    try:
+                        raw_reported_tail_ms = int(obj.get("trailing_silence_ms") or 0)
+                    except (TypeError, ValueError):
+                        raw_reported_tail_ms = 0
+                    reported_tail_ms = max(
+                        0, min(
+                            PROVIDER_EXPLICIT_TURN_TAIL_MS,
+                            raw_reported_tail_ms,
+                        )
+                    )
+                    provider_pad_ms = (
+                        max(0, PROVIDER_EXPLICIT_TURN_TAIL_MS - reported_tail_ms)
+                        if VOICE_ENGINE == "vertex25" else 0
+                    )
                     _diag(
                         cid,
                         "node.audio_stream_end",
                         reason=str(obj.get("reason") or "client")[:48],
                         first_non_silent=bool(st.get("first_non_silent_mic")),
+                        reported_tail_ms=reported_tail_ms,
+                        provider_pad_ms=provider_pad_ms,
                     )
+                    if provider_pad_ms:
+                        await session.send_realtime_input(
+                            audio=types.Blob(
+                                data=b"\x00\x00" * int(16000 * provider_pad_ms / 1000),
+                                mime_type="audio/pcm;rate=16000",
+                            )
+                        )
                     await session.send_realtime_input(audio_stream_end=True)
                 elif t == "barge_in_start":
                     # Buffer the ordered evidence frames that follow. Existing

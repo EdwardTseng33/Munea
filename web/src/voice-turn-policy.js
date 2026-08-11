@@ -175,11 +175,11 @@
     let entries = current.detected
       ? (Array.isArray(current.frames) ? current.frames : [])
       : (candidate && Array.isArray(current.preRoll) ? current.preRoll : []);
+    let retainedTailMs = 0;
     if (current.detected && current.lastVoiceFrameIndex >= 0 && entries.length) {
-      let tailMs = 0;
       let end = Math.min(entries.length, current.lastVoiceFrameIndex + 1);
-      while (end < entries.length && tailMs < cfg.openingCaptureTailMs) {
-        tailMs += Number(entries[end].durationMs) || 0;
+      while (end < entries.length && retainedTailMs < cfg.openingCaptureTailMs) {
+        retainedTailMs += Number(entries[end].durationMs) || 0;
         end += 1;
       }
       entries = entries.slice(0, end);
@@ -191,6 +191,7 @@
       candidate,
       complete: !!current.complete,
       observedQuietMs: Math.round(Number(current.trailingQuietMs) || 0),
+      retainedTailMs: Math.round(retainedTailMs),
       state: createOpeningCapture(current.noiseFloor),
     };
   }

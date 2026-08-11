@@ -5039,10 +5039,15 @@ const LiveVoice = {
                     ? Math.round(performance.now() - this._openingVoiceDetectedAt) : null,
                 });
                 if (openingCapture.complete) {
-                  this.ws.send(JSON.stringify({ type: 'audio_end', reason: 'opening_local_boundary' }));
+                  this.ws.send(JSON.stringify({
+                    type: 'audio_end',
+                    reason: 'opening_local_boundary',
+                    trailing_silence_ms: openingCapture.retainedTailMs,
+                  }));
                   voiceCallMark('opening_user_turn_closed', 'pass', {
                     bufferedMs: openingCapture.bufferedMs,
                     observedQuietMs: openingCapture.observedQuietMs,
+                    retainedTailMs: openingCapture.retainedTailMs,
                   });
                 }
               }

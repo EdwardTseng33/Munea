@@ -75,6 +75,8 @@ assert(openingWithWait.drained.observedQuietMs >= policy.DEFAULTS.openingCapture
 assert(openingWithWait.drained.bufferedMs
   <= (3 * FRAME_MS) + policy.DEFAULTS.openingCaptureTailMs + FRAME_MS,
   'opening flush must trim the long wait silence instead of replaying it after ready');
+assert(openingWithWait.drained.retainedTailMs >= policy.DEFAULTS.openingCaptureTailMs,
+  'opening flush must report how much real tail was retained for provider padding');
 assert(openingWithWait.drained.frames.includes('frame-1')
   && openingWithWait.drained.frames.includes('frame-2'),
   'trimming opening wait silence must preserve the actual first hello');
@@ -168,12 +170,16 @@ assert(app.includes("voiceCallMark('opening_user_voice_detected'")
   && readyHandler.includes("voiceCallMark('opening_user_turn_closed'")
   && readyHandler.indexOf('this._setMicOpen(true); this._openMicAfterGreet = false;')
     > readyHandler.indexOf('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))')
-  && readyHandler.includes("this.ws.send(JSON.stringify({ type: 'audio_end', reason: 'opening_local_boundary' }))"),
+  && readyHandler.includes("reason: 'opening_local_boundary'")
+  && readyHandler.includes('trailing_silence_ms: openingCapture.retainedTailMs'),
   'Voice ready must flush and close a completed opening turn before opening the live mic');
 assert(voiceServer.includes('"node.first_non_silent_mic"'),
   'Voice logs cannot distinguish standby silence from the first real microphone audio');
 assert(voiceServer.includes('"node.audio_stream_end"')
-  && voiceServer.includes('reason=str(obj.get("reason") or "client")[:48]'),
-  'Voice must identify the local opening boundary in production evidence');
+  && voiceServer.includes('PROVIDER_EXPLICIT_TURN_TAIL_MS')
+  && voiceServer.includes('data=b"\\x00\\x00" * int(16000 * provider_pad_ms / 1000)')
+  && voiceServer.includes('reported_tail_ms=reported_tail_ms')
+  && voiceServer.includes('provider_pad_ms=provider_pad_ms'),
+  'Voice must identify the local boundary and add bounded Vertex AAD silence');
 
 console.log('Voice turn policy PASS: one Voice speaker verdict, opening capture/ack, non-destructive App candidate, pre-roll, post-speech guard');
