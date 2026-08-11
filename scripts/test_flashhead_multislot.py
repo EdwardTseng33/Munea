@@ -838,6 +838,7 @@ def test_first_chunk_quality_metrics_detect_static_speech():
 
 
 def test_first_chunk_mouth_gate_is_not_too_permissive():
+    assert fec.FIRST_CHUNK_RETRY is False
     assert fec.FIRST_CHUNK_MOUTH_MOTION >= 0.015
     print("test_first_chunk_mouth_gate_is_not_too_permissive: PASS")
 

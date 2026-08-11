@@ -68,7 +68,10 @@ ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 # semantic turn should be reproducible, while chunks inside the turn must keep
 # advancing normally.  Set a negative value only for a bounded rollback.
 TURN_SEED = int(os.environ.get("MUNEA_FH_TURN_SEED", "42"))
-FIRST_CHUNK_RETRY = os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY", "1") == "1"
+# A second full 960 ms generation is too expensive for a realtime opening.
+# Keep the experimental escape hatch, but ship it off: finite skew is trimmed
+# below and a quiet/no-onset first chunk is emitted without blocking speech.
+FIRST_CHUNK_RETRY = os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY", "0") == "1"
 FIRST_CHUNK_SPEECH_RMS = float(
     os.environ.get("MUNEA_FH_FIRST_CHUNK_SPEECH_RMS", "0.02")
 )

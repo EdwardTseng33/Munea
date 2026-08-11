@@ -428,11 +428,16 @@ class EvidenceRun:
             body = response.json()
             return {
                 "ok": bool(body.get("ok")),
+                "output_resolution": body.get("output_resolution", {}),
+                "release_version": body.get("release_version"),
+                "release_commit": body.get("release_commit"),
                 "round_count": body.get("round_count"),
                 "round_latencies_ms": body.get("round_latencies_ms", []),
                 "gen_compute_ms_rolling": body.get("gen_compute_ms_rolling", {}),
                 "audio_underrun": body.get("audio_underrun", {}),
                 "audio_sender": body.get("audio_sender", {}),
+                "video_sync": body.get("video_sync", {}),
+                "model_turn_state": body.get("model_turn_state", {}),
             }
         except Exception as error:
             return {"ok": False, "error": type(error).__name__}
