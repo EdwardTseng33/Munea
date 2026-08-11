@@ -53,8 +53,12 @@ TAIL_FLUSH_S = float(os.environ.get("MUNEA_FH_TAIL_FLUSH_S", "0.45"))
 # 副作用是正向的：背景靜止後 WebRTC 編碼省下的位元集中給臉部、畫質更好。
 # MUNEA_FH_ANTIFLICKER=0 可整個關掉（回到舊行為）。
 ANTIFLICKER = os.environ.get("MUNEA_FH_ANTIFLICKER", "1") == "1"
-ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "3"))
-ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "12"))
+# Production A/B on the same Voice phrases showed that 3/12 suppresses quiet
+# phoneme motion together with flicker (only 1/3 mouth-onset gates passed).
+# 1/8 retained the temporal stabilizer while all 3/3 quiet/normal phrases kept
+# measurable mouth motion. These defaults mirror the deployed worker config.
+ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "1"))
+ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 
 
 def stabilize_frame(prev, cur, cv2mod):

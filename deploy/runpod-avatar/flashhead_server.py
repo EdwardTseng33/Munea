@@ -71,7 +71,8 @@ _fhp_mod.PROFILE_SYNC = os.environ.get("MUNEA_FH_PROFILE_SYNC", "1") == "1"
 from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
-from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
+from flashhead_engine_core import (ANTIFLICKER_HI, ANTIFLICKER_LO,
+                                    AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
                                     env_flag_enabled, health_snapshot,
                                     make_slot_stream_run_pipeline, parse_frame_size,
                                     pace_audio_sender_clock,
@@ -681,6 +682,8 @@ class FlashHead:
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
                          "av_video_lead_ms": round(VIDEO_LEAD_S * 1000),
+                         "antiflicker_lo": ANTIFLICKER_LO,
+                         "antiflicker_hi": ANTIFLICKER_HI,
                          "opus_fec": bool(OPUS_PACKET_LOSS_PCT),
                          "opus_expected_packet_loss_pct": OPUS_PACKET_LOSS_PCT,
                          "call_protocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),

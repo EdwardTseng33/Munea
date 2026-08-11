@@ -219,6 +219,18 @@ def test_opus_fec_is_enabled_before_peer_connections():
     print("test_opus_fec_is_enabled_before_peer_connections: PASS")
 
 
+def test_antiflicker_defaults_preserve_quiet_mouth_motion():
+    core_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_engine_core.py"
+    server_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py"
+    core = core_path.read_text(encoding="utf-8")
+    server = server_path.read_text(encoding="utf-8")
+    assert 'MUNEA_FH_AF_LO", "1"' in core
+    assert 'MUNEA_FH_AF_HI", "8"' in core
+    assert '"antiflicker_lo": ANTIFLICKER_LO' in server
+    assert '"antiflicker_hi": ANTIFLICKER_HI' in server
+    print("test_antiflicker_defaults_preserve_quiet_mouth_motion: PASS")
+
+
 def main():
     test_env_flag_enabled_contract()
     test_slot_cuda_stream_defaults_to_none()
@@ -227,6 +239,7 @@ def main():
     test_make_slot_stream_run_pipeline_propagates_exceptions()
     test_flashhead_server_default_flag_values_unchanged()
     test_opus_fec_is_enabled_before_peer_connections()
+    test_antiflicker_defaults_preserve_quiet_mouth_motion()
     print("FlashHead slot-stream unit test: ALL PASS")
 
 
