@@ -2835,6 +2835,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             turn_complete=True,
                         )
                 elif t == "audio_end":
+                    _diag(
+                        cid,
+                        "node.audio_stream_end",
+                        reason=str(obj.get("reason") or "client")[:48],
+                        first_non_silent=bool(st.get("first_non_silent_mic")),
+                    )
                     await session.send_realtime_input(audio_stream_end=True)
                 elif t == "barge_in_start":
                     # Buffer the ordered evidence frames that follow. Existing
