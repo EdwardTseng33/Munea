@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import difflib
 import json
 import os
@@ -777,6 +778,7 @@ async def main():
     parser.add_argument("--between-turn-seconds", type=float, default=1.2)
     parser.add_argument("--turns", type=int, default=1)
     parser.add_argument("--prompts-json", default="")
+    parser.add_argument("--prompts-b64", default="")
     parser.add_argument("--min-call-seconds", type=float, default=0)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--prompt", default="請只用自然台灣華語，連續清楚地說一段約十五秒的話，內容是今天精神還不錯、早餐吃得下、下午想在家休息；不要列點，也不要問問題。")
@@ -786,11 +788,19 @@ async def main():
     if args.turns < 1:
         parser.error("--turns must be at least 1")
     args.turn_prompts = []
-    if args.prompts_json:
+    if args.prompts_json and args.prompts_b64:
+        parser.error("use only one of --prompts-json or --prompts-b64")
+    prompts_payload = args.prompts_json
+    if args.prompts_b64:
         try:
-            args.turn_prompts = json.loads(args.prompts_json)
+            prompts_payload = base64.b64decode(args.prompts_b64).decode("utf-8")
+        except (ValueError, UnicodeDecodeError) as error:
+            parser.error("--prompts-b64 must be base64-encoded UTF-8 JSON: " + str(error))
+    if prompts_payload:
+        try:
+            args.turn_prompts = json.loads(prompts_payload)
         except json.JSONDecodeError as error:
-            parser.error("--prompts-json must be a JSON array: " + str(error))
+            parser.error("turn prompts must be a JSON array: " + str(error))
         if (
             not isinstance(args.turn_prompts, list)
             or len(args.turn_prompts) != args.turns
