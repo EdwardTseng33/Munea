@@ -3985,6 +3985,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
+  _openingCaptureActive: false, _openingCapture: null, _openingVoiceDetectedAt: 0, _openingHeardShown: false,
   _faceDirect: false, _faceDirectRequested: false, _faceDirectSession: '', _faceDirectTurn: 0,
   _requestFaceDirect() {
     const callToken = CallControl.active && CallControl.active.call_token;
@@ -4068,6 +4069,16 @@ const LiveVoice = {
       voiceCallMark('microphone_first_packet', 'pass', { bytes: buf.byteLength || 0, silent: buf === this._silentBuf });
     }
   },
+  _markOpeningHeard(source, peakRms, threshold) {
+    if (this._openingHeardShown || (this._playbackTurn || 0) > 0) return;
+    this._openingHeardShown = true;
+    setLocalizedRuntimeHint('heard');
+    voiceCallMark('opening_user_voice_acknowledged', 'pass', {
+      source: source || 'microphone',
+      peakRms: +Math.max(0, Number(peakRms) || 0).toFixed(4),
+      threshold: +Math.max(0, Number(threshold) || 0).toFixed(4),
+    });
+  },
   _noteUserMicActivity(rms, frameMs, speakerActive) {
     if (speakerActive || !this.micOpen) { this._userSpeechMs = 0; return; }
     const floor = Math.max(0, Number(this._bargeState && this._bargeState.noiseFloor) || 0.006);
@@ -4080,6 +4091,7 @@ const LiveVoice = {
       if (!this._userSpeechLatched && this._userSpeechMs >= 150) {
         this._userSpeechLatched = true;
         this._pendingUserSpeech = { startedAt: performance.now(), peakRms: this._userSpeechPeak, threshold };
+        this._markOpeningHeard('live_microphone', this._userSpeechPeak, threshold);
         try { trackProductEvent('voice_user_speech_detected', { peakRms: +this._userSpeechPeak.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
         clearTimeout(this._userSpeechWatchT);
         this._userSpeechWatchT = setTimeout(() => {
@@ -4540,6 +4552,32 @@ const LiveVoice = {
     if (!this._silentBuf || this._silentBufLen !== len) { this._silentBufLen = len; this._silentBuf = new Int16Array(len).buffer; }
     return this._silentBuf;
   },
+  _captureOpeningMicFrame(buf, rms, frameMs) {
+    if (!this._openingCaptureActive || !buf) return;
+    const policy = window.MuneaVoiceTurnPolicy;
+    if (!policy || typeof policy.captureOpeningFrame !== 'function') return;
+    const observed = policy.captureOpeningFrame(this._openingCapture, buf, rms, frameMs);
+    this._openingCapture = observed.state;
+    if (!observed.detectedNow) return;
+    this._openingVoiceDetectedAt = performance.now();
+    this._markOpeningHeard('pre_ready_buffer', rms, observed.threshold);
+    voiceCallMark('opening_user_voice_detected', 'pass', {
+      rms: +Math.max(0, Number(rms) || 0).toFixed(4),
+      threshold: +Math.max(0, Number(observed.threshold) || 0).toFixed(4),
+      bufferedMs: Math.round(observed.state.bufferedMs || 0),
+    });
+  },
+  _drainOpeningMicCapture() {
+    const policy = window.MuneaVoiceTurnPolicy;
+    this._openingCaptureActive = false;
+    if (!policy || typeof policy.drainOpeningCapture !== 'function') {
+      this._openingCapture = null;
+      return { frames: [], bufferedMs: 0, detected: false, candidate: false };
+    }
+    const drained = policy.drainOpeningCapture(this._openingCapture);
+    this._openingCapture = drained.state;
+    return drained;
+  },
   // 把「麥克風 → 降採樣 → 上行」的送音迴圈接上目前的 mic stream（start 建管、看門狗重建都走這裡）。
   _attachMicProcessor() {
     const src = this.ac.createMediaStreamSource(this.mic);
@@ -4558,7 +4596,17 @@ const LiveVoice = {
         // （42.7ms 音訊 ≈ 1 token；只為保活＋uplink 偵測）；開麥後才全速送真音訊——
         // 開場與按靜音期間的 Gemini 輸入 token 從每分鐘 ~1500 降到 ~128、幾乎不增帳。
         // 內容守門照舊：開麥前送的是全零、不是真收音，你的聲音絕不會在她招呼前灌進去（Edward 2026-07-09 規則不變）。
-        this.micLevel = 0;
+        if (this._openingCaptureActive) {
+          let openingEnergy = 0;
+          for (let i = 0; i < inp.length; i++) openingEnergy += inp[i] * inp[i];
+          const openingRms = Math.sqrt(openingEnergy / inp.length);
+          const openingFrameMs = (inp.length / this.ac.sampleRate) * 1000;
+          const openingBuf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
+          this.micLevel = Math.min(1, openingRms * 8);
+          this._captureOpeningMicFrame(openingBuf, openingRms, openingFrameMs);
+        } else {
+          this.micLevel = 0;
+        }
         const nowMs = performance.now();
         if (!this._silentKeepaliveAt || nowMs - this._silentKeepaliveAt >= 500) {
           this._silentKeepaliveAt = nowMs;
@@ -4826,6 +4874,11 @@ const LiveVoice = {
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._serviceIdentity = null;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
+    const openingPolicy = window.MuneaVoiceTurnPolicy;
+    this._openingCaptureActive = true;
+    this._openingCapture = openingPolicy && typeof openingPolicy.createOpeningCapture === 'function'
+      ? openingPolicy.createOpeningCapture() : null;
+    this._openingVoiceDetectedAt = 0; this._openingHeardShown = false;
     this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
@@ -4964,6 +5017,7 @@ const LiveVoice = {
                 try { this.ws.close(4412, 'incompatible voice protocol'); } catch (e) {}
                 return;
               }
+              const openingCapture = this._drainOpeningMicCapture();
               this.ready = true; voiceCallMark('voice_ready', 'pass');
               this._armDeadLineWatch('no_audio_both_ways', 5000);
               // 2026-08-08 Edward：「有一通可以講，但撥通後就又都不能講了」。
@@ -4973,6 +5027,17 @@ const LiveVoice = {
               // 改成掛在這裡：腦一接上就開麥。這是「能收音」的最早時機，
               // 而且它在 ready 事件本身，沒有任何提早離開的分支繞得過去。
               this._setMicOpen(true); this._openMicAfterGreet = false;
+              if (openingCapture.frames.length) {
+                openingCapture.frames.forEach(frame => this._sendMicBuffer(frame));
+                voiceCallMark('opening_user_voice_flushed', 'pass', {
+                  frames: openingCapture.frames.length,
+                  bufferedMs: openingCapture.bufferedMs,
+                  detected: openingCapture.detected,
+                  candidate: openingCapture.candidate,
+                  waitAfterDetectionMs: this._openingVoiceDetectedAt
+                    ? Math.round(performance.now() - this._openingVoiceDetectedAt) : null,
+                });
+              }
               if (this.onReady) this.onReady(); this._toListening();
               try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {}
             }   // 腦開機完成 → 語音就緒＋立刻開麥；記下「聊過了」；ready 後 5 秒雙向無聲＝死線重接
@@ -5117,6 +5182,7 @@ const LiveVoice = {
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); clearTimeout(this._userSpeechWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     clearTimeout(this._uplinkWatchT); clearTimeout(this._deadLineWatchT);   // 收音管看門＋死線看門一起收
     this.micOpen = false; this._openMicAfterGreet = false;
+    this._openingCaptureActive = false; this._openingCapture = null; this._openingVoiceDetectedAt = 0;
     try { clearTimeout(this._duckConfirmT); } catch (e) {}
     this._duckPendingAt = 0;
     this._sameLineWarmup = false;

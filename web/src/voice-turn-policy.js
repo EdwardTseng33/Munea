@@ -36,6 +36,15 @@
     //
     // 開場仍比平常嚴，但 172 + 128ms duck-confirm 不超過 300ms。
     openingSustainMs: 172,
+    // The call shell can be visible before the Voice provider is ready. Keep a
+    // short, local-only opening pre-roll so a natural first "hello" is not
+    // replaced by standby silence during that handshake window.
+    openingCaptureMinRms: 0.018,
+    openingCaptureNoiseMultiplier: 3,
+    openingCaptureSustainMs: 80,
+    openingCaptureCandidateMs: 32,
+    openingCapturePreRollFrames: 8,
+    openingCaptureMaxMs: 2200,
   });
 
   function createState(noiseFloor) {
@@ -79,7 +88,85 @@
     return Math.round(detection + stop);
   }
 
+  function createOpeningCapture(noiseFloor) {
+    return {
+      noiseFloor: Number.isFinite(noiseFloor) ? Math.max(0, noiseFloor) : 0.006,
+      candidateMs: 0,
+      detected: false,
+      preRoll: [],
+      frames: [],
+      bufferedMs: 0,
+    };
+  }
+
+  function openingCaptureThreshold(state, options) {
+    const cfg = { ...DEFAULTS, ...(options || {}) };
+    const floor = Math.max(0, Number(state && state.noiseFloor) || 0);
+    return Math.min(cfg.maxRms, Math.max(
+      cfg.openingCaptureMinRms,
+      floor * cfg.openingCaptureNoiseMultiplier,
+    ));
+  }
+
+  function captureOpeningFrame(state, frame, rms, frameMs, options) {
+    const cfg = { ...DEFAULTS, ...(options || {}) };
+    const next = {
+      ...createOpeningCapture(),
+      ...(state || {}),
+      preRoll: Array.isArray(state && state.preRoll) ? state.preRoll.slice() : [],
+      frames: Array.isArray(state && state.frames) ? state.frames.slice() : [],
+    };
+    const level = Math.max(0, Number(rms) || 0);
+    const durationMs = Math.max(0, Number(frameMs) || 0);
+    const threshold = openingCaptureThreshold(next, cfg);
+    const entry = { frame, durationMs, rms: level };
+    let detectedNow = false;
+
+    if (!next.detected) {
+      next.preRoll.push(entry);
+      while (next.preRoll.length > cfg.openingCapturePreRollFrames) next.preRoll.shift();
+      if (level < cfg.openingCaptureMinRms) {
+        next.noiseFloor = next.noiseFloor * 0.94 + level * 0.06;
+      }
+      if (level >= threshold) next.candidateMs += durationMs;
+      else next.candidateMs = Math.max(0, next.candidateMs - durationMs * 1.5);
+      if (next.candidateMs >= cfg.openingCaptureSustainMs) {
+        next.detected = true;
+        detectedNow = true;
+        next.frames = next.preRoll.slice();
+        next.preRoll = [];
+        next.bufferedMs = next.frames.reduce((sum, item) => sum + item.durationMs, 0);
+      }
+    } else {
+      next.frames.push(entry);
+      next.bufferedMs += durationMs;
+    }
+
+    while (next.detected && next.frames.length > 1 && next.bufferedMs > cfg.openingCaptureMaxMs) {
+      const removed = next.frames.shift();
+      next.bufferedMs = Math.max(0, next.bufferedMs - (removed.durationMs || 0));
+    }
+    return { state: next, threshold, detectedNow };
+  }
+
+  function drainOpeningCapture(state, options) {
+    const cfg = { ...DEFAULTS, ...(options || {}) };
+    const current = { ...createOpeningCapture(), ...(state || {}) };
+    const candidate = !current.detected && current.candidateMs >= cfg.openingCaptureCandidateMs;
+    const entries = current.detected
+      ? (Array.isArray(current.frames) ? current.frames : [])
+      : (candidate && Array.isArray(current.preRoll) ? current.preRoll : []);
+    return {
+      frames: entries.map(entry => entry.frame).filter(frame => frame !== null && frame !== undefined),
+      bufferedMs: Math.round(entries.reduce((sum, entry) => sum + (Number(entry.durationMs) || 0), 0)),
+      detected: !!current.detected,
+      candidate,
+      state: createOpeningCapture(current.noiseFloor),
+    };
+  }
+
   return {
     DEFAULTS, createState, thresholdFor, observe, localStopLatencyMs,
+    createOpeningCapture, openingCaptureThreshold, captureOpeningFrame, drainOpeningCapture,
   };
 });

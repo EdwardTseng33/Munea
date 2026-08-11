@@ -40,6 +40,31 @@ assert(policy.DEFAULTS.openingPreRollFrames * FRAME_MS >= policy.DEFAULTS.openin
 assert(policy.DEFAULTS.openingPreRollFrames > policy.DEFAULTS.preRollFrames,
   'opening turns must retain more pre-roll than normal turns');
 
+function captureOpening(levels, options) {
+  let state = policy.createOpeningCapture();
+  let last = null;
+  levels.forEach((level, index) => {
+    last = policy.captureOpeningFrame(state, `frame-${index}`, level, FRAME_MS, options);
+    state = last.state;
+  });
+  return { state, last, drained: policy.drainOpeningCapture(state, options) };
+}
+
+const openingSilence = captureOpening(Array(12).fill(0.004));
+assert.strictEqual(openingSilence.drained.frames.length, 0,
+  'opening local buffer must not turn room noise into a model turn');
+const openingHello = captureOpening([0.004, 0.004, 0.045, 0.052]);
+assert.strictEqual(openingHello.state.detected, true,
+  'two sustained near-field frames must preserve a short first hello');
+assert(openingHello.drained.frames.length >= 4 && openingHello.drained.bufferedMs >= FRAME_MS * 4 - 1,
+  'opening flush must include the onset pre-roll instead of clipping the first word');
+const openingAtReady = captureOpening([0.004, 0.04]);
+assert.strictEqual(openingAtReady.drained.candidate, true,
+  'a voice onset racing with ready must be flushed instead of losing its first frame');
+const boundedOpening = captureOpening(Array(100).fill(0.05));
+assert(boundedOpening.drained.bufferedMs <= policy.DEFAULTS.openingCaptureMaxMs + FRAME_MS,
+  'opening capture must stay local and bounded');
+
 const quiet = policy.observe(policy.createState(0.01), 0.006, 42.7, false);
 assert(quiet.state.noiseFloor < 0.01, 'listening silence should adapt the local noise floor');
 assert.strictEqual(quiet.shouldInterrupt, false, 'listening noise calibration cannot interrupt');
@@ -120,5 +145,13 @@ assert(voiceServer.includes('decide_speaker_evidence(')
 assert(app.includes('_ensureLocalPlaybackGain()')
   && app.includes('s.connect(this._ensureLocalPlaybackGain()'),
   'voice-only fallback must pass through the same duckable playback gain');
+assert(app.includes("voiceCallMark('opening_user_voice_detected'")
+  && app.includes("voiceCallMark('opening_user_voice_flushed'")
+  && app.includes("voiceCallMark('opening_user_voice_acknowledged'")
+  && app.indexOf('this._setMicOpen(true); this._openMicAfterGreet = false;')
+    < app.indexOf('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))'),
+  'opening speech must be acknowledged, measured, and flushed only after Voice ready opens the mic');
+assert(voiceServer.includes('"node.first_non_silent_mic"'),
+  'Voice logs cannot distinguish standby silence from the first real microphone audio');
 
-console.log('Voice turn policy PASS: one Voice speaker verdict, non-destructive App candidate, pre-roll, post-speech guard, opening sustain');
+console.log('Voice turn policy PASS: one Voice speaker verdict, opening capture/ack, non-destructive App candidate, pre-roll, post-speech guard');
