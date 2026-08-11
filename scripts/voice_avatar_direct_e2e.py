@@ -608,7 +608,10 @@ class EvidenceRun:
                     if source.getnchannels() != 1 or source.getsampwidth() != 2:
                         raise RuntimeError("mic WAV must be mono PCM16")
                     input_rate = source.getframerate()
-                    raw = source.readframes(min(source.getnframes(), int(input_rate * self.args.mic_seconds)))
+                    frame_count = source.getnframes()
+                    if self.args.mic_seconds > 0:
+                        frame_count = min(frame_count, int(input_rate * self.args.mic_seconds))
+                    raw = source.readframes(frame_count)
                 mic_pcm = np.frombuffer(raw, dtype=np.int16)
                 if input_rate != 16000:
                     mic_pcm = np.clip(
@@ -902,7 +905,10 @@ async def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--transport", choices=("relay", "direct"), default="direct")
     parser.add_argument("--mic-wav", default="")
-    parser.add_argument("--mic-seconds", type=float, default=5.0)
+    parser.add_argument(
+        "--mic-seconds", type=float, default=0.0,
+        help="maximum WAV seconds to play; 0 (default) plays the complete fixture",
+    )
     parser.add_argument("--expected-text", default="")
     parser.add_argument("--min-asr-char-recall", type=float, default=0.80)
     parser.add_argument("--max-first-response-ms", type=int, default=4500)

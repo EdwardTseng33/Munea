@@ -7,7 +7,7 @@
 - **正式短輪 Gate**：App 預設 production URL 連續 3/3 PASS，首聲 `812–828ms`，嘴聲偏移 `0／+15／−16ms`；缺音、RTP gap、underrun、自主重播、斷線皆 0，三輪上下文正確。
 - **正式長輪 Gate**：同一修復元件通話 `388.984s`（6 分 29 秒）／12 輪 12/12 PASS；11/12 首聲不超過 1.33 秒，單一慢輪 2.203 秒；12/12 嘴聲 `−16～+16ms`。Avatar／Voice underrun、RTP gap、波形缺音、自主重播與斷線皆 0，音訊連續相關 `0.9648`；最後仍正確保留發燒、痰、呼吸、胸痛與晚餐狀態。
 - **App 版號理由**：`web/src/app.js` 的開場、首句保留與接收緩衝皆屬 App 內 WebView 資產；現有 1.0.63／534 不包含它。Build 535 尚未 Archive，因此 PR #571 直接納入同一個 `1.0.64 (Build 535)` 候選，不為這次修復再多包一版。
-- **放行邊界**：目前最高可證明 `source tested + PR #571 CI/release check PASS + production services deployed for the earlier A/V fixes + App not packaged + App E2E pending`。首句 App 路徑尚沒有 exact Build 535 的真機證據；Archive／安裝後須以第一聲 HELLO 只說一次、立即收到回饋、回話不被重複 HELLO 撞斷，再覆蓋真喇叭回音、三輪上下文、查詢後對嘴、六分鐘連線及掛斷釋位。通過前不得送審或稱 release-ready。
+- **放行邊界**：目前最高可證明 `source tested + PR #571 merged + staging 0% Voice canary true-service 3/3 PASS + production services deployed for the earlier A/V fixes + App not packaged + App E2E pending`。staging 三通完整真人錄音的 ASR 均為 1.0，首個可聽回覆 `609／610／703ms`、聲嘴 `0／+15／+15ms`，缺音、speech RTP gap、underrun、重播、斷線皆 0；這證明服務鏈未回歸，但不能替代 App ready 前的本地首句保留。首句 App 路徑尚沒有 exact Build 535 的真機證據；Archive／安裝後須以第一聲 HELLO 只說一次、立即收到回饋、回話不被重複 HELLO 撞斷，再覆蓋真喇叭回音、三輪上下文、查詢後對嘴、六分鐘連線及掛斷釋位。通過前不得送審或稱 release-ready。
 
 ## 2026-08-11 13:35 台灣｜1.0.63 多輪上下文與五分鐘 Avatar 停止 P0
 

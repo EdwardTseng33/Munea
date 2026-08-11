@@ -89,6 +89,9 @@ assert av_quiet_syllable["ok"] and av_quiet_syllable["skew_ms"] == -141.0
 # Relay remains available as a fallback test, but cannot certify the primary route.
 assert 'choices=("relay", "direct"), default="direct"' in SOURCE
 assert 'parser.error("--expected-text is required with --mic-wav' in SOURCE
+assert '"--mic-seconds", type=float, default=0.0' in SOURCE
+assert "if self.args.mic_seconds > 0:" in SOURCE
+assert "raw = source.readframes(frame_count)" in SOURCE
 assert 'await self.avatar_feed.send(bytes(message))' in SOURCE
 assert 'await self.avatar_feed.send("finish")' in SOURCE
 assert '"asr_char_recall"' in SOURCE and '"first_response"' in SOURCE
