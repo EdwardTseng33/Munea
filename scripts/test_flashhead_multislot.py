@@ -652,6 +652,8 @@ def test_health_snapshot_math():
         "seed_resets": 0,
         "first_chunk_retries": 0,
         "first_chunk_retry_failures": 0,
+        "first_chunk_align_events": 0,
+        "first_chunk_align_frames": 0,
     }
     print("test_health_snapshot_math: PASS")
 
@@ -815,13 +817,30 @@ def test_first_chunk_quality_metrics_detect_static_speech():
     frames[1, 60:65, 45:55] = 255
     assert fec.mouth_motion_peak(frames) > fec.FIRST_CHUNK_MOUTH_MOTION
     assert fec.first_chunk_av_skew_ms(frames, speech, fps=25) == 40.0
+
+    slow = np.zeros((12, 8, 8, 3), dtype=np.uint8)
+    better = np.zeros((12, 8, 8, 3), dtype=np.uint8)
+    static = np.zeros((12, 8, 8, 3), dtype=np.uint8)
+    chosen, chosen_skew, _ = fec.select_first_chunk_candidate([
+        (slow, 280.0, 0.04),
+        (better, 120.0, 0.03),
+        (static, float("inf"), 0.08),
+    ])
+    assert chosen is better and chosen_skew == 120.0
+    aligned, dropped = fec.align_first_chunk_frames(slow, 280.0, fps=25, target_ms=80.0)
+    assert dropped == 5 and len(aligned) == 7
+    untouched, dropped2 = fec.align_first_chunk_frames(better, 40.0, fps=25, target_ms=80.0)
+    assert dropped2 == 0 and np.shares_memory(untouched, better)
+    assert fec.first_chunk_requires_retry(200.0) is False
+    assert fec.first_chunk_requires_retry(float("inf")) is True
+    assert fec.first_chunk_requires_retry(None) is False
     print("test_first_chunk_quality_metrics_detect_static_speech: PASS")
 
 
-def test_retry_prebuffer_is_bounded_and_stricter_than_steady_state():
-    assert 0.27 < fec.FIRST_CHUNK_RETRY_PREBUFFER_S <= 0.5
+def test_first_chunk_mouth_gate_is_not_too_permissive():
+    assert fec.FIRST_CHUNK_RETRY is False
     assert fec.FIRST_CHUNK_MOUTH_MOTION >= 0.015
-    print("test_retry_prebuffer_is_bounded_and_stricter_than_steady_state: PASS")
+    print("test_first_chunk_mouth_gate_is_not_too_permissive: PASS")
 
 
 def main():
@@ -849,7 +868,7 @@ def main():
     test_antiflicker_freezes_static_background_keeps_motion()
     test_turn_reset_restores_model_motion_seed_once()
 test_first_chunk_quality_metrics_detect_static_speech()
-test_retry_prebuffer_is_bounded_and_stricter_than_steady_state()
+test_first_chunk_mouth_gate_is_not_too_permissive()
 print("FlashHead multi-slot smoke test: ALL PASS")
 
 

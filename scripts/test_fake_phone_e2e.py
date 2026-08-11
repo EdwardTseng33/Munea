@@ -92,6 +92,21 @@ av_quiet_voice = avatar_av_sync_metrics(
 )
 assert av_quiet_voice["ok"] and av_quiet_voice["skew_ms"] == 20.0
 assert av_quiet_voice["audio_diagnostics"]["threshold"] == 0.012
+av_video_lead_does_not_poison_idle_baseline = avatar_av_sync_metrics(
+    [(10.00, 0.08)],
+    [
+        (9.25, 0.0223), (9.35, 0.0223), (9.45, 0.0223), (9.55, 0.0223),
+        (9.65, 0.0223), (9.75, 0.0223), (9.80, 0.0223),
+        (9.89, 0.0255), (9.921, 0.0118), (9.953, 0.0085),
+        (10.00, 0.0150), (10.046, 0.0135), (10.078, 0.0194),
+        (10.125, 0.0222), (10.156, 0.0134),
+        (10.265, 0.0241), (10.312, 0.0295),
+    ],
+    max_skew_ms=300,
+)
+assert av_video_lead_does_not_poison_idle_baseline["ok"]
+assert av_video_lead_does_not_poison_idle_baseline["skew_ms"] == 265.0
+assert av_video_lead_does_not_poison_idle_baseline["motion_diagnostics"]["weak_threshold"] == 0.02
 av_comfort_noise_only = avatar_av_sync_metrics(
     [(7.00, 0.003), (7.02, 0.008), (7.04, 0.009)],
     [(7.00, 0.02), (7.04, 0.02)],
@@ -138,10 +153,15 @@ assert '"minimum_call_duration"' in SOURCE and '"call_duration_ms"' in SOURCE
 assert 'self.args.turn_prompts[turn_number - 1]' in SOURCE
 assert 'base64.b64decode(args.prompts_b64).decode("utf-8")' in SOURCE
 assert 'raise RuntimeError("Voice disconnected after turn %d" % turn_number)' in SOURCE
+assert 'await asyncio.sleep(15.0)' in SOURCE
+assert '"/heartbeat"' in SOURCE and '"component": "app"' in SOURCE
+assert 'run.heartbeat_task = asyncio.create_task(run.heartbeat_loop())' in SOURCE
+assert '"gateway_heartbeat": bool(metrics.get("gateway_heartbeat", {}).get("ok"))' in SOURCE
+assert 'self.test_credit_balance = max(' in SOURCE and '"balance": self.test_credit_balance' in SOURCE
 assert 'all(metrics["gates"].values())' in SOURCE
 
 WRAPPER = (ROOT / "scripts" / "fake_phone_e2e.py").read_text(encoding="utf-8")
 assert 'sys.argv.extend(["--runs", "3"])' in WRAPPER
 assert '"required_consecutive_runs"' in SOURCE and '"summary.json"' in SOURCE
 
-print("Fake phone contract PASS: direct PCM, ASR, latency, continuity and multi-turn state gates")
+print("Fake phone contract PASS: direct PCM, Gateway heartbeat, ASR, latency, continuity and multi-turn state gates")

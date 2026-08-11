@@ -603,7 +603,12 @@ class FlashHead:
                 if fr is not None:
                     self.last = fr
                     self._active_ts = now
-                elif self._active_ts and (now - self._active_ts) > 0.35:
+                elif (self._active_ts and (now - self._active_ts) > 0.35
+                      and (not self.slot.active_session or not self.slot.healthy)):
+                    # Never snap a live call back to the static poster merely
+                    # because one GPU chunk arrived late. Hold the last real
+                    # frame until the next speech/idle frame; explicit call
+                    # release or an unhealthy slot may still restore poster.
                     self.last = self.slot.poster
                     self._active_ts = 0.0
                 vf = VideoFrame.from_ndarray(self.last, format="rgb24")

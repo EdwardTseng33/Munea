@@ -6,6 +6,7 @@ import json
 import os
 import types as pytypes
 import unittest
+from unittest import mock
 
 os.environ.setdefault("GEMINI_API_KEY", "test")
 
@@ -15,28 +16,84 @@ from voice_locale_session import VoiceLocaleSession
 
 class ShortOpeningPredicateTests(unittest.TestCase):
     def test_audible_two_second_first_turn_is_eligible(self):
-        self.assertTrue(voice.should_recover_short_opening(
-            input_bytes=64000,
-            non_silent=True,
-            asr_turns=0,
-            assistant_output_bytes=0,
-            recoveries=0,
-        ))
+        previous_engine = voice.VOICE_ENGINE
+        voice.VOICE_ENGINE = "vertex25"
+        try:
+            self.assertTrue(voice.should_recover_short_opening(
+                input_bytes=64000,
+                non_silent=True,
+                asr_turns=0,
+                assistant_output_bytes=0,
+                recoveries=0,
+            ))
+        finally:
+            voice.VOICE_ENGINE = previous_engine
+
+    def test_gemini31_never_injects_a_second_opening_turn(self):
+        previous_engine = voice.VOICE_ENGINE
+        voice.VOICE_ENGINE = "31"
+        try:
+            self.assertFalse(voice.should_recover_short_opening(
+                input_bytes=64000,
+                non_silent=True,
+                asr_turns=0,
+                assistant_output_bytes=0,
+                recoveries=0,
+            ))
+        finally:
+            voice.VOICE_ENGINE = previous_engine
 
     def test_silence_long_audio_and_existing_activity_are_ineligible(self):
+        previous_engine = voice.VOICE_ENGINE
+        voice.VOICE_ENGINE = "vertex25"
         base = dict(input_bytes=64000, non_silent=True, asr_turns=0,
                     assistant_output_bytes=0, recoveries=0)
-        for override in (
-            {"non_silent": False},
-            {"input_bytes": voice.SHORT_OPENING_MAX_PCM_BYTES + 2},
-            {"asr_turns": 1},
-            {"assistant_output_bytes": 2},
-            {"recoveries": 1},
-        ):
-            case = dict(base)
-            case.update(override)
-            self.assertFalse(voice.should_recover_short_opening(**case))
+        try:
+            for override in (
+                {"non_silent": False},
+                {"input_bytes": voice.SHORT_OPENING_MAX_PCM_BYTES + 2},
+                {"asr_turns": 1},
+                {"assistant_output_bytes": 2},
+                {"recoveries": 1},
+            ):
+                case = dict(base)
+                case.update(override)
+                self.assertFalse(voice.should_recover_short_opening(**case))
+        finally:
+            voice.VOICE_ENGINE = previous_engine
 
+
+class SameVoiceCueTests(unittest.TestCase):
+    def test_lookup_cues_never_fall_back_to_generic_tts(self):
+        char = "same-voice-regression"
+        wait_text = "我還在幫你確認。"
+        cue_text = "我幫你看看。"
+        wait_key = (char, "zh-TW", wait_text)
+        cue_key = (char, "zh-TW", cue_text)
+        voice._LOOKUP_WAIT_PCM.pop(wait_key, None)
+        voice._LOOKUP_CUE_PCM.pop(cue_key, None)
+        with mock.patch.object(voice, "_gemini_tts_pcm", return_value=b""), \
+                mock.patch.object(voice.server, "tts_b64") as generic_tts:
+            self.assertEqual(voice._lookup_wait_pcm(char, wait_text), b"")
+            self.assertEqual(voice._lookup_cue_pcm(char, cue_text), b"")
+        generic_tts.assert_not_called()
+        voice._LOOKUP_WAIT_PCM.pop(wait_key, None)
+        voice._LOOKUP_CUE_PCM.pop(cue_key, None)
+
+
+class ProviderSessionRecoveryTests(unittest.TestCase):
+    class ProviderError(Exception):
+        code = 1008
+
+    def test_exact_resumable_provider_abort_rotates_the_underlying_session(self):
+        error = self.ProviderError("1008 None. The operation was aborted.")
+        self.assertTrue(voice._recoverable_provider_session_abort(error, "resume-handle"))
+
+    def test_abort_without_handle_and_other_1008_errors_remain_fatal(self):
+        aborted = self.ProviderError("1008 None. The operation was aborted.")
+        policy = self.ProviderError("1008 policy violation")
+        self.assertFalse(voice._recoverable_provider_session_abort(aborted, ""))
+        self.assertFalse(voice._recoverable_provider_session_abort(policy, "resume-handle"))
 
 class _ShortOpeningWs:
     def __init__(self):
@@ -102,6 +159,8 @@ class _CloseSoonWs(_ShortOpeningWs):
 class ShortOpeningRecoveryFlowTests(unittest.IsolatedAsyncioTestCase):
     async def test_silent_provider_gets_exactly_one_safe_recovery_turn(self):
         previous_delay = voice.SHORT_OPENING_RECOVERY_MS
+        previous_engine = voice.VOICE_ENGINE
+        voice.VOICE_ENGINE = "vertex25"
         voice.SHORT_OPENING_RECOVERY_MS = 50
         try:
             ws = _ShortOpeningWs()
@@ -117,6 +176,7 @@ class ShortOpeningRecoveryFlowTests(unittest.IsolatedAsyncioTestCase):
             )
         finally:
             voice.SHORT_OPENING_RECOVERY_MS = previous_delay
+            voice.VOICE_ENGINE = previous_engine
 
         self.assertTrue(call_ended)
         self.assertEqual(st["short_opening_recoveries"], 1)
@@ -132,6 +192,8 @@ class ShortOpeningRecoveryFlowTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_real_provider_audio_cancels_pending_recovery(self):
         previous_delay = voice.SHORT_OPENING_RECOVERY_MS
+        previous_engine = voice.VOICE_ENGINE
+        voice.VOICE_ENGINE = "vertex25"
         voice.SHORT_OPENING_RECOVERY_MS = 80
         try:
             ws = _CloseSoonWs()
@@ -147,6 +209,7 @@ class ShortOpeningRecoveryFlowTests(unittest.IsolatedAsyncioTestCase):
             )
         finally:
             voice.SHORT_OPENING_RECOVERY_MS = previous_delay
+            voice.VOICE_ENGINE = previous_engine
 
         self.assertEqual(st["short_opening_recoveries"], 0)
         self.assertEqual(session.client_turns, [])

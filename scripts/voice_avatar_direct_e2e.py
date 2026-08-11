@@ -197,8 +197,14 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
     idle_median = float(statistics.median(idle_motion)) if len(idle_motion) >= 3 else 0.0
     # 12.5fps 灰階 ROI 的實測：輕聲短句常落在 0.007–0.018；只要相對待機
     # 基線連續兩格上升，就已是可見嘴型。單格仍需 0.025，避免把頭動當嘴動。
-    weak_threshold = max(0.007, idle_median + 0.006)
-    strong_threshold = max(0.025, idle_median + 0.015)
+    # FlashHead intentionally lets video lead audio. Its real first phoneme can
+    # therefore fall inside the nominal "idle" window and poison an uncapped
+    # adaptive baseline (one production candidate raised the strong gate from
+    # 0.025 to 0.037 even though visible mouth motion peaked at 0.0295). Keep
+    # adaptation for noisy idle portraits, but never let it erase the absolute
+    # motion evidence this detector was designed to accept.
+    weak_threshold = max(0.007, min(0.020, idle_median + 0.006))
+    strong_threshold = max(0.025, min(0.030, idle_median + 0.015))
     motion_diagnostics = {
         "samples": len(window),
         "peak": round(max((motion for _, motion in window), default=0.0), 4),
@@ -417,6 +423,11 @@ class EvidenceRun:
         self._avatar_video_previous = None
         self.avatar_rate = 48000
         self.stop_capture = False
+        self.heartbeat_task = None
+        self.heartbeat_successes = 0
+        self.heartbeat_failures = 0
+        self.heartbeat_error = ""
+        self.test_credit_balance = 0
 
     def avatar_health(self, base, token):
         """Read only decision-useful Avatar counters; never persist the call token."""
@@ -428,11 +439,16 @@ class EvidenceRun:
             body = response.json()
             return {
                 "ok": bool(body.get("ok")),
+                "output_resolution": body.get("output_resolution", {}),
+                "release_version": body.get("release_version"),
+                "release_commit": body.get("release_commit"),
                 "round_count": body.get("round_count"),
                 "round_latencies_ms": body.get("round_latencies_ms", []),
                 "gen_compute_ms_rolling": body.get("gen_compute_ms_rolling", {}),
                 "audio_underrun": body.get("audio_underrun", {}),
                 "audio_sender": body.get("audio_sender", {}),
+                "video_sync": body.get("video_sync", {}),
+                "model_turn_state": body.get("model_turn_state", {}),
             }
         except Exception as error:
             return {"ok": False, "error": type(error).__name__}
@@ -468,9 +484,16 @@ class EvidenceRun:
             "account_id": self.account_id, "user_id": self.user_id,
             "role": "owner", "status": "active",
         }, "return=minimal")
+        # A release durability gate may intentionally hold a call beyond five
+        # minutes.  Provision only the requested test window plus two minutes
+        # of response/tail headroom so the synthetic account measures media
+        # durability instead of failing on its old fixed four-point fixture.
+        self.test_credit_balance = max(
+            4, int((max(0.0, float(self.args.min_call_seconds)) + 59.0) // 60.0) + 2
+        )
         self.rest("POST", "credit_wallets", {
             "account_id": self.account_id, "wallet_type": "purchased",
-            "period": "voice-avatar-e2e-" + self.run_id, "balance": 4,
+            "period": "voice-avatar-e2e-" + self.run_id, "balance": self.test_credit_balance,
             "status": "active", "metadata": {"purpose": "voice-avatar-direct-e2e"},
         }, "return=minimal")
         signed = json_request(
@@ -497,6 +520,42 @@ class EvidenceRun:
                 raise RuntimeError("Gateway lease failed: " + str(self.lease.get("reason") or self.lease.get("status")))
             time.sleep(1.0)
         raise RuntimeError("Gateway lease timed out")
+
+    async def heartbeat_loop(self):
+        """Mirror the installed App's 15-second Gateway lease heartbeat."""
+        while True:
+            await asyncio.sleep(15.0)
+            lease = self.lease or {}
+            call_id = str(lease.get("call_id") or "")
+            if not call_id:
+                self.heartbeat_error = "call_lease_missing"
+                return
+            try:
+                result = await asyncio.to_thread(
+                    json_request,
+                    "POST",
+                    self.args.gateway.rstrip("/") + "/v1/calls/" +
+                    urllib.parse.quote(call_id) + "/heartbeat",
+                    {
+                        "lease_version": lease["lease_version"],
+                        "event_id": "voice-avatar-e2e-heartbeat-" + uuid.uuid4().hex,
+                        "component": "app",
+                    },
+                    bearer=self.access_token,
+                )
+                self.heartbeat_successes += 1
+                self.heartbeat_error = ""
+                if result.get("should_end"):
+                    self.heartbeat_error = str(result.get("reason") or "lease_ended")
+                    return
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                # Match the App: a missed heartbeat is recoverable; the durable
+                # lease reaper is the final authority. Preserve failures as
+                # evidence so a long-call gate cannot silently ignore them.
+                self.heartbeat_failures += 1
+                self.heartbeat_error = type(error).__name__
 
     async def capture_track(self, track):
         if track.kind == "video":
@@ -789,6 +848,8 @@ class EvidenceRun:
                 )
                 quiet_deadline = time.monotonic() + quiet_seconds
                 while time.monotonic() < quiet_deadline:
+                    if self.heartbeat_task and self.heartbeat_task.done() and self.heartbeat_error:
+                        raise RuntimeError("Gateway heartbeat ended: " + self.heartbeat_error)
                     try:
                         message = await asyncio.wait_for(
                             voice.recv(), timeout=max(0.05, quiet_deadline - time.monotonic())
@@ -871,6 +932,13 @@ class EvidenceRun:
             "avatar_health_before": avatar_health_before,
             "avatar_health_after": avatar_health_after,
             "avatar_reported_underrun_delta": max(0, after_underruns - before_underruns),
+            "gateway_heartbeat": {
+                "ok": not self.heartbeat_error,
+                "successes": self.heartbeat_successes,
+                "failures": self.heartbeat_failures,
+                "error": self.heartbeat_error,
+            },
+            "test_credit_balance": self.test_credit_balance,
         }
 
     def cleanup(self):
@@ -907,6 +975,7 @@ async def execute_run(args, output):
     try:
         run.create_test_identity()
         run.acquire()
+        run.heartbeat_task = asyncio.create_task(run.heartbeat_loop())
         voice_pcm, avatar_pcm, metrics = await run.run_media()
         wav_write(output / "voice-reference.wav", voice_pcm, 24000)
         wav_write(output / "avatar-webrtc.wav", avatar_pcm, run.avatar_rate)
@@ -954,6 +1023,7 @@ async def execute_run(args, output):
                 and not metrics.get("unsolicited_caption")
             ),
             "connection_held": not metrics.get("disconnected_after_turn"),
+            "gateway_heartbeat": bool(metrics.get("gateway_heartbeat", {}).get("ok")),
             "all_turns_completed": (
                 metrics.get("completed_turns") == metrics.get("requested_turns")
                 and all(item.get("turn_complete") is True for item in metrics.get("turns", []))
@@ -983,6 +1053,12 @@ async def execute_run(args, output):
         raise
     finally:
         run.stop_capture = True
+        if run.heartbeat_task:
+            run.heartbeat_task.cancel()
+            try:
+                await run.heartbeat_task
+            except asyncio.CancelledError:
+                pass
         if run.pc:
             await run.pc.close()
         if run.avatar_feed:

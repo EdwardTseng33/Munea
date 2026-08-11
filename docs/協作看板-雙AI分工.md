@@ -1,5 +1,23 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜🧪 1.0.66 Build 537 收斂 1.0.65 實機阻擋（PR #576 · App E2E pending · call-path risk）
+- **為何升版**：修復包含 App 撥號手勢與麥克風首句暫存，現有 1.0.65／536 不可能靠伺服器更新取得，因此唯一下一個候選是 `1.0.66 (537)`，不再重包 1.0.65。
+- **修復對照**：前五秒 HELLO 改為撥號手勢即接真麥克風、Voice ready 後送出；Avatar 健康通話不因 350ms 晚畫格跳回待機，聲嘴有限校時；Gemini 3.1 約三分鐘無 GoAway 的 `1008 operation was aborted` 僅在有續接憑證時透明重連；查詢／等待／備援不得改用非當前角色聲音。
+- **自動全鏈證據**：0% Voice `munea-voice-00121-lav@5f2a99a8`＋Glows 原生 512 Avatar 的最終 3×3 全過；6 分 04 秒／6 輪全過，23 次 Gateway 心跳全成功，供應端 1008 後原 session 續接，後續輪仍保留便當、工作疲累與通話狀態。首聲 `547–687ms`、聲嘴 `−109～+110ms`，缺音／RTP gap／underrun／自主重播／斷線為 0。真人中文 WAV 首句另跑 3/3，ASR recall 1.0、首聲約 515ms。
+- **畫質決策**：強制 640 候選嘴型不穩且負載上升，已回退；本穩定候選維持 FlashHead Lite 原生 512。改善清晰度另走原生高解析模型或升頻，不把不穩定 640 混入。
+- **下一關**：CI 與 release check 全綠後合併，從 exact main 重建 `1.0.66` Voice candidate 並回驗，再通知 Mac Archive `1.0.66 (537)`。安裝版 iPhone 第一聲、原聲音、聲嘴／查詢對嘴、六分鐘與掛斷釋位未過前維持 `App E2E pending`，不得送審或稱完成。
+
+### 2026-08-12 Codex｜🚨 1.0.65 實機四項阻擋修復（進行中 · App E2E pending · call-path risk）
+- **分支／範圍**：`codex/fix-1.0.65-call-start-avsync-20260812`；預計修改 `web/src/app.js`、`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_server.py` 與對應首句／Avatar 契約測試。與已合併的原聲音復原分開驗收，不把聲音引擎恢復誤稱為四項體驗已修好。
+- **實機阻擋**：1.0.65 開頭前五秒常不理人、聲音先於嘴型、動作中途跳回待機、512 畫面較糊；唯一已確認改善的是 AI 輸出不再整句卡頓。
+- **目前根因**：App 在使用者按下通話時只取得麥克風 stream，直到 Gateway／Voice 啟動才接上實際收音處理器，前置窗口的人聲無法保留；Avatar 只要 350ms 沒有新生成影格便強制切回 poster，直接造成動作片段化。Gemini 3.1 路徑仍帶著只為 Vertex 2.5 寫的短開場補說，存在額外回合風險。
+- **Gate**：先做單元／假手機真 PCM／正式 Gateway→Voice→Avatar 五分鐘 precheck；640 必須在獨立 GPU 候選驗過嘴型與負載才可取代 512。exact-build iPhone 的第一句只說一次、聲嘴、動作、查詢與六分鐘通話未過前，維持 `App E2E pending`，不得送審、升正式流量或稱完成。
+- **8/12 候選證據（仍為紅燈）**：獨立 640 GPU 候選跑滿 315.8 秒，7,878 視訊幀／15,753 音訊包、正常由測試端收線，正式 512 程序同時維持存活；首塊有限嘴型延遲改為裁掉過期幀，實機 GPU 首幀由 1,246.2ms 降至 697.4ms。正式 Gateway→Gemini 3.1 Voice→現行正式 Avatar 三輪便當記憶測試皆完成，首聲 610–719ms、音訊 underrun／句中缺口／自主重播／斷線均 0，能正確記住雞肉便當；但第 2 輪實際 WebRTC 聲嘴差 `+453ms`，超過 300ms，所以整體 Gate 為 FAIL，尚不可包版。
+- **同聲線規則**：查詢過場／等待與台語攔截的 Mandarin 提示只允許角色本人的 Gemini TTS 聲線（寧寧＝Despina）；同聲線合成失敗就保留文字提示並安靜等待，不再退回舊通用配音，避免 App 操作或查資料時突然換成另一個人。
+- **640 正式切換演練／回滾**：PR #576 CI 全綠後，先備份正式程式與持久設定再把兩槽切到 `640 / 1.0.66-candidate@a9234d50`；模型健康、容量與音訊連續性均正常，三輪聲嘴由舊正式 `+187/+453/+15ms` 改善為 `+47/+313/+16ms`，但第 2 輪仍超過 300ms 13ms，依紅燈規則立刻完整回滾。正式目前已重新核對為 `512 / 1.0.63@c5c8d8e2 / 兩槽 / :8888 healthy`。該輪 GPU latency 出現 1,567.1ms，吻合無可信嘴型時整塊重生的額外成本；下一候選將首塊重生預設關閉，只保留不增加 GPU 回合的有限 skew 裁幀。
+- **candidate2 演練／再次回滾**：關閉首塊重生後，隔離 GPU 首幀 785.4ms、重生 0；正式三輪首聲 547–641ms，第 2／3 輪聲嘴 `−15/+15ms`，音訊缺口、自主重播、斷線仍為 0。第 1 輪驗收器回報 `no_mouth_motion`，但同一原始 trace 峰值 0.0295；原因是 350ms video lead 讓真嘴動先進入驗收器的 idle baseline，將強門檻從既定 0.025 誤抬到 0.0373。仍依紅燈規則回滾 512；修正方式是限制自適應門檻上限並用該次真 trace 加回歸測試，不能直接把失敗改標 PASS。
+- **candidate3 連續 3×3 Gate／結論**：修正驗收器後跑 3 通×每通 3 輪，只有第 3 通全綠（聲嘴 `−78/−78/+156ms`）；前兩通多輪 `no_mouth_motion`，最低實際 mouth motion peak 僅 0.0118，不能再視為驗收誤判。三通 Voice 首聲約 547–657ms、內容記得雞肉便當，音訊 source underrun／句中 speech gap／自主重播／斷線仍為 0；Avatar `first_chunk_retries=0`。判定：FlashHead Lite 官方原生 512 權重直接強制推論 640，雖較清晰但嘴型驅動穩定度不足；candidate3 已回滾，正式重新核對為 512／兩槽／8888 ready。這輪不得把 640 包入穩定版；後續要走 640 專用微調／新模型或 native 512 後獨立超解析 A/B，不再靠重生、放寬驗收或外貼嘴巴。
+
 ### 2026-08-12 Codex｜✅ 1.0.65 Build 536 首句修復合併＋正式服務驗收（App E2E pending · call-path risk）
 - **交付**：PR #573 已合併為 `main@5c100c87`；Voice `munea-voice-00115-hip` 已由 0% 候選升為正式 100%，exact identity `1.0.65@5c100c877733`。
 - **實際聲音／畫面 Gate**：升流量前短音 3/3、正常中文三輪 117 秒均 PASS；升流量後第一通短音 A/V `+265ms` 曾超標 15ms，保留紅燈後連續三通 `+94/+140/−62ms` PASS；中文三輪 98 秒為 `−62/−31/+15ms`，ASR recall 1.0，Voice→Avatar→WebRTC 有聲缺口、underrun、自主重播、斷線均 0。
