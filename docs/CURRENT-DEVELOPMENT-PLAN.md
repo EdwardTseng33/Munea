@@ -3,7 +3,7 @@
 > Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.63 (Build 534)`; the next unique candidate removes App-side pre-verdict audio ducking and preserves Avatar lip sync across idle and real speech. Build 534 still needs Mac Archive, export, upload, exact-IPA identity checks, and installed-App acceptance.
+> **Current source:** `1.0.64 (Build 535)`; the next unique candidate removes the App opening fake-audio turn, adds receiver jitter buffering, and keeps Voice／Avatar audio and mouth motion continuous. Build 535 still needs Mac Archive, exact-IPA identity checks, and installed-App acceptance before submission.
 >
 > **Latest uploaded App:** `1.0.61 (Build 532)`; App Store Connect reports `VALID`, uploaded 2026-08-10 08:35 UTC. The current `WAITING_FOR_REVIEW` version is 1.0.55 and selects App 1.0.55 Build 525; neither artifact can certify Build 533.
 >
@@ -27,7 +27,7 @@
 | Track | Status | Progress |
 |---|---|---:|
 | Product direction / PRD | Current authorities exist; dated pricing and provider statements remain historical only | `governed` |
-| App source | Current `1.0.63 (Build 534)` metadata and cache identity are aligned; no Archive／IPA evidence yet applies to Build 534 | `tested source; Build 534 not packaged` |
+| App source | Current `1.0.64 (Build 535)` metadata and cache identity are aligned; no Archive／IPA evidence yet applies to Build 535 | `tested source; Build 535 not packaged` |
 | Uploaded App | `1.0.44 (Build 492)` was uploaded, processed and selected for 1.0.44; Edward iPhone install／launch／version readback pass; App E2E remains pending | `selected and installed, not submitted; human call gate pending` |
 | Production Brain | Exact Build 47 pricing/grant mapping is deployed; 真人 Sandbox purchase／wallet refresh remains pending | `deployed, not human verified` |
 | Production Voice／Gateway／Avatar | Voice `1.0.41@906732ab` is now aligned with current Voice source; Gateway／Avatar exact release identity and installed-App trace are not closed | `Voice deployed; App chain unknown` |

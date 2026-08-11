@@ -4,11 +4,11 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
-### 2026-08-11 Codex｜🚨 1.0.63 穩定版收斂：首句＋嘴聲實測（進行中 · call-path risk）
-- **分支／任務**：`codex/stabilize-chat-av-opening-20260811`；由 Codex 收斂首句卡頓、聲音先於嘴型、長通話 Avatar 停動與重複提問，完成後才判定是否需要新 App Build。
-- **預計範圍**：`web/src/app.js`、`web/src/voice-turn-policy.js`（僅在量測支持時）、`deploy/runpod-avatar/flashhead_engine_core.py`、`deploy/runpod-avatar/flashhead_server.py`、`scripts/voice_avatar_direct_e2e.py`、對應測試、`STATUS.md`、`docs/RELEASE-STATE.md`。
-- **驗收責任**：自動假手機必須實收真人語音與 Avatar 影像，逐輪量測 Voice 首 PCM、Avatar 收音、嘴型起動與 WebRTC 播放；再跑至少六分鐘多輪、不中斷、不重複。精確 iPhone Build 的安裝通話 Gate 仍由 Codex 執行，不交由 Edward 當測試員。
-- **當前判定**：PR #567 已修復五分鐘 session/context 斷裂的服務根因，但首句與嘴聲同步尚無真實影像證據；未通過上述 Gate 前一律不得標示可上線。
+### 2026-08-11 Codex｜✅ 1.0.64 穩定版收斂：首句＋連續音訊＋嘴聲（服務上線／App E2E pending · call-path risk）
+- **分支／PR**：`codex/stabilize-chat-av-opening-20260811`／Draft PR #568；App 候選升為 `1.0.64 (Build 535)`，避免沿用不含接收端開場修復的 1.0.63／534。
+- **根因與修復**：App 移除開場約 1 秒的假零聲音回合，只預備接收器並啟用 160ms WebRTC jitter buffer；Voice 隔離 watchdog 後晚到的 PCM／字幕，禁止 AI 自己觸發守護追問；Avatar 加入 Opus FEC、40ms 影像提前及安靜音素防閃動門檻 1／8。驗收器改為直接接收正式 Avatar WebRTC 音訊與影像，逐輪記錄首聲、嘴型、RTP 空洞、缺音、重播、連線與上下文。
+- **正式服務證據**：Voice `munea-voice-00110-gak@c5c8d8e2` 已 100% 服務；Glows `tw-06` Avatar 為同一 component commit，`video_lead=40ms`、`antiflicker=1/8`、Opus FEC 開啟。正式預設 URL 三輪 3/3 PASS（首聲 812–828ms、聲嘴 −16～+15ms）；同修復元件的 6 分 29 秒／12 輪 12/12 PASS，缺音、RTP gap、underrun、重播、斷線皆 0，最終上下文完整。
+- **放行邊界**：服務端已部署並通過真實輸出 A/V Gate；新的 App source 尚未由 Mac Archive／安裝，也沒有 exact Build 535 的 iPhone 真麥克風、喇叭與掛斷釋位證據，故仍為 `App E2E pending（Codex ownership）`。CI、合併與服務 release identity 對齊完成後才通知 Edward 包一次 535；安裝 Gate 通過前不得送審。
 
 ### 2026-08-11 Codex｜🚨 1.0.63 多輪失憶／重複提問／Avatar 中途停止（進行中 · call-path risk）
 
