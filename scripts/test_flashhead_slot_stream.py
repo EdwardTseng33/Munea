@@ -16,6 +16,7 @@ torch 替身（FakeTorch）驗證 make_slot_stream_run_pipeline() 的排程邏�
 跑法：python scripts/test_flashhead_slot_stream.py
 """
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -104,6 +105,22 @@ def test_slot_cuda_stream_defaults_to_none():
         "must behave byte-for-byte like the pre-patch single default-stream setup"
     )
     print("test_slot_cuda_stream_defaults_to_none: PASS")
+
+
+def test_video_gate_leads_audio_without_escaping_empty_turn():
+    out = fec.AudioOutBuffer(48000, prebuffer_s=0.2)
+    assert out.playout_held() and out.video_playout_held(0.08), (
+        "an empty turn must hold both tracks"
+    )
+    out.push([1] * 960)
+    assert out.playout_held(), "audio must keep the configured prebuffer"
+    remaining = out.hold_until_ts - time.time()
+    assert 0.15 <= remaining <= 0.21
+    time.sleep(0.13)
+    assert out.playout_held() and not out.video_playout_held(0.08), (
+        "video should open about 80ms before audio"
+    )
+    print("test_video_gate_leads_audio_without_escaping_empty_turn: PASS")
 
 
 def test_make_slot_stream_run_pipeline_order_and_passthrough():
@@ -195,6 +212,7 @@ def test_flashhead_server_default_flag_values_unchanged():
 def main():
     test_env_flag_enabled_contract()
     test_slot_cuda_stream_defaults_to_none()
+    test_video_gate_leads_audio_without_escaping_empty_turn()
     test_make_slot_stream_run_pipeline_order_and_passthrough()
     test_make_slot_stream_run_pipeline_propagates_exceptions()
     test_flashhead_server_default_flag_values_unchanged()

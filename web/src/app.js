@@ -4354,46 +4354,33 @@ const LiveVoice = {
     } catch (e) {}
     return { bytes, audioLevel, hasStats };
   },
-  async prepareOpeningAudioPath(waitMs = 1000) {
+  async prepareOpeningAudioPath(waitMs = 600) {
     if (!this._sameLine) {
       this._sameLineWarmup = false;
       return { mode: 'local_audio', verified: true, receiverAttached: false };
     }
     this._sameLineWarmup = true;
     this._setFaceAudioMuted(true);
-    const receiverDeadline = Date.now() + 600;
+    const receiverDeadline = Date.now() + Math.max(0, Math.min(600, waitMs || 0));
     while (this.on && !Avatar._faceAudReceiver && Date.now() < receiverDeadline) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    const before = await this._faceAudioSnapshot();
-    // 暖機資料不屬於對話，不送 Gemini；只讓 Avatar 的影音 RTP 與 iPhone 播放路徑先穩定一秒。
-    try {
-      Avatar.reset();
-      Avatar.feed(new Int16Array(24000).buffer);
-      Avatar.finish();
-    } catch (e) {}
-    await new Promise(resolve => setTimeout(resolve, Math.max(1000, waitMs || 0)));
     const after = await this._faceAudioSnapshot();
-    const deltaBytes = Math.max(0, after.bytes - before.bytes);
-    const stable = after.hasStats && (deltaBytes > 600 || after.audioLevel > 0.001);
     const receiverAttached = !!Avatar._faceAudReceiver;
+    // WebRTC 的音訊軌本來就持續送靜音；只確認接收器已掛上即可。
+    // 舊版另外送 1 秒零 PCM 給 Avatar，會建立一個假的模型回合，可能與
+    // 第一個真回答競爭 feeder／GPU 佇列，造成開頭反覆起音又被切掉。
+    const stable = receiverAttached;
     this._sameLineWarmup = false;
     if (stable) {
-      this._sameLineFellBack = false;
-      this._setFaceAudioMuted(false);
-    } else if (receiverAttached) {
-      // FlashHead may suppress a silent warmup packet even though the WebRTC
-      // audio receiver is ready. Let the first real answer verify the route;
-      // the existing three-second watchdog still falls back if it stays mute.
       this._sameLineFellBack = false;
       this._setFaceAudioMuted(false);
     } else {
       this._sameLineFellBack = true;
       this._setFaceAudioMuted(true);
     }
-    try { Avatar.reset(); } catch (e) {}
-    const mode = stable ? 'sameline_verified' : (receiverAttached ? 'pending_first_audio' : 'local_fallback');
-    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_greet' }); } catch (e) {}
+    const mode = stable ? 'receiver_ready' : 'local_fallback';
+    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_first_user_turn', syntheticPcm: false }); } catch (e) {}
     return { mode, verified: stable, receiverAttached };
   },
   // ── 同線聲音「中途斷續」監測＋自動退回（2026-07-29 · 穩定度）──
@@ -8336,7 +8323,7 @@ async function connectCall() {
       voiceCallMark('opening_audio_warmup', 'pass');
       const openingAudio = noFace
         ? { mode: 'no_avatar', verified: true, receiverAttached: false }
-        : await LiveVoice.prepareOpeningAudioPath(1000);
+        : await LiveVoice.prepareOpeningAudioPath(600);
       // Silent warmup is advisory: some Avatar workers do not emit RTP for
       // zero PCM. A connected receiver continues on the same-line route and
       // real opening audio is checked by the watchdog; no receiver uses local
@@ -8358,7 +8345,7 @@ async function connectCall() {
       voiceCallMark('call_connected', 'pass');
       if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
       try { FaceIdle.stop(); } catch (e) {}
-      // greet() 現在只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
+      // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
       LiveVoice.greet();
       // 麥克風已經在 ready 事件開好了（見 'ready' 分支）。這裡再補一次是保險：
       // 萬一 ready 早於 markConnected、中間狀態被別的路徑動過，接通當下一定是開的。

@@ -19,9 +19,9 @@ def load_functions(*names):
     return [namespace[name] for name in names]
 
 
-normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics, webrtc_speech_gap_metrics = load_functions(
+normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics, webrtc_speech_gap_metrics, avatar_av_sync_metrics = load_functions(
     "normalize_transcript", "transcript_char_recall", "source_playout_metrics",
-    "webrtc_frame_timing_metrics", "webrtc_speech_gap_metrics"
+    "webrtc_frame_timing_metrics", "webrtc_speech_gap_metrics", "avatar_av_sync_metrics"
 )
 
 assert normalize_transcript("我沒有發燒，但、有痰！") == "我沒有發燒但有痰"
@@ -50,6 +50,17 @@ assert not webrtc_speech_gap_metrics(
 assert webrtc_speech_gap_metrics(
     timing_gap, {"speech_windows_ms": [[200, 300]]}
 )["ok"]
+av_aligned = avatar_av_sync_metrics(
+    [(1.00, 0.01), (1.02, 0.08)],
+    [(0.98, 0.01), (1.14, 0.04)],
+    max_skew_ms=250,
+)
+assert av_aligned["ok"] and av_aligned["skew_ms"] == 120.0
+av_late = avatar_av_sync_metrics(
+    [(1.00, 0.08)], [(1.40, 0.04)], max_skew_ms=250
+)
+assert not av_late["ok"] and av_late["reason"] == "av_skew"
+assert not avatar_av_sync_metrics([(1.00, 0.08)], [], 250)["ok"]
 
 # The release-facing path must exercise Voice -> Avatar direct PCM by default.
 # Relay remains available as a fallback test, but cannot certify the primary route.
@@ -61,6 +72,7 @@ assert '"asr_char_recall"' in SOURCE and '"first_response"' in SOURCE
 assert '"no_unsolicited_repeat"' in SOURCE and '"source_playout"' in SOURCE
 assert '"avatar_reported_underrun"' in SOURCE and '"avatar_health_after"' in SOURCE
 assert '"avatar_webrtc_speech_timing"' in SOURCE
+assert '"avatar_av_sync"' in SOURCE and 'track.kind == "video"' in SOURCE
 assert '"avatar_route": metrics.get("avatar_ack") is True' in SOURCE
 assert 'parser.add_argument("--turns", type=int, default=1)' in SOURCE
 assert 'parser.add_argument("--prompts-json", default="")' in SOURCE

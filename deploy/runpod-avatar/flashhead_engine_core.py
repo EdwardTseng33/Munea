@@ -321,6 +321,17 @@ class AudioOutBuffer:
         with self.lock:
             return time.time() < self.hold_until_ts
 
+    def video_playout_held(self, lead_s=0.0):
+        """Open video slightly before audio to offset encode/receiver latency.
+
+        The first rendered chunk still arms the single authoritative turn gate;
+        this only compensates the measured transport difference between the two
+        WebRTC tracks and never lets video escape before a real turn exists.
+        """
+        lead = max(0.0, min(0.12, float(lead_s or 0.0)))
+        with self.lock:
+            return time.time() < self.hold_until_ts - lead
+
     def pop_frame(self):
         with self.lock:
             if time.time() < self.hold_until_ts:

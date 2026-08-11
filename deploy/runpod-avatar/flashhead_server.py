@@ -142,6 +142,12 @@ OPENING_PREBUFFER_S = max(
     AUDIO_PREBUFFER_S,
     min(0.35, float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.35"))),
 )
+# Formal A/V receiver evidence shows the video track reaches the client about
+# 78ms after audio even when both leave the same gate. Let one/two video frames
+# lead instead of delaying the whole answer. Bounded rollback: set to 0.
+VIDEO_LEAD_S = min(
+    0.12, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "80")) / 1000.0)
+)
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
@@ -549,7 +555,7 @@ class FlashHead:
                 # Idle motion is video-only. It may play while the next real
                 # speech turn is still waiting for its first PCM/prebuffer;
                 # real speech keeps the shared audio/video start gate.
-                if (self.slot.audio_out.playout_held()
+                if (self.slot.audio_out.video_playout_held(VIDEO_LEAD_S)
                         and not getattr(self.slot.feeder, "_idle_on", False)):
                     fr = None
                     self.last = self.slot.poster
@@ -639,6 +645,7 @@ class FlashHead:
             primary = outer.slots[0]
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
+                         "av_video_lead_ms": round(VIDEO_LEAD_S * 1000),
                          "call_protocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
                          "release_version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
                          "release_commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
