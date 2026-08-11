@@ -155,6 +155,8 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
     because independent WebRTC audio/video jitter buffers are part of the product
     experience we need to certify.
     """
+    import statistics
+
     audio_on = next((float(stamp) for stamp, rms in audio_levels
                      if float(rms) >= 0.045), None)
     if audio_on is None:
@@ -167,9 +169,21 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
         (float(stamp), float(motion)) for stamp, motion in video_motion
         if audio_on - 0.15 <= float(stamp) <= audio_on + 0.75
     )
+    idle_motion = [
+        float(motion) for stamp, motion in video_motion
+        if audio_on - 0.75 <= float(stamp) < audio_on - 0.15
+    ]
+    # 少於三格不足以代表待機底噪；單一頭動不能把整輪門檻抬高。
+    idle_median = float(statistics.median(idle_motion)) if len(idle_motion) >= 3 else 0.0
+    weak_threshold = max(0.010, idle_median + 0.006)
+    strong_threshold = max(0.025, idle_median + 0.015)
     motion_diagnostics = {
         "samples": len(window),
         "peak": round(max((motion for _, motion in window), default=0.0), 4),
+        "idle_samples": len(idle_motion),
+        "idle_median": round(idle_median, 4),
+        "weak_threshold": round(weak_threshold, 4),
+        "strong_threshold": round(strong_threshold, 4),
         "above_015": sum(motion >= 0.015 for _, motion in window),
         "above_020": sum(motion >= 0.020 for _, motion in window),
         "above_028": sum(motion >= 0.028 for _, motion in window),
@@ -185,11 +199,10 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
             for next_stamp, next_motion in window[index:index + 5]
             if 0.0 <= next_stamp - stamp <= 0.12
         ]
-        strong_single_frame = motion >= 0.028
+        strong_single_frame = motion >= strong_threshold
         sustained_weak_motion = (
-            motion >= 0.015
-            and sum(value >= 0.015 for value in nearby) >= 2
-            and max(nearby, default=0.0) >= 0.020
+            motion >= weak_threshold
+            and sum(value >= weak_threshold for value in nearby) >= 2
         )
         if strong_single_frame or sustained_weak_motion:
             candidates.append((stamp, max(nearby)))
