@@ -645,6 +645,12 @@ def test_health_snapshot_math():
         "idle_invalidations": 2,
         "audio_played_ms": 0.0,
     }
+    assert body["model_turn_state"] == {
+        "motion_resets": 0,
+        "motion_reset_failures": 0,
+        "seed": 42,
+        "seed_resets": 0,
+    }
     print("test_health_snapshot_math: PASS")
 
 
@@ -766,9 +772,14 @@ def test_turn_reset_restores_model_motion_seed_once():
         def __init__(self):
             self.person_name = "munea"
             self.calls = []
+            self.generator = self
+            self.seeds = []
 
         def reset_person_name(self, person_name=None):
             self.calls.append(person_name)
+
+        def manual_seed(self, seed):
+            self.seeds.append(seed)
 
     pipeline = MotionPipeline()
     slot.pipeline = pipeline
@@ -777,12 +788,16 @@ def test_turn_reset_restores_model_motion_seed_once():
 
     feeder.reset()
     assert pipeline.calls == ["munea"]
+    assert pipeline.seeds == [42]
     assert slot.motion_reset_count == 1
+    assert slot.turn_seed_reset_count == 1
     assert slot.motion_reset_failures == 0
 
     feeder.reset(reset_pipeline_motion=False)
     assert pipeline.calls == ["munea"], "character switch owns the model reset"
+    assert pipeline.seeds == [42], "character switch owns the generator reset"
     assert slot.motion_reset_count == 1
+    assert slot.turn_seed_reset_count == 1
     print("test_turn_reset_restores_model_motion_seed_once: PASS")
 
 

@@ -60,6 +60,15 @@ ANTIFLICKER = os.environ.get("MUNEA_FH_ANTIFLICKER", "1") == "1"
 ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "1"))
 ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 
+# FlashHead's torch.Generator advances after every generated chunk, while
+# reset_person_name() restores only the motion latent.  Without resetting the
+# generator, an identical opening phoneme can receive a different first-chunk
+# noise sequence depending on how many chunks earlier turns consumed; receiver
+# evidence showed that occasionally producing a near-static first 720 ms.  A
+# semantic turn should be reproducible, while chunks inside the turn must keep
+# advancing normally.  Set a negative value only for a bounded rollback.
+TURN_SEED = int(os.environ.get("MUNEA_FH_TURN_SEED", "42"))
+
 
 def should_apply_antiflicker(emit_audio):
     """Background stabilization is safe only for video-only idle chunks.
@@ -417,6 +426,7 @@ class Slot:
         # it can inherit a closed/static mouth from the previous answer.
         self.motion_reset_count = 0
         self.motion_reset_failures = 0
+        self.turn_seed_reset_count = 0
         # Real speech must invalidate any idle GPU work that is still in flight.
         # Expose this count so the production gate can prove that the race was
         # handled instead of inferring it from negative first-frame timings.
@@ -642,6 +652,11 @@ class Feeder:
                     # the neutral per-character motion seed for the new turn.
                     with self.slot.char_lock:
                         reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                        generator = getattr(self.slot.pipeline, "generator", None)
+                        reseed_fn = getattr(generator, "manual_seed", None)
+                        if TURN_SEED >= 0 and callable(reseed_fn):
+                            reseed_fn(TURN_SEED)
+                            self.slot.turn_seed_reset_count += 1
                     self.slot.motion_reset_count += 1
                     motion_reset = True
             except Exception as exc:
@@ -1113,6 +1128,12 @@ def health_snapshot(slot, wake_ts=None):
             "idle_invalidations": slot.idle_invalidation_count,
             "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
                                 if ao else 0),
+        },
+        "model_turn_state": {
+            "motion_resets": slot.motion_reset_count,
+            "motion_reset_failures": slot.motion_reset_failures,
+            "seed": TURN_SEED if TURN_SEED >= 0 else None,
+            "seed_resets": slot.turn_seed_reset_count,
         },
     }
 
