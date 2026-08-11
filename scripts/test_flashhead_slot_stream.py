@@ -122,8 +122,8 @@ def test_video_gate_leads_audio_without_escaping_empty_turn():
     assert not out.video_playout_held(0.22), (
         "video should consume the generated 220ms hold before audio"
     )
-    assert 'MUNEA_FH_AUDIO_PREBUFFER_S", "0.22"' in server_source
-    assert 'MUNEA_FH_VIDEO_LEAD_MS", "220"' in server_source
+    assert 'MUNEA_FH_AUDIO_PREBUFFER_S", "0.27"' in server_source
+    assert 'MUNEA_FH_VIDEO_LEAD_MS", "270"' in server_source
     print("test_video_gate_leads_audio_without_escaping_empty_turn: PASS")
 
 

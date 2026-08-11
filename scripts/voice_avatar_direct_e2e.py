@@ -584,7 +584,14 @@ class EvidenceRun:
         return base, str(answer.get("session") or "")
 
     async def wait_for_avatar_playout(self, expected_audio_ms):
-        timeout_s = min(15.0, max(5.0, float(expected_audio_ms) / 1000.0 + 4.0))
+        # A long but valid response must not fail simply because the old test
+        # harness stopped waiting at 15 seconds. Wait for the measured Voice
+        # duration plus transport/render tail, bounded by the run timeout so a
+        # genuinely stalled Avatar still fails deterministically.
+        timeout_s = min(
+            max(5.0, float(self.args.timeout)),
+            max(5.0, float(expected_audio_ms) / 1000.0 + 4.0),
+        )
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
             if avatar_playout_complete(
