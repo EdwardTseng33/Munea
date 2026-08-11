@@ -1,5 +1,12 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜🧪 1.0.66 Build 537 收斂 1.0.65 實機阻擋（PR #576 · App E2E pending · call-path risk）
+- **為何升版**：修復包含 App 撥號手勢與麥克風首句暫存，現有 1.0.65／536 不可能靠伺服器更新取得，因此唯一下一個候選是 `1.0.66 (537)`，不再重包 1.0.65。
+- **修復對照**：前五秒 HELLO 改為撥號手勢即接真麥克風、Voice ready 後送出；Avatar 健康通話不因 350ms 晚畫格跳回待機，聲嘴有限校時；Gemini 3.1 約三分鐘無 GoAway 的 `1008 operation was aborted` 僅在有續接憑證時透明重連；查詢／等待／備援不得改用非當前角色聲音。
+- **自動全鏈證據**：0% Voice `munea-voice-00121-lav@5f2a99a8`＋Glows 原生 512 Avatar 的最終 3×3 全過；6 分 04 秒／6 輪全過，23 次 Gateway 心跳全成功，供應端 1008 後原 session 續接，後續輪仍保留便當、工作疲累與通話狀態。首聲 `547–687ms`、聲嘴 `−109～+110ms`，缺音／RTP gap／underrun／自主重播／斷線為 0。真人中文 WAV 首句另跑 3/3，ASR recall 1.0、首聲約 515ms。
+- **畫質決策**：強制 640 候選嘴型不穩且負載上升，已回退；本穩定候選維持 FlashHead Lite 原生 512。改善清晰度另走原生高解析模型或升頻，不把不穩定 640 混入。
+- **下一關**：CI 與 release check 全綠後合併，從 exact main 重建 `1.0.66` Voice candidate 並回驗，再通知 Mac Archive `1.0.66 (537)`。安裝版 iPhone 第一聲、原聲音、聲嘴／查詢對嘴、六分鐘與掛斷釋位未過前維持 `App E2E pending`，不得送審或稱完成。
+
 ### 2026-08-12 Codex｜🚨 1.0.65 實機四項阻擋修復（進行中 · App E2E pending · call-path risk）
 - **分支／範圍**：`codex/fix-1.0.65-call-start-avsync-20260812`；預計修改 `web/src/app.js`、`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_server.py` 與對應首句／Avatar 契約測試。與已合併的原聲音復原分開驗收，不把聲音引擎恢復誤稱為四項體驗已修好。
 - **實機阻擋**：1.0.65 開頭前五秒常不理人、聲音先於嘴型、動作中途跳回待機、512 畫面較糊；唯一已確認改善的是 AI 輸出不再整句卡頓。

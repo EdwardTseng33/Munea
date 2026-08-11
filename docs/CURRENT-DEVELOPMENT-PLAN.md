@@ -3,7 +3,7 @@
 > Updated: 2026-07-28
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
-> **Current source:** `1.0.65 (Build 536)`; the next unique candidate closes the preserved opening utterance locally instead of replaying long ready-wait silence, retains receiver jitter buffering, and uses the native 512 Avatar path. Build 536 still needs service gates, Mac Archive, exact-IPA identity checks, and installed-App acceptance before submission.
+> **Current source:** `1.0.66 (Build 537)`; the unique candidate captures the real microphone at the call gesture, preserves the opening utterance until Voice is ready, retains receiver jitter buffering, transparently resumes the strict provider-abort case, and uses the native 512 Avatar path. Build 537 still needs merge, exact-main service identity, Mac Archive, exact-IPA identity checks, and installed-App acceptance before submission.
 >
 > **Latest uploaded App:** `1.0.61 (Build 532)`; App Store Connect reports `VALID`, uploaded 2026-08-10 08:35 UTC. The current `WAITING_FOR_REVIEW` version is 1.0.55 and selects App 1.0.55 Build 525; neither artifact can certify Build 533.
 >

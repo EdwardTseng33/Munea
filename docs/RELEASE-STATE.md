@@ -1,5 +1,14 @@
 # Munea Release State
 
+## 2026-08-12 台灣｜1.0.66 Build 537：1.0.65 實機阻擋修復候選（App E2E pending）
+
+- **使用者實機基準**：1.0.65 已改善 AI 輸出整句卡頓，但開場前五秒常漏第一句、聲音先於嘴型、動作跳回待機、約五分鐘後只剩聲音或不能再說，以及等待／操作時疑似換聲，均不得沿用舊 synthetic PASS 稱為已修。
+- **App／Voice／Avatar 修復**：App 在原始撥號手勢即建立真麥克風並暫存首句，Voice ready 後才依序送出；Voice 只在具備續接憑證且收到供應端精確 `1008 operation was aborted` 時原連線續接；Avatar 健康通話中保留最後真人畫格，首批聲嘴只做有限時間軸校正，不再每輪固定重生或跳回待機圖。所有查詢／等待／台語備援只允許沿用當前角色的 `Despina`，不得切成另一個聲音。
+- **服務 precheck**：0% Voice `munea-voice-00121-lav@5f2a99a8` 搭配 Glows 原生 512 Avatar，最終 3 通×3 輪全過；另有一通 6 分 04 秒／6 輪耐久 Gate 全過，Gateway 心跳 `23/23`，供應端約三分鐘 `1008` 後留下 `provider_session_abort_reconnect` 與 `session_reconnected handle=True`，後續三輪繼續正常。首聲 `547–687ms`，聲嘴 `−109～+110ms`，缺音、RTP 語音缺口、Avatar underrun、自主重播與意外斷線皆 0。
+- **真人首句 precheck**：真人中文 WAV「我沒有發燒但有痰……」連打 3/3 PASS，ASR 字元召回 `1.0`，第一個可聽回覆約 `515ms`，沒有缺音、重播或斷線。這證明真人 PCM 進 Voice 正常，不冒充 App 撥號手勢前五秒的實機證據。
+- **640 決策**：FlashHead Lite 原生推論是 512；獨立強制 640 候選雖較銳利，但嘴型不穩且 GPU 成本上升，已回退。1.0.66 維持原生 512，後續畫質只能走原生高解析模型或獨立升頻，不把強制 640 混入本次穩定版。
+- **放行邊界**：目前最高證據為 `source tested + PR pending + Voice 0% candidate verified + production unchanged + App E2E pending`。必須合併後重建 exact `1.0.66` Voice identity，再通知 Mac Archive `1.0.66 (537)`；安裝版 iPhone 未完成第一句只說一次、原聲音、聲嘴／查詢對嘴、六分鐘持續可說與掛斷釋位前，不得送審或稱穩定上線。
+
 ## 2026-08-12 台灣｜1.0.65 聲音身分復原候選（server-only、0% 3×3 Gate PASS）
 
 - **使用者實機結論**：1.0.65 唯一明確改善是 AI 輸出不再整句卡頓；開場首句、聲嘴同步、動作連續性與畫質仍未通過。使用者並確認正式聲音不是原本選定的聲音，因此 Vertex 2.5 故障復原不能再被描述為同一聲音。
@@ -100,7 +109,7 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-08-11 Asia/Taipei`（production Voice 為 Vertex 2.5 revision `munea-voice-00113-zok`；Gateway 為 `munea-call-control-00016-jeh@52a21fb7`；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；installed-iPhone `1.0.64 (Build 535)` 已因首句漏聽與嘴慢判定 FAIL；current source 候選為 `1.0.65 (Build 536)`，尚未包版）
+Snapshot time: `2026-08-12 Asia/Taipei`（production Gateway／Voice 身分須在 exact-main 部署前再核對；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；installed-iPhone `1.0.65 (Build 536)` 已因首句漏聽與嘴慢判定 FAIL；current source 候選為 `1.0.66 (Build 537)`，尚未包版）
 
 Source reconciliation baseline: `origin/main@c4477ae380df8a8f908b5383577b9f3df5591239`; latest uploaded App Build 532 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
 
@@ -145,7 +154,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.65 (Build 536)` | 下一個唯一候選；在首句人聲保留上再加入本機 650ms 封口、160ms 句尾裁切與 ready 後明確 `audio_end`，避免把等待 Voice 的長靜音重播給模型。WebView cache identity 已更新為 `20260811-opening-b536-v1065` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-11 +08:00 |
+| Latest source | `1.0.66 (Build 537)` | 下一個唯一候選；撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機。WebView cache identity 已更新為 `20260812-call-stability-b537-v1066` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-12 +08:00 |
 | Latest uploaded App | `1.0.61 (Build 532)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 08:35 UTC；不含本輪三邊協議握手，不能代表 current source | App Store Connect API（權威） | 2026-08-11 00:49 +08:00 |
 | App Store selected review lane | `1.0.55 (Build 525)` | `appStoreState=WAITING_FOR_REVIEW`；權威 API 回讀 selected build 為 App 1.0.55 Build 525。1.0.61 Build 532 只有 uploaded／VALID，並未被這個審核版本選用 | App Store Connect API | 2026-08-11 00:49 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
