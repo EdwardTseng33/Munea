@@ -159,13 +159,25 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
                      if float(rms) >= 0.045), None)
     if audio_on is None:
         return {"ok": False, "reason": "no_audio_onset", "skew_ms": None}
-    # FlashHead 的待機呼吸與微小頭動也會讓單一影格越過門檻。嘴型啟動必須是
-    # 120ms 內至少兩格持續變化，並且其中一格達到強門檻；再選最靠近聲音
-    # onset 的那一組。這樣量到的是說話嘴型，不是回合前的待機動畫。
+    # FlashHead 的待機呼吸與微小頭動也會讓影格越過弱門檻；前版因此要求
+    # 兩格持續變化，但 WebRTC 視訊實測只有約 12.5fps，短音節常只在一格出現
+    # 0.03+ 的明確嘴型跳動而被誤判「嘴沒動」。把搜尋窗縮到聲音前 150ms／
+    # 後 750ms：單格達強門檻即可，弱變化則仍須 120ms 內兩格持續。
     window = sorted(
         (float(stamp), float(motion)) for stamp, motion in video_motion
-        if audio_on - 0.25 <= float(stamp) <= audio_on + 1.5
+        if audio_on - 0.15 <= float(stamp) <= audio_on + 0.75
     )
+    motion_diagnostics = {
+        "samples": len(window),
+        "peak": round(max((motion for _, motion in window), default=0.0), 4),
+        "above_015": sum(motion >= 0.015 for _, motion in window),
+        "above_020": sum(motion >= 0.020 for _, motion in window),
+        "above_028": sum(motion >= 0.028 for _, motion in window),
+        "trace": [
+            [round(1000.0 * (stamp - audio_on), 1), round(motion, 4)]
+            for stamp, motion in window
+        ],
+    }
     candidates = []
     for index, (stamp, motion) in enumerate(window):
         nearby = [
@@ -173,14 +185,21 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
             for next_stamp, next_motion in window[index:index + 5]
             if 0.0 <= next_stamp - stamp <= 0.12
         ]
-        if (
-            motion >= 0.020
-            and sum(value >= 0.020 for value in nearby) >= 2
-            and max(nearby, default=0.0) >= 0.028
-        ):
+        strong_single_frame = motion >= 0.028
+        sustained_weak_motion = (
+            motion >= 0.015
+            and sum(value >= 0.015 for value in nearby) >= 2
+            and max(nearby, default=0.0) >= 0.020
+        )
+        if strong_single_frame or sustained_weak_motion:
             candidates.append((stamp, max(nearby)))
     if not candidates:
-        return {"ok": False, "reason": "no_mouth_motion", "skew_ms": None}
+        return {
+            "ok": False,
+            "reason": "no_mouth_motion",
+            "skew_ms": None,
+            "motion_diagnostics": motion_diagnostics,
+        }
     mouth_on, peak = min(candidates, key=lambda item: abs(item[0] - audio_on))
     skew_ms = 1000.0 * (mouth_on - audio_on)
     limit = max(0.0, float(max_skew_ms))
@@ -192,6 +211,7 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
         "skew_ms": round(skew_ms, 1),
         "mouth_motion": round(peak, 4),
         "max_skew_ms": round(limit, 1),
+        "motion_diagnostics": motion_diagnostics,
     }
 
 

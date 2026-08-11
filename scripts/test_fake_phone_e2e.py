@@ -60,13 +60,18 @@ av_late = avatar_av_sync_metrics(
     [(1.00, 0.08)], [(1.40, 0.04), (1.44, 0.035)], max_skew_ms=250
 )
 assert not av_late["ok"] and av_late["reason"] == "av_skew"
-assert not avatar_av_sync_metrics([(1.00, 0.08)], [], 250)["ok"]
+av_missing = avatar_av_sync_metrics([(1.00, 0.08)], [], 250)
+assert not av_missing["ok"] and av_missing["motion_diagnostics"]["samples"] == 0
 av_idle_then_aligned = avatar_av_sync_metrics(
     [(2.00, 0.08)],
-    [(1.76, 0.05), (1.90, 0.01), (2.06, 0.04), (2.10, 0.035)],
+    [(1.76, 0.05), (1.90, 0.01), (2.06, 0.04)],
     max_skew_ms=250,
 )
 assert av_idle_then_aligned["ok"] and av_idle_then_aligned["skew_ms"] == 60.0
+av_single_strong_frame = avatar_av_sync_metrics(
+    [(3.00, 0.08)], [(3.078, 0.004), (3.109, 0.0382)], max_skew_ms=250,
+)
+assert av_single_strong_frame["ok"] and av_single_strong_frame["skew_ms"] == 109.0
 
 # The release-facing path must exercise Voice -> Avatar direct PCM by default.
 # Relay remains available as a fallback test, but cannot certify the primary route.
