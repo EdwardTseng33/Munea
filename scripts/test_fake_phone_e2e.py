@@ -78,6 +78,12 @@ av_subtle_sustained = avatar_av_sync_metrics(
     max_skew_ms=250,
 )
 assert av_subtle_sustained["ok"] and av_subtle_sustained["skew_ms"] == 30.0
+av_quiet_syllable = avatar_av_sync_metrics(
+    [(5.00, 0.08)],
+    [(4.40, 0.0), (4.60, 0.001), (4.859, 0.0173), (4.890, 0.0082)],
+    max_skew_ms=250,
+)
+assert av_quiet_syllable["ok"] and av_quiet_syllable["skew_ms"] == -141.0
 
 # The release-facing path must exercise Voice -> Avatar direct PCM by default.
 # Relay remains available as a fallback test, but cannot certify the primary route.
