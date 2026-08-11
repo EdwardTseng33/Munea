@@ -44,25 +44,26 @@ async def _recursive_followup_scenario():
         await voice.guardian_watch(1, "ai", "unsafe answer", state, session,
                                    turn_id=1, allow_cue=True)
         await voice.guardian_flush_pending_cue(1, session, state)
-        assert len(session.sent) == 1
+        # AI 輸出仍會記錄／告警，但不可在使用者沉默時自行開第二輪。
+        assert len(session.sent) == 0
 
         await voice.guardian_watch(1, "user", "unsafe user turn", state, session,
                                    turn_id=1, allow_cue=True)
         await voice.guardian_flush_pending_cue(1, session, state)
-        assert len(session.sent) == 2
+        assert len(session.sent) == 1
         assert state["guardian_internal_followup_active"] is True
 
         await voice.guardian_watch(1, "ai", "hidden correction", state, session,
                                    turn_id=1, allow_cue=False)
         await voice.guardian_flush_pending_cue(1, session, state)
-        assert len(session.sent) == 2
+        assert len(session.sent) == 1
 
         next_turn = voice._guardian_begin_real_user_turn(state)
         assert next_turn == 2
         await voice.guardian_watch(1, "user", "new unsafe turn", state, session,
                                    turn_id=next_turn, allow_cue=True)
         await voice.guardian_flush_pending_cue(1, session, state)
-        assert len(session.sent) == 3
+        assert len(session.sent) == 2
     finally:
         voice.guardian_scan_text = original_scan
         voice.guardian_record_and_alert = original_record

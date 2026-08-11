@@ -230,6 +230,64 @@ class _RecoveredThenContinuedSession(_FakeSession):
         )
 
 
+class _RecoveredLateTailThenContinuedSession(_FakeSession):
+    """watchdog 收尾後，provider 又補舊尾音／字幕，再正常完成下一輪。"""
+
+    async def receive(self):
+        if self._call_index:
+            return
+        self._call_index += 1
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x01\x00" * 24000,
+            tool_call=None,
+        )
+        await asyncio.sleep(0.35)
+        # 這是已被 watchdog 收掉的第一輪 tail，聲音與字幕都不可再送給 App。
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None,
+                output_transcription=_msg(text="沒有發燒就好，我再說一次。"),
+                interrupted=False,
+                turn_complete=False,
+            ),
+            data=b"\x03\x00" * 12000,
+            tool_call=None,
+        )
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None, output_transcription=None,
+                interrupted=False, turn_complete=True,
+            ),
+            data=None,
+            tool_call=None,
+        )
+        # 下一個正常回合仍沿用同一條 session，不能被 quarantine 吃掉。
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x02\x00" * 12000,
+            tool_call=None,
+        )
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None, output_transcription=None,
+                interrupted=False, turn_complete=True,
+            ),
+            data=None,
+            tool_call=None,
+        )
+
+
 class RunVoiceSessionGoAwayReconnectTests(unittest.IsolatedAsyncioTestCase):
     async def test_missing_turn_complete_finishes_in_place_and_preserves_session(self):
         previous = os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS")
@@ -294,6 +352,46 @@ class RunVoiceSessionGoAwayReconnectTests(unittest.IsolatedAsyncioTestCase):
             if isinstance(item, str) and '"type": "turn_complete"' in item
         ]
         self.assertEqual(len(turn_events), 2)  # recovered 第一輪＋正常第二輪，晚到訊號未重複
+        self.assertEqual(sum('"recovered": true' in item for item in turn_events), 1)
+
+    async def test_late_tail_after_recovery_is_suppressed_without_eating_next_turn(self):
+        previous = os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS")
+        os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = "50"
+        try:
+            session = _RecoveredLateTailThenContinuedSession([])
+            ws = _CloseAfterTurnCountWs(target=2)
+            st = voice._new_call_state()
+
+            call_ended, handle = await voice._run_voice_session(
+                session, cli=None, ws=ws, cid=5, t0=0.0, st=st, char="a05",
+                location=None, topics=None, fam=0, day_call=None,
+                call_payload=None, gate_key="", call_token="",
+                asr_context_terms=["a05"], first_connect=False,
+                resumption_handle="late-tail-handle",
+                voice_locale_session=VoiceLocaleSession({}),
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("MUNEA_VOICE_TURN_STALL_IDLE_MS", None)
+            else:
+                os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = previous
+
+        self.assertTrue(call_ended)
+        self.assertEqual(handle, "late-tail-handle")
+        self.assertEqual(session._call_index, 1)
+        self.assertEqual(st["provider_turn_recoveries"], 1)
+        self.assertEqual(st["provider_turn_recovered_late_audio_bytes"], 24000)
+        self.assertGreater(st["provider_turn_recovered_late_caption_chars"], 0)
+        binary = [item for item in ws.sent if isinstance(item, (bytes, bytearray))]
+        # 第一輪 48k + watchdog 180ms tail 17.28k + 下一輪 24k；遲到的 24k 不在其中。
+        self.assertEqual(sum(map(len, binary)), 89280)
+        captions = [item for item in ws.sent if isinstance(item, str) and '"type": "caption"' in item]
+        self.assertFalse(any("我再說一次" in item for item in captions))
+        turn_events = [
+            item for item in ws.sent
+            if isinstance(item, str) and '"type": "turn_complete"' in item
+        ]
+        self.assertEqual(len(turn_events), 2)
         self.assertEqual(sum('"recovered": true' in item for item in turn_events), 1)
 
     async def test_goaway_then_turn_complete_returns_reconnect_with_handle(self):

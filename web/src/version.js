@@ -12,11 +12,21 @@
  * 一個新功能面板算「小功能」，走最後一碼；要跳中間碼請先問 Edward。
  */
 window.MuneaVersion = {
-  current: '1.0.63',
+  current: '1.0.64',
   callProtocol: 3,
   voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
+    {
+      version: '1.0.64',
+      date: '2026-08-11',
+      title: '聊聊開場、聲音連續與嘴型穩定修復',
+      items: [
+        '開場改為只確認 Avatar 接收軌已就緒，不再送入一段假靜音造成第一句自我打斷。',
+        '同線 WebRTC 加入接收抖動緩衝提示，並由服務端啟用 Opus 抗掉包，降低整句卡頓。',
+        '多輪晚到尾音不再重播；低動作語句保留嘴型，長通話維持上下文與聲畫同步。',
+      ],
+    },
     {
       version: '1.0.63',
       date: '2026-08-11',

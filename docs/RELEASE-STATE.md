@@ -1,5 +1,14 @@
 # Munea Release State
 
+## 2026-08-11 台灣｜1.0.64 Build 535 聊聊穩定候選
+
+- **候選內容**：App 移除開場假零聲音回合，只做接收端預備並設定 160ms WebRTC jitter buffer；Voice 將 watchdog 恢復後的晚到 PCM／字幕隔離，且 AI 輸出不再建立隱藏守護追問；Avatar 啟用 Opus FEC、40ms 影像提前與 1／8 安靜音素防閃門檻。這些修正分別針對第一句自我卡住、整句網路微斷、聲音先動嘴後動、晚到尾音重播及鬼打牆式自行追問。
+- **正式 runtime**：Voice `munea-voice-00110-gak@c5c8d8e2` 已承接 100% traffic；Glows `tw-06` Avatar 使用同一 component commit，健康資料回報 `av_video_lead_ms=40`、`antiflicker_lo/hi=1/8`、`opus_fec=true`、`opus_expected_packet_loss_pct=10`。
+- **正式短輪 Gate**：App 預設 production URL 連續 3/3 PASS，首聲 `812–828ms`，嘴聲偏移 `0／+15／−16ms`；缺音、RTP gap、underrun、自主重播、斷線皆 0，三輪上下文正確。
+- **正式長輪 Gate**：同一修復元件通話 `388.984s`（6 分 29 秒）／12 輪 12/12 PASS；11/12 首聲不超過 1.33 秒，單一慢輪 2.203 秒；12/12 嘴聲 `−16～+16ms`。Avatar／Voice underrun、RTP gap、波形缺音、自主重播與斷線皆 0，音訊連續相關 `0.9648`；最後仍正確保留發燒、痰、呼吸、胸痛與晚餐狀態。
+- **App 版號理由**：`web/src/app.js` 的開場與接收緩衝屬 App 內 WebView 資產；現有 1.0.63／534 不包含它，不能只靠服務更新承接。因此鎖定 `1.0.64 (Build 535)` 與新 cache identity。
+- **放行邊界**：目前最高可證明 `source tested + production services deployed + production real-output A/V gates PASS + App not packaged + App E2E pending`。CI、PR 合併與正式 release identity 對齊後才允許 Mac Archive／安裝；exact Build 535 尚需 iPhone 真麥克風、真喇叭回音、第一句、三輪上下文、查詢後對嘴、六分鐘連線及掛斷釋位，通過前不得送審或稱 release-ready。
+
 ## 2026-08-11 13:35 台灣｜1.0.63 多輪上下文與五分鐘 Avatar 停止 P0
 
 - **實機根因證據**：安裝版 `1.0.63 (Build 534)` 正式通話 `c17` 在約 3 分鐘內，provider 每輪漏 `turn_complete` 後都走 `finish_and_reconnect`；共建立 9 條新的 Gemini Live session，全部沒有 resumption handle，最後達 `reconnect_limit_reached attempts=9` 並觸發 Gateway `avatar_disconnected`。因此模型每輪忘記前文、反覆問「吃飯了沒」，額度耗盡後只剩聲音而 Avatar 不動。
@@ -53,7 +62,7 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-08-11 Asia/Taipei`（production Voice 為 `munea-voice-00105-roh@556dfd5d`；Gateway 為 `munea-call-control-00016-jeh@52a21fb7`；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；current source 候選為 `1.0.63 (Build 534)`；installed-iPhone lane 尚無 Build 534 證據）
+Snapshot time: `2026-08-11 Asia/Taipei`（production Voice 為 `munea-voice-00110-gak@c5c8d8e2`；Gateway 為 `munea-call-control-00016-jeh@52a21fb7`；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；current source 候選為 `1.0.64 (Build 535)`；installed-iPhone lane 尚無 Build 535 證據）
 
 Source reconciliation baseline: `origin/main@c4477ae380df8a8f908b5383577b9f3df5591239`; latest uploaded App Build 532 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
 
@@ -98,7 +107,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.63 (Build 534)` | 下一個唯一候選；移除 App 插話候選期的預先壓音、保留 Avatar 同線並修正待機 GPU 幀競態。WebView cache identity 已更新為 `v1063` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-11 +08:00 |
+| Latest source | `1.0.64 (Build 535)` | 下一個唯一候選；移除 App 開場假音訊回合、加入 WebRTC 接收緩衝，並保持 Voice／Avatar 聲畫連續。WebView cache identity 已更新為 `20260811-livefix-b535-v1064` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-11 +08:00 |
 | Latest uploaded App | `1.0.61 (Build 532)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 08:35 UTC；不含本輪三邊協議握手，不能代表 current source | App Store Connect API（權威） | 2026-08-11 00:49 +08:00 |
 | App Store selected review lane | `1.0.55 (Build 525)` | `appStoreState=WAITING_FOR_REVIEW`；權威 API 回讀 selected build 為 App 1.0.55 Build 525。1.0.61 Build 532 只有 uploaded／VALID，並未被這個審核版本選用 | App Store Connect API | 2026-08-11 00:49 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |

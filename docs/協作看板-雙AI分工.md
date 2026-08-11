@@ -4,6 +4,12 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-11 Codex｜✅ 1.0.64 穩定版收斂：首句＋連續音訊＋嘴聲（服務上線／App E2E pending · call-path risk）
+- **分支／PR**：`codex/stabilize-chat-av-opening-20260811`／Draft PR #568；App 候選升為 `1.0.64 (Build 535)`，避免沿用不含接收端開場修復的 1.0.63／534。
+- **根因與修復**：App 移除開場約 1 秒的假零聲音回合，只預備接收器並啟用 160ms WebRTC jitter buffer；Voice 隔離 watchdog 後晚到的 PCM／字幕，禁止 AI 自己觸發守護追問；Avatar 加入 Opus FEC、40ms 影像提前及安靜音素防閃動門檻 1／8。驗收器改為直接接收正式 Avatar WebRTC 音訊與影像，逐輪記錄首聲、嘴型、RTP 空洞、缺音、重播、連線與上下文。
+- **正式服務證據**：Voice `munea-voice-00110-gak@c5c8d8e2` 已 100% 服務；Glows `tw-06` Avatar 為同一 component commit，`video_lead=40ms`、`antiflicker=1/8`、Opus FEC 開啟。正式預設 URL 三輪 3/3 PASS（首聲 812–828ms、聲嘴 −16～+15ms）；同修復元件的 6 分 29 秒／12 輪 12/12 PASS，缺音、RTP gap、underrun、重播、斷線皆 0，最終上下文完整。
+- **放行邊界**：服務端已部署並通過真實輸出 A/V Gate；新的 App source 尚未由 Mac Archive／安裝，也沒有 exact Build 535 的 iPhone 真麥克風、喇叭與掛斷釋位證據，故仍為 `App E2E pending（Codex ownership）`。CI、合併與服務 release identity 對齊完成後才通知 Edward 包一次 535；安裝 Gate 通過前不得送審。
+
 ### 2026-08-11 Codex｜🚨 1.0.63 多輪失憶／重複提問／Avatar 中途停止（進行中 · call-path risk）
 
 - **分支／範圍**：`codex/fix-voice-inplace-turn-recovery-p0-20260811`；預計修改 `engine/live_voice_server.py`、`engine/test_voice_session_extend.py`、`scripts/test-voice-launch-policy.js`、長通話驗收腳本與狀態文件。先修 Voice 回合恢復與同線上下文，開頭卡頓、嘴聲延遲分開量測，不混成同一個「已修好」結論。

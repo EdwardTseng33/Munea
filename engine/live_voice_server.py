@@ -531,6 +531,20 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
                 sources=",".join(st.get("guardian_internal_followup_sources") or ()) or "-",
             )
             return
+        if who == "ai":
+            # AI 字幕監看只做稽核／告警，不得在使用者沉默時自己再開一輪。
+            # 關鍵字分類器會把「沒有胸痛」「如果喘要就醫」這類安全覆述也判成
+            # medical emergency；舊行為因此在每輪結束後自動塞 hidden prompt，
+            # 造成使用者聽到寧寧無故多講一次。已播出的句子也無法靠第二輪收回，
+            # 所以保留記錄與人工告警，取消自主語音更正。
+            _diag(
+                cid,
+                "guardian.ai_cue_suppressed",
+                reason="no_autonomous_ai_correction",
+                turn=turn_id,
+                categories=",".join(categories) or "-",
+            )
+            return
         cue = (
             guardian_ai_correction_cue(categories, risk, policy)
             if who == "ai"
@@ -1873,6 +1887,8 @@ def _new_call_state():
           # 重建整條 Live session；否則模型會忘記同通前文，幾輪後也會耗盡重連額度。
           "provider_turn_recovery_seq": 0, "provider_turn_recoveries": 0,
           "provider_turn_recovered_pending": False,
+          "provider_turn_recovered_late_audio_bytes": 0,
+          "provider_turn_recovered_late_caption_chars": 0,
           "provider_turn_recovery_in_progress": False, "provider_audio_forwarding": False,
           # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
@@ -3030,6 +3046,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         st["resumption_handle"] = sru.new_handle
                         _diag(cid, "node.session_resumption_update")
                     sc = getattr(msg, "server_content", None)
+                    # watchdog 已經替 App／Avatar 宣告上一輪結束後，provider 偶爾仍會
+                    # 補送同一輪的尾音或字幕。這些資料若重新開啟 provider_turn_active，
+                    # 就會變成使用者什麼都沒說、寧寧卻把上一段再講一次。保留 pending
+                    # 直到真正的 turn_complete 抵達；期間只隔離舊 tail，不重建 session。
+                    recovered_tail = bool(
+                        st.get("provider_turn_recovered_pending")
+                        and not st.get("provider_turn_active")
+                    )
                     if sc:
                         it_pre = getattr(sc, "input_transcription", None)
                         if it_pre and getattr(it_pre, "text", None):
@@ -3188,7 +3212,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 )
 
                         ot_pre = getattr(sc, "output_transcription", None)
-                        if ot_pre and getattr(ot_pre, "text", None):
+                        if recovered_tail and ot_pre and getattr(ot_pre, "text", None):
+                            late_chars = len(str(ot_pre.text))
+                            st["provider_turn_recovered_late_caption_chars"] = int(
+                                st.get("provider_turn_recovered_late_caption_chars") or 0
+                            ) + late_chars
+                            _diag(
+                                cid,
+                                "node.recovered_tail_caption_suppressed",
+                                chars=late_chars,
+                            )
+                        if (not recovered_tail) and ot_pre and getattr(ot_pre, "text", None):
                             current_profile = (
                                 st.get("voice_locale_profile")
                                 or voice_locale_session.current_profile()
@@ -3228,7 +3262,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     count=st["mandarin_pronunciation_seen"],
                                 )
                     data = getattr(msg, "data", None)
-                    if data and not st.get("language_block") and not st.get("client_barge_in"):
+                    if (
+                        data
+                        and not recovered_tail
+                        and not st.get("language_block")
+                        and not st.get("client_barge_in")
+                    ):
                         _semantic_reason = st.get("semantic_hold_reason")
                         if _semantic_reason and not st.get("semantic_hold_outcome_recorded"):
                             _remaining = max(
@@ -3259,7 +3298,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 )
                             st["semantic_hold_outcome_recorded"] = True
                             _clear_semantic_hold()
-                    if data and not st.get("language_block") and not st.get("client_barge_in"):
+                    if recovered_tail and data:
+                        st["provider_turn_recovered_late_audio_bytes"] = int(
+                            st.get("provider_turn_recovered_late_audio_bytes") or 0
+                        ) + len(data)
+                        _diag(
+                            cid,
+                            "node.recovered_tail_audio_suppressed",
+                            out_bytes=len(data),
+                            total_bytes=st["provider_turn_recovered_late_audio_bytes"],
+                        )
+                    elif data and not st.get("language_block") and not st.get("client_barge_in"):
                         # 先把 provider 活性更新，再做任何可能 yield 的工作；否則 watchdog
                         # 可能在新 PCM 已抵達、但 _mark_first_audio 尚未返回時誤收上一輪。
                         await turn_recovery_done.wait()
@@ -3269,7 +3318,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         st["provider_turn_active"] = True
                         st["provider_turn_last_audio_at"] = _provider_audio_at
                         st["provider_turn_out_bytes"] = turn_out
-                        st["provider_turn_recovered_pending"] = False
                         await _mark_first_audio("model")
                         if st.get("lookup_waiting_answer"):
                             now = time.monotonic()
@@ -3303,7 +3351,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         _diag(cid, "node.audio_suppressed", reason=reason, out_bytes=len(data))
                     if sc:
                         ot = getattr(sc, "output_transcription", None)
-                        if ot and getattr(ot, "text", None):
+                        if (not recovered_tail) and ot and getattr(ot, "text", None):
                             # 2026-07-25（卡西法・三修③）：語音線字幕出口也要過同一道防禦性
                             # 清洗，剝掉可能漏出的 <thinking> 內部推理標記，跟文字線同一把關卡。
                             current_profile = (

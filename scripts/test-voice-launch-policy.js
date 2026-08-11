@@ -65,18 +65,22 @@ expect(app.includes('const cfg = developerConfig();') && !app.includes('devAuthC
   'development Voice endpoint is read through an undefined config helper');
 expect(app.includes('this._sameLineWarmup = this._sameLine'),
   'Avatar same-line audio does not start in warmup mode');
-expect(app.includes('prepareOpeningAudioPath(waitMs = 1000)') && app.includes('new Int16Array(24000).buffer'),
-  'Avatar same-line audio is not warmed independently before the greeting');
-expect(app.includes("stage: 'before_greet'") && app.includes("'pending_first_audio'") && app.includes("'local_fallback'"),
-  'inconclusive silent warmup does not preserve same-line verification and local fallback modes');
+expect(app.includes('prepareOpeningAudioPath(waitMs = 600)') &&
+  app.includes('syntheticPcm: false') && !app.includes('new Int16Array(24000).buffer'),
+  'opening readiness still creates a synthetic Avatar PCM/model turn');
+expect(app.includes("stage: 'before_first_user_turn'") && app.includes("'receiver_ready'") && app.includes("'local_fallback'"),
+  'opening receiver readiness does not preserve verified and local fallback modes');
 expect(app.includes("return { mode, verified: stable, receiverAttached }") && !app.includes("opening_audio_not_ready"),
   'an inconclusive silent warmup can still tear down an otherwise healthy call');
 expect(!app.includes('_sameLineWarmupPending'),
   'the first assistant answer is still being consumed as the audio warmup');
-expect(app.includes('await LiveVoice.prepareOpeningAudioPath(1000)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(1000)') < app.indexOf('LiveVoice.greet()'),
-  'the greeting can start before the one-second audio warmup');
+expect(app.includes('await LiveVoice.prepareOpeningAudioPath(600)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(600)') < app.indexOf('LiveVoice.greet()'),
+  'the first user turn can start before the Avatar receiver is attached');
 expect(app.includes('this._renderStream.addTrack(e.track)') && app.includes('vid.srcObject = this._renderStream'),
   'Avatar audio and video tracks are not combined on the single playback clock');
+expect(app.includes("'jitterBufferTarget' in receiver") && app.includes('receiver.jitterBufferTarget = 160') &&
+  app.includes("'playoutDelayHint' in receiver") && app.includes('receiver.playoutDelayHint = 0.16'),
+  'same-line WebRTC has no bounded receiver jitter buffer hint');
 expect(app.includes('showLiveFrame()') && app.includes("bg.classList.add('livevid')") && app.includes('Avatar.showLiveFrame();'),
   'the live Avatar can be exposed before the first validated frame');
 expect(app.includes("trackProductEvent('voice_playback_underrun'"),
@@ -188,8 +192,9 @@ expect(everyVoiceStyleBookHas('energy'),
   'a persona book is missing the delivery-energy section');
 expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
-expect(avatarServer.includes('self.slot.audio_out.playout_held()'),
-  'Avatar video can start consuming frames before the audio prebuffer releases');
+expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_S)') &&
+       avatarServer.includes('MUNEA_FH_VIDEO_LEAD_MS", "40"'),
+  'Avatar video is not held on the real turn gate with bounded measured lead');
 expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.35"') &&
        avatarServer.includes('OPENING_PREBUFFER_S = max(') &&
        avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),

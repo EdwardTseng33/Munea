@@ -19,9 +19,9 @@ def load_functions(*names):
     return [namespace[name] for name in names]
 
 
-normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics, webrtc_speech_gap_metrics = load_functions(
+normalize_transcript, transcript_char_recall, source_playout_metrics, webrtc_frame_timing_metrics, webrtc_speech_gap_metrics, avatar_av_sync_metrics = load_functions(
     "normalize_transcript", "transcript_char_recall", "source_playout_metrics",
-    "webrtc_frame_timing_metrics", "webrtc_speech_gap_metrics"
+    "webrtc_frame_timing_metrics", "webrtc_speech_gap_metrics", "avatar_av_sync_metrics"
 )
 
 assert normalize_transcript("我沒有發燒，但、有痰！") == "我沒有發燒但有痰"
@@ -50,6 +50,40 @@ assert not webrtc_speech_gap_metrics(
 assert webrtc_speech_gap_metrics(
     timing_gap, {"speech_windows_ms": [[200, 300]]}
 )["ok"]
+av_aligned = avatar_av_sync_metrics(
+    [(1.00, 0.01), (1.02, 0.08)],
+    [(0.98, 0.01), (1.14, 0.04), (1.18, 0.035)],
+    max_skew_ms=250,
+)
+assert av_aligned["ok"] and av_aligned["skew_ms"] == 120.0
+av_late = avatar_av_sync_metrics(
+    [(1.00, 0.08)], [(1.40, 0.04), (1.44, 0.035)], max_skew_ms=250
+)
+assert not av_late["ok"] and av_late["reason"] == "av_skew"
+av_missing = avatar_av_sync_metrics([(1.00, 0.08)], [], 250)
+assert not av_missing["ok"] and av_missing["motion_diagnostics"]["samples"] == 0
+av_idle_then_aligned = avatar_av_sync_metrics(
+    [(2.00, 0.08)],
+    [(1.76, 0.05), (1.90, 0.01), (2.06, 0.04)],
+    max_skew_ms=250,
+)
+assert av_idle_then_aligned["ok"] and av_idle_then_aligned["skew_ms"] == 60.0
+av_single_strong_frame = avatar_av_sync_metrics(
+    [(3.00, 0.08)], [(3.078, 0.004), (3.109, 0.0382)], max_skew_ms=250,
+)
+assert av_single_strong_frame["ok"] and av_single_strong_frame["skew_ms"] == 109.0
+av_subtle_sustained = avatar_av_sync_metrics(
+    [(4.00, 0.08)],
+    [(3.40, 0.003), (3.60, 0.004), (4.03, 0.0176), (4.10, 0.0155)],
+    max_skew_ms=250,
+)
+assert av_subtle_sustained["ok"] and av_subtle_sustained["skew_ms"] == 30.0
+av_quiet_syllable = avatar_av_sync_metrics(
+    [(5.00, 0.08)],
+    [(4.40, 0.0), (4.60, 0.001), (4.859, 0.0173), (4.890, 0.0082)],
+    max_skew_ms=250,
+)
+assert av_quiet_syllable["ok"] and av_quiet_syllable["skew_ms"] == -141.0
 
 # The release-facing path must exercise Voice -> Avatar direct PCM by default.
 # Relay remains available as a fallback test, but cannot certify the primary route.
@@ -61,6 +95,7 @@ assert '"asr_char_recall"' in SOURCE and '"first_response"' in SOURCE
 assert '"no_unsolicited_repeat"' in SOURCE and '"source_playout"' in SOURCE
 assert '"avatar_reported_underrun"' in SOURCE and '"avatar_health_after"' in SOURCE
 assert '"avatar_webrtc_speech_timing"' in SOURCE
+assert '"avatar_av_sync"' in SOURCE and 'track.kind == "video"' in SOURCE
 assert '"avatar_route": metrics.get("avatar_ack") is True' in SOURCE
 assert 'parser.add_argument("--turns", type=int, default=1)' in SOURCE
 assert 'parser.add_argument("--prompts-json", default="")' in SOURCE

@@ -4,8 +4,8 @@
 This is the automated gate that runs before a human receives a candidate. It
 creates an isolated test account, obtains a real Gateway lease/call token,
 streams a recorded human WAV into Voice, requires Voice to send PCM directly to
-Avatar, captures Avatar WebRTC audio, scores the ASR transcript, and deletes the
-test account. ``--transport relay`` remains available to verify the fallback,
+Avatar, captures Avatar WebRTC audio and video, measures real mouth-to-audio
+onset, scores the ASR transcript, and deletes the test account. ``--transport relay`` remains available to verify the fallback,
 but cannot certify the release candidate's primary audio route.
 
 It still does not certify iOS permissions, WebView audio routing, or an exact
@@ -140,10 +140,96 @@ def webrtc_speech_gap_metrics(timing: dict, continuity: dict) -> dict:
     return {
         "ok": not material,
         "speech_gap_count": len(material),
+        "speech_gap_ms_total": round(sum(
+            float(gap.get("duration_ms") or 0.0) for gap in material
+        ), 1),
         "max_speech_pts_gap_ms": round(max(
             (float(gap.get("duration_ms") or 0.0) for gap in material), default=0.0
         ), 1),
         "speech_pts_gaps": material,
+    }
+
+
+def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dict:
+    """Measure actual WebRTC audio onset against image-derived mouth motion.
+
+    Positive skew means the user hears speech before the mouth begins moving.
+    This deliberately consumes receiver timestamps rather than Voice PCM arrival,
+    because independent WebRTC audio/video jitter buffers are part of the product
+    experience we need to certify.
+    """
+    import statistics
+
+    audio_on = next((float(stamp) for stamp, rms in audio_levels
+                     if float(rms) >= 0.045), None)
+    if audio_on is None:
+        return {"ok": False, "reason": "no_audio_onset", "skew_ms": None}
+    # FlashHead 的待機呼吸與微小頭動也會讓影格越過弱門檻；前版因此要求
+    # 兩格持續變化，但 WebRTC 視訊實測只有約 12.5fps，短音節常只在一格出現
+    # 0.03+ 的明確嘴型跳動而被誤判「嘴沒動」。把搜尋窗縮到聲音前 150ms／
+    # 後 750ms：單格達強門檻即可，弱變化則仍須 120ms 內兩格持續。
+    window = sorted(
+        (float(stamp), float(motion)) for stamp, motion in video_motion
+        if audio_on - 0.15 <= float(stamp) <= audio_on + 0.75
+    )
+    idle_motion = [
+        float(motion) for stamp, motion in video_motion
+        if audio_on - 0.75 <= float(stamp) < audio_on - 0.15
+    ]
+    # 少於三格不足以代表待機底噪；單一頭動不能把整輪門檻抬高。
+    idle_median = float(statistics.median(idle_motion)) if len(idle_motion) >= 3 else 0.0
+    # 12.5fps 灰階 ROI 的實測：輕聲短句常落在 0.007–0.018；只要相對待機
+    # 基線連續兩格上升，就已是可見嘴型。單格仍需 0.025，避免把頭動當嘴動。
+    weak_threshold = max(0.007, idle_median + 0.006)
+    strong_threshold = max(0.025, idle_median + 0.015)
+    motion_diagnostics = {
+        "samples": len(window),
+        "peak": round(max((motion for _, motion in window), default=0.0), 4),
+        "idle_samples": len(idle_motion),
+        "idle_median": round(idle_median, 4),
+        "weak_threshold": round(weak_threshold, 4),
+        "strong_threshold": round(strong_threshold, 4),
+        "above_015": sum(motion >= 0.015 for _, motion in window),
+        "above_020": sum(motion >= 0.020 for _, motion in window),
+        "above_028": sum(motion >= 0.028 for _, motion in window),
+        "trace": [
+            [round(1000.0 * (stamp - audio_on), 1), round(motion, 4)]
+            for stamp, motion in window
+        ],
+    }
+    candidates = []
+    for index, (stamp, motion) in enumerate(window):
+        nearby = [
+            next_motion
+            for next_stamp, next_motion in window[index:index + 5]
+            if 0.0 <= next_stamp - stamp <= 0.12
+        ]
+        strong_single_frame = motion >= strong_threshold
+        sustained_weak_motion = (
+            motion >= weak_threshold
+            and sum(value >= weak_threshold for value in nearby) >= 2
+        )
+        if strong_single_frame or sustained_weak_motion:
+            candidates.append((stamp, max(nearby)))
+    if not candidates:
+        return {
+            "ok": False,
+            "reason": "no_mouth_motion",
+            "skew_ms": None,
+            "motion_diagnostics": motion_diagnostics,
+        }
+    mouth_on, peak = min(candidates, key=lambda item: abs(item[0] - audio_on))
+    skew_ms = 1000.0 * (mouth_on - audio_on)
+    limit = max(0.0, float(max_skew_ms))
+    return {
+        "ok": abs(skew_ms) <= limit,
+        "reason": "aligned" if abs(skew_ms) <= limit else "av_skew",
+        "audio_onset_at": round(audio_on, 6),
+        "mouth_onset_at": round(mouth_on, 6),
+        "skew_ms": round(skew_ms, 1),
+        "mouth_motion": round(peak, 4),
+        "max_skew_ms": round(limit, 1),
+        "motion_diagnostics": motion_diagnostics,
     }
 
 
@@ -219,6 +305,7 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
     if start is not None:
         runs.append(len(missing) - start)
     material = [run for run in runs if run >= 2]  # at least 40 ms inside reference speech
+    missing_speech_ms_total = sum(material) * 20
 
     if count > 1 and np.std(ref) > 1e-9 and np.std(out) > 1e-9:
         envelope_correlation = float(np.corrcoef(ref, out)[0, 1])
@@ -246,6 +333,10 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
         "reference_speech_frames": int(np.sum(speech)),
         "missing_speech_runs": len(material),
         "max_missing_speech_ms": int(max_gap_ms),
+        "missing_speech_ms_total": int(missing_speech_ms_total),
+        "missing_speech_ratio": round(
+            missing_speech_ms_total / max(20.0, float(np.sum(speech)) * 20.0), 4
+        ),
         "speech_windows_ms": speech_windows,
     }
 
@@ -265,7 +356,11 @@ class EvidenceRun:
         self.avatar_feed_ack = False
         self.capture_tasks = []
         self.avatar_audio = []
+        self.avatar_audio_levels = []
         self.avatar_frame_timing = []
+        self.avatar_video_motion = []
+        self.avatar_video_frames = 0
+        self._avatar_video_previous = None
         self.avatar_rate = 48000
         self.stop_capture = False
 
@@ -350,14 +445,29 @@ class EvidenceRun:
         raise RuntimeError("Gateway lease timed out")
 
     async def capture_track(self, track):
-        if track.kind != "audio":
+        if track.kind == "video":
             while not self.stop_capture:
                 try:
-                    await asyncio.wait_for(track.recv(), timeout=2)
+                    frame = await asyncio.wait_for(track.recv(), timeout=2)
                 except asyncio.TimeoutError:
                     continue
                 except Exception:
                     return
+                image = frame.to_ndarray(format="gray")
+                height, width = image.shape[:2]
+                mouth = image[
+                    int(height * 0.33):max(int(height * 0.50), int(height * 0.33) + 1),
+                    int(width * 0.30):max(int(width * 0.70), int(width * 0.30) + 1),
+                ][::3, ::3].astype(np.float32)
+                motion = 0.0
+                if (self._avatar_video_previous is not None
+                        and self._avatar_video_previous.shape == mouth.shape):
+                    motion = float(np.mean(np.abs(mouth - self._avatar_video_previous)) / 255.0)
+                self._avatar_video_previous = mouth
+                self.avatar_video_motion.append((time.monotonic(), motion))
+                self.avatar_video_frames += 1
+            return
+        if track.kind != "audio":
             return
         while not self.stop_capture:
             try:
@@ -373,7 +483,10 @@ class EvidenceRun:
                     array = array.astype(np.float32).mean(axis=0)
                 else:
                     array = array.reshape(-1, channels).astype(np.float32).mean(axis=1)
-            self.avatar_audio.append(np.clip(array, -32768, 32767).astype(np.int16).reshape(-1))
+            pcm = np.clip(array, -32768, 32767).astype(np.int16).reshape(-1)
+            self.avatar_audio.append(pcm)
+            rms = float(np.sqrt(np.mean(np.square(pcm.astype(np.float32) / 32768.0)))) if len(pcm) else 0.0
+            self.avatar_audio_levels.append((time.monotonic(), rms))
             self.avatar_rate = int(frame.sample_rate)
             self.avatar_frame_timing.append(
                 (frame.pts, frame.samples, frame.sample_rate, time.monotonic())
@@ -507,7 +620,10 @@ class EvidenceRun:
                 voice_chunks = []
                 voice_times = []
                 self.avatar_audio = []
+                self.avatar_audio_levels = []
                 self.avatar_frame_timing = []
+                self.avatar_video_motion = []
+                self.avatar_video_frames = 0
                 turn_user_caption = ""
                 turn_assistant_caption = ""
                 turn_complete = False
@@ -576,6 +692,11 @@ class EvidenceRun:
                     "user_caption": turn_user_caption,
                     "assistant_caption": turn_assistant_caption,
                     "source_playout": source_playout_metrics(voice_chunks, voice_times),
+                    "avatar_av_sync": avatar_av_sync_metrics(
+                        self.avatar_audio_levels, self.avatar_video_motion,
+                        self.args.max_av_skew_ms,
+                    ),
+                    "avatar_video_frames": self.avatar_video_frames,
                 })
 
                 # Between turns this is the exact risk gate: the same socket must
@@ -637,6 +758,7 @@ class EvidenceRun:
             "source_playout": source_playout,
             "avatar_audio_ms": round(len(avatar_pcm) / self.avatar_rate * 1000),
             "avatar_webrtc_timing": webrtc_frame_timing_metrics(self.avatar_frame_timing),
+            "avatar_video_frames": self.avatar_video_frames,
             "user_caption": user_caption,
             "assistant_caption": assistant_caption,
             "first_response_ms": max(
@@ -647,6 +769,17 @@ class EvidenceRun:
             "requested_turns": self.args.turns,
             "completed_turns": len(turn_results),
             "turns": turn_results,
+            "avatar_av_sync": {
+                "ok": bool(turn_results) and all(
+                    item.get("avatar_av_sync", {}).get("ok") is True
+                    for item in turn_results
+                ),
+                "turn_skew_ms": [
+                    item.get("avatar_av_sync", {}).get("skew_ms")
+                    for item in turn_results
+                ],
+                "max_skew_ms": self.args.max_av_skew_ms,
+            },
             "unsolicited_audio_bytes": unsolicited_audio_bytes,
             "unsolicited_caption": unsolicited_caption,
             "disconnected_after_turn": disconnected_after_turn,
@@ -717,6 +850,7 @@ async def execute_run(args, output):
             "avatar_webrtc_speech_timing": bool(
                 metrics.get("avatar_webrtc_speech_timing", {}).get("ok")
             ),
+            "avatar_av_sync": bool(metrics.get("avatar_av_sync", {}).get("ok")),
             "source_playout": (
                 metrics.get("source_playout", {}).get("max_underrun_ms") is not None
                 and metrics["source_playout"]["max_underrun_ms"] <= args.max_source_underrun_ms
@@ -774,6 +908,7 @@ async def main():
     parser.add_argument("--max-first-response-ms", type=int, default=4500)
     parser.add_argument("--min-avatar-audio-ms", type=int, default=1000)
     parser.add_argument("--max-source-underrun-ms", type=int, default=250)
+    parser.add_argument("--max-av-skew-ms", type=int, default=250)
     parser.add_argument("--post-turn-quiet-seconds", type=float, default=3.0)
     parser.add_argument("--between-turn-seconds", type=float, default=1.2)
     parser.add_argument("--turns", type=int, default=1)

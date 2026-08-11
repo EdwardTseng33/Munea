@@ -53,8 +53,12 @@ TAIL_FLUSH_S = float(os.environ.get("MUNEA_FH_TAIL_FLUSH_S", "0.45"))
 # 副作用是正向的：背景靜止後 WebRTC 編碼省下的位元集中給臉部、畫質更好。
 # MUNEA_FH_ANTIFLICKER=0 可整個關掉（回到舊行為）。
 ANTIFLICKER = os.environ.get("MUNEA_FH_ANTIFLICKER", "1") == "1"
-ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "3"))
-ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "12"))
+# Production A/B on the same Voice phrases showed that 3/12 suppresses quiet
+# phoneme motion together with flicker (only 1/3 mouth-onset gates passed).
+# 1/8 retained the temporal stabilizer while all 3/3 quiet/normal phrases kept
+# measurable mouth motion. These defaults mirror the deployed worker config.
+ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "1"))
+ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 
 
 def stabilize_frame(prev, cur, cv2mod):
@@ -320,6 +324,17 @@ class AudioOutBuffer:
         """True while audio and video must stay on their shared start gate."""
         with self.lock:
             return time.time() < self.hold_until_ts
+
+    def video_playout_held(self, lead_s=0.0):
+        """Open video slightly before audio to offset encode/receiver latency.
+
+        The first rendered chunk still arms the single authoritative turn gate;
+        this only compensates the measured transport difference between the two
+        WebRTC tracks and never lets video escape before a real turn exists.
+        """
+        lead = max(0.0, min(0.12, float(lead_s or 0.0)))
+        with self.lock:
+            return time.time() < self.hold_until_ts - lead
 
     def pop_frame(self):
         with self.lock:

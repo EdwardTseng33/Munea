@@ -16,6 +16,7 @@ torch 替身（FakeTorch）驗證 make_slot_stream_run_pipeline() 的排程邏�
 跑法：python scripts/test_flashhead_slot_stream.py
 """
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -106,6 +107,22 @@ def test_slot_cuda_stream_defaults_to_none():
     print("test_slot_cuda_stream_defaults_to_none: PASS")
 
 
+def test_video_gate_leads_audio_without_escaping_empty_turn():
+    out = fec.AudioOutBuffer(48000, prebuffer_s=0.2)
+    assert out.playout_held() and out.video_playout_held(0.08), (
+        "an empty turn must hold both tracks"
+    )
+    out.push([1] * 960)
+    assert out.playout_held(), "audio must keep the configured prebuffer"
+    remaining = out.hold_until_ts - time.time()
+    assert 0.15 <= remaining <= 0.21
+    time.sleep(0.17)
+    assert out.playout_held() and not out.video_playout_held(0.04), (
+        "video should open about 40ms before audio"
+    )
+    print("test_video_gate_leads_audio_without_escaping_empty_turn: PASS")
+
+
 def test_make_slot_stream_run_pipeline_order_and_passthrough():
     torch_mod = FakeTorch()
     my_stream = FakeStream("slot0")
@@ -192,12 +209,37 @@ def test_flashhead_server_default_flag_values_unchanged():
     print("test_flashhead_server_default_flag_values_unchanged: PASS")
 
 
+def test_opus_fec_is_enabled_before_peer_connections():
+    server_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py"
+    source = server_path.read_text(encoding="utf-8")
+    assert '"fec": "1"' in source
+    assert '"packet_loss": str(OPUS_PACKET_LOSS_PCT)' in source
+    assert source.index("_munea_opus_init") < source.index("RTCPeerConnection(")
+    assert '"opus_expected_packet_loss_pct": OPUS_PACKET_LOSS_PCT' in source
+    print("test_opus_fec_is_enabled_before_peer_connections: PASS")
+
+
+def test_antiflicker_defaults_preserve_quiet_mouth_motion():
+    core_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_engine_core.py"
+    server_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py"
+    core = core_path.read_text(encoding="utf-8")
+    server = server_path.read_text(encoding="utf-8")
+    assert 'MUNEA_FH_AF_LO", "1"' in core
+    assert 'MUNEA_FH_AF_HI", "8"' in core
+    assert '"antiflicker_lo": ANTIFLICKER_LO' in server
+    assert '"antiflicker_hi": ANTIFLICKER_HI' in server
+    print("test_antiflicker_defaults_preserve_quiet_mouth_motion: PASS")
+
+
 def main():
     test_env_flag_enabled_contract()
     test_slot_cuda_stream_defaults_to_none()
+    test_video_gate_leads_audio_without_escaping_empty_turn()
     test_make_slot_stream_run_pipeline_order_and_passthrough()
     test_make_slot_stream_run_pipeline_propagates_exceptions()
     test_flashhead_server_default_flag_values_unchanged()
+    test_opus_fec_is_enabled_before_peer_connections()
+    test_antiflicker_defaults_preserve_quiet_mouth_motion()
     print("FlashHead slot-stream unit test: ALL PASS")
 
 
