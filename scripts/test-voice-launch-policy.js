@@ -78,6 +78,9 @@ expect(app.includes('await LiveVoice.prepareOpeningAudioPath(600)') && app.index
   'the first user turn can start before the Avatar receiver is attached');
 expect(app.includes('this._renderStream.addTrack(e.track)') && app.includes('vid.srcObject = this._renderStream'),
   'Avatar audio and video tracks are not combined on the single playback clock');
+expect(app.includes("'jitterBufferTarget' in receiver") && app.includes('receiver.jitterBufferTarget = 160') &&
+  app.includes("'playoutDelayHint' in receiver") && app.includes('receiver.playoutDelayHint = 0.16'),
+  'same-line WebRTC has no bounded receiver jitter buffer hint');
 expect(app.includes('showLiveFrame()') && app.includes("bg.classList.add('livevid')") && app.includes('Avatar.showLiveFrame();'),
   'the live Avatar can be exposed before the first validated frame');
 expect(app.includes("trackProductEvent('voice_playback_underrun'"),

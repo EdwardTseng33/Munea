@@ -150,6 +150,12 @@ OPENING_PREBUFFER_S = max(
 VIDEO_LEAD_S = min(
     0.12, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "40")) / 1000.0)
 )
+# Opus in-band FEC trades a small amount of codec efficiency for recovery from
+# isolated WebRTC packet loss. Long-call evidence saw intact Voice PCM and zero
+# Avatar underrun but a 100ms receiver hole, so the loss is after generation.
+OPUS_PACKET_LOSS_PCT = min(
+    30, max(0, int(os.environ.get("MUNEA_FH_OPUS_PACKET_LOSS_PCT", "10")))
+)
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
@@ -395,6 +401,33 @@ class FlashHead:
         from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
         from fastapi.responses import JSONResponse
         from fastapi.middleware.cors import CORSMiddleware
+
+        # aiortc creates the Opus encoder lazily after SDP negotiation. Patch the
+        # constructor once, before any PeerConnection exists, so every slot asks
+        # libopus to emit in-band FEC for the expected loss rate. Unknown/older
+        # runtimes fail open to the stock encoder rather than blocking Avatar.
+        if OPUS_PACKET_LOSS_PCT:
+            try:
+                from aiortc.codecs import opus as _opus_codec
+                if not getattr(_opus_codec.OpusEncoder, "_munea_fec_enabled", False):
+                    _stock_opus_init = _opus_codec.OpusEncoder.__init__
+
+                    def _munea_opus_init(encoder):
+                        _stock_opus_init(encoder)
+                        options = dict(getattr(encoder.codec, "options", None) or {})
+                        options.update({
+                            "application": "voip",
+                            "fec": "1",
+                            "packet_loss": str(OPUS_PACKET_LOSS_PCT),
+                        })
+                        encoder.codec.options = options
+
+                    _opus_codec.OpusEncoder.__init__ = _munea_opus_init
+                    _opus_codec.OpusEncoder._munea_fec_enabled = True
+                    print("[audio-codec] opus fec=1 packet_loss="
+                          + str(OPUS_PACKET_LOSS_PCT) + "%", flush=True)
+            except Exception as exc:
+                print("[audio-codec] opus fec unavailable: " + str(exc)[:120], flush=True)
 
         api = FastAPI()
         worker_origins = [x.strip() for x in os.environ.get(
@@ -648,6 +681,8 @@ class FlashHead:
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
                          "av_video_lead_ms": round(VIDEO_LEAD_S * 1000),
+                         "opus_fec": bool(OPUS_PACKET_LOSS_PCT),
+                         "opus_expected_packet_loss_pct": OPUS_PACKET_LOSS_PCT,
                          "call_protocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
                          "release_version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
                          "release_commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),

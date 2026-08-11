@@ -140,6 +140,9 @@ def webrtc_speech_gap_metrics(timing: dict, continuity: dict) -> dict:
     return {
         "ok": not material,
         "speech_gap_count": len(material),
+        "speech_gap_ms_total": round(sum(
+            float(gap.get("duration_ms") or 0.0) for gap in material
+        ), 1),
         "max_speech_pts_gap_ms": round(max(
             (float(gap.get("duration_ms") or 0.0) for gap in material), default=0.0
         ), 1),
@@ -302,6 +305,7 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
     if start is not None:
         runs.append(len(missing) - start)
     material = [run for run in runs if run >= 2]  # at least 40 ms inside reference speech
+    missing_speech_ms_total = sum(material) * 20
 
     if count > 1 and np.std(ref) > 1e-9 and np.std(out) > 1e-9:
         envelope_correlation = float(np.corrcoef(ref, out)[0, 1])
@@ -329,6 +333,10 @@ def continuity_metrics(voice_pcm: np.ndarray, avatar_pcm: np.ndarray, avatar_rat
         "reference_speech_frames": int(np.sum(speech)),
         "missing_speech_runs": len(material),
         "max_missing_speech_ms": int(max_gap_ms),
+        "missing_speech_ms_total": int(missing_speech_ms_total),
+        "missing_speech_ratio": round(
+            missing_speech_ms_total / max(20.0, float(np.sum(speech)) * 20.0), 4
+        ),
         "speech_windows_ms": speech_windows,
     }
 

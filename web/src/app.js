@@ -3591,6 +3591,13 @@ const Avatar = {
       this.pc.ontrack = e => {
         // WebRTC 不保證 audio/video 的 ontrack 事件帶同一個 MediaStream 物件。
         // 明確把兩軌合進同一個 render stream，交給唯一播放器 faceVid，避免有影無聲或兩路時鐘漂移。
+        // 支援該 API 的瀏覽器把同線 A/V 保留 160ms 抖動緩衝，吸收長測抓到的
+        // 100ms 網路突波；音畫兩軌設同一目標，不另造第二個聲音時鐘。
+        try {
+          const receiver = e.receiver;
+          if (receiver && 'jitterBufferTarget' in receiver) receiver.jitterBufferTarget = 160;
+          else if (receiver && 'playoutDelayHint' in receiver) receiver.playoutDelayHint = 0.16;
+        } catch (e0) {}
         if (!this._renderStream) this._renderStream = new MediaStream();
         if (e.track && !this._renderStream.getTracks().some(track => track.id === e.track.id)) this._renderStream.addTrack(e.track);
         if (vid.srcObject !== this._renderStream) vid.srcObject = this._renderStream;

@@ -209,6 +209,16 @@ def test_flashhead_server_default_flag_values_unchanged():
     print("test_flashhead_server_default_flag_values_unchanged: PASS")
 
 
+def test_opus_fec_is_enabled_before_peer_connections():
+    server_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py"
+    source = server_path.read_text(encoding="utf-8")
+    assert '"fec": "1"' in source
+    assert '"packet_loss": str(OPUS_PACKET_LOSS_PCT)' in source
+    assert source.index("_munea_opus_init") < source.index("RTCPeerConnection(")
+    assert '"opus_expected_packet_loss_pct": OPUS_PACKET_LOSS_PCT' in source
+    print("test_opus_fec_is_enabled_before_peer_connections: PASS")
+
+
 def main():
     test_env_flag_enabled_contract()
     test_slot_cuda_stream_defaults_to_none()
@@ -216,6 +226,7 @@ def main():
     test_make_slot_stream_run_pipeline_order_and_passthrough()
     test_make_slot_stream_run_pipeline_propagates_exceptions()
     test_flashhead_server_default_flag_values_unchanged()
+    test_opus_fec_is_enabled_before_peer_connections()
     print("FlashHead slot-stream unit test: ALL PASS")
 
 
