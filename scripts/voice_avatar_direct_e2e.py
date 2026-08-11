@@ -159,14 +159,29 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
                      if float(rms) >= 0.045), None)
     if audio_on is None:
         return {"ok": False, "reason": "no_audio_onset", "skew_ms": None}
-    candidates = [
+    # FlashHead 的待機呼吸與微小頭動也會讓單一影格越過門檻。嘴型啟動必須是
+    # 120ms 內至少兩格持續變化，並且其中一格達到強門檻；再選最靠近聲音
+    # onset 的那一組。這樣量到的是說話嘴型，不是回合前的待機動畫。
+    window = sorted(
         (float(stamp), float(motion)) for stamp, motion in video_motion
-        if audio_on - 0.35 <= float(stamp) <= audio_on + 1.5
-        and float(motion) >= 0.028
-    ]
+        if audio_on - 0.25 <= float(stamp) <= audio_on + 1.5
+    )
+    candidates = []
+    for index, (stamp, motion) in enumerate(window):
+        nearby = [
+            next_motion
+            for next_stamp, next_motion in window[index:index + 5]
+            if 0.0 <= next_stamp - stamp <= 0.12
+        ]
+        if (
+            motion >= 0.020
+            and sum(value >= 0.020 for value in nearby) >= 2
+            and max(nearby, default=0.0) >= 0.028
+        ):
+            candidates.append((stamp, max(nearby)))
     if not candidates:
         return {"ok": False, "reason": "no_mouth_motion", "skew_ms": None}
-    mouth_on, peak = candidates[0]
+    mouth_on, peak = min(candidates, key=lambda item: abs(item[0] - audio_on))
     skew_ms = 1000.0 * (mouth_on - audio_on)
     limit = max(0.0, float(max_skew_ms))
     return {
@@ -566,7 +581,6 @@ class EvidenceRun:
                 self.avatar_frame_timing = []
                 self.avatar_video_motion = []
                 self.avatar_video_frames = 0
-                self._avatar_video_previous = None
                 turn_user_caption = ""
                 turn_assistant_caption = ""
                 turn_complete = False

@@ -52,15 +52,21 @@ assert webrtc_speech_gap_metrics(
 )["ok"]
 av_aligned = avatar_av_sync_metrics(
     [(1.00, 0.01), (1.02, 0.08)],
-    [(0.98, 0.01), (1.14, 0.04)],
+    [(0.98, 0.01), (1.14, 0.04), (1.18, 0.035)],
     max_skew_ms=250,
 )
 assert av_aligned["ok"] and av_aligned["skew_ms"] == 120.0
 av_late = avatar_av_sync_metrics(
-    [(1.00, 0.08)], [(1.40, 0.04)], max_skew_ms=250
+    [(1.00, 0.08)], [(1.40, 0.04), (1.44, 0.035)], max_skew_ms=250
 )
 assert not av_late["ok"] and av_late["reason"] == "av_skew"
 assert not avatar_av_sync_metrics([(1.00, 0.08)], [], 250)["ok"]
+av_idle_then_aligned = avatar_av_sync_metrics(
+    [(2.00, 0.08)],
+    [(1.76, 0.05), (1.90, 0.01), (2.06, 0.04), (2.10, 0.035)],
+    max_skew_ms=250,
+)
+assert av_idle_then_aligned["ok"] and av_idle_then_aligned["skew_ms"] == 60.0
 
 # The release-facing path must exercise Voice -> Avatar direct PCM by default.
 # Relay remains available as a fallback test, but cannot certify the primary route.
