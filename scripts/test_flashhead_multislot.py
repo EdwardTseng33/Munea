@@ -650,6 +650,8 @@ def test_health_snapshot_math():
         "motion_reset_failures": 0,
         "seed": 42,
         "seed_resets": 0,
+        "first_chunk_retries": 0,
+        "first_chunk_retry_failures": 0,
     }
     print("test_health_snapshot_math: PASS")
 
@@ -801,6 +803,19 @@ def test_turn_reset_restores_model_motion_seed_once():
     print("test_turn_reset_restores_model_motion_seed_once: PASS")
 
 
+def test_first_chunk_quality_metrics_detect_static_speech():
+    quiet = np.zeros(2400, dtype=np.int16)
+    speech = np.full(2400, 5000, dtype=np.int16)
+    assert fec.pcm_rms(quiet) == 0.0
+    assert fec.pcm_rms(speech) > fec.FIRST_CHUNK_SPEECH_RMS
+
+    frames = np.zeros((4, 100, 100, 3), dtype=np.uint8)
+    assert fec.mouth_motion_peak(frames) == 0.0
+    frames[1, 60:65, 45:55] = 255
+    assert fec.mouth_motion_peak(frames) > fec.FIRST_CHUNK_MOUTH_MOTION
+    print("test_first_chunk_quality_metrics_detect_static_speech: PASS")
+
+
 def main():
     test_admission_find_free_and_full()
     test_admission_release_and_reclaim()
@@ -825,6 +840,7 @@ def main():
     test_force_release_slot_used_by_unhealthy_path()
     test_antiflicker_freezes_static_background_keeps_motion()
     test_turn_reset_restores_model_motion_seed_once()
+    test_first_chunk_quality_metrics_detect_static_speech()
     print("FlashHead multi-slot smoke test: ALL PASS")
 
 

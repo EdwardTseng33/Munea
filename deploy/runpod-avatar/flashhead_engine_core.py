@@ -68,6 +68,38 @@ ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 # semantic turn should be reproducible, while chunks inside the turn must keep
 # advancing normally.  Set a negative value only for a bounded rollback.
 TURN_SEED = int(os.environ.get("MUNEA_FH_TURN_SEED", "42"))
+FIRST_CHUNK_RETRY = os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY", "1") == "1"
+FIRST_CHUNK_SPEECH_RMS = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_SPEECH_RMS", "0.02")
+)
+FIRST_CHUNK_MOUTH_MOTION = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_MOUTH_MOTION", "0.008")
+)
+
+
+def pcm_rms(pcm):
+    """Normalized RMS for float or PCM16 arrays without copying large turns."""
+    values = np.asarray(pcm).reshape(-1)
+    if not len(values):
+        return 0.0
+    work = values.astype(np.float32, copy=False)
+    if values.dtype.kind in "iu":
+        work = work / 32768.0
+    return float(np.sqrt(np.mean(work * work)))
+
+
+def mouth_motion_peak(frames):
+    """Peak adjacent-frame motion in the production portrait mouth region."""
+    values = np.asarray(frames)
+    if values.ndim != 4 or len(values) < 2:
+        return 0.0
+    height, width = values.shape[1:3]
+    mouth = values[
+        :, int(height * 0.55):max(int(height * 0.72), int(height * 0.55) + 1),
+        int(width * 0.33):max(int(width * 0.67), int(width * 0.33) + 1),
+    ].astype(np.float32)
+    adjacent = np.abs(np.diff(mouth, axis=0))
+    return float(np.max(np.mean(adjacent, axis=(1, 2, 3))) / 255.0)
 
 
 def should_apply_antiflicker(emit_audio):
@@ -427,6 +459,8 @@ class Slot:
         self.motion_reset_count = 0
         self.motion_reset_failures = 0
         self.turn_seed_reset_count = 0
+        self.first_chunk_retry_count = 0
+        self.first_chunk_retry_failures = 0
         # Real speech must invalidate any idle GPU work that is still in flight.
         # Expose this count so the production gate can prove that the race was
         # handled instead of inferring it from negative first-frame timings.
@@ -739,6 +773,10 @@ class Feeder:
             if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
                 return
             chunk_epoch = self._epoch
+            first_round_chunk = bool(
+                emit_audio and self._round_pending
+                and self.slot.round_start_ts <= t_chunk_ready
+            )
             self.slot.audio_dq.extend(chunk_16k.tolist())
             arr = np.array(self.slot.audio_dq)
         try:
@@ -746,6 +784,31 @@ class Feeder:
                                             self.slot.audio_start_idx, self.slot.audio_end_idx)
             with self.slot.char_lock:
                 video = self.run_pipeline(self.slot.pipeline, emb)
+                frames = video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
+                input_rms = pcm_rms(output_pcm if output_pcm is not None else chunk_16k)
+                initial_motion = mouth_motion_peak(frames)
+                retry_supported = (
+                    FIRST_CHUNK_RETRY and TURN_SEED >= 0 and first_round_chunk
+                    and input_rms >= FIRST_CHUNK_SPEECH_RMS
+                    and initial_motion < FIRST_CHUNK_MOUTH_MOTION
+                )
+                reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
+                generator = getattr(self.slot.pipeline, "generator", None)
+                reseed_fn = getattr(generator, "manual_seed", None)
+                if retry_supported and callable(reset_fn) and callable(reseed_fn):
+                    reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                    reseed_fn(TURN_SEED + 1)
+                    retry_video = self.run_pipeline(self.slot.pipeline, emb)
+                    retry_frames = retry_video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
+                    retry_motion = mouth_motion_peak(retry_frames)
+                    self.slot.first_chunk_retry_count += 1
+                    frames = retry_frames
+                    if retry_motion < FIRST_CHUNK_MOUTH_MOTION:
+                        self.slot.first_chunk_retry_failures += 1
+                    print("[mouth-quality] slot" + str(self.slot.index)
+                          + " first chunk retry rms=" + str(round(input_rms, 4))
+                          + " motion=" + str(round(initial_motion, 4))
+                          + " -> " + str(round(retry_motion, 4)), flush=True)
         except Exception as e:
             # 故障隔離核心：這一路的 pipeline 炸了，不讓例外往上炸穿整個 feeder
             # 執行緒（更不會波及其他槽的 pipeline/thread，本來就是獨立物件）。
@@ -753,8 +816,6 @@ class Feeder:
             self._on_fault(e)
             return
         self._fault_streak = 0
-        video = video[self.slot.motion_frames_num:]
-        frames = video.cpu().numpy().astype(np.uint8)
         if self.sharpen:
             import cv2 as _cv2
             for _i in range(frames.shape[0]):
@@ -1134,6 +1195,8 @@ def health_snapshot(slot, wake_ts=None):
             "motion_reset_failures": slot.motion_reset_failures,
             "seed": TURN_SEED if TURN_SEED >= 0 else None,
             "seed_resets": slot.turn_seed_reset_count,
+            "first_chunk_retries": slot.first_chunk_retry_count,
+            "first_chunk_retry_failures": slot.first_chunk_retry_failures,
         },
     }
 
