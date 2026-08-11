@@ -123,14 +123,15 @@ WAV2VEC_DIR = os.environ.get(
 )
 
 SR_IN, SR_ENG = 24000, 16000
-# 每輪從 0.2s 起播；只有真的發生 mid-turn underrun 才逐級加到 0.35s。
-# GPU p95 繼續量測，但不再把偶發慢塊轉成每一句固定等待。
+# 每輪從 0.22s 起播；其中只有 0.02s 是相對原本 0.2s 的額外等待，
+# 但可讓已經生成好的嘴型先播完整 0.22s。只有真的發生 mid-turn
+# underrun 才逐級加到 0.35s，GPU p95 不轉成每一句固定等待。
 AUDIO_PREBUFFER_S = min(
-    0.35, max(0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.2")))
+    0.35, max(0.22, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.22")))
 )
-# 兩端仍共用同一個 start gate，嘴聲同步不變；連續三輪穩定就逐步退回 0.2s。
+# 兩端仍共用同一個 start gate；連續三輪穩定就逐步退回 0.22s。
 AUDIO_PREBUFFER_MIN_S = max(
-    0.2, min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.2")))
+    0.22, min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.22")))
 )
 AUDIO_PREBUFFER_MAX_S = max(
     AUDIO_PREBUFFER_MIN_S,
@@ -143,13 +144,13 @@ OPENING_PREBUFFER_S = max(
     AUDIO_PREBUFFER_S,
     min(0.35, float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.35"))),
 )
-# Formal A/V receiver evidence shows the video track reaches the client about
-# 78ms after audio even when both leave the same gate. The first 80ms trial
-# over-corrected to -78ms, so use one 25fps frame (40ms) as the measured midpoint.
-# Let one video frame
-# lead instead of delaying the whole answer. Bounded rollback: set to 0.
+# Production receiver evidence after speech antiflicker was removed still found
+# a quiet-phoneme turn with 422ms apparent mouth lag. The first 0.96s lip chunk
+# already exists before release, so let video consume the 220ms shared hold
+# instead of making those frames wait behind the same gate. This adds only 20ms
+# to audio versus the old 200ms minimum. Bounded rollback: set to 40 or 0.
 VIDEO_LEAD_S = min(
-    0.12, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "40")) / 1000.0)
+    0.35, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "220")) / 1000.0)
 )
 # Opus in-band FEC trades a small amount of codec efficiency for recovery from
 # isolated WebRTC packet loss. Long-call evidence saw intact Voice PCM and zero
@@ -684,6 +685,7 @@ class FlashHead:
                          "av_video_lead_ms": round(VIDEO_LEAD_S * 1000),
                          "antiflicker_lo": ANTIFLICKER_LO,
                          "antiflicker_hi": ANTIFLICKER_HI,
+                         "antiflicker_speech": False,
                          "opus_fec": bool(OPUS_PACKET_LOSS_PCT),
                          "opus_expected_packet_loss_pct": OPUS_PACKET_LOSS_PCT,
                          "call_protocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),

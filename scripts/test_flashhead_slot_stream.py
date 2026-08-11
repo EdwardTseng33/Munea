@@ -108,18 +108,22 @@ def test_slot_cuda_stream_defaults_to_none():
 
 
 def test_video_gate_leads_audio_without_escaping_empty_turn():
-    out = fec.AudioOutBuffer(48000, prebuffer_s=0.2)
-    assert out.playout_held() and out.video_playout_held(0.08), (
+    server_source = (ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py").read_text(
+        encoding="utf-8"
+    )
+    out = fec.AudioOutBuffer(48000, prebuffer_s=0.22)
+    assert out.playout_held() and out.video_playout_held(0.22), (
         "an empty turn must hold both tracks"
     )
     out.push([1] * 960)
     assert out.playout_held(), "audio must keep the configured prebuffer"
     remaining = out.hold_until_ts - time.time()
-    assert 0.15 <= remaining <= 0.21
-    time.sleep(0.17)
-    assert out.playout_held() and not out.video_playout_held(0.04), (
-        "video should open about 40ms before audio"
+    assert 0.17 <= remaining <= 0.23
+    assert not out.video_playout_held(0.22), (
+        "video should consume the generated 220ms hold before audio"
     )
+    assert 'MUNEA_FH_AUDIO_PREBUFFER_S", "0.22"' in server_source
+    assert 'MUNEA_FH_VIDEO_LEAD_MS", "220"' in server_source
     print("test_video_gate_leads_audio_without_escaping_empty_turn: PASS")
 
 
@@ -228,7 +232,25 @@ def test_antiflicker_defaults_preserve_quiet_mouth_motion():
     assert 'MUNEA_FH_AF_HI", "8"' in core
     assert '"antiflicker_lo": ANTIFLICKER_LO' in server
     assert '"antiflicker_hi": ANTIFLICKER_HI' in server
+    assert '"antiflicker_speech": False' in server
     print("test_antiflicker_defaults_preserve_quiet_mouth_motion: PASS")
+
+
+def test_antiflicker_only_filters_idle_video():
+    old_value = fec.ANTIFLICKER
+    try:
+        fec.ANTIFLICKER = True
+        assert fec.should_apply_antiflicker(emit_audio=False) is True
+        assert fec.should_apply_antiflicker(emit_audio=True) is False
+        fec.ANTIFLICKER = False
+        assert fec.should_apply_antiflicker(emit_audio=False) is False
+    finally:
+        fec.ANTIFLICKER = old_value
+    core_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_engine_core.py"
+    core = core_path.read_text(encoding="utf-8")
+    assert "apply_filter=should_apply_antiflicker(emit_audio)" in core
+    assert "prev = frames[-1]" in core
+    print("test_antiflicker_only_filters_idle_video: PASS")
 
 
 def main():
@@ -240,6 +262,7 @@ def main():
     test_flashhead_server_default_flag_values_unchanged()
     test_opus_fec_is_enabled_before_peer_connections()
     test_antiflicker_defaults_preserve_quiet_mouth_motion()
+    test_antiflicker_only_filters_idle_video()
     print("FlashHead slot-stream unit test: ALL PASS")
 
 

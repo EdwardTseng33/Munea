@@ -61,6 +61,18 @@ ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "1"))
 ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 
 
+def should_apply_antiflicker(emit_audio):
+    """Background stabilization is safe only for video-only idle chunks.
+
+    Speech frames must preserve even quiet phoneme motion.  Production A/V
+    evidence caught a full 8.3-second audible response whose small mouth
+    changes were flattened by the same pixel hold intended for idle
+    background flicker.  Keep the stabilizer's reference frame updated during
+    speech, but never filter speech pixels.
+    """
+    return ANTIFLICKER and not emit_audio
+
+
 def stabilize_frame(prev, cur, cv2mod):
     """單張時間穩定：跟上一張輸出 prev 比，回傳處理後的 cur。
 
@@ -332,7 +344,7 @@ class AudioOutBuffer:
         this only compensates the measured transport difference between the two
         WebRTC tracks and never lets video escape before a real turn exists.
         """
-        lead = max(0.0, min(0.12, float(lead_s or 0.0)))
+        lead = max(0.0, min(0.35, float(lead_s or 0.0)))
         with self.lock:
             return time.time() < self.hold_until_ts - lead
 
@@ -399,6 +411,12 @@ class Slot:
         self.gen_compute_ms_hist = collections.deque(maxlen=100)
         self.video_catchup_events = 0
         self.video_catchup_frames = 0
+        # FlashHead carries the final motion latent into the next generation
+        # chunk.  That continuity is correct inside one assistant utterance,
+        # but a new semantic turn must start from the character reference or
+        # it can inherit a closed/static mouth from the previous answer.
+        self.motion_reset_count = 0
+        self.motion_reset_failures = 0
         # Real speech must invalidate any idle GPU work that is still in flight.
         # Expose this count so the production gate can prove that the race was
         # handled instead of inferring it from negative first-frame timings.
@@ -470,7 +488,10 @@ def switch_slot_char(slot, char, char_src_map, get_base_data_fn, load_poster_fn)
         prev = slot.char
         try:
             if slot.feeder is not None:
-                slot.feeder.reset()
+                # get_base_data_fn below already replaces the character and
+                # resets its motion latent.  Avoid reacquiring char_lock from
+                # Feeder.reset while this switch already owns it.
+                slot.feeder.reset(reset_pipeline_motion=False)
             get_base_data_fn(slot.pipeline, cond_image_path_or_dir=char_src_map[char],
                               base_seed=42, use_face_crop=False)
             slot.char = char
@@ -593,7 +614,7 @@ class Feeder:
             print("[feeder] slot" + str(self.slot.index)
                   + " real audio invalidated in-flight idle frames", flush=True)
 
-    def reset(self):
+    def reset(self, reset_pipeline_motion=True):
         with self.lock:
             self.acc = np.zeros(0, dtype=np.float32)
             self.acc_out = np.zeros(0, dtype=np.float32)
@@ -610,8 +631,30 @@ class Feeder:
             self.slot.sink.clear()
         if self.slot.audio_out is not None:
             self.slot.audio_out.clear()
+        motion_reset = False
+        if reset_pipeline_motion:
+            try:
+                reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
+                if callable(reset_fn):
+                    # An older GPU chunk may still be updating
+                    # latent_motion_frames.  Epoch invalidates its output;
+                    # char_lock then waits for it to finish before restoring
+                    # the neutral per-character motion seed for the new turn.
+                    with self.slot.char_lock:
+                        reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                    self.slot.motion_reset_count += 1
+                    motion_reset = True
+            except Exception as exc:
+                # Preserve audible service even if a third-party model build
+                # lacks a compatible reset implementation.  Surface the
+                # failure for the production gate instead of silently
+                # poisoning subsequent lip turns.
+                self.slot.motion_reset_failures += 1
+                self.slot.last_fault = "motion reset: " + repr(exc)
+                print("[feeder] slot" + str(self.slot.index)
+                      + " motion reset failed: " + repr(exc), flush=True)
         print("[feeder] slot" + str(self.slot.index) + " reset(turn boundary) epoch="
-              + str(self._epoch), flush=True)
+              + str(self._epoch) + " motion=" + str(motion_reset), flush=True)
 
     def finish(self):
         with self.lock:
@@ -644,7 +687,7 @@ class Feeder:
                     print("[feeder] slot" + str(self.slot.index)
                           + " on_unhealthy callback error: " + repr(cb_err), flush=True)
 
-    def _stabilize(self, frames, chunk_epoch):
+    def _stabilize(self, frames, chunk_epoch, apply_filter=True):
         """時間穩定器：逐張跟上一張輸出比，幾乎沒變的像素沿用上一張。
 
         cv2 快路徑實測 768² 約 3.5-4.7ms/張（26 張一包約 0.1s、佔 0.96s
@@ -656,12 +699,18 @@ class Feeder:
         except ImportError:
             cv2mod = None
         prev = self._prev_frame
-        for i in range(frames.shape[0]):
-            cur = frames[i]
-            if prev is not None and prev.shape == cur.shape:
-                cur = stabilize_frame(prev, cur, cv2mod)
-                frames[i] = cur
-            prev = cur
+        if apply_filter:
+            for i in range(frames.shape[0]):
+                cur = frames[i]
+                if prev is not None and prev.shape == cur.shape:
+                    cur = stabilize_frame(prev, cur, cv2mod)
+                    frames[i] = cur
+                prev = cur
+        elif len(frames):
+            # Speech uses the unfiltered model frames, while the last frame is
+            # still remembered so the next idle chunk does not jump back to a
+            # stale pre-speech reference.
+            prev = frames[-1]
         # 只有世代號沒變才更新基準——reset()/換角色後不可拿舊世代的畫面當基準
         with self.lock:
             if self._epoch == chunk_epoch and prev is not None:
@@ -734,7 +783,10 @@ class Feeder:
                       + " source=" + str(round(timeline_start_s, 3)) + "s",
                       flush=True)
         if ANTIFLICKER:
-            frames = self._stabilize(frames, chunk_epoch)
+            frames = self._stabilize(
+                frames, chunk_epoch,
+                apply_filter=should_apply_antiflicker(emit_audio),
+            )
         # Keep the final generation check and queue insertion atomic with
         # push24k's epoch bump + sink.clear(). Otherwise real input can arrive
         # after the check but before this push and stale idle frames still win.

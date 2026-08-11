@@ -717,7 +717,11 @@ def test_antiflicker_freezes_static_background_keeps_motion():
     n = 6
     frames = np.zeros((n, 8, 8, 3), dtype=np.uint8)
     for i in range(n):
-        noise = rng.integers(-2, 3, size=(8, 8, 3))
+        # Keep the synthetic background inside ANTIFLICKER_LO. The old -2..2
+        # range could differ by four levels between adjacent frames, which is
+        # deliberately blended (not frozen) by the production filter and made
+        # this assertion fail deterministically under the real 1/8 defaults.
+        noise = rng.integers(-1, 1, size=(8, 8, 3))
         frames[i] = np.clip(base.astype(np.int16) + noise, 0, 255).astype(np.uint8)
         # 「嘴巴」那格做真動作：0 <-> 200 交替（差異遠超 AF_HI，必須通過）
         frames[i, 6, 6] = 200 if i % 2 == 0 else 0
@@ -754,6 +758,34 @@ def test_antiflicker_freezes_static_background_keeps_motion():
     print("test_antiflicker_freezes_static_background_keeps_motion: PASS")
 
 
+def test_turn_reset_restores_model_motion_seed_once():
+    """A new assistant turn resets model motion; character switching does not deadlock."""
+    slot = make_slot(0, "s0")
+
+    class MotionPipeline:
+        def __init__(self):
+            self.person_name = "munea"
+            self.calls = []
+
+        def reset_person_name(self, person_name=None):
+            self.calls.append(person_name)
+
+    pipeline = MotionPipeline()
+    slot.pipeline = pipeline
+    emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+
+    feeder.reset()
+    assert pipeline.calls == ["munea"]
+    assert slot.motion_reset_count == 1
+    assert slot.motion_reset_failures == 0
+
+    feeder.reset(reset_pipeline_motion=False)
+    assert pipeline.calls == ["munea"], "character switch owns the model reset"
+    assert slot.motion_reset_count == 1
+    print("test_turn_reset_restores_model_motion_seed_once: PASS")
+
+
 def main():
     test_admission_find_free_and_full()
     test_admission_release_and_reclaim()
@@ -777,6 +809,7 @@ def main():
     test_frame_size_contract()
     test_force_release_slot_used_by_unhealthy_path()
     test_antiflicker_freezes_static_background_keeps_motion()
+    test_turn_reset_restores_model_motion_seed_once()
     print("FlashHead multi-slot smoke test: ALL PASS")
 
 
