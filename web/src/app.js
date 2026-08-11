@@ -4924,6 +4924,9 @@ const LiveVoice = {
                 version: o.version || '', commit: o.commit || '',
                 callProtocol: Number(o.callProtocol) || 0,
                 voiceProtocol: o.voiceProtocol || '',
+                voiceEngine: o.voiceEngine || '',
+                voiceModel: o.voiceModel || '',
+                voiceName: o.voiceName || '',
               });
             }
             if (o.type === 'faceaudio_status') {
