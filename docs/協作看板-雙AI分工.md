@@ -10,6 +10,7 @@
 - **1.0.63+534 實機證據**：正式通話 `c17` 在約 3 分鐘內，幾乎每一個 AI 回合都出現 `node.turn_complete_stall → finish_and_reconnect`，共重建 Live session 9 次且全部 `handle=False`；最後達 `reconnect_limit_reached attempts=9`，Gateway 隨後記錄 `avatar_disconnected`。這與使用者回報五分鐘內反覆問「吃飯了沒」、最後只剩聲音而 Avatar 停住一致。
 - **根因／修復原則**：provider 漏送 `turn_complete` 只代表一輪需要補收尾，不代表整條 Live session 壞掉。現行 watchdog 卻主動清掉 resumption handle 並強制重連，造成模型忘記同通前文，且重連額度耗盡後連帶釋放 Avatar。改為在同一 Live session 內原地補送 App／Avatar 回合收尾，保留模型上下文與真正 GoAway 才使用的 session resumption。
 - **驗收責任**：先跑單元競態測試，再以正式 Gateway→Voice→Avatar 跑超過 5 分鐘、多輪、有前文追問的長通話 Gate；要求 forced reconnect／reconnect limit／Avatar disconnect／非預期重複皆為 0。服務 Gate 通過後仍標 `App E2E pending（Codex ownership）`，直到 exact-build iPhone 真麥克風覆蓋開頭、聲嘴、五分鐘上下文與掛斷釋位。
+- **0% 正式候選 Gate PASS**：Voice `munea-voice-00107-jiy@3341f961` 三輪 QA 真人 WAV 與同一通 `354.093s／15` 輪上下文 Gate 皆過；長通話內 9 次漏 `turn_complete` 全部原地恢復，forced reconnect／reconnect limit／Avatar disconnect／自主重播／有聲 RTP gap／underrun 皆 0，第 15 輪仍正確記得外送便當及藍色毛巾在沙發。PR #567 最新 CI 全綠。下一步合併、依 exact tag 切 Voice production；現有 1.0.63 無需重包。開頭卡頓與輕微嘴慢仍分案，不隨本項宣稱修好。
 
 ### 2026-08-11 Codex｜🚨 1.0.62 實機四項失敗：自我打斷／嘴聲不同步／假斷線／查詢無對嘴（進行中 · call-path risk）
 
