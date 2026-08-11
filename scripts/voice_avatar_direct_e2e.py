@@ -441,6 +441,7 @@ class EvidenceRun:
         self.avatar_feed_task = asyncio.create_task(self.read_avatar_feed())
 
     async def run_media(self):
+        call_started_at = time.monotonic()
         avatar_url, avatar_session = await self.connect_avatar()
         if not avatar_session:
             raise RuntimeError("Avatar session missing")
@@ -521,7 +522,11 @@ class EvidenceRun:
                     await voice.send(json.dumps({"type": "audio_end"}))
                     mic_finished_at = time.monotonic()
                 else:
-                    await voice.send(json.dumps({"type": "text", "text": self.args.prompt}, ensure_ascii=False))
+                    turn_prompt = (
+                        self.args.turn_prompts[turn_number - 1]
+                        if self.args.turn_prompts else self.args.prompt
+                    )
+                    await voice.send(json.dumps({"type": "text", "text": turn_prompt}, ensure_ascii=False))
                     mic_finished_at = time.monotonic()
 
                 deadline = time.monotonic() + self.args.timeout
@@ -618,6 +623,8 @@ class EvidenceRun:
         arrival_gaps = [1000 * (right - left) for left, right in zip(voice_times, voice_times[1:])]
         source_playout = source_playout_metrics(voice_chunks, voice_times)
         return voice_pcm, avatar_pcm, {
+            "call_id": str(self.lease.get("call_id") or ""),
+            "call_duration_ms": round((time.monotonic() - call_started_at) * 1000),
             "transport": self.args.transport,
             "transport_status": "ready",
             "avatar_ack": avatar_ack if self.args.transport == "direct" else self.avatar_feed_ack,
@@ -729,6 +736,9 @@ async def execute_run(args, output):
                     for item in metrics.get("turns", [])
                 )
             ),
+            "minimum_call_duration": (
+                metrics.get("call_duration_ms", 0) >= args.min_call_seconds * 1000
+            ),
         }
         metrics["ok"] = all(metrics["gates"].values())
         (output / "result.json").write_text(
@@ -766,6 +776,8 @@ async def main():
     parser.add_argument("--post-turn-quiet-seconds", type=float, default=3.0)
     parser.add_argument("--between-turn-seconds", type=float, default=1.2)
     parser.add_argument("--turns", type=int, default=1)
+    parser.add_argument("--prompts-json", default="")
+    parser.add_argument("--min-call-seconds", type=float, default=0)
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--prompt", default="請只用自然台灣華語，連續清楚地說一段約十五秒的話，內容是今天精神還不錯、早餐吃得下、下午想在家休息；不要列點，也不要問問題。")
     args = parser.parse_args()
@@ -773,6 +785,18 @@ async def main():
         parser.error("--runs must be at least 1")
     if args.turns < 1:
         parser.error("--turns must be at least 1")
+    args.turn_prompts = []
+    if args.prompts_json:
+        try:
+            args.turn_prompts = json.loads(args.prompts_json)
+        except json.JSONDecodeError as error:
+            parser.error("--prompts-json must be a JSON array: " + str(error))
+        if (
+            not isinstance(args.turn_prompts, list)
+            or len(args.turn_prompts) != args.turns
+            or not all(isinstance(item, str) and item.strip() for item in args.turn_prompts)
+        ):
+            parser.error("--prompts-json must contain exactly --turns non-empty strings")
     if args.mic_wav and not args.expected_text.strip():
         parser.error("--expected-text is required with --mic-wav; a fake phone must score what Voice heard")
     output = Path(args.out).resolve()

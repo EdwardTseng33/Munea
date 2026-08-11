@@ -114,8 +114,10 @@ const speechActiveEnd = app.indexOf('\n}', speechActiveStart) + 2;
 const speechActiveContract = app.slice(speechActiveStart, speechActiveEnd);
 expect(speechActiveStart >= 0 &&
   speechActiveContract.includes('LiveVoice._playoutUntil') &&
-  !speechActiveContract.includes('_faceAudLevel'),
-  'raw Avatar idle audio can still keep speechActive true and suppress microphone uplink');
+  speechActiveContract.includes('now <= predictedEnd + 1500') &&
+  speechActiveContract.includes('_faceAudLevel || 0) >= 0.06') &&
+  !speechActiveContract.includes("if (Number(Avatar && Avatar._faceAudLevel"),
+  'Avatar decoded-tail evidence is not bounded to the Voice playout window and can lock microphone uplink');
 expect(voiceServer.includes('localization.requires_taiwanese_hokkien_fallback(obj["text"])'),
   'explicit Hokkien text requests are not blocked before reaching the conversational model');
 expect(voiceServer.includes('await _arm_language_block("audio_input")'),

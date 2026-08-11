@@ -1868,7 +1868,12 @@ def _new_call_state():
           "face_audio_ready": None, "face_audio_turn_started": False,
           "face_audio_turn_seq": 0, "face_audio_transport_turn": 0,
           "provider_turn_active": False, "provider_turn_last_audio_at": 0.0,
-          "provider_turn_out_bytes": 0, "drop_resumption_handle": False,
+          "provider_turn_out_bytes": 0, "provider_turn_max_gap_ms": 0.0,
+          # provider 偶爾會漏送 turn_complete。這只是一輪的收尾訊號遺失，不能拿來
+          # 重建整條 Live session；否則模型會忘記同通前文，幾輪後也會耗盡重連額度。
+          "provider_turn_recovery_seq": 0, "provider_turn_recoveries": 0,
+          "provider_turn_recovered_pending": False,
+          "provider_turn_recovery_in_progress": False, "provider_audio_forwarding": False,
           # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
@@ -2977,11 +2982,28 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             "reason": "client_disabled",
                         }))
 
+    # watchdog 原地補回合時，下一塊 provider 音訊要等 App／Avatar 舊回合收乾淨再進來，
+    # 避免舊 tail 與新一句 PCM 互相穿插。
+    turn_recovery_done = asyncio.Event()
+    turn_recovery_done.set()
+
     async def from_live():
         # session.receive() 每輪結束就收（SDK 行為）；外層 while 讓「一輪接完再等下一輪」＝多輪對話不斷。
         # 2026-07-25 通話延長：整段包一層 try/except——GoAway 預警後底層連線遲早會被
         # Gemini 收掉，這是「預期中的收線」，跟真的斷線／出錯要分開處理；回傳值
         # "reconnect" 交給外層換一條底層連線接著講，"ended" 才是這通真的結束了。
+        observed_recovery_seq = int(st.get("provider_turn_recovery_seq") or 0)
+
+        def _sync_recovered_turn_counters():
+            nonlocal observed_recovery_seq, turn_out, turn_max_gap_ms, turn_last_out
+            current = int(st.get("provider_turn_recovery_seq") or 0)
+            if current == observed_recovery_seq:
+                return
+            observed_recovery_seq = current
+            turn_out = 0
+            turn_max_gap_ms = 0.0
+            turn_last_out = None
+
         try:
             while True:
                 st["face_audio_turn_started"] = False
@@ -2991,6 +3013,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 got = False
                 async for msg in session.receive():
                     got = True
+                    await turn_recovery_done.wait()
+                    _sync_recovered_turn_counters()
                     # 通話延長（2026-07-25）：GoAway＝伺服器預告「這條底層連線快到期了」
                     # （time_left 通常留了緩衝，不是馬上斷）；session_resumption_update
                     # 帶新的 handle，之後重連要帶著這個 handle 才能接上同一通邏輯電話。
@@ -3236,6 +3260,16 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["semantic_hold_outcome_recorded"] = True
                             _clear_semantic_hold()
                     if data and not st.get("language_block") and not st.get("client_barge_in"):
+                        # 先把 provider 活性更新，再做任何可能 yield 的工作；否則 watchdog
+                        # 可能在新 PCM 已抵達、但 _mark_first_audio 尚未返回時誤收上一輪。
+                        await turn_recovery_done.wait()
+                        _sync_recovered_turn_counters()
+                        _provider_audio_at = time.monotonic()
+                        turn_out += len(data)
+                        st["provider_turn_active"] = True
+                        st["provider_turn_last_audio_at"] = _provider_audio_at
+                        st["provider_turn_out_bytes"] = turn_out
+                        st["provider_turn_recovered_pending"] = False
                         await _mark_first_audio("model")
                         if st.get("lookup_waiting_answer"):
                             now = time.monotonic()
@@ -3247,10 +3281,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 after_result_ms=round((now - result_at) * 1000),
                             )
                             st["lookup_waiting_answer"] = False
-                        turn_out += len(data)
-                        st["provider_turn_active"] = True
-                        st["provider_turn_last_audio_at"] = time.monotonic()
-                        st["provider_turn_out_bytes"] = turn_out
                         # 2026-07-29：量「送聲音的手抖不抖」。Edward 7/28 回報「句尾的最後一句
                         # 會卡其中某個字」，但體感沒有數字就查不動——這裡記下相鄰兩塊聲音之間
                         # 最久的一次空檔，收在 turn_done 一起報。手順的時候這個值很小；
@@ -3260,9 +3290,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         _now_out = time.monotonic()
                         turn_max_gap_ms, _ = note_turn_gap(_now_out, turn_last_out, turn_max_gap_ms)
                         turn_last_out = _now_out
+                        st["provider_turn_max_gap_ms"] = turn_max_gap_ms
                         # 唯一音訊出口：先嘗試 Voice→Avatar 直送，再把同一塊送給 App 播放。
                         # 直送若逾時，_forward_audio 會先通知 App 切回 relay，確保這一塊不遺失。
-                        await _forward_audio(data)
+                        st["provider_audio_forwarding"] = True
+                        try:
+                            await _forward_audio(data)
+                        finally:
+                            st["provider_audio_forwarding"] = False
                     elif data:
                         reason = "language" if st.get("language_block") else "barge_in"
                         _diag(cid, "node.audio_suppressed", reason=reason, out_bytes=len(data))
@@ -3314,10 +3349,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             await ws.send(json.dumps({"type": "interrupted"}))
                             # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）。
                             await _reset_face_audio_turn("model_interrupted")
+                        if (
+                            getattr(sc, "turn_complete", False)
+                            and st.get("provider_turn_recovered_pending")
+                            and not st.get("provider_turn_active")
+                            and turn_out == 0
+                        ):
+                            # watchdog 已替這一輪補過收尾；provider 晚到的原始訊號只吃掉，
+                            # 不可以再向 App／Avatar 補第二次 turn_complete。
+                            st["provider_turn_recovered_pending"] = False
+                            _diag(cid, "node.turn_complete_late_after_recovery")
+                            continue
                         if getattr(sc, "turn_complete", False):
                             st["provider_turn_active"] = False
                             st["provider_turn_last_audio_at"] = 0.0
                             st["provider_turn_out_bytes"] = 0
+                            st["provider_turn_max_gap_ms"] = 0.0
+                            st["provider_turn_recovered_pending"] = False
                             ms = round(turn_out / (24000 * 2) * 1000)
                             # max_gap_ms＝這一輪送聲音最久的一次空檔。Avatar 播放端現在只有
                             # 200-350 毫秒動態緩衝；持續衝到接近或超過緩衝，
@@ -3462,8 +3510,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             raise
 
     async def _session_watchdog():
-        # GoAway 保底：萬一遲遲沒有 turn_complete 這種天然空檔（例如對方講很長一段話、
-        # 或整通都沒人開口），不要傻等硬斷線——時間一到就主動出手，逼外層換線。
+        # 兩種不同責任：provider 漏 turn_complete 時只在原 session 補回合收尾；
+        # 真正 GoAway 到期才換底層連線。兩者不可再共用「重連」處置。
         while True:
             await asyncio.sleep(0.25)
             now = time.monotonic()
@@ -3478,6 +3526,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     or st.get("tool_wait_active")
                     or st.get("lookup_waiting_answer")
                     or st.get("action_results")
+                    or st.get("provider_audio_forwarding")
                 ),
                 idle_ms=float(os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS", "2500")),
             )
@@ -3491,26 +3540,58 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     "node.turn_complete_stall",
                     quiet_ms=quiet_ms,
                     out_bytes=out_bytes,
-                    action="finish_and_reconnect",
+                    action="finish_in_place",
                 )
-                await _send_turn_tail()
-                await _finish_face_audio_turn()
-                await ws.send(json.dumps({"type": "turn_complete", "recovered": True}))
+                # 先同步宣告這輪已被接管，再做任何 await；新 PCM 會在
+                # turn_recovery_done 等舊回合的 tail／Avatar 收尾完成，不會交錯。
+                turn_recovery_done.clear()
+                st["provider_turn_recovery_in_progress"] = True
                 st["provider_turn_active"] = False
                 st["provider_turn_last_audio_at"] = 0.0
                 st["provider_turn_out_bytes"] = 0
-                st["await_first"] = True
-                st["client_barge_in"] = False
-                st["user_turn_started_at"] = None
-                _capture_call_turns(st)
-                st["user_buf"] = ""
-                st["ai_buf"] = ""
-                # Resuming the same provider handle can resume the orphaned
-                # generation. Reconnect fresh while keeping the App socket and
-                # Gateway lease alive.
-                st["resumption_handle"] = None
-                st["drop_resumption_handle"] = True
-                return "reconnect_turn_stall"
+                max_gap_ms = round(float(st.get("provider_turn_max_gap_ms") or 0.0))
+                st["provider_turn_max_gap_ms"] = 0.0
+                st["provider_turn_recovery_seq"] = int(
+                    st.get("provider_turn_recovery_seq") or 0
+                ) + 1
+                st["provider_turn_recoveries"] = int(
+                    st.get("provider_turn_recoveries") or 0
+                ) + 1
+                st["provider_turn_recovered_pending"] = True
+                try:
+                    await _send_turn_tail()
+                    await _finish_face_audio_turn()
+                    await ws.send(json.dumps({"type": "turn_complete", "recovered": True}))
+                    st["await_first"] = True
+                    st["client_barge_in"] = False
+                    st["user_turn_started_at"] = None
+                    st["locale_user_transcript"] = ""
+                    st["locale_resolved_text"] = ""
+                    _capture_call_turns(st)
+                    st["user_buf"] = ""
+                    st["ai_buf"] = ""
+                    st["guardian_internal_followup_active"] = False
+                    st["guardian_internal_followup_sources"] = ()
+                    if (
+                        st.get("pending_cues")
+                        or st.get("pending_health_cue")
+                        or st.get("pending_promise_cue")
+                    ):
+                        st["bg_tasks"].append(asyncio.create_task(
+                            guardian_flush_pending_cue(cid, session, st)
+                        ))
+                    _diag(
+                        cid,
+                        "node.turn_complete_recovered_in_place",
+                        recovery=st["provider_turn_recoveries"],
+                        audio_ms=round(out_bytes / (24000 * 2) * 1000),
+                        max_gap_ms=max_gap_ms,
+                        session_preserved=True,
+                    )
+                finally:
+                    st["provider_turn_recovery_in_progress"] = False
+                    turn_recovery_done.set()
+                continue
             deadline = st.get("goaway_deadline")
             if deadline and now >= deadline:
                 return "reconnect_timeout"
@@ -3527,13 +3608,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         if from_browser_task in done:
             call_ended = True   # 瀏覽器連線斷了／使用者掛斷，這才是真的收線
         elif watchdog_task in done and from_live_task not in done:
-            # 一直沒等到天然空檔、GoAway 保底時間到了——強制換線（from_live_task 在
-            # 下面的 finally 會被取消，session.receive() 中途取消是安全的）。
-            watchdog_status = watchdog_task.result()
-            if watchdog_status == "reconnect_turn_stall":
-                _diag(cid, "node.turn_stall_forced_reconnect")
-            else:
-                _diag(cid, "node.goaway_forced_reconnect")
+            # watchdog 只會因真正的 GoAway 到期而結束；漏 turn_complete 已在同一條
+            # Live session 內原地收尾，不再取消 session 或消耗重連額度。
+            watchdog_task.result()
+            _diag(cid, "node.goaway_forced_reconnect")
         elif from_live_task in done:
             status = from_live_task.result()
             if status != "reconnect":
@@ -3547,8 +3625,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 await t
             except (asyncio.CancelledError, Exception):
                 pass
-    if st.pop("drop_resumption_handle", False):
-        return call_ended, None
     return call_ended, st.get("resumption_handle") or resumption_handle
 
 
@@ -3924,6 +4000,7 @@ async def handle(ws):
             native_search_queries=st["native_search_queries"],
             native_search_sources=st["native_search_sources"],
             mandarin_pronunciation_seen=st["mandarin_pronunciation_seen"],
+            provider_turn_recoveries=st["provider_turn_recoveries"],
         )
 
 

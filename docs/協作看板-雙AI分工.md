@@ -4,6 +4,13 @@
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
 
+### 2026-08-11 Codex｜🚨 1.0.63 多輪失憶／重複提問／Avatar 中途停止（進行中 · call-path risk）
+
+- **分支／範圍**：`codex/fix-voice-inplace-turn-recovery-p0-20260811`；預計修改 `engine/live_voice_server.py`、`engine/test_voice_session_extend.py`、`scripts/test-voice-launch-policy.js`、長通話驗收腳本與狀態文件。先修 Voice 回合恢復與同線上下文，開頭卡頓、嘴聲延遲分開量測，不混成同一個「已修好」結論。
+- **1.0.63+534 實機證據**：正式通話 `c17` 在約 3 分鐘內，幾乎每一個 AI 回合都出現 `node.turn_complete_stall → finish_and_reconnect`，共重建 Live session 9 次且全部 `handle=False`；最後達 `reconnect_limit_reached attempts=9`，Gateway 隨後記錄 `avatar_disconnected`。這與使用者回報五分鐘內反覆問「吃飯了沒」、最後只剩聲音而 Avatar 停住一致。
+- **根因／修復原則**：provider 漏送 `turn_complete` 只代表一輪需要補收尾，不代表整條 Live session 壞掉。現行 watchdog 卻主動清掉 resumption handle 並強制重連，造成模型忘記同通前文，且重連額度耗盡後連帶釋放 Avatar。改為在同一 Live session 內原地補送 App／Avatar 回合收尾，保留模型上下文與真正 GoAway 才使用的 session resumption。
+- **驗收責任**：先跑單元競態測試，再以正式 Gateway→Voice→Avatar 跑超過 5 分鐘、多輪、有前文追問的長通話 Gate；要求 forced reconnect／reconnect limit／Avatar disconnect／非預期重複皆為 0。服務 Gate 通過後仍標 `App E2E pending（Codex ownership）`，直到 exact-build iPhone 真麥克風覆蓋開頭、聲嘴、五分鐘上下文與掛斷釋位。
+
 ### 2026-08-11 Codex｜🚨 1.0.62 實機四項失敗：自我打斷／嘴聲不同步／假斷線／查詢無對嘴（進行中 · call-path risk）
 
 - **分支／範圍**：`codex/fix-app-speaker-avatar-sync-p0-20260811`；修改 App 播放／插話裁決與 Avatar fallback（`web/src/app.js`）、Avatar 待機／真語音競態與健康監測（`deploy/runpod-avatar/flashhead_engine_core.py`）、版本 1.0.63 Build 534、對應測試與狀態文件。正式 Voice WebSocket 未被 1.0.62 實證為斷線，故本輪不擴大修改 Voice。
