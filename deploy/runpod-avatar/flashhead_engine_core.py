@@ -75,6 +75,12 @@ FIRST_CHUNK_SPEECH_RMS = float(
 FIRST_CHUNK_MOUTH_MOTION = float(
     os.environ.get("MUNEA_FH_FIRST_CHUNK_MOUTH_MOTION", "0.008")
 )
+FIRST_CHUNK_MAX_SKEW_MS = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_MAX_SKEW_MS", "160")
+)
+FIRST_CHUNK_RETRY_CANDIDATES = max(
+    1, min(3, int(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_CANDIDATES", "3")))
+)
 
 
 def pcm_rms(pcm):
@@ -100,6 +106,41 @@ def mouth_motion_peak(frames):
     ].astype(np.float32)
     adjacent = np.abs(np.diff(mouth, axis=0))
     return float(np.max(np.mean(adjacent, axis=(1, 2, 3))) / 255.0)
+
+
+def first_chunk_av_skew_ms(frames, pcm, fps=25):
+    """Measure model-local audio-to-mouth onset skew for one generated chunk."""
+    values = np.asarray(frames)
+    audio = np.asarray(pcm).reshape(-1)
+    if values.ndim != 4 or len(values) < 2 or not len(audio):
+        return None
+    work = audio.astype(np.float32, copy=False)
+    if audio.dtype.kind in "iu":
+        work = work / 32768.0
+    samples_per_frame = max(1, int(round(len(work) / len(values))))
+    audio_onset = None
+    for index in range(len(values)):
+        part = work[index * samples_per_frame:(index + 1) * samples_per_frame]
+        if len(part) and float(np.sqrt(np.mean(part * part))) >= FIRST_CHUNK_SPEECH_RMS:
+            audio_onset = index
+            break
+    if audio_onset is None:
+        return None
+
+    height, width = values.shape[1:3]
+    mouth = values[
+        :, int(height * 0.55):max(int(height * 0.72), int(height * 0.55) + 1),
+        int(width * 0.33):max(int(width * 0.67), int(width * 0.33) + 1),
+    ].astype(np.float32)
+    motion = np.mean(np.abs(np.diff(mouth, axis=0)), axis=(1, 2, 3)) / 255.0
+    mouth_onset = next(
+        (index + 1 for index, value in enumerate(motion)
+         if index + 1 >= audio_onset and float(value) >= FIRST_CHUNK_MOUTH_MOTION),
+        None,
+    )
+    if mouth_onset is None:
+        return float("inf")
+    return round((mouth_onset - audio_onset) * 1000.0 / max(1, float(fps)), 1)
 
 
 def should_apply_antiflicker(emit_audio):
@@ -785,30 +826,41 @@ class Feeder:
             with self.slot.char_lock:
                 video = self.run_pipeline(self.slot.pipeline, emb)
                 frames = video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
-                input_rms = pcm_rms(output_pcm if output_pcm is not None else chunk_16k)
-                initial_motion = mouth_motion_peak(frames)
-                retry_supported = (
-                    FIRST_CHUNK_RETRY and TURN_SEED >= 0 and first_round_chunk
-                    and input_rms >= FIRST_CHUNK_SPEECH_RMS
-                    and initial_motion < FIRST_CHUNK_MOUTH_MOTION
-                )
-                reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
-                generator = getattr(self.slot.pipeline, "generator", None)
-                reseed_fn = getattr(generator, "manual_seed", None)
-                if retry_supported and callable(reset_fn) and callable(reseed_fn):
-                    reset_fn(getattr(self.slot.pipeline, "person_name", None))
-                    reseed_fn(TURN_SEED + 1)
-                    retry_video = self.run_pipeline(self.slot.pipeline, emb)
-                    retry_frames = retry_video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
-                    retry_motion = mouth_motion_peak(retry_frames)
-                    self.slot.first_chunk_retry_count += 1
-                    frames = retry_frames
-                    if retry_motion < FIRST_CHUNK_MOUTH_MOTION:
-                        self.slot.first_chunk_retry_failures += 1
-                    print("[mouth-quality] slot" + str(self.slot.index)
-                          + " first chunk retry rms=" + str(round(input_rms, 4))
-                          + " motion=" + str(round(initial_motion, 4))
-                          + " -> " + str(round(retry_motion, 4)), flush=True)
+                if first_round_chunk:
+                    input_pcm = output_pcm if output_pcm is not None else chunk_16k
+                    initial_skew = first_chunk_av_skew_ms(
+                        frames, input_pcm, self.slot.tgt_fps,
+                    )
+                    retry_supported = (
+                        FIRST_CHUNK_RETRY and TURN_SEED >= 0
+                        and initial_skew is not None
+                        and initial_skew > FIRST_CHUNK_MAX_SKEW_MS
+                    )
+                    reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
+                    generator = getattr(self.slot.pipeline, "generator", None)
+                    reseed_fn = getattr(generator, "manual_seed", None)
+                    final_skew = initial_skew
+                    attempts = 0
+                    while (retry_supported and callable(reset_fn) and callable(reseed_fn)
+                           and attempts < FIRST_CHUNK_RETRY_CANDIDATES - 1):
+                        attempts += 1
+                        reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                        reseed_fn(TURN_SEED + attempts)
+                        retry_video = self.run_pipeline(self.slot.pipeline, emb)
+                        frames = retry_video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
+                        final_skew = first_chunk_av_skew_ms(
+                            frames, input_pcm, self.slot.tgt_fps,
+                        )
+                        self.slot.first_chunk_retry_count += 1
+                        if final_skew is not None and final_skew <= FIRST_CHUNK_MAX_SKEW_MS:
+                            break
+                    if attempts:
+                        if final_skew is None or final_skew > FIRST_CHUNK_MAX_SKEW_MS:
+                            self.slot.first_chunk_retry_failures += 1
+                        print("[mouth-quality] slot" + str(self.slot.index)
+                              + " first chunk retry skew=" + str(initial_skew)
+                              + "ms -> " + str(final_skew) + "ms"
+                              + " attempts=" + str(attempts), flush=True)
         except Exception as e:
             # 故障隔離核心：這一路的 pipeline 炸了，不讓例外往上炸穿整個 feeder
             # 執行緒（更不會波及其他槽的 pipeline/thread，本來就是獨立物件）。

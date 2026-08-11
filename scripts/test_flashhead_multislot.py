@@ -811,8 +811,10 @@ def test_first_chunk_quality_metrics_detect_static_speech():
 
     frames = np.zeros((4, 100, 100, 3), dtype=np.uint8)
     assert fec.mouth_motion_peak(frames) == 0.0
+    assert fec.first_chunk_av_skew_ms(frames, speech, fps=25) == float("inf")
     frames[1, 60:65, 45:55] = 255
     assert fec.mouth_motion_peak(frames) > fec.FIRST_CHUNK_MOUTH_MOTION
+    assert fec.first_chunk_av_skew_ms(frames, speech, fps=25) == 40.0
     print("test_first_chunk_quality_metrics_detect_static_speech: PASS")
 
 
