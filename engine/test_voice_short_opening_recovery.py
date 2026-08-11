@@ -80,6 +80,21 @@ class SameVoiceCueTests(unittest.TestCase):
         voice._LOOKUP_WAIT_PCM.pop(wait_key, None)
         voice._LOOKUP_CUE_PCM.pop(cue_key, None)
 
+
+class ProviderSessionRecoveryTests(unittest.TestCase):
+    class ProviderError(Exception):
+        code = 1008
+
+    def test_exact_resumable_provider_abort_rotates_the_underlying_session(self):
+        error = self.ProviderError("1008 None. The operation was aborted.")
+        self.assertTrue(voice._recoverable_provider_session_abort(error, "resume-handle"))
+
+    def test_abort_without_handle_and_other_1008_errors_remain_fatal(self):
+        aborted = self.ProviderError("1008 None. The operation was aborted.")
+        policy = self.ProviderError("1008 policy violation")
+        self.assertFalse(voice._recoverable_provider_session_abort(aborted, ""))
+        self.assertFalse(voice._recoverable_provider_session_abort(policy, "resume-handle"))
+
 class _ShortOpeningWs:
     def __init__(self):
         self.messages = [b"\xa0\x0f" * 32000, json.dumps({"type": "audio_end"})]

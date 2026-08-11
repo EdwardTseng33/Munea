@@ -423,6 +423,10 @@ class EvidenceRun:
         self._avatar_video_previous = None
         self.avatar_rate = 48000
         self.stop_capture = False
+        self.heartbeat_task = None
+        self.heartbeat_successes = 0
+        self.heartbeat_failures = 0
+        self.heartbeat_error = ""
 
     def avatar_health(self, base, token):
         """Read only decision-useful Avatar counters; never persist the call token."""
@@ -508,6 +512,42 @@ class EvidenceRun:
                 raise RuntimeError("Gateway lease failed: " + str(self.lease.get("reason") or self.lease.get("status")))
             time.sleep(1.0)
         raise RuntimeError("Gateway lease timed out")
+
+    async def heartbeat_loop(self):
+        """Mirror the installed App's 15-second Gateway lease heartbeat."""
+        while True:
+            await asyncio.sleep(15.0)
+            lease = self.lease or {}
+            call_id = str(lease.get("call_id") or "")
+            if not call_id:
+                self.heartbeat_error = "call_lease_missing"
+                return
+            try:
+                result = await asyncio.to_thread(
+                    json_request,
+                    "POST",
+                    self.args.gateway.rstrip("/") + "/v1/calls/" +
+                    urllib.parse.quote(call_id) + "/heartbeat",
+                    {
+                        "lease_version": lease["lease_version"],
+                        "event_id": "voice-avatar-e2e-heartbeat-" + uuid.uuid4().hex,
+                        "component": "app",
+                    },
+                    bearer=self.access_token,
+                )
+                self.heartbeat_successes += 1
+                self.heartbeat_error = ""
+                if result.get("should_end"):
+                    self.heartbeat_error = str(result.get("reason") or "lease_ended")
+                    return
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                # Match the App: a missed heartbeat is recoverable; the durable
+                # lease reaper is the final authority. Preserve failures as
+                # evidence so a long-call gate cannot silently ignore them.
+                self.heartbeat_failures += 1
+                self.heartbeat_error = type(error).__name__
 
     async def capture_track(self, track):
         if track.kind == "video":
@@ -800,6 +840,8 @@ class EvidenceRun:
                 )
                 quiet_deadline = time.monotonic() + quiet_seconds
                 while time.monotonic() < quiet_deadline:
+                    if self.heartbeat_task and self.heartbeat_task.done() and self.heartbeat_error:
+                        raise RuntimeError("Gateway heartbeat ended: " + self.heartbeat_error)
                     try:
                         message = await asyncio.wait_for(
                             voice.recv(), timeout=max(0.05, quiet_deadline - time.monotonic())
@@ -882,6 +924,12 @@ class EvidenceRun:
             "avatar_health_before": avatar_health_before,
             "avatar_health_after": avatar_health_after,
             "avatar_reported_underrun_delta": max(0, after_underruns - before_underruns),
+            "gateway_heartbeat": {
+                "ok": not self.heartbeat_error,
+                "successes": self.heartbeat_successes,
+                "failures": self.heartbeat_failures,
+                "error": self.heartbeat_error,
+            },
         }
 
     def cleanup(self):
@@ -918,6 +966,7 @@ async def execute_run(args, output):
     try:
         run.create_test_identity()
         run.acquire()
+        run.heartbeat_task = asyncio.create_task(run.heartbeat_loop())
         voice_pcm, avatar_pcm, metrics = await run.run_media()
         wav_write(output / "voice-reference.wav", voice_pcm, 24000)
         wav_write(output / "avatar-webrtc.wav", avatar_pcm, run.avatar_rate)
@@ -965,6 +1014,7 @@ async def execute_run(args, output):
                 and not metrics.get("unsolicited_caption")
             ),
             "connection_held": not metrics.get("disconnected_after_turn"),
+            "gateway_heartbeat": bool(metrics.get("gateway_heartbeat", {}).get("ok")),
             "all_turns_completed": (
                 metrics.get("completed_turns") == metrics.get("requested_turns")
                 and all(item.get("turn_complete") is True for item in metrics.get("turns", []))
@@ -994,6 +1044,12 @@ async def execute_run(args, output):
         raise
     finally:
         run.stop_capture = True
+        if run.heartbeat_task:
+            run.heartbeat_task.cancel()
+            try:
+                await run.heartbeat_task
+            except asyncio.CancelledError:
+                pass
         if run.pc:
             await run.pc.close()
         if run.avatar_feed:

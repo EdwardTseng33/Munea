@@ -153,10 +153,14 @@ assert '"minimum_call_duration"' in SOURCE and '"call_duration_ms"' in SOURCE
 assert 'self.args.turn_prompts[turn_number - 1]' in SOURCE
 assert 'base64.b64decode(args.prompts_b64).decode("utf-8")' in SOURCE
 assert 'raise RuntimeError("Voice disconnected after turn %d" % turn_number)' in SOURCE
+assert 'await asyncio.sleep(15.0)' in SOURCE
+assert '"/heartbeat"' in SOURCE and '"component": "app"' in SOURCE
+assert 'run.heartbeat_task = asyncio.create_task(run.heartbeat_loop())' in SOURCE
+assert '"gateway_heartbeat": bool(metrics.get("gateway_heartbeat", {}).get("ok"))' in SOURCE
 assert 'all(metrics["gates"].values())' in SOURCE
 
 WRAPPER = (ROOT / "scripts" / "fake_phone_e2e.py").read_text(encoding="utf-8")
 assert 'sys.argv.extend(["--runs", "3"])' in WRAPPER
 assert '"required_consecutive_runs"' in SOURCE and '"summary.json"' in SOURCE
 
-print("Fake phone contract PASS: direct PCM, ASR, latency, continuity and multi-turn state gates")
+print("Fake phone contract PASS: direct PCM, Gateway heartbeat, ASR, latency, continuity and multi-turn state gates")

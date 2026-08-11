@@ -101,6 +101,17 @@ LOOKUP_CUE_TAIL_MS = 80
 LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
 
 
+def _recoverable_provider_session_abort(error, resumption_handle=None):
+    """Recognize Gemini's resumable session-limit close without hiding errors."""
+    code = getattr(error, "code", None)
+    text = str(error or "").lower()
+    return bool(
+        resumption_handle
+        and str(code) == "1008"
+        and "operation was aborted" in text
+    )
+
+
 # ── 兩支儀表的算法（2026-08-01 · Edward 7/31 深夜「變慢＋斷斷續續」查不到證據後重做）──
 # 抽成純函式的理由：這兩個數字原本寫在通話迴圈裡，一個從頭到尾沒人驗算過，
 # 結果兩支都在量別的東西（見各自註解），出事時反而讓人以為「數據顯示沒問題」。
@@ -3740,6 +3751,19 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # 原樣往外丟，跟改動前的行為一致（外層照舊優雅收線）。
             if _voice_session_extend_enabled() and st.get("goaway_pending"):
                 _diag(cid, "node.goaway_closed", err=f"{type(exc).__name__}:{str(exc)[:60]}")
+                return "reconnect"
+            # Gemini 3.1 can end a resumable underlying session with API 1008
+            # without sending GoAway first (observed at about 3m15s).  This is
+            # a transport rotation, not the user's call ending.  Require both
+            # the exact provider signal and a resumption handle; every other
+            # 1008/error still propagates as a real failure.
+            if (
+                _voice_session_extend_enabled()
+                and _recoverable_provider_session_abort(
+                    exc, st.get("resumption_handle") or resumption_handle
+                )
+            ):
+                _diag(cid, "node.provider_session_abort_reconnect", code=1008)
                 return "reconnect"
             raise
 
