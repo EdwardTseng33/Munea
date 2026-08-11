@@ -1,5 +1,14 @@
 # Munea Release State
 
+## 2026-08-12 台灣｜1.0.65 聲音身分復原候選（server-only、0% 3×3 Gate PASS）
+
+- **使用者實機結論**：1.0.65 唯一明確改善是 AI 輸出不再整句卡頓；開場首句、聲嘴同步、動作連續性與畫質仍未通過。使用者並確認正式聲音不是原本選定的聲音，因此 Vertex 2.5 故障復原不能再被描述為同一聲音。
+- **根因**：角色設定雖仍是 `Despina`，正式 Voice 曾因 Developer API 預付額度耗盡改走 Vertex `gemini-live-2.5-flash-native-audio`；聲音名稱相同不代表跨模型的實際聲紋與韻律相同。
+- **額度復原證據**：充值後，舊 Gemini 3.1 revision 以 0% tag 通過一次 production Gateway→Voice→Avatar 真 PCM 測試：首聲 `781ms`、輸出 `14.861s`、聲嘴 `+141ms`、source/WebRTC 語音缺口、Avatar underrun、自主重播與中途斷線皆 0。這只證明 3.1 額度與舊 revision 可用，不直接回滾舊程式。
+- **最新程式 0% 候選**：`munea-voice-00119-qox@f7c4d51e` 使用核准的 `Gemini 3.1 Flash Live + Despina`，production Gateway→Voice→Avatar 連續三通、每通三輪 `3/3 PASS`。9 輪首聲約 `562–797ms`，聲嘴皆在 `±250ms` 內；source/WebRTC speech gap、Avatar underrun、自主重播、中途斷線皆 0。
+- **候選範圍／預期體驗**：最新程式碼保留 1.0.65 已改善的連續語音，部署入口恢復核准的聲音模型；App 的 service identity 同時記錄 engine、model、voice name，往後不能只靠聲音名稱宣稱聲音未變。這是 server-only 變更，不需要重新包 App。
+- **放行邊界**：合併後以 exact-main commit 重建相同 0% 候選，確認 identity 與基本 media Gate 後才切正式。正式切流後仍不得把開場、512 畫質、動作硬切或真機聲嘴列為已修；這四項另案處理，exact-build App 體驗仍以使用者現有失敗證據為準。
+
 ## 2026-08-12 01:02 台灣｜1.0.65 Build 536 正式 Voice 已部署，放行包版前 Gate
 
 - **合併／部署**：PR #573 已合併為 `main@5c100c87`；正式 Voice revision `munea-voice-00115-hip` 正以 100% 流量服務，release identity 為 `1.0.65@5c100c877733`。

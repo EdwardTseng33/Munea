@@ -2028,6 +2028,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 "commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
                 "callProtocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
                 "voiceProtocol": "speaker-arbiter-v2",
+                "voiceEngine": VOICE_ENGINE,
+                "voiceModel": MODEL,
+                "voiceName": (eng.CHARS.get(char) or eng.CHARS["寧寧"]).get("voice") or "Leda",
             }))
             await ws.send(json.dumps({"type": "ready"}))
         except Exception:

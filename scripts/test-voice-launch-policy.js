@@ -198,11 +198,18 @@ expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_
        avatarServer.includes('0.35, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "350"))'),
   'Avatar video is not held on the real turn gate with bounded measured lead');
 expect([voiceCanaryDeploy, voiceProdDeploy].every((deployScript) =>
-  deployScript.includes('MUNEA_VOICE_ENGINE=vertex25') &&
-  deployScript.includes('MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS=900') &&
-  deployScript.includes('MUNEA_VERTEX_LOCATION=us-central1') &&
+  deployScript.includes('MUNEA_VOICE_ENGINE=31') &&
+  deployScript.includes('MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS,MUNEA_VERTEX_LOCATION,MUNEA_VOICE_MODEL_OVERRIDE') &&
   deployScript.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01')),
-  'Voice deploy can silently fall back to the depleted Developer API or break the Gateway shard identity');
+  'Voice deploy can silently change the approved Gemini 3.1 voice engine or break the Gateway shard identity');
+expect(voiceServer.includes('"voiceEngine": VOICE_ENGINE') &&
+       voiceServer.includes('"voiceModel": MODEL') &&
+       voiceServer.includes('"voiceName":'),
+  'Voice service identity does not expose the audible engine/model/cast for App evidence');
+expect(app.includes('voiceEngine: o.voiceEngine') &&
+       app.includes('voiceModel: o.voiceModel') &&
+       app.includes('voiceName: o.voiceName'),
+  'App diagnostics cannot prove which audible voice was used by an installed build');
 expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.35"') &&
        avatarServer.includes('OPENING_PREBUFFER_S = max(') &&
        avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
