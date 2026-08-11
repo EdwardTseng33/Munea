@@ -78,11 +78,11 @@ FIRST_CHUNK_MOUTH_MOTION = float(
 FIRST_CHUNK_MAX_SKEW_MS = float(
     os.environ.get("MUNEA_FH_FIRST_CHUNK_MAX_SKEW_MS", "160")
 )
+FIRST_CHUNK_TARGET_SKEW_MS = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_TARGET_SKEW_MS", "80")
+)
 FIRST_CHUNK_RETRY_CANDIDATES = max(
     1, min(3, int(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_CANDIDATES", "3")))
-)
-FIRST_CHUNK_RETRY_PREBUFFER_S = max(
-    0.0, min(0.5, float(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_PREBUFFER_S", "0.35")))
 )
 
 
@@ -144,6 +144,45 @@ def first_chunk_av_skew_ms(frames, pcm, fps=25):
     if mouth_onset is None:
         return float("inf")
     return round((mouth_onset - audio_onset) * 1000.0 / max(1, float(fps)), 1)
+
+
+def select_first_chunk_candidate(candidates):
+    """Choose the earliest credible mouth onset, then strongest motion."""
+    usable = [item for item in candidates if item and len(item) >= 3]
+    if not usable:
+        return None, None, 0.0
+
+    def rank(item):
+        _frames, skew_ms, motion = item
+        finite = skew_ms is not None and np.isfinite(skew_ms)
+        return (
+            0 if finite else 1,
+            float(skew_ms) if finite else float("inf"),
+            -float(motion or 0.0),
+        )
+
+    return min(usable, key=rank)
+
+
+def align_first_chunk_frames(frames, skew_ms, fps=25, target_ms=80.0):
+    """Trim only stale leading lip frames when model-local mouth onset is late."""
+    values = np.asarray(frames)
+    if (values.ndim != 4 or len(values) <= 2 or skew_ms is None
+            or not np.isfinite(skew_ms) or not fps):
+        return values, 0
+    excess_ms = max(0.0, float(skew_ms) - max(0.0, float(target_ms)))
+    drop = min(len(values) - 2, int(excess_ms * float(fps) / 1000.0))
+    return values[drop:], drop
+
+
+def first_chunk_requires_retry(skew_ms):
+    """Retry only when no credible mouth onset exists to align.
+
+    A finite late onset is deterministic: trim its stale leading frames. A
+    second GPU generation adds roughly 600 ms and makes first speech feel
+    stuck, so it is reserved for a non-finite measurement.
+    """
+    return skew_ms is not None and not np.isfinite(skew_ms)
 
 
 def should_apply_antiflicker(emit_audio):
@@ -505,6 +544,8 @@ class Slot:
         self.turn_seed_reset_count = 0
         self.first_chunk_retry_count = 0
         self.first_chunk_retry_failures = 0
+        self.first_chunk_align_events = 0
+        self.first_chunk_align_frames = 0
         # Real speech must invalidate any idle GPU work that is still in flight.
         # Expose this count so the production gate can prove that the race was
         # handled instead of inferring it from negative first-frame timings.
@@ -834,10 +875,19 @@ class Feeder:
                     initial_skew = first_chunk_av_skew_ms(
                         frames, input_pcm, self.slot.tgt_fps,
                     )
+                    candidates = [(frames, initial_skew, mouth_motion_peak(frames))]
+                    aligned_initial, initial_aligned = align_first_chunk_frames(
+                        frames,
+                        initial_skew,
+                        self.slot.tgt_fps,
+                        FIRST_CHUNK_TARGET_SKEW_MS,
+                    )
+                    # A finite late onset can be corrected deterministically by
+                    # dropping only stale leading lip frames. Regenerating the
+                    # whole chunk added about 600 ms on the real GPU.
                     retry_supported = (
                         FIRST_CHUNK_RETRY and TURN_SEED >= 0
-                        and initial_skew is not None
-                        and initial_skew > FIRST_CHUNK_MAX_SKEW_MS
+                        and first_chunk_requires_retry(initial_skew)
                     )
                     reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
                     generator = getattr(self.slot.pipeline, "generator", None)
@@ -854,24 +904,35 @@ class Feeder:
                         final_skew = first_chunk_av_skew_ms(
                             frames, input_pcm, self.slot.tgt_fps,
                         )
+                        candidates.append((frames, final_skew, mouth_motion_peak(frames)))
                         self.slot.first_chunk_retry_count += 1
                         if final_skew is not None and final_skew <= FIRST_CHUNK_MAX_SKEW_MS:
                             break
                     if attempts:
-                        # A regenerated first chunk takes a different GPU path
-                        # and receiver evidence can add about 300ms after the
-                        # model-local onset. Give only that rare turn an extra
-                        # 80ms A/V co-release margin; ordinary turns keep the
-                        # lower steady-state prebuffer.
-                        self.slot.audio_out.arm_prebuffer(
-                            FIRST_CHUNK_RETRY_PREBUFFER_S
-                        )
+                        frames, final_skew, _final_motion = select_first_chunk_candidate(candidates)
                         if final_skew is None or final_skew > FIRST_CHUNK_MAX_SKEW_MS:
                             self.slot.first_chunk_retry_failures += 1
                         print("[mouth-quality] slot" + str(self.slot.index)
                               + " first chunk retry skew=" + str(initial_skew)
                               + "ms -> " + str(final_skew) + "ms"
                               + " attempts=" + str(attempts), flush=True)
+                    if attempts:
+                        frames, aligned = align_first_chunk_frames(
+                            frames,
+                            final_skew,
+                            self.slot.tgt_fps,
+                            FIRST_CHUNK_TARGET_SKEW_MS,
+                        )
+                    else:
+                        frames, aligned = aligned_initial, initial_aligned
+                    if aligned:
+                        self.slot.first_chunk_align_events += 1
+                        self.slot.first_chunk_align_frames += aligned
+                        print("[mouth-quality] slot" + str(self.slot.index)
+                              + " first chunk align drop=" + str(aligned)
+                              + " skew=" + str(final_skew) + "ms"
+                              + " target=" + str(FIRST_CHUNK_TARGET_SKEW_MS) + "ms",
+                              flush=True)
         except Exception as e:
             # 故障隔離核心：這一路的 pipeline 炸了，不讓例外往上炸穿整個 feeder
             # 執行緒（更不會波及其他槽的 pipeline/thread，本來就是獨立物件）。
@@ -1260,6 +1321,8 @@ def health_snapshot(slot, wake_ts=None):
             "seed_resets": slot.turn_seed_reset_count,
             "first_chunk_retries": slot.first_chunk_retry_count,
             "first_chunk_retry_failures": slot.first_chunk_retry_failures,
+            "first_chunk_align_events": slot.first_chunk_align_events,
+            "first_chunk_align_frames": slot.first_chunk_align_frames,
         },
     }
 

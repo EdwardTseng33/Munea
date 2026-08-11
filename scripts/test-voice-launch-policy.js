@@ -130,10 +130,13 @@ expect(voiceServer.includes('await _arm_language_block("audio_input")'),
   'recognized Hokkien audio is not blocked at the server boundary');
 expect(voiceServer.includes('if data and not st.get("language_block")'),
   'Hokkien model audio can still reach the client after the language gate triggers');
-expect(voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK'),
-  'the deterministic Mandarin fallback does not bypass conversational generation');
+expect(voiceServer.includes('_gemini_tts_pcm(\n            localization.TAIWANESE_HOKKIEN_FALLBACK') &&
+  !voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK'),
+  'the deterministic Mandarin fallback may switch away from the companion voice');
 expect(voiceServer.includes('asyncio.to_thread(_hokkien_fallback_pcm, char)'),
   'the deterministic Mandarin fallback is not prewarmed off the call-ready path');
+expect(!voiceServer.includes('encoded = server.tts_b64(text, char, normalized_locale)'),
+  'lookup cues can still switch to a generic second voice');
 // 2026-07-24：prefix_padding_ms 改走 _voice_rhythm_param 三層 fallback（呼叫端明確值→
 // 環境變數→這裡的 300 預設）；不設環境變數＝跟改動前的字面 300ms 完全一樣的行為，
 // 契約檢查同步改成看 fallback 呼叫是否仍以 300 為內建預設。
@@ -290,9 +293,15 @@ expect(app.includes("this._markOpeningHeard('pre_ready_buffer'") &&
   app.includes("this._markOpeningHeard('live_microphone'") &&
   app.includes("setLocalizedRuntimeHint('heard')"),
   'the user gets no immediate acknowledgement that the first utterance was heard');
-expect(app.includes('const micPipelineReady = this._setupMicPipeline(micPromise);') &&
-  app.indexOf('const micPipelineReady = this._setupMicPipeline(micPromise);') < app.indexOf('this.ws = new WebSocket(url)'),
-  'the microphone pipeline is no longer built in parallel with (before) the WebSocket handshake');
+expect(app.includes('this._primePipelinePromise = this._setupMicPipeline(this._primeMicPromise, true);') &&
+  app.includes('const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);') &&
+  app.indexOf('const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);') < app.indexOf('this.ws = new WebSocket(url)'),
+  'the microphone pipeline must start at the call-button gesture and still precede the WebSocket handshake');
+expect(avatarServer.includes('and (not self.slot.active_session or not self.slot.healthy)') &&
+  avatarServer.includes('Never snap a live call back to the static poster'),
+  'a live Avatar call still snaps to the static poster after a 350ms GPU gap');
+expect(app.includes('requestVideoFrameCallback') && app.includes('_startFramePresentationProbe(vid)'),
+  'the long-call face watchdog still relies only on iOS legacy decoded-frame counters');
 expect(app.includes('this._armUplinkWatch()') && app.includes("'microphone_uplink_slow'") && app.includes("'microphone_uplink_rebuilt'"),
   'the 3-second uplink watchdog with automatic pipeline rebuild is missing');
 expect(app.includes('(this._micRebuilds || 0) >= 2'),

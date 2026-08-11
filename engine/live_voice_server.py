@@ -135,9 +135,15 @@ def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
 
 def should_recover_short_opening(*, input_bytes, non_silent, asr_turns,
                                  assistant_output_bytes, recoveries):
-    """True only for an audible, uncommitted first utterance of at most 3s."""
+    """Vertex-only fallback for an audible, uncommitted opening of at most 3s.
+
+    Gemini 3.1 handles the explicit App boundary natively. Replaying a hidden
+    recovery prompt there can create a second assistant turn after a slow but
+    valid response, which is worse than waiting for the provider result.
+    """
     return (
-        bool(non_silent)
+        VOICE_ENGINE == "vertex25"
+        and bool(non_silent)
         and 0 < int(input_bytes or 0) <= SHORT_OPENING_MAX_PCM_BYTES
         and int(asr_turns or 0) == 0
         and int(assistant_output_bytes or 0) == 0
@@ -1764,7 +1770,7 @@ _LOOKUP_CUE_LOCK = threading.Lock()
 
 
 def _hokkien_fallback_pcm(char):
-    """Generate and cache exact Mandarin-only fallback audio for each companion."""
+    """Generate and cache Mandarin fallback in the companion's own voice."""
     cache_key = str(char or "")
     cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
     if cached is not None:
@@ -1773,14 +1779,12 @@ def _hokkien_fallback_pcm(char):
         cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
         if cached is not None:
             return cached
-        encoded = server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW")
-        if not encoded:
-            _HOKKIEN_FALLBACK_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected Hokkien fallback audio format")
-            pcm = wav.readframes(wav.getnframes())
+        # Never substitute the legacy generic TTS voice. If the matching
+        # companion voice is unavailable, silence is less confusing than a
+        # different person suddenly taking over the same call.
+        pcm = _gemini_tts_pcm(
+            localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW"
+        )
         _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
         return pcm
 
@@ -1802,19 +1806,10 @@ def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT, locale="zh-TW"):
         if cached is not None:
             return cached
         same_voice = _gemini_tts_pcm(text, char, normalized_locale)
-        if same_voice:
-            _LOOKUP_WAIT_PCM[cache_key] = same_voice
-            return same_voice
-        encoded = server.tts_b64(text, char, normalized_locale)
-        if not encoded:
-            _LOOKUP_WAIT_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected lookup wait audio format")
-            pcm = wav.readframes(wav.getnframes())
-        _LOOKUP_WAIT_PCM[cache_key] = pcm
-        return pcm
+        # Same-person invariant: a lookup may wait silently, but it must never
+        # fall back to a generic voice that sounds like a second speaker.
+        _LOOKUP_WAIT_PCM[cache_key] = same_voice or b""
+        return _LOOKUP_WAIT_PCM[cache_key]
 
 
 def _char_voice_name(char):
@@ -1827,7 +1822,7 @@ def _char_voice_name(char):
 
 def _gemini_tts_pcm(text, char, locale="zh-TW"):
     """用她本人的聲線唸一句話（同 voice_name 的官方配音通道 · 7/16 實測 24kHz 原生同規格）。
-    失敗回空 bytes、呼叫端自動退回舊配音——聲線一致是體驗、不是可用性前提。
+    失敗回空 bytes；呼叫端不得退回另一個人的舊配音。
     2026-07-25：補上 language_code，避免繁中退回通用華語腔。
     2026-07-30：language_code 跟當輪 responseLocale 走，讓英文、日文、西文過場音
     不會拿 cmn-TW 合成。"""
@@ -1871,19 +1866,10 @@ def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT, locale="zh-TW"):
         if cached is not None:
             return cached
         same_voice = _gemini_tts_pcm(text, char, normalized_locale)
-        if same_voice:
-            _LOOKUP_CUE_PCM[cache_key] = same_voice
-            return same_voice
-        encoded = server.tts_b64(text, char, normalized_locale)
-        if not encoded:
-            _LOOKUP_CUE_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected lookup cue audio format")
-            pcm = wav.readframes(wav.getnframes())
-        _LOOKUP_CUE_PCM[cache_key] = pcm
-        return pcm
+        # Same-person invariant: keep the caption and continue the lookup, but
+        # never inject a generic fallback voice into a Despina/Charon session.
+        _LOOKUP_CUE_PCM[cache_key] = same_voice or b""
+        return _LOOKUP_CUE_PCM[cache_key]
 
 
 def _warm_lookup_cue_pool(char, locale="zh-TW"):

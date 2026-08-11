@@ -3475,6 +3475,7 @@ function speechActive() {
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
   _session: '', _lastError: '', _renderStream: null,
+  _presentedFrames: 0, _frameProbeHandle: 0, _frameProbeVideo: null,
   _videoReady: false, _feedReady: false, _readyNotified: false,
   _notifyReady() {
     if (this._readyNotified || !this._videoReady || !this._feedReady) return;
@@ -3852,6 +3853,10 @@ const Avatar = {
   _frameProgress() {
     const vid = document.getElementById('faceVid');
     if (!vid) return -1;
+    // Long-lived iOS MediaStreams can stop updating the legacy decoded-frame
+    // counters while frames are still being presented. The compositor callback
+    // is the authoritative witness for the freeze watchdog.
+    if ((this._presentedFrames || 0) > 0) return this._presentedFrames;
     try {
       if (vid.getVideoPlaybackQuality) {
         const q = vid.getVideoPlaybackQuality();
@@ -3860,6 +3865,24 @@ const Avatar = {
     } catch (e) {}
     if (typeof vid.webkitDecodedFrameCount === 'number' && vid.webkitDecodedFrameCount > 0) return vid.webkitDecodedFrameCount;
     return vid.currentTime || 0;   // 最後備援：MediaStream 的 currentTime（幀停走時多數瀏覽器跟著停）
+  },
+  _startFramePresentationProbe(vid) {
+    if (!vid || typeof vid.requestVideoFrameCallback !== 'function') return;
+    try {
+      if (this._frameProbeHandle && this._frameProbeVideo &&
+          typeof this._frameProbeVideo.cancelVideoFrameCallback === 'function') {
+        this._frameProbeVideo.cancelVideoFrameCallback(this._frameProbeHandle);
+      }
+    } catch (e) {}
+    this._frameProbeVideo = vid;
+    this._presentedFrames = 0;
+    const tick = (_now, metadata) => {
+      if (!this.on || this._frameProbeVideo !== vid) return;
+      const reported = Number(metadata && metadata.presentedFrames) || 0;
+      this._presentedFrames = Math.max(this._presentedFrames + 1, reported);
+      this._frameProbeHandle = vid.requestVideoFrameCallback(tick);
+    };
+    this._frameProbeHandle = vid.requestVideoFrameCallback(tick);
   },
   _armFaceWatch() {
     clearInterval(this._faceWatchT);
@@ -3942,6 +3965,13 @@ const Avatar = {
     this._playoutStatsBaseline = null; this._playoutStatsBusy = false; this._playoutStatsAt = 0;
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     try { clearInterval(this._faceWatchT); } catch (e) {} this._faceStallMs = 0;   // 臉部看門一起收
+    try {
+      if (this._frameProbeHandle && this._frameProbeVideo &&
+          typeof this._frameProbeVideo.cancelVideoFrameCallback === 'function') {
+        this._frameProbeVideo.cancelVideoFrameCallback(this._frameProbeHandle);
+      }
+    } catch (e) {}
+    this._frameProbeHandle = 0; this._frameProbeVideo = null; this._presentedFrames = 0;
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.pc) this.pc.close(); } catch (e) {}
     this.ws = this.pc = null; this._session = '';
@@ -3971,6 +4001,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (vid.videoWidth > 0 && vid.currentTime > 0.05) {
         Avatar._facePlaying = true;
         Avatar._videoReady = true;
+        Avatar._startFramePresentationProbe(vid);
         voiceCallMark('avatar_first_frame', 'pass', { width: vid.videoWidth, height: vid.videoHeight });
         Avatar._notifyReady();
         Avatar._armFaceWatch();   // 首幀確認就開臉部看門（重建成功回來也會重新武裝）：有聲 4 秒無新幀＝凍住
@@ -3986,6 +4017,7 @@ const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
   _openingCaptureActive: false, _openingCapture: null, _openingVoiceDetectedAt: 0, _openingHeardShown: false,
+  _primePipelinePromise: null, _primeCancelled: false,
   _faceDirect: false, _faceDirectRequested: false, _faceDirectSession: '', _faceDirectTurn: 0,
   _requestFaceDirect() {
     const callToken = CallControl.active && CallControl.active.call_token;
@@ -4008,6 +4040,15 @@ const LiveVoice = {
       return false;
     }
   },
+  _beginOpeningCapture() {
+    if (this._openingCaptureActive && this._openingCapture) return;
+    const policy = window.MuneaVoiceTurnPolicy;
+    this._openingCaptureActive = true;
+    this._openingCapture = policy && typeof policy.createOpeningCapture === 'function'
+      ? policy.createOpeningCapture() : null;
+    this._openingVoiceDetectedAt = 0;
+    this._openingHeardShown = false;
+  },
   prime() {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -4019,16 +4060,27 @@ const LiveVoice = {
       if (!this.playCtx || this.playCtx.state === 'closed') this.playCtx = new AudioContext({ sampleRate: 24000 });
       this.playHead = this.playCtx.currentTime;
       if (!this.ac || this.ac.state === 'closed') this.ac = new AudioContext();
+      this._primeCancelled = false;
+      this._beginOpeningCapture();
       this._resumeAudio();
-      if (!this._primeMicPromise) {
+      const currentTrack = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+      const pipelineAlive = !!(this.proc && currentTrack && currentTrack.readyState === 'live');
+      if (!pipelineAlive && !this._primeMicPromise) {
         this._primeMicPromise = navigator.mediaDevices.getUserMedia({ audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: false,
           channelCount: { ideal: 1 },
           sampleRate: { ideal: 48000 },
-        } })
+          } })
           .then(stream => ({ stream })).catch(error => ({ error }));
+      }
+      // Start the real microphone graph inside the original user gesture,
+      // before account/Gateway/Voice waits.  micOpen remains false, so the
+      // processor keeps only the bounded local opening buffer and sends no
+      // private speech until the authenticated Voice socket is ready.
+      if (!pipelineAlive && !this._primePipelinePromise) {
+        this._primePipelinePromise = this._setupMicPipeline(this._primeMicPromise, true);
       }
       return true;
     } catch (e) { return false; }
@@ -4694,12 +4746,17 @@ const LiveVoice = {
   },
   // 收音管「先建後招呼」（2026-07-16 蟲 b 根治）：getUserMedia 一回來就把送音迴圈建好待命，
   // 不等 WebSocket onopen、更不等她招呼講完——管線本身不等任何人，守門只管內容。
-  async _setupMicPipeline(micPromise) {
+  async _setupMicPipeline(micPromise, allowBeforeStart = false) {
     try {
+      const liveTrack = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+      if (this.proc && liveTrack && liveTrack.readyState === 'live') return { ok: true, reused: true };
       const micResult = await micPromise;
       if (this._primeMicPromise === micPromise) this._primeMicPromise = null;
       if (!micResult || !micResult.stream) return { ok: false, error: (micResult && micResult.error) || 'microphone_unavailable' };
-      if (!this.on) { try { micResult.stream.getTracks().forEach(t => t.stop()); } catch (e) {} return { ok: false, error: 'call_cancelled' }; }
+      if (this._primeCancelled || (!this.on && !allowBeforeStart)) {
+        try { micResult.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        return { ok: false, error: 'call_cancelled' };
+      }
       this.mic = micResult.stream;
       voiceCallMark('microphone_ready', 'pass', { trackState: this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState });
       this._resumeAudio();
@@ -4874,11 +4931,9 @@ const LiveVoice = {
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._serviceIdentity = null;
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
-    const openingPolicy = window.MuneaVoiceTurnPolicy;
-    this._openingCaptureActive = true;
-    this._openingCapture = openingPolicy && typeof openingPolicy.createOpeningCapture === 'function'
-      ? openingPolicy.createOpeningCapture() : null;
-    this._openingVoiceDetectedAt = 0; this._openingHeardShown = false;
+    // prime() may already have captured the user's first words while account
+    // and Gateway preflight ran. Never replace that buffer here.
+    this._beginOpeningCapture();
     this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
@@ -4886,10 +4941,9 @@ const LiveVoice = {
     // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
     // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
     if (!this.prime()) { this.on = false; voiceCallFail('microphone_requested', this._micUnavailableReason || 'microphone_prime_failed'); return false; }
-    const micPromise = this._primeMicPromise;
     // 收音管先建後招呼（蟲 b 根治）：管線跟 WebSocket 握手「並行」建，不再等 onopen 才動工。
     // 送音迴圈建好就開始跑（ws 還沒 open 時 _sendMicBuffer 自然丟包），open 那一刻立即有上行。
-    const micPipelineReady = this._setupMicPipeline(micPromise);
+    const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; voiceCallFail('voice_socket_construct', e, { endpoint: url }); return false; }
     return await new Promise(resolve => {
@@ -5198,6 +5252,7 @@ const LiveVoice = {
   stop() {
     if (this._pendingRelay) this._finishRelay(this._relaySpokenId ? 'ack' : 'release');
     this.on = false;
+    this._primeCancelled = true;
     this.ready = false;
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); clearTimeout(this._userSpeechWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     clearTimeout(this._uplinkWatchT); clearTimeout(this._deadLineWatchT);   // 收音管看門＋死線看門一起收
@@ -5217,7 +5272,7 @@ const LiveVoice = {
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
     try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
-    const pendingMic = this._primeMicPromise; this._primeMicPromise = null;
+    const pendingMic = this._primeMicPromise; this._primeMicPromise = null; this._primePipelinePromise = null;
     if (pendingMic) pendingMic.then(r => { try { if (r && r.stream) r.stream.getTracks().forEach(t => t.stop()); } catch (e) {} });
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.ac) this.ac.close(); } catch (e) {}

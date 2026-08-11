@@ -1,5 +1,13 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜🚨 1.0.65 實機四項阻擋修復（進行中 · App E2E pending · call-path risk）
+- **分支／範圍**：`codex/fix-1.0.65-call-start-avsync-20260812`；預計修改 `web/src/app.js`、`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_server.py` 與對應首句／Avatar 契約測試。與已合併的原聲音復原分開驗收，不把聲音引擎恢復誤稱為四項體驗已修好。
+- **實機阻擋**：1.0.65 開頭前五秒常不理人、聲音先於嘴型、動作中途跳回待機、512 畫面較糊；唯一已確認改善的是 AI 輸出不再整句卡頓。
+- **目前根因**：App 在使用者按下通話時只取得麥克風 stream，直到 Gateway／Voice 啟動才接上實際收音處理器，前置窗口的人聲無法保留；Avatar 只要 350ms 沒有新生成影格便強制切回 poster，直接造成動作片段化。Gemini 3.1 路徑仍帶著只為 Vertex 2.5 寫的短開場補說，存在額外回合風險。
+- **Gate**：先做單元／假手機真 PCM／正式 Gateway→Voice→Avatar 五分鐘 precheck；640 必須在獨立 GPU 候選驗過嘴型與負載才可取代 512。exact-build iPhone 的第一句只說一次、聲嘴、動作、查詢與六分鐘通話未過前，維持 `App E2E pending`，不得送審、升正式流量或稱完成。
+- **8/12 候選證據（仍為紅燈）**：獨立 640 GPU 候選跑滿 315.8 秒，7,878 視訊幀／15,753 音訊包、正常由測試端收線，正式 512 程序同時維持存活；首塊有限嘴型延遲改為裁掉過期幀，實機 GPU 首幀由 1,246.2ms 降至 697.4ms。正式 Gateway→Gemini 3.1 Voice→現行正式 Avatar 三輪便當記憶測試皆完成，首聲 610–719ms、音訊 underrun／句中缺口／自主重播／斷線均 0，能正確記住雞肉便當；但第 2 輪實際 WebRTC 聲嘴差 `+453ms`，超過 300ms，所以整體 Gate 為 FAIL，尚不可包版。
+- **同聲線規則**：查詢過場／等待與台語攔截的 Mandarin 提示只允許角色本人的 Gemini TTS 聲線（寧寧＝Despina）；同聲線合成失敗就保留文字提示並安靜等待，不再退回舊通用配音，避免 App 操作或查資料時突然換成另一個人。
+
 ### 2026-08-12 Codex｜✅ 1.0.65 Build 536 首句修復合併＋正式服務驗收（App E2E pending · call-path risk）
 - **交付**：PR #573 已合併為 `main@5c100c87`；Voice `munea-voice-00115-hip` 已由 0% 候選升為正式 100%，exact identity `1.0.65@5c100c877733`。
 - **實際聲音／畫面 Gate**：升流量前短音 3/3、正常中文三輪 117 秒均 PASS；升流量後第一通短音 A/V `+265ms` 曾超標 15ms，保留紅燈後連續三通 `+94/+140/−62ms` PASS；中文三輪 98 秒為 `−62/−31/+15ms`，ASR recall 1.0，Voice→Avatar→WebRTC 有聲缺口、underrun、自主重播、斷線均 0。

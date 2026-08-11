@@ -164,6 +164,16 @@ assert(app.includes('_ensureLocalPlaybackGain()')
 const readyStart = app.indexOf("if (o.type === 'ready')");
 const readyEnd = app.indexOf("if (o.type === 'caption' && o.who === 'user'", readyStart);
 const readyHandler = app.slice(readyStart, readyEnd);
+const primeStart = app.indexOf('prime() {');
+const primeEnd = app.indexOf('\n  _resumeAudio()', primeStart);
+const primeHandler = app.slice(primeStart, primeEnd);
+const liveStart = app.indexOf('async start(onListen, onSpeak, onDrop)');
+const liveStartBody = app.slice(liveStart, app.indexOf('return await new Promise', liveStart));
+assert(primeHandler.includes('this._beginOpeningCapture()')
+  && primeHandler.includes('this._primePipelinePromise = this._setupMicPipeline(this._primeMicPromise, true)')
+  && liveStartBody.includes('this._beginOpeningCapture()')
+  && !liveStartBody.includes('this._openingCapture = openingPolicy'),
+  'the call-button gesture must attach local opening capture before Gateway/Voice waits and start must preserve it');
 assert(app.includes("voiceCallMark('opening_user_voice_detected'")
   && readyHandler.includes("voiceCallMark('opening_user_voice_flushed'")
   && app.includes("voiceCallMark('opening_user_voice_acknowledged'")
