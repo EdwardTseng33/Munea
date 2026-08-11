@@ -2,12 +2,12 @@
 
 ## 2026-08-11 台灣｜1.0.64 Build 535 聊聊穩定候選
 
-- **候選內容**：App 移除開場假零聲音回合，只做接收端預備並設定 160ms WebRTC jitter buffer；Voice 將 watchdog 恢復後的晚到 PCM／字幕隔離，且 AI 輸出不再建立隱藏守護追問；Avatar 啟用 Opus FEC、40ms 影像提前與 1／8 安靜音素防閃門檻。這些修正分別針對第一句自我卡住、整句網路微斷、聲音先動嘴後動、晚到尾音重播及鬼打牆式自行追問。
+- **候選內容**：App 移除開場假零聲音回合，只做接收端預備並設定 160ms WebRTC jitter buffer；另由 PR #571 修正 Voice `ready` 前第一句被靜音守門丟棄：只在手機本地保留有持續人聲證據的短預捲（上限 2.2 秒），ready 後依序送出，並立即顯示「我聽見了」。Voice 將 watchdog 恢復後的晚到 PCM／字幕隔離，且 AI 輸出不再建立隱藏守護追問；Avatar 啟用 Opus FEC、40ms 影像提前與 1／8 安靜音素防閃門檻。正常插話仍由 Voice 單一裁決，沒有為首句放寬 barge-in。
 - **正式 runtime**：Voice `munea-voice-00110-gak@c5c8d8e2` 已承接 100% traffic；Glows `tw-06` Avatar 使用同一 component commit，健康資料回報 `av_video_lead_ms=40`、`antiflicker_lo/hi=1/8`、`opus_fec=true`、`opus_expected_packet_loss_pct=10`。
 - **正式短輪 Gate**：App 預設 production URL 連續 3/3 PASS，首聲 `812–828ms`，嘴聲偏移 `0／+15／−16ms`；缺音、RTP gap、underrun、自主重播、斷線皆 0，三輪上下文正確。
 - **正式長輪 Gate**：同一修復元件通話 `388.984s`（6 分 29 秒）／12 輪 12/12 PASS；11/12 首聲不超過 1.33 秒，單一慢輪 2.203 秒；12/12 嘴聲 `−16～+16ms`。Avatar／Voice underrun、RTP gap、波形缺音、自主重播與斷線皆 0，音訊連續相關 `0.9648`；最後仍正確保留發燒、痰、呼吸、胸痛與晚餐狀態。
-- **App 版號理由**：`web/src/app.js` 的開場與接收緩衝屬 App 內 WebView 資產；現有 1.0.63／534 不包含它，不能只靠服務更新承接。因此鎖定 `1.0.64 (Build 535)` 與新 cache identity。
-- **放行邊界**：目前最高可證明 `source tested + production services deployed + production real-output A/V gates PASS + App not packaged + App E2E pending`。CI、PR 合併與正式 release identity 對齊後才允許 Mac Archive／安裝；exact Build 535 尚需 iPhone 真麥克風、真喇叭回音、第一句、三輪上下文、查詢後對嘴、六分鐘連線及掛斷釋位，通過前不得送審或稱 release-ready。
+- **App 版號理由**：`web/src/app.js` 的開場、首句保留與接收緩衝皆屬 App 內 WebView 資產；現有 1.0.63／534 不包含它。Build 535 尚未 Archive，因此 PR #571 直接納入同一個 `1.0.64 (Build 535)` 候選，不為這次修復再多包一版。
+- **放行邊界**：目前最高可證明 `source tested + PR #571 CI/release check PASS + production services deployed for the earlier A/V fixes + App not packaged + App E2E pending`。首句 App 路徑尚沒有 exact Build 535 的真機證據；Archive／安裝後須以第一聲 HELLO 只說一次、立即收到回饋、回話不被重複 HELLO 撞斷，再覆蓋真喇叭回音、三輪上下文、查詢後對嘴、六分鐘連線及掛斷釋位。通過前不得送審或稱 release-ready。
 
 ## 2026-08-11 13:35 台灣｜1.0.63 多輪上下文與五分鐘 Avatar 停止 P0
 
