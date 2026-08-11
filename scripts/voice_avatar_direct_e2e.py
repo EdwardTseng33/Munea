@@ -197,8 +197,14 @@ def avatar_av_sync_metrics(audio_levels, video_motion, max_skew_ms=250.0) -> dic
     idle_median = float(statistics.median(idle_motion)) if len(idle_motion) >= 3 else 0.0
     # 12.5fps 灰階 ROI 的實測：輕聲短句常落在 0.007–0.018；只要相對待機
     # 基線連續兩格上升，就已是可見嘴型。單格仍需 0.025，避免把頭動當嘴動。
-    weak_threshold = max(0.007, idle_median + 0.006)
-    strong_threshold = max(0.025, idle_median + 0.015)
+    # FlashHead intentionally lets video lead audio. Its real first phoneme can
+    # therefore fall inside the nominal "idle" window and poison an uncapped
+    # adaptive baseline (one production candidate raised the strong gate from
+    # 0.025 to 0.037 even though visible mouth motion peaked at 0.0295). Keep
+    # adaptation for noisy idle portraits, but never let it erase the absolute
+    # motion evidence this detector was designed to accept.
+    weak_threshold = max(0.007, min(0.020, idle_median + 0.006))
+    strong_threshold = max(0.025, min(0.030, idle_median + 0.015))
     motion_diagnostics = {
         "samples": len(window),
         "peak": round(max((motion for _, motion in window), default=0.0), 4),
