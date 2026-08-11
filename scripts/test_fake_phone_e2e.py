@@ -157,6 +157,7 @@ assert 'await asyncio.sleep(15.0)' in SOURCE
 assert '"/heartbeat"' in SOURCE and '"component": "app"' in SOURCE
 assert 'run.heartbeat_task = asyncio.create_task(run.heartbeat_loop())' in SOURCE
 assert '"gateway_heartbeat": bool(metrics.get("gateway_heartbeat", {}).get("ok"))' in SOURCE
+assert 'self.test_credit_balance = max(' in SOURCE and '"balance": self.test_credit_balance' in SOURCE
 assert 'all(metrics["gates"].values())' in SOURCE
 
 WRAPPER = (ROOT / "scripts" / "fake_phone_e2e.py").read_text(encoding="utf-8")

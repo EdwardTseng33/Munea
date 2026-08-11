@@ -427,6 +427,7 @@ class EvidenceRun:
         self.heartbeat_successes = 0
         self.heartbeat_failures = 0
         self.heartbeat_error = ""
+        self.test_credit_balance = 0
 
     def avatar_health(self, base, token):
         """Read only decision-useful Avatar counters; never persist the call token."""
@@ -483,9 +484,16 @@ class EvidenceRun:
             "account_id": self.account_id, "user_id": self.user_id,
             "role": "owner", "status": "active",
         }, "return=minimal")
+        # A release durability gate may intentionally hold a call beyond five
+        # minutes.  Provision only the requested test window plus two minutes
+        # of response/tail headroom so the synthetic account measures media
+        # durability instead of failing on its old fixed four-point fixture.
+        self.test_credit_balance = max(
+            4, int((max(0.0, float(self.args.min_call_seconds)) + 59.0) // 60.0) + 2
+        )
         self.rest("POST", "credit_wallets", {
             "account_id": self.account_id, "wallet_type": "purchased",
-            "period": "voice-avatar-e2e-" + self.run_id, "balance": 4,
+            "period": "voice-avatar-e2e-" + self.run_id, "balance": self.test_credit_balance,
             "status": "active", "metadata": {"purpose": "voice-avatar-direct-e2e"},
         }, "return=minimal")
         signed = json_request(
@@ -930,6 +938,7 @@ class EvidenceRun:
                 "failures": self.heartbeat_failures,
                 "error": self.heartbeat_error,
             },
+            "test_credit_balance": self.test_credit_balance,
         }
 
     def cleanup(self):
