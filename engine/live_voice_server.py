@@ -1913,6 +1913,12 @@ def _new_call_state():
           # 唸不準只記次數、不攔話（2026-08-10）。留著數字是為了看她到底多常講到那幾個詞，
           # 若真的很頻繁，正解是回頭調說明書的用詞提醒，不是再把整段話攔下來。
           "mandarin_pronunciation_seen": 0,
+          # Output-language detection is advisory only. A false positive used
+          # to interrupt a valid Mandarin answer, ask the model to repeat it,
+          # then play a canned fallback when the retry was flagged again—the
+          # exact unsolicited-repeat failure caught by the 3x3 phone gate.
+          # Unsupported *user input* still uses language_block below.
+          "hokkien_output_seen": 0,
           "blocked_output_text": "", "language_retry_count": 0,
           "client_barge_in": False, "pending_barge_in": None,
           "barge_in_rejected": 0, "barge_post_duck_accepted": 0,
@@ -3285,7 +3291,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     st["blocked_output_text"]
                                 )
                             ):
-                                await _arm_language_block("model_output")
+                                st["hokkien_output_seen"] = (
+                                    st.get("hokkien_output_seen", 0) + 1
+                                )
+                                _diag(
+                                    cid, "node.hokkien_output_seen",
+                                    chars=len(st["blocked_output_text"]),
+                                )
                             elif (
                                 output_locale == "zh-TW"
                                 and localization.contains_unstable_mandarin_speech(output_text)

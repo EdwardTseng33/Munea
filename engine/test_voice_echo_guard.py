@@ -154,7 +154,8 @@ def main():
     check("播完+殘響後窗會關（不永遠蓋）", not g.in_playout_window(114.0, head))
     check("歸零後窗立即關", not g.in_playout_window(105.0, 0.0))
     check("收線總帳含回音丟棄數", "echo_dropped=st" in srv)
-    check("片語級台語輸出只讓她自己重講一次", 'source == "model_output" and st.get("language_retry_count", 0) < 1' in srv)
+    check("模型輸出語言誤判只記錄不再自動重講",
+          'node.hokkien_output_seen' in srv and '_arm_language_block("model_output")' not in srv)
     check("單一國語發音不穩不再重播整段", "_send_safe_mandarin_tts(blocked_text, source)" not in srv)
 
     # 契約：查詢備胎鏈＋安撫句＋配速（7/16 晚 gemini-2.5-flash 整批客滿事故後立）
