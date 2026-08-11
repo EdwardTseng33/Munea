@@ -1,5 +1,19 @@
 # Munea Release State
 
+## 2026-08-12 00:32 台灣｜1.0.65 Build 536 首句短音復原 Gate
+
+- **實際根因證據**：真人約兩秒開場音訊已完整送達 Vertex（有聲 PCM＋`audio_end`），但 provider 偶發不產生 ASR 或回答；增加語言提示及把尾端靜音由 900ms 拉到 1200ms 都不能修復，因此部署契約明確鎖回 900ms，不再增加每輪固定延遲。
+- **候選修復**：PR #573 / `f84a1781` 只對第一個、≤3 秒、有聲、沒有任何 ASR 或 AI 輸出的開場啟動一次性復原；等待 1350ms 期間一旦收到 ASR、AI 音訊或新使用者人聲立即取消，且整通最多一次。復原採原本 Native Audio 聲線，不重播或猜測未辨識內容，也不寫入長期記憶。
+- **0% 全鏈證據**：Voice `munea-voice-staging-00133-kup` 仍為 0%。正式 Gateway→候選 Voice→Glows FlashHead 512→WebRTC 的真人短句 3/3 PASS：首聲 `2203/2219ms`，聲嘴 `-109/+125/+63ms`；正常中文 3 calls × 3 turns = 9/9 PASS：ASR recall `1.0`、首聲 `1172–2422ms`、聲嘴 `-62～+109ms`、Voice/Avatar underrun、有聲 RTP gap、非預期重播、斷線與復原誤觸均為 `0`。repository `release:check` PASS。
+- **放行邊界**：目前為 `source tested + pushed + staging 0% verified + PR pending + production unchanged + App E2E pending`。合併及 exact production identity／正式假手機 Gate 通過前不通知 Mac 包版；exact `1.0.65 (536)` 安裝版 iPhone 完成真麥克風、喇叭、第一句一次成功、三輪上下文、查詢對嘴、六分鐘連線與掛斷釋位前不得送審或稱 release-ready。
+
+## 2026-08-11 21:30 台灣｜1.0.65 Build 536 首句最終候選
+
+- **版本決策**：使用者已在安裝版 1.0.64 重現「第一聲 HELLO 無回應、需重複數次，晚到回覆又被第二聲打斷」；因此不重用 1.0.64／535 身分。唯一下一個 App 候選升為 `1.0.65 (Build 536)`，cache identity `20260811-opening-b536-v1065`。
+- **剩餘根因**：PR #571 已保留 Voice ready 前的人聲，但 opening capture 仍會把講完後等待 ready 的靜音累積到最多 2.2 秒再整包送出，讓 provider 二次等待端點。現在以 650ms 安靜在本機封口，只保留 160ms 句尾；ready 後先送首句和 `audio_end(reason=opening_local_boundary)`，再開正常 live mic。後續 barge-in 與 Voice 單一說話裁決不變。
+- **服務基線**：production Voice 已由 Vertex AI `gemini-live-2.5-flash-native-audio` revision `munea-voice-00113-zok` 承接；Avatar 已以 FlashHead 原生 512 通過 production 3 通 × 3 輪真嘴部 Gate。PR #570 已合併至 `main@10356489`。
+- **放行順序**：先通過 repository／CI 與 Voice 0% 候選的 production Gateway→Voice→Avatar 3/3；再合併、部署並核對服務 identity；最後才通知 Mac 包 Build 536。exact-build iPhone 真麥克風、喇叭、第一聲一次成功、三輪上下文、查詢對嘴、六分鐘與掛斷釋位完成前，維持 `App E2E pending`，不得送審。
+
 ## 2026-08-11 21:15 台灣｜1.0.64 實機回報後的 Avatar 512 原生推論修復
 
 - **1.0.64 實機紅燈**：使用者確認開頭需重複多次 HELLO 才回應，且聲音再次比嘴巴快；因此 1.0.64／535 不得沿用舊 synthetic PASS 稱為穩定版或直接送審。開頭漏聽與嘴型是兩個獨立根因。
@@ -70,7 +84,7 @@
 
 本文件是 App、source、runtime、DB 與營運後台的 current release snapshot。品質分數看 [`PRODUCT-QUALITY-CONFIDENCE.md`](./PRODUCT-QUALITY-CONFIDENCE.md)；歷史活動看 `STATUS.md` 與協作看板。
 
-Snapshot time: `2026-08-11 Asia/Taipei`（production Voice 為 `munea-voice-00110-gak@c5c8d8e2`；Gateway 為 `munea-call-control-00016-jeh@52a21fb7`；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；current source 候選為 `1.0.64 (Build 535)`；installed-iPhone lane 尚無 Build 535 證據）
+Snapshot time: `2026-08-11 Asia/Taipei`（production Voice 為 Vertex 2.5 revision `munea-voice-00113-zok`；Gateway 為 `munea-call-control-00016-jeh@52a21fb7`；App Store review lane 為 `1.0.55 (Build 525) WAITING_FOR_REVIEW`；installed-iPhone `1.0.64 (Build 535)` 已因首句漏聽與嘴慢判定 FAIL；current source 候選為 `1.0.65 (Build 536)`，尚未包版）
 
 Source reconciliation baseline: `origin/main@c4477ae380df8a8f908b5383577b9f3df5591239`; latest uploaded App Build 532 的 exact source commit 尚未由 IPA 回讀，不能推定等於 current source
 
@@ -115,7 +129,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.64 (Build 535)` | 下一個唯一候選；移除 App 開場假音訊回合、加入 WebRTC 接收緩衝，並保持 Voice／Avatar 聲畫連續。WebView cache identity 已更新為 `20260811-livefix-b535-v1064` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-11 +08:00 |
+| Latest source | `1.0.65 (Build 536)` | 下一個唯一候選；在首句人聲保留上再加入本機 650ms 封口、160ms 句尾裁切與 ready 後明確 `audio_end`，避免把等待 Voice 的長靜音重播給模型。WebView cache identity 已更新為 `20260811-opening-b536-v1065` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-11 +08:00 |
 | Latest uploaded App | `1.0.61 (Build 532)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 08:35 UTC；不含本輪三邊協議握手，不能代表 current source | App Store Connect API（權威） | 2026-08-11 00:49 +08:00 |
 | App Store selected review lane | `1.0.55 (Build 525)` | `appStoreState=WAITING_FOR_REVIEW`；權威 API 回讀 selected build 為 App 1.0.55 Build 525。1.0.61 Build 532 只有 uploaded／VALID，並未被這個審核版本選用 | App Store Connect API | 2026-08-11 00:49 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |

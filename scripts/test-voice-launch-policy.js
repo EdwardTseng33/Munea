@@ -7,6 +7,8 @@ const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'web', 'src', 'styles.css'), 'utf8');
 const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
 const avatarServer = fs.readFileSync(path.join(root, 'deploy', 'runpod-avatar', 'flashhead_server.py'), 'utf8');
+const voiceCanaryDeploy = fs.readFileSync(path.join(root, 'deploy', 'cloudrun', 'canary-deploy.sh'), 'utf8');
+const voiceProdDeploy = fs.readFileSync(path.join(root, 'deploy', 'cloudrun', 'prod-deploy.sh'), 'utf8');
 const chatEngine = fs.readFileSync(path.join(root, 'engine', 'chat_engine.py'), 'utf8');
 // 2026-07-31：人設書改成一國一本後，語音風格規矩從 live_voice_server.py 搬進
 // engine/persona/voice-style.<國>.txt。守門要跟著看新地方——不然程式改對了、
@@ -193,8 +195,14 @@ expect(everyVoiceStyleBookHas('energy'),
 expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
 expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_S)') &&
-       avatarServer.includes('MUNEA_FH_VIDEO_LEAD_MS", "40"'),
+       avatarServer.includes('0.35, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "350"))'),
   'Avatar video is not held on the real turn gate with bounded measured lead');
+expect([voiceCanaryDeploy, voiceProdDeploy].every((deployScript) =>
+  deployScript.includes('MUNEA_VOICE_ENGINE=vertex25') &&
+  deployScript.includes('MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS=900') &&
+  deployScript.includes('MUNEA_VERTEX_LOCATION=us-central1') &&
+  deployScript.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01')),
+  'Voice deploy can silently fall back to the depleted Developer API or break the Gateway shard identity');
 expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.35"') &&
        avatarServer.includes('OPENING_PREBUFFER_S = max(') &&
        avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),

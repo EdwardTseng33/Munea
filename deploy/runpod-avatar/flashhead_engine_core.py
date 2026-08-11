@@ -60,6 +60,91 @@ ANTIFLICKER = os.environ.get("MUNEA_FH_ANTIFLICKER", "1") == "1"
 ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "1"))
 ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 
+# FlashHead's torch.Generator advances after every generated chunk, while
+# reset_person_name() restores only the motion latent.  Without resetting the
+# generator, an identical opening phoneme can receive a different first-chunk
+# noise sequence depending on how many chunks earlier turns consumed; receiver
+# evidence showed that occasionally producing a near-static first 720 ms.  A
+# semantic turn should be reproducible, while chunks inside the turn must keep
+# advancing normally.  Set a negative value only for a bounded rollback.
+TURN_SEED = int(os.environ.get("MUNEA_FH_TURN_SEED", "42"))
+FIRST_CHUNK_RETRY = os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY", "1") == "1"
+FIRST_CHUNK_SPEECH_RMS = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_SPEECH_RMS", "0.02")
+)
+FIRST_CHUNK_MOUTH_MOTION = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_MOUTH_MOTION", "0.015")
+)
+FIRST_CHUNK_MAX_SKEW_MS = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_MAX_SKEW_MS", "160")
+)
+FIRST_CHUNK_RETRY_CANDIDATES = max(
+    1, min(3, int(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_CANDIDATES", "3")))
+)
+FIRST_CHUNK_RETRY_PREBUFFER_S = max(
+    0.0, min(0.5, float(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_PREBUFFER_S", "0.35")))
+)
+
+
+def pcm_rms(pcm):
+    """Normalized RMS for float or PCM16 arrays without copying large turns."""
+    values = np.asarray(pcm).reshape(-1)
+    if not len(values):
+        return 0.0
+    work = values.astype(np.float32, copy=False)
+    if values.dtype.kind in "iu":
+        work = work / 32768.0
+    return float(np.sqrt(np.mean(work * work)))
+
+
+def mouth_motion_peak(frames):
+    """Peak adjacent-frame motion in the production portrait mouth region."""
+    values = np.asarray(frames)
+    if values.ndim != 4 or len(values) < 2:
+        return 0.0
+    height, width = values.shape[1:3]
+    mouth = values[
+        :, int(height * 0.55):max(int(height * 0.72), int(height * 0.55) + 1),
+        int(width * 0.33):max(int(width * 0.67), int(width * 0.33) + 1),
+    ].astype(np.float32)
+    adjacent = np.abs(np.diff(mouth, axis=0))
+    return float(np.max(np.mean(adjacent, axis=(1, 2, 3))) / 255.0)
+
+
+def first_chunk_av_skew_ms(frames, pcm, fps=25):
+    """Measure model-local audio-to-mouth onset skew for one generated chunk."""
+    values = np.asarray(frames)
+    audio = np.asarray(pcm).reshape(-1)
+    if values.ndim != 4 or len(values) < 2 or not len(audio):
+        return None
+    work = audio.astype(np.float32, copy=False)
+    if audio.dtype.kind in "iu":
+        work = work / 32768.0
+    samples_per_frame = max(1, int(round(len(work) / len(values))))
+    audio_onset = None
+    for index in range(len(values)):
+        part = work[index * samples_per_frame:(index + 1) * samples_per_frame]
+        if len(part) and float(np.sqrt(np.mean(part * part))) >= FIRST_CHUNK_SPEECH_RMS:
+            audio_onset = index
+            break
+    if audio_onset is None:
+        return None
+
+    height, width = values.shape[1:3]
+    mouth = values[
+        :, int(height * 0.55):max(int(height * 0.72), int(height * 0.55) + 1),
+        int(width * 0.33):max(int(width * 0.67), int(width * 0.33) + 1),
+    ].astype(np.float32)
+    motion = np.mean(np.abs(np.diff(mouth, axis=0)), axis=(1, 2, 3)) / 255.0
+    mouth_onset = next(
+        (index + 1 for index, value in enumerate(motion)
+         if index + 1 >= audio_onset and float(value) >= FIRST_CHUNK_MOUTH_MOTION),
+        None,
+    )
+    if mouth_onset is None:
+        return float("inf")
+    return round((mouth_onset - audio_onset) * 1000.0 / max(1, float(fps)), 1)
+
 
 def should_apply_antiflicker(emit_audio):
     """Background stabilization is safe only for video-only idle chunks.
@@ -417,6 +502,9 @@ class Slot:
         # it can inherit a closed/static mouth from the previous answer.
         self.motion_reset_count = 0
         self.motion_reset_failures = 0
+        self.turn_seed_reset_count = 0
+        self.first_chunk_retry_count = 0
+        self.first_chunk_retry_failures = 0
         # Real speech must invalidate any idle GPU work that is still in flight.
         # Expose this count so the production gate can prove that the race was
         # handled instead of inferring it from negative first-frame timings.
@@ -642,6 +730,11 @@ class Feeder:
                     # the neutral per-character motion seed for the new turn.
                     with self.slot.char_lock:
                         reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                        generator = getattr(self.slot.pipeline, "generator", None)
+                        reseed_fn = getattr(generator, "manual_seed", None)
+                        if TURN_SEED >= 0 and callable(reseed_fn):
+                            reseed_fn(TURN_SEED)
+                            self.slot.turn_seed_reset_count += 1
                     self.slot.motion_reset_count += 1
                     motion_reset = True
             except Exception as exc:
@@ -724,6 +817,10 @@ class Feeder:
             if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
                 return
             chunk_epoch = self._epoch
+            first_round_chunk = bool(
+                emit_audio and self._round_pending
+                and self.slot.round_start_ts <= t_chunk_ready
+            )
             self.slot.audio_dq.extend(chunk_16k.tolist())
             arr = np.array(self.slot.audio_dq)
         try:
@@ -731,6 +828,50 @@ class Feeder:
                                             self.slot.audio_start_idx, self.slot.audio_end_idx)
             with self.slot.char_lock:
                 video = self.run_pipeline(self.slot.pipeline, emb)
+                frames = video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
+                if first_round_chunk:
+                    input_pcm = output_pcm if output_pcm is not None else chunk_16k
+                    initial_skew = first_chunk_av_skew_ms(
+                        frames, input_pcm, self.slot.tgt_fps,
+                    )
+                    retry_supported = (
+                        FIRST_CHUNK_RETRY and TURN_SEED >= 0
+                        and initial_skew is not None
+                        and initial_skew > FIRST_CHUNK_MAX_SKEW_MS
+                    )
+                    reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
+                    generator = getattr(self.slot.pipeline, "generator", None)
+                    reseed_fn = getattr(generator, "manual_seed", None)
+                    final_skew = initial_skew
+                    attempts = 0
+                    while (retry_supported and callable(reset_fn) and callable(reseed_fn)
+                           and attempts < FIRST_CHUNK_RETRY_CANDIDATES - 1):
+                        attempts += 1
+                        reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                        reseed_fn(TURN_SEED + attempts)
+                        retry_video = self.run_pipeline(self.slot.pipeline, emb)
+                        frames = retry_video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
+                        final_skew = first_chunk_av_skew_ms(
+                            frames, input_pcm, self.slot.tgt_fps,
+                        )
+                        self.slot.first_chunk_retry_count += 1
+                        if final_skew is not None and final_skew <= FIRST_CHUNK_MAX_SKEW_MS:
+                            break
+                    if attempts:
+                        # A regenerated first chunk takes a different GPU path
+                        # and receiver evidence can add about 300ms after the
+                        # model-local onset. Give only that rare turn an extra
+                        # 80ms A/V co-release margin; ordinary turns keep the
+                        # lower steady-state prebuffer.
+                        self.slot.audio_out.arm_prebuffer(
+                            FIRST_CHUNK_RETRY_PREBUFFER_S
+                        )
+                        if final_skew is None or final_skew > FIRST_CHUNK_MAX_SKEW_MS:
+                            self.slot.first_chunk_retry_failures += 1
+                        print("[mouth-quality] slot" + str(self.slot.index)
+                              + " first chunk retry skew=" + str(initial_skew)
+                              + "ms -> " + str(final_skew) + "ms"
+                              + " attempts=" + str(attempts), flush=True)
         except Exception as e:
             # 故障隔離核心：這一路的 pipeline 炸了，不讓例外往上炸穿整個 feeder
             # 執行緒（更不會波及其他槽的 pipeline/thread，本來就是獨立物件）。
@@ -738,8 +879,6 @@ class Feeder:
             self._on_fault(e)
             return
         self._fault_streak = 0
-        video = video[self.slot.motion_frames_num:]
-        frames = video.cpu().numpy().astype(np.uint8)
         if self.sharpen:
             import cv2 as _cv2
             for _i in range(frames.shape[0]):
@@ -1113,6 +1252,14 @@ def health_snapshot(slot, wake_ts=None):
             "idle_invalidations": slot.idle_invalidation_count,
             "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
                                 if ao else 0),
+        },
+        "model_turn_state": {
+            "motion_resets": slot.motion_reset_count,
+            "motion_reset_failures": slot.motion_reset_failures,
+            "seed": TURN_SEED if TURN_SEED >= 0 else None,
+            "seed_resets": slot.turn_seed_reset_count,
+            "first_chunk_retries": slot.first_chunk_retry_count,
+            "first_chunk_retry_failures": slot.first_chunk_retry_failures,
         },
     }
 

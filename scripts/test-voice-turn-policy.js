@@ -64,6 +64,22 @@ assert.strictEqual(openingAtReady.drained.candidate, true,
 const boundedOpening = captureOpening(Array(100).fill(0.05));
 assert(boundedOpening.drained.bufferedMs <= policy.DEFAULTS.openingCaptureMaxMs + FRAME_MS,
   'opening capture must stay local and bounded');
+const openingWithWait = captureOpening([
+  0.004, 0.045, 0.052,
+  ...Array(30).fill(0.003),
+]);
+assert.strictEqual(openingWithWait.drained.complete, true,
+  'a real opening utterance followed by the Voice quiet window must form a local boundary');
+assert(openingWithWait.drained.observedQuietMs >= policy.DEFAULTS.openingCaptureCompleteQuietMs,
+  'the opening boundary must be backed by enough observed quiet time');
+assert(openingWithWait.drained.bufferedMs
+  <= (3 * FRAME_MS) + policy.DEFAULTS.openingCaptureTailMs + FRAME_MS,
+  'opening flush must trim the long wait silence instead of replaying it after ready');
+assert(openingWithWait.drained.retainedTailMs >= policy.DEFAULTS.openingCaptureTailMs,
+  'opening flush must report how much real tail was retained for provider padding');
+assert(openingWithWait.drained.frames.includes('frame-1')
+  && openingWithWait.drained.frames.includes('frame-2'),
+  'trimming opening wait silence must preserve the actual first hello');
 
 const quiet = policy.observe(policy.createState(0.01), 0.006, 42.7, false);
 assert(quiet.state.noiseFloor < 0.01, 'listening silence should adapt the local noise floor');
@@ -145,13 +161,25 @@ assert(voiceServer.includes('decide_speaker_evidence(')
 assert(app.includes('_ensureLocalPlaybackGain()')
   && app.includes('s.connect(this._ensureLocalPlaybackGain()'),
   'voice-only fallback must pass through the same duckable playback gain');
+const readyStart = app.indexOf("if (o.type === 'ready')");
+const readyEnd = app.indexOf("if (o.type === 'caption' && o.who === 'user'", readyStart);
+const readyHandler = app.slice(readyStart, readyEnd);
 assert(app.includes("voiceCallMark('opening_user_voice_detected'")
-  && app.includes("voiceCallMark('opening_user_voice_flushed'")
+  && readyHandler.includes("voiceCallMark('opening_user_voice_flushed'")
   && app.includes("voiceCallMark('opening_user_voice_acknowledged'")
-  && app.indexOf('this._setMicOpen(true); this._openMicAfterGreet = false;')
-    < app.indexOf('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))'),
-  'opening speech must be acknowledged, measured, and flushed only after Voice ready opens the mic');
+  && readyHandler.includes("voiceCallMark('opening_user_turn_closed'")
+  && readyHandler.indexOf('this._setMicOpen(true); this._openMicAfterGreet = false;')
+    > readyHandler.indexOf('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))')
+  && readyHandler.includes("reason: 'opening_local_boundary'")
+  && readyHandler.includes('trailing_silence_ms: openingCapture.retainedTailMs'),
+  'Voice ready must flush and close a completed opening turn before opening the live mic');
 assert(voiceServer.includes('"node.first_non_silent_mic"'),
   'Voice logs cannot distinguish standby silence from the first real microphone audio');
+assert(voiceServer.includes('"node.audio_stream_end"')
+  && voiceServer.includes('PROVIDER_EXPLICIT_TURN_TAIL_MS')
+  && voiceServer.includes('data=b"\\x00\\x00" * int(16000 * provider_pad_ms / 1000)')
+  && voiceServer.includes('reported_tail_ms=reported_tail_ms')
+  && voiceServer.includes('provider_pad_ms=provider_pad_ms'),
+  'Voice must identify the local boundary and add bounded Vertex AAD silence');
 
 console.log('Voice turn policy PASS: one Voice speaker verdict, opening capture/ack, non-destructive App candidate, pre-roll, post-speech guard');

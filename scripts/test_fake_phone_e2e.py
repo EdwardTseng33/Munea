@@ -110,6 +110,9 @@ assert mouth_roi.shape == (108, 217)
 # Relay remains available as a fallback test, but cannot certify the primary route.
 assert 'choices=("relay", "direct"), default="direct"' in SOURCE
 assert 'parser.error("--expected-text is required with --mic-wav' in SOURCE
+assert '"--expect-short-recovery", action="store_true"' in SOURCE
+assert 'event.get("type") == "short_turn_recovery"' in SOURCE
+assert 'metrics.get("short_turn_recovery") is True' in SOURCE
 assert '"--mic-seconds", type=float, default=0.0' in SOURCE
 assert "if self.args.mic_seconds > 0:" in SOURCE
 assert "raw = source.readframes(frame_count)" in SOURCE
@@ -129,6 +132,7 @@ assert 'for turn_number in range(1, self.args.turns + 1):' in SOURCE
 assert 'await self.wait_for_avatar_playout(' in SOURCE
 assert '"avatar_playout_complete": avatar_playout_complete_for_turn' in SOURCE
 assert '"avatar_playout": bool(metrics.get("turns"))' in SOURCE
+assert '"call_id": str(getattr(error, "munea_call_id", "") or "")' in SOURCE
 assert '"all_turns_completed"' in SOURCE and '"completed_turns"' in SOURCE
 assert '"minimum_call_duration"' in SOURCE and '"call_duration_ms"' in SOURCE
 assert 'self.args.turn_prompts[turn_number - 1]' in SOURCE

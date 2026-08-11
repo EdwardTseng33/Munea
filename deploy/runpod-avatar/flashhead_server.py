@@ -127,11 +127,11 @@ SR_IN, SR_ENG = 24000, 16000
 # 但可讓已經生成好的嘴型先播完整 0.22s。只有真的發生 mid-turn
 # underrun 才逐級加到 0.35s，GPU p95 不轉成每一句固定等待。
 AUDIO_PREBUFFER_S = min(
-    0.35, max(0.22, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.22")))
+    0.35, max(0.22, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.35")))
 )
 # 兩端仍共用同一個 start gate；連續三輪穩定就逐步退回 0.22s。
 AUDIO_PREBUFFER_MIN_S = max(
-    0.22, min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.22")))
+    0.22, min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.35")))
 )
 AUDIO_PREBUFFER_MAX_S = max(
     AUDIO_PREBUFFER_MIN_S,
@@ -145,12 +145,12 @@ OPENING_PREBUFFER_S = max(
     min(0.35, float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.35"))),
 )
 # Production receiver evidence after speech antiflicker was removed still found
-# a quiet-phoneme turn with 422ms apparent mouth lag. The first 0.96s lip chunk
-# already exists before release, so let video consume the 220ms shared hold
-# instead of making those frames wait behind the same gate. This adds only 20ms
-# to audio versus the old 200ms minimum. Bounded rollback: set to 40 or 0.
+# The first generated lip chunk already exists before release, so let video
+# consume most of the shared audio hold instead of waiting behind the same
+# gate. A 3x3 receiver-side canary kept every onset within 250ms at 350ms and
+# eliminated audio sender rebases. Bounded rollback: set to 270, 220, 40, or 0.
 VIDEO_LEAD_S = min(
-    0.35, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "220")) / 1000.0)
+    0.35, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "350")) / 1000.0)
 )
 # Opus in-band FEC trades a small amount of codec efficiency for recovery from
 # isolated WebRTC packet loss. Long-call evidence saw intact Voice PCM and zero

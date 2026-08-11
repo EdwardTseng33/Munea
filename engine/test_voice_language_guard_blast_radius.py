@@ -59,15 +59,25 @@ class PronunciationGuardMustNotBlock(unittest.TestCase):
             "唸不準要留下記錄，不然之後看不出她到底多常講到那幾個詞",
         )
 
-    def test_hokkien_output_still_blocks(self):
-        """台語沒開放，她自己講台語仍然要攔——這次放寬不可以順手把它拆掉。"""
+    def test_hokkien_output_is_observed_without_repeating_the_turn(self):
+        """模型輸出誤判不可再中斷、重講、最後換罐頭句。"""
         src = _src()
-        at = src.index("looks_like_taiwanese_hokkien(output_text)")
-        after = src[at:at + 400]
-        self.assertIn(
+        at = src.index("looks_like_taiwanese_hokkien_output(")
+        after = src[at:at + 700]
+        self.assertNotIn(
             '_arm_language_block("model_output")', after,
-            "她輸出台語不再被攔——台語還沒開放，這道要留著",
+            "模型輸出誤判又會攔斷正常答案並觸發自動重講",
         )
+        self.assertIn(
+            "hokkien_output_seen", after,
+            "模型輸出語言異常仍要留下可稽核紀錄",
+        )
+
+    def test_hokkien_user_input_still_blocks(self):
+        """使用者真的說未開放語言時，仍保留一次明確提示。"""
+        src = _src()
+        at = src.index('await _arm_language_block("audio_input")')
+        self.assertGreater(at, 0)
 
     def test_no_stranger_voice_path_left(self):
         """換一個陌生聲線把整段重唸的那條路要整支拿掉，不能只是沒被呼叫。"""

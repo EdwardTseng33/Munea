@@ -20,7 +20,7 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | `1.0.64 (Build 535)`；下一個唯一候選，移除開場假音訊回合、加入接收緩衝並保持 Avatar 同線 | App Store Connect 最新上傳是 `1.0.61 (Build 532)`；current review lane 則是 `1.0.55 (Build 525)`，兩者都不是 current source | `partial` | Build 535 通過完整發行檢查後，由 Mac Archive／Export；安裝 Gate 通過前不送審 |
+| App source lane | `1.0.65 (Build 536)`；下一個唯一候選，首句在本機封口並於 Voice ready 後明確結束輸入，Avatar 採原生 512 | App Store Connect 最新上傳是 `1.0.61 (Build 532)`；current review lane 則是 `1.0.55 (Build 525)`，兩者都不是 current source；安裝版 1.0.64／535 已判 FAIL | `partial` | Build 536 通過完整發行檢查與服務 Gate 後，由 Mac Archive／Export；安裝 Gate 通過前不送審 |
 | App Store lane | latest uploaded `1.0.61 (Build 532)`；selected review `1.0.55 (Build 525)` | Build 532 `VALID` 但未被 1.0.55 審核版本選用；1.0.55 為 `WAITING_FOR_REVIEW`，尚未核准／公開 | `partial` | Build 533 上傳後核對 exact IPA identity，再決定建立／替換審核版本 |
 | Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |

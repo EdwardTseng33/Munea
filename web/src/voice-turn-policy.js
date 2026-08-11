@@ -45,6 +45,11 @@
     openingCaptureCandidateMs: 32,
     openingCapturePreRollFrames: 8,
     openingCaptureMaxMs: 2200,
+    // Once a real opening utterance is followed by the same quiet window used
+    // by Voice AAD, freeze that utterance locally. Do not queue the caller's
+    // wait silence and replay the wait a second time after Voice becomes ready.
+    openingCaptureCompleteQuietMs: 650,
+    openingCaptureTailMs: 160,
   });
 
   function createState(noiseFloor) {
@@ -96,6 +101,9 @@
       preRoll: [],
       frames: [],
       bufferedMs: 0,
+      lastVoiceFrameIndex: -1,
+      trailingQuietMs: 0,
+      complete: false,
     };
   }
 
@@ -136,15 +144,26 @@
         next.frames = next.preRoll.slice();
         next.preRoll = [];
         next.bufferedMs = next.frames.reduce((sum, item) => sum + item.durationMs, 0);
+        next.lastVoiceFrameIndex = next.frames.length - 1;
+        next.trailingQuietMs = 0;
       }
-    } else {
+    } else if (!next.complete) {
       next.frames.push(entry);
       next.bufferedMs += durationMs;
+      const continuationThreshold = Math.max(0.008, threshold * 0.45);
+      if (level >= continuationThreshold) {
+        next.lastVoiceFrameIndex = next.frames.length - 1;
+        next.trailingQuietMs = 0;
+      } else {
+        next.trailingQuietMs += durationMs;
+        if (next.trailingQuietMs >= cfg.openingCaptureCompleteQuietMs) next.complete = true;
+      }
     }
 
     while (next.detected && next.frames.length > 1 && next.bufferedMs > cfg.openingCaptureMaxMs) {
       const removed = next.frames.shift();
       next.bufferedMs = Math.max(0, next.bufferedMs - (removed.durationMs || 0));
+      next.lastVoiceFrameIndex = Math.max(-1, next.lastVoiceFrameIndex - 1);
     }
     return { state: next, threshold, detectedNow };
   }
@@ -153,14 +172,26 @@
     const cfg = { ...DEFAULTS, ...(options || {}) };
     const current = { ...createOpeningCapture(), ...(state || {}) };
     const candidate = !current.detected && current.candidateMs >= cfg.openingCaptureCandidateMs;
-    const entries = current.detected
+    let entries = current.detected
       ? (Array.isArray(current.frames) ? current.frames : [])
       : (candidate && Array.isArray(current.preRoll) ? current.preRoll : []);
+    let retainedTailMs = 0;
+    if (current.detected && current.lastVoiceFrameIndex >= 0 && entries.length) {
+      let end = Math.min(entries.length, current.lastVoiceFrameIndex + 1);
+      while (end < entries.length && retainedTailMs < cfg.openingCaptureTailMs) {
+        retainedTailMs += Number(entries[end].durationMs) || 0;
+        end += 1;
+      }
+      entries = entries.slice(0, end);
+    }
     return {
       frames: entries.map(entry => entry.frame).filter(frame => frame !== null && frame !== undefined),
       bufferedMs: Math.round(entries.reduce((sum, entry) => sum + (Number(entry.durationMs) || 0), 0)),
       detected: !!current.detected,
       candidate,
+      complete: !!current.complete,
+      observedQuietMs: Math.round(Number(current.trailingQuietMs) || 0),
+      retainedTailMs: Math.round(retainedTailMs),
       state: createOpeningCapture(current.noiseFloor),
     };
   }

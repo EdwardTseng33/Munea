@@ -645,6 +645,14 @@ def test_health_snapshot_math():
         "idle_invalidations": 2,
         "audio_played_ms": 0.0,
     }
+    assert body["model_turn_state"] == {
+        "motion_resets": 0,
+        "motion_reset_failures": 0,
+        "seed": 42,
+        "seed_resets": 0,
+        "first_chunk_retries": 0,
+        "first_chunk_retry_failures": 0,
+    }
     print("test_health_snapshot_math: PASS")
 
 
@@ -766,9 +774,14 @@ def test_turn_reset_restores_model_motion_seed_once():
         def __init__(self):
             self.person_name = "munea"
             self.calls = []
+            self.generator = self
+            self.seeds = []
 
         def reset_person_name(self, person_name=None):
             self.calls.append(person_name)
+
+        def manual_seed(self, seed):
+            self.seeds.append(seed)
 
     pipeline = MotionPipeline()
     slot.pipeline = pipeline
@@ -777,13 +790,38 @@ def test_turn_reset_restores_model_motion_seed_once():
 
     feeder.reset()
     assert pipeline.calls == ["munea"]
+    assert pipeline.seeds == [42]
     assert slot.motion_reset_count == 1
+    assert slot.turn_seed_reset_count == 1
     assert slot.motion_reset_failures == 0
 
     feeder.reset(reset_pipeline_motion=False)
     assert pipeline.calls == ["munea"], "character switch owns the model reset"
+    assert pipeline.seeds == [42], "character switch owns the generator reset"
     assert slot.motion_reset_count == 1
+    assert slot.turn_seed_reset_count == 1
     print("test_turn_reset_restores_model_motion_seed_once: PASS")
+
+
+def test_first_chunk_quality_metrics_detect_static_speech():
+    quiet = np.zeros(2400, dtype=np.int16)
+    speech = np.full(2400, 5000, dtype=np.int16)
+    assert fec.pcm_rms(quiet) == 0.0
+    assert fec.pcm_rms(speech) > fec.FIRST_CHUNK_SPEECH_RMS
+
+    frames = np.zeros((4, 100, 100, 3), dtype=np.uint8)
+    assert fec.mouth_motion_peak(frames) == 0.0
+    assert fec.first_chunk_av_skew_ms(frames, speech, fps=25) == float("inf")
+    frames[1, 60:65, 45:55] = 255
+    assert fec.mouth_motion_peak(frames) > fec.FIRST_CHUNK_MOUTH_MOTION
+    assert fec.first_chunk_av_skew_ms(frames, speech, fps=25) == 40.0
+    print("test_first_chunk_quality_metrics_detect_static_speech: PASS")
+
+
+def test_retry_prebuffer_is_bounded_and_stricter_than_steady_state():
+    assert 0.27 < fec.FIRST_CHUNK_RETRY_PREBUFFER_S <= 0.5
+    assert fec.FIRST_CHUNK_MOUTH_MOTION >= 0.015
+    print("test_retry_prebuffer_is_bounded_and_stricter_than_steady_state: PASS")
 
 
 def main():
@@ -810,7 +848,9 @@ def main():
     test_force_release_slot_used_by_unhealthy_path()
     test_antiflicker_freezes_static_background_keeps_motion()
     test_turn_reset_restores_model_motion_seed_once()
-    print("FlashHead multi-slot smoke test: ALL PASS")
+test_first_chunk_quality_metrics_detect_static_speech()
+test_retry_prebuffer_is_bounded_and_stricter_than_steady_state()
+print("FlashHead multi-slot smoke test: ALL PASS")
 
 
 if __name__ == "__main__":

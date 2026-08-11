@@ -5026,7 +5026,6 @@ const LiveVoice = {
               // 間歇性正是這樣來的：同一份程式，有時走到、有時沒走到。
               // 改成掛在這裡：腦一接上就開麥。這是「能收音」的最早時機，
               // 而且它在 ready 事件本身，沒有任何提早離開的分支繞得過去。
-              this._setMicOpen(true); this._openMicAfterGreet = false;
               if (openingCapture.frames.length) {
                 openingCapture.frames.forEach(frame => this._sendMicBuffer(frame));
                 voiceCallMark('opening_user_voice_flushed', 'pass', {
@@ -5034,10 +5033,28 @@ const LiveVoice = {
                   bufferedMs: openingCapture.bufferedMs,
                   detected: openingCapture.detected,
                   candidate: openingCapture.candidate,
+                  complete: openingCapture.complete,
+                  observedQuietMs: openingCapture.observedQuietMs,
                   waitAfterDetectionMs: this._openingVoiceDetectedAt
                     ? Math.round(performance.now() - this._openingVoiceDetectedAt) : null,
                 });
+                if (openingCapture.complete) {
+                  this.ws.send(JSON.stringify({
+                    type: 'audio_end',
+                    reason: 'opening_local_boundary',
+                    trailing_silence_ms: openingCapture.retainedTailMs,
+                  }));
+                  voiceCallMark('opening_user_turn_closed', 'pass', {
+                    bufferedMs: openingCapture.bufferedMs,
+                    observedQuietMs: openingCapture.observedQuietMs,
+                    retainedTailMs: openingCapture.retainedTailMs,
+                  });
+                }
               }
+              // Flush the preserved opening utterance (and its boundary when
+              // complete) before live callbacks can append newer microphone
+              // frames. The next real audio frame reopens Gemini's input stream.
+              this._setMicOpen(true); this._openMicAfterGreet = false;
               if (this.onReady) this.onReady(); this._toListening();
               try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {}
             }   // 腦開機完成 → 語音就緒＋立刻開麥；記下「聊過了」；ready 後 5 秒雙向無聲＝死線重接

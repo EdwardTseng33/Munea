@@ -1,18 +1,32 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜🧪 1.0.65 Build 536 首句短音復原（PR #573 · 0% 全鏈 PASS · call-path risk）
+
+- **範圍**：`codex/fix-live-opening-av-20260811` / PR #573；本輪實際修改 `engine/live_voice_server.py`、短開場回歸、假手機 Gate 與 Voice 部署契約。App 候選身分維持唯一的 `1.0.65 (Build 536)`，未再加版。
+- **根因／修復**：真人約兩秒開場可到達 Vertex 卻偶發沒有 ASR／輸出，增加靜音無效。只對第一個 ≤3 秒有聲開場加同聲線一次性復原；ASR、AI 音訊或第二句會取消，整通最多一次。Voice 尾端明確鎖回 900ms，避免測試環境的 1200ms 污染後續部署。
+- **證據**：`f84a1781` / `munea-voice-staging-00133-kup` 0% 候選經 production Gateway→Voice→Glows Avatar→WebRTC，短句 3/3 與正常中文 3×3 共 12 輪全過；正常 ASR 1.0、聲嘴全部在 ±125ms、underrun／有聲 RTP gap／自主重播／斷線／復原誤觸均 0，完整 `release:check` PASS。
+- **下一關**：PR／CI→合併→同提交正式 Voice→正式假手機回驗；完成前 production unchanged。Mac 只在上述全綠後包一次 Build 536。exact installed iPhone Gate 前維持 `App E2E pending（Codex ownership）`，不得送審。
+
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
+
+### 2026-08-11 Codex｜🚨 1.0.65 Build 536：首句等待靜音二次播放收斂（進行中 · call-path risk）
+- **分支／範圍**：`codex/fix-live-opening-av-20260811`／Draft PR #573；修改 `web/src/voice-turn-policy.js`、`web/src/app.js`、`engine/live_voice_server.py`、Cloud Run Voice 部署設定、首句契約測試、App 版號與發布狀態。PR #571 已修「ready 前人聲被換成靜音」，本輪補它未涵蓋的「人已講完但 Voice 尚未 ready」窗口。
+- **1.0.64 實機證據**：使用者確認第一聲 HELLO 仍常無回應，需重複數次；延遲回覆又會被後一聲 HELLO 當成真插話打斷。1.0.64 已有安裝實機失敗證據，不能再沿用 1.0.64／535 身分重包後稱同一候選，故唯一下一版升為 `1.0.65 (Build 536)`。
+- **根因／修復**：原 opening capture 最多保留 2.2 秒，連使用者講完後等待 Voice ready 的長靜音也一起重播，provider 因而再等一次端點。現在 650ms 安靜即凍結首句，只保留 160ms 句尾；Voice ready 後先依序送出首句與 `audio_end(opening_local_boundary)`，再打開正常即時麥克風。正常 barge-in、回音裁決與後續回合不變。
+- **供應者設定收斂**：正式 Voice 已是 Vertex 2.5，但 staging 只留 `MUNEA_VERTEX_LOCATION`、缺 `MUNEA_VOICE_ENGINE`，後續部署可能退回已耗盡額度的 Developer API。production／staging Voice 部署入口現在都明確固定模型引擎 `vertex25` 與模型位置 `us-central1`；Gateway 的邏輯 shard identity 則保持現役 `gemini-live-asia-east1-01`，兩者分開納入自動契約。首次 0% canary 曾把這兩者誤當同一設定而 3/3 被 4403 Gate 攔下，未切流量；已依正式 Gateway 身分修正後重建。
+- **Gate／責任**：策略、launch、JS syntax、Voice compile 後，建立 Voice 0% 候選並跑 production Gateway→Voice→512 Avatar 真聲音／真嘴部至少 3/3；CI、合併、正式服務 identity 全對齊後才通知 Mac 包 Build 536。exact-build iPhone 首句只說一次、三輪、查詢對嘴、六分鐘與掛斷釋位通過前維持 `App E2E pending（Codex ownership）`。
 
 ### 2026-08-11 Codex｜🚨 首句 HELLO 被接通守門丟棄（PR #571 已合併／服務 3/3／App E2E pending · call-path risk）
 
 - **分支／PR**：`codex/fix-first-utterance-buffer-20260811`／PR #571 已合併為 `main@e4a07d81`；修改 `web/src/voice-turn-policy.js`、`web/src/app.js`、`engine/live_voice_server.py`、語音契約測試與狀態文件。與 Avatar 防閃 PR #570 分開，不混成同一支修改。
 - **實機症狀**：通話開啟後第一聲 HELLO 常無反應；2–3 秒後再說一次，延遲到來的第一個回覆又正好被第二聲插話打斷。
 - **已定位根因**：App 在麥克風管線建立後到 Voice `ready` 前，把真實收音直接換成每 500ms 一包靜音；畫面已讓人感覺能說話，但這個窗口內的第一句不會進模型。這是舊「AI 先招呼、使用者後開麥」規則的殘留，與目前「使用者先說」產品規則衝突。
-- **修復／Gate**：只在接通窗口本地保留有持續人聲證據的短預捲，Voice ready 後依序送出並立刻顯示「我聽見了」；不關閉正常 barge-in、不把底噪當成一輪。加入 App 偵測／緩衝／送出與 Voice 首個非靜音 PCM 的逐段碼錶。首句、底噪、插話、回音、狀態機、長連線回合、假手機契約與完整 `release:check` 已 PASS，GitHub 四道 CI 全綠。staging 0% canary 以完整真人錄音走 Gateway→Voice→Glows Avatar 連打 3/3，ASR 1.0、首個可聽回覆 `609／610／703ms`、聲嘴 `0／+15／+15ms`，無缺音、speech RTP gap、underrun、重播或斷線。另修正假手機預設只送 WAV 前 5 秒的驗收陷阱，改為預設完整播放；exact-build iPhone 真麥克風未過前維持 `App E2E pending（Codex ownership）`。Build 535 尚未 Archive，本修復直接納入同一候選，不另增包版。
+- **修復／Gate**：只在接通窗口本地保留有持續人聲證據的短預捲，Voice ready 後依序送出並立即顯示「我聽見了」；不關閉正常 barge-in、不把底噪當成一輪。首句、底噪、插話、回音、狀態機、長連線回合、假手機契約與完整 `release:check` 已 PASS，GitHub 四道 CI 全綠。staging 0% canary 以完整真人錄音走 Gateway→Voice→Glows Avatar 連打 3/3，ASR 1.0、首個可聽回覆 `609／610／703ms`、聲嘴 `0／+15／+15ms`，無缺音、speech RTP gap、underrun、重播或斷線。1.0.64 實機其後仍抓到等待靜音問題，故後續由 Build 536 收斂，不以本項舊 Gate 覆蓋。
 
 ### 2026-08-11 Codex｜✅ Avatar 有聲無嘴／嘴慢：回到 FlashHead 原生 512 推論（服務 Gate PASS／App E2E pending · call-path risk）
-- **分支／PR**：`codex/fix-avatar-speech-antiflicker-20260811`／Draft PR #570。說話幀停用逐像素防閃、保留待機防閃；每個語意回合重設 FlashHead motion latent，避免上一輪靜態嘴型污染下一輪；驗收器改量正式 WebRTC 畫面的實際嘴部 ROI，並等待 Avatar 真正播完後才結算每輪。
+- **分支／PR**：`codex/fix-avatar-speech-antiflicker-20260811`／PR #570 已合併為 `main@10356489`。說話幀停用逐像素防閃、保留待機防閃；每個語意回合重設 FlashHead motion latent，避免上一輪靜態嘴型污染下一輪；驗收器改量正式 WebRTC 畫面的實際嘴部 ROI，並等待 Avatar 真正播完後才結算每輪。
 - **根因證據**：640 推論即使 Voice 音訊、direct ACK、WebRTC RTP、underrun、缺音與連線全部正常，仍會出現整個前 750ms 幾乎沒有嘴部動態；保留跨輪 latent 的 A/B 也只有 1/3 輪合格，已回退。FlashHead 官方原生 512 A/B 則讓嘴部動態顯著恢復、GPU 首批畫格由約 0.85–1.0 秒降至約 0.69–0.82 秒。
 - **正式服務 Gate**：Glows `tw-06` 已保留 `MUNEA_FH_FRAME_SIZE=512`，640 環境與 server/core 均有可回復備份。相同 production Gateway→Voice→Avatar 路徑連續 3 通 × 3 輪為 `3/3 PASS`；9 輪首聲 `797–1766ms`、聲嘴 `−93～+250ms`，缺音、RTP gap、Avatar underrun、自主重播與斷線皆 0，多輪內容沒有再問「吃飯了沒」。
 - **放行邊界**：這是正式服務的真聲音／真嘴部 precheck，不代替安裝版 iPhone。1.0.64 的開頭漏聽仍是 App 端另一個 P0；新 App 修正合併、包版並完成 exact-build 真麥克風／喇叭 Gate 前，維持 `App E2E pending（Codex ownership）`，不得稱可送審。

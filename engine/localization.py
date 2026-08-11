@@ -42,7 +42,12 @@ _TIME_ZONE_RE = re.compile(r"^(?:UTC|[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+)$")
 _DATA_REGION_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 _SPEECH_CODES = {"zh-TW": "cmn-TW", "en": "en-US", "ja": "ja-JP", "es": "es-ES"}
 _ASR_LANGUAGE_HINTS = {
-    "zh-TW": ["cmn-Hant-TW"],
+    # Taiwan users commonly open with a very short "Hello"/"OK" before
+    # continuing in Mandarin. Vertex native audio can otherwise discard that
+    # sub-two-second turn when only Mandarin is hinted. Keep Mandarin first so
+    # recognition bias remains local, with English as the narrow code-switch
+    # fallback rather than changing the session or response language.
+    "zh-TW": ["cmn-Hant-TW", "en-US"],
     "en": ["en-US"],
     "ja": ["ja-JP"],
     "es": ["es-ES"],
