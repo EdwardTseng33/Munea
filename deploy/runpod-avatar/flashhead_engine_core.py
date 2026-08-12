@@ -113,6 +113,37 @@ def mouth_motion_peak(frames):
     return float(np.max(np.mean(adjacent, axis=(1, 2, 3))) / 255.0)
 
 
+def prepare_output_frames(frames, output_size=None, sharpen=False, cv2mod=None):
+    """Upscale model frames for transport without changing model resolution.
+
+    FlashHead 512 retains the livelier motion profile seen in production, but
+    sending that square directly makes the App enlarge it to 1080 CSS pixels.
+    A bounded Lanczos resize plus a mild unsharp pass improves transport detail
+    without asking the diffusion model to infer at 640 again.
+    """
+    values = np.asarray(frames)
+    if values.ndim != 4 or not len(values):
+        return values
+    size = int(output_size or values.shape[2])
+    if size <= 0:
+        return values
+    if cv2mod is None:
+        import cv2 as cv2mod
+    needs_resize = values.shape[1] != size or values.shape[2] != size
+    if not needs_resize and not sharpen:
+        return values
+    prepared = np.empty((len(values), size, size, values.shape[3]), dtype=np.uint8)
+    for index, frame in enumerate(values):
+        current = frame
+        if needs_resize:
+            current = cv2mod.resize(current, (size, size), interpolation=cv2mod.INTER_LANCZOS4)
+        if sharpen:
+            blurred = cv2mod.GaussianBlur(current, (0, 0), 1.0)
+            current = cv2mod.addWeighted(current, 1.28, blurred, -0.28, 0)
+        prepared[index] = current
+    return prepared
+
+
 def first_chunk_av_skew_ms(frames, pcm, fps=25):
     """Measure model-local audio-to-mouth onset skew for one generated chunk."""
     values = np.asarray(frames)
@@ -261,6 +292,8 @@ class FrameSink:
         self.lock = threading.Lock()
         self.last_pop_latency_ms = None
         self.underrun_count = 0
+        self.trim_events = 0
+        self.trim_frames = 0
 
     def push_many(self, frames, chunk_gen_ts, tgt_fps):
         with self.lock:
@@ -272,6 +305,8 @@ class FrameSink:
                 drop_n = len(self.q) - self.target_depth
                 for _ in range(drop_n):
                     self.q.popleft()
+                self.trim_events += 1
+                self.trim_frames += drop_n
 
     def pop(self):
         with self.lock:
@@ -503,6 +538,8 @@ class Slot:
         self.audio_end_idx = None
         self.audio_start_idx = None
         self.audio_dq = None
+        self.model_frame_height = None
+        self.model_frame_width = None
         self.frame_height = None
         self.frame_width = None
         self.load_report = {}
@@ -527,6 +564,8 @@ class Slot:
         self.gen_compute_ms_hist = collections.deque(maxlen=100)
         self.video_catchup_events = 0
         self.video_catchup_frames = 0
+        self.video_late_events = 0
+        self.video_late_frames = 0
         # FlashHead carries the final motion latent into the next generation
         # chunk.  That continuity is correct inside one assistant utterance,
         # but a new semantic turn must start from the character reference or
@@ -639,7 +678,7 @@ def switch_slot_char(slot, char, char_src_map, get_base_data_fn, load_poster_fn)
 class Feeder:
     def __init__(self, slot, get_audio_embedding, run_pipeline, sr_in=24000, sr_eng=16000,
                  max_ahead_s=1.5, sharpen=False, fault_streak_limit=3, on_unhealthy=None,
-                 auto_start=True):
+                 auto_start=True, output_size=None, output_sharpen=False):
         self.slot = slot
         self.get_audio_embedding = get_audio_embedding
         self.run_pipeline = run_pipeline
@@ -647,6 +686,8 @@ class Feeder:
         self.sr_eng = sr_eng
         self.max_ahead_s = max_ahead_s
         self.sharpen = sharpen
+        self.output_size = int(output_size) if output_size else None
+        self.output_sharpen = bool(output_sharpen)
         self.fault_streak_limit = fault_streak_limit
         self.on_unhealthy = on_unhealthy
 
@@ -910,6 +951,11 @@ class Feeder:
             self._on_fault(e)
             return
         self._fault_streak = 0
+        frames = prepare_output_frames(
+            frames,
+            output_size=self.output_size,
+            sharpen=self.output_sharpen,
+        )
         if self.sharpen:
             import cv2 as _cv2
             for _i in range(frames.shape[0]):
@@ -943,11 +989,14 @@ class Feeder:
                 self.slot.tgt_fps,
             )
             if drop_count:
-                frames = frames[drop_count:]
-                self.slot.video_catchup_events += 1
-                self.slot.video_catchup_frames += drop_count
+                # Do not delete video-only frames. That makes onset numbers look
+                # current by moving every following viseme onto the wrong
+                # phoneme. Keep the content intact and expose the scheduling
+                # debt so the long-call gate can fail on it explicitly.
+                self.slot.video_late_events += 1
+                self.slot.video_late_frames += drop_count
                 print("[video-sync] slot" + str(self.slot.index)
-                      + " drop=" + str(drop_count)
+                      + " late_frames=" + str(drop_count) + " preserved"
                       + " audio=" + str(round(audio_played_s, 3)) + "s"
                       + " queued=" + str(round(queued_video_s, 3)) + "s"
                       + " source=" + str(round(timeline_start_s, 3)) + "s",
@@ -1277,9 +1326,15 @@ def health_snapshot(slot, wake_ts=None):
             "recent_late_ms": list(slot.audio_sender_recent_late_ms),
         },
         "video_underrun": {"count": sink.underrun_count if sink else 0},
+        "video_queue_trim": {
+            "events": sink.trim_events if sink else 0,
+            "frames": sink.trim_frames if sink else 0,
+        },
         "video_sync": {
             "catchup_events": slot.video_catchup_events,
             "catchup_frames": slot.video_catchup_frames,
+            "late_events": slot.video_late_events,
+            "late_frames": slot.video_late_frames,
             "idle_invalidations": slot.idle_invalidation_count,
             "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
                                 if ao else 0),

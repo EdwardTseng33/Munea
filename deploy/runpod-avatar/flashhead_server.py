@@ -161,8 +161,14 @@ OPUS_PACKET_LOSS_PCT = min(
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
 # 程式留著、MUNEA_FH_SHARPEN=1 可再開；正解走真 1024（Pro 模型/超解析），見下方研究。
-FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
 FRAME_SIZE = parse_frame_size(os.environ.get("MUNEA_FH_FRAME_SIZE", "512"))
+OUTPUT_FRAME_SIZE = parse_frame_size(os.environ.get(
+    "MUNEA_FH_OUTPUT_FRAME_SIZE", str(max(640, FRAME_SIZE))
+))
+FH_SHARPEN = os.environ.get("MUNEA_FH_SHARPEN", "0") == "1"
+OUTPUT_SHARPEN = os.environ.get(
+    "MUNEA_FH_OUTPUT_SHARPEN", "1" if OUTPUT_FRAME_SIZE > FRAME_SIZE else "0"
+) == "1"
 # N-way batching surgery phase 1 / option B (2026-07-23): give each slot its
 # own CUDA stream instead of sharing the default stream with the other two.
 # Default off -- matches pre-patch behavior byte-for-byte (see
@@ -304,7 +310,8 @@ class FlashHead:
         if len(frame_shape) != 3 or frame_shape[0] != FRAME_SIZE or frame_shape[1] != FRAME_SIZE:
             raise RuntimeError("FlashHead generated " + str(frame_shape)
                                + " but MUNEA_FH_FRAME_SIZE=" + str(FRAME_SIZE))
-        slot.frame_height, slot.frame_width = frame_shape[0], frame_shape[1]
+        slot.model_frame_height, slot.model_frame_width = frame_shape[0], frame_shape[1]
+        slot.frame_height = slot.frame_width = OUTPUT_FRAME_SIZE
         t3 = time.time()
 
         slot.load_report = {
@@ -315,6 +322,7 @@ class FlashHead:
             "chunk_samples": slot.chunk_samples,
             "slice_len_frames": slot.slice_len,
             "chunk_budget_ms": round(slot.slice_len / slot.tgt_fps * 1000, 1),
+            "model_resolution": {"width": slot.model_frame_width, "height": slot.model_frame_height},
             "output_resolution": {"width": slot.frame_width, "height": slot.frame_height},
             "host": "standalone-" + os.uname().nodename,
         }
@@ -335,7 +343,7 @@ class FlashHead:
             if raw is None:
                 raise FileNotFoundError("avatar source not found: " + path)
             p = cv2.cvtColor(raw, cv2.COLOR_BGR2RGB)
-            return cv2.resize(p, (FRAME_SIZE, FRAME_SIZE))
+            return cv2.resize(p, (OUTPUT_FRAME_SIZE, OUTPUT_FRAME_SIZE), interpolation=cv2.INTER_LANCZOS4)
 
         self._load_poster = _load_poster
         self.pool = SlotPool(self.slots)
@@ -376,7 +384,9 @@ class FlashHead:
             slot.cuda_stream = None
         slot.feeder = Feeder(slot, self._get_audio_embedding, run_pipeline_for_slot,
                              sr_in=SR_IN, sr_eng=SR_ENG, max_ahead_s=MAX_AHEAD_S,
-                             sharpen=FH_SHARPEN, on_unhealthy=self._on_slot_unhealthy)
+                             sharpen=FH_SHARPEN, on_unhealthy=self._on_slot_unhealthy,
+                             output_size=OUTPUT_FRAME_SIZE,
+                             output_sharpen=OUTPUT_SHARPEN)
 
     def _on_slot_unhealthy(self, slot):
         """故障隔離：一槽連續出錯超過門檻時呼叫——強制把它從准入池釋放，

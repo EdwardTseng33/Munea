@@ -876,7 +876,7 @@ html[lang="es"] #connect .cn-row .cn-btn {
 .face-blink { display: none; }
 
 /* ===== FlashHead 全身合成（2026-07-11 · 先鋒判斷框/羽化參數 1:1 移植自 flashhead-live-test.html）=====
-   9:16 定比框置中（窄螢幕滿寬、上下留邊）；全身立繪墊底；512 活臉塞進判斷框、四邊羽化融進立繪 */
+   9:16 定比框置中（窄螢幕滿寬、上下留邊）；全身立繪墊底；活臉塞進判斷框、上下羽化融進立繪 */
 .fh-frame {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: 100%; height: 100%; aspect-ratio: 1080 / 1920;
@@ -889,8 +889,10 @@ html[lang="es"] #connect .cn-row .cn-btn {
 .fh-overlay {
   position: absolute; left: 0; top: 9.895833%; width: 100%; height: auto; aspect-ratio: 1 / 1;
   overflow: hidden; opacity: 0; transition: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 82%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 82%, transparent 100%);
+  /* 512 模型的下半身每輪會重畫衣領；若一直保留到框底，會和靜態
+     全身立繪的衣領同時出現。從肩頸下方提早羽化，只留下會動的頭頸。 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 72%, transparent 88%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 72%, transparent 88%);
 }
 .face-bg.livevid .fh-overlay { opacity: 1; }
 .fh-overlay video {

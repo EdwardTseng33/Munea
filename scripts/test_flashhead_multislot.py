@@ -317,12 +317,33 @@ def test_real_audio_invalidates_inflight_idle_frames():
     print("test_real_audio_invalidates_inflight_idle_frames: PASS")
 
 
-def test_lip_catchup_skips_only_expired_frames():
+def test_lip_lateness_is_measured_without_deleting_content():
     assert fec.lip_catchup_frame_count(0.0, 0.0, 0.0, 24, 25) == 0
     assert fec.lip_catchup_frame_count(1.0, 0.2, 0.4, 24, 25) == 20
     assert fec.lip_catchup_frame_count(10.0, 0.0, 0.0, 8, 25) == 6
     assert fec.lip_catchup_frame_count(1.0, 0.0, None, 8, 25) == 0
-    print("test_lip_catchup_skips_only_expired_frames: PASS")
+    source = Path(fec.__file__).read_text(encoding="utf-8")
+    assert "frames = frames[drop_count:]" not in source
+    assert 'late_frames=" + str(drop_count) + " preserved' in source
+    print("test_lip_lateness_is_measured_without_deleting_content: PASS")
+
+
+def test_512_model_frames_can_ship_as_detail_preserved_640():
+    try:
+        import cv2
+    except ImportError:
+        print("test_512_model_frames_can_ship_as_detail_preserved_640: SKIP (cv2 unavailable)")
+        return
+    frames = np.zeros((3, 512, 512, 3), dtype=np.uint8)
+    frames[:, 120:390, 150:360] = 96
+    frames[1, 270:300, 220:290] = 210
+    source_motion = fec.mouth_motion_peak(frames)
+    output = fec.prepare_output_frames(frames, output_size=640, sharpen=True, cv2mod=cv2)
+    assert output.shape == (3, 640, 640, 3)
+    assert output.dtype == np.uint8
+    assert fec.mouth_motion_peak(output) > 0
+    assert source_motion > 0
+    print("test_512_model_frames_can_ship_as_detail_preserved_640: PASS")
 
 
 def test_lip_timeline_survives_mid_turn_pause():
@@ -634,6 +655,7 @@ def test_health_snapshot_math():
     assert body["frames"] == 0
     assert body["output_resolution"] == {"width": 768, "height": 768}
     assert body["video_underrun"]["count"] == 0
+    assert body["video_queue_trim"] == {"events": 0, "frames": 0}
     assert body["audio_sender"] == {
         "rebase_count": 0,
         "max_late_ms": 0.0,
@@ -642,6 +664,8 @@ def test_health_snapshot_math():
     assert body["video_sync"] == {
         "catchup_events": 0,
         "catchup_frames": 0,
+        "late_events": 0,
+        "late_frames": 0,
         "idle_invalidations": 2,
         "audio_played_ms": 0.0,
     }
@@ -853,7 +877,8 @@ def main():
     test_audible_output_keeps_original_24k_samples()
     test_audio_ingress_waits_for_video_once_then_stays_continuous()
     test_real_audio_invalidates_inflight_idle_frames()
-    test_lip_catchup_skips_only_expired_frames()
+    test_lip_lateness_is_measured_without_deleting_content()
+    test_512_model_frames_can_ship_as_detail_preserved_640()
     test_lip_timeline_survives_mid_turn_pause()
     test_new_round_marker_waits_for_its_own_gpu_chunk()
     test_audio_finish_does_not_count_natural_tail_as_underrun()

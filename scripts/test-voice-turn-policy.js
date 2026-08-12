@@ -177,12 +177,19 @@ assert(primeHandler.includes('this._beginOpeningCapture()')
 assert(app.includes("voiceCallMark('opening_user_voice_detected'")
   && readyHandler.includes("voiceCallMark('opening_user_voice_flushed'")
   && app.includes("voiceCallMark('opening_user_voice_acknowledged'")
-  && readyHandler.includes("voiceCallMark('opening_user_turn_closed'")
+  && readyHandler.includes("this._closeLiveOpeningTurn('opening_local_boundary'")
   && readyHandler.indexOf('this._setMicOpen(true); this._openMicAfterGreet = false;')
     > readyHandler.indexOf('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))')
-  && readyHandler.includes("reason: 'opening_local_boundary'")
-  && readyHandler.includes('trailing_silence_ms: openingCapture.retainedTailMs'),
+  && readyHandler.includes('openingCapture.retainedTailMs'),
   'Voice ready must flush and close a completed opening turn before opening the live mic');
+assert(app.includes("this._closeLiveOpeningTurn('opening_live_boundary'")
+  && app.includes('const closeLiveOpeningTurn = this._noteUserMicActivity')
+  && app.indexOf('this._sendMicBuffer(buf);\n      // The first live utterance')
+    < app.indexOf("this._closeLiveOpeningTurn('opening_live_boundary'")
+  && app.includes('this._firstLiveOpeningBoundarySent = true'),
+  'the first utterance spoken after ready must send one explicit boundary after its final quiet PCM');
+assert(app.includes('this._userSpeechQuietMs = openingCapture.observedQuietMs || 0'),
+  'a pre-ready utterance racing ready must carry its partial quiet window into the live boundary gate');
 assert(voiceServer.includes('"node.first_non_silent_mic"'),
   'Voice logs cannot distinguish standby silence from the first real microphone audio');
 assert(voiceServer.includes('"node.audio_stream_end"')

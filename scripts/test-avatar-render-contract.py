@@ -142,6 +142,15 @@ def check_app_overlay(contracts: dict) -> None:
             ".fh-overlay 不再是正方形——正式線的條件圖是原生正方形裁切，"
             "貼回去也必須是正方形，否則頭會被壓扁"
         )
+    mask = re.search(
+        r"mask-image:\s*linear-gradient\(to bottom,\s*transparent\s+0%,\s*black\s+4%,"
+        r"\s*black\s+([\d.]+)%,\s*transparent\s+([\d.]+)%\)",
+        block,
+    )
+    if not mask or float(mask.group(1)) > 74 or float(mask.group(2)) > 90:
+        raise AssertionError(
+            ".fh-overlay 下緣沒有在衣領前完成羽化——512 活臉會和底圖衣領重疊"
+        )
 
     # app.js：const _box = (_fc === 'a06') ? { top: 'A%' } : { top: 'B%' };  → a06=A、其餘=B
     box_line = re.search(
