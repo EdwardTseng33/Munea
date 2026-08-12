@@ -28,6 +28,8 @@ SERVICE_ROOT="/root/munea-service"
 export MUNEA_WORKER_ID="${MUNEA_WORKER_ID:-runpod-${RUNPOD_POD_ID:-unknown}}"
 export MUNEA_FACE_PORT="${MUNEA_FACE_PORT:-8188}"
 export MUNEA_FH_FRAME_SIZE="${MUNEA_FH_FRAME_SIZE:-640}"
+export MUNEA_FH_OUTPUT_FRAME_SIZE="${MUNEA_FH_OUTPUT_FRAME_SIZE:-640}"
+export MUNEA_FH_OUTPUT_SHARPEN="${MUNEA_FH_OUTPUT_SHARPEN:-1}"
 export MUNEA_FH_MODEL_ROOT="${MUNEA_FH_MODEL_ROOT:-/models}"
 # 2026-07-24：預設從「單程序執行緒多槽（MUNEA_FH_SLOTS=2，受 GIL 序列化
 # 拖慢）」升級成「2 個獨立 process（各自 1 slot）」，跟主卡同一套修復、

@@ -67,16 +67,17 @@ expect(app.includes('const cfg = developerConfig();') && !app.includes('devAuthC
   'development Voice endpoint is read through an undefined config helper');
 expect(app.includes('this._sameLineWarmup = this._sameLine'),
   'Avatar same-line audio does not start in warmup mode');
-expect(app.includes('prepareOpeningAudioPath(waitMs = 600)') &&
+expect(app.includes('prepareOpeningAudioPath(waitMs = 2500)') &&
   app.includes('syntheticPcm: false') && !app.includes('new Int16Array(24000).buffer'),
   'opening readiness still creates a synthetic Avatar PCM/model turn');
-expect(app.includes("stage: 'before_first_user_turn'") && app.includes("'receiver_ready'") && app.includes("'local_fallback'"),
-  'opening receiver readiness does not preserve verified and local fallback modes');
-expect(app.includes("return { mode, verified: stable, receiverAttached }") && !app.includes("opening_audio_not_ready"),
-  'an inconclusive silent warmup can still tear down an otherwise healthy call');
+expect(app.includes("stage: 'before_first_user_turn'") && app.includes("'receiver_ready'") && app.includes("'path_not_ready'"),
+  'opening receiver readiness does not distinguish a verified path from a false connection');
+expect(app.includes("return { mode, verified: stable, receiverAttached, directReady }") &&
+  app.includes("voiceCallFail('opening_audio_ready', 'opening_audio_path_not_ready'"),
+  'an inconclusive direct path can still be presented to the user as a connected call');
 expect(!app.includes('_sameLineWarmupPending'),
   'the first assistant answer is still being consumed as the audio warmup');
-expect(app.includes('await LiveVoice.prepareOpeningAudioPath(600)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(600)') < app.indexOf('LiveVoice.greet()'),
+expect(app.includes('await LiveVoice.prepareOpeningAudioPath(2500)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(2500)') < app.indexOf('LiveVoice.greet()'),
   'the first user turn can start before the Avatar receiver is attached');
 expect(app.includes('this._renderStream.addTrack(e.track)') && app.includes('vid.srcObject = this._renderStream'),
   'Avatar audio and video tracks are not combined on the single playback clock');
@@ -293,6 +294,11 @@ expect(app.includes("this._markOpeningHeard('pre_ready_buffer'") &&
   app.includes("this._markOpeningHeard('live_microphone'") &&
   app.includes("setLocalizedRuntimeHint('heard')"),
   'the user gets no immediate acknowledgement that the first utterance was heard');
+expect(app.includes('while (this.on && (!Avatar._faceAudReceiver || !this._faceDirect)') &&
+  app.includes('const stable = receiverAttached && directReady') &&
+  app.includes("voiceCallFail('opening_audio_ready', 'opening_audio_path_not_ready'") &&
+  app.indexOf('if (LiveVoice.onListen) LiveVoice.onListen();') > app.indexOf('markConnected();'),
+  'the UI can still announce a connected/listening call before the direct Avatar audio path is ready');
 expect(app.includes('this._primePipelinePromise = this._setupMicPipeline(this._primeMicPromise, true);') &&
   app.includes('const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);') &&
   app.indexOf('const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);') < app.indexOf('this.ws = new WebSocket(url)'),

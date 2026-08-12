@@ -1,5 +1,13 @@
 # Munea Release State
 
+## 2026-08-12 台灣｜1.0.67 Build 538 首句真正就緒＋長通話聲嘴同步候選（PR #581 · 0% canary · App E2E pending）
+- **為何必須新 Build**：1.0.66／537 的實機首句仍會在服務尚未可回話時顯示接通；本輪修改 App 本地 ready gate 與首輪 `audio_end`，不是 server-only，舊包無法取得修正。
+- **首句策略**：採「更晚接通」而非 AI 主動招呼。麥克風、Voice、Avatar audio/direct 都 ready 後才顯示接通並開始計時；首輪真人語音後 650ms 安靜即送一次明確邊界，避免第一個 HELLO 漏聽、第二句又打斷回覆。
+- **長通話與畫質**：不再為追趕聲音刪除嘴型影格；生成前替完整模型批次保留佇列空間。模型仍以原生 512 推論，傳送端升頻至 640 並輕度銳化；App 下緣羽化提前收掉動態領口。最終 signed playout offset 候選為 `−350ms`。
+- **自動假手機證據**：單路 6 輪在 `−80ms` 已證明無累積漂移；比照正式兩槽滿載後發現聲嘴 `−0.31～−0.45s`，因此未放行。`−280ms` 雖多數通過，正式仍出現一次 `−0.36s` 尖峰；最終 `−350ms` 在雙路同時各 3 輪為 `+0.03～+0.05s` 與 `−0.14～−0.17s`，單路 3 輪為 `+0.05～+0.08s`。所有測試皆 640×640、video trim 0、audio underrun 0。
+- **正式 Avatar Gate**：`1.0.67-opening-avsync@dc87c152` 已部署至 Glows 8888（兩槽、512 推論、640 輸出、額外銳化、`−350ms`）。正式雙槽連跑兩組、每組兩路×3 輪＝12／12 有聲有嘴，聲嘴 `+0.03～+0.09s` 與 `−0.12～−0.17s`；video trim、audio underrun、fault 均 0，結束後 `active=0`。冷啟動 rolling p95 曾為 795.5／871.3ms，但暖機後最近生成約 362～384ms；無銳化候選雖降至約 684～685ms，卻在第三輪兩路同時有嘴無聲，已拒絕。正式回滾點為 `/root/munea-backup-before-opening-avsync-20260812-064156`（1.0.66）與 `/root/munea-backup-before-opening-avsync-20260812-064852`（1.0.67／−280ms）。
+- **剩餘邊界**：Brain/App Web exact `dc87c152` 已在 `munea-brain-staging-00126-hik` 0% canary 通過結構 Gate，正式 Brain 流量未切。PR #581 維持 Draft；App 本地 ready gate 必須由 Mac Archive／安裝版 iPhone 驗收，因此目前仍為 `App E2E pending`，不得送審或稱完整穩定。
+
 ## 2026-08-12 台灣｜1.0.66 Build 537 首句嘴型中斷修復（Avatar 正式上線 · App 實機回驗 pending）
 
 - **原始實機失敗**：安裝版 `1.0.66 (537)` 曾出現首句嘴型講到一半被切斷／卡住，且語音內容與嘴型不一致；因此舊版證據已作廢並重新驗收。
@@ -165,7 +173,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.66 (Build 537)` | 下一個唯一候選；撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機。WebView cache identity 已更新為 `20260812-call-stability-b537-v1066` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-12 +08:00 |
+| Latest source | `1.0.67 (Build 538)` | 下一個唯一候選；服務真正可聽可回後才顯示接通，首輪 650ms 安靜送明確句尾；長通話不刪嘴型影格，512 推論升頻輸出 640。WebView cache identity 為 `20260812-opening-avsync-b538-v1067` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-12 +08:00 |
 | Latest uploaded App | `1.0.61 (Build 532)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 08:35 UTC；不含本輪三邊協議握手，不能代表 current source | App Store Connect API（權威） | 2026-08-11 00:49 +08:00 |
 | App Store selected review lane | `1.0.55 (Build 525)` | `appStoreState=WAITING_FOR_REVIEW`；權威 API 回讀 selected build 為 App 1.0.55 Build 525。1.0.61 Build 532 只有 uploaded／VALID，並未被這個審核版本選用 | App Store Connect API | 2026-08-11 00:49 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |

@@ -17,11 +17,13 @@ PARSER.add_argument("--key-file", default=r"E:\Claude\Munea\deploy\.munea-app-ke
 PARSER.add_argument("--demo-password")
 PARSER.add_argument("--wav", default=r"E:\Claude\Munea\engine\nening-reply-1.wav")
 PARSER.add_argument("--out")
+PARSER.add_argument("--repeats", type=int, default=1)
 ARGS = PARSER.parse_args()
 
 BASE = ARGS.base.rstrip("/")
 CHAR = ARGS.char
 DURATION_S = ARGS.duration
+REPEATS = max(1, min(20, ARGS.repeats))
 if ARGS.demo_password:
     _session_response = requests.post(
         BASE + "/demo/session", json={"password": ARGS.demo_password}, timeout=30
@@ -168,18 +170,22 @@ async def main():
         max_size=None,
     )
     await asyncio.sleep(2.0)   # 2 秒待機基準
-    w = wave.open(WAV, "rb"); sr = w.getframerate()
-    t_speak = time.monotonic() - T0
-    print(f"[t] === 大坨倒真語音起點 t={t_speak:.2f}s ===", flush=True)
-    sent = 0
-    while sent < int(DURATION_S * sr):
-        raw = w.readframes(int(0.2 * sr))
-        if not raw: break
-        await aud.send(raw); sent += int(0.2 * sr)
-        await asyncio.sleep(0.01)
-    w.close()
-    await aud.send("finish")   # 明確要求服務補算最後不足一個模型 chunk 的句尾
-    await asyncio.sleep(max(4.0, DURATION_S + 3.0))   # 讓整句與最後補算塊演完
+    speak_starts = []
+    for turn in range(REPEATS):
+        await aud.send("reset")
+        w = wave.open(WAV, "rb"); sr = w.getframerate()
+        t_speak = time.monotonic() - T0
+        speak_starts.append(t_speak)
+        print(f"[t] === 第 {turn + 1}/{REPEATS} 輪真語音起點 t={t_speak:.2f}s ===", flush=True)
+        sent = 0
+        while sent < int(DURATION_S * sr):
+            raw = w.readframes(int(0.2 * sr))
+            if not raw: break
+            await aud.send(raw); sent += int(0.2 * sr)
+            await asyncio.sleep(0.01)
+        w.close()
+        await aud.send("finish")   # 明確要求服務補算最後不足一個模型 chunk 的句尾
+        await asyncio.sleep(max(4.0, DURATION_S + 3.0))   # 讓整句與最後補算塊演完
     stop["v"] = True
     try:
         await asyncio.wait_for(aud.close(), timeout=3.0)
@@ -204,41 +210,42 @@ async def main():
                            + "，實收 " + str(received_sizes[0][0]) + "x"
                            + str(received_sizes[0][1]))
 
-    # ── 聲音軌能量時間軸（每收包時刻的 RMS）──
-    a_on = None
-    for t, arr, _sr in aframes:
-        if t >= t_speak and np.sqrt(np.mean((arr / 32768.0) ** 2)) > 0.02:
-            a_on = t; break
     # ── 嘴巴動起點（y33-50% 區塊）──
-    m_on = None
     mouth_motion = []
     prev = None
     for t, a in vframes:
         h, wd = a.shape[:2]
         m = a[int(h*0.33):int(h*0.50), int(wd*0.30):int(wd*0.70)].astype(np.int16)
-        if prev is not None and prev.shape == m.shape and t >= t_speak:
+        if prev is not None and prev.shape == m.shape and t >= speak_starts[0]:
             score = float(np.mean(np.abs(m - prev)))
             mouth_motion.append((t, score))
-            if score > 2.0 and m_on is None:
-                m_on = t
         prev = m
 
     # A single poster/idle transition can move enough pixels to trip the old
     # first-frame detector even though the mouth is visibly still. Require
     # sustained motion in at least 5 of the next 8 frames before calling it
     # speech motion; retain the raw first transition for diagnostics.
-    m_on_sustained = None
-    for i, (t, _) in enumerate(mouth_motion):
-        window = [score for wt, score in mouth_motion[i:i + 8] if wt - t <= 0.45]
-        if len(window) >= 5 and sum(score > 2.0 for score in window) >= 5:
-            m_on_sustained = t
-            break
-    measured_mouth_on = m_on_sustained or m_on
-    print(f"[RESULT] 聲音軌開始出聲 t={a_on and round(a_on,2)}s"
-          f" · 嘴巴持續動 t={m_on_sustained and round(m_on_sustained,2)}s"
-          f" · 首次畫面變化 t={m_on and round(m_on,2)}s"
-          f" · 臉聲差={round(measured_mouth_on - a_on, 2) if (a_on and measured_mouth_on) else '量不到'}s",
-          flush=True)
+    turn_results = []
+    for turn, turn_start in enumerate(speak_starts):
+        turn_end = speak_starts[turn + 1] if turn + 1 < len(speak_starts) else float("inf")
+        a_on = next((t for t, arr, _sr in aframes
+                     if turn_start <= t < turn_end
+                     and np.sqrt(np.mean((arr / 32768.0) ** 2)) > 0.02), None)
+        candidates = [(index, t) for index, (t, score) in enumerate(mouth_motion)
+                      if turn_start <= t < turn_end and score > 2.0]
+        m_on = candidates[0][1] if candidates else None
+        m_on_sustained = None
+        for index, t in candidates:
+            window = [score for wt, score in mouth_motion[index:index + 8] if wt - t <= 0.45]
+            if len(window) >= 5 and sum(score > 2.0 for score in window) >= 5:
+                m_on_sustained = t
+                break
+        measured_mouth_on = m_on_sustained or m_on
+        skew = round(measured_mouth_on - a_on, 2) if (a_on and measured_mouth_on) else None
+        turn_results.append((a_on, measured_mouth_on, skew))
+        print(f"[RESULT {turn + 1}] 聲音={a_on and round(a_on,2)}s"
+              f" · 嘴巴={measured_mouth_on and round(measured_mouth_on,2)}s"
+              f" · 臉聲差={skew if skew is not None else '量不到'}s", flush=True)
     print(f"[t] 收到影像格 {len(vframes)}、聲音包 {len(aframes)}"
           f"、解析度 {received_sizes[0][0]}x{received_sizes[0][1]}", flush=True)
     # 存證：完整同時鐘影音、聲音軌 WAV、講話起點影格。
@@ -250,7 +257,7 @@ async def main():
         ww.writeframes(pcm.tobytes()); ww.close()
     save_av_evidence(os.path.join(OUT, "received-av.mp4"), vframes, aframes)
     saved = 0
-    evidence_anchor = a_on or measured_mouth_on
+    evidence_anchor = next((a or m for a, m, _ in turn_results if a or m), None)
     for t, a in vframes:
         if evidence_anchor and evidence_anchor - 0.3 <= t <= evidence_anchor + 1.2 and saved < 6:
             Image.fromarray(a).save(os.path.join(OUT, f"speak_{t:05.2f}s.png")); saved += 1
