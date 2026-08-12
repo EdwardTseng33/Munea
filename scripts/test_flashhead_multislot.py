@@ -827,10 +827,10 @@ def test_first_chunk_quality_metrics_detect_static_speech():
         (static, float("inf"), 0.08),
     ])
     assert chosen is better and chosen_skew == 120.0
-    aligned, dropped = fec.align_first_chunk_frames(slow, 280.0, fps=25, target_ms=80.0)
-    assert dropped == 5 and len(aligned) == 7
-    untouched, dropped2 = fec.align_first_chunk_frames(better, 40.0, fps=25, target_ms=80.0)
-    assert dropped2 == 0 and np.shares_memory(untouched, better)
+    source = Path(fec.__file__).read_text(encoding="utf-8")
+    assert "def align_first_chunk_frames" not in source
+    assert "first chunk preserved frames=" in source
+    assert "first chunk align drop=" not in source
     assert fec.first_chunk_requires_retry(200.0) is False
     assert fec.first_chunk_requires_retry(float("inf")) is True
     assert fec.first_chunk_requires_retry(None) is False

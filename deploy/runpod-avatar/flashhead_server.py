@@ -144,13 +144,13 @@ OPENING_PREBUFFER_S = max(
     AUDIO_PREBUFFER_S,
     min(0.35, float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.35"))),
 )
-# Production receiver evidence after speech antiflicker was removed still found
-# The first generated lip chunk already exists before release, so let video
-# consume most of the shared audio hold instead of waiting behind the same
-# gate. A 3x3 receiver-side canary kept every onset within 250ms at 350ms and
-# eliminated audio sender rebases. Bounded rollback: set to 270, 220, 40, or 0.
+# Signed receiver clock correction. Positive values open video before audio;
+# negative values hold it after audio.  Earlier onset-only tuning used +350ms
+# together with video-only frame deletion. That pair hid a content mismatch,
+# so the content-preserving default is a common clock (0ms) and candidates may
+# apply only a measured bounded signed transport correction.
 VIDEO_LEAD_S = min(
-    0.35, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "350")) / 1000.0)
+    0.35, max(-0.35, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "0")) / 1000.0)
 )
 # Opus in-band FEC trades a small amount of codec efficiency for recovery from
 # isolated WebRTC packet loss. Long-call evidence saw intact Voice PCM and zero

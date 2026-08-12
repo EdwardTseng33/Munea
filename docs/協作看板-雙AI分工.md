@@ -1,5 +1,14 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜🟡 1.0.66 Build 537 首句嘴型中斷修復（Avatar production · App 實機回驗 pending · call-path risk）
+- **分支／範圍**：`codex/fix-confirmed-barge-avsync-20260812`；修改 `deploy/runpod-avatar/flashhead_engine_core.py` 與對應 FlashHead 回歸測試。App 1.0.66 已使用 Voice 最終裁決後才停聲，本輪不重包未改動的 App。
+- **實機失敗證據**：安裝版 `1.0.66 (537)` 首句嘴巴仍會講到一半像被攔截或卡住，並有聲音內容與嘴型不一致；因此舊 3×3 起音數字不得再作為放行證據。
+- **已確認根因**：Avatar 曾依首塊「聲音起點到嘴動起點」數字，單獨裁掉最多約 600ms 嘴型畫格，卻保留完整聲音。這會改善起音分數，但將後續 viseme 移到錯誤的語音內容，且讓首句嘴型看似被切掉。
+- **修復**：禁止任何 video-only 首塊裁切，完整保留生成畫格；聲音與影片改用共用時鐘的 signed playout offset，正式值 `-80ms`。單元與 release check 已通過。
+- **完整影音 Gate**：候選保存完整同時鐘 `received-av.mp4`，人工檢視首句嘴型連續、未裁掉開頭或跳回 poster；不再只用 onset skew 冒充內容對齊。
+- **正式部署與自動回驗**：Avatar `1.0.66-first-lip-preserve@0d651ba3` 已上正式 8888，回滾點 `/root/munea-backup-before-first-lip-preserve-20260812-0449`。正式 Voice→Avatar 3×1 PASS：首聲 `672／688／734ms`、聲嘴 `+15／+16／+15ms`、連續性相關 `0.9658／0.9754／0.9727`，首塊裁切／缺音／RTP gap／underrun／重播／斷線皆 0。
+- **放行邊界**：server-only，現有 1.0.66 不需重包；自動假手機與完整影音已由 Codex 驗收，不把老闆當自動測試員。安裝版 iPhone 的真人視聽仍是最後回驗，因此目前不稱完整穩定或恢復送審。
+
 ### 2026-08-12 Codex｜✅ 1.0.66 Build 537 收斂 1.0.65 實機阻擋（PR #576 merged · Voice production · App E2E pending · call-path risk）
 - **為何升版**：修復包含 App 撥號手勢與麥克風首句暫存，現有 1.0.65／536 不可能靠伺服器更新取得，因此唯一下一個候選是 `1.0.66 (537)`，不再重包 1.0.65。
 - **修復對照**：前五秒 HELLO 改為撥號手勢即接真麥克風、Voice ready 後送出；Avatar 健康通話不因 350ms 晚畫格跳回待機，聲嘴有限校時；Gemini 3.1 約三分鐘無 GoAway 的 `1008 operation was aborted` 僅在有續接憑證時透明重連；查詢／等待／備援不得改用非當前角色聲音。

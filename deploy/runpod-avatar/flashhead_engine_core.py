@@ -69,8 +69,10 @@ ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
 # advancing normally.  Set a negative value only for a bounded rollback.
 TURN_SEED = int(os.environ.get("MUNEA_FH_TURN_SEED", "42"))
 # A second full 960 ms generation is too expensive for a realtime opening.
-# Keep the experimental escape hatch, but ship it off: finite skew is trimmed
-# below and a quiet/no-onset first chunk is emitted without blocking speech.
+# Keep the experimental escape hatch, but ship it off.  Most importantly,
+# never delete video frames without deleting the matching audio samples: that
+# makes an onset metric look better while moving every following viseme onto
+# the wrong phoneme.
 FIRST_CHUNK_RETRY = os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY", "0") == "1"
 FIRST_CHUNK_SPEECH_RMS = float(
     os.environ.get("MUNEA_FH_FIRST_CHUNK_SPEECH_RMS", "0.02")
@@ -80,9 +82,6 @@ FIRST_CHUNK_MOUTH_MOTION = float(
 )
 FIRST_CHUNK_MAX_SKEW_MS = float(
     os.environ.get("MUNEA_FH_FIRST_CHUNK_MAX_SKEW_MS", "160")
-)
-FIRST_CHUNK_TARGET_SKEW_MS = float(
-    os.environ.get("MUNEA_FH_FIRST_CHUNK_TARGET_SKEW_MS", "80")
 )
 FIRST_CHUNK_RETRY_CANDIDATES = max(
     1, min(3, int(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_CANDIDATES", "3")))
@@ -167,23 +166,13 @@ def select_first_chunk_candidate(candidates):
     return min(usable, key=rank)
 
 
-def align_first_chunk_frames(frames, skew_ms, fps=25, target_ms=80.0):
-    """Trim only stale leading lip frames when model-local mouth onset is late."""
-    values = np.asarray(frames)
-    if (values.ndim != 4 or len(values) <= 2 or skew_ms is None
-            or not np.isfinite(skew_ms) or not fps):
-        return values, 0
-    excess_ms = max(0.0, float(skew_ms) - max(0.0, float(target_ms)))
-    drop = min(len(values) - 2, int(excess_ms * float(fps) / 1000.0))
-    return values[drop:], drop
-
-
 def first_chunk_requires_retry(skew_ms):
-    """Retry only when no credible mouth onset exists to align.
+    """Retry only when no credible mouth onset exists.
 
-    A finite late onset is deterministic: trim its stale leading frames. A
-    second GPU generation adds roughly 600 ms and makes first speech feel
-    stuck, so it is reserved for a non-finite measurement.
+    A second GPU generation adds roughly 600 ms and makes first speech feel
+    stuck, so it is reserved for a non-finite measurement.  Finite late motion
+    is reported for model tuning and preserved byte-for-byte; it must never be
+    hidden by deleting video-only content.
     """
     return skew_ms is not None and not np.isfinite(skew_ms)
 
@@ -465,13 +454,13 @@ class AudioOutBuffer:
             return time.time() < self.hold_until_ts
 
     def video_playout_held(self, lead_s=0.0):
-        """Open video slightly before audio to offset encode/receiver latency.
+        """Apply a bounded signed video offset to the shared turn gate.
 
-        The first rendered chunk still arms the single authoritative turn gate;
-        this only compensates the measured transport difference between the two
-        WebRTC tracks and never lets video escape before a real turn exists.
+        Positive values open video before audio; negative values hold video
+        after audio.  The first rendered chunk still arms the single
+        authoritative turn gate and an empty turn remains held forever.
         """
-        lead = max(0.0, min(0.35, float(lead_s or 0.0)))
+        lead = max(-0.35, min(0.35, float(lead_s or 0.0)))
         with self.lock:
             return time.time() < self.hold_until_ts - lead
 
@@ -879,15 +868,6 @@ class Feeder:
                         frames, input_pcm, self.slot.tgt_fps,
                     )
                     candidates = [(frames, initial_skew, mouth_motion_peak(frames))]
-                    aligned_initial, initial_aligned = align_first_chunk_frames(
-                        frames,
-                        initial_skew,
-                        self.slot.tgt_fps,
-                        FIRST_CHUNK_TARGET_SKEW_MS,
-                    )
-                    # A finite late onset can be corrected deterministically by
-                    # dropping only stale leading lip frames. Regenerating the
-                    # whole chunk added about 600 ms on the real GPU.
                     retry_supported = (
                         FIRST_CHUNK_RETRY and TURN_SEED >= 0
                         and first_chunk_requires_retry(initial_skew)
@@ -919,23 +899,10 @@ class Feeder:
                               + " first chunk retry skew=" + str(initial_skew)
                               + "ms -> " + str(final_skew) + "ms"
                               + " attempts=" + str(attempts), flush=True)
-                    if attempts:
-                        frames, aligned = align_first_chunk_frames(
-                            frames,
-                            final_skew,
-                            self.slot.tgt_fps,
-                            FIRST_CHUNK_TARGET_SKEW_MS,
-                        )
-                    else:
-                        frames, aligned = aligned_initial, initial_aligned
-                    if aligned:
-                        self.slot.first_chunk_align_events += 1
-                        self.slot.first_chunk_align_frames += aligned
-                        print("[mouth-quality] slot" + str(self.slot.index)
-                              + " first chunk align drop=" + str(aligned)
-                              + " skew=" + str(final_skew) + "ms"
-                              + " target=" + str(FIRST_CHUNK_TARGET_SKEW_MS) + "ms",
-                              flush=True)
+                    print("[mouth-quality] slot" + str(self.slot.index)
+                          + " first chunk preserved frames=" + str(len(frames))
+                          + " skew=" + str(final_skew) + "ms",
+                          flush=True)
         except Exception as e:
             # 故障隔離核心：這一路的 pipeline 炸了，不讓例外往上炸穿整個 feeder
             # 執行緒（更不會波及其他槽的 pipeline/thread，本來就是獨立物件）。

@@ -107,7 +107,7 @@ def test_slot_cuda_stream_defaults_to_none():
     print("test_slot_cuda_stream_defaults_to_none: PASS")
 
 
-def test_video_gate_leads_audio_without_escaping_empty_turn():
+def test_video_gate_supports_signed_offset_without_escaping_empty_turn():
     server_source = (ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py").read_text(
         encoding="utf-8"
     )
@@ -122,9 +122,13 @@ def test_video_gate_leads_audio_without_escaping_empty_turn():
     assert not out.video_playout_held(0.22), (
         "video should consume the generated 220ms hold before audio"
     )
+    assert out.video_playout_held(-0.05), (
+        "a negative offset must hold video after the audio gate"
+    )
     assert 'MUNEA_FH_AUDIO_PREBUFFER_S", "0.35"' in server_source
-    assert 'MUNEA_FH_VIDEO_LEAD_MS", "350"' in server_source
-    print("test_video_gate_leads_audio_without_escaping_empty_turn: PASS")
+    assert 'MUNEA_FH_VIDEO_LEAD_MS", "0"' in server_source
+    assert "max(-0.35" in server_source
+    print("test_video_gate_supports_signed_offset_without_escaping_empty_turn: PASS")
 
 
 def test_make_slot_stream_run_pipeline_order_and_passthrough():
@@ -256,7 +260,7 @@ def test_antiflicker_only_filters_idle_video():
 def main():
     test_env_flag_enabled_contract()
     test_slot_cuda_stream_defaults_to_none()
-    test_video_gate_leads_audio_without_escaping_empty_turn()
+    test_video_gate_supports_signed_offset_without_escaping_empty_turn()
     test_make_slot_stream_run_pipeline_order_and_passthrough()
     test_make_slot_stream_run_pipeline_propagates_exceptions()
     test_flashhead_server_default_flag_values_unchanged()
