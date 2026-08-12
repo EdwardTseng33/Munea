@@ -64,8 +64,11 @@ class HealthTopicsDataTest(unittest.TestCase):
                                 if s.get("riskLevel") in ("L4", "L5"))
             else:
                 text = t["inject"]
+            # 2026-08-12 放寬用詞、不放寬要求：原本只認「醫師」這個書面語，
+            # 但我們自己的文案規矩是**用長輩會說的詞**——他們講「看醫生」「掛號」。
+            # 守的東西沒變（嚴管題一定要把人往就醫方向推），改的是別再用單一書面語當判準。
             self.assertTrue(
-                any(k in text for k in ("就醫", "119", "轉介", "醫師")),
+                any(k in text for k in ("就醫", "119", "轉介", "醫師", "醫生", "掛號", "急診")),
                 f"{t['id']} 嚴管題缺轉介語言")
 
     def test_no_simplified_chinese_in_injects(self):
@@ -179,10 +182,19 @@ class MatchingTest(unittest.TestCase):
         self.assertEqual(again, [])
 
     def test_voice_cue_never_read_aloud_instruction(self):
+        """這張提示是給她看的、不是給她唸的——這條永遠不能鬆。
+
+        2026-08-12 拿掉了第三條斷言（原本釘著「一兩句短話」）：Edward 親點
+        **「一次一兩句短話」那條鐵律已經作廢，改成她自己判斷該長該短**。
+        口語風格書 8/6 就改了，這幾段包在衛教外面的說明卻沒跟上，而且貼得比較後面、
+        會壓過新規則——等於我們挑好三張卡，又叫她不要講完。
+        守的東西沒變（提示不准唸出來），退掉的是那條已經作廢的話量規定。
+        """
         cue = health_kb.voice_cue("TW-EDU-01")
         self.assertIn("不是用戶說的話", cue)
         self.assertIn("絕不把這段提示唸出來", cue)
-        self.assertIn("一兩句短話", cue)
+        self.assertIn("話量你自己判斷", cue)
+        self.assertNotIn("一兩句短話", cue, "作廢的話量鐵律又跑回來了")
 
 
 class WiringContractTest(unittest.TestCase):
