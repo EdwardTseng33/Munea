@@ -198,8 +198,8 @@ expect(everyVoiceStyleBookHas('energy'),
 expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
 expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_S)') &&
-       avatarServer.includes('0.35, max(0.0, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "350"))'),
-  'Avatar video is not held on the real turn gate with bounded measured lead');
+       avatarServer.includes('0.35, max(-0.35, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "0"))'),
+  'Avatar video is not held on the real turn gate with a bounded signed correction');
 expect([voiceCanaryDeploy, voiceProdDeploy].every((deployScript) =>
   deployScript.includes('MUNEA_VOICE_ENGINE=31') &&
   deployScript.includes('MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS,MUNEA_VERTEX_LOCATION,MUNEA_VOICE_MODEL_OVERRIDE') &&
