@@ -594,7 +594,8 @@ class DataIntegrityTest(unittest.TestCase):
             for s in topic["solutions"]:
                 if s.get("riskLevel") == "L3":
                     self.assertTrue(s.get("dailyCap"), f"{s['id']} 缺每日上限")
-                    self.assertTrue(s.get("contraindications"), f"{s['id']} 缺禁忌族群")
+                    self.assertTrue(s.get("contraindications") or s.get("warnsAbout"),
+                                f"{s['id']} 缺禁忌族群")
                     self.assertTrue(s.get("evidence"), f"{s['id']} 缺證據出處")
                     self.assertTrue(s.get("verifiedAt"), f"{s['id']} 缺查證日期")
 
@@ -605,6 +606,79 @@ class DataIntegrityTest(unittest.TestCase):
                 for ch in bad:
                     self.assertNotIn(ch, s["say"], f"{s['id']} 含簡體字「{ch}」")
 
+
+
+class WarningCardsReachTheRightPeopleTest(unittest.TestCase):
+    """**這張卡就是寫給他聽的，不能因為他符合條件就被拿掉。**
+
+    2026-08-12 抓到正在線上的缺陷：13 張警告卡把自己警告的對象寫進「禁忌」欄，
+    而禁忌的行為是「命中就整張剔除」——結果**正在吃抗凝血藥的人問魚油，
+    那張寫著「會加重出血」的卡整張消失**，最該聽的人聽不到。
+
+    分法：contraindications ＝ 這個人完全不該用（硬剔除）；
+          warnsAbout ＝ 這張卡就是寫給這個人聽的（絕不剔除，而且要往前排）。
+    """
+
+    CASES = (
+        ("TW-EDU-31", "魚油有效嗎", "正在吃抗凝血劑", "lex-fish-oil"),
+        ("TW-EDU-31", "納豆激酶有效嗎", "正在吃抗凝血劑", "lex-nattokinase"),
+        ("TW-EDU-31", "人蔘可以吃嗎", "正在吃降血糖藥", "lex-ginseng"),
+        ("TW-EDU-33", "紅麴可以吃嗎", "正在吃降血脂藥", "lipid-red-yeast-caution"),
+        ("TW-EDU-16", "紅麴可以吃嗎", "正在吃降血脂藥（Statin 類）", "supp-red-yeast"),
+        ("TW-EDU-30", "當歸可以吃嗎", "正在吃抗凝血劑", "tcm-herb-interaction"),
+    )
+
+    def _pick(self, tid, said, cond):
+        prof = {"audience": "elder", "audiences": ["elder"], "conditions": [cond]}
+        return [s["id"] for s in hs.pick(tid, said, prof, 15)["solutions"]]
+
+    def test_the_person_being_warned_still_gets_the_warning(self):
+        for tid, said, cond, want in self.CASES:
+            self.assertIn(want, self._pick(tid, said, cond),
+                          f"{cond} 的人問「{said}」，卻拿不到 {want}")
+
+    def test_no_warning_card_hides_behind_its_own_contraindication(self):
+        """通則：卡片內容在警告某件事，就不准把那件事寫進禁忌欄。"""
+        import io as _io, json as _json, os as _os, re as _re
+        with _io.open(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                                    "health_solutions.json"), encoding="utf-8") as f:
+            topics = _json.load(f)["topics"]
+        warn_words = _re.compile(r"打架|交互|一起吃|併用|同一種|重複|會讓.*太濃|出血|疊加")
+        bad = []
+        for tid, t in topics.items():
+            for s in t["solutions"]:
+                say = s.get("say", "")
+                if not warn_words.search(say):
+                    continue
+                for c in s.get("contraindications") or []:
+                    key = _re.sub(r"（.*?）|正在吃|中$", "", c).strip()
+                    if key and key[:3] in say:
+                        bad.append(f"{tid}/{s['id']}：警告「{key}」卻把它寫進禁忌")
+        self.assertEqual(bad, [], "警告卡會被自己的禁忌濾掉：" + "；".join(bad))
+
+    def test_the_warning_leads_when_it_applies_to_him(self):
+        """他正好是那種人時，那張要排得夠前面（不是塞在第三順位之外）。"""
+        got = self._pick("TW-EDU-31", "人蔘可以吃嗎", "正在吃降血糖藥")
+        self.assertEqual(got[0], "lex-ginseng")
+
+    def test_it_is_still_not_volunteered_when_he_did_not_ask(self):
+        """另一半：**他沒問就不要主動提**——怕的是「你不提他還不知道，一提他就去買」。
+
+        （這兩句是實測找出來的：把「他有沒有問」那個條件拿掉，這兩張真的會冒出來。
+        用挑不出差別的句子當測資，守門等於沒在守——第一版就是那樣。）
+        """
+        prof = lambda c: {"audience": "elder", "audiences": ["elder"], "conditions": [c]}
+        got = ids(hs.pick("TW-EDU-16", "保健品跟藥一起吃會怎樣",
+                          prof("正在吃降血脂藥（Statin 類）"), 15))
+        self.assertNotIn("supp-red-yeast", got, "他沒問紅麴，我們主動端上去了")
+        got = ids(hs.pick("TW-EDU-30", "中醫可以調身體嗎", prof("正在吃抗凝血劑"), 15))
+        self.assertNotIn("tcm-herb-interaction", got, "他沒問當歸丹參，我們主動端上去了")
+
+    def test_a_real_contraindication_still_removes_the_card(self):
+        """放寬的只有『警告對象』——真正不該用的還是要整張拿掉。"""
+        prof = {"audience": "elder", "audiences": ["elder"], "conditions": ["腎功能異常"]}
+        ids = [s["id"] for s in hs.pick("TW-EDU-01", "我睡不好", prof, 23)["solutions"]]
+        self.assertNotIn("sleep-magnesium-supplement", ids)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

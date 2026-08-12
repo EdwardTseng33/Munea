@@ -201,6 +201,16 @@ def _blocked_by_safety(sol, flags, user_text):
     for c in sol.get("contraindications") or []:
         if any(c in cond for cond in flags["conditions"]):
             return True      # 腎功能異常 → 鎂直接拿掉，不是降權
+    # warnsAbout ＝「這張卡的內容就是在警告這種人」。它跟禁忌的差別在**他有沒有問**：
+    #   · 他沒問 → 不主動端出去（怕的是「你不提他還不知道，一提他就去買」）
+    #   · **他自己點名問了 → 一定要端出去**，因為他已經知道那樣東西了，
+    #     這時候沉默等於「因為危險，所以不告訴他危險」——他大概率就去買了
+    # 2026-08-12 抓到：13 張警告卡把警告對象寫進禁忌欄（禁忌＝整張剔除），於是
+    # **正在吃抗凝血藥的人問魚油，那張「會加重出血」的卡整張消失**，最該聽的人聽不到。
+    # 跟 7/31「blocked 卡他點名就要答」是同一條規則。
+    for w in sol.get("warnsAbout") or []:
+        if any(w in cond for cond in flags["conditions"]):
+            return not _named(sol, user_text)
     return False
 
 
@@ -453,8 +463,9 @@ def render(topic_id, user_text="", profile=None, hour=None, locale=None):
         line = f"【{tag}·{s['timeToEffect']}檔·{s['solutionType']}】{s['say']}"
         if s.get("riskLevel") == "L3":
             # L3 三件事少講一件就不合格——這裡把上限與禁忌接在後面，確保她講得到
+            _who = list(s.get("contraindications") or []) + list(s.get("warnsAbout") or [])
             line += f"（**這是保健品，同一段話一定要講到：一天上限{s.get('dailyCap','請問專業')}、"
-            line += f"以及{'、'.join(s.get('contraindications') or [])}的人要先問醫師或營養師**）"
+            line += f"以及{'、'.join(_who)}的人要先問醫師或營養師**）"
         parts.append(line)
     if res.get("related"):
         parts.append("【這兩件事可能有關】" + res["related"])

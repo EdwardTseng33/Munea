@@ -96,23 +96,43 @@ class InteractionTest(unittest.TestCase):
 
     ANTICOAG = {"audience": "elder", "conditions": ["正在吃抗凝血劑"]}
 
-    def test_blood_thinner_users_never_see_the_bleeding_risks(self):
-        for said, banned in (("Q10 要不要吃", "lex-q10"),
-                             ("薑黃有用嗎", "lex-turmeric"),
-                             ("靈芝可以吃嗎", "lex-lingzhi"),
-                             ("納豆激酶有效嗎", "lex-nattokinase")):
+    def test_blood_thinner_users_are_never_offered_the_bleeding_risks(self):
+        """**沒問就不提**——怕的是「你不提他還不知道，一提他就去買」。"""
+        for said in ("有什麼保健品可以顧心臟", "我想買個保健品", "有什麼推薦的"):
             ids = [s["id"] for s in hs.pick(TOPIC, said, self.ANTICOAG, 15)["solutions"]]
-            self.assertNotIn(banned, ids, said)
+            for banned in ("lex-q10", "lex-turmeric", "lex-lingzhi", "lex-nattokinase"):
+                self.assertNotIn(banned, ids, said)
+
+    def test_but_if_he_names_it_himself_he_must_get_the_warning(self):
+        """**問了就一定要答**（2026-08-12 改的量法）。
+
+        原本這條寫成「吃抗凝血藥的人永遠看不到這幾張」，連他自己點名問都一樣。
+        但那等於：他已經知道納豆激酶了、開口問我們，我們卻因為它危險而不講它危險
+        ——他大概率就去買了。跟 7/31「blocked 卡他點名就要答」是同一條規則。
+        守的東西沒變（不主動端出去），改的是「他自己問」那一格。
+        """
+        for said, want in (("Q10 要不要吃", "lex-q10"),
+                           ("薑黃有用嗎", "lex-turmeric"),
+                           ("靈芝可以吃嗎", "lex-lingzhi"),
+                           ("納豆激酶有效嗎", "lex-nattokinase")):
+            ids = [s["id"] for s in hs.pick(TOPIC, said, self.ANTICOAG, 15)["solutions"]]
+            self.assertIn(want, ids, f"他自己問「{said}」，我們卻不警告他")
 
     def test_gout_removes_chicken_essence(self):
         prof = {"audience": "elder", "conditions": ["痛風／尿酸過高"]}
         ids = [s["id"] for s in hs.pick(TOPIC, "雞精有沒有幫助", prof, 15)["solutions"]]
         self.assertNotIn("lex-essence-chicken", ids)
 
-    def test_diabetes_meds_remove_bitter_melon(self):
+    def test_diabetes_meds_never_get_offered_bitter_melon(self):
+        prof = {"audience": "elder", "conditions": ["正在吃降血糖藥"]}
+        ids = [s["id"] for s in hs.pick(TOPIC, "有什麼保健品可以吃", prof, 15)["solutions"]]
+        self.assertNotIn("lex-bitter-melon", ids)
+
+    def test_but_naming_bitter_melon_gets_the_warning(self):
+        """他自己問苦瓜胜肽，那張「不能取代血糖藥」就是他最該聽到的一句。"""
         prof = {"audience": "elder", "conditions": ["正在吃降血糖藥"]}
         ids = [s["id"] for s in hs.pick(TOPIC, "苦瓜胜肽有效嗎", prof, 15)["solutions"]]
-        self.assertNotIn("lex-bitter-melon", ids)
+        self.assertIn("lex-bitter-melon", ids)
 
     def test_q10_say_warns_it_weakens_warfarin(self):
         say = next(s for s in hs.TOPICS[TOPIC]["solutions"] if s["id"] == "lex-q10")["say"]

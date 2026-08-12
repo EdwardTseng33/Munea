@@ -95,9 +95,13 @@ def check(path, existing_topics, existing_ids, batch=()):
         if s.get("blocked") and not s.get("askedFor"):
             err(f"{sid} 是 blocked 卻沒有 askedFor——他點名了也叫不出來")
         if s.get("riskLevel") == "L3":
-            for k in ("dailyCap", "contraindications", "verifiedAt"):
+            for k in ("dailyCap", "verifiedAt"):
                 if not s.get(k):
                     err(f"{sid} 是保健品（L3）卻缺 {k}——三件事少一件就不合格")
+            # 「誰要小心」可以寫在禁忌（完全不該用）或 warnsAbout（這張就是警告他的），
+            # 兩個欄位的行為不同，但都算把那一件事講清楚了。
+            if not (s.get("contraindications") or s.get("warnsAbout")):
+                err(f"{sid} 是保健品（L3）卻沒寫誰要小心")
             if not (s.get("evidence") or {}).get("finding"):
                 err(f"{sid} 是保健品（L3）卻沒寫證據強度")
         if s.get("riskLevel") == "L5":
