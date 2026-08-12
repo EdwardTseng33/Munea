@@ -410,7 +410,7 @@
     },
     "consti-refer": {
      "label": "When it needs a doctor",
-     "say": "If there's blood in your stool or it's turned black, if you're losing weight without trying, or if you've gone from regular to nothing at all with bad belly pain — that's a doctor's visit, promptly. Changing your diet won't fix that kind."
+     "say": "If there's blood in your stool or it's turned black, if you're losing weight without trying, or if you've gone from regular to nothing at all with bad belly pain — that's a doctor's visit, promptly. Changing your diet won't fix that kind.  If there's trouble breathing, confusion, or pain you can't bear, don't wait — call 911."
     }
    }
   },
@@ -1794,7 +1794,7 @@
     },
     "lex-refer": {
      "label": "When to stop and get help",
-     "say": "After starting any supplement, if your skin or the whites of your eyes turn yellow, you break out in a rash or swell up, your heart races, or your muscles ache and feel weak — **stop taking it and see a doctor promptly**, and bring the bottle with you. And the most important rule of all: **never stop a prescription medicine in favor of a supplement** — that trade is never worth the risk."
+     "say": "After starting any supplement, if your skin or the whites of your eyes turn yellow, you break out in a rash or swell up, your heart races, or your muscles ache and feel weak — **stop taking it and see a doctor promptly**, and bring the bottle with you. And the most important rule of all: **never stop a prescription medicine in favor of a supplement** — that trade is never worth the risk.  And if your lips or eyelids swell, you break out in hives, or you have trouble breathing — that can be anaphylaxis. Don't wait; call 911."
     }
    }
   },

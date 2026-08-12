@@ -622,6 +622,7 @@ class WarningCardsReachTheRightPeopleTest(unittest.TestCase):
     CASES = (
         ("TW-EDU-31", "魚油有效嗎", "正在吃抗凝血劑", "lex-fish-oil"),
         ("TW-EDU-31", "納豆激酶有效嗎", "正在吃抗凝血劑", "lex-nattokinase"),
+        ("TW-EDU-31", "薑黃有用嗎", "正在吃抗凝血劑", "lex-turmeric"),
         ("TW-EDU-31", "人蔘可以吃嗎", "正在吃降血糖藥", "lex-ginseng"),
         ("TW-EDU-33", "紅麴可以吃嗎", "正在吃降血脂藥", "lipid-red-yeast-caution"),
         ("TW-EDU-16", "紅麴可以吃嗎", "正在吃降血脂藥（Statin 類）", "supp-red-yeast"),
@@ -651,7 +652,13 @@ class WarningCardsReachTheRightPeopleTest(unittest.TestCase):
                 if not warn_words.search(say):
                     continue
                 for c in s.get("contraindications") or []:
-                    key = _re.sub(r"（.*?）|正在吃|中$", "", c).strip()
+                    # 只看藥物交互作用。疾病與生理狀態（膽結石、癲癇、懷孕、發燒、腎功能）
+                    # 就算卡片裡有提到，那也是真的「不該用」，本來就該整張剔除——
+                    # 2026-08-12 我自己第一版把這條訂太寬，差點把「腎不好別多吃鉀」
+                    # 也搬成警告，那是會出事的。
+                    if not c.startswith("正在吃"):
+                        continue
+                    key = _re.sub(r"（.*?）|正在吃", "", c).strip()
                     if key and key[:3] in say:
                         bad.append(f"{tid}/{s['id']}：警告「{key}」卻把它寫進禁忌")
         self.assertEqual(bad, [], "警告卡會被自己的禁忌濾掉：" + "；".join(bad))

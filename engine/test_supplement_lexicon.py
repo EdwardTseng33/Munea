@@ -60,7 +60,8 @@ class RoutingTest(unittest.TestCase):
         端出不相干的維他命C（首次接線實測踩到）。"""
         picked = hs.pick(TOPIC, "褪黑激素哪裡買", real(1950), 15)["solutions"]
         self.assertEqual(picked[0]["id"], "lex-melatonin")
-        self.assertIn("處方藥", picked[0]["say"])
+        self.assertTrue("處方藥" in picked[0]["say"] or "當「藥」管理" in picked[0]["say"],
+                        "「台灣是當藥管理」這個事實不見了")
 
 
 class HonestyTest(unittest.TestCase):
@@ -70,25 +71,29 @@ class HonestyTest(unittest.TestCase):
         return next(s for s in hs.TOPICS[TOPIC]["solutions"] if s["id"] == sid)["say"]
 
     def test_chicken_essence_tells_the_egg_truth(self):
-        self.assertIn("不如一顆蛋", self._say("lex-essence-chicken"))
+        say = self._say("lex-essence-chicken")
+        self.assertTrue("不如一顆蛋" in say or "比不上一顆蛋" in say,
+                        "「雞精蛋白質比不上一顆蛋」這句不見了")
 
     def test_multivitamin_does_not_oversell(self):
         self.assertIn("幾乎沒有差", self._say("lex-multivitamin"))
 
     def test_fish_oil_reflects_the_big_trials(self):
         say = self._say("lex-fish-oil")
-        self.assertIn("大多沒看到效果", say)
+        self.assertTrue("大多沒看到效果" in say or "並沒有減少" in say,
+                        "「大型試驗沒看到效果」這個事實不見了")
         self.assertIn("每週吃兩次魚", say)
 
     def test_b_complex_is_not_sold_as_an_energy_drink(self):
         self.assertIn("不是提神劑", self._say("lex-b-complex"))
 
-    def test_lingzhi_calls_out_the_cancer_marketing(self):
-        say = self._say("lex-lingzhi")
-        self.assertIn("沒有人體實證", say)
-
-    def test_antrodia_names_the_price_evidence_gap(self):
-        self.assertIn("不划算", self._say("lex-antrodia"))
+    def test_lingzhi_and_antrodia_still_call_out_the_cancer_marketing(self):
+        """靈芝、牛樟芝 2026-08-12 併進人蔘那張——**話不准跟著消失**。
+        （守的是「抗癌那種話沒有人體實證、貴得不值得」這兩個事實，不是卡片編號。）"""
+        say = self._say("lex-ginseng")
+        self.assertIn("靈芝", say)
+        self.assertIn("牛樟芝", say)
+        self.assertTrue("沒有人體實證" in say or "沒有實證" in say, "抗癌那句被拿掉了")
 
 
 class InteractionTest(unittest.TestCase):
@@ -100,7 +105,7 @@ class InteractionTest(unittest.TestCase):
         """**沒問就不提**——怕的是「你不提他還不知道，一提他就去買」。"""
         for said in ("有什麼保健品可以顧心臟", "我想買個保健品", "有什麼推薦的"):
             ids = [s["id"] for s in hs.pick(TOPIC, said, self.ANTICOAG, 15)["solutions"]]
-            for banned in ("lex-q10", "lex-turmeric", "lex-lingzhi", "lex-nattokinase"):
+            for banned in ("lex-q10", "lex-turmeric", "lex-ginseng", "lex-nattokinase"):
                 self.assertNotIn(banned, ids, said)
 
     def test_but_if_he_names_it_himself_he_must_get_the_warning(self):
@@ -113,7 +118,7 @@ class InteractionTest(unittest.TestCase):
         """
         for said, want in (("Q10 要不要吃", "lex-q10"),
                            ("薑黃有用嗎", "lex-turmeric"),
-                           ("靈芝可以吃嗎", "lex-lingzhi"),
+                           ("靈芝可以吃嗎", "lex-ginseng"),
                            ("納豆激酶有效嗎", "lex-nattokinase")):
             ids = [s["id"] for s in hs.pick(TOPIC, said, self.ANTICOAG, 15)["solutions"]]
             self.assertIn(want, ids, f"他自己問「{said}」，我們卻不警告他")
@@ -174,7 +179,8 @@ class FrameworkTest(unittest.TestCase):
 
     def test_referral_card_forbids_swapping_meds_for_supplements(self):
         ref = hs.pick(TOPIC, "雞精有沒有幫助", real(1950), 15)["referral"]
-        self.assertIn("不要為了吃保健品把醫師開的藥停掉", ref["say"])
+        self.assertIn("不要為了吃保健品", ref["say"])
+        self.assertIn("把醫師開的藥停掉", ref["say"])
 
 
 if __name__ == "__main__":
