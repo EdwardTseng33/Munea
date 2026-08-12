@@ -1,5 +1,11 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-12 Codex｜🚨 1.0.66 Build 537 首句嘴型中斷修復（進行中 · call-path risk）
+- **分支／範圍**：`codex/fix-confirmed-barge-avsync-20260812`；修改 `deploy/runpod-avatar/flashhead_engine_core.py` 與對應 FlashHead 回歸測試。App 1.0.66 已使用 Voice 最終裁決後才停聲，本輪不重包未改動的 App。
+- **實機失敗證據**：安裝版 `1.0.66 (537)` 首句嘴巴仍會講到一半像被攔截或卡住，並有聲音內容與嘴型不一致；因此舊 3×3 起音數字不得再作為放行證據。
+- **已確認根因**：Avatar 曾依首塊「聲音起點到嘴動起點」數字，單獨裁掉最多約 600ms 嘴型畫格，卻保留完整聲音。這會改善起音分數，但將後續 viseme 移到錯誤的語音內容，且讓首句嘴型看似被切掉。
+- **修復與 Gate**：禁止任何 video-only 首塊裁切，完整保留生成畫格；單元／release check 已通過。部署候選後必須保存完整聲音＋影片，以首句不中斷、內容級聲嘴與後續輪連續性驗收，不能只看 onset skew。
+
 ### 2026-08-12 Codex｜✅ 1.0.66 Build 537 收斂 1.0.65 實機阻擋（PR #576 merged · Voice production · App E2E pending · call-path risk）
 - **為何升版**：修復包含 App 撥號手勢與麥克風首句暫存，現有 1.0.65／536 不可能靠伺服器更新取得，因此唯一下一個候選是 `1.0.66 (537)`，不再重包 1.0.65。
 - **修復對照**：前五秒 HELLO 改為撥號手勢即接真麥克風、Voice ready 後送出；Avatar 健康通話不因 350ms 晚畫格跳回待機，聲嘴有限校時；Gemini 3.1 約三分鐘無 GoAway 的 `1008 operation was aborted` 僅在有續接憑證時透明重連；查詢／等待／備援不得改用非當前角色聲音。
