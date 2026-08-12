@@ -3215,6 +3215,32 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     got = True
                     await turn_recovery_done.wait()
                     _sync_recovered_turn_counters()
+                    # 每輪的真實用量（2026-08-12 Edward「去實際計算一下」）：
+                    # 在這之前，「說明書貴不貴、聲音貴不貴」全靠推估——因為我們**根本沒在量**。
+                    # 這裡把伺服器回報的用量原樣記下來，一天就有真數字可以算錢、可以決定
+                    # 要不要把說明書存起來。拿不到就安靜跳過，絕不影響通話。
+                    _um = getattr(msg, "usage_metadata", None)
+                    if _um is not None:
+                        try:
+                            _by_kind = {}
+                            for _d in (getattr(_um, "response_tokens_details", None) or []) + \
+                                      (getattr(_um, "prompt_tokens_details", None) or []):
+                                _mod = getattr(getattr(_d, "modality", None), "name", None) \
+                                    or str(getattr(_d, "modality", "") or "?")
+                                _by_kind[_mod] = _by_kind.get(_mod, 0) + (getattr(_d, "token_count", 0) or 0)
+                            st["usage_prompt"] = st.get("usage_prompt", 0) + (getattr(_um, "prompt_token_count", 0) or 0)
+                            st["usage_output"] = st.get("usage_output", 0) + (getattr(_um, "response_token_count", 0) or 0)
+                            st["usage_cached"] = st.get("usage_cached", 0) + (getattr(_um, "cached_content_token_count", 0) or 0)
+                            _agg = st.setdefault("usage_by_modality", {})
+                            for _k, _v in _by_kind.items():
+                                _agg[_k] = _agg.get(_k, 0) + _v
+                            _diag(cid, "usage.turn",
+                                  prompt=getattr(_um, "prompt_token_count", 0) or 0,
+                                  output=getattr(_um, "response_token_count", 0) or 0,
+                                  cached=getattr(_um, "cached_content_token_count", 0) or 0,
+                                  by_modality=_by_kind)
+                        except Exception:
+                            pass
                     # 通話延長（2026-07-25）：GoAway＝伺服器預告「這條底層連線快到期了」
                     # （time_left 通常留了緩衝，不是馬上斷）；session_resumption_update
                     # 帶新的 handle，之後重連要帶著這個 handle 才能接上同一通邏輯電話。
@@ -3887,6 +3913,15 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 await t
             except (asyncio.CancelledError, Exception):
                 pass
+    # 這條底層連線的用量總帳（2026-08-12）：一行就看得出這通花在哪——
+    # 說明書（文字）貴還是聲音貴、存起來的部分有沒有真的被算成快取。
+    if st.get("usage_prompt") or st.get("usage_output"):
+        _diag(cid, "usage.leg_total",
+              prompt=st.get("usage_prompt", 0),
+              output=st.get("usage_output", 0),
+              cached=st.get("usage_cached", 0),
+              by_modality=st.get("usage_by_modality") or {},
+              turns=st.get("turn_count", 0))
     return call_ended, st.get("resumption_handle") or resumption_handle
 
 

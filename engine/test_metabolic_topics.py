@@ -63,8 +63,14 @@ class WeightLossSafetyTest(unittest.TestCase):
         self.assertIn("來路不明", sol["say"])
 
     def test_losing_weight_never_means_losing_muscle_silently(self):
+        """他說要減肥，就一定要有一張在顧肌肉——不然照著做最先掉的是肌肉。
+
+        2026-08-12 名單放寬：新的「每餐先吃一份蛋白質」比原本的「慢慢減才穩」
+        更直接在顧肌肉，守的東西沒變（顧肌肉的那張必須在），只是能滿足它的卡多了一張。
+        """
         ids = [s["id"] for s in hs.pick("TW-EDU-34", "我想減肥", real(1950), 15)["solutions"]]
-        self.assertTrue({"wt-slow-is-right", "wt-muscle-not-just-diet"} & set(ids))
+        self.assertTrue({"wt-slow-is-right", "wt-muscle-not-just-diet",
+                         "wt-protein-and-veg-first"} & set(ids))
 
 
 class LipidTest(unittest.TestCase):

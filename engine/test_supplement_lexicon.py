@@ -42,9 +42,18 @@ class RoutingTest(unittest.TestCase):
             self.assertEqual(picked[0]["id"], lead, said)
 
     def test_generic_supplement_talk_still_goes_to_the_management_topic(self):
-        """「保健品跟藥一起管」那題的地盤不能被搶。"""
-        for said in ("我在吃紅麴", "家裡藥太多了"):
+        """「保健品跟藥一起管」那題的地盤不能被搶。
+
+        2026-08-12 分地盤：新開了 TW-EDU-43「處方藥怎麼吃、吃太多種怎麼辦」。
+        兩題的分工是——**有保健品味道的歸 16，純處方藥的歸 43**。
+        所以「家裡藥太多了」改由 43 帶頭（那題就是在講多重用藥），但 16 仍會
+        一起被帶上（一輪最多帶兩題），保健品配藥的知識不會消失。
+        守的東西沒變：只要句子裡有保健品，16 就必須是第一個。
+        """
+        for said in ("我在吃紅麴", "保健品跟藥一起吃會不會怎樣", "葡萄柚不能配什麼藥"):
             self.assertEqual(health_kb.match_topics(said)[:1], ["TW-EDU-16"], said)
+        # 純處方藥的講法讓給專門那題，但 16 不能整個消失
+        self.assertIn("TW-EDU-16", health_kb.match_topics("家裡藥太多了"))
 
     def test_melatonin_by_name_gets_the_prescription_answer(self):
         """他點名問，答案本身就是「台灣是處方藥」——不能因為不推薦就整條沉掉、
