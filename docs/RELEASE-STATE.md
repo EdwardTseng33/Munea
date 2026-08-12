@@ -5,7 +5,8 @@
 - **首句策略**：採「更晚接通」而非 AI 主動招呼。麥克風、Voice、Avatar audio/direct 都 ready 後才顯示接通並開始計時；首輪真人語音後 650ms 安靜即送一次明確邊界，避免第一個 HELLO 漏聽、第二句又打斷回覆。
 - **長通話與畫質**：不再為追趕聲音刪除嘴型影格；生成前替完整模型批次保留佇列空間。模型仍以原生 512 推論，傳送端升頻至 640 並輕度銳化；App 下緣羽化提前收掉動態領口。最終 signed playout offset 候選為 `−350ms`。
 - **自動假手機證據**：單路 6 輪在 `−80ms` 已證明無累積漂移；比照正式兩槽滿載後發現聲嘴 `−0.31～−0.45s`，因此未放行。`−280ms` 雖多數通過，正式仍出現一次 `−0.36s` 尖峰；最終 `−350ms` 在雙路同時各 3 輪為 `+0.03～+0.05s` 與 `−0.14～−0.17s`，單路 3 輪為 `+0.05～+0.08s`。所有測試皆 640×640、video trim 0、audio underrun 0。
-- **部署邊界**：Brain/App Web exact `036f2745` 已在 `munea-brain-staging-00125-coy` 0% canary 通過結構 Gate；Avatar exact 候選僅在 Glows 8890，正式 Brain 流量與 Avatar 8888 均未切。PR #581 維持 Draft；Mac Archive／安裝版 iPhone 全通話 Gate 完成前仍為 `App E2E pending`，不得送審或稱穩定上線。
+- **正式 Avatar Gate**：`1.0.67-opening-avsync@dc87c152` 已部署至 Glows 8888（兩槽、512 推論、640 輸出、額外銳化、`−350ms`）。正式雙槽連跑兩組、每組兩路×3 輪＝12／12 有聲有嘴，聲嘴 `+0.03～+0.09s` 與 `−0.12～−0.17s`；video trim、audio underrun、fault 均 0，結束後 `active=0`。冷啟動 rolling p95 曾為 795.5／871.3ms，但暖機後最近生成約 362～384ms；無銳化候選雖降至約 684～685ms，卻在第三輪兩路同時有嘴無聲，已拒絕。正式回滾點為 `/root/munea-backup-before-opening-avsync-20260812-064156`（1.0.66）與 `/root/munea-backup-before-opening-avsync-20260812-064852`（1.0.67／−280ms）。
+- **剩餘邊界**：Brain/App Web exact `dc87c152` 已在 `munea-brain-staging-00126-hik` 0% canary 通過結構 Gate，正式 Brain 流量未切。PR #581 維持 Draft；App 本地 ready gate 必須由 Mac Archive／安裝版 iPhone 驗收，因此目前仍為 `App E2E pending`，不得送審或稱完整穩定。
 
 ## 2026-08-12 台灣｜1.0.66 Build 537 首句嘴型中斷修復（Avatar 正式上線 · App 實機回驗 pending）
 
