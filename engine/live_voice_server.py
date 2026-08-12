@@ -2809,6 +2809,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 if not st["first_mic"]:
                     st["first_mic"] = True
                     _diag(cid, "node.mic_uplink", ms=round((st["last_in"] - t0) * 1000))
+                    # 2026-08-12（Edward：「為什麼不等真的接通才顯示接通」）：把「你的聲音
+                    # 真的送得進來」回報給 App——App 的叮聲與「接通了」提示等這一句才亮。
+                    # 8/10 有兩通整通 in_bytes=0 卻照樣顯示接通，就是缺這一格證明。
+                    try:
+                        await ws.send(json.dumps({"type": "uplink_ok"}))
+                    except Exception:
+                        pass
                 # 回音濾網（病歷 a 快藥）：她出聲期間＋殘響窗內，低能量上行＝喇叭漏回來的
                 # 自己聲音 → 丟棄；正常音量直說天生高於門檻、插話照常穿透。voice_echo_guard.py。
                 _eg_now = time.monotonic()
