@@ -4931,6 +4931,7 @@ const LiveVoice = {
     try { clearTimeout(this._slBoundaryFallbackT); } catch (e) {} this._slBoundaryFallbackT = null;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._serviceIdentity = null;
+    this._uplinkOk = false; this.onUplinkOk = null;   // 「你的聲音我收到了」：每通重新證明
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
     // prime() may already have captured the user's first words while account
     // and Gateway preflight ran. Never replace that buffer here.
@@ -5060,6 +5061,12 @@ const LiveVoice = {
               if (!this._firstAssistantCaptionRecorded) { this._firstAssistantCaptionRecorded = true; voiceCallMark('assistant_first_caption', 'pass'); }
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
+            }
+            if (o.type === 'uplink_ok') {
+              // 伺服器親口說「你的聲音我收到了」＝上行證明。叮聲與「接通了」等這一句。
+              this._uplinkOk = true;
+              voiceCallMark('uplink_confirmed', 'pass');
+              if (this.onUplinkOk) { try { this.onUplinkOk(); } catch (e) {} }
             }
             if (o.type === 'ready') {
               const expectedCall = Number((window.MuneaVersion && window.MuneaVersion.callProtocol) || 0);
@@ -8544,8 +8551,25 @@ async function connectCall() {
       } catch (e) {}
       markConnected();                       // 1 秒獨立暖機完成，現在才切成真正接通並開始計時
       voiceCallMark('call_connected', 'pass');
-      CallChime.play();                                  // 「線通了」用耳朵就聽得到（Edward 8/12：等太久以為當機）
-      setLocalizedCallHint('connected');                 // 接通了、可以直接講——她預設等使用者先開口
+      // 「接通了」＝證明過才算（Edward 8/12：「為什麼不等真的接通才顯示接通」）。
+      // 叮聲與提示句等伺服器回報「你的聲音我收到了」（uplink_ok）才亮——8/10 有兩通
+      // 整通麥克風 0 位元組卻照樣顯示接通，就是缺這一格證明。2.5 秒沒等到就照舊亮
+      // （舊伺服器沒有這個回報、不能卡死），但帳上會記 timeout，一查就知道哪一通心虛。
+      {
+        let _uxConfirmed = false;
+        let _uxT = 0;
+        const _confirmConnectedUx = (basis) => {
+          if (_uxConfirmed) return; _uxConfirmed = true;
+          clearTimeout(_uxT); LiveVoice.onUplinkOk = null;
+          if (!callDialing && !callConnected) return;    // 等證明的空檔掛斷了：別對著已收線的畫面響叮聲
+          CallChime.play();                              // 「線通了」用耳朵就聽得到（等太久以為當機）
+          setLocalizedCallHint('connected');             // 接通了、可以直接講——她預設等使用者先開口
+          voiceCallMark('connected_ux_shown', basis === 'uplink_ok' ? 'pass' : 'warn', { basis });
+        };
+        _uxT = setTimeout(() => _confirmConnectedUx('timeout'), 2500);
+        if (LiveVoice._uplinkOk) _confirmConnectedUx('uplink_ok');
+        else LiveVoice.onUplinkOk = () => _confirmConnectedUx('uplink_ok');
+      }
       if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
       try { FaceIdle.stop(); } catch (e) {}
       // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
