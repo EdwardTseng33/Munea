@@ -9,6 +9,9 @@
   "b2bUrl": "https://munea-b2b.vercel.app",
   "year": 2026,
 
+  "_facebookUrl說明": "官方粉專。會寫進網頁的品牌識別資料（sameAs），用途是告訴 Google「App Store 上那個沐寧、Facebook 上那個沐寧、這個官網，是同一個品牌」。少了這條，三個身分在 Google 眼裡是三座孤島，搜品牌名時會被同名的其他單位擠掉。之後若在 Facebook 設了好記的網址（如 /MuneaApp），改這裡即可。",
+  "facebookUrl": "https://www.facebook.com/profile.php?id=61592697779724",
+
   "langLabels": {
     "zh": { "native": "中文", "short": "繁中" },
     "en": { "native": "English", "short": "EN" },
