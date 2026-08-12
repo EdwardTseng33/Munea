@@ -45,6 +45,7 @@ from fractions import Fraction
 
 import numpy as np
 
+SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
 FH_REPO = os.path.expanduser(os.environ.get("MUNEA_FH_REPO", "/root/SoulX-FlashHead"))
 sys.path.insert(0, FH_REPO)
 os.chdir(FH_REPO)
@@ -71,6 +72,11 @@ _fhp_mod.PROFILE_SYNC = os.environ.get("MUNEA_FH_PROFILE_SYNC", "1") == "1"
 from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
+# Keep the Munea engine beside this server authoritative even when the
+# upstream FlashHead repository is the process working directory.  This also
+# lets an isolated candidate directory load its matching engine without
+# modifying the production checkout.
+sys.path.insert(0, SERVER_DIR)
 from flashhead_engine_core import (ANTIFLICKER_HI, ANTIFLICKER_LO,
                                     AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
                                     env_flag_enabled, health_snapshot,

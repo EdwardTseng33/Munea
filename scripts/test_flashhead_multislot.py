@@ -328,6 +328,13 @@ def test_lip_lateness_is_measured_without_deleting_content():
     print("test_lip_lateness_is_measured_without_deleting_content: PASS")
 
 
+def test_video_generation_reserves_room_for_the_whole_chunk():
+    assert fec.can_generate_video_chunk(0, 25, 24, 1.5)
+    assert fec.can_generate_video_chunk(13, 25, 24, 1.5)
+    assert not fec.can_generate_video_chunk(14, 25, 24, 1.5)
+    print("test_video_generation_reserves_room_for_the_whole_chunk: PASS")
+
+
 def test_512_model_frames_can_ship_as_detail_preserved_640():
     try:
         import cv2
@@ -878,6 +885,7 @@ def main():
     test_audio_ingress_waits_for_video_once_then_stays_continuous()
     test_real_audio_invalidates_inflight_idle_frames()
     test_lip_lateness_is_measured_without_deleting_content()
+    test_video_generation_reserves_room_for_the_whole_chunk()
     test_512_model_frames_can_ship_as_detail_preserved_640()
     test_lip_timeline_survives_mid_turn_pause()
     test_new_round_marker_waits_for_its_own_gpu_chunk()

@@ -614,6 +614,21 @@ def lip_catchup_frame_count(audio_played_s, queued_video_s, timeline_start_s,
     return min(max(0, int(frame_count) - max(1, int(keep_frames))), expired_frames)
 
 
+def can_generate_video_chunk(depth_frames, fps, chunk_frames, max_ahead_s):
+    """Reserve queue room for a whole model chunk before rendering it.
+
+    FlashHead produces one sizeable frame batch at a time.  Checking only the
+    current queue depth can therefore pass at 1.49 seconds and immediately push
+    another ~0.96 seconds into a 1.5-second queue.  The sink then has no choice
+    but to trim lip frames.  Gate on the post-push depth so content is paced,
+    never deleted.
+    """
+    rate = max(1.0, float(fps))
+    current_s = max(0.0, float(depth_frames)) / rate
+    chunk_s = max(0.0, float(chunk_frames)) / rate
+    return current_s <= max(0.0, float(max_ahead_s) - chunk_s)
+
+
 def pace_audio_sender_clock(started, next_pts, sample_rate, now,
                             rebase_after_s=0.04):
     """Keep late WebRTC audio frames paced instead of sending a catch-up burst.
@@ -1061,11 +1076,13 @@ class Feeder:
             with self.lock:
                 if len(self.acc) >= cs and self.t0 is not None:
                     # The audio queue now holds ingress PCM before GPU work.
-                    # Throttle only generated video depth; using audio depth
-                    # here would postpone lip rendering until speech nearly
-                    # finished and defeat the shared start gate.
-                    ahead_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
-                    if ahead_s < self.max_ahead_s:
+                    # Reserve room for the entire next model chunk. Checking
+                    # only current depth lets one large push overflow the sink,
+                    # which deletes mouth content and creates long-call drift.
+                    depth_frames = self.slot.sink.depth()
+                    if can_generate_video_chunk(
+                            depth_frames, self.slot.tgt_fps,
+                            self.slot.slice_len, self.max_ahead_s):
                         output_samples = min(len(self.acc_out), int(round(cs * self.sr_in / self.sr_eng)))
                         timeline_start_s = (self.timeline_base_s
                                             + self.consumed / max(1, self.sr_eng))
