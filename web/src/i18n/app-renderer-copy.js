@@ -14,6 +14,7 @@
     pro: 'subscription.planPro',
   });
   const CALL_HINT_KEYS = Object.freeze({
+    connected: 'voice.call.connected',
     connecting: 'voice.connecting',
     developerConnecting: 'voice.call.developerConnecting',
     developerReady: 'voice.call.developerReady',

@@ -62,10 +62,16 @@ const DIAG_SPANS = [
 function lineIndexInDiagSpan(lineNo) {
   return DIAG_SPANS.some(([a, b]) => lineNo >= a && lineNo <= b);
 }
-// AvSyncMeter 的門必須還在：start() 非 debug 直接早退（拆了門＝條目全失效）
+// AvSyncMeter 的門必須還在。2026-08-12 起量測本體整通都跑（長通話聲嘴漂移要逐輪記帳），
+// 但「會顯示中文字的浮層」只在 munea.debug=1 才建立、_render 沒浮層直接早退——
+// 門從「整個不啟動」搬到「字的出口」，條目的保證不變：debug 字永遠到不了一般使用者眼前。
 assert(
-  /start\(videoEl\) \{[\s\S]{0,200}?localStorage\.getItem\('munea\.debug'\) !== '1'\) return;/.test(app),
-  'AvSyncMeter.start must early-return unless munea.debug=1',
+  /start\(videoEl\) \{[\s\S]{0,900}?localStorage\.getItem\('munea\.debug'\) === '1'\) \{[\s\S]{0,400}?_overlay = document\.createElement/.test(app),
+  'AvSyncMeter overlay must only be created when munea.debug=1',
+);
+assert(
+  /_render\(\) \{\s*\n\s*if \(!this\._overlay\) return;/.test(app),
+  'AvSyncMeter._render must early-return without the debug overlay',
 );
 // 清單記的是頭尾去空白後的字；原始碼可能是「'線路 '」這種帶尾空白的字面，
 // 也可能是反引號模板字串。

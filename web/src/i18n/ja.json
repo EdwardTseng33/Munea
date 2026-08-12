@@ -449,6 +449,7 @@
   "voice.call.offline": "オフライン",
   "voice.call.speaking": "話しています",
   "voice.call.dialing": "発信中",
+  "voice.call.connected": "つながりました。どうぞお話しください",
   "voice.call.developerConnecting": "開発テスト用に直接接続しています…",
   "voice.call.developerReady": "開発テスト用の接続準備ができました…",
   "voice.call.firstWarmup": "準備しています。初回は30秒ほどかかることがあります…",
