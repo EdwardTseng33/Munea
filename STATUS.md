@@ -1,6 +1,11 @@
 # 🏥 沐寧 Munea · 主狀態板（跨機同步中樞）
 
-> 📦 **2026-08-12 最新包版：`1.0.65 (Build 536)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@2bec777b`（自 1.0.63 起 41 筆）。手機回讀 `1.0.65 (536)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS、510 項綠。**版號沿用主線自訂的 1.0.65 (536)**。
+> 📦 **2026-08-12 最新包版：`1.0.66 (Build 537)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@c05bde2f`（#575~#577 共 5 筆）、乾淨合併無衝突。手機回讀 `1.0.66 (537)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS。**版號沿用主線自訂的 1.0.66 (537)**。
+> - **這版重點**：開場與長時間通話的穩定度候選修正、換回核准過的 Gemini 3.1 聲音角色、隔離版臉機啟動流程。
+> - 🔴 **本輪紅燈（主線既有、乾淨 main 驗證同樣紅）**：`engine/test_voice_echo_guard.py` 的「**配音失敗自動退回舊路**」不過——意即用她本人聲線配音若失敗，無法自動退回原本的聲音通道。**實測徵狀：通話中途聲音怪掉或沒聲**。其餘 263 項綠。
+> - 🔴 **看板仍推不上去**（積壓 22 筆）。待 Edward 於 Mac 終端機 `gh auth login -h github.com`。
+>
+> 📦 **2026-08-12 前一包版：`1.0.65 (Build 536)` 已裝 Edward iPhone＋已上傳 App Store Connect（Mac 蘇菲 · Edward「先包版到我手機」）**：來源 `origin/main@2bec777b`（自 1.0.63 起 41 筆）。手機回讀 `1.0.65 (536)`、啟動存活；Apple 回 `Uploaded App`。七道防漏全 PASS、510 項綠。**版號沿用主線自訂的 1.0.65 (536)**。
 > - **這版重點**：接通後的**第一句話**修一輪——短開場（含英文短句）不再漏掉、未送出的開場會補回；嘴型第一段更穩（重試保護、依起音偏移把關）；語言守門不再重播成迴圈。
 > - 🧹 **環境事故（再次）**：`/private/tmp/munea-1055-release-20260802` 又被系統清空 → 已改用新分身 `/private/tmp/munea-rel-20260811`、Python 環境重建於 `/private/tmp/munea-venv-1065`（工作區外）、`npm ci` 重裝。**暫存區會被清是常態，往後每輪先確認分身還在。**
 > - 🔴 **本輪紅燈（主線既有、乾淨 main 驗證同樣紅）**：`test-native-auth.js` 的「登入失效後自動恢復」檢查本身有錯（`ReferenceError: clientReleaseInfo is not defined`）＝檢查程式壞了、非登入功能故障。前一輪的「待機聲音壓住麥克風」紅燈本輪未再出現於 tail，惟本輪在該支之前即中斷，狀態待下輪確認。
