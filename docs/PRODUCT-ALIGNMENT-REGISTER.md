@@ -20,7 +20,7 @@
 
 | Surface | Source / product truth | Runtime / external truth | Alignment | Next gate |
 |---|---|---|---|---|
-| App source lane | `1.0.66 (Build 537)`；下一個唯一候選，撥號即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機並採原生 512 | App Store Connect 最新上傳是 `1.0.61 (Build 532)`；current review lane 則是 `1.0.55 (Build 525)`，兩者都不是 current source；安裝版 1.0.65／536 已判 FAIL | `partial` | Build 537 通過完整發行檢查與 exact-main 服務 Gate 後，由 Mac Archive／Export；安裝 Gate 通過前不送審 |
+| App source lane | `1.0.67 (Build 538)`；下一個唯一候選，服務真正可聽可回後才顯示接通，首輪送明確句尾；長通話不刪嘴型影格，原生 512 推論升頻輸出 640 | App Store Connect 最新上傳是 `1.0.61 (Build 532)`；current review lane 則是 `1.0.55 (Build 525)`，兩者都不是 current source；安裝版 1.0.66／537 已判首句與聲嘴 FAIL | `partial` | Build 538 通過完整發行檢查、候選服務 Gate 與 exact-build 安裝 Gate 後才可送審 |
 | App Store lane | latest uploaded `1.0.61 (Build 532)`；selected review `1.0.55 (Build 525)` | Build 532 `VALID` 但未被 1.0.55 審核版本選用；1.0.55 為 `WAITING_FOR_REVIEW`，尚未核准／公開 | `partial` | Build 533 上傳後核對 exact IPA identity，再決定建立／替換審核版本 |
 | Draft call／purchase fixes | 已全數收攏進 #188：#174 0 點預檢、#175 TEST 購買與 Apple mismatch UX 於 2026-07-20 比對差異為空後關閉 | #188 另含點數預檢靜默化與開發者 0 點旁路；仍未 merged／packaged | `partial` | 合併 #188 後鎖定 next candidate |
 | Production Brain | current source `1.0.41` | 02:10 manifest：`1.0.36@d6a72a1` | `runtime-behind` | 定價／購買 compatibility canary；不要為追版號盲目部署 |

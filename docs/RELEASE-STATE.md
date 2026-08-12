@@ -1,5 +1,12 @@
 # Munea Release State
 
+## 2026-08-12 台灣｜1.0.67 Build 538 首句真正就緒＋長通話聲嘴同步候選（PR #581 · 0% canary · App E2E pending）
+- **為何必須新 Build**：1.0.66／537 的實機首句仍會在服務尚未可回話時顯示接通；本輪修改 App 本地 ready gate 與首輪 `audio_end`，不是 server-only，舊包無法取得修正。
+- **首句策略**：採「更晚接通」而非 AI 主動招呼。麥克風、Voice、Avatar audio/direct 都 ready 後才顯示接通並開始計時；首輪真人語音後 650ms 安靜即送一次明確邊界，避免第一個 HELLO 漏聽、第二句又打斷回覆。
+- **長通話與畫質**：不再為追趕聲音刪除嘴型影格；生成前替完整模型批次保留佇列空間。模型仍以原生 512 推論，傳送端升頻至 640 並輕度銳化；App 下緣羽化提前收掉動態領口。
+- **自動假手機證據**：隔離 Avatar 候選同一 WebRTC 連線連續 6 輪真人 WAV，6／6 聲音與嘴動可量；聲嘴差 `−0.20～−0.23s` 且未隨輪次擴大；640×640、video trim 0、audio underrun 0、generation p95 584.8ms。
+- **部署邊界**：Brain/App Web exact `036f2745` 已在 `munea-brain-staging-00125-coy` 0% canary 通過結構 Gate；Avatar exact 候選僅在 Glows 8890，正式 Brain 流量與 Avatar 8888 均未切。PR #581 維持 Draft；Mac Archive／安裝版 iPhone 全通話 Gate 完成前仍為 `App E2E pending`，不得送審或稱穩定上線。
+
 ## 2026-08-12 台灣｜1.0.66 Build 537 首句嘴型中斷修復（Avatar 正式上線 · App 實機回驗 pending）
 
 - **原始實機失敗**：安裝版 `1.0.66 (537)` 曾出現首句嘴型講到一半被切斷／卡住，且語音內容與嘴型不一致；因此舊版證據已作廢並重新驗收。
@@ -165,7 +172,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.66 (Build 537)` | 下一個唯一候選；撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機。WebView cache identity 已更新為 `20260812-call-stability-b537-v1066` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-12 +08:00 |
+| Latest source | `1.0.67 (Build 538)` | 下一個唯一候選；服務真正可聽可回後才顯示接通，首輪 650ms 安靜送明確句尾；長通話不刪嘴型影格，512 推論升頻輸出 640。WebView cache identity 為 `20260812-opening-avsync-b538-v1067` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-12 +08:00 |
 | Latest uploaded App | `1.0.61 (Build 532)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 08:35 UTC；不含本輪三邊協議握手，不能代表 current source | App Store Connect API（權威） | 2026-08-11 00:49 +08:00 |
 | App Store selected review lane | `1.0.55 (Build 525)` | `appStoreState=WAITING_FOR_REVIEW`；權威 API 回讀 selected build 為 App 1.0.55 Build 525。1.0.61 Build 532 只有 uploaded／VALID，並未被這個審核版本選用 | App Store Connect API | 2026-08-11 00:49 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
