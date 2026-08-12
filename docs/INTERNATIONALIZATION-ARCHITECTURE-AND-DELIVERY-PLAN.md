@@ -132,6 +132,7 @@ Phase 1c（2026-07-28）建立完整交付面與回歸基準：
 
 - `docs/I18N-SURFACE-INVENTORY.json` 把 App WebView、法律／支援頁、營運後台、官網、LocaleContext、Gateway／Voice、iOS binary 與 App Store 全部納入同一份完成矩陣。
 - `scripts/i18n-surface-inventory.js` 掃描正式介面中的繁中文字串候選；遷移期間不得高於基準，正式開放前必須降為零或逐筆審核為非使用者文案。
+- 非使用者文案的審核代號（2026-07-31 擴充）：`backend-template-identity`／`legacy-brand-migration-sentinel`／`legacy-storage-identity`／`debug-panel-diagnostic`（`_diag`／`_diagNote` 無 force 的診斷字，僅 `munea.debug=1` 顯示）／`developer-fixture`（`seedFixtures=true` 才寫入的開發示範資料）。後兩類以 `scripts/test-debug-diagnostics-gated.js` 為證據：門被拆測試即紅、條目失效。`_diagNote` 帶 force 的字故障時會顯示給使用者，不得入冊。
 - 完成不再以「有四個 JSON」判定，而是每個 surface 都要通過 catalog、動態內容、視覺截圖、區域安全、App Store 與實機語音 gate。
 
 Phase 1d（2026-07-28）補齊可共用的語言品質底盤：
@@ -235,6 +236,7 @@ Phase 2e（2026-07-28）建立 App Store 多語 metadata 與可用地區閘門�
 - 西班牙文先保留中性翻譯草稿，但 App Store locale 與可用地區維持空值，必須先選定 `es-ES` 或 `es-MX` 再做母語、法規、客服與截圖審核。
 - `appAvailability` 與 IAP availability 只以 App Store Connect 為權威，目前 repo 一律記為 `unverified`、`changeAuthorized=false`；本批不操作 App Store Connect。
 - Apple 目前將西班牙（`es-ES`）與墨西哥（`es-MX`）列為不同 App Store localization；兩個候選值明列於 manifest，但產品／法規市場決策前不代選、不開地區。
+- **2026-07-30 市場決策（Edward 拍板）**：西班牙文首發市場選 `es-ES`（西班牙）。兩份 manifest 的 `selectedVariant(s)` 已記錄此決策；`es-MX` 草稿保留備援、未選、不開。後續 es 的母語審稿、法規、截圖與實機證據一律以 `es-ES` 為對象（`docs/qa/i18n/es-ES/`）。開地區與送審仍屬 App Store Connect 授權操作、不由本 repo 推定。
 - Apple 現行欄位與在地化規則參考：<https://developer.apple.com/help/app-store-connect/reference/app-information/app-information>、<https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information>、<https://developer.apple.com/help/app-store-connect/manage-app-information/localize-app-information>；可用地區參考：<https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store>。
 
 - development preview 才能預覽尚未發布的 catalog，方便翻譯與排版 QA，不改正式使用者行為。
@@ -281,6 +283,14 @@ Phase 3d（2026-07-28）：可信 Live Voice locale session bridge
 - 永久切換只更新 `conversationLocale`／preferred languages，不會改 `uiLocale`、country、timezone、safety、legal 或 data region；儲存 patch 沿用既有 account／person 欄位映射。
 - `engine/voice-locale-integration-manifest.json` 明確保持 Live Voice #270、Gateway #258 與 legacy token mode 未完成；新增 `voiceIntegration` 發布 Gate，三項未接完前即使有人放入 E2E JSON 也不能開語系。
 - 本批只新增獨立 bridge、測試與 Gate，不修改被佔用的正式 Voice／Gateway handler、不部署；屬 call-path risk，仍為 `App E2E pending`。
+
+Phase 3e（2026-07-30）：strict LocaleContext 0% canary 防誤切閘門
+
+- Gateway、Live Voice 與混語 session bridge 已完成程式接線與單元／pipeline 測試；發布 Gate 仍保留 `legacyTokenMode=compatibility`，不得把 coded + tested 說成已正式啟用。
+- Voice staging canary 只有明確同時設定 `MUNEA_VOICE_CALL_CONTROL_REQUIRED=1` 與 `MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=0` 才能進 strict mode；否則 fail closed，避免無 token 薄門繞過可信 `locale_context`。
+- canary verifier 會從 exact Cloud Run revision metadata 核對 strict／compatibility mode；strict revision 永遠維持 0% 流量，`promote.sh` 在任何 traffic mutation 前直接拒絕。
+- Call Control 的 `-StrictLocaleContext` 同樣只允許 `--no-traffic` canary；與 `-AllowTraffic` 同時使用會中止。
+- 這批只建立可重現且不可誤升流量的驗收通道，不部署、不切 staging／production 流量。完成 exact-build iPhone、四語真實通話與發布證據前，正式相容模式維持不變。
 
 此階段屬 chat-call path risk。完成程式與自動測試後仍標記 `App E2E pending`，直到使用受影響 profile 的實體 iPhone 完成完整通話驗收。
 
@@ -389,3 +399,18 @@ Phase 2f（2026-07-28）：安全 UI 套用與法律頁路由元件
 - 服務先接受 LocaleContext、再 shadow 記錄、再內部 canary，最後才分市場開流量。
 - Phase 0 不部署。後續每階段獨立 PR、獨立回滾點，不把三個市場同時打開。
 - 「程式完成」不等於「可上架」；必須分別記錄 coded、tested、merged、packaged、deployed、verified。
+
+
+## 2026-07-31 文案搬遷歸零與「暫不進目錄」歸類（批 33-39）
+
+App WebView 的中文文案搬遷於 2026-07-31 到達 **unbound = 0**（總量 1,834：1,516 綁定、318 誠實入冊）。守門自此反轉：`test-i18n-migration-worklist` 與 `test-i18n-surface-inventory` 由「還有債要擋」改為「不准出現新未綁」，release-readiness 的 `sourceCopyMigration` 關轉綠並鎖定。
+
+入冊（docs/I18N-NON-USER-FACING-REVIEW.json）新增三個 reasonCode，證據測試 `scripts/test-i18n-deferred-buckets.js`：
+
+- `zh-intent-matcher`：中文語音/文字指令的比對式與回話（CHAT_RULES → parseChatIntent → chatHandle 前半）。分語言指令設計是獨立工作項，不是漏翻。
+- `family-feed-recipient-locale`：寫進家人動態牆的存庫句。照「收件人語言」呈現屬後端 Phase 2b；前端先翻會把存庫內容綁死在發文者語言。
+- `brand-proper-noun`：「沐寧 Munea」品牌專名（報告紙本頁首尾）。
+
+另沿用 `legacy-storage-identity`（存庫代號：示範人名、心情詞、用藥時段、你/本人、親屬預設——顯示端拆分器齊備：moodDayShort／interestTopicLabel／localizedMedicationDuration／medSlotLabel／actDisplayName）與 `debug-panel-diagnostic`（含 AvSyncMeter 區塊與 _diag/_diagNote 本體）。原「force 黑盒子字」不入冊：故障時會真的跳給用戶，已全數就地包翻譯（avatar.force* 鍵、中文字面不變）。
+
+偵測器同日修正：模板字串內每個漢字都落在 muneaT 呼叫範圍即視為已綁（清除 76 條組字外殼誤報）；並補上漏建的 `activity.quizProgress` 鍵。

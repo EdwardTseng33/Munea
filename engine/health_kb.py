@@ -16,6 +16,7 @@ import os
 
 import health_followup
 import health_selector
+import health_i18n_layer as _i18n
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOPICS_PATH = os.path.join(HERE, "health_topics.json")
@@ -32,22 +33,37 @@ MAX_TOPICS_PER_CALL = 3
 MAX_TOPICS_PER_TURN = 2
 
 
-def resident_rules():
-    """常駐保命紅線（進 chat_engine.RED、所有線路每輪都在）。"""
-    return _DOC["resident"]
+def resident_rules(locale="zh-TW"):
+    """常駐保命紅線（進 chat_engine.RED、所有線路每輪都在）。
+
+    2026-07-31 人設書分國後收語系：急症判斷（中風／心肌梗塞／低血糖／譫妄）各國通用，
+    但**法規那條各國不同**——褪黑激素在台灣是處方藥、在日本則是沒有核准上市，
+    講錯等於給錯法律資訊。該語系沒有專屬版本就退回中文版（不會開天窗）。
+    """
+    key = f"resident_{locale.replace('-', '_')}"
+    return _DOC.get(key) or _DOC["resident"]
 
 
-def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):
+def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None, locale=None):
     """關鍵字比對：回傳命中的 topic id 清單（命中字愈長愈優先＝愈specific愈可信）。
     純字串包含比對——ASR 字幕沒有標點、打字有錯字都吃得下最大公約數；不做模型呼叫。"""
     if not text:
         return []
     exclude = exclude or ()
     scored = []
+    # 一國一庫（2026-07-31 Edward 拍板 B）：非中文語系用那一國疊層的觸發字；
+    # 沒有疊層的題＝那一國不觸發（敗向安全——絕不拿中文字去比外語對話）。
+    _ov_locale = _i18n.normalize(locale) if locale else _i18n.DEFAULT_LOCALE
+    # 拉丁語系要忽略大小寫：使用者講「No puedo dormir」、疊層寫小寫，
+    # 逐字比對就整個叫不出來（中文沒有大小寫，所以這個坑到出國才踩到）。
+    _hay = text.lower()
     for t in TOPICS:
         if t["id"] in exclude:
             continue
-        hit_len = sum(len(k) for k in t["keywords"] if k in text)
+        _kws = t["keywords"]
+        if _ov_locale != _i18n.DEFAULT_LOCALE:
+            _kws = _i18n.keywords_for(t["id"], _ov_locale) or []
+        hit_len = sum(len(k) for k in _kws if health_selector.mentions(k, text))
         if hit_len:
             # 具體處境要壓過一般症狀（2026-07-29 加女性題時抓到）：
             # 「最近一直熱潮紅、晚上睡不好」原本被當成一般失眠——更年期的題才是
@@ -57,14 +73,14 @@ def match_topics(text, limit=MAX_TOPICS_PER_TURN, exclude=None):
     return [tid for _, _, tid in scored[:limit]]
 
 
-def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None):
+def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None, locale=None):
     """文字線用：按這一句用戶的話組出注入段；沒命中回空字串（不佔說明書）。
 
     2026-07-29：命中的題目若已經有「方案池」（因人因時因地挑選），改用挑選層的結果——
     同一句「我睡不好」，上班族半夜問跟長輩早上問會拿到不同的方案。沒建方案池的題
     照舊走原本那段固定注入文，兩者並存、不必一次搬完 21 題。
     """
-    ids = match_topics(text, exclude=exclude)
+    ids = match_topics(text, exclude=exclude, locale=locale)
     # 2026-07-29（考卷實測抓到）：話題是連續的，關鍵字比對卻只看這一句。
     # 「我睡不好」→「吃鎂有用嗎，真的假的？」第二句命中的是謠言查證題，
     # 她就拿不到鎂的方案、只能講泛泛之談。上一輪在聊的那題要接得回來。
@@ -88,14 +104,14 @@ def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None
         ids = sorted(ids, key=lambda t: (not _serves_audience(t),))
     for tid in ids:
         if tid in health_selector.TOPICS:
-            picked = health_selector.render(tid, text, profile, hour)
+            picked = health_selector.render(tid, text, profile, hour, locale=locale)
             if picked:
                 # 效果飛輪：把這次推了什麼記下來，幾天後她才問得出「後來有沒有好一點」。
                 # 記不起來也不能擋住對話——這只是加分項，不是必要路徑。
                 pid = (profile or {}).get("personId")
                 if pid:
                     try:
-                        chosen = health_selector.pick(tid, text, profile, hour)["solutions"]
+                        chosen = health_selector.pick(tid, text, profile, hour, locale=locale)["solutions"]
                         health_followup.record_recommendation(pid, tid, chosen)
                     except Exception:
                         pass
@@ -114,13 +130,13 @@ def injection_for(text, exclude=None, profile=None, hour=None, recent_topic=None
     )
 
 
-def voice_cue(topic_id, user_text="", profile=None, hour=None):
+def voice_cue(topic_id, user_text="", profile=None, hour=None, locale=None):
     """語音線用：在守護腦同一個「輪替空檔」機制排隊送出的衛教提示（每題整通只送一次）。
 
     2026-07-29：有方案池的題也走因人挑選——聊聊是主戰場，長輩版跟青少年版不能混。
     """
     if topic_id in health_selector.TOPICS:
-        picked = health_selector.render(topic_id, user_text, profile, hour)
+        picked = health_selector.render(topic_id, user_text, profile, hour, locale=locale)
         if picked:
             return (
                 "（系統衛教提示、不是用戶說的話——絕不把這段提示唸出來，"

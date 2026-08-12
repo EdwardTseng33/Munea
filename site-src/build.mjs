@@ -135,6 +135,14 @@ for (const l of LOCALES) {
   const vars = {
     ...dict,
     ...ctaVars(dict),
+    // 示範影片：中文用原檔名，英日西各播自己那支（同一位夥伴、講當地語言）
+    'meta.demoSuffix': l.code === 'zh' ? '' : '-' + l.code,
+    // 條款／隱私／客服：三語版本早就做好了（app-site/legal/{en,ja,es}/），
+    // 但四個語系的頁尾一直都連到中文版。這裡讓每個語系連自己那一份。
+    // 中文走 /privacy 這種乾淨網址（主機有轉址規則），其他語系直接指檔案。
+    'meta.legalPrivacy': l.code === 'zh' ? '/privacy' : `/legal/${l.code}/privacy.html`,
+    'meta.legalTerms': l.code === 'zh' ? '/terms' : `/legal/${l.code}/terms.html`,
+    'meta.legalSupport': l.code === 'zh' ? '/support' : `/legal/${l.code}/support.html`,
     'meta.htmlLang': l.htmlLang,
     'meta.fonts': fontLink(l.fonts),
     'meta.canonical': urlFor(l.dir),
@@ -148,6 +156,9 @@ for (const l of LOCALES) {
     'meta.b2bUrl': config.b2bUrl,
     'meta.siteUrl': SITE,
     'meta.ogImage': `${SITE}/assets/og-image.jpg`,
+    // 品牌識別資料用：把官網／App Store／粉專串成同一個品牌實體（見 index.html 的 ld+json）
+    'meta.appStoreUrl': config.appStoreUrl,
+    'meta.facebookUrl': config.facebookUrl,
   };
 
   const html = render(template, vars, l.code);

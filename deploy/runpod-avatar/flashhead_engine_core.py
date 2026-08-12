@@ -53,8 +53,140 @@ TAIL_FLUSH_S = float(os.environ.get("MUNEA_FH_TAIL_FLUSH_S", "0.45"))
 # 副作用是正向的：背景靜止後 WebRTC 編碼省下的位元集中給臉部、畫質更好。
 # MUNEA_FH_ANTIFLICKER=0 可整個關掉（回到舊行為）。
 ANTIFLICKER = os.environ.get("MUNEA_FH_ANTIFLICKER", "1") == "1"
-ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "3"))
-ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "12"))
+# Production A/B on the same Voice phrases showed that 3/12 suppresses quiet
+# phoneme motion together with flicker (only 1/3 mouth-onset gates passed).
+# 1/8 retained the temporal stabilizer while all 3/3 quiet/normal phrases kept
+# measurable mouth motion. These defaults mirror the deployed worker config.
+ANTIFLICKER_LO = float(os.environ.get("MUNEA_FH_AF_LO", "1"))
+ANTIFLICKER_HI = float(os.environ.get("MUNEA_FH_AF_HI", "8"))
+
+# FlashHead's torch.Generator advances after every generated chunk, while
+# reset_person_name() restores only the motion latent.  Without resetting the
+# generator, an identical opening phoneme can receive a different first-chunk
+# noise sequence depending on how many chunks earlier turns consumed; receiver
+# evidence showed that occasionally producing a near-static first 720 ms.  A
+# semantic turn should be reproducible, while chunks inside the turn must keep
+# advancing normally.  Set a negative value only for a bounded rollback.
+TURN_SEED = int(os.environ.get("MUNEA_FH_TURN_SEED", "42"))
+# A second full 960 ms generation is too expensive for a realtime opening.
+# Keep the experimental escape hatch, but ship it off.  Most importantly,
+# never delete video frames without deleting the matching audio samples: that
+# makes an onset metric look better while moving every following viseme onto
+# the wrong phoneme.
+FIRST_CHUNK_RETRY = os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY", "0") == "1"
+FIRST_CHUNK_SPEECH_RMS = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_SPEECH_RMS", "0.02")
+)
+FIRST_CHUNK_MOUTH_MOTION = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_MOUTH_MOTION", "0.015")
+)
+FIRST_CHUNK_MAX_SKEW_MS = float(
+    os.environ.get("MUNEA_FH_FIRST_CHUNK_MAX_SKEW_MS", "160")
+)
+FIRST_CHUNK_RETRY_CANDIDATES = max(
+    1, min(3, int(os.environ.get("MUNEA_FH_FIRST_CHUNK_RETRY_CANDIDATES", "3")))
+)
+
+
+def pcm_rms(pcm):
+    """Normalized RMS for float or PCM16 arrays without copying large turns."""
+    values = np.asarray(pcm).reshape(-1)
+    if not len(values):
+        return 0.0
+    work = values.astype(np.float32, copy=False)
+    if values.dtype.kind in "iu":
+        work = work / 32768.0
+    return float(np.sqrt(np.mean(work * work)))
+
+
+def mouth_motion_peak(frames):
+    """Peak adjacent-frame motion in the production portrait mouth region."""
+    values = np.asarray(frames)
+    if values.ndim != 4 or len(values) < 2:
+        return 0.0
+    height, width = values.shape[1:3]
+    mouth = values[
+        :, int(height * 0.55):max(int(height * 0.72), int(height * 0.55) + 1),
+        int(width * 0.33):max(int(width * 0.67), int(width * 0.33) + 1),
+    ].astype(np.float32)
+    adjacent = np.abs(np.diff(mouth, axis=0))
+    return float(np.max(np.mean(adjacent, axis=(1, 2, 3))) / 255.0)
+
+
+def first_chunk_av_skew_ms(frames, pcm, fps=25):
+    """Measure model-local audio-to-mouth onset skew for one generated chunk."""
+    values = np.asarray(frames)
+    audio = np.asarray(pcm).reshape(-1)
+    if values.ndim != 4 or len(values) < 2 or not len(audio):
+        return None
+    work = audio.astype(np.float32, copy=False)
+    if audio.dtype.kind in "iu":
+        work = work / 32768.0
+    samples_per_frame = max(1, int(round(len(work) / len(values))))
+    audio_onset = None
+    for index in range(len(values)):
+        part = work[index * samples_per_frame:(index + 1) * samples_per_frame]
+        if len(part) and float(np.sqrt(np.mean(part * part))) >= FIRST_CHUNK_SPEECH_RMS:
+            audio_onset = index
+            break
+    if audio_onset is None:
+        return None
+
+    height, width = values.shape[1:3]
+    mouth = values[
+        :, int(height * 0.55):max(int(height * 0.72), int(height * 0.55) + 1),
+        int(width * 0.33):max(int(width * 0.67), int(width * 0.33) + 1),
+    ].astype(np.float32)
+    motion = np.mean(np.abs(np.diff(mouth, axis=0)), axis=(1, 2, 3)) / 255.0
+    mouth_onset = next(
+        (index + 1 for index, value in enumerate(motion)
+         if index + 1 >= audio_onset and float(value) >= FIRST_CHUNK_MOUTH_MOTION),
+        None,
+    )
+    if mouth_onset is None:
+        return float("inf")
+    return round((mouth_onset - audio_onset) * 1000.0 / max(1, float(fps)), 1)
+
+
+def select_first_chunk_candidate(candidates):
+    """Choose the earliest credible mouth onset, then strongest motion."""
+    usable = [item for item in candidates if item and len(item) >= 3]
+    if not usable:
+        return None, None, 0.0
+
+    def rank(item):
+        _frames, skew_ms, motion = item
+        finite = skew_ms is not None and np.isfinite(skew_ms)
+        return (
+            0 if finite else 1,
+            float(skew_ms) if finite else float("inf"),
+            -float(motion or 0.0),
+        )
+
+    return min(usable, key=rank)
+
+
+def first_chunk_requires_retry(skew_ms):
+    """Retry only when no credible mouth onset exists.
+
+    A second GPU generation adds roughly 600 ms and makes first speech feel
+    stuck, so it is reserved for a non-finite measurement.  Finite late motion
+    is reported for model tuning and preserved byte-for-byte; it must never be
+    hidden by deleting video-only content.
+    """
+    return skew_ms is not None and not np.isfinite(skew_ms)
+
+
+def should_apply_antiflicker(emit_audio):
+    """Background stabilization is safe only for video-only idle chunks.
+
+    Speech frames must preserve even quiet phoneme motion.  Production A/V
+    evidence caught a full 8.3-second audible response whose small mouth
+    changes were flattened by the same pixel hold intended for idle
+    background flicker.  Keep the stabilizer's reference frame updated during
+    speech, but never filter speech pixels.
+    """
+    return ANTIFLICKER and not emit_audio
 
 
 def stabilize_frame(prev, cur, cv2mod):
@@ -166,51 +298,171 @@ class AudioOutBuffer:
     第一批資料尚未到達前維持 hold；資料到達後才開始倒數，讓這段時間真的
     累積成播放存貨，而不是把模型生成時間誤算成預緩衝。
     """
-    def __init__(self, sample_rate, prebuffer_s=0.5):
+    def __init__(self, sample_rate, prebuffer_s=0.5, adaptive_min_s=None,
+                 adaptive_max_s=None):
         self.sample_rate = sample_rate
         self.prebuffer_s = prebuffer_s
         self.default_prebuffer_s = prebuffer_s
-        self.next_prebuffer_s = prebuffer_s
-        self.last_prebuffer_s = prebuffer_s
+        adaptive_min = prebuffer_s if adaptive_min_s is None else float(adaptive_min_s)
+        adaptive_max = prebuffer_s if adaptive_max_s is None else float(adaptive_max_s)
+        self.adaptive_min_s = max(0.0, min(adaptive_min, adaptive_max))
+        self.adaptive_max_s = max(self.adaptive_min_s, adaptive_max)
+        self.adaptive_prebuffer_s = self.adaptive_min_s
+        self.adaptive_target_s = self.adaptive_prebuffer_s
+        self.next_prebuffer_s = self.adaptive_prebuffer_s
+        self.last_prebuffer_s = self.adaptive_prebuffer_s
+        self.generation_compute_ms = collections.deque(maxlen=20)
+        self.generation_budget_ms = None
+        self.generation_p95_ms = None
         self.frame_samples = int(sample_rate * 0.02)
         self.lock = threading.Lock()
         self.buf = np.zeros(0, dtype=np.int16)
         self.underrun_count = 0
         self.underrun_gap_ms = collections.deque(maxlen=50)
+        self._underrun_started_ts = None
         self.last_push_ts = 0.0
         self.depth_samples = 0
+        # Counts only PCM frames actually handed to WebRTC. Held/underrun
+        # zeroes are excluded so lip catch-up follows the audible timeline.
+        self.played_samples = 0
         self.hold_until_ts = float("inf")
         self._awaiting_first_push = True
+        self._turn_complete = False
+        self._one_shot_prebuffer = False
+        self._turn_underrun_seen = False
+        self.stable_turns = 0
 
-    def push(self, pcm_int16):
+    def _raise_adaptive_prebuffer_locked(self, seconds):
+        if self.adaptive_max_s <= self.adaptive_min_s:
+            return
+        self.adaptive_prebuffer_s = min(
+            self.adaptive_max_s,
+            max(self.adaptive_prebuffer_s, self.adaptive_prebuffer_s + float(seconds)),
+        )
+        if self._awaiting_first_push and not self._one_shot_prebuffer:
+            self.next_prebuffer_s = self.adaptive_prebuffer_s
+
+    def observe_generation(self, compute_ms, budget_ms):
+        """Record GPU headroom without charging every turn a speculative wait.
+
+        Compute p95 remains operational evidence, but only a real mid-turn
+        starvation may raise the next turn's 200-350 ms prebuffer.  This avoids
+        turning one slow/cold chunk into a fixed latency tax on every sentence.
+        """
+        if compute_ms is None or budget_ms is None or budget_ms <= 0:
+            return
         with self.lock:
-            if len(pcm_int16) and self._awaiting_first_push:
+            self.generation_compute_ms.append(max(0.0, float(compute_ms)))
+            self.generation_budget_ms = float(budget_ms)
+            ordered = sorted(self.generation_compute_ms)
+            # Match health_snapshot's operational p95: with a short rolling
+            # window, do not let one cold-compile maximum dominate every
+            # subsequent turn. Real starvation still takes the separate
+            # immediate +50ms path in push().
+            p95_index = max(0, int(len(ordered) * 0.95) - 1)
+            self.generation_p95_ms = ordered[p95_index]
+
+    def _queue_locked(self, pcm_int16):
+        now = time.time()
+        if len(pcm_int16) and self._underrun_started_ts is not None:
+            gap_ms = round((now - self._underrun_started_ts) * 1000, 1)
+            self.underrun_gap_ms.append(gap_ms)
+            self._underrun_started_ts = None
+            # Only observed starvation raises the next-turn cushion.
+            self._turn_underrun_seen = True
+            self.stable_turns = 0
+            self._raise_adaptive_prebuffer_locked(0.05)
+        self.buf = np.concatenate([self.buf, pcm_int16])
+        self.last_push_ts = now
+        self.depth_samples = len(self.buf)
+
+    def queue(self, pcm_int16):
+        """Queue original Voice PCM immediately, without waiting for lip rendering.
+
+        Playout remains held until ``release_playout`` sees the first rendered
+        video chunk. GPU variance may then freeze video, but it can no longer
+        starve the audible PCM queue every model chunk.
+        """
+        with self.lock:
+            self._queue_locked(np.asarray(pcm_int16, dtype=np.int16).reshape(-1))
+
+    def release_playout(self):
+        """Open the shared audio/video start gate after first video is ready."""
+        with self.lock:
+            if len(self.buf) and self._awaiting_first_push:
+                now = time.time()
                 delay = self.next_prebuffer_s
                 self.last_prebuffer_s = delay
-                self.next_prebuffer_s = self.default_prebuffer_s
-                self.hold_until_ts = time.time() + delay
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
+                self._one_shot_prebuffer = False
+                self.hold_until_ts = now + delay
                 self._awaiting_first_push = False
-            self.buf = np.concatenate([self.buf, pcm_int16])
-            self.last_push_ts = time.time()
-            self.depth_samples = len(self.buf)
+
+    def push(self, pcm_int16):
+        """Backward-compatible queue-and-release path for local callers/tests."""
+        with self.lock:
+            self._queue_locked(np.asarray(pcm_int16, dtype=np.int16).reshape(-1))
+            if len(self.buf) and self._awaiting_first_push:
+                now = time.time()
+                delay = self.next_prebuffer_s
+                self.last_prebuffer_s = delay
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
+                self._one_shot_prebuffer = False
+                self.hold_until_ts = now + delay
+                self._awaiting_first_push = False
 
     def clear(self):
         with self.lock:
             self.buf = np.zeros(0, dtype=np.int16)
             self.depth_samples = 0
+            self.played_samples = 0
             self.hold_until_ts = float("inf")
             self._awaiting_first_push = True
-            self.next_prebuffer_s = self.default_prebuffer_s
+            self._turn_complete = False
+            self._turn_underrun_seen = False
+            self._one_shot_prebuffer = False
+            self._underrun_started_ts = None
+            self.next_prebuffer_s = self.adaptive_prebuffer_s
 
     def arm_prebuffer(self, seconds):
         """Use a one-shot playout delay for the next PCM turn only."""
         with self.lock:
             self.next_prebuffer_s = max(0.0, float(seconds))
+            self._one_shot_prebuffer = True
+
+    def mark_input_complete(self):
+        """Stop treating the natural end of a response as buffer starvation."""
+        with self.lock:
+            if self._turn_underrun_seen:
+                self.stable_turns = 0
+            else:
+                self.stable_turns += 1
+                if self.stable_turns >= 3 and self.adaptive_prebuffer_s > self.adaptive_min_s:
+                    self.adaptive_prebuffer_s = max(
+                        self.adaptive_min_s, self.adaptive_prebuffer_s - 0.05
+                    )
+                    self.adaptive_target_s = self.adaptive_prebuffer_s
+                    self.stable_turns = 0
+            if self._awaiting_first_push and not self._one_shot_prebuffer:
+                self.next_prebuffer_s = self.adaptive_prebuffer_s
+            self._turn_complete = True
+            self._underrun_started_ts = None
 
     def playout_held(self):
         """True while audio and video must stay on their shared start gate."""
         with self.lock:
             return time.time() < self.hold_until_ts
+
+    def video_playout_held(self, lead_s=0.0):
+        """Apply a bounded signed video offset to the shared turn gate.
+
+        Positive values open video before audio; negative values hold video
+        after audio.  The first rendered chunk still arms the single
+        authoritative turn gate and an empty turn remains held forever.
+        """
+        lead = max(-0.35, min(0.35, float(lead_s or 0.0)))
+        with self.lock:
+            return time.time() < self.hold_until_ts - lead
 
     def pop_frame(self):
         with self.lock:
@@ -220,10 +472,11 @@ class AudioOutBuffer:
                 chunk = self.buf[:self.frame_samples]
                 self.buf = self.buf[self.frame_samples:]
                 self.depth_samples = len(self.buf)
+                self.played_samples += len(chunk)
                 return chunk
-            self.underrun_count += 1
-            if self.last_push_ts:
-                self.underrun_gap_ms.append(round((time.time() - self.last_push_ts) * 1000, 1))
+            if not self._turn_complete and self._underrun_started_ts is None:
+                self.underrun_count += 1
+                self._underrun_started_ts = time.time()
             self.depth_samples = len(self.buf)
             return np.zeros(self.frame_samples, dtype=np.int16)
 
@@ -272,6 +525,30 @@ class Slot:
         self.round_latencies = collections.deque(maxlen=20)
         self.last_gen_compute_ms = None
         self.gen_compute_ms_hist = collections.deque(maxlen=100)
+        self.video_catchup_events = 0
+        self.video_catchup_frames = 0
+        # FlashHead carries the final motion latent into the next generation
+        # chunk.  That continuity is correct inside one assistant utterance,
+        # but a new semantic turn must start from the character reference or
+        # it can inherit a closed/static mouth from the previous answer.
+        self.motion_reset_count = 0
+        self.motion_reset_failures = 0
+        self.turn_seed_reset_count = 0
+        self.first_chunk_retry_count = 0
+        self.first_chunk_retry_failures = 0
+        self.first_chunk_align_events = 0
+        self.first_chunk_align_frames = 0
+        # Real speech must invalidate any idle GPU work that is still in flight.
+        # Expose this count so the production gate can prove that the race was
+        # handled instead of inferring it from negative first-frame timings.
+        self.idle_invalidation_count = 0
+        # WebRTC audio sender scheduling is separate from PCM availability.
+        # A busy event loop can wake the 20 ms sender late even while audio_out
+        # still has plenty of buffered PCM. Track that independently so an RTP
+        # playout hole cannot hide behind audio_underrun=0.
+        self.audio_sender_rebase_count = 0
+        self.audio_sender_max_late_ms = 0.0
+        self.audio_sender_recent_late_ms = collections.deque(maxlen=20)
         # ---- 准入/佔用（SlotPool 管）----
         self.active_session = None
         self.active_pc = None
@@ -280,6 +557,41 @@ class Slot:
         self.healthy = True
         self.fault_count = 0
         self.last_fault = None
+
+
+def lip_catchup_frame_count(audio_played_s, queued_video_s, timeline_start_s,
+                            frame_count, fps, keep_frames=2):
+    """Return how many already-expired lip frames may be skipped safely.
+
+    Audio remains the master clock. The final ``keep_frames`` are retained so
+    a slow GPU produces a short mouth freeze/catch-up instead of an empty video
+    queue or delaying audible PCM.
+    """
+    if not frame_count or not fps or timeline_start_s is None:
+        return 0
+    expired_s = max(0.0, float(audio_played_s) + float(queued_video_s)
+                    - float(timeline_start_s))
+    expired_frames = int(expired_s * float(fps))
+    return min(max(0, int(frame_count) - max(1, int(keep_frames))), expired_frames)
+
+
+def pace_audio_sender_clock(started, next_pts, sample_rate, now,
+                            rebase_after_s=0.04):
+    """Keep late WebRTC audio frames paced instead of sending a catch-up burst.
+
+    aiortc asks ``recv`` for one media frame at a time. If the event loop wakes
+    100 ms late, retaining the original wall-clock anchor makes the next five
+    20 ms frames return immediately. Receivers can discard that burst as late
+    RTP, creating an audible hole even though PCM never underruns. Move only
+    the wall-clock anchor forward; RTP PTS and every audio sample stay intact.
+    """
+    if not sample_rate:
+        return started, 0.0, False
+    target = float(started) + float(next_pts) / float(sample_rate)
+    late_s = max(0.0, float(now) - target)
+    if late_s <= float(rebase_after_s):
+        return started, round(late_s * 1000, 1), False
+    return float(started) + late_s, round(late_s * 1000, 1), True
 
 
 def switch_slot_char(slot, char, char_src_map, get_base_data_fn, load_poster_fn):
@@ -297,7 +609,10 @@ def switch_slot_char(slot, char, char_src_map, get_base_data_fn, load_poster_fn)
         prev = slot.char
         try:
             if slot.feeder is not None:
-                slot.feeder.reset()
+                # get_base_data_fn below already replaces the character and
+                # resets its motion latent.  Avoid reacquiring char_lock from
+                # Feeder.reset while this switch already owns it.
+                slot.feeder.reset(reset_pipeline_motion=False)
             get_base_data_fn(slot.pipeline, cond_image_path_or_dir=char_src_map[char],
                               base_seed=42, use_face_crop=False)
             slot.char = char
@@ -342,12 +657,17 @@ class Feeder:
         # resampling never becomes the audible output path.
         self.acc_out = np.zeros(0, dtype=np.float32)
         self.consumed = 0
+        self.timeline_base_s = 0.0
         self.t0 = None
         self.last_in = 0.0
         self._idle_due = 0.0
         self._idle_on = False
         self._round_pending = False
         self._finish_pending = False
+        self._complete_pending = False
+        # 每次真 PCM 進來都推進；待機 GPU 工作用它確認計算期間沒有真語音抵達。
+        # 否則晚完成的待機畫格會插到新一輪嘴型前面，造成首句嘴慢甚至完全沒動。
+        self._real_input_seq = 0
         # 世代號——每次 reset() +1。GPU 上跑到一半的舊塊完成時比對世代號，
         # 變了就整塊丟棄，不讓上一輪聲畫漏進新一輪（治「掛斷重撥她一接通就
         # 繼續講上一段」「插話後又冒半句舊話」）。
@@ -361,17 +681,47 @@ class Feeder:
             threading.Thread(target=self._loop, daemon=True).start()
 
     def push24k(self, pcm_bytes):
-        x = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        pcm_int16 = np.frombuffer(pcm_bytes, dtype=np.int16).copy()
+        # Audible PCM takes the direct ingress path. Lip generation consumes a
+        # resampled copy, but never becomes the clock that feeds the speaker.
+        self.slot.audio_out.queue(pcm_int16)
+        x = pcm_int16.astype(np.float32) / 32768.0
         n_out = int(len(x) * self.sr_eng / self.sr_in)
         if n_out <= 0:
             return
         xq = np.interp(np.linspace(0, 1, n_out, endpoint=False),
                         np.linspace(0, 1, len(x), endpoint=False), x).astype(np.float32)
+        stop_idle = False
         with self.lock:
             now = time.time()
+            self._real_input_seq += 1
+            if self._idle_on:
+                # 讓已在 GPU 上的待機工作以 epoch 判定作廢；只清畫面，不碰已排入的
+                # 原始 PCM／共同播放時鐘。真嘴型完成前仍由 poster 保持畫面。
+                self._idle_on = False
+                self._epoch += 1
+                self._prev_frame = None
+                # Do not clear audio_dq here. The embedding model indexes a
+                # fixed-length history window; shortening it while an idle
+                # chunk is in flight makes the next embedding index past the
+                # array and poisons the CUDA context. The zero-valued idle
+                # history is the required neutral pre-roll for real speech.
+                self.slot.idle_invalidation_count += 1
+                stop_idle = True
             if self.t0 is None or (now - self.last_in) > 0.8:
                 self.t0 = now
                 self.consumed = 0
+                # A pause starts a new model round, not a new audible turn.
+                # Anchor the round after PCM queued before this push so its
+                # first lip frame keeps the full-turn playback timeline.
+                with self.slot.audio_out.lock:
+                    queued_before_push = max(
+                        0,
+                        self.slot.audio_out.depth_samples - len(pcm_int16),
+                    )
+                    self.timeline_base_s = (
+                        self.slot.audio_out.played_samples + queued_before_push
+                    ) / max(1, self.slot.audio_out.sample_rate)
                 self.slot.round_count += 1
                 self.slot.round_start_ts = now
                 self._round_pending = True
@@ -380,15 +730,21 @@ class Feeder:
             self.acc = np.concatenate([self.acc, xq])
             self.acc_out = np.concatenate([self.acc_out, x])
             self.last_in = now
+        if stop_idle and self.slot.sink is not None:
+            self.slot.sink.clear()
+            print("[feeder] slot" + str(self.slot.index)
+                  + " real audio invalidated in-flight idle frames", flush=True)
 
-    def reset(self):
+    def reset(self, reset_pipeline_motion=True):
         with self.lock:
             self.acc = np.zeros(0, dtype=np.float32)
             self.acc_out = np.zeros(0, dtype=np.float32)
             self.t0 = None
             self.consumed = 0
+            self.timeline_base_s = 0.0
             self._epoch += 1
             self._finish_pending = False
+            self._complete_pending = False
             self._prev_frame = None
             if self.slot.audio_dq is not None:
                 self.slot.audio_dq.extend([0.0] * self.slot.audio_dq.maxlen)
@@ -396,13 +752,46 @@ class Feeder:
             self.slot.sink.clear()
         if self.slot.audio_out is not None:
             self.slot.audio_out.clear()
+        motion_reset = False
+        if reset_pipeline_motion:
+            try:
+                reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
+                if callable(reset_fn):
+                    # An older GPU chunk may still be updating
+                    # latent_motion_frames.  Epoch invalidates its output;
+                    # char_lock then waits for it to finish before restoring
+                    # the neutral per-character motion seed for the new turn.
+                    with self.slot.char_lock:
+                        reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                        generator = getattr(self.slot.pipeline, "generator", None)
+                        reseed_fn = getattr(generator, "manual_seed", None)
+                        if TURN_SEED >= 0 and callable(reseed_fn):
+                            reseed_fn(TURN_SEED)
+                            self.slot.turn_seed_reset_count += 1
+                    self.slot.motion_reset_count += 1
+                    motion_reset = True
+            except Exception as exc:
+                # Preserve audible service even if a third-party model build
+                # lacks a compatible reset implementation.  Surface the
+                # failure for the production gate instead of silently
+                # poisoning subsequent lip turns.
+                self.slot.motion_reset_failures += 1
+                self.slot.last_fault = "motion reset: " + repr(exc)
+                print("[feeder] slot" + str(self.slot.index)
+                      + " motion reset failed: " + repr(exc), flush=True)
         print("[feeder] slot" + str(self.slot.index) + " reset(turn boundary) epoch="
-              + str(self._epoch), flush=True)
+              + str(self._epoch) + " motion=" + str(motion_reset), flush=True)
 
     def finish(self):
         with self.lock:
             self._finish_pending = bool(len(self.acc))
+            # Audible PCM is queued at ingress now, so input completion no
+            # longer depends on the last lip-render chunk finishing. Waiting
+            # for GPU tail work here mislabels natural end silence as an audio
+            # underrun even though the captured waveform is continuous.
+            self._complete_pending = False
             partial_samples = len(self.acc)
+        self.slot.audio_out.mark_input_complete()
         if self._finish_pending:
             print("[feeder] slot" + str(self.slot.index) + " finish requested partial_samples="
                   + str(partial_samples), flush=True)
@@ -424,7 +813,7 @@ class Feeder:
                     print("[feeder] slot" + str(self.slot.index)
                           + " on_unhealthy callback error: " + repr(cb_err), flush=True)
 
-    def _stabilize(self, frames, chunk_epoch):
+    def _stabilize(self, frames, chunk_epoch, apply_filter=True):
         """時間穩定器：逐張跟上一張輸出比，幾乎沒變的像素沿用上一張。
 
         cv2 快路徑實測 768² 約 3.5-4.7ms/張（26 張一包約 0.1s、佔 0.96s
@@ -436,22 +825,35 @@ class Feeder:
         except ImportError:
             cv2mod = None
         prev = self._prev_frame
-        for i in range(frames.shape[0]):
-            cur = frames[i]
-            if prev is not None and prev.shape == cur.shape:
-                cur = stabilize_frame(prev, cur, cv2mod)
-                frames[i] = cur
-            prev = cur
+        if apply_filter:
+            for i in range(frames.shape[0]):
+                cur = frames[i]
+                if prev is not None and prev.shape == cur.shape:
+                    cur = stabilize_frame(prev, cur, cv2mod)
+                    frames[i] = cur
+                prev = cur
+        elif len(frames):
+            # Speech uses the unfiltered model frames, while the last frame is
+            # still remembered so the next idle chunk does not jump back to a
+            # stale pre-speech reference.
+            prev = frames[-1]
         # 只有世代號沒變才更新基準——reset()/換角色後不可拿舊世代的畫面當基準
         with self.lock:
             if self._epoch == chunk_epoch and prev is not None:
                 self._prev_frame = prev.copy()
         return frames
 
-    def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None):
+    def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None,
+                   emit_audio=True, timeline_start_s=None, idle_input_seq=None):
         t_chunk_ready = time.time()
         with self.lock:
+            if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
+                return
             chunk_epoch = self._epoch
+            first_round_chunk = bool(
+                emit_audio and self._round_pending
+                and self.slot.round_start_ts <= t_chunk_ready
+            )
             self.slot.audio_dq.extend(chunk_16k.tolist())
             arr = np.array(self.slot.audio_dq)
         try:
@@ -459,6 +861,48 @@ class Feeder:
                                             self.slot.audio_start_idx, self.slot.audio_end_idx)
             with self.slot.char_lock:
                 video = self.run_pipeline(self.slot.pipeline, emb)
+                frames = video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
+                if first_round_chunk:
+                    input_pcm = output_pcm if output_pcm is not None else chunk_16k
+                    initial_skew = first_chunk_av_skew_ms(
+                        frames, input_pcm, self.slot.tgt_fps,
+                    )
+                    candidates = [(frames, initial_skew, mouth_motion_peak(frames))]
+                    retry_supported = (
+                        FIRST_CHUNK_RETRY and TURN_SEED >= 0
+                        and first_chunk_requires_retry(initial_skew)
+                    )
+                    reset_fn = getattr(self.slot.pipeline, "reset_person_name", None)
+                    generator = getattr(self.slot.pipeline, "generator", None)
+                    reseed_fn = getattr(generator, "manual_seed", None)
+                    final_skew = initial_skew
+                    attempts = 0
+                    while (retry_supported and callable(reset_fn) and callable(reseed_fn)
+                           and attempts < FIRST_CHUNK_RETRY_CANDIDATES - 1):
+                        attempts += 1
+                        reset_fn(getattr(self.slot.pipeline, "person_name", None))
+                        reseed_fn(TURN_SEED + attempts)
+                        retry_video = self.run_pipeline(self.slot.pipeline, emb)
+                        frames = retry_video[self.slot.motion_frames_num:].cpu().numpy().astype(np.uint8)
+                        final_skew = first_chunk_av_skew_ms(
+                            frames, input_pcm, self.slot.tgt_fps,
+                        )
+                        candidates.append((frames, final_skew, mouth_motion_peak(frames)))
+                        self.slot.first_chunk_retry_count += 1
+                        if final_skew is not None and final_skew <= FIRST_CHUNK_MAX_SKEW_MS:
+                            break
+                    if attempts:
+                        frames, final_skew, _final_motion = select_first_chunk_candidate(candidates)
+                        if final_skew is None or final_skew > FIRST_CHUNK_MAX_SKEW_MS:
+                            self.slot.first_chunk_retry_failures += 1
+                        print("[mouth-quality] slot" + str(self.slot.index)
+                              + " first chunk retry skew=" + str(initial_skew)
+                              + "ms -> " + str(final_skew) + "ms"
+                              + " attempts=" + str(attempts), flush=True)
+                    print("[mouth-quality] slot" + str(self.slot.index)
+                          + " first chunk preserved frames=" + str(len(frames))
+                          + " skew=" + str(final_skew) + "ms",
+                          flush=True)
         except Exception as e:
             # 故障隔離核心：這一路的 pipeline 炸了，不讓例外往上炸穿整個 feeder
             # 執行緒（更不會波及其他槽的 pipeline/thread，本來就是獨立物件）。
@@ -466,8 +910,6 @@ class Feeder:
             self._on_fault(e)
             return
         self._fault_streak = 0
-        video = video[self.slot.motion_frames_num:]
-        frames = video.cpu().numpy().astype(np.uint8)
         if self.sharpen:
             import cv2 as _cv2
             for _i in range(frames.shape[0]):
@@ -477,14 +919,57 @@ class Feeder:
         t_frames_ready = time.time()
         self.slot.last_gen_compute_ms = round((t_frames_ready - t_chunk_ready) * 1000, 1)
         self.slot.gen_compute_ms_hist.append(self.slot.last_gen_compute_ms)
+        budget_ms = (round(self.slot.slice_len / self.slot.tgt_fps * 1000, 1)
+                     if self.slot.slice_len and self.slot.tgt_fps else None)
+        self.slot.audio_out.observe_generation(self.slot.last_gen_compute_ms, budget_ms)
         with self.lock:
             if self._epoch != chunk_epoch:
                 print("[feeder] slot" + str(self.slot.index) + " stale chunk dropped (epoch "
                       + str(chunk_epoch) + " -> " + str(self._epoch) + ")", flush=True)
                 return
+            if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
+                print("[feeder] slot" + str(self.slot.index)
+                      + " stale idle chunk dropped (real input arrived)", flush=True)
+                return
+        if emit_audio and timeline_start_s is not None and len(frames):
+            queued_video_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
+            audio_played_s = (self.slot.audio_out.played_samples
+                              / max(1, self.slot.audio_out.sample_rate))
+            drop_count = lip_catchup_frame_count(
+                audio_played_s,
+                queued_video_s,
+                timeline_start_s,
+                len(frames),
+                self.slot.tgt_fps,
+            )
+            if drop_count:
+                frames = frames[drop_count:]
+                self.slot.video_catchup_events += 1
+                self.slot.video_catchup_frames += drop_count
+                print("[video-sync] slot" + str(self.slot.index)
+                      + " drop=" + str(drop_count)
+                      + " audio=" + str(round(audio_played_s, 3)) + "s"
+                      + " queued=" + str(round(queued_video_s, 3)) + "s"
+                      + " source=" + str(round(timeline_start_s, 3)) + "s",
+                      flush=True)
         if ANTIFLICKER:
-            frames = self._stabilize(frames, chunk_epoch)
-        self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
+            frames = self._stabilize(
+                frames, chunk_epoch,
+                apply_filter=should_apply_antiflicker(emit_audio),
+            )
+        # Keep the final generation check and queue insertion atomic with
+        # push24k's epoch bump + sink.clear(). Otherwise real input can arrive
+        # after the check but before this push and stale idle frames still win.
+        with self.lock:
+            if self._epoch != chunk_epoch:
+                print("[feeder] slot" + str(self.slot.index)
+                      + " stale chunk dropped before sink push", flush=True)
+                return
+            if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
+                print("[feeder] slot" + str(self.slot.index)
+                      + " stale idle chunk dropped before sink push", flush=True)
+                return
+            self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
         if valid_samples is None:
             valid_samples = len(chunk_16k)
         if output_pcm is None:
@@ -497,25 +982,46 @@ class Feeder:
                 ).astype(np.float32)
             else:
                 output_pcm = np.zeros(0, dtype=np.float32)
-        pcm_out = np.clip(output_pcm * 32768.0, -32768, 32767).astype(np.int16)
-        self.slot.audio_out.push(pcm_out)
-        if self._round_pending:
-            self._round_pending = False
-            lat_ms = round((t_frames_ready - self.slot.round_start_ts) * 1000, 1)
+        if emit_audio:
+            self.slot.audio_out.release_playout()
+        round_marker = None
+        if emit_audio:
+            with self.lock:
+                # PCM ingress may begin a newer semantic round while this older
+                # GPU chunk is between frames-ready and metric recording. An
+                # older chunk must not consume that newer marker (the old code
+                # produced impossible negative first-frame latency). Leave it
+                # pending for the first chunk that actually started after the
+                # marker instead.
+                if self._round_pending and self.slot.round_start_ts <= t_chunk_ready:
+                    round_marker = (self.slot.round_count, self.slot.round_start_ts)
+                    self._round_pending = False
+        if round_marker is not None:
+            round_no, round_start_ts = round_marker
+            lat_ms = round((t_frames_ready - round_start_ts) * 1000, 1)
             self.slot.round_latencies.append(lat_ms)
-            print("[round] slot" + str(self.slot.index) + " #" + str(self.slot.round_count)
+            print("[round] slot" + str(self.slot.index) + " #" + str(round_no)
                   + " first-frame-latency " + str(lat_ms) + "ms", flush=True)
 
     def _loop(self):
         cs = self.slot.chunk_samples
         while True:
             todo = None
+            complete_now = False
+            idle_input_seq = None
             with self.lock:
                 if len(self.acc) >= cs and self.t0 is not None:
-                    ahead_s = self.slot.audio_out.depth_samples / self.slot.audio_out.sample_rate
+                    # The audio queue now holds ingress PCM before GPU work.
+                    # Throttle only generated video depth; using audio depth
+                    # here would postpone lip rendering until speech nearly
+                    # finished and defeat the shared start gate.
+                    ahead_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
                     if ahead_s < self.max_ahead_s:
                         output_samples = min(len(self.acc_out), int(round(cs * self.sr_in / self.sr_eng)))
-                        todo = (self.acc[:cs].copy(), cs, self.acc_out[:output_samples].copy())
+                        timeline_start_s = (self.timeline_base_s
+                                            + self.consumed / max(1, self.sr_eng))
+                        todo = (self.acc[:cs].copy(), cs,
+                                self.acc_out[:output_samples].copy(), timeline_start_s)
                         self.acc = self.acc[cs:]
                         self.acc_out = self.acc_out[output_samples:]
                         self.consumed += cs
@@ -534,30 +1040,60 @@ class Feeder:
                     self.acc = np.zeros(0, dtype=np.float32)
                     self.acc_out = self.acc_out[output_samples:]
                     self._finish_pending = False
+                    timeline_start_s = (self.timeline_base_s
+                                        + self.consumed / max(1, self.sr_eng))
                     self.consumed += valid
-                    todo = (padded, valid, output_pcm)
+                    todo = (padded, valid, output_pcm, timeline_start_s)
+                if todo is None and self._complete_pending and len(self.acc) == 0:
+                    self._complete_pending = False
+                    complete_now = True
+            if complete_now:
+                # "finish" means no more input will arrive, not that every
+                # queued/model chunk has already reached playout. Mark the turn
+                # complete only after this feeder has produced its final chunk;
+                # otherwise a real mid-turn underrun is hidden as natural tail
+                # silence and the adaptive prebuffer never learns from it.
+                self.slot.audio_out.mark_input_complete()
             if todo is not None:
                 if self._idle_on:
                     self._idle_on = False
                     self.slot.sink.clear()
-                    self.slot.audio_out.clear()
                     print("[feeder] slot" + str(self.slot.index)
                           + " real audio arrived, stop idle feed", flush=True)
-                self._gen_chunk(todo[0], todo[1], todo[2])
+                self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])
                 continue
             now = time.time()
             with self.lock:
                 real_silent = ((now - self.last_in) > 1.0 and len(self.acc) < cs
                                 and self.slot.audio_out.depth_samples == 0
                                 and self.slot.sink.depth() == 0)
+                if real_silent:
+                    idle_input_seq = self._real_input_seq
             has_conn = any(pc.connectionState in ("new", "connecting", "connected")
                            for pc in self.slot.pcs)
             if has_conn and real_silent and now >= self._idle_due and self.slot.healthy:
-                if not self._idle_on:
-                    self._idle_on = True
+                idle_started = False
+                with self.lock:
+                    idle_still_valid = (self._real_input_seq == idle_input_seq
+                                        and (time.time() - self.last_in) > 1.0
+                                        and len(self.acc) < cs)
+                    if idle_still_valid and not self._idle_on:
+                        self._idle_on = True
+                        idle_started = True
+                if not idle_still_valid:
+                    continue
+                if idle_started:
                     print("[feeder] slot" + str(self.slot.index)
                           + " real silence, connection alive, start idle feed", flush=True)
-                self._gen_chunk(np.zeros(cs, dtype=np.float32))
+                # WebRTC already emits zero PCM while speech is absent. Queueing
+                # another 960 ms of generated silence here makes the next real
+                # phrase clear/re-arm the audio buffer and inserts a new
+                # 200-350 ms start gate inside one conversational turn. Idle
+                # generation is video-only; real PCM keeps one continuous clock.
+                self._gen_chunk(
+                    np.zeros(cs, dtype=np.float32), emit_audio=False,
+                    idle_input_seq=idle_input_seq,
+                )
                 self._idle_due = now + cs / self.sr_eng
             else:
                 time.sleep(0.02)
@@ -693,6 +1229,7 @@ def health_snapshot(slot, wake_ts=None):
         gen_p95 = round(srt[max(0, int(len(srt) * 0.95) - 1)], 1)
     ao = slot.audio_out
     sink = slot.sink
+    round_latencies = list(slot.round_latencies)
     return {
         "frames": sink.count if sink else 0,
         "output_resolution": {
@@ -701,7 +1238,11 @@ def health_snapshot(slot, wake_ts=None):
         },
         "load": slot.load_report,
         "round_count": slot.round_count,
-        "round_latencies_ms": list(slot.round_latencies),
+        "round_latencies_ms": round_latencies,
+        "round_latency_integrity": {
+            "negative_count": sum(1 for value in round_latencies if value < 0),
+            "min_ms": min(round_latencies) if round_latencies else None,
+        },
         "uptime_s": round(time.time() - (wake_ts if wake_ts else time.time()), 1),
         "sink_depth": len(sink.q) if sink else 0,
         "latency_ms": {
@@ -723,8 +1264,36 @@ def health_snapshot(slot, wake_ts=None):
             "prebuffer_s": ao.default_prebuffer_s if ao else None,
             "last_prebuffer_s": ao.last_prebuffer_s if ao else None,
             "next_prebuffer_s": ao.next_prebuffer_s if ao else None,
+            "adaptive_prebuffer_s": round(ao.adaptive_prebuffer_s, 3) if ao else None,
+            "adaptive_target_s": round(ao.adaptive_target_s, 3) if ao else None,
+            "adaptive_min_s": ao.adaptive_min_s if ao else None,
+            "adaptive_max_s": ao.adaptive_max_s if ao else None,
+            "generation_p95_ms": (round(ao.generation_p95_ms, 1)
+                                    if ao and ao.generation_p95_ms is not None else None),
+        },
+        "audio_sender": {
+            "rebase_count": slot.audio_sender_rebase_count,
+            "max_late_ms": round(slot.audio_sender_max_late_ms, 1),
+            "recent_late_ms": list(slot.audio_sender_recent_late_ms),
         },
         "video_underrun": {"count": sink.underrun_count if sink else 0},
+        "video_sync": {
+            "catchup_events": slot.video_catchup_events,
+            "catchup_frames": slot.video_catchup_frames,
+            "idle_invalidations": slot.idle_invalidation_count,
+            "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
+                                if ao else 0),
+        },
+        "model_turn_state": {
+            "motion_resets": slot.motion_reset_count,
+            "motion_reset_failures": slot.motion_reset_failures,
+            "seed": TURN_SEED if TURN_SEED >= 0 else None,
+            "seed_resets": slot.turn_seed_reset_count,
+            "first_chunk_retries": slot.first_chunk_retry_count,
+            "first_chunk_retry_failures": slot.first_chunk_retry_failures,
+            "first_chunk_align_events": slot.first_chunk_align_events,
+            "first_chunk_align_frames": slot.first_chunk_align_frames,
+        },
     }
 
 

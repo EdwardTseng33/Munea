@@ -25,6 +25,10 @@ def main():
     assert probe.validate_voice_canary_url(canary + "/") == canary
     legacy_canary = "wss://canary-0716-1804---munea-voice-staging-491603544409.asia-east1.run.app"
     assert probe.validate_voice_canary_url(legacy_canary) == legacy_canary
+    staged_canary = "wss://stg-0803-200347-122f62b---munea-voice-staging-fiu65jd4da-de.a.run.app"
+    assert probe.validate_voice_canary_url(staged_canary) == staged_canary
+    production_canary = "wss://prod-0810-161906-1d3d6d6---munea-voice-fiu65jd4da-de.a.run.app"
+    assert probe.validate_voice_canary_url(production_canary) == production_canary
     for unsafe in (
         "ws://canary-0716-1804---munea-voice-staging-fiu65jd4da-de.a.run.app",
         "wss://voice.example",
@@ -325,7 +329,9 @@ def main():
     assert "--access-token" not in wrapper
     assert "--access-token" not in SOURCE.read_text(encoding="utf-8")
     assert "munea-gateway-admin-key" not in wrapper
-    assert "VoiceCanaryUrl must be a query-free wss://canary-*" in wrapper
+    assert "VoiceCanaryUrl must be a query-free wss://canary-*, wss://stg-* or wss://prod-*" in wrapper
+    assert "Run serving production Voice reconnect probe" in wrapper
+    assert "--media-check" in wrapper
     assert "fespbkdwafueyonppzwq.supabase.co" in wrapper
     print("Voice chain probe contracts: PASS")
 

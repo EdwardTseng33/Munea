@@ -7,15 +7,27 @@
   --fs-page: 24px; --fs-section: 18px; --fs-card: 16px; --fs-body: 16px; --fs-sub: 14px; --fs-note: 12.5px;
   --fs-action-primary: 16px;
   --fw-title: 700; --fw-em: 600; --fw-body: 400; --fw-action-primary: 800;
-  /* Edward 2026-07-03 定色（munea.net 唯一標準）：薄荷綠 / 暮色橘 / 白 / 石墨黑 */
+  /* Edward 2026-07-30 定色重申（違者退回）：主企業色＝薄荷綠不是深綠；橘＝Logo 上的那個橘。
+     深綠 #236C66 僅限文字強調，不得當主色／按鈕底。後台 admin.css 同值，兩邊要一起改。
+     同日晚間補訓：橘不做「文字」色（達標/隨時/設定頁的深橘字被抓＝規範外）——
+     文字只用白/石墨黑、功能性小標用薄荷綠深階（7/03 鐵則本來就這樣寫）；橘只做底色/圖示/圖形。 */
   --teal: #3AA8A0;          /* 薄荷綠（主） */
   --teal-d: #2E8A83;        /* 薄荷綠·深（按下/文字級） */
   --teal-dd: #236C66;       /* 深綠·僅文字強調用 */
-  --btn-green: #2A7E78;     /* 主按鈕深薄荷綠（白字 4.82:1 · WCAG AA；舊 #37A099 只有 3.16:1） */
+  --btn-green: #37A099;     /* 主按鈕薄荷綠（Edward 7/30 拍板品牌優先；白字 3.16:1 只到 AA 大字級，7/24 的深綠 #2A7E78 退場） */
   --mint: #E8F2EE; --mint-2: #D9EFE8;
   --cream: #F4F0E8; --cream-2: #FFFFFF; --surface: #FFFFFF;
   --ink: #3A352E; --ink-2: #4A5651; --muted: #5A6963;   /* 石墨黑（官網同款） */
-  --coral: #D98841; --coral-d: #A8611E; --coral-soft: #F8E9D8;   /* 暮色橘 */
+  --coral: #F4A261; --coral-d: #E08B45; --coral-soft: #F8E9D8;   /* Logo 橘（-d＝圖示/圖形深階·非文字色） */
+  /* 小字點綴專用的暖橘（Edward 2026-07-31：「整個畫面都綠色會單調失衡，橘色要暖一點不要太暗」）。
+     取捨是量出來的，不是憑感覺挑：白卡上 --coral 只有 2.06、--coral-d 2.64，小字看不清；
+     舊深字 #A8611E 有 4.78 但 Edward 嫌暗。#B0651B 在白卡 4.45（AA 門檻 4.5，差 0.05）、
+     米色底 3.91——比舊深字暖一階、又不至於糊掉。只用在「粗體小標籤」這種短詞
+    （隨時／寧寧幫你留意／區塊標題），不用在整段內文，內文仍走 --ink／--muted。 */
+  /* 2026-07-31：Edward「整個畫面都是綠的」→ 小字改暖橘點綴。原訂 #B0651B 對白底
+     只有 4.45、差一點點沒過 AA 小字門檻（4.5）——我們的用戶是長輩，讀得清楚比
+     好看更優先。壓深到 #AB6119＝4.71，肉眼幾乎看不出差別，暖色點綴照樣成立。 */
+  --coral-text: #AB6119;
   --gold: #E0B354; --gold-soft: #F6EAD0;
   --line: #EAE3D6;          /* 官網線色 */
   --deep: #36423E; --deep-2: #3F4C47; --deep-card: #485751;      /* 石墨綠模板色（官網深色塊 · 7/4 提亮一階） */
@@ -77,7 +89,7 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 
 /* 區塊標題三層次（Careon 手法） */
 .sec-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 26px 0 13px; }
-.sec-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--coral-d); margin-bottom: 3px; }
+.sec-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--teal-dd); margin-bottom: 3px; }
 .sec-head h2 { font-size: 20px; font-weight: 800; color: var(--ink); }
 #home .sec-head h2 { font-family: var(--serif); font-size: 18px; font-weight: 900; }
 .sec-head .more { font-size: 15px; color: var(--teal); font-weight: 600; align-self: flex-end; }
@@ -96,7 +108,7 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .home-sep { color: var(--muted); opacity: .55; }
 
 .greeting-wrap { position: relative; margin: 4px 0 16px; }
-.greeting-kicker { font-family: var(--sans); font-size: 12.5px; font-weight: 700; letter-spacing: .12em; color: var(--coral); text-transform: uppercase; margin-bottom: 2px; }
+.greeting-kicker { font-family: var(--sans); font-size: 12.5px; font-weight: 700; letter-spacing: .12em; color: var(--teal-dd); text-transform: uppercase; margin-bottom: 2px; }
 .greeting-big { font-family: var(--serif); max-width: 310px; font-size: 27px; font-weight: 900; color: var(--ink); letter-spacing: 0; line-height: 1.16; }
 
 /* 安心存摺 條（升級：獎章圓 + 進度感） */
@@ -117,7 +129,9 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .bc-avatar .av-stripes { position: absolute; inset: 0; background: none; }
 .bc-avatar .online { position: absolute; right: 4px; bottom: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); border: 3px solid #fff; }
 .bc-info { flex: 1; min-width: 0; }
-.bc-eyebrow { display: inline-flex; align-items: center; color: var(--coral-d); font-size: 13px; font-weight: 600; letter-spacing: .03em; margin-bottom: 7px; }
+/* 「寧寧幫你留意」這行小標改暖橘（Edward 2026-07-31）——卡片內容已經有綠色圖示，
+   小標再用綠就整張卡同一個調子；橘色小標配綠圖示，冷暖各站一邊才有層次。 */
+.bc-eyebrow { display: inline-flex; align-items: center; color: var(--coral-text); font-size: 13px; font-weight: 600; letter-spacing: .03em; margin-bottom: 7px; }
 .bc-name { font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; line-height: 1.1; position: relative; z-index: 1; }
 .bc-name .bc-tag { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--teal-dd); background: var(--mint); padding: 3px 9px; border-radius: 999px; }
 .bc-status { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 15px; font-weight: 700; margin-bottom: 12px; }
@@ -140,15 +154,17 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .task-item + .task-item { border-top: 1px solid var(--line); }
 .task-ico { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
 .task-ico .ic { width: 21px; height: 21px; }
-.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.mood { background: #236C66; color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
+.task-ico.pill { background: var(--coral); color: #fff; } .task-ico.walk { background: var(--teal); color: #fff; } .task-ico.mood { background: var(--teal-d); color: #fff; } .task-ico.chat { background: var(--mint-2); color: var(--teal); } .task-ico.visit { background: var(--gold); color: #fff; }
 .task-body { flex: 1; }
 .task-title { font-size: 15px; font-weight: 700; color: var(--ink); }
 .task-sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
 .task-check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex-shrink: 0; color: transparent; transition: .2s; }
 .task-item.done .task-check { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.05); }
 .task-item.done .task-title { color: var(--muted); text-decoration: line-through; }
-.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
-.task-time.coral { color: var(--coral); }
+/* 「隨時／達標」這欄回到暖橘（Edward 2026-07-31）：之前統一成深綠，整個畫面只剩一個色調。
+   .coral 這個 class 名字本來就是橘的意思，值卻被改成 teal-dd——名字跟顏色打架，一併收回來。 */
+.task-time { font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--coral-text); flex: 0 0 auto; max-width: 92px; text-align: center; line-height: 1.2; white-space: normal; }
+.task-time.coral { color: var(--coral-text); }
 html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 
 .fam-peek { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); margin-top: 14px; }
@@ -199,7 +215,9 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .mpc-streak { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; display: flex; align-items: center; gap: 8px; color: var(--teal-d); font-size: 15px; font-weight: 600; }
 .mpc-streak .ic { width: 18px; height: 18px; }
 .med-actions { display: flex; gap: 12px; }
-.med-actions button { flex: 1; padding: 17px; border-radius: var(--radius-sm); font-family: var(--display); font-weight: 700; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* min-width: 0 是必要的（2026-08-10 全畫面驗收抓到）：並排的按鈕預設不會縮到比內容窄，
+   西班牙文＋最大字級時「稍後提醒」把按鈕整個推出畫面 11px。加了之後文字會換行而不是溢出。 */
+.med-actions button { flex: 1; min-width: 0; padding: 17px; border-radius: var(--radius-sm); font-family: var(--display); font-weight: 700; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .med-actions .taken { border: none; background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); flex: 1.4; }
 .med-actions .taken .ic { color: #fff; }
 .med-actions .snooze { border: 1.5px solid var(--line); background: #fff; color: var(--ink-2); line-height: 1.3; font-size: 15px; }
@@ -210,7 +228,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 /* ============ 狀態頁 ============ */
 .page-head { margin: 6px 0 16px; }
 #family .page-head { margin-bottom: 16px; }
-.page-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--coral-d); margin-bottom: 4px; }
+.page-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--teal-dd); margin-bottom: 4px; }
 .page-title { font-family: var(--serif); font-size: 28px; font-weight: 800; color: var(--ink); }
 .page-sub { font-size: 15px; color: var(--muted); margin-top: 4px; }
 .stat-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; margin-bottom: 16px; }
@@ -228,8 +246,8 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .stat-tile.t-sleep .st-val { color: #8A6410; }
 .stat-tile.t-med { cursor: pointer; font: inherit; }
 .stat-tile.t-med .st-ico { background: var(--coral); color: #FFF; }
-.stat-tile.t-med .st-val { color: var(--coral-d); }
-.stat-tile.t-act .st-ico { background: var(--teal-dd); color: #FFF; }
+.stat-tile.t-med .st-val { color: var(--ink); }
+.stat-tile.t-act .st-ico { background: var(--teal-d); color: #FFF; }
 .stat-tile.t-act .st-val { color: var(--teal-dd); }
 .stat-tile .pill-dots { position: absolute; right: 12px; top: 12px; margin: 0; }
 .stat-tile .pill-dots i { width: 11px; height: 6px; }
@@ -263,8 +281,8 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .md-head b { font-size: 15px; font-weight: 800; color: var(--ink); }
 .md-status { margin-left: auto; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
 .md-status.ok { background: var(--mint); color: var(--teal-dd); }
-.md-status.warn { background: var(--coral-soft); color: var(--coral-d); }
-.md-status.alert { background: var(--coral-soft); color: var(--coral-d); }
+.md-status.warn { background: var(--coral-soft); color: var(--ink); }
+.md-status.alert { background: var(--coral-soft); color: var(--ink); }
 .md-chart { display: flex; align-items: flex-end; gap: 6px; height: 72px; padding: 0 2px; }
 .md-chart i { flex: 1; background: var(--mint); border-radius: 5px 5px 0 0; min-height: 6px; transition: height .3s ease; }
 .md-chart i.now { background: var(--teal-d); }
@@ -299,7 +317,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .focus-card .fc-body { flex: 1; min-width: 0; }
 .focus-card .fc-top { display: flex; align-items: baseline; gap: 8px; }
 .focus-card .fc-top b { font-size: 17px; font-weight: 800; color: var(--ink); }
-.focus-card .fc-val { margin-left: auto; font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--coral-d); white-space: nowrap; }
+.focus-card .fc-val { margin-left: auto; font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--ink); white-space: nowrap; }
 .focus-card .fc-val small { font-size: 13px; color: var(--muted); font-weight: 600; }
 .focus-card .fc-read { font-size: 15px; color: var(--ink-2); line-height: 1.5; margin-top: 4px; text-wrap: pretty; }
 .focus-card .fc-chev { color: var(--muted); flex-shrink: 0; }
@@ -370,16 +388,21 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .auth-title { font-family: var(--display); font-weight: 800; color: var(--ink); font-size: 17px; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
 .auth-email { font-size: 13px; color: var(--teal-dd); font-weight: 700; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 185px; }
 .auth-email:empty { display: none; }
-.auth-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+/* 頭像＋方案標籤直排（Edward 2026-07-31）：標籤講的是「這個人是什麼會員」，跟著人走才對。 */
+.auth-id { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+/* 右欄只剩一顆按鍵之後改置中，卡片左右兩邊的重心才對得起來。 */
+.auth-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 8px; flex-shrink: 0; }
 .auth-primary, .auth-secondary, .auth-dev-btn { border: none; font-family: var(--display); font-weight: 800; cursor: pointer; }
 .auth-primary { min-width: 72px; height: 40px; border-radius: 13px; color: #fff; background: var(--btn-green); font-size: var(--fs-action-primary); font-weight: var(--fw-action-primary); }
-.auth-secondary { min-width: 72px; height: 40px; border-radius: 13px; color: var(--teal-dd); background: var(--mint); border: 1px solid var(--teal-d); font-family: var(--display); font-weight: 800; font-size: var(--fs-action-primary); padding: 0 14px; }
+/* 登出要跟登入一眼分得出來（Edward 2026-07-31）：登入是要人往前走的動作、給實心綠；
+   登出是離開，做成白底灰框的次要鍵——顏色不同之外，份量也不同，才不會誤按。 */
+.auth-secondary { min-width: 72px; height: 40px; border-radius: 13px; color: var(--muted); background: #fff; border: 1px solid var(--line); font-family: var(--display); font-weight: 800; font-size: var(--fs-action-primary); padding: 0 14px; }
 /* 會員身份標籤（帳號卡 · FREE/PLUS/PRO · Edward 7/8） */
 .mem-badge { font-family: var(--display); font-size: 12.5px; font-weight: 800; letter-spacing: .06em; border-radius: 999px; padding: 3px 10px; line-height: 1.4; flex-shrink: 0; }
 .mem-badge.free { background: var(--mint); color: var(--teal-dd); }
 .mem-badge.plus { background: var(--teal); color: #fff; }
 .mem-badge.pro { background: var(--gold); color: #fff; }
-.mem-badge.test { background: var(--coral-soft); color: var(--coral-d); }
+.mem-badge.test { background: var(--coral-soft); color: var(--ink); }
 .set-list { background: var(--surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden; }
 .set-row { display: flex; align-items: center; gap: 14px; padding: 16px 18px; font-size: 17px; color: var(--ink); }
 .set-row + .set-row { border-top: 1px solid var(--line); }
@@ -506,7 +529,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .qc-del { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
 .qc-del .ic { width: 15px; height: 15px; }
 .qc-del:active { background: rgba(31,45,41,.05); }
-.qc-del.arm { background: var(--coral-soft); color: var(--coral-d); border-color: transparent; }
+.qc-del.arm { background: var(--coral-soft); color: var(--danger-d); border-color: transparent; }
 /* 活動詳情頁 */
 #actDetailBody .ad-kind { font-size: 13px; font-weight: 700; color: var(--teal-dd); letter-spacing: .05em; }
 #actDetailBody .ad-title { font-family: var(--display); font-size: 23px; font-weight: 800; color: var(--ink); margin: 4px 0 10px; line-height: 1.25; }
@@ -515,12 +538,63 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 #actDetailBody .ad-lbl { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
 #actDetailBody .ad-avs { display: flex; gap: 9px; flex-wrap: wrap; }
 #actDetailBody .ad-avs .init-ava { width: 46px; height: 46px; font-size: 16px; border-radius: 50%; background-size: cover; background-position: center; }
+/* 走路排行那排頭像原本是方的——.init-ava 的圓角是跟父層繼承的，這裡父層沒設就變方框 */
+#actDetailBody .walk-p .init-ava { width: 30px; height: 30px; border-radius: 50%; font-size: 13px; flex: 0 0 30px; }
+/* 上下留 10px：皇冠是往徽章外面長的，行距要夠它站，而且每一行都一樣高才對得齊 */
+#actDetailBody .walk-p { display: flex; align-items: center; gap: 10px; padding: 10px; position: relative; overflow: hidden; border-radius: 12px; }
+/* 每個人佔全家的比例，畫成一條淡淡的底（跟投票同一套語言：條長就是佔比）。
+   數字看得懂的人看 %，看不懂的人也看得出誰那條比較長。 */
+#actDetailBody .walk-p .wp-bar { position: absolute; left: 0; top: 0; bottom: 0; background: #E7DECF; opacity: .72; border-radius: 12px; transition: width .5s cubic-bezier(.4, 0, .2, 1); }
+#actDetailBody .walk-p > *:not(.wp-bar) { position: relative; }
+#actDetailBody .walk-p .wp-pct { margin-left: auto; font-size: 12.5px; font-weight: 700; color: var(--muted); min-width: 34px; text-align: right; }
+#actDetailBody .walk-p.lead .wp-bar { background: #F0DCAE; opacity: .78; }
+#actDetailBody .walk-p.lead .wp-pct { color: #A97A1C; }
+#actDetailBody .walk-p b { flex: 1; font-weight: 700; font-size: 14.5px; color: var(--ink); }
+#actDetailBody .walk-p span:last-child { font-weight: 700; font-size: 14.5px; color: var(--teal-dd); }
+/* 名次（Edward 2026-08-01「一起運動這裡可以做個排名」）
+   第一名給金色實心、二三名給薄荷底，其餘只是淡淡的數字——這是家人一起走路，
+   不是排行榜比輸贏；名次要看得到，但不能讓走比較少的人覺得被公告。 */
+/* 每一名的徽章尺寸一律相同——第一名放大一圈的話，後面整欄的頭像和名字就會跟它對不齊
+   （Edward 2026-08-01 一眼看出來）。冠軍靠皇冠和金色區分，不靠大小。 */
+#actDetailBody .walk-p .walk-rank { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; color: var(--muted); background: transparent; position: relative; }
+/* 前三名做成獎牌（Edward 2026-08-01「名次徽章可以遊戲化一點」）：
+   金銀銅漸層＋一道內側亮邊當光澤＋往下的投影，小小一顆也看得出是立體的獎章。
+   第一名再大一圈並加一頂小皇冠——一眼就知道今天誰最會走。 */
+#actDetailBody .walk-p .walk-rank.r1,
+#actDetailBody .walk-p .walk-rank.r2,
+#actDetailBody .walk-p .walk-rank.r3 { color: #fff; font-size: 13px; text-shadow: 0 1px 1px rgba(0, 0, 0, .18); }
+#actDetailBody .walk-p .walk-rank.r1 { background: linear-gradient(160deg, #F5D384 0%, #E0B354 46%, #BE8F2E 100%); box-shadow: 0 2px 6px rgba(190, 143, 46, .42), inset 0 1px 0 rgba(255, 255, 255, .6); }
+#actDetailBody .walk-p .walk-rank.r2 { background: linear-gradient(160deg, #E4EAEE 0%, #C3CBD0 46%, #9BA6AE 100%); box-shadow: 0 2px 5px rgba(155, 166, 174, .38), inset 0 1px 0 rgba(255, 255, 255, .65); }
+#actDetailBody .walk-p .walk-rank.r3 { background: linear-gradient(160deg, #E2A87C 0%, #C9855A 46%, #A2653F 100%); box-shadow: 0 2px 5px rgba(162, 101, 63, .35), inset 0 1px 0 rgba(255, 255, 255, .5); }
+/* 冠軍的小皇冠：用邊框畫三個尖角，不必再載一張圖 */
+#actDetailBody .walk-p .walk-rank.r1::before { content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 13px; height: 8px; background: #E8A93C; clip-path: polygon(0 100%, 0 22%, 25% 62%, 50% 0, 75% 62%, 100% 22%, 100% 100%); }
+#actDetailBody .walk-p .walk-rank.none { color: #C9CFCD; font-weight: 400; }
+#actDetailBody .walk-p.lead b { color: var(--ink); }
+#actDetailBody .walk-p.lead span:last-child { color: #A97A1C; }
+#actDetailBody .walk-p.quiet b { color: var(--ink-2); }
+#actDetailBody .walk-p.quiet span:last-child { color: var(--muted); font-weight: 600; font-size: 13.5px; }
 #actDetailBody .ad-interact { margin-top: 20px; }
+/* 活動詳情裡的說明文（步數怎麼來、誰要去…）以前完全沒有樣式，用瀏覽器預設的行高
+   擠成一團（Edward 2026-08-01「說明文字間距太窄」）。跟卡片上的說明同一階：
+   13.5px、行高 1.75，長輩讀長句才不會黏在一起。 */
+#actDetailBody .qc-num, .quest-card .qc-num { font-size: 13.5px; line-height: 1.75; color: var(--muted); margin-top: 10px; }
 #actDetailBody .ad-note { background: var(--mint); border-radius: 16px; padding: 14px 16px; font-size: 15.5px; line-height: 1.65; color: var(--ink); }
 #actDetailBody .ad-rewards { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; color: var(--ink); }
-.ad-del { display: inline-flex; align-items: center; gap: 6px; margin-top: 26px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
+/* 按鈕四階（2026-08-01 定，Edward 要一套規範）
+ *   ① 主要動作　實心薄荷綠白字　　　例：開始聊聊、登入
+ *   ② 次要動作　白底綠框綠字　　　　例：去看看、訂閱方案
+ *   ③ 中性離開　白底灰框灰字　　　　例：登出
+ *   ④ 破壞性　　白底紅字淡紅框，按第一下才變實心淡紅底　例：刪除活動
+ * 破壞性刻意不用實心紅：那會在畫面上比「開始聊聊」還搶眼，長輩容易誤按。
+ * 但也不能像以前那樣做成灰的——刪除是回不來的動作，要看得出它跟別的鍵不一樣。
+ * 位置擺畫面最下方、置中：不跟上面的內容搶，要找的時候在固定的地方。 */
+.ad-del { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; max-width: 260px; margin: 30px auto 4px; padding: 12px 18px; border-radius: 999px; border: 1.5px solid #F0CFC9; background: #fff; color: var(--danger-d); font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .15s, color .15s, border-color .15s; }
 .ad-del .ic { width: 16px; height: 16px; }
-.ad-del.arm { background: var(--coral-soft); color: var(--coral-d); border-color: transparent; }
+.ad-del.arm { background: var(--coral-soft); color: var(--danger-d); border-color: transparent; }
+/* 「不看這個活動」＝只收起自己的畫面，不是破壞性動作，所以走按鈕規範第③階的中性灰，
+   不借用刪除的紅色——紅色會讓人以為按下去大家的活動都沒了。 */
+.ad-del.ad-hide { border-color: var(--line); color: var(--ink-2); }
+.ad-del.ad-hide.arm { background: #EFEDE8; color: var(--ink); border-color: transparent; }
 .quest-card .qc-kicker { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--teal-dd); margin-bottom: 6px; }
 .quest-card .qc-kicker .ic { width: 16px; height: 16px; }
 .quest-card .qc-goal { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
@@ -574,7 +648,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .health-row .hr-state { font-size: 14px; color: var(--muted); margin-top: 1px; }
 .health-row .hr-lights { display: flex; gap: 6px; }
 .health-row .hr-lights .lt { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--mint); color: var(--teal-d); }
-.health-row .hr-lights .lt.warn { background: var(--coral-soft); color: var(--coral); }
+.health-row .hr-lights .lt.warn { background: var(--coral-soft); color: var(--ink); }
 .health-row .hr-lights .lt .ic { width: 14px; height: 14px; }
 
 /* 個人健康（點某人後） */
@@ -654,7 +728,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .auth-provider .ic,
 .auth-provider .apple-mark { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 21px; height: 21px; display: block; flex-shrink: 0; }
 .auth-provider .apple-mark { fill: currentColor; stroke: none; }
-.auth-dev-btn { width: 100%; margin-top: 10px; min-height: 46px; border-radius: 15px; background: var(--coral-soft); color: var(--coral-d); font-size: 15px; }
+.auth-dev-btn { width: 100%; margin-top: 10px; min-height: 46px; border-radius: 15px; background: var(--coral-soft); color: var(--ink); font-size: 15px; }
 .auth-message { min-height: 20px; font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.4; }
 .auth-message.is-error { color: var(--danger); font-weight: 700; }
 .auth-message.is-ok { color: var(--teal-dd); font-weight: 700; }
@@ -725,6 +799,13 @@ html[lang="es"] #connect .cn-row .cn-btn {
 /* 讀取實況（幾點讀的、讀到哪幾項／失敗原因）——讓人能確定到底讀到了沒 */
 .cn-health-read { margin: -10px 4px 18px; color: var(--teal-dd); font-size: 12.5px; line-height: 1.5; }
 .cn-health-read[hidden] { display: none; }
+/* 「接下來點這幾下」——蘋果不給直達的路，只能把路寫清楚（Strava／MyFitnessPal 同樣做法） */
+.cn-health-steps { margin: -6px 4px 18px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.cn-health-steps[hidden] { display: none; }
+.chs-title { margin: 0 0 8px; font-family: var(--display); font-weight: 800; font-size: 14px; color: var(--ink); }
+.chs-list { margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 13.5px; line-height: 1.75; }
+.chs-list li::marker { color: var(--teal-dd); font-weight: 800; }
+.chs-alt { margin: 10px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
 .sr-on.off { color: var(--muted); }
 .sr-on.off .d { background: var(--muted); }
 .cn-note { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 15px 16px; margin-top: 18px; }
@@ -880,19 +961,22 @@ html[lang="es"] #connect .cn-row .cn-btn {
 .cue-speak b:nth-child(1){ animation-delay: 0s; } .cue-speak b:nth-child(2){ animation-delay: .12s; } .cue-speak b:nth-child(3){ animation-delay: .24s; } .cue-speak b:nth-child(4){ animation-delay: .36s; } .cue-speak b:nth-child(5){ animation-delay: .48s; }
 @keyframes cueSpeak { 0%,100% { transform: scaleY(.5); } 50% { transform: scaleY(2.4); } }
 
-.face-screen[data-state="listening"] .face-wave { display: inline-flex; }
+/* 通話一開始（撥通中）就顯示，一路留到掛斷——接通後畫面不該是空的（Edward 2026-08-10）。
+   撥通中／她在說話時它是靜止的一排小點，只有長輩開口才起波。 */
+.face-screen[data-state="connecting"] .face-wave,
+.face-screen[data-state="listening"]  .face-wave,
+.face-screen[data-state="speaking"]   .face-wave { display: inline-flex; }
 .face-screen[data-state="thinking"]  .cue-think  { display: inline-flex; }
-.face-screen[data-state="speaking"]  .face-wave { display: inline-flex; }
 /* 待命態：不顯 cue（臉靜靜呼吸眨眼即可）*/
 
-/* 聲波波頻：JS 依「真實音量」逐格設 scaleY；沒聲音低伏收攏，不再是常亮假 loading */
-/* 波頻：不用深色膠囊底，改浮在畫面上的圓潤發光細柱（跟著真實音量跳、間距拉開、不是一片綠塊）*/
-.face-cue .cue.face-wave { background: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 0 !important; gap: 5px !important; }
-.face-wave i { display: block; width: 3.5px; height: 20px; border-radius: 999px; background: #3ED4C2;
-  box-shadow: 0 0 11px rgba(62,212,194,.95), 0 2px 6px rgba(0,0,0,.28);
-  transform: scaleY(.3); transform-origin: center; transition: transform .12s cubic-bezier(.34,1.4,.5,1); }
-.face-screen[data-state="listening"] .face-wave i { background: #3ED4C2; }   /* 收音（聽你說）＝亮療癒綠 */
-.face-screen[data-state="speaking"]  .face-wave i { background: #16C4AE; box-shadow: 0 0 12px rgba(22,196,174,1), 0 2px 6px rgba(0,0,0,.28); }  /* 講話（她在說）＝深亮綠 */
+/* 收音波紋「點線」（2026-08-10 Edward 從三款提案挑的 C）：細長條配一排小點，畫在 canvas 上。
+   不放任何底色——墊底的暗影由 canvas 貼著形狀畫（見 app.js _paint），
+   底色會在臉上留一塊灰霧（8/10 合成實測）。 */
+.face-cue .cue.face-wave {
+  background: none !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  padding: 0 !important; gap: 0 !important; }
+.face-wave canvas { display: block; width: 236px; height: 46px; }
 
 /* Edward 2026-07-06：圖片不要有動態——移除說話時的臉部微動（改由下方聲波動態表達「在說」） */
 
@@ -1015,6 +1099,12 @@ body:has(#chat.active) .tab-bar { display: none; }
 .p-mei { background: #3AA8A0; color: #FFF; }
 .p-zhi { background: #36423E; color: #FFF; }
 .p-bao { background: #B98A2E; color: #FFF; }
+/* 家人多的時候不夠分（Edward 2026-08-01「顏色可以多元一點」）：原本只有四色＋本人色，
+   七個家人就會有兩個人撞色、看起來像同一個人。補三色湊滿八個，都對得起 teal／coral 的調子。 */
+.p-lin { background: #8B5E7A; color: #FFF; }
+.p-hai { background: #52738C; color: #FFF; }
+.p-ye  { background: #6E7F52; color: #FFF; }
+.p-mo  { background: #A85A47; color: #FFF; }
 .init-ava-lg { font-size: 28px; border-radius: 50%; }
 
 .re-ic { display: inline-flex; }
@@ -1064,7 +1154,11 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 /* ===== 家庭挑戰 · 全家走在進度上（巧思層） ===== */
 .qc-kicker .ic { width: 17px; height: 17px; color: var(--coral-d); }
 .qc-kicker.night .ic { color: #5E7FB6; }
-.qc-days { margin-left: auto; font-size: 13px; color: var(--muted); font-weight: 600; background: var(--cream); border-radius: 100px; padding: 3px 10px; }
+/* 右上角那顆日期／狀態標籤不可以折行（Edward 2026-08-01 指出）——
+   英文「Within 10 days」西文「12 preguntas」都會被擠成兩行、看起來像壞掉。
+   標籤短、優先給它空間；長的是左邊的標題，讓標題去折行才對。 */
+.qc-days { margin-left: auto; flex: 0 0 auto; white-space: nowrap; font-size: 13px; color: var(--muted); font-weight: 600; background: var(--cream); border-radius: 100px; padding: 3px 10px; }
+.quest-card .qc-kicker > :first-child { min-width: 0; }
 .qc-track > i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--teal); border-radius: 100px; }
 
 /* 早睡挑戰：五個月亮點 */
@@ -1083,7 +1177,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .hr-mood.m-upset { color: #6E4488; }
 
 /* ===== 記錄簿 · 故事書時間軸 ===== */
-.book-month { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--coral-d); margin: 4px 0 10px 4px; }
+.book-month { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--teal-dd); margin: 4px 0 10px 4px; }
 .book-timeline { position: relative; padding-left: 18px; }
 .book-timeline::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--line); border-radius: 2px; }
 .book-timeline .book-entry { position: relative; }
@@ -1118,7 +1212,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .qc-rsvp .rsvp .init-ava { width: 26px; height: 26px; border-radius: 50%; font-size: 13px; }
 .qc-rsvp .yes { background: var(--mint); color: var(--teal-dd); }
 .qc-rsvp .no { background: #F1EFE8; color: var(--muted); }
-.qc-rsvp .wait { background: var(--coral-soft); color: var(--coral-d); }
+.qc-rsvp .wait { background: var(--coral-soft); color: var(--ink); }
 
 
 @media (prefers-reduced-motion: reduce) {
@@ -1146,7 +1240,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-btn.ghost { border: 1px solid var(--teal-d); }
 .plan-divider { height: 1px; background: var(--line); margin: 14px 0; }
 .pts-label { font-size: 15px; color: var(--ink); }
-.pts-label b { font-size: 20px; color: var(--coral-d); }
+.pts-label b { font-size: 20px; color: var(--teal-dd); }
 .pts-used { font-size: 13px; color: var(--muted); margin-left: 6px; }
 .pts-bar { height: 8px; background: var(--cream); border-radius: 100px; margin: 8px 0 6px; overflow: hidden; }
 .pts-bar i { display: block; height: 100%; background: var(--coral); border-radius: 100px; }
@@ -1217,6 +1311,23 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .plan-price { white-space: nowrap; color: var(--teal-dd); font-weight: 700; font-size: 20px; }
 .plan-price small { font-size: 13px; font-weight: 600; color: var(--muted); }
 .plan-actions { display: flex; gap: 10px; margin-top: 14px; }
+/* 訂閱卡底下的兩個次要入口：管理訂閱／恢復購買（Edward 2026-07-31 從訂閱方案頁搬來）。
+   第一版做成加底線的文字連結＋中間一個分隔點，Edward 看了說醜——確實：底線是網頁的語言，
+   跟這張卡上圓潤的膠囊按鈕不同調，中間那個點又多一個雜訊。
+   改成跟上面「訂閱方案／加值點數」同一套膠囊，只是把份量整個收下來：
+   底色比主按鈕更淡、字更小、圓角略小、不用邊框——一看就知道是次要，但仍是同一個家族。
+   觸控高度維持 44px（長輩手指不準，視覺份量低不等於難按）。 */
+/* 這一排是次要動作（管理訂閱／恢復購買）。原本跟上面的主要動作一樣滿版、一樣高，
+ * 四顆看起來一樣重，眼睛不知道該先看哪個（Edward 2026-08-01：「按鈕欄位要設計好」）。
+ * 改成置中、寬度跟著字走、比上面矮一截也小一號——主次一眼分得出來，四語都適用。 */
+/* 兩顆丸子按鈕：flex 預設會壓縮，字比按鈕寬時就滿出右邊，看起來像靠左
+ * （Edward 2026-08-01：「文字在欄位內置中，現在看都靠左了」）。
+ * 改成不壓縮、按鈕跟著字長，真的排不下就換行——字永遠在按鈕正中央。 */
+.plan-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.plan-link { flex: 0 0 auto; min-width: 0; min-height: 38px; padding: 0 15px; border: none; border-radius: 11px;
+  background: var(--mint); color: var(--teal-d); cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; opacity: .8; white-space: nowrap; }
+.plan-link:active { opacity: 1; }
 .plan-actions .plan-btn { flex: 1 1 0; min-width: 0; white-space: normal; min-height: 48px; padding-inline: 12px; }
 #topUpBtn.plan-btn { background: var(--btn-green); color: #fff; box-shadow: var(--shadow-sm); }
 
@@ -1298,6 +1409,18 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 
 /* 用藥設定 · 點選籤 */
 .med-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 2px; }
+/* 「吃多久」五顆要排成一行不折行（Edward 2026-08-01）。等分五欄、最後一欄留寬一點
+   給「長期」——英文 Long term／西文 A largo plazo 比數字長，等分會擠爆。 */
+.med-chips.fit-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.32fr); gap: 6px; flex-wrap: nowrap; }
+.med-chips.fit-row .mchip { padding: 10px 2px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 「提前多久提醒」也是五顆一行，但長字在中間不在最後——用等分五欄，
+   不要吃多久那排「最後一顆放寬」的比例。 */
+.med-chips.fit-row.even { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* 日文也要縮：「14日分」是兩個全形字＋數字，比中文的「14 天」寬，
+   用中文的字級會被切成「14…」（2026-08-01 正式機實拍才看見——加了省略號之後
+   元素寬度相等，靠比對寬度的檢查永遠不會報）。 */
+html:lang(en) .med-chips.fit-row .mchip, html:lang(es) .med-chips.fit-row .mchip,
+html:lang(ja) .med-chips.fit-row .mchip { font-size: 13px; letter-spacing: -.2px; }
 .mchip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-family: var(--sans); font-size: 15px; font-weight: 600; padding: 10px 16px; border-radius: 100px; min-height: 44px; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
 .mchip.on { background: var(--teal-d); border-color: var(--teal-d); color: #FFF; }
 
@@ -1308,12 +1431,15 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .qc-hero b { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--ink); }
 .qc-hero .qc-unit { font-size: 15px; font-weight: 600; color: var(--muted); }
 .qc-hero .qc-badge { margin-left: auto; align-self: center; font-size: 15px; font-weight: 700; color: var(--teal-dd); background: var(--mint); border-radius: 100px; padding: 5px 13px; }
+/* 活動狀態籤走品牌橘（2026-08-01）：整頁都是薄荷綠，狀態籤跟按鍵、進度條同色，
+   看不出它只是在說明狀態、不是可以按的東西。淡橘底＋深橘字，對比 4.66 過 AA。 */
+#actDetailBody .ad-chip, .quest-card .qc-days { background: var(--coral-soft); color: var(--coral-text); }
 .qc-bar { height: 12px; border-radius: 100px; background: var(--mint); overflow: hidden; }
 .qc-bar i { display: block; height: 100%; border-radius: 100px; background: var(--teal-d); }
 .qc-crew { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 12px; }
 .qc-person { display: inline-flex; align-items: center; gap: 7px; background: var(--cream); border-radius: 100px; padding: 5px 13px 5px 5px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
 .qc-person .init-ava { width: 26px; height: 26px; border-radius: 50%; font-size: 13px; }
-.qc-note { font-size: 15px; color: var(--muted); line-height: 1.5; }
+.qc-note { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
 
 /* 發起活動：拉桿（flat） */
 .range-row { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
@@ -1335,18 +1461,22 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .rank-av { width: 30px; height: 30px; flex-shrink: 0; }
 .rank-av .init-ava { width: 30px; height: 30px; border-radius: 50%; font-size: 13px; }
 .rank-score { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--teal-dd); }
-.qc-note { font-size: 15px; color: var(--muted); line-height: 1.5; }
+.qc-note { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
 
 /* 左上日期 */
 .home-date { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
 
 /* 揪一攤 · 14 天快選月曆（自家設計、不用瀏覽器原生格） */
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 2px 0 8px; }
-.cal-cell { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 0 8px; text-align: center; cursor: pointer; line-height: 1.15; }
-.cal-cell small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
-.cal-cell b { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--display); }
-.cal-cell.on { background: var(--teal-d); border-color: var(--teal-d); }
-.cal-cell.on small, .cal-cell.on b { color: #FFF; }
+/* 就診日期（Edward 2026-08-01）：原本是未來 14 天的十四格，兩個月後的回診記不進來。
+   今天／明天留成一點就好的快捷，其餘日子點日期欄叫出手機自己的年月日行事曆。
+   日期欄一律自己佔滿一行——四個語系的日期長度差很多（「2026年8月3日 週一」vs
+   「Mon, August 3, 2026」），排在快捷旁邊只有中日文塞得下。 */
+.visit-when { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 8px; }
+.visit-datefield { flex: 1 1 100%; position: relative; display: flex; align-items: center; justify-content: center;
+  min-height: 50px; padding: 0 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer; }
+.visit-datefield:focus-within { border-color: var(--teal-d); outline: 2px solid var(--teal-d); outline-offset: 2px; }
+.visit-datetext { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; pointer-events: none; }
+.visit-datefield input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; background: none; cursor: pointer; }
 
 /* 機智問答作答 */
 .quiz-q { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.5; margin: 6px 0 14px; min-height: 30px; }
@@ -1441,7 +1571,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rp-st { font-size: 13px; font-weight: 700; }
 .rp-st.ok { color: var(--teal-dd); }
 .rp-st.no { color: var(--muted); }
-.rp-st.ask { color: var(--coral-d); }
+.rp-st.ask { color: var(--teal-dd); }
 .rp .rg-badge { bottom: 0; right: -3px; }
 
 /* 發起活動 · 一排四人邀請（Google 邀請式簡潔） */
@@ -1482,10 +1612,10 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .rl-st .ic { width: 14px; height: 14px; stroke-width: 2.6; }
 .rl-st.ok { color: var(--teal-dd); }
 .rl-st.no { color: var(--muted); }
-.rl-st.ask { color: var(--coral-d); }
+.rl-st.ask { color: var(--teal-dd); }
 
 /* 內建條款閱讀頁 */
-.legal-tag { display: inline-block; font-size: 13px; font-weight: 700; color: var(--coral-d); background: var(--coral-soft); border-radius: 100px; padding: 3px 10px; margin: 6px 0 4px; }
+.legal-tag { display: inline-block; font-size: 13px; font-weight: 700; color: var(--ink); background: var(--coral-soft); border-radius: 100px; padding: 3px 10px; margin: 6px 0 4px; }
 .legal-body h4 { font-size: 15px; font-weight: 700; color: var(--ink); margin: 16px 0 6px; }
 .legal-body p { font-size: 15px; line-height: 1.75; color: var(--ink-2); }
 .legal-body p b { color: var(--ink); }
@@ -1566,7 +1696,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .tier.on { border-color: var(--teal); background: var(--mint); }
 .plan-cancel { display: block; margin: 16px auto 2px; border: none; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 12px; }
 
-.tier-tag { font-style: normal; margin-left: 6px; font-size: 13px; font-weight: 800; color: var(--coral-d); background: var(--coral-soft); border-radius: 100px; padding: 2px 7px; }
+.tier-tag { font-style: normal; margin-left: 6px; font-size: 13px; font-weight: 800; color: var(--ink); background: var(--coral-soft); border-radius: 100px; padding: 2px 7px; }
 
 /* ── 設計規範 v1 · 按鈕三階（2026 深研定案：互動只用深綠、一頁一顆主鈕）── */
 .video-btn, .modal-btn, .auth-primary { background: var(--btn-green); border-radius: 16px; min-height: 50px; }
@@ -1576,7 +1706,10 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 /* 規範 v1.1 · 女巫把關修正 */
 .tab-btn { font-size: 13px; }
 .set-row .sr-main small { color: var(--ink-2); }
-.set-section { color: var(--coral-d); }
+/* 設定頁的區塊標題（帳號／訂閱與點數／帳號與家庭…）改暖橘（Edward 2026-07-31）。
+   這裡是米色底、對比 3.91 比白卡低一階，但它是 13px 粗體的分段標籤、短詞、旁邊沒有競爭文字，
+   看得清；真正要讀的內容（列標題與說明）仍是 --ink／--ink-2 的高對比色，沒有被動到。 */
+.set-section { color: var(--coral-text); }
 .plan-payer { color: var(--ink-2); }
 .tu-card span { font-size: 15px; color: var(--ink-2); }
 .plan-cancel { color: var(--ink-2); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
@@ -1586,7 +1719,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 /* 巧思 · 家人活動圓環（頭像外圈 = 今日活動量） */
 .fam-switch-item .fs-ava { position: relative; }
 
-.tier-tag.next { color: var(--coral-d); background: var(--coral-soft); margin-left: 6px; }
+.tier-tag.next { color: var(--ink); background: var(--coral-soft); margin-left: 6px; }
 .mm-cell.future { background: var(--cream); pointer-events: none; }
 .mm-note { grid-column: 1 / -1; font-size: 13px; color: var(--muted); margin-top: 6px; }
 
@@ -1614,7 +1747,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .mr-say span { background: var(--mint); color: var(--teal-dd); padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 16px; font-weight: 700; line-height: 1.5; }
 
 /* 低點數 · 溫柔提醒（不焦慮：講清楚基本陪伴不受影響） */
-.low-strip { display: flex; align-items: center; gap: 8px; background: var(--coral-soft); color: var(--coral-d); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
+.low-strip { display: flex; align-items: center; gap: 8px; background: var(--coral-soft); color: var(--ink); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600; margin-bottom: 10px; line-height: 1.5; }
 .low-strip .ic { width: 16px; height: 16px; flex-shrink: 0; }
 .hud-pill.pts.low { color: #FFC98A; }
 
@@ -1699,7 +1832,9 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
    window.print() 時才用得到，那條在 exportVisitSummaryPdf 內另外處理。 */
 
 /* 用藥時段清單 */
-.ms-group { background: #FFF; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+/* 沒有藥的時段本來要佔三行（時段名／空行／「這個時段沒有藥」），四個時段就吃掉大半個畫面。
+   改成把那句話塞回第二行原本擺「幾種」的位置，一個空時段只剩兩行（Edward 2026-08-01：板位太大）。 */
+.ms-group { background: #FFF; border-radius: 14px; padding: 10px 13px; margin-bottom: 8px; }
 .ms-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; }
 .ms-head > b { grid-column: 1; grid-row: 1; min-width: 0; font-size: 17px; overflow-wrap: anywhere; }
 .ms-time-wrap { grid-column: 2; grid-row: 1; display: inline-flex; align-items: center; gap: 6px; margin-left: 0; }
@@ -1710,16 +1845,21 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .ms-med b { font-size: 15px; }
 .ms-med span { font-size: 13px; color: var(--muted); }
 .ms-med .ms-del { margin-left: auto; width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--mint); color: var(--ink-2); }
-.ms-empty { font-size: 13px; color: var(--muted); padding: 8px 0 0; }
+.ms-empty { font-size: 13px; color: var(--muted); padding: 6px 0 0; }
 
 /* ===== 智慧照護提示輪播（首頁綜合資訊入口） ===== */
 .care-card { position: relative; background: linear-gradient(180deg,#fff,#FCFAF5); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 16px 18px; margin: 14px 0 20px; box-shadow: var(--shadow-sm); overflow: hidden; }
+/* 「寧寧幫你留意」這行小標改暖橘（Edward 2026-07-31）——卡片裡的活動圖示已經有顏色，
+   小標再用綠就整張卡同一個調子；橘小標配內容區的綠，冷暖各站一邊才有層次。
+   眼睛圖示跟著文字走（用 currentColor），不然會變成橘字配綠圖、更亂。 */
+/* 「寧寧幫你留意」用深綠（Edward 2026-07-31 定案，中間試過橘與石墨黑）：
+   它是一塊區域的名字、下面接待辦清單，染橘會跟卡片裡的內容搶戲；深綠是品牌色又夠沉。 */
 .care-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--teal-dd); font-weight: 800; }
 .care-head .ic { width: 16px; height: 16px; }
 .care-dots { margin-left: auto; display: inline-flex; gap: 5px; }
 .care-dots i { width: 6px; height: 6px; border-radius: 4px; background: rgba(35,108,102,.22); transition: all .3s; }
 .care-dots i.on { width: 14px; }
-.care-dots i.on { background: var(--teal-dd); }
+.care-dots i.on { background: var(--teal-d); }
 .care-body { display: grid; min-height: 62px; margin-top: 10px; min-width: 0; }
 .care-item { grid-area: 1 / 1; min-width: 0; max-width: 100%; display: flex; align-items: center; gap: 12px; opacity: 0; visibility: hidden; transition: opacity .35s ease; pointer-events: none; }
 .care-item.on { opacity: 1; visibility: visible; pointer-events: auto; }
@@ -1739,7 +1879,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 .tier b { font-size: 16px; }
 .tier i { font-size: 16px; }
 .tier span { font-size: 13px; }
-.tier-tag.now { background: var(--teal-dd); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; }
+.tier-tag.now { background: var(--teal-d); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; }
 .tier-tag.next { background: var(--coral-d); color: #FFF; padding: 2px 8px; border-radius: 999px; font-style: normal; margin-left: 6px; }
 .tier.trial { opacity: .62; }
 .tier.trial b::after { content: "體驗用"; font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 6px; }
@@ -1757,7 +1897,7 @@ body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)
 /* 家人動態的「移除／檢舉」（蘋果 UGC 審核要求 · 7/9） */
 .care-mod { display: flex; gap: 16px; margin-top: 6px; }
 .care-mod-btn { font-size: 12px; font-weight: 800; color: var(--muted); background: none; border: none; padding: 0; cursor: pointer; }
-.care-mod-btn:active { color: var(--coral-d); }
+.care-mod-btn:active { color: var(--teal-dd); }
 /* 家人頁頂：標題＋管理／封鎖入口同一列（7/9） */
 .fam-page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
@@ -1805,6 +1945,14 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 設計稿：訊息＝純文字（無泡泡）、13.5px/--ink-2、行高 1.5 */
 .bc-msg { margin-top: 2px; background: none; padding: 0; font-size: 14px; line-height: 1.5; color: #5A5349; } /* 設計稿訊息暖灰 */
 .bc-msg-t { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-height: 64px; }
+/* 家人帶話時放到 4 行（Edward 2026-07-31 指定）：平常的問候一句話就夠，
+   但轉達家人的話要看得完整——被切一半的叮嚀等於沒傳到。
+   真的超過 4 行就給「看全部」，寧可多一次點擊也不能默默吃掉後半句。 */
+.butler-card.has-relay .bc-msg-t { -webkit-line-clamp: 4; max-height: 86px; }
+.butler-card.has-relay.relay-open .bc-msg-t { -webkit-line-clamp: unset; max-height: none; }
+.bc-relay-more { border: none; background: none; padding: 0; margin-top: 4px; color: var(--teal-dd); font-family: var(--display); font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: underline; }
+/* 傳話的字跟平常的問候同一款（Edward 2026-07-31）：這是寧寧在講話，不是通知橫幅。
+   加粗放大會讓整張卡變得像在喊人——長輩要的是讀起來舒服，行數夠讀完就好。 */
 /* ③ 首頁進場節奏：卡片一張張輕輕浮上（總長 <0.5 秒） */
 #home.screen.active .pad > * { animation: viewIn .3s cubic-bezier(.22,.9,.32,1) both; }
 #home.screen.active .pad > *:nth-child(2) { animation-delay: .05s; }
@@ -1821,7 +1969,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* ===== 狀態頁重排（Edward 7/4：層次、圖表、裝置條接好即消失） ===== */
 .st-trend { font-style: normal; font-size: 14px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; background: var(--mint); color: var(--teal-dd); }
 .st-trend.up { background: var(--mint); color: var(--teal-dd); }
-.st-trend.warn { background: var(--coral-soft); color: var(--coral-d); }
+.st-trend.warn { background: var(--coral-soft); color: var(--ink); }
 .st-trend.ok { background: var(--mint); color: var(--teal-dd); }
 
 /* 長條圖（純樣式、無外掛） */
@@ -1914,12 +2062,29 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 全家狀態：心情做成有顏色的小藥丸、一眼分辨 */
 .mood-pill { font-style: normal; font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-right: 4px; display: inline-flex; align-items: center; gap: 3px; vertical-align: -3px; }
 .mood-pill .ic { width: 13px; height: 13px; }
+/* 家人頁的心情標籤＝情緒球那六顆的淡化版（Edward 2026-08-01）
+ *
+ * 他點的球是黃／青綠／深綠／灰藍／橘／紅，標籤本來卻是米底黑字（開心）跟土黃字（愉快）——
+ * 同一個心情在兩個畫面長得不像同一件事。改成「同色系淡底＋同色系深字」：
+ * 底色一眼認得出是哪顆球，字色壓到對白底 4.5 以上，六顆同一個閱讀重量。
+ *   開心 #F4B63A → 底 #FBF0D5 字 #8A6410（4.74）
+ *   愉快 #2FB7A8 → 底 #DCF3F0 字 #1A7268（4.96）
+ *   平靜 #236C66 → 底 #D9EFE8 字 #236C66（5.39，原本就對）
+ *   低落 #6D7F91 → 底 #E4EAF0 字 #46566A（6.19，原本就對）
+ *   焦慮 #D98A32 → 底 #FAECD8 字 #985C15（4.66）
+ *   生氣 #E95B4F → 底 #F7DEDB 字 #B0392D（4.73）
+ * tired／upset 是聊聊觀察才會出現的詞（情緒球沒有），沿用原本的配色。 */
 .mood-pill.calm { background: var(--mint-2); color: var(--teal-dd); }
-.mood-pill.happy { background: var(--coral-soft); color: var(--coral-d); }
-.mood-pill.glad { background: #F6ECD4; color: #9A6E14; }
-.mood-pill.tired { background: #F6E7C8; color: #8A6410; }
+.mood-pill.happy { background: #FBF0D5; color: #8A6410; }
+.mood-pill.glad { background: #DCF3F0; color: #1A7268; }
+.mood-pill.tired { background: #F6E7C8; color: #7E5B0E; }
 .mood-pill.down { background: #E4EAF0; color: #46566A; }
 .mood-pill.upset { background: #ECE1F0; color: #6E4488; }
+/* 焦慮與生氣（2026-08-01 補）：這兩格是同日新開的，樣式漏了 → 家人頁上那顆標籤
+   沒有底色、跟旁邊六顆長得不一樣（Edward 一眼看出來）。底色與字色沿用同一組配法：
+   淡底＋同色系深字，深字對淡底都在 4.5 以上，跟其他五顆同一個閱讀重量。 */
+.mood-pill.anxious { background: #FAECD8; color: #985C15; }
+.mood-pill.angry { background: #F7DEDB; color: #B0392D; }
 /* 成員列按下去的小彈跳（活著的感覺） */
 .health-row:active { transform: scale(.985); }
 .health-row { transition: transform .12s ease; }
@@ -1933,7 +2098,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 /* 活動迷你三日條（右上角、前兩天 vs 今天） */
 .act-spark { position: absolute; right: 14px; top: 16px; display: inline-flex; align-items: flex-end; gap: 3px; }
 .act-spark i { width: 7px; border-radius: 3px; background: rgba(35,108,102,.28); }
-.act-spark i.hi { background: var(--teal-dd); }
+.act-spark i.hi { background: var(--teal-d); }
 
 /* 獎勵行：獎牌一欄、文字一欄（兩行左緣自然對齊） */
 .qc-prize { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
@@ -1961,7 +2126,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .tier.on .tier-top i { color: var(--teal-dd); }
 .tier .tier-desc { display: block; margin-top: 5px; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tier-tag.now { background: #FFF; color: var(--teal-dd); border: 1.5px solid var(--teal-d); padding: 1px 8px; font-size: 11.5px; }
-.tier-tag.next { background: #FFF; color: var(--coral-d); border: 1.5px solid var(--coral); padding: 1px 8px; font-size: 11.5px; margin-left: 0; }
+.tier-tag.next { background: #FFF; color: var(--ink); border: 1.5px solid var(--coral); padding: 1px 8px; font-size: 11.5px; margin-left: 0; }
 .tier.trial b { font-size: 15px; }
 .tier.trial b::after { content: "（體驗用）"; font-size: 11.5px; margin-left: 2px; }
 
@@ -2080,6 +2245,8 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .ppk.sel.pro .ppk-price { color: #8A6410; }
 .ppk-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .ppk-feats li { position: relative; padding-left: 22px; font-size: 13.5px; line-height: 1.4; color: var(--ink); word-break: keep-all; }
+/* keep-all 禁止 CJK 字中換行——中文句短沒事，日文長句在特大字級會把方案卡撐寬 29px（證據閘 ja/xl 抓到）。日文放行自然換行。 */
+:is(html:lang(ja)) .ppk-feats li { word-break: normal; }
 .ppk-save { display: block; font-size: 11.5px; font-weight: 800; color: #C79A3B; margin-top: 3px; }
 .ppk-feats li b { font-weight: 800; }
 .ppk-feats li::before { content: ""; position: absolute; left: 0; top: 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232E8A83' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/9px no-repeat; }
@@ -2134,8 +2301,21 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .nps-slider::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 3px solid var(--teal); box-shadow: 0 4px 10px -3px rgba(35,108,102,.45); cursor: grab; }
 .nps-hint { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
 /* 類型籤：線條 icon ＋ 文字（同全 App stroke 圖標語言） */
-.fb-types .topic-chip { display: inline-flex; align-items: center; gap: 6px; }
-.fb-types .topic-chip .ic { width: 17px; height: 17px; flex-shrink: 0; }
+/* 給開發者的建議（Edward 2026-08-01：四個語系的設計體驗要一樣、可以活潑一點）
+   四國字長差太多——中文「回報問題」四個字、西文「Informar de un problema」二十三個。
+   自由折行會讓每一國長得都不一樣（中文 3+1、西文一行一顆）。改成固定格子：
+   上面 2×2 選種類、下面 3 欄選區塊，字長怎麼變版面都不動。 */
+.topic-chips.fb-types { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 10px; }
+.fb-types .topic-chip { display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: 9px; min-height: 88px; padding: 14px; border-radius: 18px; text-align: left; line-height: 1.3; }
+.fb-types .topic-chip .ic { width: 22px; height: 22px; flex-shrink: 0; color: var(--muted); transition: color .15s; }
+/* 選到的那張浮起來一點——這一頁是唯一會請人主動說話的地方，值得有點反應 */
+.fb-types .topic-chip.on { box-shadow: 0 3px 12px rgba(46, 138, 131, .16); transform: translateY(-1px); }
+.fb-types .topic-chip.on .ic { color: var(--teal-d); }
+/* 每一格都等高：西文字長會撐成兩行，不補這行同一排就會高低不齊 */
+#fbCats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; }
+#fbCats .topic-chip { display: flex; align-items: center; justify-content: center; min-height: 48px;
+  padding: 9px 6px; text-align: center; line-height: 1.25; }
 textarea.chal-input { resize: none; line-height: 1.7; }
 /* 想聊的話題：小圓籤（長輩好按的大觸控） */
 .topic-chips { display: flex; flex-wrap: wrap; gap: 9px; margin: 4px 0 8px; }
@@ -2157,7 +2337,7 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .safety-triggers .st-ic .ic { width: 19px; height: 19px; color: #fff; stroke: #fff; fill: none; }
 .safety-triggers .st-ic.bp { background: var(--teal); }
 .safety-triggers .st-ic.hr { background: var(--coral-d); }
-.safety-triggers .st-ic.ox { background: var(--teal-dd); }
+.safety-triggers .st-ic.ox { background: var(--teal-d); }
 .safety-triggers .st-ic.fall { background: #C79A3B; }
 
 .safety-flow { margin-top: 18px; background: var(--mint); border-radius: 16px; padding: 15px 16px; display: flex; flex-direction: column; gap: 11px; }
@@ -2186,18 +2366,159 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .vote-opt.mine { border-color: var(--teal-d); }
 .vote-opt .vo-check { color: var(--teal-dd); font-weight: 800; }
 .vote-opt.voted { cursor: default; }
-.vo-no { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); display: grid; place-items: center; font-size: 13px; font-weight: 800; }
+.vo-no { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; background: var(--mint); color: var(--teal-dd); display: grid; place-items: center; font-size: 13px; font-weight: 800; position: relative; }
+/* 選項色標（Edward 2026-08-01「有點單調」）
+   一色一選項，投票前畫面就有分別；進度條用同一色的淡版，投完票一眼看出哪一條是哪個選項。 */
+.vote-opt.v-teal  .vo-no { background: #D9EFE8; color: #1A7268; }
+.vote-opt.v-coral .vo-no { background: #FBE3D2; color: #A85A22; }
+.vote-opt.v-gold  .vo-no { background: #F7EBCF; color: #8A6410; }
+.vote-opt.v-sage  .vo-no { background: #E2EBDF; color: #4A6B4E; }
+.vote-opt.v-plum  .vo-no { background: #EFE2E8; color: #82486A; }
+.vote-opt.v-teal  i { background: #D2EDE6; }
+.vote-opt.v-coral i { background: #FADFCC; }
+.vote-opt.v-gold  i { background: #F6E9C9; }
+.vote-opt.v-sage  i { background: #DFEADB; }
+.vote-opt.v-plum  i { background: #EFDFE7; }
+/* 領先的選項：左邊一道金色，不整塊變色——長輩看得出「這個最多人選」，
+   但沒投的那幾個也不會像被劃掉。 */
+.vote-opt.lead { border-color: #E8C77E; box-shadow: inset 3px 0 0 #E0B354; }
+/* 投票的人（誰選了這個）。頭像小一圈、互相疊一點，塞得下四個還不擠。 */
+.vote-opt .vo-faces { position: relative; display: flex; align-items: center; margin-left: auto; }
+.vote-opt .vo-faces .init-ava { width: 25px; height: 25px; border-radius: 50%; font-size: 11.5px; font-weight: 700; margin-left: -5px; border: 2px solid #fff; flex: 0 0 25px; }
+.vote-opt .vo-faces .init-ava:first-child { margin-left: 0; }
+.vote-opt .vo-faces .vo-more { margin-left: 3px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.vote-opt .vo-faces + .vo-n { margin-left: 8px; }
 /* 抽獎卡：開獎鍵（次要描邊）＋中獎行 */
 .draw-body { margin-top: 8px; }
 .draw-now { display: block; width: 100%; margin-top: 8px; min-height: 44px; border: 1.5px solid var(--teal-d); border-radius: 13px; background: #FFF; color: var(--teal-dd); font-family: var(--display); font-size: 14px; font-weight: 700; cursor: pointer; }
+/* 不是發起人時看到的：跟按鈕一樣的位置與高度，但明顯不是可以按的東西
+   （Edward 2026-08-01「開獎應該是 owner 的事」）。 */
+.draw-wait { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 8px; min-height: 44px; border-radius: 13px; background: var(--mint); color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 600; }
+/* 抽一張（Edward 2026-08-01「抽獎應該是用戶能有抽的體驗，抽完才是等開獎」）。
+   做成一張卡片的樣子而不是普通按鈕——要看得出「這裡有東西可以抽」。 */
+.draw-pick { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 10px; min-height: 52px; border: none; border-radius: 15px; background: linear-gradient(135deg, #F4B860 0%, #E09B45 100%); color: #fff; font-family: var(--display); font-size: 15.5px; font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(214, 148, 62, .32); -webkit-tap-highlight-color: transparent; transition: transform .12s; }
+.draw-pick:active { transform: scale(.97); }
+.draw-pick .dp-card { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(255, 255, 255, .28); padding: 5px; }
+.draw-pick .dp-card svg { display: block; width: 100%; height: 100%; }
+/* 活動卡上的「我做了沒」狀態標（Edward 2026-08-01「抽了或還沒抽也應該有個外層狀態」）
+   四種：還沒抽（橘、該你動了）／抽到了（金）／沒抽到（灰）／獎被抽完了（灰）。
+   顏色本身就是訊息——不必讀完字也知道要不要點進去。 */
+.qc-state { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.qc-state::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.qc-state.todo { background: var(--coral-soft); color: var(--coral-text); }
+.qc-state.got { background: #FBEFD3; color: #8A6410; }
+.qc-state.miss, .qc-state.over { background: #EFEDE8; color: var(--muted); }
+/* 多獎項（Edward 2026-08-01「大獎、二獎、安慰獎」）
+   建立表單：一行一個獎，名稱佔滿、右邊選幾位；第一行是主獎不給移除。 */
+.prize-list { display: flex; flex-direction: column; gap: 8px; }
+.prize-row { display: flex; align-items: center; gap: 8px; }
+.prize-row .pz-name { flex: 1; min-width: 0; }
+/* 等級標籤是系統給的（大獎／二獎／安慰獎），使用者只填獎品內容 */
+.prize-row .pz-tier { flex: 0 0 52px; font-size: 13.5px; font-weight: 700; color: var(--teal-dd); }
+.prize-row .pz-count { flex: 0 0 84px; height: 46px; padding: 0 10px; border: 1.5px solid var(--line); border-radius: 13px; background: #fff; font-family: var(--sans); font-size: 15px; color: var(--ink); }
+/* 第一行沒有移除鍵，但要留同寬的位置——不然它的輸入框比下面幾行寬，整排看起來是歪的 */
+.prize-row:first-child { padding-right: 42px; }
+.prize-row .pz-del { flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center; border: none; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.prize-row .pz-del svg { width: 16px; height: 16px; }
+.pz-add { display: block; margin: 10px 0 0; padding: 0; border: none; background: none; color: var(--teal-dd); font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* 活動卡上把獎項攤開：看得到自己在抽什麼、各有幾個名額 */
+.prize-board { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; border-radius: 13px; overflow: hidden; background: var(--line); }
+.prize-board .pb-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--mint); }
+.prize-board .pb-tier { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: #fff; background: var(--teal-d); padding: 3px 8px; border-radius: 999px; }
+.prize-board .pb-name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prize-board .pb-count { flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--teal-dd); }
+/* 抽完就沒名額的那一列淡掉——「先搶先有」要看得見 */
+.prize-board .pb-row.gone { background: #F0EDE7; }
+.prize-board .pb-row.gone .pb-tier { background: #C2C8C5; }
+.prize-board .pb-row.gone .pb-name { color: var(--muted); text-decoration: line-through; }
+.prize-board .pb-row.gone .pb-count { color: var(--muted); }
+/* 自己抽到什麼（Edward 2026-08-01「直接顯示用戶設定的獎項」＋「下面顯示找誰領獎」）
+   這張卡是抽完最先看到的東西，本來靜靜出現太平淡——進場給它彈一下、
+   金光橫掃過去一次，獎牌再亮一下。全部只跑一次就停（Edward 2026-08-01：「跑一次就好，不用輪播」）——一直在動的畫面看久了是吵的。 */
+.draw-got { position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 14px 15px; border-radius: 15px; background: linear-gradient(135deg, #FBF0D5 0%, #F6E4BC 100%); box-shadow: inset 0 0 0 1.5px #E8C77E; animation: got-pop .52s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes got-pop { 0% { opacity: 0; transform: scale(.86) translateY(8px); } 60% { opacity: 1; transform: scale(1.03) translateY(0); } 100% { opacity: 1; transform: scale(1); } }
+/* 金光掃過：一道斜向亮帶從左掃到右，只跑一次 */
+.draw-got::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .72) 48%, transparent 66%); transform: translateX(-120%); animation: got-shine 1.1s .28s ease-out both; pointer-events: none; }
+@keyframes got-shine { to { transform: translateX(120%); } }
+.draw-got .dg-ico { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%; background: #E0B354; color: #fff; animation: ico-in .6s .1s cubic-bezier(.2, 1.6, .4, 1) both, ico-glow 1.6s .7s ease-in-out 1 both; }
+@keyframes ico-in { 0% { transform: scale(.4) rotate(-32deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes ico-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(224, 179, 84, .5); } 50% { box-shadow: 0 0 0 7px rgba(224, 179, 84, 0); } }
+.draw-got .dg-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.draw-got .dg-tier { align-self: flex-start; font-size: 11.5px; font-weight: 700; color: #8A6410; background: rgba(255, 255, 255, .7); padding: 2px 8px; border-radius: 999px; }
+.draw-got .dg-txt b { font-size: 16px; font-weight: 700; color: var(--ink); }
+.draw-got .dg-txt small { font-size: 12.5px; color: #7A5A18; line-height: 1.5; }
+/* 沒抽到就不要慶祝——輕輕淡入就好，不彈跳、不掃光。
+   對一個剛落空的人放煙火是刺人的。 */
+.draw-got.miss { background: var(--mint); box-shadow: none; animation: miss-in .34s ease-out both; }
+.draw-got.miss::after { display: none; }
+@keyframes miss-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+.draw-got.miss .dg-txt b { color: var(--ink-2); font-size: 15px; }
+.draw-got.miss .dg-txt small { color: var(--muted); }
+/* 翻牌定格的「咚」：轉完最後一下放大再回來，讓結果落地有重量。
+   定格之後那幾秒不能是死畫面——獎項名持續發著金光呼吸，禮物盒也停下來不再亂搖。 */
+.draw-roll .dr-prize.locked { animation: prize-lock .42s cubic-bezier(.2, 1.6, .35, 1), prize-hold 1.6s .42s ease-in-out 1 both; }
+@keyframes prize-lock { 0% { transform: scale(1.35); filter: brightness(1.6); } 60% { transform: scale(.97); } 100% { transform: scale(1); filter: none; } }
+@keyframes prize-hold { 0%, 100% { text-shadow: 0 0 0 rgba(224, 179, 84, 0); } 50% { text-shadow: 0 0 20px rgba(224, 179, 84, .6); } }
+/* 定格後禮物盒改成輕輕浮動，不再左右晃——晃是「還在抽」的訊號，抽完就該停 */
+.draw-stage:has(.dr-prize.locked) .ds-gift { animation: none; }
+@keyframes gift-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) {
+  .draw-roll .dr-prize.locked { animation: none !important; }
+  .draw-stage:has(.dr-prize.locked) .ds-gift { animation: none !important; }
+}
+/* 獎項板一列一列滑進來（最多四列，錯開得很短、不拖時間） */
+.prize-board .pb-row { animation: pb-in .34s ease-out both; }
+.prize-board .pb-row:nth-child(2) { animation-delay: .05s; }
+.prize-board .pb-row:nth-child(3) { animation-delay: .1s; }
+.prize-board .pb-row:nth-child(4) { animation-delay: .15s; }
+@keyframes pb-in { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+/* 還抽得到的那幾列，右邊的「還剩 N 個」輕輕呼吸，暗示這是會變的數字 */
+.prize-board .pb-row:not(.gone) .pb-count { animation: none; }
+@keyframes left-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+/* 會動的東西一律尊重系統的「減少動態效果」設定——長輩對晃動比較敏感 */
+@media (prefers-reduced-motion: reduce) {
+  .draw-got, .draw-got .dg-ico, .draw-got.miss, .prize-board .pb-row, .draw-roll .dr-prize.locked { animation: none !important; }
+  .draw-got::after { display: none; }
+  .prize-board .pb-row:not(.gone) .pb-count { animation: none; }
+  .draw-stage .ds-gift { animation: none; }
+  .draw-confetti i { display: none; }
+}
+/* 其他人抽到什麼 */
+.pick-list { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; border-radius: 13px; overflow: hidden; background: var(--line); }
+.pick-list .pk-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; background: #fff; }
+.pick-list .pk-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.pick-list .pk-got { font-size: 13px; font-weight: 700; color: #8A6410; }
+.pick-list .pk-got.miss { color: var(--muted); font-weight: 600; }
+.draw-roll .dr-prize { font-size: 26px; }
+/* 開獎結果：多個獎項時列成一張榜，自己中的那行標出來 */
+.draw-win-card.multi .dw-title { font-family: var(--display); font-size: 17px; font-weight: 700; color: var(--ink); margin: 2px 0 10px; }
+.draw-win-card.multi .dw-list { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-bottom: 12px; }
+.draw-win-card.multi .dw-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 13px; border-radius: 11px; background: rgba(255, 255, 255, .62); }
+.draw-win-card.multi .dw-item.me { background: #FBEFD3; box-shadow: inset 0 0 0 1.5px #E0B354; }
+.draw-win-card.multi .dw-prize-name { font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.draw-win-card.multi .dw-item b { font-size: 15.5px; font-weight: 700; color: var(--ink); }
+/* 抽完之後：自己的號碼一直看得到，開獎時才知道中沒中 */
+.draw-mine { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 13px 15px; border-radius: 15px; background: var(--mint); }
+.draw-mine .dm-no { display: grid; place-items: center; flex: 0 0 46px; width: 46px; height: 46px; border-radius: 12px; background: #fff; color: var(--teal-dd); font-family: var(--display); font-size: 19px; font-weight: 800; letter-spacing: .5px; box-shadow: 0 1px 4px rgba(26, 114, 104, .16); }
+.draw-mine .dm-txt { display: flex; flex-direction: column; gap: 2px; }
+.draw-mine .dm-txt b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.draw-mine .dm-txt small { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.draw-roll .dr-num { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
 .draw-win { font-size: 16px; font-weight: 700; color: var(--ink); margin-top: 6px; }
-.draw-win b { color: var(--coral-d); }
+.draw-win b { color: var(--ink); }
 
 /* MUNEA-STATUS-PORT-CSS */
 /* ===== 狀態頁 V1-Status 設計檔移植（Edward 7/7 · 完全比照 handoff · scope #status 不污染別頁） ===== */
 #status { --mint2: var(--mint-2); --ink2: var(--ink-2); }
 #status .serif { font-family: var(--serif); }
-#status .h1 { font-size: 27px; font-weight: 900; letter-spacing: .5px; }
+/* 狀態頁的標題原本自己一套（27px/900、位置也比別頁高 14px），四頁看起來不齊。
+ * 2026-08-01 Edward 問「每個頁面都有統一了嗎」——查出來就是這一頁沒有。
+ * 改成跟 .page-title 同一組規格（24px/800、上下留白一致）。 */
+#status .h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; line-height: 1.2;
+  min-height: 44px; display: flex; align-items: center; margin: 6px 0 16px; }
+/* 2026-08-01 二修：上次補的 8px 補反了——我量的是「框」的位置（四頁都一樣），
+ * 但真正看得到的是「字形」的位置，那個差 8px。Edward 一眼看出來、我的量測法沒有。
+ * 這裡改回 6px，並用字形位置驗證（見下一條註解）。 */
 #status .card, #family .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
 #status .row, #family .row { display: flex; align-items: center; }
 #status .chip, #family .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }  /* 7/9 Edward：家人頁標籤與狀態頁同規範（原只掛 #status、家人頁變螢光方塊） */
@@ -2292,7 +2613,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .fc-you { margin-left: auto; font-size: 12px; color: var(--teal-dd); font-weight: 800; }
 .fc-link { display: block; width: 100%; margin-top: 12px; border: 1.5px solid var(--teal-d); background: #fff; color: var(--teal-dd); font-weight: 700; font-size: 15px; padding: 12px; border-radius: 14px; cursor: pointer; }
 .fc-leave { display: block; width: 100%; margin-top: 10px; border: none; background: none; color: var(--danger-d); font-weight: 700; font-size: 14px; padding: 8px; cursor: pointer; }
-.fc-remove.arm { background: var(--coral-soft); color: var(--coral-d); border-color: transparent; }
+.fc-remove.arm { background: var(--coral-soft); color: var(--danger-d); border-color: transparent; }
 .fc-leave.arm { background: var(--coral-soft); border-radius: 999px; }
 .fc-privacy { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; margin-top: 14px; }
 .jc-code { text-align: center; letter-spacing: 3px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
@@ -2386,19 +2707,9 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
   background: var(--btn-green); color: #fff; font-weight: 700; font-size: 15px; }
 .tc-input-row button.busy-spin { color: rgba(255,255,255,.85); }
 
-/* 撥通中（腦開機）：同位置放載入動態；真收音動態等 ready 才出現（Edward 7/9） */
-/* 撥通中不再放收音載入動態（Edward 7/9：不直覺）——波紋等真的接通（聽/說狀態）才出現 */
-.face-screen[data-state="connecting"] .face-wave { display: none; }
-@keyframes wave-boot { 0%, 100% { transform: scaleY(.18); opacity: .45; } 50% { transform: scaleY(.85); opacity: 1; } }
-.face-screen[data-state="connecting"] .face-wave i { animation: wave-boot 1.05s ease-in-out infinite; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(2) { animation-delay: .09s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(3) { animation-delay: .18s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(4) { animation-delay: .27s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(5) { animation-delay: .36s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(6) { animation-delay: .45s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(7) { animation-delay: .54s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(8) { animation-delay: .63s; }
-.face-screen[data-state="connecting"] .face-wave i:nth-child(9) { animation-delay: .72s; }
+/* 撥通中的波紋規則已改寫到上方 .face-wave 那段（2026-08-10）：
+   7/9 當時是「撥通中不顯示波紋」；8/10 Edward 反過來要求「接通就要看到靜止狀態」，
+   舊的 wave-boot 假 loading 動畫連同九根 <i> 一起退場，改由 canvas 畫真的靜止點線。 */
 
 /* 抽獎儀式（Edward 7/9：開獎要有動畫、中獎要有慶祝；全用自家色盤、不用外部素材） */
 .draw-stage { position: relative; overflow: hidden; text-align: center; padding: 20px 12px 22px; background: var(--gold-soft); border: 1.5px solid var(--gold); border-radius: 18px; margin-top: 10px; }
@@ -2412,7 +2723,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .draw-win-card.nopop { animation: none; }
 .draw-win-card .dw-ico { width: 46px; height: 46px; border-radius: 999px; background: var(--gold); color: #fff; display: grid; place-items: center; margin: 0 auto 10px; }
 .draw-win-card .dw-name { font-family: var(--display); font-size: 24px; font-weight: 800; color: var(--ink); }
-.draw-win-card .dw-prize { font-size: 18px; color: var(--coral-d); font-weight: 800; margin-top: 3px; }
+.draw-win-card .dw-prize { font-size: 18px; color: var(--ink); font-weight: 800; margin-top: 3px; }
 .draw-win-card .dw-claim { font-size: 14px; color: var(--ink-2); line-height: 1.6; margin-top: 10px; }
 @keyframes win-pop { 0% { transform: scale(.55); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
@@ -2462,7 +2773,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .rsvp-btns { display: flex; gap: 10px; margin: 12px 0 4px; }
 .rsvp-btn { flex: 1; min-height: 46px; border-radius: 14px; font-family: var(--display); font-size: 16px; font-weight: 800; cursor: pointer; border: 1.5px solid var(--line); background: #fff; color: var(--ink-2); }
 .rsvp-btn.go.on { background: var(--teal); border-color: var(--teal); color: #fff; }
-.rsvp-btn.no.on { background: var(--coral-soft); border-color: var(--coral); color: var(--coral-d); }
+.rsvp-btn.no.on { background: var(--coral-soft); border-color: var(--coral); color: var(--ink); }
 .walk-bar { height: 12px; border-radius: 999px; background: var(--mint-2); overflow: hidden; margin: 12px 0 8px; }
 .walk-bar i { display: block; height: 100%; border-radius: 999px; background: var(--teal); transition: width .5s ease; }
 .walk-sum { font-family: var(--display); font-size: 16px; color: var(--teal-dd); margin-bottom: 12px; }
@@ -2473,4 +2784,387 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .walk-p b { flex: 1; color: var(--ink); }
 .walk-p span:last-child { color: var(--teal-dd); font-weight: 700; }
 .rsvp-btn:disabled { opacity: .5; cursor: default; }
-.inv-temp-note { font-size: 13px; line-height: 1.55; color: var(--coral-d); background: var(--coral-soft); border-radius: 12px; padding: 9px 12px; margin: -4px 0 12px; }
+.inv-temp-note { font-size: 13px; line-height: 1.55; color: var(--ink); background: var(--coral-soft); border-radius: 12px; padding: 9px 12px; margin: -4px 0 12px; }
+
+/* ===== 拉丁語系版型修正（Edward 2026-08-01 走查英文版後立）=====
+ * 中文一個字一格、英文與西班牙文一個詞好幾格——同一個字級，中文排得剛好的地方
+ * 換成英文就爆框或折行。Edward 現場點出四處：通話控制鈕的字跑出圓圈、
+ * 家庭活動兩顆鈕的字折成兩行、頁面大標「Family health circle」折行、
+ * 設定頁列表的標題折行把右邊的值擠掉。
+ *
+ * 原則：只調「版面會被撐破」的地方——大標題、固定寬度的控制項、有右欄的列表。
+ * 內文不調。英文內文比中文多一行是正常的，把內文縮小反而害長輩看不清，
+ * 那是為了版面犧牲可讀性、方向錯了。
+ *
+ * 只掛 en / es。中文與日文都是一字一格、本來就排得下，不受影響。 */
+
+/* 頁面大標：四語同一個字級與粗細（Edward 2026-08-01：「標題的字體大小與字粗
+ * 不同語系的所有頁面都要統一」「位置也要一致」）。
+ * 原本中日 28px、英西 23px——那是我為了塞下英文才分開調的，結果同一個 App
+ * 換個語言標題就變大變小，看起來像兩個產品。
+ * 24px 是「四語每一頁都放得下一行」的最大值（量過首頁／家人／設定／裝置四頁）。
+ * 西班牙文的家人頁原本是 Círculo de salud familiar，太長，一併收短成 Salud familiar。 */
+.page-title, .greeting-big { font-size: 24px; }
+html:lang(en) .greeting-big, html:lang(es) .greeting-big { max-width: none; }
+
+/* 通話控制鈕：英文與西班牙文只留圖示，不放字（Edward 2026-08-01 拍板）。
+ * Microphone / Subtitulos 這種長度不管怎麼縮都會頂到圓圈邊，縮到塞得下又小到看不清；
+ * 麥克風與字幕的圖示本來就通用、看圖就懂。念螢幕的人不受影響——按鈕上的
+ * aria-label 仍在（見 index.html 的 data-i18n-aria-label），只是畫面上不再印出來。
+ * 中文「字幕／麥克風」與日文「字幕／マイク」都短、放得下，維持原樣。 */
+html:lang(en) .ctl-btn > span,
+html:lang(es) .ctl-btn > span { display: none; }
+html:lang(en) .ctl-btn .ic,
+html:lang(es) .ctl-btn .ic { width: 26px; height: 26px; }
+
+/* 家庭活動兩顆並排鈕：字放一行 */
+html:lang(en) .chal-act,
+html:lang(es) .chal-act { font-size: 13px; }
+html:lang(en) .chal-act span,
+html:lang(es) .chal-act span { white-space: nowrap; }
+html:lang(en) .chal-act .ic,
+html:lang(es) .chal-act .ic { width: 16px; height: 16px; }
+
+/* 設定頁列表：標題折行會把右邊的值擠掉 */
+html:lang(en) .set-row,
+html:lang(es) .set-row { font-size: 15.5px; }
+
+/* 有右欄的列：左邊標題被右邊的值擠到折行。
+ * 「Apple Health」被擠成「Apple / Health」兩行、待辦列的「Salir a caminar」也一樣。
+ * 修法：標題不准斷詞、右邊的值縮一級並自己顧好寬度——先保住左邊的標題完整。 */
+html:lang(en) .set-row .sr-main > span:first-child,
+html:lang(es) .set-row .sr-main > span:first-child { white-space: nowrap; }
+html:lang(en) .set-row .sr-on,
+html:lang(es) .set-row .sr-on { font-size: 13px; text-align: right; }
+html:lang(en) .set-row .sr-main small,
+html:lang(es) .set-row .sr-main small { font-size: 12.5px; }
+
+html:lang(en) .task-title,
+/* 2026-08-10 全畫面驗收抓到：原本強制不換行＋超出就切掉，西班牙文＋最大字級時
+   「Salir a caminar」只放得下 77px（需要 107px），使用者看到的是被切一半的任務名。
+   中文本來就是換行的，這裡讓英文與西班牙文比照——任務名要看得完整，比排成一行重要。 */
+html:lang(es) .task-title { font-size: 14.5px; overflow-wrap: anywhere; }
+html:lang(en) .task-sub,
+html:lang(es) .task-sub { font-size: 13px; }
+html:lang(en) .task-time,
+html:lang(es) .task-time { font-size: 12.5px; white-space: nowrap; }
+html:lang(en) .task-body,
+html:lang(es) .task-body { min-width: 0; }
+
+/* 被框住的小按鈕與籤條：字一長就被切掉或折成好幾行。
+ * 「14 days」「Monthly summaries」在英文直接被切；日文的「写真を変更」「お薬の写真を追加」
+ * 折成 5-8 行；西班牙文的意見分類籤條全部折兩行。
+ * 日文也要顧——片假名詞（サブスクリプション…）比中文長很多，不能當成跟中文一樣。 */
+html:lang(en) .seg-btn, html:lang(es) .seg-btn, html:lang(ja) .seg-btn {
+  font-size: 12px; padding-left: 4px; padding-right: 4px; }
+html:lang(en) .topic-chip, html:lang(es) .topic-chip, html:lang(ja) .topic-chip {
+  font-size: 13px; }
+html:lang(en) .pf-avatar-btn, html:lang(es) .pf-avatar-btn, html:lang(ja) .pf-avatar-btn {
+  font-size: 13px; padding-left: 14px; padding-right: 14px; white-space: nowrap; }
+html:lang(en) .med-photo-btn, html:lang(es) .med-photo-btn, html:lang(ja) .med-photo-btn {
+  font-size: 13px; white-space: nowrap; }
+html:lang(en) .taken, html:lang(es) .taken, html:lang(ja) .taken {
+  font-size: 15px; white-space: nowrap; }
+
+/* 待辦列的時間籤：沒有指定時間時不要占位。
+ * 原本永遠掛一個「隨時／Anytime」，中文兩個字還好，英文與西班牙文一長就把左邊的
+ * 標題與副標擠到折行（Edward 2026-08-01：「anytime 的設計不好要改」）。
+ * 「隨時」本來就不是資訊——沒有時間限制就不必說。有真時間時 app.js 會把 data-i18n
+ * 拿掉再寫入（見 renderWalkTask/renderMoodTask），所以這條只命中沒被動過的預設值。 */
+.task-time[data-i18n="home.taskAnytime"] { display: none; }
+
+/* 並排按鈕要留呼吸的邊，不能讓字頂到左右兩側（Edward 2026-08-01 指出）。 */
+.chal-act { padding: 0 16px; }
+/* 外語只調內距與不換行，字級交給上面的按鈕規範統一管。 */
+html:lang(en) .chal-act, html:lang(es) .chal-act, html:lang(ja) .chal-act {
+  gap: 8px; padding: 0 16px; }
+
+/* 底部分頁的字：英文與西班牙文是整個單字，用粗體會顯得又擠又重
+ * （Edward 2026-08-01：「這裡在英文上改為用細體」）。
+ * 中文兩個字、日文也短，維持原本的粗體不動。 */
+html:lang(en) .tab-btn > span,
+html:lang(es) .tab-btn > span { font-weight: 500; letter-spacing: .01em; font-size: 11.5px; }
+html:lang(en) .tab-btn.active > span,
+html:lang(es) .tab-btn.active > span { font-weight: 700; }
+
+/* 兩端對齊只適合中文與日文（一字一格、拉開來很整齊）。
+ * 英文與西班牙文是不等寬的單字，硬拉兩端會在字與字之間扯出一格一格的白洞，
+ * 讀起來很吃力（Edward 2026-08-01：「排版 UX 閱讀體驗不舒服」）。拉丁語系一律靠左。 */
+html:lang(en) .reader-card p, html:lang(es) .reader-card p {
+  text-align: left; overflow-wrap: normal; word-break: normal; hyphens: auto; }
+/* 訂閱條款那小段改置中（Edward 2026-08-01 拍板）：它是頁尾的註記、不是要細讀的內文，
+ * 置中之後最後一行不會孤零零掛在左邊，整塊看起來收得住。四語一致。 */
+.sub-legal { text-align: center; }
+html:lang(en) .sub-legal, html:lang(es) .sub-legal {
+  overflow-wrap: normal; word-break: normal; hyphens: auto; }
+
+/* 寧寧觀察卡的標題：原本寫在行內（font-size:15.5px），行內樣式贏過所有選擇器，
+ * 外語就沒辦法覆寫、「Ningning's observations」只能折成兩行。改成 class 才調得動。 */
+.obs-heading { font-size: 15.5px; font-weight: 900; }
+html:lang(en) .obs-heading, html:lang(es) .obs-heading { font-size: 14.5px; white-space: nowrap; }
+
+/* 月繳／年繳切換：西班牙文的「Anual + Ahorra un 20%」擠成三行。
+ * 折行的是徽章那一小塊，讓它跟著文字同一行、字再小一點就收得回來。 */
+html:lang(en) .scyc-btn, html:lang(es) .scyc-btn { font-size: 13px; padding: 8px 4px; white-space: nowrap; }
+html:lang(en) .scyc-badge, html:lang(es) .scyc-badge { font-size: 10px; padding: 1px 5px; margin-left: 4px; }
+
+/* 兩顆鈕不必五五分——「發起活動」的字本來就比「記錄簿」長。
+ * 硬切一半會讓左邊那顆頂到邊、右邊那顆空一大塊。按比例分，兩邊的呼吸距離才平均。 */
+html:lang(en) .chal-actions, html:lang(es) .chal-actions {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+
+/* 「管理訂閱／恢復購買」兩顆並排：英文與西班牙文兩個單字會折成兩行。
+ * Edward 2026-08-01：「單行，按鈕文字可以小一點」——字縮一級、不換行。 */
+/* 主要動作（看方案／加值點數）維持原本的 15px——這是使用者最常按的兩顆，
+ * 文案收短之後放得下，不必為了塞而縮小（Edward 2026-08-01：「訂閱方案文字要大一點」）。
+ * 底下那排是次要動作（管理訂閱／恢復購買），縮一級剛好拉開主次。 */
+html:lang(en) .plan-actions .plan-btn, html:lang(es) .plan-actions .plan-btn {
+  white-space: nowrap; }
+
+/* 活動種類的六張卡：有的字折行、有的不折，整排就高矮不齊，看起來很毛躁
+ * （Edward 2026-08-01：「有大有小設計看起來閱讀不是很舒服」）。
+ * 兩手一起做：文案收短（見文案表），再讓同一列的卡強制等高、字一律一行。 */
+.chal-types { grid-auto-rows: 1fr; }
+.chal-type { justify-content: center; min-height: 74px; }
+.chal-type span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+html:lang(en) .chal-type, html:lang(es) .chal-type, html:lang(ja) .chal-type {
+  font-size: 12.5px; padding-inline: 6px; }
+
+/* ===== 按鈕設計規範（Edward 2026-08-01：「按鈕的設計規範要制定好」）=====
+ *
+ * 之前是一顆一顆調，同樣是「主要動作」卻有 600／700／800 三種粗細、
+ * 14／15／15.5／16px 四種字級，掃過去會覺得亂。這裡收成三級，全站照這個走。
+ * 基準取首頁「開始聊聊」——它是全 App 最重要的一顆，其他的不該比它重。
+ *
+ *   ① 主要（primary）  這一頁最想讓人按的那一顆。實心底色、滿版。
+ *                      例：開始聊聊／升級方案／登入
+ *   ② 次要（secondary）同一區的其他選擇，跟主要並排。淡底或白底框。
+ *                      例：加值點數／發起活動／家庭記錄簿
+ *   ③ 輔助（tertiary） 少數人才需要、但必須找得到。小丸子、置中。
+ *                      例：管理訂閱／恢復購買
+ *
+ * 三級的差別只在「字級 × 粗細 × 高度」，顏色與圓角各自沿用原本的設計。
+ * 加新按鈕時挑一級套用，不要再自己寫字級——這就是這組變數存在的意義。 */
+:root {
+  --btn-1-size: 15.5px; --btn-1-weight: 700; --btn-1-height: 50px;
+  --btn-2-size: 15px;   --btn-2-weight: 700; --btn-2-height: 48px;
+  --btn-3-size: 12.5px; --btn-3-weight: 600; --btn-3-height: 38px;
+}
+/* ① 主要 */
+.video-btn, .sub-cta, .auth-primary {
+  font-family: var(--display); font-size: var(--btn-1-size); font-weight: var(--btn-1-weight); }
+.auth-primary { height: auto; min-height: 40px; }
+/* ② 次要 */
+.plan-actions .plan-btn, .chal-act, .auth-secondary {
+  font-family: var(--display); font-size: var(--btn-2-size); font-weight: var(--btn-2-weight); }
+.plan-actions .plan-btn, .chal-act { min-height: var(--btn-2-height); }
+/* ③ 輔助 */
+.plan-link {
+  font-size: var(--btn-3-size); font-weight: var(--btn-3-weight); min-height: var(--btn-3-height); }
+
+/* 心情那排六張臉：原本用 space-between，每顆的寬度跟著自己的標籤走，
+ * 標籤一長一短，圓圈就被推得歪七扭八（日文「落ち込んでいる」六個字最明顯）。
+ * 改成六等分格子——不管標籤多長，圓圈永遠對齊。標籤太長就自己收成兩行、不推擠鄰居。 */
+#moodFaces { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+#status .moodface { width: 100%; }
+/* 標籤一律一行——折行會讓六張臉的底部高低不齊（Edward 2026-08-01：「變得有上有下」）。 */
+#status .moodface > span:last-child { font-size: 10.5px; text-align: center; line-height: 1.25; white-space: nowrap; }
+
+
+/* 日文版的字型：繁中字型（Noto Sans TC）沒有日文寫法的漢字，缺字會逐字掉到系統字型，
+ * 同一句話就出現兩種粗細與兩種字面（Edward 2026-08-01：「文字有粗有細」）。
+ * iOS 內建的 Hiragino 是最好的日文字型，排第一；非 Apple 裝置退到 Noto Sans JP。
+ * 只換字型、不動字級與粗細——版面完全不受影響。 */
+html:lang(ja) {
+  --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", -apple-system, sans-serif;
+  --display: "Poppins", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --serif: "Hiragino Mincho ProN", "Noto Serif JP", Georgia, serif;
+}
+
+/* 標題的位置四頁一致（Edward 2026-08-01：「位置也要一致」）。
+ * 家人頁的標題旁邊多一顆管理鍵，那顆比文字高，把整行往下推了幾 px；
+ * 各頁的標題基線因此對不齊，切換分頁時標題會上下跳。
+ * 讓標題與旁邊的按鈕都以同一條中線對齊，行高固定，四頁就不再跳。 */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; margin: 6px 0 16px; }
+.page-title { line-height: 1.2; margin: 0; }
+.page-head > .pt-nav { flex: 0 0 auto; }
+
+/* 帳號那一列：西班牙文「Modo invitado」折成兩行、「Iniciar sesión」還頂出卡片外
+ * （Edward 2026-08-01）。原因是標題設了 overflow-wrap:anywhere（可以從單字中間斷），
+ * 而右邊的按鈕沒有寬度上限，兩邊互相擠。
+ * 改成：左邊佔滿剩下的空間、太長就用刪節號；右邊按鈕不縮但也不許超過四成寬。 */
+.auth-card-main { flex: 1 1 auto; }
+.auth-title { overflow-wrap: normal; word-break: normal; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.auth-actions { max-width: 42%; }
+.auth-actions > button { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* 心情卡：說明文字長短不一，卡片高度就跟著變，切換語言或換一天位置就跳
+ * （Edward 2026-08-01：「副標文字太多會導致板位上下位移」「間距也不同」）。
+ * 標題一行、說明固定兩行的高度——不管字多字少，這張卡永遠一樣高。 */
+#status .mood-card-title, [data-i18n="status.moodMonitoring"] { white-space: nowrap; }
+#moodNote { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: 38px; margin-top: 3px; }
+#moodLabel { white-space: nowrap; }
+
+/* 六張心情臉底下的名字拿掉（Edward 2026-08-01：「文字可以優化或簡寫或就不要文字，
+ * 因為點了上面會寫」）。點下去之後上面那行大字就是它的名字，底下再寫一次是重複；
+ * 而且各語言的名字長短不一，會把圓圈推得歪七扭八——拿掉之後間距永遠齊。
+ * 用「看不見但唸得到」的作法，不是 display:none——念螢幕給視障者聽時仍會報出名字。 */
+#status .moodface > span:last-child {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+#status .moodface { position: relative; gap: 0; }
+#moodFaces { gap: 8px; }
+
+/* 設定頁的列：右邊的狀態文字拿掉，標題才有完整一行的空間
+ * （Edward 2026-08-01：「拿掉右邊的狀態說明，讓標題可以完整單行顯示」）。
+ * 那顆小圓點留著——一眼就看得出開或關，而且只佔 7px。
+ * 文字改成「看不見但唸得到」，念螢幕給視障者聽時仍會報「未連接／已連接」。
+ * 數字（例如用藥幾種）留著，但跟左邊拉開距離，不要黏在一起。 */
+.set-row .sr-on > span:not(.d) {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.set-row .sr-on { position: relative; }
+.set-row .sr-main { padding-right: 12px; }
+
+/* 右邊的狀態字有兩種放法：有的在 .sr-on、有的塞在箭頭那格 .sr-arrow 裡。
+ * 兩種都要收（Edward 2026-08-01：「拿掉右邊的狀態說明」——指了兩次都還在，
+ * 就是因為第一次只收了 .sr-on 那種）。箭頭本身留著，它是「可以點進去」的提示。 */
+.set-row .sr-arrow > b {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.set-row .sr-arrow { position: relative; }
+
+
+/* 用藥卡：說明文字在西班牙文長到五行，把卡片撐得比別張高一倍；
+ * 右邊那顆狀態籤又做得跟主要按鈕一樣大，兩邊搶版面
+ * （Edward 2026-08-01：「副標有問題太多了、按鈕太大了」）。
+ * 說明限兩行、狀態籤降成第③級的份量——它只是狀態，不是要人按的東西。 */
+#medCard #medSub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; line-height: 1.4; }
+#medCard #medChip { font-size: 11.5px; font-weight: 600; padding: 5px 10px; white-space: nowrap; }
+
+/* 心情週還沒有紀錄時的說明——跟健康數據的空狀態同一種語氣與份量 */
+.mood-week-empty { padding: 16px 2px; font-size: 13.5px; line-height: 1.7; color: var(--muted); text-align: center; }
+
+/* 心情卡的回應行：高度固定兩行，換心情時版面不跳 */
+.mood-note { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; margin-top: 3px; opacity: .9; min-height: 38px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   啟動頁與開場三頁（Edward 2026-08-10 拍板）
+   需求單：docs/開場與啟動頁-需求單-2026-08-10.md
+   守住的線：不自創標誌／不要陰影與漸層／深綠只當文字不當底／橘只做圖形不做文字
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── 啟動頁 ── 底色跟 App 同一個米黃，接得上不會閃 */
+.boot-splash, .onb {
+  position: fixed; inset: 0; z-index: 90;
+  display: flex; align-items: center; justify-content: center;
+}
+.boot-splash[hidden], .onb[hidden] { display: none; }
+/* 啟動頁要疊在開場三頁「上面」。兩層本來同高，而開場頁在畫面檔裡排比較後面＝蓋住啟動頁；
+   啟動頁淡出那半秒露出來的就會是 App 首頁，看起來像閃了一下（Edward 2026-08-10 真機回報）。
+   把啟動頁墊高一階，淡出時露出的才是已經鋪在下面的開場頁。 */
+.boot-splash { background: var(--cream); z-index: 91; }
+.boot-splash.is-leaving { animation: bootLeave .5s ease-in both; }
+@keyframes bootLeave { to { opacity: 0; visibility: hidden; } }
+
+.boot-inner {
+  width: 100%; max-width: 400px; height: 100vh; height: 100dvh; max-height: 866px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 28px;
+}
+@media (max-width: 520px) { .boot-inner { max-height: none; } }
+
+.boot-mark { position: relative; width: 186px; height: 186px; flex: 0 0 auto; }
+.boot-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+
+/* 水滴：重力加速落下 → 碰到水面被壓扁 → 回彈定位 */
+.boot-drop { transform-origin: 50% 59%; animation: bootDrop .95s linear .25s both; }
+@keyframes bootDrop {
+  0%   { transform: translateY(-74px) scaleY(1.13) scaleX(.92); opacity: 0;
+         animation-timing-function: cubic-bezier(.55,.02,.86,.28); }
+  16%  { opacity: 1; }
+  72%  { transform: translateY(0) scaleY(1.05) scaleX(.97); opacity: 1;
+         animation-timing-function: cubic-bezier(.25,.7,.4,1); }
+  83%  { transform: translateY(3px) scaleY(.92) scaleX(1.06); opacity: 1; }
+  93%  { transform: translateY(-1px) scaleY(1.02) scaleX(.99); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+/* 水波：從水滴碰到水面的那一點爆開，由內而外、先快後慢 */
+.boot-wave-in, .boot-wave-out { transform-origin: 50% 59%; }
+.boot-wave-in  { animation: bootWave .78s cubic-bezier(.1,.86,.24,1) .93s both; }
+.boot-wave-out { animation: bootWave .96s cubic-bezier(.1,.86,.24,1) 1.06s both; }
+@keyframes bootWave {
+  0%   { transform: scale(.04); opacity: 0; }
+  22%  { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 品牌字與副標一開始就在，不延遲浮現（Edward 2026-08-10） */
+.boot-lockup { margin-top: 26px; text-align: center; animation: bootRise .6s ease-out both; }
+@keyframes bootRise { from { transform: translateY(7px); opacity: 0; } to { transform: none; opacity: 1; } }
+.boot-word {
+  font-family: var(--display); font-weight: 700; font-size: 34px;
+  letter-spacing: -.025em; color: var(--ink); line-height: 1;
+}
+.boot-word b { color: var(--teal); font-weight: 700; }
+.boot-zh { font-family: var(--sans); font-size: .78em; font-weight: 700; letter-spacing: .04em; margin-left: 9px; opacity: .95; }
+.boot-tagline { margin-top: 15px; font-family: var(--sans); font-weight: 400; font-size: 14.5px; color: var(--muted); letter-spacing: .03em; }
+
+/* ── 開場三頁 ── */
+.onb { background: var(--teal); }
+.onb-inner {
+  width: 100%; max-width: 400px; height: 100vh; height: 100dvh; max-height: 866px;
+  display: flex; flex-direction: column;
+  padding: calc(20px + env(safe-area-inset-top)) 0 calc(22px + env(safe-area-inset-bottom));
+}
+@media (max-width: 520px) { .onb-inner { max-height: none; } }
+
+/* 橫向捲動＋吸附＝手勢滑動免費拿到，按鈕再用捲動控制 */
+.onb-track {
+  flex: 1; display: flex; overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  /* 橫向滑動是手勢，不該看到捲軸。App 其他地方在 .app-shell * 那條就藏掉了，
+     但開場頁是 body 底下獨立的一層、不在 .app-shell 裡面，所以漏掉——
+     Edward 2026-08-10 在截圖上看到那條灰線。 */
+  scrollbar-width: none;
+}
+.onb-track::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.onb-page {
+  flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0 26px; text-align: center;
+}
+.onb-art { width: 100%; max-width: 320px; }
+.onb-art img { width: 100%; height: auto; display: block; }
+.onb-title {
+  margin-top: 26px; font-family: var(--sans); font-weight: 700; font-size: 26px;
+  line-height: 1.42; color: #fff; letter-spacing: .01em;
+}
+.onb-title span { display: block; }
+.onb-body {
+  margin-top: 14px; font-family: var(--sans); font-weight: 500; font-size: 15px;
+  line-height: 1.75; color: #E9F8F5; max-width: 300px;
+}
+
+.onb-foot { flex: 0 0 auto; padding: 0 26px; }
+.onb-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+.onb-dots i { width: 6px; height: 6px; border-radius: 3px; background: #8FCFC9; transition: width .25s ease, background .25s ease; }
+.onb-dots i.on { width: 18px; background: #fff; }
+.onb-cta {
+  width: 100%; height: 54px; border-radius: 27px; border: 2px solid #BFE2DE;
+  background: transparent; color: #fff; font-family: var(--sans); font-weight: 700; font-size: 17px;
+  cursor: pointer;
+}
+.onb-cta.is-last { background: #fff; border-color: #fff; color: var(--teal-dd); }
+.onb-cta:active { transform: scale(.985); }
+.onb-cta:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-drop, .boot-wave-in, .boot-wave-out, .boot-lockup { animation: none; opacity: 1; transform: none; }
+  .boot-splash.is-leaving { animation: none; opacity: 0; visibility: hidden; }
+  .onb-track { scroll-behavior: auto; }
+}

@@ -212,6 +212,13 @@
       "filename": "027_localized_notification_copy.sql",
       "type": "schema",
       "sha256": "8ca87fe025316592663dec83fc828a44f899c8e03f3ca736696f21815d6091d8"
+    },
+    {
+      "order": 29,
+      "identity": "028",
+      "filename": "028_person_country.sql",
+      "type": "schema",
+      "sha256": "73662272b604c17306f19700cbd1989bf23644090504b2b76616088fdbb032f4"
     }
   ]
 }

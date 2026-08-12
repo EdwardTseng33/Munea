@@ -39,6 +39,11 @@ diag.start({
 });
 diag.mark('gateway_assigned', 'pass', { gatewayCallId: 'call-123', token: 'secret-token' });
 diag.mark('voice_socket_open', 'pass', { endpoint: 'wss://voice.example/ws?key=secret' });
+diag.markTurn(2, 'last_human_voice', { observedAt: Date.now() - 900, basis: 'client_mic_rms' });
+diag.markTurn(2, 'vad_stop', { afterLastVoiceMs: 650, targetMs: 800, turnClass: 'no_unfinished_signal' });
+diag.markTurn(2, 'voice_first_pcm', { afterVadMs: 120, basis: 'voice_server_monotonic' });
+diag.markTurn(2, 'avatar_pcm_received', { basis: 'avatar_audio_ws_ack' });
+diag.markTurn(2, 'webrtc_playout', { basis: 'decoded_remote_audio_rms' });
 diag.fail('voice_socket_closed', 'ws_4403', { closeCode: 4403, closeReason: 'call token required' });
 const summary = diag.end('failed', { reason: 'voice_socket_closed' });
 
@@ -46,11 +51,14 @@ assert.strictEqual(summary.outcome, 'failed');
 assert.strictEqual(summary.lastSuccessfulStage, 'voice_socket_open');
 assert.strictEqual(summary.firstFailedStage, 'voice_socket_closed');
 assert(summary.stages.some(stage => stage.stage === 'gateway_assigned'));
+assert.strictEqual(summary.turnTimings.length, 1);
+assert.strictEqual(summary.turnTimings[0].turn, 2);
 const serialized = JSON.stringify(storage.dump());
 assert(!serialized.includes('do-not-store'));
 assert(!serialized.includes('secret-token'));
 assert(!serialized.includes('private words'));
 assert(reports.some(item => item.eventName === 'voice_call_stage_failed'));
+assert(reports.some(item => item.eventName === 'voice_turn_e2e'));
 const terminal = reports.find(item => item.eventName === 'voice_call_diagnostic');
 assert(terminal, 'terminal diagnostic summary must be reported');
 assert(terminal.properties.stages.some(stage => stage.stage === 'voice_socket_open'));
@@ -78,6 +86,9 @@ assert(indexSource.indexOf('src/voice-call-diagnostics.js') < indexSource.indexO
   'gateway_assigned',
   'voice_socket_open',
   'voice_ready',
+  'opening_user_voice_detected',
+  'opening_user_voice_acknowledged',
+  'opening_user_voice_flushed',
   'avatar_offer_accepted',
   'avatar_first_frame',
   'opening_audio_ready',
@@ -89,7 +100,13 @@ assert(indexSource.indexOf('src/voice-call-diagnostics.js') < indexSource.indexO
   'dead_line_reconnect',
   'face_stream_stalled',
   'face_fallback_voice_only',
+  'barge_in_candidate_sent',
+  'barge_in_server_ack',
+  'voice_turn_avatar_pcm',
+  'voice_turn_webrtc_playout',
 ].forEach(stage => assert(appSource.includes("'" + stage + "'"), 'missing App trace stage: ' + stage));
+assert(appSource.includes("voiceCallMark('voice_turn_' + o.stage"),
+  'per-turn VAD and Voice PCM markers are not forwarded from the Voice server');
 assert(source.includes("mark('dial_tapped'"), 'trace must start at the call button tap');
 assert(appSource.includes('closeCode: event.code') && appSource.includes('closeReason: event.reason'), 'WebSocket close code and reason must be captured');
 

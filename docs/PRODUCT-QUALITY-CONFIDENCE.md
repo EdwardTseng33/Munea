@@ -77,9 +77,9 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.44 (Build 492)`；current source 已超過凍結 commit `72a0bd46`，目前沒有適用 post-package source 的 Archive／IPA 或 iPhone 證據，下一包必須使用新 Build number |
-| Latest uploaded App | `1.0.44 (Build 492)`；凍結 commit `72a0bd46`，IPA SHA-256 `287b264172f9316a827911c314e61c50f4720c8c93cb9a651c4bd2824fc107f1`，Edward iPhone 安裝／啟動與版號回讀成功，App E2E pending |
-| App Store | Build 492 已上傳、processing 完成並選入 1.0.44 版本頁；狀態為「準備提交」，未送審／核准／公開 |
+| Latest source | `1.0.66 (Build 537)`；為下一個唯一候選，撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機；維持原生 512。尚未封裝或真機驗證 |
+| Latest uploaded App | `1.0.61 (Build 532)`；App Store Connect 回報 `VALID`，上傳時間 2026-08-10 08:35 UTC；不含本輪三邊協議，不能代表 Build 533 |
+| App Store | 1.0.55 狀態 `WAITING_FOR_REVIEW`，實際選用 App 1.0.55 Build 525；1.0.61 Build 532 未被該審核版本選用；Build 533 尚未上傳、選入、核准或公開 |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
 | Production Brain | 17:23 secret-free manifest：公開 `/version` 回 `1.0.40@fa14e4c`，revision `munea-brain-00006-faw`，100% traffic；點數包 100／300／600／1,000 與 Plus 100／Pro 200 mapping 已部署，安全 smoke 與新 revision ERROR log 檢查 PASS，真人 Sandbox purchase 仍 pending |
 | Production Voice | 00:21 secret-free manifest：公開 `/version` 回 `1.0.41@906732ab`，revision `munea-voice-00007-xab`；已與 current Voice source 對齊，真人通話仍需 App E2E |

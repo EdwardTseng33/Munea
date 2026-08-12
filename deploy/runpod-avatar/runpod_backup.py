@@ -12,6 +12,7 @@ backup still fails closed unless ``MUNEA_RUNPOD_TEMPLATE_ID`` is configured.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import sys
@@ -68,6 +69,15 @@ class Config:
     scale_down_action: str = "stop"
     state_file: str = str(HERE / ".runpod-backup-state.json")
     lock_file: str = str(HERE / ".runpod-backup.lock")
+    # 官網展示機（B2B）。它不是備援線的一員——名字不同、機房被那顆網路硬碟綁死在
+    # US-IL-1、由 munea-b2b 的 /api/call-key 在訪客輸入密語時叫醒。
+    #
+    # 2026-08-10 Edward 追究「為什麼沒有人去關」時查出來的洞：官網那支**確實**有
+    # TTL，但那段只有「下一個訪客來訪」才會跑到。一個客人看完就走、沒有下一個人來，
+    # 機器就永遠開著——$0.74/hr ≈ 一個月 NT$17,000。備援線有這支管家每 15 秒巡，
+    # 展示機完全沒人管。所以把它收進同一個管家：時間到就收，不必等誰來訪。
+    demo_pod_name: str = "munea-flashhead-demo-768"
+    demo_ttl_seconds: int = 1800   # 0 = 不管展示機
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -107,6 +117,8 @@ class Config:
             scale_down_action=os.environ.get("MUNEA_RUNPOD_SCALE_DOWN_ACTION", "stop").lower(),
             state_file=os.environ.get("MUNEA_RUNPOD_STATE_FILE", str(HERE / ".runpod-backup-state.json")),
             lock_file=os.environ.get("MUNEA_RUNPOD_LOCK_FILE", str(HERE / ".runpod-backup.lock")),
+            demo_pod_name=os.environ.get("MUNEA_DEMO_POD_NAME", "munea-flashhead-demo-768"),
+            demo_ttl_seconds=_int("MUNEA_DEMO_POD_TTL_SECONDS", 1800),
         )
 
     def validate(self) -> None:
@@ -253,6 +265,25 @@ class GatewayClient:
             raise BackupControllerError("Gateway worker unregister failed: " + str(result))
 
 
+def pod_age_seconds(pod: dict[str, Any], now: float) -> float | None:
+    """這台機器開了多久。RunPod 的時間長相是 "2026-07-23 09:01:55.866 +0000 UTC"。
+
+    解析不出來就回 None，呼叫端必須當成「不知道年紀」而**不是** 0 或無限大——
+    這個數字唯一的用途是決定要不要刪機器，猜錯任一邊都不行。
+    """
+    raw = str(pod.get("lastStartedAt") or pod.get("createdAt") or "").strip()
+    if not raw:
+        return None
+    text = raw.replace(" +0000 UTC", "+00:00").replace(" ", "T", 1)
+    try:
+        started = datetime.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=datetime.timezone.utc)
+    return max(0.0, now - started.timestamp())
+
+
 class RunPodProvider:
     def __init__(self, prefix: str, worker_key: str = "", now: Callable[[], float] = time.time):
         self.prefix = prefix
@@ -261,6 +292,13 @@ class RunPodProvider:
 
     def list(self) -> list[dict[str, Any]]:
         return podctl.managed_pods(self.prefix)
+
+    def list_named(self, name: str) -> list[dict[str, Any]]:
+        """名字**完全相等**的機器。展示機不帶備援線的字首，所以不能用 prefix 找；
+        而且比對一定要用完全相等——用「開頭是」會咬到別條線的機器。"""
+        if not name:
+            return []
+        return [p for p in podctl.list_pods() if str(p.get("name") or "") == name]
 
     def worker_url(self, pod_id: str) -> str:
         return podctl.proxy_url(pod_id, 8188)
@@ -453,7 +491,18 @@ def desired_backup_pods(snapshot: dict[str, Any], config: Config) -> tuple[int, 
     demand = min(config.target_concurrent_calls, all_active + queue_depth)
     reason = scale_up_reason(snapshot, config.utilization_threshold)
 
-    if not ready_primary:
+    # 主力全掛的時候先開一台備援等著——但只在真的有人要用的時候
+    # （Edward 2026-08-07：「本來就是備用會暫停，但為什麼會一直消耗？」）。
+    #
+    # 原本這裡無條件把需求墊到 1：主力一不健康就開一台預熱，好讓第一個打進來的人
+    # 不用等開機。立意是好的，但主力掛著沒修的期間，備援會開了空等 15 分鐘、被收掉、
+    # 再開一台，一整天循環燒錢，而且從頭到尾沒有半個使用者
+    # （8/6-8/7 就是這樣：主力沒接上、備援一直補，直到 RunPod 餘額見底）。
+    #
+    # 改成：沒有人在用也沒有人排隊，就不開。第一個人一打進來（排隊 > 0）
+    # 上面的 scale_up_reason 會回 queue_waiting，那時才開——寧可讓第一通等開機，
+    # 也不要沒人用的時候整天燒。
+    if not ready_primary and (all_active > 0 or queue_depth > 0):
         demand = max(1, demand)
     deficit = max(0, demand - primary_capacity)
     desired = (deficit + config.slots - 1) // config.slots
@@ -533,10 +582,59 @@ class BackupController:
                     if self.config.mode == "active":
                         self.gateway.health(worker_id, False)
 
+    def _reap_demo_pod(self, now: float) -> dict[str, Any] | None:
+        """展示機開太久就收掉。回傳事件（有收才回），沒事回 None。
+
+        為什麼放在這支管家裡：官網那支 /api/call-key 也有一模一樣的 TTL，但那段
+        **只有訪客上門才會跑到**。一個客人看完就走，沒有下一個人來，機器就永遠開著
+        （2026-08-10 Edward 追究「為什麼沒有人去關」時查出來的）。這裡每 15 秒一輪，
+        不必等誰來訪。兩邊用同一個 30 分鐘，誰先看到誰收。
+
+        比對用「名字完全相等」——展示機不帶備援線的字首，用開頭比會咬到別條線。
+        年紀讀不出來時**不刪**：寧可多燒一輪，也不要因為看不懂時間就砍掉別人正在
+        展示的機器。
+        """
+        if self.config.mode != "active" or self.config.demo_ttl_seconds <= 0:
+            return None
+        lookup = getattr(self.provider, "list_named", None)
+        if not callable(lookup):
+            return None      # 舊的／測試用 provider 沒有這支：當成沒有展示機要收
+        try:
+            pods = lookup(self.config.demo_pod_name)
+        except Exception as exc:
+            # 查不到就這輪算了，下一輪（15 秒後）再說。
+            # ⚠ 這裡**絕對不能**回傳一個事件——run_once 看到事件就會直接 return，
+            # 等於展示機一出問題，備援線整輪不做事。備援線是通話容量的保命索，
+            # 不可以被一個附帶功能拖著（2026-08-10 第一版就是這樣寫的，測試抓到）。
+            print("[runpod-backup] demo reap lookup failed: " + str(exc)[:120], flush=True)
+            return None
+        for pod in pods:
+            if str(pod.get("desiredStatus") or "").upper() != "RUNNING":
+                continue
+            age = pod_age_seconds(pod, now)
+            if age is None or age <= self.config.demo_ttl_seconds:
+                continue
+            pod_id = str(pod.get("id") or "")
+            if not pod_id:
+                continue
+            podctl.terminate_pod(pod_id)
+            return {
+                "action": "reaped_demo_pod", "pod_id": pod_id,
+                "name": self.config.demo_pod_name,
+                "age_seconds": round(age), "ttl_seconds": self.config.demo_ttl_seconds,
+            }
+        return None
+
     def run_once(self) -> dict[str, Any]:
         with OperationLock(self.config.lock_file):
             state = self.state.load()
             now = self.now()
+            # 展示機先收——它跟備援線無關，不該因為備援線今天沒事做就沒人管它。
+            # 收到就直接回報收工：外層每 15 秒還會再跑一輪，備援線不會因此漏一拍，
+            # 而且這樣才會出現在 controller 的事件紀錄裡（no_change 不會被印出來）。
+            demo_event = self._reap_demo_pod(now)
+            if demo_event is not None:
+                return {"mode": self.config.mode, **demo_event}
             snapshot = self.gateway.snapshot()
             managed_pods = self.provider.list() if self.config.mode == "active" else None
             self._refresh_health(snapshot, state, managed_pods)

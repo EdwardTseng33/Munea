@@ -134,6 +134,14 @@ const part2 = (function testDeveloperButtonRouting() {
     const developerCalls = [];
     const context = {
       console,
+      // 2026-07-31 i18n 之後，signInDeveloperMode 裡的訊息改走翻譯小工具。
+      // 這裡是把函式抽出來單獨跑的沙盒，得自己備一個——真的 App 裡它在 app.js
+      // 同一支檔案的最上面、不會缺。回傳 fallback 讓下面比對訊息的斷言照舊看得懂。
+      muneaT(key, fallback, values) {
+        let out = String(fallback == null ? key : fallback);
+        if (values) for (const [k, v] of Object.entries(values)) out = out.split(`{${k}}`).join(String(v));
+        return out;
+      },
       window: {
         MuneaAuth: {
           async signInWithTestAccount(overrides) {

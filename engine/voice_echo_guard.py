@@ -45,6 +45,96 @@ def guard_tail_ms():
     return _env_int("MUNEA_VOICE_ECHO_GUARD_TAIL_MS", 2500)
 
 
+def guard_hot_multiplier():
+    """她「正在講話中」的門檻倍率（2026-07-30 · Edward 抓到「她講太大聲會打斷自己」）。
+
+    回音有兩張臉：小聲的（低於門檻→上一輪已用播放水位窗治好）跟大聲的——
+    喇叭開大時她自己的聲音衝破門檻、被當成使用者插話→她講到一半自己閉嘴。
+    telemetry 實錘：退回手機播音模式後 9 秒內連 3 發假插話（音量 2-4 倍於門檻）。
+
+    治法＝分兩段門檻：她「講話中」（播放水位還在前方）要求更大聲才算插話、
+    「殘響尾」維持原門檻。代價講明白：她講話時真人插話也要講大聲一點——
+    對長輩產品，「她自斷」比「插話要大聲」傷害大得多。可調可關（設 1.0＝關）。"""
+    try:
+        return float(os.environ.get("MUNEA_VOICE_ECHO_GUARD_HOT_MULT", "2.5"))
+    except (TypeError, ValueError):
+        return 2.5
+
+
+def speaker_threshold(playout_active=False, after_duck=False):
+    """The sole server-side amplitude policy for deciding who is speaking.
+
+    App-side RMS is only a cheap candidate trigger and is never trusted as a
+    verdict. All destructive interruption and ordinary uplink filtering use
+    this function. During unducked assistant playout the same base threshold is
+    raised by the one echo multiplier; after ducking it returns to the base.
+    """
+    base = float(guard_rms_threshold())
+    if playout_active and not after_duck:
+        return base * guard_hot_multiplier()
+    return base
+
+
+def decide_speaker_evidence(level_frames, playout_active, after_duck,
+                            sustain_ms, minimum_ms=120.0):
+    """Return one authoritative speaker verdict plus auditable evidence."""
+    threshold = speaker_threshold(playout_active, after_duck)
+    accepted, evidence_ms, onset_index = sustained_voice_evidence(
+        level_frames, threshold, sustain_ms, minimum_ms=minimum_ms,
+    )
+    return {
+        "accepted": bool(accepted),
+        "evidence_ms": evidence_ms,
+        "onset_index": onset_index,
+        "threshold": threshold,
+        "basis": "post_duck" if after_duck else (
+            "pre_duck_hot" if playout_active else "pre_duck_idle"
+        ),
+    }
+
+
+def sustained_voice_evidence(level_frames, threshold, sustain_ms, minimum_ms=120.0):
+    """Mirror the browser sustain rule over buffered ``(rms, frame_ms)`` pairs.
+
+    Returns ``(accepted, strongest_run_ms, onset_index)``. The onset points to
+    the first frame of the strongest run so the caller can replay the retained
+    speech onset after accepting a barge-in without replaying the whole echo
+    window.
+    """
+    try:
+        required = float(sustain_ms or 0.0)
+    except (TypeError, ValueError):
+        required = 150.0
+    try:
+        minimum = min(120.0, max(60.0, float(minimum_ms)))
+    except (TypeError, ValueError):
+        minimum = 120.0
+    required = min(350.0, max(minimum, required))
+    run_ms = 0.0
+    strongest_ms = 0.0
+    run_start = 0
+    strongest_start = 0
+    for index, item in enumerate(level_frames or []):
+        try:
+            rms, frame_ms = item
+            rms = max(0.0, float(rms))
+            frame_ms = max(0.0, float(frame_ms))
+        except (TypeError, ValueError):
+            continue
+        if rms >= threshold:
+            if run_ms <= 0.0:
+                run_start = index
+            run_ms += frame_ms
+        else:
+            run_ms = max(0.0, run_ms - frame_ms * 1.5)
+            if run_ms <= 0.0:
+                run_start = index + 1
+        if run_ms > strongest_ms:
+            strongest_ms = run_ms
+            strongest_start = run_start
+    return strongest_ms >= required, strongest_ms, strongest_start
+
+
 def frame_rms(frame):
     """16-bit PCM 音量。壞資料回 0（寧可放行、不誤丟真人聲）。"""
     if not frame:

@@ -11,7 +11,9 @@
 - **正確但做不到的建議比不給更傷**：輪班的人拿到「固定時間起床」會覺得你不懂他的生活。
 """
 import json
+import health_i18n_layer as _i18n
 import os
+import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SOLUTIONS_PATH = os.environ.get("MUNEA_HEALTH_SOLUTIONS_PATH") or os.path.join(HERE, "health_solutions.json")
@@ -44,6 +46,37 @@ URGENCY_WORDS = ("受不了", "撐不住", "快瘋了", "好幾天沒睡", "三�
 PILL_AVERSE_WORDS = ("不想吃藥", "不要吃藥", "不敢吃藥", "藥吃太多", "不想再吃", "怕副作用")
 # 偏好中醫
 TCM_WORDS = ("中藥", "中醫", "轉骨", "四物", "藥膳")
+# 「他問的是吃什麼」（2026-08-12）：不是問原因、不是問嚴不嚴重，是問**要拿什麼進嘴巴**。
+# 這種問法要優先端得出東西的卡，不能只回「慢慢來最穩」「食物優先」這類原則。
+WHAT_TO_TAKE_WORDS = ("吃什麼", "喝什麼", "買什麼", "補什麼", "吃啥", "有什麼可以吃",
+                      "有沒有什麼可以", "保健品", "保健食品", "健康食品", "營養品",
+                      "食療", "食補", "怎麼吃", "飲食", "什麼比較容易消", "菜單")
+# 「可以吃嗎」這種問法**不算**問吃什麼——他多半是在問某樣特定的東西能不能碰
+# （「餵母奶感冒可以吃藥嗎」「我在吃抗凝血的藥，可以吃當歸嗎」）。那種問法由
+# askedFor 負責把該回答的那張叫出來；把它算成「問吃什麼」會讓食補卡蓋掉交互作用警告。
+# 2026-08-12 第一版就是這樣咬到孕期題與中醫題，兩支守門當場抓出來。
+MEDICATION_WORDS = ("藥", "藥物", "處方", "膠囊", "藥丸")
+# 「講得出東西」＝點得出食物、成分或份量，不是只講方向。
+# 這串是給挑選用的粗篩，不是內容規範；寫得寬一點沒關係，寧可多浮上來一張真的有用的。
+NAMES_SOMETHING_CONCRETE = re.compile(
+    r"[一二三四五六七八九十兩半0-9]+\s*(份|杯|顆|克|毫克|公克|茶匙|湯匙|分鐘|次|c\.?c\.?|毫升)|"
+    r"洋車前子|燕麥|糙米|地瓜|豆漿|豆腐|優格|優酪|牛奶|雞胸|雞蛋|魚|鮭魚|鯖魚|堅果|芝麻|"
+    r"深綠|青菜|蔬菜|水果|香蕉|奇異果|黑咖啡|無糖茶|綠茶|開水|喝水|燙過|汆燙|"
+    r"魚油|鈣|維生素|維他命|鎂|鐵|鋅|葉酸|乳清|蛋白粉|益生菌|B\s?群|薑黃|紅麴|葡萄糖胺|"
+    r"膠原|花青素|葉黃素|omega|Omega")
+
+
+# 「講得出動作」＝句子裡有做得到的事，不只是說明這是什麼病。
+DOES_SOMETHING = re.compile(
+    r"每天|每餐|每週|一週|睡前|起床後?|先吃|改成|換成|加一份|減一|走路|快走|練|抬|站|坐直|"
+    r"泡|按|記錄|量血壓|量一下|放在|拿掉|戴|擦|洗|曬|問藥師|帶去|試試|先從")
+
+
+def _asks_what_to_take(text):
+    t = text or ""
+    if any(w in t for w in MEDICATION_WORDS):
+        return False          # 問的是藥能不能吃，不是問吃什麼——別讓食補卡蓋掉警告
+    return any(w in t for w in WHAT_TO_TAKE_WORDS)
 # 代問偵測（2026-07-29 · 三齡層擴充時發現）：青少年的事多半是爸媽在問、不是本人；
 # 長輩的事也常是子女在問。同一題對「本人」跟「替他問的人」要講完全不同的話——
 # 對本人是「你可以怎麼做」，對家長是「先理解他不是故意的，你可以怎麼幫」。
@@ -118,10 +151,51 @@ def _profile_flags(profile):
     }
 
 
+_CJK = re.compile(r"[぀-ヿ㐀-鿿豈-﫿]")
+_WORD_START = {}
+
+
+def mentions(needle, text):
+    """這句話裡有沒有提到這個詞。**全庫唯一的比對規則**。
+
+    中文日文用純包含比對（本來就沒有詞的空隙，「睡不好」要能在句中任何位置命中）。
+    拉丁語系兩件事都要做：**忽略大小寫**（語音辨識會寫成「Plavix」「Ventolín」，
+    我們的字典是小寫）、而且**從詞頭開始比**（西班牙版回報「tos（咳嗽）」被
+    「hidra*tos*（醣類）」叫起來）。只綁詞頭、不綁詞尾，是為了留住詞根：
+    「aliment」還是要能命中「alimentación」。
+
+    2026-07-31：這支原本只長在觸發字那一邊，**點名字（askedFor）那一邊是生的**——
+    大寫就比不到。剛好新的「他點名了才回答」機制整個靠 askedFor，出國就會失靈。
+    兩邊改用同一支，以後不會再走鐘。
+    """
+    k = (needle or "").lower()
+    if not k:
+        return False
+    hay = (text or "").lower()
+    if _CJK.search(k) or not k[0].isalpha():
+        return k in hay
+    rx = _WORD_START.get(k)
+    if rx is None:
+        rx = _WORD_START[k] = re.compile(r"\b" + re.escape(k))
+    return rx.search(hay) is not None
+
+
+def _named(sol, user_text):
+    """他自己把這樣東西講出來了嗎。"""
+    return any(mentions(w, user_text) for w in (sol.get("askedFor") or []))
+
+
 def _blocked_by_safety(sol, flags, user_text):
     """安全過濾（硬性、排序翻不了）。回傳 True＝整個方案剔除。"""
     if sol.get("blocked"):
-        return True
+        # blocked＝我們絕不主動端出去的（開刀、調藥、減肥針、通血路點滴）。
+        # 但這批寫的每一張 blocked 卡，內容其實都是「他問了要怎麼答」的誠實回話。
+        # 一律剔除的結果是：他指名問「通血路的點滴有效嗎」，我們寫好的答案永遠不出場，
+        # 她只能拿通用模型自己接——最該講究措辭的那一句反而沒有稿。
+        # 所以：他自己點名了就端出去，沒點名就繼續不主動提。
+        # （2026-07-31 建慢性病三題時抓到；7 月的褪黑激素那次是同一個病，
+        #   當時把單張卡改成不 blocked 繞過去，這次改成通則。）
+        return not _named(sol, user_text)
     if sol.get("riskLevel") in ("L4", "L5"):
         return True          # 轉介類另外處理、不進一般推薦池
     for c in sol.get("contraindications") or []:
@@ -183,11 +257,27 @@ def _score(sol, flags, urgent, user_text):
         elif sol.get("solutionType") in ("食補", "行為調整"):
             score += 0.5
 
+    # 他問的是「吃什麼」，就要真的講得出東西（2026-08-12 · Edward 拿 ChatGPT 的
+    # 內臟脂肪回答當對照後）：18 句真人問法實測，7 句我們一樣具體的東西都端不出來——
+    # 但拆開看，多數題目**卡片其實寫了、只是沒被挑出來**（腎臟題的「菜先燙過」、
+    # 血脂題的「燕麥與可溶性纖維」都在庫裡，卻輸給了原則型的卡）。
+    # 他問「吃什麼」時，講得出食物與份量的那幾張本來就該排前面。
+    if _asks_what_to_take(text):
+        if sol.get("solutionType") == "食補":
+            # 只要 +2：目的是把講得出東西的那張**擠進三張裡**，不是讓它永遠當第一句。
+            # 第一版給 +3，膝蓋題的蛋白質卡就壓過了實證更明確的肌力訓練——守門抓到。
+            score += 2.0
+        elif sol.get("solutionType") == "保健品":
+            score += 1.5          # 排斥藥丸的人前面已經扣 6 分，這裡蓋不過去
+        if NAMES_SOMETHING_CONCRETE.search(sol.get("say") or ""):
+            # 型別不是食補、但內容真的講得出東西的也算（例：腎臟題「蔬菜先燙過再炒」）
+            score += 1.5
+
     # 他點名問的東西要浮上來（2026-07-29 中醫題抓到、已成通則）：
     # 「我在吃抗凝血的藥，可以吃當歸嗎」——最該回答的那條卻因為分數不夠沒被選中，
     # 端出去的是三句通用的話。askedFor 原本只用來解除陪襯層降級，不夠；
     # 他指名問的，本來就該排到前面，不然等於答非所問。
-    if any(w and w in text for w in (sol.get("askedFor") or [])):
+    if any(mentions(w, text) for w in (sol.get("askedFor") or [])):
         score += 5.0
 
     # 證據強度：同分時已證實的排前面
@@ -223,7 +313,7 @@ def health_kb_keywords(topic_id):
     return _TOPIC_KEYWORDS.get(topic_id) or []
 
 
-def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
+def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS, locale=None):
     """挑方案。回傳 dict：{"solutions": [...], "referral": {...}|None, "reframe": str|None, "urgent": bool}"""
     topic = TOPICS.get(topic_id)
     if not topic:
@@ -233,6 +323,13 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     urgent = _is_urgent(user_text, hour)
     proxy = _asking_for_someone_else(user_text)
     pool = topic.get("solutions") or []
+    # 一國一庫：非中文語系先把說法換成那一國的（缺說法的方案剔除；
+    # 轉介卡沒翻＝整題回空——安全話術絕不退回中文）。打分欄位語言中立、照常用。
+    if locale:
+        pool = _i18n.localized_solutions(topic_id, pool, locale)
+        if not pool:
+            return {"solutions": [], "referral": None, "reframe": None,
+                    "urgent": False, "proxy": False, "related": None}
     # 代問時只留「講給家長聽」的版本；本人問只留「講給本人聽」的版本；沒標的兩邊都給。
     pool = [s for s in pool if s.get("forWhom") in (None, "parent" if proxy else "self")]
     # 照顧者替家人問時，方案是要給**被照顧的那位**用的（2026-07-29 骨鬆題抓到）：
@@ -259,7 +356,7 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     def _demoted(s):
         if not s.get("secondLine"):
             return False
-        return not any(w and w in (user_text or "") for w in (s.get("askedFor") or []))
+        return not _named(s, user_text)
 
     # leadWith＝陪襯層的反面（2026-07-29 加貧血題時抓到）：有些方案是「門檻」——
     # 不先做這件事，後面每一條都失去意義。貧血題的「先驗血、別盲補」就是，
@@ -286,12 +383,25 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
             picked.append(s)
             type_count[t] = type_count.get(t, 0) + 1
 
-    normal = [s for s in ranked if not _demoted(s)]
-    demoted = [s for s in ranked if _demoted(s)]
+    blocked = [s for s in ranked if s.get("blocked")]        # 他點名了才會在這裡
+    normal = [s for s in ranked if not s.get("blocked") and not _demoted(s)]
+    demoted = [s for s in ranked if not s.get("blocked") and _demoted(s)]
     _take(normal, True)      # 先照多樣性挑正規方案
     _take(normal, False)     # 正規的還有就補滿——多樣性只是偏好，不該讓位給陪襯層
     _take(demoted, True)     # 真的不夠了才動陪襯層
     _take(demoted, False)
+
+    # 他點名問的「不能建議」那類：一定要講到（不然等於問了不答），但不放第一句。
+    # 「我感冒了，可以吃家裡的感冒藥嗎」——第一句該是「先問藥師會不會跟你的藥打架」
+    # 這種做得到的事，「我不建議成藥」擺第二句才不會像在打發他。
+    if blocked and limit >= 2:
+        b = blocked[0]
+        if b in picked:
+            if picked.index(b) == 0:
+                picked.insert(1, picked.pop(0))
+        else:
+            picked.insert(min(1, len(picked)), b)
+            del picked[limit:]
 
     # 轉介卡：紅旗類永遠獨立帶著，不跟一般方案搶名額
     referral = next((s for s in pool if s.get("riskLevel") == "L5"), None)
@@ -314,7 +424,7 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
     related = None
     for r in topic.get("relatedTopics") or []:
         cue = health_kb_keywords(r.get("topicId"))
-        if cue and any(k in (user_text or "") for k in cue):
+        if cue and any(mentions(k, user_text) for k in cue):
             related = r.get("say")
             break
 
@@ -322,16 +432,24 @@ def pick(topic_id, user_text="", profile=None, hour=None, limit=MAX_SOLUTIONS):
             "urgent": urgent, "proxy": proxy, "related": related}
 
 
-def render(topic_id, user_text="", profile=None, hour=None):
+def render(topic_id, user_text="", profile=None, hour=None, locale=None):
     """組成注入給模型的那段話。沒挑到東西就回空字串（不佔說明書）。"""
-    res = pick(topic_id, user_text, profile, hour)
+    res = pick(topic_id, user_text, profile, hour, locale=locale)
     if not res["solutions"]:
         return ""
     parts = []
     if res["reframe"]:
         parts.append("【先重新定義問題】" + res["reframe"])
-    for i, s in enumerate(res["solutions"]):
-        tag = "主推" if i == 0 else f"備援{i}"
+    rank = 0
+    for s in res["solutions"]:
+        if s.get("blocked"):
+            # 他自己點名問的「不能建議」那類（開刀、調藥、瘦瘦針、通血路點滴）。
+            # 這不是推薦，所以不掛主推／備援的頭銜，也不套保健品那段上限話術
+            # ——那會把一句「這個沒有用」講成在推薦保健品。
+            parts.append("【他自己問到這個·照這個說法誠實回】" + s["say"])
+            continue
+        tag = "主推" if rank == 0 else f"備援{rank}"
+        rank += 1
         line = f"【{tag}·{s['timeToEffect']}檔·{s['solutionType']}】{s['say']}"
         if s.get("riskLevel") == "L3":
             # L3 三件事少講一件就不合格——這裡把上限與禁忌接在後面，確保她講得到

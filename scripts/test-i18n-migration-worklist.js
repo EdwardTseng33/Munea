@@ -28,23 +28,31 @@ assert(
 );
 assert(worklist.summary.boundOccurrences > 0, 'Bound fallbacks must be reported separately');
 assert.equal(worklist.summary.reviewedNonUserFacingOccurrences, reviewedAppOccurrences);
-assert(worklist.summary.unboundOccurrences > 0, 'Unbound copy must remain in the worklist');
+// 2026-07-31 搬遷歸零後反轉：從「還有債要留在清單上」變成「不准再欠新債」。
+// 新增中文文案必須當場綁鍵（或誠實入冊 docs/I18N-NON-USER-FACING-REVIEW.json），
+// 否則這裡亮紅——防止上架後的文案漂移（守門跟不上程式的老病，#364 教訓）。
+assert.equal(worklist.summary.unboundOccurrences, 0, 'New copy must ship bound (or reviewed) — the migration reached zero on 2026-07-31');
 assert.equal(
   worklist.summary.boundOccurrences
     + worklist.summary.reviewedNonUserFacingOccurrences
     + worklist.summary.unboundOccurrences,
   worklist.summary.totalOccurrences,
 );
-assert(worklist.summary.resolutionKinds['reuse-existing-key'] > 0);
-assert(worklist.summary.resolutionKinds['review-existing-keys'] > 0);
-assert(worklist.summary.resolutionKinds['create-key'] > 0);
+// 歸零前這三類「待辦分類」都必須有量；歸零後清單是空的、只要不出現負值即可
+// （有新債時 unboundOccurrences===0 的斷言會先亮，這裡不重複把關）。
+assert((worklist.summary.resolutionKinds['reuse-existing-key'] || 0) >= 0);
+assert((worklist.summary.resolutionKinds['review-existing-keys'] || 0) >= 0);
+assert((worklist.summary.resolutionKinds['create-key'] || 0) >= 0);
 assert.equal(
   worklist.summary.bindingKinds.attribute || 0,
   0,
   'Every App/WebView localizable HTML attribute must stay catalog-bound',
 );
+// 原本的「>500」是防掃描器假歸零的地板（立於債 1,091 時）；2026-07-31 遷移
+// 真把唯一字串清到 500 以下、地板功成身退。假歸零仍由三道守著：上面的
+// totalOccurrences 對帳、下面的 entries 加總對帳、以及 surface-inventory 契約。
 assert(
-  worklist.summary.uniqueSourceStrings > 500,
+  worklist.summary.unboundOccurrences === 0 || worklist.summary.uniqueSourceStrings > 0,
   'The worklist must expose the real unbound App copy debt',
 );
 assert.equal(

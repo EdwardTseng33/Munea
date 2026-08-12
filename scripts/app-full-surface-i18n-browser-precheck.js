@@ -61,6 +61,37 @@ if (
   throw new Error('Browser precheck profiles must match app-surface-manifest.json');
 }
 
+// ── 局部驗收模式（2026-07-30 Edward 拍板：開發動到哪個畫面才截那幾張，不必每次全拍）──
+// 用法例：node scripts/app-full-surface-i18n-browser-precheck.js --states=screen:home,reader:subscription --locales=ja --profiles=iphone-dynamic-type-large
+// 帶任一過濾參數＝局部模式：只拍指定組合、檢查照常跑、截圖存到 --out
+// （預設 docs/qa/i18n/local-browser-precheck/_targeted/，已列入 .gitignore 不進版控），
+// 且完全不改動正式證據報告。不帶參數＝全套 456 張——同日 Edward 補拍板：連打包前也不強制，純選用。
+const cliArgs = process.argv.slice(2);
+function argValue(name) {
+  const hit = cliArgs.find((a) => a.startsWith(`--${name}=`));
+  return hit ? hit.split('=').slice(1).join('=') : '';
+}
+function argList(name) {
+  const value = argValue(name);
+  return value ? value.split(',').map((v) => v.trim()).filter(Boolean) : null;
+}
+const FILTER = { states: argList('states'), locales: argList('locales'), profiles: argList('profiles') };
+const TARGETED = Boolean(FILTER.states || FILTER.locales || FILTER.profiles);
+const TARGETED_OUT = argValue('out')
+  ? path.resolve(argValue('out'))
+  : path.join(ROOT, 'docs', 'qa', 'i18n', 'local-browser-precheck', '_targeted');
+for (const [name, allowed] of [
+  ['states', SURFACE_MANIFEST.surfaces.map(({ state }) => state)],
+  ['locales', LOCALES.map(({ locale }) => locale)],
+  ['profiles', CAPTURE_PROFILES.map(({ id }) => id)],
+]) {
+  for (const wanted of FILTER[name] || []) {
+    if (!allowed.includes(wanted)) {
+      throw new Error(`Unknown --${name} value "${wanted}". Available: ${allowed.join(', ')}`);
+    }
+  }
+}
+
 function playwrightApi() {
   const configured = process.env.MUNEA_PLAYWRIGHT_PATH;
   if (!configured) {
@@ -204,6 +235,13 @@ async function resetAndPrepareState(page, state) {
       return modal;
     };
 
+    // 啟動頁在 index.html 裡預設就是顯示的（2026-08-10 新增；不然開 App 會先閃一下首頁）。
+    // 拍任何一張畫面之前都要先收掉它跟開場三頁，否則兩者會蓋在每一張截圖上面。
+    const bootSplashOverlay = $('#bootSplash');
+    if (bootSplashOverlay) bootSplashOverlay.hidden = true;
+    const onboardingOverlay = $('#onboarding');
+    if (onboardingOverlay) onboardingOverlay.hidden = true;
+
     document.querySelectorAll('.modal-mask.show').forEach((modal) => {
       modal.classList.remove('show');
       modal.setAttribute('aria-hidden', 'true');
@@ -218,6 +256,14 @@ async function resetAndPrepareState(page, state) {
     if (busy) busy.hidden = true;
     const textPanel = $('#textChatPanel');
     if (textPanel) textPanel.hidden = true;
+
+    // 開場三頁是蓋在最上層的覆蓋層，不是分頁裡的 .screen，所以不能走 setScreen
+    if (requestedState === 'screen:onboarding-intro') {
+      const intro = document.getElementById('onboarding');
+      if (!intro) throw new Error('Missing onboarding intro overlay');
+      intro.hidden = false;
+      return;
+    }
 
     if (requestedState.startsWith('screen:')) {
       setScreen(requestedState.slice('screen:'.length));
@@ -491,7 +537,9 @@ async function stateMetrics(page, surface, locale, catalogs) {
       .filter((child) => {
         const childStyle = getComputedStyle(child);
         if (childStyle.display === 'none' || childStyle.visibility === 'hidden') return false;
-        if (child.closest('.hscroll-wrap')) return false;
+        // 橫向捲動容器裡的內容本來就會排到畫面外等著被滑過來，不是版面爆掉
+        // （.onb-track＝開場三頁，2026-08-10 加入）
+        if (child.closest('.hscroll-wrap, .onb-track')) return false;
         const box = child.getBoundingClientRect();
         return (
           box.width > 0
@@ -596,7 +644,7 @@ async function stateMetrics(page, surface, locale, catalogs) {
 }
 
 async function main() {
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  fs.mkdirSync(TARGETED ? TARGETED_OUT : OUTPUT_DIR, { recursive: true });
   const server = createFixtureServer({ port: PORT });
   await listen(server, PORT);
   const { chromium } = playwrightApi();
@@ -659,9 +707,12 @@ async function main() {
     LOCALES.map(({ locale }) => [locale, catalog(locale)]),
   );
 
+  const runProfiles = CAPTURE_PROFILES.filter(({ id }) => !FILTER.profiles || FILTER.profiles.includes(id));
+  const runLocales = LOCALES.filter(({ locale }) => !FILTER.locales || FILTER.locales.includes(locale));
+  const runSurfaces = SURFACE_MANIFEST.surfaces.filter(({ state }) => !FILTER.states || FILTER.states.includes(state));
   try {
-    for (const profile of CAPTURE_PROFILES) {
-      for (const expected of LOCALES) {
+    for (const profile of runProfiles) {
+      for (const expected of runLocales) {
         const context = await browser.newContext({
           locale: expected.htmlLang,
           viewport: profile.viewport,
@@ -699,11 +750,11 @@ async function main() {
           { ...expected, appFontScale: profile.appFontScale },
         );
 
-        for (const surface of SURFACE_MANIFEST.surfaces) {
+        for (const surface of runSurfaces) {
           await resetAndPrepareState(page, surface.state);
           const metrics = await stateMetrics(page, surface, expected.locale, catalogs);
           const screenshotPath = path.join(
-            OUTPUT_DIR,
+            TARGETED ? TARGETED_OUT : OUTPUT_DIR,
             `${expected.locale}__${safeFilePart(surface.state)}__${profile.fileSuffix}.png`,
           );
           await page.screenshot({ path: screenshotPath, fullPage: false });
@@ -755,21 +806,28 @@ async function main() {
     }
     report.result = report.failures.length ? 'fail-local-precheck' : 'pass-local-precheck';
     report.completedAt = new Date().toISOString();
-    fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+    // 局部模式不落正式證據報告——它是開發自驗工具，不能冒充全套證據
+    if (!TARGETED) fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   } finally {
     await browser.close();
     await new Promise((resolve) => server.close(resolve));
   }
 
   if (report.result !== 'pass-local-precheck') {
+    if (TARGETED) {
+      throw new Error(
+        `Targeted i18n precheck found ${report.failures.length} failure(s): `
+        + `${JSON.stringify(report.failures)}`,
+      );
+    }
     throw new Error(
       `Full-surface i18n local precheck found ${report.failures.length} failure(s). `
       + `See ${path.relative(ROOT, REPORT_PATH)}.`,
     );
   }
-  process.stdout.write(
-    `Full-surface App i18n local precheck PASS: ${report.screens.length} screenshots.\n`,
-  );
+  process.stdout.write(TARGETED
+    ? `Targeted i18n precheck PASS: ${report.screens.length} screenshots in ${path.relative(ROOT, TARGETED_OUT)}.\n`
+    : `Full-surface App i18n local precheck PASS: ${report.screens.length} screenshots.\n`);
 }
 
 main().catch((error) => {

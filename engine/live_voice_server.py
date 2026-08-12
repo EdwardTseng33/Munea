@@ -34,7 +34,9 @@ from urllib.parse import urlencode
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
 from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
-                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold)
+                              note_playout, in_playout_window, guard_enabled, guard_rms_threshold,
+                              sustained_voice_evidence, speaker_threshold,
+                              decide_speaker_evidence)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -42,6 +44,9 @@ import health_kb
 import health_selector
 import localization
 import live_lookup
+import voice_turn_semantics
+import voice_turn_completion
+import voice_tool_continuity
 from voice_locale_session import VoiceLocaleSession
 from call_control_client import post_internal, verify_call_token, CallControlError
 from google import genai
@@ -51,9 +56,41 @@ import websockets
 from websockets.http11 import Response
 from websockets.datastructures import Headers
 
-MODEL = "gemini-3.1-flash-live-preview"
+# 引擎選擇（2026-07-30 Edward 拍板「開始測試 2.5 正式版」）：預設 31＝現行、零改變。
+# vertex25＝Google 雲正式版 2.5 原生語音（gemini-live-2.5-flash-native-audio @ us-central1）。
+# 7/30 三關實測：吃 cmn-TW+Leda ✅、附和/主動接話開關存在 ✅、第一聲 750ms（僅比 3.1 慢 0.1 秒）。
+# 7/25 否決三理由全數失效——但正式採用前仍要過 19 題考卷＋Edward 人耳。
+VOICE_ENGINE = os.environ.get("MUNEA_VOICE_ENGINE", "31").strip().lower()
+if VOICE_ENGINE in ("vertex25", "25", "native25"):
+    MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-live-2.5-flash-native-audio"
+else:
+    VOICE_ENGINE = "31"
+    MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
+# Vertex Live currently needs actual PCM silence to close an explicit audio
+# turn reliably; audio_stream_end alone does not substitute for AAD silence.
+# This padding is sent immediately (no wall-clock sleep), and the App reports
+# how much real tail it already retained so the provider receives 900ms total.
+try:
+    _provider_explicit_turn_tail_ms = int(
+        os.environ.get("MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS", "900")
+    )
+except (TypeError, ValueError):
+    _provider_explicit_turn_tail_ms = 900
+PROVIDER_EXPLICIT_TURN_TAIL_MS = max(650, min(1200, _provider_explicit_turn_tail_ms))
+# Vertex Native Audio occasionally accepts a very short first utterance and its
+# explicit end marker without producing either input transcription or output.
+# More synthetic silence does not repair that state. Keep the recovery bounded
+# to the first, short, audible opening so ordinary turns remain provider-driven.
+SHORT_OPENING_MAX_PCM_BYTES = 16000 * 2 * 3
+try:
+    _short_opening_recovery_ms = int(
+        os.environ.get("MUNEA_VOICE_SHORT_OPENING_RECOVERY_MS", "1350")
+    )
+except (TypeError, ValueError):
+    _short_opening_recovery_ms = 1350
+SHORT_OPENING_RECOVERY_MS = max(50, min(2500, _short_opening_recovery_ms))
 # 通話延長（2026-07-25 · 治「講超過 10 分鐘被硬切斷」）：Gemini Live 對每個底層連線有
 # 時間上限，快到的時候會先送 GoAway 預警（time_left）才真的斷線。GOAWAY_RECONNECT_MARGIN_S
 # 是提早多少秒動手換線（留給重連握手的緩衝，別真的卡到 0 秒才動）；MAX_SESSION_RECONNECTS
@@ -62,6 +99,67 @@ GOAWAY_RECONNECT_MARGIN_S = float(os.environ.get("MUNEA_VOICE_GOAWAY_MARGIN_S", 
 MAX_SESSION_RECONNECTS = int(os.environ.get("MUNEA_VOICE_MAX_RECONNECTS", "8"))
 LOOKUP_CUE_TAIL_MS = 80
 LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
+
+
+def _recoverable_provider_session_abort(error, resumption_handle=None):
+    """Recognize Gemini's resumable session-limit close without hiding errors."""
+    code = getattr(error, "code", None)
+    text = str(error or "").lower()
+    return bool(
+        resumption_handle
+        and str(code) == "1008"
+        and "operation was aborted" in text
+    )
+
+
+# ── 兩支儀表的算法（2026-08-01 · Edward 7/31 深夜「變慢＋斷斷續續」查不到證據後重做）──
+# 抽成純函式的理由：這兩個數字原本寫在通話迴圈裡，一個從頭到尾沒人驗算過，
+# 結果兩支都在量別的東西（見各自註解），出事時反而讓人以為「數據顯示沒問題」。
+# 抽出來就能用測試把「起點是什麼」釘死，之後誰改都會被守門測試擋下來。
+
+def reply_latency_ms(now, last_voice_at=0.0, last_packet_at=None):
+    """他講完到她出聲，幾毫秒。回 (毫秒, 起點是什麼)。
+
+    起點必須是「最後一次真的聽到人聲」。舊版拿 last_packet_at（每一格麥克風封包都會
+    刷新，包含全靜音），量到的永遠是一格封包的間隔（正式機實測 7-38 毫秒）＝根本沒在量。
+    真的沒聽過人聲時（開場招呼、純文字輸入）才退回封包時間，並在回傳值標明。
+    """
+    if last_voice_at:
+        return round((now - last_voice_at) * 1000), "user_voice"
+    if last_packet_at is None:
+        return None, "unknown"
+    return round((now - last_packet_at) * 1000), "last_packet"
+
+
+def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
+    """這一輪送聲音，相鄰兩塊之間最久的空檔（毫秒）。回 (新的最大值, 這一塊的空檔)。
+
+    turn_last_out 是「這一輪」的上一塊，每輪開始必須歸零——舊版拿整通共用的
+    last_out 比，於是每輪第一塊都量到「兩句話中間他在想事情」那段安靜
+    （正式機報過 45,540 毫秒＝他想了 45 秒，被記成她卡了 45 秒）。
+    """
+    if turn_last_out is None:
+        return current_max_ms, None
+    gap = (now - turn_last_out) * 1000
+    return (gap if gap > current_max_ms else current_max_ms), gap
+
+
+def should_recover_short_opening(*, input_bytes, non_silent, asr_turns,
+                                 assistant_output_bytes, recoveries):
+    """Vertex-only fallback for an audible, uncommitted opening of at most 3s.
+
+    Gemini 3.1 handles the explicit App boundary natively. Replaying a hidden
+    recovery prompt there can create a second assistant turn after a slow but
+    valid response, which is worse than waiting for the provider result.
+    """
+    return (
+        VOICE_ENGINE == "vertex25"
+        and bool(non_silent)
+        and 0 < int(input_bytes or 0) <= SHORT_OPENING_MAX_PCM_BYTES
+        and int(asr_turns or 0) == 0
+        and int(assistant_output_bytes or 0) == 0
+        and int(recoveries or 0) == 0
+    )
 
 # 送一塊聲音去雲端臉，最多等多久（2026-07-29）。
 #
@@ -75,6 +173,17 @@ LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
 # 聲音永遠優先。150 毫秒的取法：正常送出遠小於此（寫進緩衝就回來），
 # 又遠小於手機端 600 毫秒的播放水庫，就算真的等滿一次也不會被聽出來。
 FACE_SEND_TIMEOUT_S = float(os.environ.get("MUNEA_VOICE_FACE_SEND_TIMEOUT_S", "0.15"))
+
+
+def face_direct_enabled():
+    """臉的聲音「伺服器直送」總開關（2026-08-10 晚 · 1.0.60 實測災情後裝）。
+
+    直送路（#551）要三邊同時到位：這台伺服器＋手機 App＋顯卡上的臉引擎。
+    8/10 一天四次上線後 Edward 實測整組崩（她開口卡住、通話中段 48 秒聽不到使用者、
+    臉凍住、自己斷線），三邊版本沒對齊是主嫌。**預設關**＝App 問「可以直送嗎」一律回
+    不行，App 自動退回舊走法（聲音繞手機轉送臉機、跟 8/9 一樣）。等三邊在測試機上
+    驗齊了，設 MUNEA_VOICE_FACE_DIRECT=1 再開。每通電話開場問一次、不必重啟。"""
+    return os.environ.get("MUNEA_VOICE_FACE_DIRECT", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def verify_family_relay_proof(relay):
@@ -102,7 +211,24 @@ KEYS = [k.strip() for k in _raw_keys.split(",") if k.strip()]
 if not KEYS:
     sys.exit("需要 GEMINI_API_KEY（或多把 GEMINI_API_KEYS，逗號分隔）")
 
-_clients = [genai.Client(api_key=k) for k in KEYS]   # 每把鑰匙一個 client
+
+def _make_client(key):
+    """依引擎開一個連線客戶端。31＝原樣（開發者鑰匙）。vertex25＝Google 雲正式版：
+    雲端機器（Cloud Run）內建身分、genai.Client(vertexai=True) 直接可用；
+    本機測試沒有內建身分，退而用 gcloud 現領的短期通行證（MUNEA_VERTEX_ACCESS_TOKEN）。"""
+    if VOICE_ENGINE != "vertex25":
+        return genai.Client(api_key=key)
+    project = os.environ.get("MUNEA_GCP_PROJECT", "gen-lang-client-0229303523")
+    location = os.environ.get("MUNEA_VERTEX_LOCATION", "us-central1")
+    tok = os.environ.get("MUNEA_VERTEX_ACCESS_TOKEN", "").strip()
+    if tok:
+        from google.oauth2.credentials import Credentials
+        return genai.Client(vertexai=True, project=project, location=location,
+                            credentials=Credentials(tok))
+    return genai.Client(vertexai=True, project=project, location=location)
+
+
+_clients = [_make_client(k) for k in KEYS]   # 每把鑰匙一個 client（vertex25 時鑰匙只當佔位、實際走雲端身分）
 _key_active = [0] * len(KEYS)                          # 每把鑰匙「現在幾通在用」
 _key_lock = threading.Lock()
 
@@ -382,9 +508,31 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None):
             _diag(cid, "guardian.alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
-async def guardian_watch(cid, who, text, st, session):
+def _guardian_begin_real_user_turn(st):
+    """Re-arm hidden safety follow-ups only after a new microphone turn."""
+    turn_id = int(st.get("guardian_real_turn_id", 0)) + 1
+    st["guardian_real_turn_id"] = turn_id
+    st["guardian_internal_followup_active"] = False
+    st["guardian_internal_followup_sources"] = ()
+    for field in ("user_flagged", "ai_flagged"):
+        current = st.setdefault(field, set())
+        st[field] = {
+            key for key in current
+            if not (
+                isinstance(key, tuple) and key and isinstance(key[0], int)
+                and key[0] < turn_id - 1
+            )
+        }
+    return turn_id
+
+
+async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=None):
     """背景任務：非同步跑守護腦判讀 + 記錄/告警 +（high/critical）排隊安全導引。絕不擋音訊管線。"""
     try:
+        if turn_id is None:
+            turn_id = int(st.get("guardian_real_turn_id", 0))
+        if allow_cue is None:
+            allow_cue = not (who == "ai" and st.get("guardian_internal_followup_active"))
         result = await asyncio.to_thread(guardian_scan_text, text)
         if not result:
             return
@@ -412,7 +560,7 @@ async def guardian_watch(cid, who, text, st, session):
                     }
                     _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
                     await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result)
-                    key = ("semantic", scat)
+                    key = (turn_id, "semantic", scat)
                     if key not in st["user_flagged"]:
                         st["user_flagged"].add(key)
                         cue = guardian_redirect_cue((scat,), sem_result["risk"], sem_result["responsePolicy"])
@@ -420,13 +568,40 @@ async def guardian_watch(cid, who, text, st, session):
                             st["pending_cues"].append(cue)
             return
         flagged = st["user_flagged"] if who == "user" else st["ai_flagged"]
-        if categories in flagged:
+        key = (turn_id, categories)
+        if key in flagged:
             return
-        flagged.add(categories)
+        flagged.add(key)
         policy = (result or {}).get("responsePolicy") or {}
         _diag(cid, "guardian.hit", who=who, level=level, categories=",".join(categories) or "-",
               protection=risk.get("protectionEvent"), family=policy.get("familyNotificationCandidate"))
-        cue = (guardian_ai_correction_cue if who == "ai" else guardian_redirect_cue)(categories, risk, policy)
+        if not allow_cue:
+            _diag(
+                cid, "guardian.cue_suppressed",
+                reason="hidden_followup_no_recursive_turn",
+                turn=turn_id,
+                sources=",".join(st.get("guardian_internal_followup_sources") or ()) or "-",
+            )
+            return
+        if who == "ai":
+            # AI 字幕監看只做稽核／告警，不得在使用者沉默時自己再開一輪。
+            # 關鍵字分類器會把「沒有胸痛」「如果喘要就醫」這類安全覆述也判成
+            # medical emergency；舊行為因此在每輪結束後自動塞 hidden prompt，
+            # 造成使用者聽到寧寧無故多講一次。已播出的句子也無法靠第二輪收回，
+            # 所以保留記錄與人工告警，取消自主語音更正。
+            _diag(
+                cid,
+                "guardian.ai_cue_suppressed",
+                reason="no_autonomous_ai_correction",
+                turn=turn_id,
+                categories=",".join(categories) or "-",
+            )
+            return
+        cue = (
+            guardian_ai_correction_cue(categories, risk, policy)
+            if who == "ai"
+            else guardian_redirect_cue(categories, risk, policy)
+        )
         cues = st["pending_cues"]
         if len(cues) < 2:
             cues.append(cue)
@@ -523,15 +698,18 @@ def health_watch_user_text(cid, st):
         # 語音線的因人分齡等於一直沒生效。改成接通時跟 Brain 要一次、存進這通的
         # 狀態裡（st 是每通獨立的；絕不做跨通的模組級快取，那會把 A 的資料端給 B）。
         _prof = st.get("health_profile") or {}
+        # 一國一庫：用「這通實際講哪種語言」挑觸發字與說法（同人設書同一個來源）；
+        # 那一國沒有疊層＝衛教不出手，安全話術絕不退回中文。
+        _kb_locale = (st.get("voice_locale_profile") or {}).get("sessionLocale")
         _hour = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).hour
-        ids = health_kb.match_topics(said, limit=1, exclude=sent)
+        ids = health_kb.match_topics(said, limit=1, exclude=sent, locale=_kb_locale)
         if not ids:
             return
         sent.add(ids[0])
-        st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour)
+        st["pending_health_cue"] = health_kb.voice_cue(ids[0], said, _prof, _hour, locale=_kb_locale)
         # 帳先備著、等這句真的送出去才記——提示是排在下一個輪替空檔送的，
         # 電話在那之前掛掉就等於她沒講過，記了下次會問「上次那個有試嗎」問空氣。
-        st["pending_health_record"] = (ids[0], said, _prof, _hour)
+        st["pending_health_record"] = (ids[0], said, _prof, _hour)  # 記帳不分語系（帳本是機器鍵）
         _diag(cid, "healthkb.hit", topic=ids[0])
     except Exception as e:
         _diag(cid, "healthkb.err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
@@ -539,11 +717,11 @@ def health_watch_user_text(cid, st):
 
 async def guardian_flush_pending_cue(cid, session, st):
     """在天然的輪替空檔（模型這一輪講完、turn_complete）送出排隊的安全導引，不是插話攔截正在講的這一句。"""
-    pending = st.get("pending_cues") or []
+    guardian_cues = list(st.get("pending_cues") or [])
+    pending = list(guardian_cues)
     st["pending_cues"] = []
     health_cue = st.get("pending_health_cue")
     st["pending_health_cue"] = None
-    health_record = st.get("pending_health_record")
     st["pending_health_record"] = None
     promise_cue = st.get("pending_promise_cue")
     st["pending_promise_cue"] = None
@@ -551,18 +729,27 @@ async def guardian_flush_pending_cue(cid, session, st):
         # 空頭承諾更正排最前面：長輩可能正準備坐下來等，這句要最快講
         pending = [promise_cue] + pending
     if health_cue:
-        pending = pending + [health_cue]  # 衛教排在安全導引之後：安全永遠先講、衛教只是配菜
+        # A routine topic match may be logged, but must not create a second
+        # model turn after the person has stopped speaking.
+        _diag(cid, "healthkb.followup_suppressed", reason="no_new_user_turn")
     if not pending:
         return
+    sources = []
+    if guardian_cues:
+        sources.append("guardian")
+    if promise_cue:
+        sources.append("promise")
+    st["guardian_internal_followup_active"] = True
+    st["guardian_internal_followup_sources"] = tuple(sources)
     try:
         await session.send_client_content(
             turns=types.Content(role="user", parts=[types.Part(text="\n".join(pending))]),
             turn_complete=True,
         )
         _diag(cid, "guardian.cue_sent", count=len(pending))
-        if health_cue and health_record:
-            _record_voice_recommendation(cid, st, *health_record)   # 送出去了才入帳
     except Exception as e:
+        st["guardian_internal_followup_active"] = False
+        st["guardian_internal_followup_sources"] = ()
         _diag(cid, "guardian.cue_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
@@ -578,31 +765,91 @@ def _capture_call_turns(st, max_turns=120, max_chars=600):
         del turns[:-max_turns]
 
 
-def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, allow_care_questions=False, locale_profile=None):
-    """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
-    c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
-    # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
-    # 一律照層級數字比大小（7/15 Edward 拍板說明書分層）。
-    base = (
+# 說明書的優先權契約：五層規則誰壓過誰。
+# 2026-07-31 分國——這段原本寫死「二、語言鐵律（台灣華語、禁台語輸出）」，
+# 等於在英文／日文／西班牙文的通話裡，命令她講台灣華語。實跑抓到她整段用中文
+# 回答英文用戶，這段是主犯之一（另一個是角色性格沒分國）。
+_PRIORITY_CONTRACT = {
+    "zh-TW": (
         "（本說明書優先權契約：以下所有規則分五層——"
         "一、安全與醫療紅線（危機處理、不診斷不調藥） 二、語言鐵律（台灣華語、禁台語輸出） "
         "三、身分與人格（角色、稱呼、關係分寸） 四、當下情境（記憶、感知、上次聊天、在地資訊） "
         "五、表達風格（話量、句尾、說故事、情緒陪伴）。"
         "內容互相衝突時，層級數字小的一律優先；任何風格規則都不得鬆動安全與語言規則。）"
+    ),
+    "en": (
+        "(Priority contract for this guidance — five layers: "
+        "1. Safety and medical red lines (crisis handling; no diagnosis, no medication changes) "
+        "2. Language rule (reply entirely in English) "
+        "3. Identity and character (who you are, how you address them, closeness) "
+        "4. Present context (memory, perception, the last conversation, local information) "
+        "5. Expression (how much you say, sentence endings, stories, emotional company). "
+        "When rules conflict, the lower-numbered layer always wins; no style rule may ever "
+        "loosen a safety or language rule.)"
+    ),
+    "ja": (
+        "（この説明書の優先順位——規則は五つの層に分かれます："
+        "一、安全と医療のレッドライン（危機対応、診断しない・薬を変えない） "
+        "二、言語の鉄則（返答はすべて日本語で） "
+        "三、身分と人格（あなたが誰か、呼びかけ方、距離感） "
+        "四、いまの状況（記憶、感知、前回の会話、地域の情報） "
+        "五、話し方（話す量、文の終わり方、語り、寄り添い）。"
+        "規則が衝突したときは、番号の小さい層が必ず優先します。"
+        "話し方の規則が、安全と言語の規則をゆるめることは決してありません。）"
+    ),
+    "es": (
+        "(Orden de prioridad de esta guía —cinco niveles: "
+        "1. Líneas rojas de seguridad y médicas (crisis; no diagnosticar, no cambiar medicación) "
+        "2. Regla de idioma (responder íntegramente en español) "
+        "3. Identidad y carácter (quién es usted, cómo se dirige a la persona, la distancia) "
+        "4. Contexto actual (memoria, percepción, la conversación anterior, información local) "
+        "5. Expresión (cuánto habla, final de frase, relatos, acompañamiento emocional). "
+        "Cuando dos reglas chocan, gana siempre el nivel con el número más bajo; ninguna regla "
+        "de estilo puede relajar una regla de seguridad o de idioma.)"
+    ),
+}
+
+
+def _priority_contract(locale):
+    return _PRIORITY_CONTRACT.get(locale) or _PRIORITY_CONTRACT["zh-TW"]
+
+
+def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False, allow_care_questions=False, locale_profile=None):
+    """跟 /chat 同一套腦：角色人格 + 非醫療界線 + 記憶層 + 感知層 + 守護腦。"""
+    # 2026-07-31：說明書與角色性格都照這通電話的語系拿。
+    # sessionLocale＝這通實際講哪種語言（介面英文但講日文的人要拿日文書）。
+    # 角色性格原本固定讀繁中版，於是英文說明書中間夾著中文個性描述——
+    # 實跑抓到她整段用中文回答英文用戶。
+    _book_locale = (locale_profile or {}).get("sessionLocale") or eng.DEFAULT_PERSONA_LOCALE
+    _chars = eng.characters_for(_book_locale)
+    c = _chars.get(char) or _chars["寧寧"]
+    # 優先權契約放在整份說明書最前面：規則衝突不再靠「排在前面還後面」決定，
+    # 一律照層級數字比大小（7/15 Edward 拍板說明書分層）。
+    base = (
+        _priority_contract(_book_locale)
     )
     # 共同底盤（管家身分＋專業邊界＋告警/情緒/調解能力）在最前面，角色性格疊在上面
-    base += eng.CORE + c.get("persona", "") + eng.RED
+    # 共同底盤依查詢模式組裝（2026-07-30）：開內建搜尋＝線上版查詢規則（不再跟
+    # 「你不會自己上網查」同時出現＝不打架）；其餘模式＝離線版原行為。
+    # 2026-07-31：說明書照這通電話的語系拿（locale_profile 已在上面解出來、是可信來源）
+    # 說明書用「這通對話實際講哪種語言」（sessionLocale）決定，不是介面語言——
+    # 介面英文但講日文的長輩，該拿到的是日文書。
+    _core = eng.core_instruction(
+        "online" if (native_search_enabled() and not demo_mode) else "offline",
+        _book_locale,
+    )
+    base += _core + c.get("persona", "") + eng.red_lines(_book_locale)
     if native_search_enabled() and not demo_mode:
         # 2026-07-29：這通有內建搜尋（她可以自己查）——但共用說明書寫的是「你不會自己上網查」，
         # 兩邊會打架。這段把規矩講清楚，而且補上最重要的一條：**健康問題不准用搜尋回答**。
         # 為什麼：搜尋結果沒人審過（內容農場跟醫學會指引在她眼裡長一樣），
         # 而健康建議一旦講錯，長輩會照著做。7/24 三路調研已拍板「健康走策展題庫、不走現查」。
+        # 2026-07-30 瘦身下半場：原本這段開頭在「覆蓋掉共用說明書那句『你不會自己上網查』」
+        # ——那是補丁蓋補丁；現在共用底盤已依模式二選一（core_instruction），矛盾在源頭解掉，
+        # 這裡只留它真正的貢獻＝健康除外條款（守門測試釘著原句、不得改寫）。
         base += (
-            "（這一通你有一個查資料的能力，可以自己查天氣、新聞時事、店家營業時間這類——"
-            "覆蓋掉上面說明書裡「你不會自己上網查」那句。用的時候不要說「我幫你查一下」再消失，"
-            "查到就自然講出來、像本來就知道一樣；查不到就老實說不知道。"
-            "**但有一條硬規矩：健康、身體、用藥、症狀、保健品這類問題，絕對不准用查到的網路內容回答**——"
-            "那些東西沒有人審過，內容農場跟醫學會的說法在搜尋結果裡長得一樣。"
+            "（查詢的健康除外條款（硬規矩）：健康、身體、用藥、症狀、保健品這類問題，"
+            "**絕對不准用查到的網路內容回答**——那些沒人審過，內容農場跟醫學會的說法在搜尋結果裡長得一樣。"
             "健康的事只能用系統給你的衛教資料回答（下面若有「因人挑選的方案」或「衛教資料庫」那段就是），"
             "沒有那段就老實說「這個我不太確定，你要不要問醫生或藥師」——**寧可說不知道，也不要拿網路上的東西當健康建議**。）"
         )
@@ -663,117 +910,46 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         pass
     if c.get("type") == "animal" and c.get("style"):
         base += f"（你講話的聲音演技：{c['style']}）"
+    # 2026-08-06 GPT Live 對齊：即時互動只留一份短、分段、可執行的契約。
+    # 醫療、安全、權限與來源紅線仍在共用人設書；這裡不再用多組例句重複同一規則。
     base += (
-        # 相處框架（2026-07-16 Edward 拍板）：先給「像真人視訊」的整體想像、再給細規則——
-        # 好的自我想像會自動帶出自然節奏；「像真人一樣聊天」是說話方式、不是身分宣稱，
-        # 底層紅線「不能假裝自己是真人」仍然優先（優先權契約層級小者優先）。
-        "（現在是即時語音視訊通話。把整通電話當成真實世界裡兩個人的視訊聊天來相處："
-        "你的節奏、溫度、來回方式，都要像一個自然、有人味的人在跟他視訊——"
-        "多數時候是他說、你接住；不是你表演、他觀看。"
-        "剛接起電話先用一句溫暖的話打招呼；不確定對方是誰時不要亂猜名字或稱呼；"
-        "句子短、口語、一次一兩句、講完停下來等對方回應。）"
-        # 通用紅線（2026-07-16）：不管上面有沒有給「上次聊過」的提示，都不准虛構跨通記憶——
-        # Gemini 沒拿到摘要也可能自己演「延續上一通」，這條對所有通話無條件生效。
-        # 2026-07-28 擴寫（考卷三輪：11 次紅線違反有 9 次是這一條，佔 82%）。
-        # 舊版只擋「上一通聊了什麼」，但真正犯的是更廣的假設——「我記得你們以前感情很好」
-        # 「我們回診的時候」「我記得美玉奶奶有問過」，這些都不是上一通的內容，是她替對方
-        # 的關係、習慣、互動史腦補了一個版本。
-        # 更關鍵的是：舊版只有「禁止」沒有「替代」。她的貼身度壓力還在（貼身度也正好是
-        # 七項裡長期最低分），只擋不給路，她還是會用「我記得你…」去補。所以這版把「用問的」
-        # 明確立成她表達關心的正規做法——問句不宣稱事實，又比斷言更貼身（讓他自己講）。
-        # 2026-07-29 重整（原本是「一條總則＋六條列舉」，一路打地鼠加上來的）。
-        # 七輪考卷追下來，六條其實是同一個檢查的六種變形——她填關係、填習慣、填細節、
-        # 填家人、填當下情境、填別人的想法，全都是「不知道就補一個版本」。
-        # 與其繼續加第七條，改成一句能套用到所有情況的自檢：「這是他剛剛講的，還是上面寫的？」
-        # 例子只留四個代表型（含新抓到的「填當下情境」），比原本更短、涵蓋更廣。
-        # 2026-07-29 補成雙向：原本這條只有「沒寫的不要講」半邊。七輪考卷裡「貼身度」
-        # 一直是七項最低分，而評審給低分的理由**每一次都是同一句**——「沒有連結使用者的
-        # 背景資訊」。她手上其實有 8-12 條（高血壓每天吃藥、孫子小寶下個月結婚、每天去
-        # 公園散步…），只是沒用出來，於是給出誰都適用的通用建議。
-        # 這半邊跟防編造是同一個檢查的正面用法：問完那句話，答案是「有」就要大方用。
-        # ── 2026-07-29 說明書瘦身第 1 刀（Edward 拍板優化①：13,661 字、每輪重新計費）──
-        # 這裡原本有三段：我的「自檢＋問句」紅線（493 字）＋「現實邊界」（244 字）＋
-        # 「語音自覺」（264 字）。三段的歷史都留在 git（S02/S09/S18 實例、7/16 貼圖幻覺、
-        # 7/24 語音自覺拍板），內容合併如下、規則一條不丟：
-        # ①自檢部分與共用底盤 ⓪-D-4（「這是誰告訴我的？」四種來源）重複——那條 7/29 才
-        #   收斂成總則、且 17/19 那輪就是兩條並存跑出來的；此處只留 ⓪-D-4 沒有的東西：
-        #   新通話定位＋「把斷定改成問句」的替代講法（那是貼身度 3.3→4.0 的關鍵）。
-        # ②「現實邊界」（他傳不了給你）與「語音自覺」（你給不了他）是同一個現實的兩半，
-        #   併成一段「純語音的現實」。
-        "（新通話紅線：這是一通新接起的電話——你們以前聊過什麼、你有沒有提醒過他，"
-        "你都不知道（⓪-D-4 的來源自檢，這裡同樣適用）。"
-        "**但「不知道」不等於冷淡——把斷定改成問句就好**：\n"
-        "　✗「我記得你們以前感情很好」→ ✓「你們以前感情一定很好吧？」\n"
-        "　✗「等晚一點兒子回來跟他說」→ ✓「要不要跟家人說一聲？」"
-        "（沒講過的兒子女兒孫子老伴一律不存在；他自己說了是誰，你才跟著那樣叫）\n"
-        "　✗「你這麼晚還開著電視喔？」→ ✓「你這麼晚還沒睡喔？」"
-        "（現在幾點是上面寫的、可以講；但他此刻在做什麼你看不到，不要猜）\n"
-        "　✗「你也遇過那隻長壽的貓喔？」→ ✓「是什麼樣的事？」"
-        "（問句裡一樣不准塞他沒講過的細節）\n"
-        "用問的比用猜的更貼心。"
-        # 2026-07-29 考卷 S04：她說「他以前一定是個很溫柔的人。」——內容跟 ✓ 例同款，
-        # 但句尾少了「吧？」就從溫暖的猜變成斷定的編。差一個字，紅線就過不了。
-        "**猜他的過去時，句尾一定要帶問**（「…吧？」「…嗎？」）——"
-        "「他以前一定很溫柔吧？」是關心，「他以前一定是個很溫柔的人。」是替他編故事。"
-        "**這不是叫你多問問題**——是同一句關心換個講法，"
-        "一次還是一兩句、問完停下來聽；他主動提起就順著接。）"
-        "（純語音的現實：你們之間只有「聲音」。**他傳不了任何東西給你**——沒有貼圖、照片、"
-        "文字訊息、影片、連結，你也看不到他的畫面；絕對不要說「你傳了貼圖／照片」，"
-        "也不要叫他做任何你看不到的事（「用指的給我看」「比給我看」「拿給我看」都不行）。"
-        "他講不清楚時只能用聽的問：「是刺刺的痛還是悶悶的痛？」——"
-        # 2026-07-29 考卷 S09：含糊台語「哇底疼」被她猜成「聽起來你的頭很不舒服」。
-        # 聽不清時猜錯部位比慢一步嚴重（對方會以為她聽懂了）。守門測試要求本段
-        # 不得出現年齡層字眼（通用規則）——註解也一併遵守。
-        "**沒聽清楚的部位、人名、東西，不要自己挑一個講出來**（「你說哪裡不舒服？」"
-        "比「聽起來你的頭不舒服」安全得多）；"
-        "聽不清楚或只聽到雜音，就老實說沒聽清、請他再說一次，不要猜他做了什麼。"
-        "**你也給不了他任何東西**——不要說「我傳給你」「你看一下這張圖」「詳見某某網站」，"
-        "講了他也收不到、只會一直等。查到的資料先在心裡消化成口語，像跟朋友轉述那樣講，"
-        "不唸條列、不用書面語；一次最多三件事、每講完一件停一下，讓他消化或接話。）"
+        "\n[即時通話互動契約]\n"
+        "相處：現在是即時語音視訊通話。把它當成真實世界裡兩個人的視訊聊天；"
+        "像一個自然、有人味的人接住對方，不是你表演、他觀看。剛接起先一句溫暖招呼，"
+        "一次只推進一件事，講到這輪需要的程度就停。\n"
+        "來源：這是一通新接起的電話。只使用對方這通親口說的內容與上面明確提供的可信資料；"
+        "沒有來源的關係、過去、家人、習慣或眼前情境都不要補。想關心就改成中性問句，"
+        "一次問一件；問句裡一樣不准塞他沒講過的細節。\n"
+        "純語音的現實：你們之間只有「聲音」。他傳不了任何東西給你——沒有貼圖、照片、文字、"
+        "影片或連結；你看不到畫面，也不要叫他「用指的給我看」「拿給我看」。"
+        "聽不清楚部位、人名或東西，就說沒聽清、請他再說一次，不要猜他做了什麼。"
+        "你也給不了他任何東西——不要說「我傳給你」「你看一下這張圖」「詳見某某網站」。"
+        "查到的資料先消化成口語再講；一次最多三件事，每件之間留空，讓他消化或接話。）"
     )
     # 熟識度分寸貫穿整段對話（不只開場）：越不熟越收斂、越熟越自在（Edward 2026-07-12）
     if fam < 1:
         base += "（你們還不太熟，這是頭幾通電話：整段對話都要特別收斂——話少、溫和、讓他主導，不要熱情轟炸、不要一直找話題硬聊、不要連環問。他問你、或聊到他有興趣的才多說一點。）"
     elif fam < 3:
-        base += "（你們聊過幾次、漸漸熟了：可以自在一點，但仍別長篇、別連環問、別硬炒氣氛。）"
-    else:
-        base += "（你們很熟了、像老朋友：自在、可主動一點，但一次還是一兩句、不長篇。）"
-    if native_search_enabled() and not demo_mode:
-        # 2026-07-28：她自己查（Gemini 內建 Google 搜尋）。跟舊的橋接查詢差在——
-        # 舊路要等我們繞出去查 5 秒，所以說明書叫她「不要自己先說過場，伺服器會替你播」；
-        # 現在查只要 1.3 秒、而且是她自己在查，那句過場話就該由她自己講（她本人的聲音、
-        # 接得順）。這也是 Edward 7/28 聽到「系統句跟她自己講的重疊」的病根：舊版說明書
-        # 叫她別講、工具說明又叫她先講一句，兩份指示打架，於是同一件事被講兩三次。
         base += (
-            "（你可以自己上網查現在的資訊。**他自己開口問**餐廳店家、景點旅遊"
-            "（例如日本哪裡好玩、桃園有什麼好吃的）、電影影劇、天氣預報、時事、活動檔期這類"
-            "「講錯會誤導人」的具體事情時，就直接查；"
-            "**你自己不要把話題帶到那邊、再查給他看**——那是炫技，不是聊天。「聊到」不算，**要他真的問**才算。\n"
-            # 例句刻意避開「看」這個動詞：7/28 考卷抓到她把「看」泛化成視覺能力，
-            # 冒出「把藥袋拿來讓我幫您看看」——她根本看不到任何東西。
-            # 2026-07-29 考卷 S02 三輪同型：被問「今天有什麼新聞」時她不真的查，
-            # 改唸簡報再自己擴寫出「網路詐騙」「持續下雨」這種簡報裡沒有的內容＝編新聞。
-            # 病根是簡報跟查詢的分工沒講清楚：簡報是清晨備料（天氣/話題），新聞現況要用查的。
-            "**他問新聞時事，就真的去查**——不要只靠今日簡報回答再自己補內容；"
-            "簡報是清晨備好的天氣和話題，新聞要現查才是真的。查了沒有就老實說沒查到。\n"
-            "要查的時候，**先用一句很短的話告訴他你在查**（像「我查一下喔」「等我一下」），"
-            "講完就去查、查完接著把答案講出來——**整件事你自己一次講完，不要重複說你要查**。\n"
-            "只講查到的真店名、真地點、真資訊；用「我聽很多人推薦…」「那邊最有名的是…」這種像自己去過或朋友推薦的口吻，"
-            "自然分享一兩個亮點就好，順便帶一個有意思的小知識或典故更好。"
-            "**你只能用「講」的**：不要唸網址、不要唸編號清單、不要唸括號裡的出處，"
-            "也不要用書面報告語氣——他是用聽的，唸不出來的東西就不要講。\n"
-            # 2026-07-28 真機實測 5 通抓到 1 次：她把「（在網路上搜尋「某某店」大安區）」
-            # 這種動作描述整句唸出來。長輩聽到會覺得機器怪怪的，機率不低、值得寫死。
-            "**不要把自己正在做的動作講出來**（像「在網路上搜尋…」「我呼叫一下工具」"
-            "「正在查詢中」），也不要唸出括號或方括號裡的內容——那是給系統看的、不是講給他聽的。"
-            "你只要像朋友一樣，講一句「我查一下喔」，然後直接把結果講給他聽。\n"
-            # 2026-07-28 考卷 S18 實例：「把藥袋拿來讓我幫您看看也可以喔」——一句話同時
-            # 踩兩條鐵律（宣稱有視覺、承諾做不到的事）。上面「現實邊界」雖然已寫「你看不到
-            # 他的畫面」，但這段講了大量「查」，會把「查」誤推廣成「看得見」，所以在這裡再釘一次。
-            "**你查東西是「上網查」，不是「用眼睛看」**——你看不到任何東西，"
-            "絕對不要叫他把藥袋、單子、照片、螢幕「拿來給你看」「拍給你」，"
-            "那些你都收不到、也看不到。要幫他確認藥袋或單據上寫什麼，只能請他「唸給你聽」。\n"
-            "查不到就老實說查不到，可以建議他打電話問問看；**絕對不可以自己編**店名、地址、價格或營業時間。）"
+            "（你們聊過幾次、漸漸熟了：可以自在一點，但對方沒要求時不要自顧自延伸"
+            "第二個話題，也別連環問、別硬炒氣氛。）"
+        )
+    else:
+        base += (
+            "（你們很熟了、像老朋友：自在、可主動一點，但仍然一次只推進一件事；"
+            "對方明確想深入、比較、聽完整說明或故事時再自然展開。）"
+        )
+    if native_search_enabled() and not demo_mode:
+        # Gemini 內建搜尋：短契約取代重複的案例清單；健康除外條款仍由前面的硬規矩負責。
+        base += (
+            "\n[即時資訊｜內建搜尋]\n"
+            "你可以自己上網查現在的資訊，但只在他明確問到店家、旅遊、天氣、時事、活動等"
+            "會變動的具體資訊時查；不要自己帶話題再查。他問新聞時事就真的查，他沒問就不要主動報。"
+            "查前先用一句很短的話告訴他你在查，整次只說一次；查後先講結論，再講一兩個有用重點。"
+            "只講查到的內容；查不到就說沒查到，不准用印象補。不要唸網址、來源括號、編號清單，"
+            "也不要把自己正在做的動作講出來。你查東西是上網查，不是「用眼睛看」；"
+            "不要叫他把東西拿來給你看，只能請他唸給你聽。"
+            "不要重複過場，也不要編店名、地址、價格或營業時間。）"
         )
     if live_lookup_enabled():
         if not demo_mode:
@@ -796,18 +972,13 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         # （她自己查）時這段會跟上面那段同時貼上去，變成「你可以查」＋「你沒辦法查」自相矛盾。
         # 這段的方向跟⑦「不捏造家人的話」、健康圍籬一樣：不知道就說不知道，絕不憑印象編。
         base += (
-            "（**你沒有辦法上網查東西**——這通電話裡你查不了任何即時資訊。"
-            "**絕對不要說「我幫你查一下」「我查查看」「我找找看」「等我一下」**這種話"
-            "（你根本查不了，講了就是空頭支票，長輩會一直等）。\n"
-            "**你知道的即時資訊只有一個地方**：上面「今日簡報」那段——天氣、明天預告、"
-            "空品、本週話題都在那裡，那些是今天早上就備好的真資料，可以自然講、大方講。\n"
-            "**簡報裡沒有的**（某家店還開不開、今天的新聞、營業時間、票價、路況這類），"
-            "就**老實說你不知道**——像朋友一樣自然："
-            "「這我就不知道了欸」「我沒把握，你要不要打去問問看」「這個我幫不上忙，"
-            "要不要問問你女兒？」。**寧可說不知道，絕對不可以憑印象編**店名、地址、價格、"
-            "營業時間、新聞或數字——編了長輩會當真、跑一趟撲空，比不講嚴重得多。\n"
-            "**這樣才像朋友**：真人朋友被問到不知道的事，就是說「我不知道欸」，"
-            "不會說「我幫你查一下」然後消失好幾秒。那是客服，不是你。）"
+            "\n[即時資訊｜無搜尋]\n"
+            "你沒有辦法上網查東西。絕對不要說「我幫你查一下」「我查查看」「我找找看」或「等我一下」；"
+            "做不到還承諾是空頭支票，那是客服，不是朋友。"
+            "可用的即時資訊只限上面「你今天已經知道的事」；可以自然講，但不要透露「今日簡報」、"
+            "系統或資料來源。那段沒有的店家、新聞、價格、路況或數字就直接說不知道，"
+            "像朋友一樣說「這我就不知道了欸」，可建議他打電話確認；"
+            "寧可說不知道，絕對不可以憑印象編。）"
         )
     nm = (name or "").strip()
     if nm and nm not in ("寧寧", "沐寧", "munea", "Munea"):
@@ -827,6 +998,20 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "只有安撫他、提醒重要事情、或隔很久重新開口時才偶爾再叫一次。"
             "每一句都叫他的名字非常不自然、禁止。）"
         )
+    else:
+        # 2026-08-08 Edward 真機：個人資料沒填任何稱呼，她開口就叫他「伯伯」。
+        # 舊寫法在這裡**什麼都不說**——不知道名字時，說明書對稱呼完全沉默，
+        # 而開場指令卻要求「用他的稱呼開頭」，等於逼她自己生一個。
+        # 沉默不是中立：模型會用最像樣的猜測填空（照年紀猜「伯伯」、照性別猜「先生」）。
+        # 所以這裡要明講「不知道」＋給她一條照樣合格的路（不加稱呼直接說話）。
+        base += (
+            "（稱呼規則：**你不知道他叫什麼**——個人資料裡沒有填。"
+            "所以整通電話都不要加稱呼，直接跟他說話就好；"
+            "**絕對不准自己想一個**，包括照年紀或性別猜的「伯伯」「阿姨」「阿公」「阿嬤」"
+            "「先生」「小姐」「大哥」「大姐」——你沒見過他，那是憑空猜的。"
+            "沒有稱呼一點都不失禮，叫錯才傷人。"
+            "他自己在對話中說了名字，之後才可以用他說的那個。）"
+        )
     # 今天日期時間（台灣時間）——所有版本都給，讓「明天／今晚」算得準（2026-07-09 Edward）
     tw = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
     wd = "一二三四五六日"[tw.weekday()]
@@ -840,9 +1025,24 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "（你可以「直接幫他把提醒設進 App」：他說要設看診／回診提醒，就呼叫 set_clinic_reminder；"
             "他說要設吃藥／用藥提醒，就呼叫 set_medication_reminder。呼叫前若日期、時間、藥名或科別沒聽清楚，"
             "先用一句話問清楚再設，不要自己亂猜。只有工具回覆 status=ok 才能說設好了；若回覆 error，誠實說沒有設成功並請他重試。"
-            "他要傳話給家庭圈成員時，先用一句話複誦收件人與完整內容，得到確認後才呼叫 send_family_relay；不要自行添加、刪改或猜測內容。"
+            # 傳話要「整理過再確認」而不是原句照送（Edward 2026-07-31）：
+            # 他對你說的是「幫我跟他說他晚餐的藥忘記吃了」——那是講給你聽的第三人稱。
+            # 原封不動送出去，收到的人會看到一句在講別人的話，很怪。
+            # 但整理只能動說法、不能動意思，所以一定要唸回去讓他點頭，這是防走鐘的保險。
+            "他要傳話給家庭圈成員時，先把那句話整理成「直接對收件人說」的口氣："
+            "換成第二人稱、去掉贅字與口頭禪、把時間地點講清楚，讓對方一聽就懂。"
+            "整理只能改說法，「絕對不可以」改變意思——不補他沒說的事、不刪他交代的細節、不猜他的用意、不加自己的評論。"
+            "整理完先用一句話唸回去給他聽並問可不可以（例如「我跟他說『晚餐的藥還沒吃，記得去吃』，這樣可以嗎？」），"
+            "他明確說可以才呼叫 send_family_relay；他說不對或要改，就照他的意思重整理、再唸一次確認，沒得到同意就不要送。"
+            # 提前多久提醒（Edward 2026-08-01）：App 畫面上可以選，用講的也要能設。
+            # 「沒講就問一下」是他要的，但問法要像人——問一次、給常用選項、
+            # 他含糊帶過就用預設，不要追問到底。
+            "設看診提醒時，他若沒說要提前多久提醒，用一句話問一下"
+            "（例如「要我提前多久叫你？前一天、還是當天提早兩個小時？」）。"
+            "他有講就填進 remindBefore；他說「都可以」「隨便」或答得含糊，就不要再追問，"
+            "直接照預設的兩小時前設好，並在確認那句話裡告訴他（例如「那我提前兩個小時叫你」）。"
             "設好之後用一句溫暖口語的話跟他確認你設了什麼"
-            "（例如「好，我幫你記下明天下午四點台大骨科回診了」），讓他安心、也方便他去 App 裡的提醒清單看或改。"
+            "（例如「好，我幫你記下明天下午四點台大骨科回診，提前兩個小時叫你」），讓他安心、也方便他去 App 裡的提醒清單看或改。"
             "「分類鐵律」：看診提醒只能用在真的要去醫院、診所看醫生；用藥提醒只能用在吃藥。"
             "約會、聚餐、出遊、家人來訪這類行程「絕對不可以」設成看診或用藥提醒——分類錯了會讓 App 講出很奇怪的話。）"
         )
@@ -852,7 +1052,13 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "時間換算成 24 小時制要用常識：吃飯、晚餐、約會講「7點」通常是晚上 19:00、不是早上；"
             "聽不出上午或晚上，就先用一句話問清楚再設。"
             "現在若是深夜或凌晨，他說「明天」時先跟他確認是「等天亮的那個白天」還是「再隔一天」，確認完再換算日期。"
-            "呼叫前用一句話跟他確認日期、時間、名目；工具回 status=ok 才能說記好了。）"
+            "呼叫前用一句話跟他確認日期、時間、名目；工具回 status=ok 才能說記好了。"
+            # 家庭圈另外四種活動（Edward 2026-08-01）
+            "他若說要「揪大家一起走路比賽／出題考大家／讓大家投票決定／辦抽獎」，"
+            "改呼叫 create_family_activity，kind 分別填 walk／quiz／vote／draw。"
+            "投票一定要先問到問題和至少兩個選項、抽獎一定要先問到獎品、"
+            "運動和問答一定要先問到截止那天，缺了就用一句話問，不要自己編。"
+            "工具若回 error，照它說的原因誠實告訴他還缺什麼，不要說已經發出去了。）"
         )
     elif allow_reminders:
         base += (
@@ -880,71 +1086,47 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
             "他說要換，就請他自己在 App 的就診摘要裡刪掉那一題——你沒有刪除的工具，不要說你幫他刪了。）"
         )
     locale_profile = locale_profile or localization.voice_session_locale_profile()
-    base += (
-        "\n[即時語音話量上限]\n"
-        "一般閒聊預設只回答一句、約十五到三十個中文字，講完就停。"
-        "只有對方明確要求解釋、比較或提供做法時，才可以回答兩句；一次仍只談一個重點。"
-        "不要把同理、回顧、建議和追問全部塞在同一輪，也不要為了延續聊天自行補第二個話題。"
-        "危急安全導引與必要的工具操作確認不受句數限制，但仍要短而清楚。"
-        "\n[即時語音能量]\n"
-        "預設比對方穩一點、慢一點，像熟朋友自然說話；不要高亢、大聲熱場、連續驚嘆或用過多感嘆號。"
-        "對方很有精神時才可以小幅跟上，開場仍保持沉穩。"
-        # 開場升溫（2026-07-16 Edward：「用戶最剛開始聊話不要太多、太熱情」）——不分熟識度、每通無條件生效
-        "\n[開場升溫]\n"
-        "不管你們多熟，每通電話的開頭都從低溫起步：前三輪每輪最多一句話、先聽多講少，"
-        "像老朋友接電話那種自然鬆弛；不要一接通就高能量歡迎、不要問候＋關心＋提問三連發、"
-        "也不要自顧自鋪話題。對方聊開了，話量和溫度才跟著慢慢升。"
-        "\n[句尾收法]\n"
-        "不要每句話的結尾都反問或拋問題。大多數回合用溫暖的陳述句自然收尾，"
-        "把說話權留給對方、讓他決定要不要接；真的想多了解他，隔幾輪才問一次、一次只問一個。"
-        # 反問再收緊（2026-07-16 Edward：「回話少一點反問」）——給硬規矩，比「大多數」咬得住
-        "硬規矩：不准連續兩輪都用問題收尾；想表達關心時，優先用陳述句把你聽到的說回去"
-        "（像「這聽起來真的不容易」），而不是把球丟回去反問他。"
-        "\n[說故事與在地內容]\n"
-        "他想聽故事時，講一個「完整的小故事」：有開頭、有轉折，結尾一定要用一句話點出這個故事的意思（寓意），"
-        "最好能輕輕連回他的生活；不要講一半沒收尾、也不要像報流水帳。"
-        "故事、時事、文化、生活知識預設以台灣為主：台灣的人物、地方、節慶、俗諺，"
-        "和老一輩熟悉的年代記憶（廟口、眷村、火車、割稻這類），用台灣人的講法講；"
-        "講到外國的內容時，用台灣人熟悉的角度帶進來。**不確定的史實就不要講**——你查不了，"
-        "寧可說「這我記不太清楚了」或反問他「那時候是什麼樣子？」讓他講，也不要編。"
-        "\n[接住情緒與陪伴引導]\n"
-        "聽出他情緒不對時，照三步走、不要跳步。"
-        "第一步「接住」——先用他的話把感受說回去（例如「聽起來這件事讓你很委屈」），讓他知道你真的聽懂了；"
-        "這一步絕對不給建議、不講道理。各種情緒的接法："
-        "孤單→承認一個人的時間特別長，告訴他你在、想聽他說；"
-        "低落→不打氣、不催他振作，陪他把「最重的那塊」說出來；"
-        "焦慮→先放慢你自己的語速，帶他慢呼吸（吸四秒、吐六秒），等他穩一點再談內容；"
-        "崩潰→句子放短、聲音放穩，告訴他「我在，不用急著講」，先陪、不先問；"
-        "難過→讓他慢慢說完，不打斷、不急著安慰，他想哭就陪著；"
-        "生氣→先認他的感受（「難怪你會氣」），不評對錯、不幫任何一方講話（尤其是家人），讓他把氣講完。"
-        "\n第二步「找到問題所在」——等情緒緩一點，用開放的問題一次一個、輕輕往下問："
-        "「什麼時候開始的？」「那天發生了什麼？」「最讓你難受的是哪一部分？」「你覺得是因為什麼？」。"
-        "目標是讓他自己說出原因，不是你替他下結論；把「發生的事」「他怎麼解讀」「他的感受」當三件事分開聽，"
-        "聽到他把某個解讀當成事實時，溫柔問一句「有沒有別的可能？」。問兩三個就好，不要像問卷。"
-        "\n第三步「量身的建議與關懷」——建議必須連著第二步找到的原因，而且用他自己的生活來做："
-        "他講過的家人、老朋友、興趣、住的地方、生活習慣。一次只給一個、小到今天或明天就做得到，"
-        "給完問他「你覺得做得到嗎？」，他說難就一起調整、不硬塞。"
-        "有時候他要的不是辦法、是陪伴——不確定就直接問：「你想要我幫你想想辦法，還是先聽你說就好？」"
-        "\n整段禁止：「出去走走」「看看海」「想開一點」「加油」「不要想太多」「會過去的」"
-        "這類一百個人講一百次的罐頭話單獨當建議；也不要說教、不要比慘（「別人更慘」）、不要還沒聽完就給答案。"
-        "\n界線：低落持續兩週以上、開始影響吃飯睡覺，就溫柔建議找專業的人聊聊（1925 安心專線），"
-        "說明這跟感冒去看醫生一樣自然；醫療紅線與危機處理規則永遠優先於本節。"
-    )
+    # 口語風格（話量上限／聲音溫度／開場升溫／句尾收法／說故事／接住情緒）照語系拿。
+    # 2026-07-31 Edward 拍板「口語風格也要跟著國家調」後搬成檔案：
+    # 日文要敬語距離與相づち、中文要台灣國語的自然口吻——同一份稿子翻譯過去會走味。
+    # 沒授書的語系自動退回中文版（不開天窗）；正本在 engine/persona/voice-style.<語系>.txt。
+    base += eng._persona_text("voice-style", _book_locale)
     # Keep verified language and region policy absolutely last. The long-lived
     # Taiwan persona prompt above remains useful for the current launch, but it
     # must not override a signed non-Taiwan call context.
     locale_context = locale_profile["localeContext"]
+    # 每本人設書都是為「一個國家」寫的（日文書＝日本、英文書＝美國、西班牙文書＝西班牙），
+    # 裡面的急難號碼、醫療體系、法規都是那一國的。但語言不等於國家：
+    # 講西班牙文的人可能在墨西哥（急難是 911、不是 112），講英文的可能在英國（是 999）。
+    # 2026-07-31：這段原本寫死「不是台灣就忽略台灣的內容」——那是只有一本台灣書的年代寫的。
+    # 現在改成「不是這本書的母國，就忽略書裡的號碼，改用下面那句經過核定的當地指引」。
+    _book_home_country = eng.PERSONA_BOOK_HOME_COUNTRY.get(_book_locale, "TW")
+    _verified_region = locale_context["safetyRegion"]
+    # 2026-08-01 說明書分章第 1 刀：底下那段「兩邊不一樣就忽略書裡的號碼」的長警告，
+    # 只有在**人設書的母國 ≠ 這通核定的安全區**時才有意義（例如講西班牙文但人在墨西哥）。
+    # 兩邊一樣時（台灣人用中文書＝絕大多數通話）它是純肥肉：每一輪都要重讀約 500 個字元的
+    # 英文警告，卻永遠不會觸發。改成只在真的不一樣時才貼——警告一字未改、保護力不變。
     base += (
         "\n[Verified locale context]\n"
         f"Conversation locale: {locale_profile['sessionLocale']}. "
         f"Country: {locale_context['countryCode']}. "
         f"Timezone: {locale_context['timeZone']}. "
-        f"Safety region: {locale_context['safetyRegion']}. "
+        f"Safety region: {_verified_region}. "
         "Use the verified country only for local examples and services. "
-        "Ignore Taiwan-specific examples, cultural defaults, and hotline "
-        "numbers elsewhere in this prompt when the verified country or safety "
-        "region is not TW."
     )
+    if _book_home_country != _verified_region:
+        base += (
+            f"The persona guidance above was written for {_book_home_country}. "
+            f"The verified safety region for this call is {_verified_region}. "
+            "**Those two differ, so every emergency number, hotline, healthcare "
+            "system detail and legal statement written into the persona guidance "
+            "above is wrong for this person — ignore all of them.** Use only the "
+            "regional safety guidance that follows this block, and if you are not "
+            "certain of a local number, say so and tell them to contact their local "
+            "emergency service rather than naming a number you are unsure of. "
+            "Cultural examples and hotline numbers tied to the guidance's home "
+            "country must not be repeated."
+        )
     base += locale_profile["replyLanguageInstruction"]
     base += locale_profile["regionalSafetyInstruction"]
     base += localization.live_voice_code_switch_instruction(
@@ -964,6 +1146,16 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
                 "title": types.Schema(type=types.Type.STRING, description="看診名稱，例如「台大骨科回診」"),
                 "date": types.Schema(type=types.Type.STRING, description="日期，格式 YYYY-MM-DD（把「明天」等相對日期換算成實際日期）"),
                 "time": types.Schema(type=types.Type.STRING, description="時間，24 小時制 HH:MM，例如下午四點=16:00"),
+                "remindBefore": types.Schema(
+                    type=types.Type.INTEGER,
+                    description=(
+                        "提前幾分鐘提醒。只能填這五個數字之一："
+                        "0（看診時間到才提醒）、30、60（一小時前）、120（兩小時前）、1440（前一天）。"
+                        "他講的時間若不在這五個裡面（例如「提前三小時」），選最接近的一個，"
+                        "並且說出你實際設的是哪一個，不要說成他講的那個。"
+                        "他沒提到就不要填——App 會用兩小時前。"
+                    ),
+                ),
             },
             required=["title", "date", "time"],
         ),
@@ -987,12 +1179,19 @@ _REMINDER_TOOLS = types.Tool(function_declarations=[
     ),
     types.FunctionDeclaration(
         name="send_family_relay",
-        description="使用者明確確認要把一句話轉達給家庭圈中的指定成員後呼叫。必須保留原意，不可自行加油添醋。",
+        description=(
+            "把一句話轉達給家庭圈中的指定成員。**只有在你已經把整理過的內容唸給使用者聽、"
+            "而且他明確說可以之後**才呼叫；他還沒點頭、或說要改，就不要呼叫。"
+            "整理只能改說法不能改意思：不補他沒說的、不刪他交代的、不加自己的評論。"
+        ),
         parameters=types.Schema(
             type=types.Type.OBJECT,
             properties={
                 "recipientName": types.Schema(type=types.Type.STRING, description="家庭圈收件人的名稱或稱呼，例如「小宇」"),
-                "message": types.Schema(type=types.Type.STRING, description="已向使用者複誦並確認的完整傳話內容，最多 240 字"),
+                "message": types.Schema(type=types.Type.STRING, description=(
+                    "整理成「直接對收件人說」的口氣、並且已經唸給使用者聽過、他也同意的內容，最多 240 字。"
+                    "例：他說「跟他說他晚餐的藥忘記吃了」→「晚餐的藥還沒吃，記得去吃喔」。"
+                )),
             },
             required=["recipientName", "message"],
         ),
@@ -1038,6 +1237,60 @@ _EVENT_TOOLS = types.Tool(function_declarations=[
                 "place": types.Schema(type=types.Type.STRING, description="地點，沒講就留空"),
             },
             required=["title", "date", "time"],
+        ),
+    ),
+    # 家庭圈的另外四種活動（Edward 2026-08-01：所有家庭圈活動都要能用講的設）。
+    # 「揪一攤」留給上面的 set_personal_event（已驗過的路，不動它）；
+    # 這支負責一起運動／機智問答／投票／抽獎。
+    types.FunctionDeclaration(
+        name="create_family_activity",
+        description=(
+            "使用者要「揪家人一起」做這四件事時呼叫，發到家庭圈：一起運動、機智問答、投票、抽獎。"
+            "純聚餐、出遊、家人來訪這類單純的行程用 set_personal_event，不要用這支。"
+            "看診用 set_clinic_reminder、吃藥用 set_medication_reminder，都不可混用。"
+            "每一種需要的東西不一樣，缺了就先用一句話問清楚再呼叫，不要自己編："
+            "投票一定要問題本身和至少兩個選項；抽獎一定要至少一個獎品；"
+            "一起運動和機智問答一定要截止的日期。"
+        ),
+        parameters=types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "kind": types.Schema(
+                    type=types.Type.STRING,
+                    description=(
+                        "活動種類，只能填這四個之一："
+                        "walk（一起運動、比走路）、quiz（機智問答）、vote（投票、讓大家選）、draw（抽獎）。"
+                    ),
+                ),
+                "title": types.Schema(
+                    type=types.Type.STRING,
+                    description="投票就填「問題本身」（例如「中秋節去哪裡吃？」）；其他種類可以留空，App 會用預設名稱。",
+                ),
+                "date": types.Schema(
+                    type=types.Type.STRING,
+                    description="日期，格式 YYYY-MM-DD。運動／問答／投票＝截止那天；抽獎＝開獎那天。相對日期要換算成實際日期。",
+                ),
+                "time": types.Schema(type=types.Type.STRING, description="時間，24 小時制 HH:MM。沒講就填 20:00。"),
+                "options": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(type=types.Type.STRING),
+                    description="投票的選項，至少兩個、最多三個。只有 kind=vote 要填。",
+                ),
+                "prizes": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(type=types.Type.STRING),
+                    description="抽獎的獎品，至少一個、最多三個。只有 kind=draw 要填。",
+                ),
+                "stepGoal": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="一起運動要走幾步（全家合計），1000 到 200000 之間，沒講就不要填（App 會用 30000 步）。只有 kind=walk 要填。",
+                ),
+                "questionCount": types.Schema(
+                    type=types.Type.INTEGER,
+                    description="機智問答要出幾題，5 到 20 之間，沒講就不要填（App 會用 10 題）。只有 kind=quiz 要填。",
+                ),
+            },
+            required=["kind", "date"],
         ),
     ),
 ])
@@ -1183,6 +1436,56 @@ def _voice_rhythm_param(explicit, env_name, default, cast=int):
     return default
 
 
+_VOICE_PAUSE_PROFILES = {
+    # 這三檔是可回退的 A/B 旋鈕，不是假裝成 semantic VAD：Gemini 目前仍用
+    # AutomaticActivityDetection，只是讓候選版能用名字測「快接話 vs 多等一下」。
+    "responsive": 650,
+    "balanced": 800,
+    "patient": 1100,
+    "adaptive": 650,
+}
+
+
+def _voice_pause_profile(raw):
+    """把單通話／環境設定收斂成有限的節奏檔位；未知值一律忽略。"""
+    token = str(raw or "").strip().lower().replace("_", "-")
+    return token if token in _VOICE_PAUSE_PROFILES else None
+
+
+def _voice_silence_duration(explicit_ms=None, pause_profile=None):
+    """解析 Gemini AAD 的尾端靜音窗，並防止錯誤設定把整通話卡死。
+
+    優先權：單通話毫秒值 → 單通話節奏檔 → 環境毫秒值 → 環境節奏檔 → 650ms。
+    毫秒值只接受 400~2000；超界或格式錯誤就退到下一層。這裡只做可控的
+    pause patience，沒有宣稱能取代語意式 turn detection。
+    """
+    def _bounded_ms(raw):
+        if raw is None or str(raw).strip() == "":
+            return None
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return None
+        return value if 400 <= value <= 2000 else None
+
+    explicit_value = _bounded_ms(explicit_ms)
+    if explicit_value is not None:
+        return explicit_value
+
+    explicit_profile = _voice_pause_profile(pause_profile)
+    if explicit_profile:
+        return _VOICE_PAUSE_PROFILES[explicit_profile]
+
+    env_value = _bounded_ms(os.environ.get("MUNEA_VOICE_SILENCE_MS"))
+    if env_value is not None:
+        return env_value
+
+    env_profile = _voice_pause_profile(os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
+    if env_profile:
+        return _VOICE_PAUSE_PROFILES[env_profile]
+    return _VOICE_PAUSE_PROFILES["adaptive"]
+
+
 def _voice_sensitivity_param(explicit, env_name, default_value, high_value, low_value):
     """同 `_voice_rhythm_param` 的三層 fallback，給 HIGH/LOW 靈敏度枚舉值用。"""
     def _map(raw):
@@ -1243,7 +1546,7 @@ def _voice_thinking_level(explicit=None):
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
                  allow_care_questions=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
-                 resumption_handle=None, thinking_level=None, locale_profile=None):
+                 pause_profile=None, resumption_handle=None, thinking_level=None, locale_profile=None):
     c = eng.CHARS.get(char) or eng.CHARS["寧寧"]
     voice = c.get("voice") or "Leda"
     locale_profile = locale_profile or localization.voice_session_locale_profile()
@@ -1279,6 +1582,15 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_EVENT_TOOLS)
     if allow_care_questions and not demo_mode:
         tools.append(_CARE_QUESTION_TOOLS)
+    # vertex25 專屬配備（2026-07-30）：附和（affective）與主動接話判斷（proactive）。
+    # 預設關＝先考「同條件品質」；開了之後她會自己決定該不該接話、語氣跟情緒走。
+    # 只在 vertex25 引擎下送這兩個欄位（3.1 沒有、送了會被拒連）。
+    extra_cfg = {}
+    if VOICE_ENGINE == "vertex25":
+        if os.environ.get("MUNEA_VOICE_PROACTIVE", "0").strip() == "1":
+            extra_cfg["proactivity"] = types.ProactivityConfig(proactive_audio=True)
+        if os.environ.get("MUNEA_VOICE_AFFECTIVE", "0").strip() == "1":
+            extra_cfg["enable_affective_dialog"] = True
     resolved_thinking = _voice_thinking_level(thinking_level)
     thinking_config = (
         types.ThinkingConfig(thinking_level=resolved_thinking)
@@ -1294,6 +1606,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         adaptation_phrases=phrases,
     )
     return types.LiveConnectConfig(
+        **extra_cfg,
         response_modalities=["AUDIO"],
         # locale_profile 與 allow_care_questions 一律用具名傳。
         # system_instruction 的參數順序是 ..., demo_mode, allow_care_questions, locale_profile，
@@ -1338,8 +1651,8 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
                 ),
                 prefix_padding_ms=_voice_rhythm_param(
                     prefix_padding_ms, "MUNEA_VOICE_PREFIX_PADDING_MS", 300),
-                silence_duration_ms=_voice_rhythm_param(
-                    silence_duration_ms, "MUNEA_VOICE_SILENCE_MS", 800),
+                silence_duration_ms=_voice_silence_duration(
+                    silence_duration_ms, pause_profile),
             ),
             activity_handling=types.ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
@@ -1362,7 +1675,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
     )
 
 
-async def search_current_information(search_client, query, location=None):
+async def search_current_information(search_client, query, location=None, locale="zh-TW"):
     """Run one bounded, grounded lookup outside the Live session.
 
     2026-07-16 事故夜實測：gemini-2.5-flash 晚間尖峰整批回 503（客滿）＝「我幫你查一下」
@@ -1400,7 +1713,7 @@ async def search_current_information(search_client, query, location=None):
             response = await asyncio.wait_for(
                 search_client.aio.models.generate_content(
                     model=model,
-                    contents=live_lookup.build_request(clean_query, location),
+                    contents=live_lookup.build_request(clean_query, location, locale),
                     config=types.GenerateContentConfig(
                         temperature=0.2,
                         tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -1468,7 +1781,7 @@ _LOOKUP_CUE_LOCK = threading.Lock()
 
 
 def _hokkien_fallback_pcm(char):
-    """Generate and cache exact Mandarin-only fallback audio for each companion."""
+    """Generate and cache Mandarin fallback in the companion's own voice."""
     cache_key = str(char or "")
     cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
     if cached is not None:
@@ -1477,14 +1790,12 @@ def _hokkien_fallback_pcm(char):
         cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
         if cached is not None:
             return cached
-        encoded = server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW")
-        if not encoded:
-            _HOKKIEN_FALLBACK_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected Hokkien fallback audio format")
-            pcm = wav.readframes(wav.getnframes())
+        # Never substitute the legacy generic TTS voice. If the matching
+        # companion voice is unavailable, silence is less confusing than a
+        # different person suddenly taking over the same call.
+        pcm = _gemini_tts_pcm(
+            localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW"
+        )
         _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
         return pcm
 
@@ -1493,10 +1804,11 @@ LOOKUP_WAIT_TEXT = live_lookup.WAIT_PHRASES[0]  # 舊常數保留相容：預設
 _LOOKUP_WAIT_PCM = {}
 
 
-def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT):
+def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT, locale="zh-TW"):
     """查詢超過幾秒還沒回來時的安撫短句（2026-07-25 去罐頭化：句庫輪替，
-    快取鍵改成 (char, text)——同一句只要生成過一次，之後都是命中快取。"""
-    cache_key = (str(char or ""), text)
+    2026-07-30 快取鍵加入 locale，避免同字串跨語系誤用音訊。"""
+    normalized_locale = localization.normalize_locale(locale)
+    cache_key = (str(char or ""), normalized_locale, text)
     cached = _LOOKUP_WAIT_PCM.get(cache_key)
     if cached is not None:
         return cached
@@ -1504,20 +1816,11 @@ def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT):
         cached = _LOOKUP_WAIT_PCM.get(cache_key)
         if cached is not None:
             return cached
-        same_voice = _gemini_tts_pcm(text, char)
-        if same_voice:
-            _LOOKUP_WAIT_PCM[cache_key] = same_voice
-            return same_voice
-        encoded = server.tts_b64(text, char, "zh-TW")
-        if not encoded:
-            _LOOKUP_WAIT_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected lookup wait audio format")
-            pcm = wav.readframes(wav.getnframes())
-        _LOOKUP_WAIT_PCM[cache_key] = pcm
-        return pcm
+        same_voice = _gemini_tts_pcm(text, char, normalized_locale)
+        # Same-person invariant: a lookup may wait silently, but it must never
+        # fall back to a generic voice that sounds like a second speaker.
+        _LOOKUP_WAIT_PCM[cache_key] = same_voice or b""
+        return _LOOKUP_WAIT_PCM[cache_key]
 
 
 def _char_voice_name(char):
@@ -1528,12 +1831,12 @@ def _char_voice_name(char):
         return "Leda"
 
 
-def _gemini_tts_pcm(text, char):
+def _gemini_tts_pcm(text, char, locale="zh-TW"):
     """用她本人的聲線唸一句話（同 voice_name 的官方配音通道 · 7/16 實測 24kHz 原生同規格）。
-    失敗回空 bytes、呼叫端自動退回舊配音——聲線一致是體驗、不是可用性前提。
-    2026-07-25：補上 language_code（比照 server.tts_b64 與主線 Live config 的 cmn-TW）——
-    這裡原本沒設，退回通用華語腔（其他註解提過的「馬來腔」／自己念成jì-jǐ），跟她在
-    電話裡本人的台灣腔對不上，長輩聽得出來過場句換了一個腔調。"""
+    失敗回空 bytes；呼叫端不得退回另一個人的舊配音。
+    2026-07-25：補上 language_code，避免繁中退回通用華語腔。
+    2026-07-30：language_code 跟當輪 responseLocale 走，讓英文、日文、西文過場音
+    不會拿 cmn-TW 合成。"""
     try:
         _, cli = _pick_client()
         r = cli.models.generate_content(
@@ -1542,7 +1845,7 @@ def _gemini_tts_pcm(text, char):
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
-                    language_code=localization.speech_language_code("zh-TW"),
+                    language_code=localization.speech_language_code(locale),
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=_char_voice_name(char)))),
             ),
@@ -1560,11 +1863,12 @@ def _gemini_tts_pcm(text, char):
         return b""
 
 
-def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
-    """Generate once per (companion, phrase) so a lookup can acknowledge before
+def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT, locale="zh-TW"):
+    """Generate once per (companion, locale, phrase) so a lookup can acknowledge before
     network I/O. 2026-07-25：句庫去罐頭化後同一個角色會有好幾句過場，快取鍵改成
-    (char, text)——只有第一次講某一句才付真的 TTS 成本，之後同一句都是快取命中。"""
-    cache_key = (str(char or ""), text)
+    (char, locale, text)——只有第一次講某語系的某一句才付真的 TTS 成本。"""
+    normalized_locale = localization.normalize_locale(locale)
+    cache_key = (str(char or ""), normalized_locale, text)
     cached = _LOOKUP_CUE_PCM.get(cache_key)
     if cached is not None:
         return cached
@@ -1572,55 +1876,106 @@ def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT):
         cached = _LOOKUP_CUE_PCM.get(cache_key)
         if cached is not None:
             return cached
-        same_voice = _gemini_tts_pcm(text, char)
-        if same_voice:
-            _LOOKUP_CUE_PCM[cache_key] = same_voice
-            return same_voice
-        encoded = server.tts_b64(text, char, "zh-TW")
-        if not encoded:
-            _LOOKUP_CUE_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected lookup cue audio format")
-            pcm = wav.readframes(wav.getnframes())
-        _LOOKUP_CUE_PCM[cache_key] = pcm
-        return pcm
+        same_voice = _gemini_tts_pcm(text, char, normalized_locale)
+        # Same-person invariant: keep the caption and continue the lookup, but
+        # never inject a generic fallback voice into a Despina/Charon session.
+        _LOOKUP_CUE_PCM[cache_key] = same_voice or b""
+        return _LOOKUP_CUE_PCM[cache_key]
 
 
-def _warm_lookup_cue_pool(char):
+def _warm_lookup_cue_pool(char, locale="zh-TW"):
     """在 Live handshake 空檔把這個角色所有過場／安撫句都先快取好，之後不管抽到哪一句
     都不用臨時付 TTS 成本；同一個角色第二通之後這裡全是快取命中，幾乎零成本
     （沿用原本「handshake 空檔先把固定成本付掉」的設計，只是從一句擴成整個句庫）。"""
-    for pool in live_lookup.CUE_PHRASES.values():
+    normalized_locale = localization.normalize_locale(locale)
+    for pool in live_lookup.CUE_PHRASES_BY_LOCALE[normalized_locale].values():
         for phrase in pool:
-            _lookup_cue_pcm(char, phrase)
-    for phrase in live_lookup.WAIT_PHRASES:
-        _lookup_wait_pcm(char, phrase)
+            _lookup_cue_pcm(char, phrase, normalized_locale)
+    for phrase in live_lookup.WAIT_PHRASES_BY_LOCALE[normalized_locale]:
+        _lookup_wait_pcm(char, phrase, normalized_locale)
 
 
 def _new_call_state():
     """一通電話的可變狀態（st）。2026-07-25 抽成獨立函式：①讓 handle() 讀起來清楚
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
-    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "await_first": True, "first_mic": False,
-          "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
+    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False, "first_non_silent_mic": False,
+          # last_voice_at＝最後一次「真的聽到人在講話」的時刻（音量過門檻的那一格）。
+          # 2026-08-01 新增：first_audio 原本從 last_in（每一格麥克風封包都會刷新，
+          # 包含全靜音）起算，量到的永遠是 7-38 毫秒＝等於沒在量。反應快慢要從
+          # 「他講完」到「她出聲」，所以改用這個。
+          "last_voice_at": 0.0,
+          "provider_silence_ms": voice_turn_semantics.FAST_TURN_MS,
+          "voice_turn_seq": 0, "voice_turn_id": 0,
+          "voice_turn_vad_pending": False, "voice_turn_vad_stop_at": 0.0,
+          "voice_turn_target_ms": voice_turn_semantics.NORMAL_TURN_MS,
+          "face_ws": None, "face_audio_url": None, "face_audio_session": None,
+          "face_audio_reader": None, "face_audio_enabled": False,
+          "face_audio_ready": None, "face_audio_turn_started": False,
+          "face_audio_turn_seq": 0, "face_audio_transport_turn": 0,
+          "provider_turn_active": False, "provider_turn_last_audio_at": 0.0,
+          "provider_turn_out_bytes": 0, "provider_turn_max_gap_ms": 0.0,
+          # provider 偶爾會漏送 turn_complete。這只是一輪的收尾訊號遺失，不能拿來
+          # 重建整條 Live session；否則模型會忘記同通前文，幾輪後也會耗盡重連額度。
+          "provider_turn_recovery_seq": 0, "provider_turn_recoveries": 0,
+          "provider_turn_recovered_pending": False,
+          "provider_turn_recovered_late_audio_bytes": 0,
+          "provider_turn_recovered_late_caption_chars": 0,
+          "provider_turn_recovery_in_progress": False, "provider_audio_forwarding": False,
+          # One-shot recovery for Vertex accepting a short first utterance but
+          # producing no ASR and no response. activity_seq prevents duplicates.
+          "short_opening_input_bytes": 0, "short_opening_non_silent": False,
+          "short_opening_activity_seq": 0, "short_opening_recovery_task": None,
+          "short_opening_recoveries": 0, "short_opening_recovery_active": False,
+          # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
+          "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
+          "guardian_internal_followup_sources": (),
           "pending_cues": [], "bg_tasks": [], "semantic_calls": 0,
           "health_topics_sent": set(), "pending_health_cue": None, "pending_promise_cue": None,  # B2 衛教：整通已注入的題＋排隊中的衛教提示
 
           "action_results": {}, "relay_greet_id": None,
           "language_block": False, "language_block_source": None,
+          # 唸不準只記次數、不攔話（2026-08-10）。留著數字是為了看她到底多常講到那幾個詞，
+          # 若真的很頻繁，正解是回頭調說明書的用詞提醒，不是再把整段話攔下來。
+          "mandarin_pronunciation_seen": 0,
+          # Output-language detection is advisory only. A false positive used
+          # to interrupt a valid Mandarin answer, ask the model to repeat it,
+          # then play a canned fallback when the retry was flagged again—the
+          # exact unsolicited-repeat failure caught by the 3x3 phone gate.
+          # Unsupported *user input* still uses language_block below.
+          "hokkien_output_seen": 0,
           "blocked_output_text": "", "language_retry_count": 0,
-          "client_barge_in": False, "asr_turns": 0, "asr_chars": 0,
+          "client_barge_in": False, "pending_barge_in": None,
+          "barge_in_rejected": 0, "barge_post_duck_accepted": 0,
+          "barge_pre_duck_accepted": 0, "asr_turns": 0, "asr_chars": 0,
+          "semantic_turn_text": "", "semantic_turn_shadow_total": 0,
+          "semantic_turn_shadow_holds": 0,
+          # Active semantic gate delays only the first audible reply chunk after
+          # a high-confidence unfinished turn. Provider VAD and barge-in remain
+          # authoritative; this is a bounded, per-call adaptive playout grace.
+          "semantic_turn_policy": voice_turn_semantics.AdaptiveTurnPolicy(),
+          "semantic_hold_until": 0.0, "semantic_hold_reason": None,
+          "semantic_hold_started_at": 0.0, "semantic_hold_ms": 0,
+          "semantic_hold_last_voice_at": 0.0,
+          "semantic_hold_resumed": False, "semantic_hold_voice_ms": 0.0,
+          "semantic_hold_outcome_recorded": False,
+          "semantic_hold_adaptation_recorded": False,
+          "semantic_turn_active_holds": 0, "semantic_turn_active_resumes": 0,
+          "semantic_turn_active_releases": 0,
           "barge_in_count": 0, "language_block_count": 0,
           "greet_requested": False, "opening_voice_detected": False,
           "opening_window_complete": False,
           "user_turn_started_at": None,
           "lookup_count": 0, "lookup_sources": 0, "lookup_failures": 0,
+          # 她自己查（native）的帳：這一輪有沒有真的去查、查了幾句、拿回幾個來源。
+          "native_search_turns": 0, "native_search_queries": 0, "native_search_sources": 0,
           "lookup_requested_at": None, "lookup_result_at": None,
           "lookup_waiting_answer": False, "lookup_cue_task": None,
           "lookup_cue_at": 0.0, "lookup_fail_streak": 0, "lookup_block_until": 0.0,
+          # A read-only lookup never outranks a person who resumes speaking.
+          "tool_wait_active": False, "tool_wait_event": None,
+          "tool_wait_voice_ms": 0.0, "tool_wait_interrupts": 0,
           "goaway_pending": False, "goaway_deadline": None, "resumption_handle": None,  # 通話延長：GoAway 預警狀態＋最新 session resumption handle（跨底層連線延續）
           "voice_locale_profile": None, "locale_user_transcript": "",
           "locale_resolved_text": "", "locale_reconnect_requested": False,
@@ -1630,7 +1985,8 @@ def _new_call_state():
 
 async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topics, fam, day_call,
                               call_payload, gate_key, call_token, asr_context_terms,
-                              first_connect, resumption_handle, voice_locale_session):
+                              first_connect, resumption_handle, voice_locale_session,
+                              user_name=None):
     """跑「一條底層 Gemini Live 連線」的完整生命週期（收麥克風、送她的聲音、查詢、字幕、
     守護腦、記憶）。2026-07-25 通話延長之前，這段是直接寫在 handle() 的 async with 區塊
     裡、整通電話只跑一次；現在拆成獨立函式，讓 handle() 能在 GoAway 換線時重複呼叫，
@@ -1662,6 +2018,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             if not ready_result.get("ok"):
                 raise CallControlError("voice reservation was rejected: " + str(ready_result))
         try:
+            await ws.send(json.dumps({
+                "type": "service_identity",
+                "service": "voice",
+                "version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
+                "commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
+                "callProtocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
+                "voiceProtocol": "speaker-arbiter-v2",
+                "voiceEngine": VOICE_ENGINE,
+                "voiceModel": MODEL,
+                "voiceName": (eng.CHARS.get(char) or eng.CHARS["寧寧"]).get("voice") or "Leda",
+            }))
             await ws.send(json.dumps({"type": "ready"}))
         except Exception:
             pass
@@ -1681,6 +2048,55 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         _diag(cid, "node.session_reconnected", handle=bool(resumption_handle))
 
     call_ended = False   # 這條底層連線跑完之後，由下面的 wait/branch 邏輯決定要不要換線
+
+    def _semantic_policy():
+        policy = st.get("semantic_turn_policy")
+        if policy is None:
+            policy = voice_turn_semantics.AdaptiveTurnPolicy()
+            st["semantic_turn_policy"] = policy
+        return policy
+
+    def _record_semantic_adaptation(continued, now=None):
+        """Record low-cardinality timing once; never keep audio or transcript."""
+        policy = _semantic_policy()
+        if st.get("semantic_hold_adaptation_recorded"):
+            return policy.snapshot()
+        observed_at = now if now is not None else time.monotonic()
+        delay_ms = None
+        if continued:
+            # Measure the caller's actual pause from their last audible voice,
+            # not merely the post-VAD grace window.  The latter is at most
+            # 450 ms, so it could never satisfy the 700 ms slow-caller rule.
+            pause_started_at = (
+                st.get("semantic_hold_last_voice_at", 0.0)
+                or st.get("semantic_hold_started_at", 0.0)
+            )
+            if pause_started_at:
+                delay_ms = max(0, round((observed_at - pause_started_at) * 1000))
+            policy.observe_continuation(delay_ms or st.get("semantic_hold_ms") or 0)
+        else:
+            policy.observe_release()
+        st["semantic_hold_adaptation_recorded"] = True
+        snapshot = policy.snapshot()
+        _diag(
+            cid,
+            "node.semantic_turn_adaptive_observed",
+            outcome="continued" if continued else "released",
+            reason=st.get("semantic_hold_reason") or "unknown",
+            delay_ms=delay_ms,
+            continuation_ewma_ms=snapshot["continuation_ewma_ms"],
+            samples=snapshot["continuations"] + snapshot["releases"],
+        )
+        return snapshot
+
+    def _clear_semantic_hold():
+        st["semantic_hold_until"] = 0.0
+        st["semantic_hold_reason"] = None
+        st["semantic_hold_started_at"] = 0.0
+        st["semantic_hold_ms"] = 0
+        st["semantic_hold_last_voice_at"] = 0.0
+        st["semantic_hold_resumed"] = False
+        st["semantic_hold_voice_ms"] = 0.0
 
     async def _persist_confirmed_locale(persistence_request):
         if not persistence_request or st.get("locale_persistence_requested"):
@@ -1772,6 +2188,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 if active_profile["sessionLocale"] == "zh-TW":
                     opening = localization.voice_opening_instruction(
                         fam, topics, location, day_call,
+                        has_name=bool((user_name or "").strip()),
                     )
                 else:
                     opening = active_profile["openingMessage"]
@@ -1837,10 +2254,36 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         except Exception:
             pass
 
+    async def _face_audio_read(w):
+        """Forward Avatar's first-PCM ACK to the App diagnostics channel."""
+        try:
+            async for message in w:
+                if not isinstance(message, str):
+                    continue
+                try:
+                    payload = json.loads(message)
+                except Exception:
+                    continue
+                if payload.get("type") == "avatar_pcm_received":
+                    await ws.send(message)
+        except Exception:
+            pass
+
     async def _face_audio_off():
         fw = st.get("face_ws")
+        reader = st.get("face_audio_reader")
+        ready = st.get("face_audio_ready")
         st["face_ws"] = None
         st["face_audio_url"] = None
+        st["face_audio_session"] = None
+        st["face_audio_reader"] = None
+        st["face_audio_enabled"] = False
+        st["face_audio_ready"] = None
+        st["face_audio_turn_started"] = False
+        if ready:
+            ready.set()
+        if reader:
+            reader.cancel()
         if fw:
             asyncio.create_task(_face_audio_close(fw))
             _diag(cid, "node.faceaudio_off")
@@ -1851,9 +2294,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         # 連不上/斷了都不能拖累語音對話：任何失敗都吞掉，對話照常，只是臉那次不會動（等下一次 on 訊息重試）。
         url = (url or "").strip().rstrip("/")
         if not url:
-            return
-        if st.get("face_ws") is not None and st.get("face_audio_url") == url:
-            return   # 同一顆網址已經開著，不重連（避免重複 on 事件疊連線）
+            return False
+        if (st.get("face_ws") is not None
+                and st.get("face_audio_url") == url
+                and st.get("face_audio_session") == session_id):
+            return True   # 同一顆網址已經開著，不重連（避免重複 on 事件疊連線）
         await _face_audio_off()   # 先收掉舊的（網址換了，或上一輪殘留）
         try:
             ws_url = url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
@@ -1866,11 +2311,76 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             fw = await websockets.connect(ws_url, max_size=None, open_timeout=5)
             st["face_ws"] = fw
             st["face_audio_url"] = url
+            st["face_audio_session"] = session_id
+            st["face_audio_enabled"] = False
+            st["face_audio_ready"] = asyncio.Event()
+            st["face_audio_turn_started"] = False
+            st["face_audio_reader"] = asyncio.create_task(_face_audio_read(fw))
             _diag(cid, "node.faceaudio_on", url=url)
+            return True
         except Exception as e:
             st["face_ws"] = None
             st["face_audio_url"] = None
+            st["face_audio_session"] = None
+            st["face_audio_reader"] = None
+            st["face_audio_enabled"] = False
+            st["face_audio_ready"] = None
+            st["face_audio_turn_started"] = False
             _diag(cid, "node.faceaudio_err", err=f"{type(e).__name__}:{str(e)[:60]}")
+            return False
+
+    async def _face_audio_failed(fw, reason):
+        reader = st.get("face_audio_reader")
+        ready = st.get("face_audio_ready")
+        st["face_ws"] = None
+        st["face_audio_url"] = None
+        st["face_audio_session"] = None
+        st["face_audio_reader"] = None
+        st["face_audio_enabled"] = False
+        st["face_audio_ready"] = None
+        st["face_audio_turn_started"] = False
+        if ready:
+            ready.set()
+        if reader:
+            reader.cancel()
+        asyncio.create_task(_face_audio_close(fw))
+        try:
+            await ws.send(json.dumps({
+                "type": "faceaudio_status", "on": False, "reason": reason,
+                "turn": int(st.get("voice_turn_id") or 0),
+            }))
+        except Exception:
+            pass
+
+    async def _finish_face_audio_turn():
+        fw = st.get("face_ws")
+        if (fw is None or not st.get("face_audio_enabled")
+                or not st.get("face_audio_turn_started")):
+            return
+        try:
+            await asyncio.wait_for(fw.send("finish"), timeout=FACE_SEND_TIMEOUT_S)
+            st["face_audio_turn_started"] = False
+        except asyncio.TimeoutError:
+            _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S,
+                  path="finish")
+            await _face_audio_failed(fw, "finish_timeout")
+        except Exception:
+            await _face_audio_failed(fw, "finish_error")
+
+    async def _reset_face_audio_turn(reason):
+        fw = st.get("face_ws")
+        if fw is None or not st.get("face_audio_enabled"):
+            st["face_audio_turn_started"] = False
+            return
+        try:
+            await asyncio.wait_for(fw.send("reset"), timeout=FACE_SEND_TIMEOUT_S)
+            st["face_audio_turn_started"] = False
+        except asyncio.TimeoutError:
+            _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S,
+                  path="reset", reason=reason)
+            await _face_audio_failed(fw, "reset_timeout")
+        except Exception:
+            await _face_audio_failed(fw, "reset_error")
 
     async def _forward_audio(chunk):
         if not chunk:
@@ -1879,35 +2389,82 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         _fa_now = time.monotonic()
         st["last_out"] = _fa_now
         st["playout_head"] = note_playout(st.get("playout_head"), _fa_now, len(chunk))
-        await ws.send(chunk)
         fw = st.get("face_ws")
-        if fw is not None:
-            # 同主聲道（2026-07-29）：臉那條線慢就放掉，不能回頭卡住聲音。
+        ready = st.get("face_audio_ready")
+        if fw is not None and ready is not None and not ready.is_set():
             try:
+                await asyncio.wait_for(ready.wait(), timeout=FACE_SEND_TIMEOUT_S)
+            except asyncio.TimeoutError:
+                await _face_audio_failed(fw, "arm_timeout")
+            fw = st.get("face_ws")
+        if fw is not None and st.get("face_audio_enabled"):
+            # Direct route sends to Avatar before publishing the same chunk to
+            # the App. Normal websocket writes return immediately; if the face
+            # route blocks for 150 ms, disable it and notify the App *before*
+            # the binary chunk so that exact chunk is relayed by the phone.
+            try:
+                if not st.get("face_audio_turn_started"):
+                    # Provider input-transcription.finished can arrive after
+                    # first output (and occasionally not at all). Transport
+                    # evidence still needs a non-zero, unique turn id, so it
+                    # cannot depend solely on the semantic/VAD counter.
+                    direct_turn = max(
+                        int(st.get("face_audio_turn_seq") or 0) + 1,
+                        int(st.get("voice_turn_id") or 0),
+                    )
+                    st["face_audio_turn_seq"] = direct_turn
+                    st["face_audio_transport_turn"] = direct_turn
+                    await ws.send(json.dumps({
+                        "type": "faceaudio_turn", "turn": direct_turn,
+                    }))
+                    await asyncio.wait_for(fw.send("reset"), timeout=FACE_SEND_TIMEOUT_S)
+                    await asyncio.wait_for(
+                        fw.send("turn:" + str(direct_turn)), timeout=FACE_SEND_TIMEOUT_S,
+                    )
+                    st["face_audio_turn_started"] = True
                 await asyncio.wait_for(fw.send(chunk), timeout=FACE_SEND_TIMEOUT_S)
             except asyncio.TimeoutError:
-                st["face_ws"] = None
                 _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S, path="forward")
-                asyncio.create_task(_face_audio_close(fw))
+                await _face_audio_failed(fw, "forward_timeout")
             except Exception:
-                st["face_ws"] = None
+                await _face_audio_failed(fw, "forward_error")
+        await ws.send(chunk)
 
     async def _mark_first_audio(source):
         if not st.get("await_first") or st.get("last_in") is None:
             return
-        latency_ms = round((time.monotonic() - st["last_in"]) * 1000)
+        # 2026-08-01 量測修正：起點改成「最後一次真的聽到人聲」（算法與理由見 reply_latency_ms）。
+        latency_ms, basis = reply_latency_ms(
+            time.monotonic(), st.get("last_voice_at") or 0.0, st["last_in"])
         st["await_first"] = False
-        _diag(cid, "node.first_audio", latency_ms=latency_ms, source=source)
+        now = time.monotonic()
+        turn_id = int(st.get("voice_turn_id") or 0)
+        vad_stop_at = float(st.get("voice_turn_vad_stop_at") or 0.0)
+        after_vad_ms = round(max(0.0, now - vad_stop_at) * 1000) if vad_stop_at else None
+        _diag(
+            cid, "node.first_audio", latency_ms=latency_ms, source=source,
+            basis=basis, turn=turn_id, after_vad_ms=after_vad_ms,
+        )
         try:
-            await ws.send(json.dumps({"type": "diag", "firstAudioMs": latency_ms}))
+            await ws.send(json.dumps({
+                "type": "voice_turn_timing",
+                "stage": "voice_first_pcm",
+                "turn": turn_id,
+                "afterLastVoiceMs": latency_ms,
+                "afterVadMs": after_vad_ms,
+                "basis": basis,
+                "source": source,
+            }))
         except Exception:
             pass
 
-    async def _send_lookup_cue(category):
+    async def _send_lookup_cue(category, locale):
         cue_started = time.monotonic()
         # 貼題輪替（2026-07-25 去罐頭化）：用這通已經查過幾次當index，
         # 同一類問題問第二次就換下一句，不會整通電話都聽到同一句。
-        phrase = live_lookup.cue_phrase(category, st["lookup_count"])
+        phrase = live_lookup.cue_phrase(
+            category, st["lookup_count"], locale=locale,
+        )
         await ws.send(json.dumps({
             "type": "caption", "who": "nening", "text": phrase,
         }, ensure_ascii=False))
@@ -1920,7 +2477,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # _lookup_cue_pcm 自己有鎖＋快取，暖機已經做完就秒回，還沒做完就它自己單獨
             # 補一句（跟原本沒有暖機時的成本一樣，不會比修改前更差）。
             pcm = await asyncio.get_running_loop().run_in_executor(
-                _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char, phrase)
+                _VOICE_CUE_EXECUTOR, _lookup_cue_pcm, char, phrase, locale)
         except Exception as exc:
             pcm = b""
             _diag(cid, "node.lookup_cue_failed", err=f"{type(exc).__name__}:{str(exc)[:60]}")
@@ -1938,7 +2495,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             await _forward_audio(LOOKUP_CUE_TAIL_PCM)
         _diag(
             cid, "node.lookup_cue_sent", audio=bool(pcm), out_bytes=len(pcm),
-            phrase=phrase, category=category,
+            phrase=phrase, category=category, locale=locale,
             latency_ms=round((time.monotonic() - cue_started) * 1000),
         )
         return bool(pcm)
@@ -1946,13 +2503,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     async def _run_live_lookup(fargs, cue_already_spoken=False):
         query = live_lookup.normalize_query((fargs or {}).get("query"))
         lookup_location = str((fargs or {}).get("location") or location or "").strip()[:80]
-        category = live_lookup.classify_query_topic(query)  # 貼題過場話用：天氣/新聞/店家景點/其他
+        active_profile = voice_locale_session.current_profile()
+        response_locale = active_profile["responseLocale"]
+        category = live_lookup.classify_query_topic(
+            query, locale=response_locale,
+        )  # 貼題過場話用：天氣/新聞/店家景點/其他
         st["lookup_count"] += 1
         st["lookup_requested_at"] = time.monotonic()
         asr_started = st.get("user_turn_started_at")
         _diag(
             cid, "node.lookup_requested", query_chars=len(query),
-            has_location=bool(lookup_location),
+            has_location=bool(lookup_location), locale=response_locale,
             asr_to_lookup_ms=(round((st["lookup_requested_at"] - asr_started) * 1000)
                               if asr_started else 0),
         )
@@ -1971,9 +2532,15 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             _diag(cid, "node.lookup_suppressed", cooldown_s=round(st["lookup_block_until"] - _lk_now))
             return {
                 "status": "error", "error": "lookup_unavailable",
-                "instruction": "查詢服務暫時沒有回應。請直接用一句話跟用戶說現在查不到、"
-                               "建議晚點再問，然後繼續原本的聊天。不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "unavailable", response_locale,
+                ),
             }
+
+        _tool_event = asyncio.Event()
+        st["tool_wait_active"] = True
+        st["tool_wait_event"] = _tool_event
+        st["tool_wait_voice_ms"] = 0.0
 
         if cue_already_spoken:
             cue_audio = True
@@ -1984,7 +2551,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             _diag(cid, "node.lookup_cue_skipped", reason="recently_played")
         else:
             st["lookup_cue_at"] = _lk_now
-            cue_audio = await _send_lookup_cue(category)
+            cue_audio = await _send_lookup_cue(category, response_locale)
         network_started = time.monotonic()
         _diag(cid, "node.lookup_started", cue_audio=cue_audio, category=category)
 
@@ -1992,10 +2559,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             # 查太久（備胎鏈換手時）不讓長輩對著沉默等：5.5 秒還沒回來就先安撫一句
             # （2026-07-25 去罐頭化：句庫輪替，不再固定唸同一句）
             await asyncio.sleep(5.5)
-            wait_text = live_lookup.wait_phrase(st["lookup_count"])
+            wait_text = live_lookup.wait_phrase(
+                st["lookup_count"], locale=response_locale,
+            )
             try:
                 pcm = await asyncio.get_running_loop().run_in_executor(
-                    _VOICE_CUE_EXECUTOR, _lookup_wait_pcm, char, wait_text)
+                    _VOICE_CUE_EXECUTOR, _lookup_wait_pcm, char, wait_text,
+                    response_locale)
             except Exception:
                 pcm = b""
             if not pcm:
@@ -2015,10 +2585,27 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         wait_cue_task = asyncio.create_task(_send_wait_cue())
         st["bg_tasks"].append(wait_cue_task)
         try:
-            result = await asyncio.wait_for(
-                search_current_information(cli, query, lookup_location),
-                timeout=float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "13")),
+            result = await voice_tool_continuity.run_interruptible(
+                search_current_information(
+                    cli, query, lookup_location, locale=response_locale,
+                ),
+                _tool_event,
+                float(os.environ.get("MUNEA_LOOKUP_TIMEOUT_SECONDS", "13")),
             )
+        except voice_tool_continuity.ToolWaitInterrupted:
+            st["tool_wait_interrupts"] += 1
+            st["lookup_result_at"] = time.monotonic()
+            st["lookup_waiting_answer"] = False
+            _diag(
+                cid,
+                "node.lookup_cancelled_user_resumed",
+                latency_ms=round((st["lookup_result_at"] - network_started) * 1000),
+            )
+            return {
+                "status": "cancelled",
+                "error": "user_resumed",
+                "instruction": live_lookup.user_resumed_instruction(response_locale),
+            }
         except asyncio.TimeoutError:
             st["lookup_failures"] += 1
             st["lookup_result_at"] = time.monotonic()
@@ -2032,8 +2619,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 st["lookup_block_until"] = time.monotonic() + 120
             return {
                 "status": "error", "error": "lookup_timeout",
-                "instruction": "查詢沒有回應。請用一句話跟用戶說現在查不到、之後再幫忙看，"
-                               "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "timeout", response_locale,
+                ),
             }
         except Exception as exc:
             st["lookup_failures"] += 1
@@ -2048,12 +2636,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 st["lookup_block_until"] = time.monotonic() + 120
             return {
                 "status": "error", "error": "lookup_failed",
-                "instruction": "查詢出了點狀況。請用一句話跟用戶說現在查不到、之後再幫忙看，"
-                               "除非用戶再次主動要求，不要再呼叫查詢工具。",
+                "instruction": live_lookup.failure_instruction(
+                    "failed", response_locale,
+                ),
             }
         finally:
             # 查詢一有結果（成功或失敗）就取消「還在找」安撫句——別讓它插在答案中間
             wait_cue_task.cancel()
+            if st.get("tool_wait_event") is _tool_event:
+                st["tool_wait_active"] = False
+                st["tool_wait_event"] = None
+                st["tool_wait_voice_ms"] = 0.0
 
         st["lookup_fail_streak"] = 0
         st["lookup_block_until"] = 0.0
@@ -2090,34 +2683,15 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 await _forward_audio(chunk)
                 await asyncio.sleep(0)
             await _send_turn_tail()
+            await _finish_face_audio_turn()
         await ws.send(json.dumps({"type": "turn_complete"}))
         _diag(cid, "node.language_fallback", source=source, out_bytes=len(pcm))
 
-    async def _send_safe_mandarin_tts(text, source):
-        caption = localization.display_text(localization.speech_text(text, "zh-TW"), "zh-TW").strip()
-        if not caption:
-            caption = "我換個比較清楚的說法。"
-        await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption}))
-        try:
-            pcm = await asyncio.to_thread(_gemini_tts_pcm, caption, char)
-            if not pcm:
-                encoded = await asyncio.to_thread(server.tts_b64, caption, char, "zh-TW")
-                with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-                    pcm = wav.readframes(wav.getnframes())
-        except Exception as e:
-            pcm = b""
-            _diag(cid, "node.safe_mandarin_tts_err", err=f"{type(e).__name__}:{str(e)[:60]}")
-        first = True
-        for offset in range(0, len(pcm), 4800):
-            await _forward_audio(pcm[offset:offset + 4800])
-            if first:
-                first = False
-            else:
-                await asyncio.sleep(0.08)   # 配速同過場音：不灌爆同線聲畫節拍
-        if pcm:
-            await _send_turn_tail()
-        await ws.send(json.dumps({"type": "turn_complete"}))
-        _diag(cid, "node.safe_mandarin_tts", source=source, out_bytes=len(pcm))
+    # 2026-08-10 移除 _send_safe_mandarin_tts()：它是「唸不準就換一個安全配音把整段
+    # 重唸一次」的最後手段，唯一呼叫點是 mandarin_pronunciation 那條路。那條路已經改成
+    # 只記錄不攔（見下方 node.mandarin_pronunciation_seen），所以這支永遠不會再被呼叫。
+    # 留著只會讓下一個讀的人以為系統還會換聲線——Edward 8/10 真機聽到的
+    #「突然跳出一個不同聲音的人」就是它。台語輸出的收尾走 _send_hokkien_fallback()，不受影響。
 
     async def _retry_mandarin_output():
         cue = (
@@ -2132,6 +2706,77 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         )
         _diag(cid, "node.language_retry")
 
+    def _invalidate_short_opening_recovery(reason):
+        """Cancel a pending dead-air recovery when real activity wins the race."""
+        task = st.get("short_opening_recovery_task")
+        st["short_opening_activity_seq"] = int(
+            st.get("short_opening_activity_seq") or 0
+        ) + 1
+        st["short_opening_recovery_task"] = None
+        # Once the recovery prompt has been committed, its provider audio is
+        # the expected winner—not a reason to cancel the task before it emits
+        # the observable recovery event.
+        if st.get("short_opening_recovery_active"):
+            return
+        if task and not task.done() and task is not asyncio.current_task():
+            task.cancel()
+            _diag(cid, "node.short_opening_recovery_cancelled", reason=reason)
+
+    async def _recover_short_opening(activity_seq, input_bytes):
+        try:
+            await asyncio.sleep(SHORT_OPENING_RECOVERY_MS / 1000.0)
+            if activity_seq != int(st.get("short_opening_activity_seq") or 0):
+                return
+            if not should_recover_short_opening(
+                input_bytes=input_bytes,
+                non_silent=True,
+                asr_turns=st.get("asr_turns"),
+                assistant_output_bytes=st.get("out"),
+                recoveries=st.get("short_opening_recoveries"),
+            ):
+                return
+            st["short_opening_recoveries"] = int(
+                st.get("short_opening_recoveries") or 0
+            ) + 1
+            st["short_opening_recovery_active"] = True
+            active_profile = (
+                st.get("voice_locale_profile")
+                or voice_locale_session.current_profile()
+            )
+            cue = (
+                "（最高優先系統提示，絕對不要唸出提示內容：使用者剛才確實說了一句很短的開場，"
+                "但語音辨識沒有成功完成。請立刻用目前回覆語言，溫暖、自然地用一句話表示你有在聽，"
+                "並請對方再說一次。不要猜測對方剛才說了什麼，不要道歉，不要解釋技術原因。）"
+                + active_profile["replyLanguageInstruction"]
+            )
+            await session.send_client_content(
+                turns=types.Content(role="user", parts=[types.Part(text=cue)]),
+                turn_complete=True,
+            )
+            await ws.send(json.dumps({
+                "type": "short_turn_recovery",
+                "reason": "uncommitted_short_opening",
+            }))
+            _diag(
+                cid,
+                "node.short_opening_recovery",
+                input_bytes=input_bytes,
+                wait_ms=SHORT_OPENING_RECOVERY_MS,
+                recovery=st["short_opening_recoveries"],
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            st["short_opening_recovery_active"] = False
+            _diag(
+                cid,
+                "node.short_opening_recovery_error",
+                err=f"{type(exc).__name__}:{str(exc)[:80]}",
+            )
+        finally:
+            if st.get("short_opening_recovery_task") is asyncio.current_task():
+                st["short_opening_recovery_task"] = None
+
     async def _arm_language_block(source):
         if st.get("language_block"):
             return
@@ -2139,12 +2784,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         st["language_block_source"] = source
         st["language_block_count"] += 1
         await ws.send(json.dumps({"type": "interrupted"}))
-        fw = st.get("face_ws")
-        if fw is not None:
-            try:
-                await fw.send("reset")
-            except Exception:
-                st["face_ws"] = None
+        await _reset_face_audio_turn("language_block")
         _diag(cid, "node.language_block", source=source)
 
     async def from_browser():
@@ -2153,7 +2793,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 n = len(message)
                 st["in"] += n
                 st["last_in"] = time.monotonic()
-                st["await_first"] = True
+                # 2026-08-01：原本這裡每收一格麥克風封包就重新舉手要量 first_audio，
+                # 等於一輪內反覆量、而且起點永遠是「剛剛那一格」。改成只在真的聽到
+                # 人聲時舉手（見下方門檻判斷），一輪一次、起點是他講的最後一聲。
                 if st.get("greet_requested") and not st.get("opening_window_complete") and not st.get("opening_voice_detected"):
                     try:
                         samples = memoryview(message).cast("h")
@@ -2173,11 +2815,99 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # v2：窗以「手機大概播到哪」為準（in_playout_window）；送出時間窗當後備。
                 _eg_window = (in_playout_window(_eg_now, st.get("playout_head"))
                               or in_output_window(_eg_now, st.get("last_out")))
-                if _eg_window and guard_enabled() and frame_rms(message) < guard_rms_threshold():
+                # 2026-07-30 熱門檻：她講話中（水位在前方）要求更大聲才算真插話——
+                # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
+                _eg_rms = frame_rms(message)
+                _eg_hot = speaker_threshold(playout_active=bool(
+                    st.get("playout_head") and _eg_now < st.get("playout_head")
+                ))
+                _voice_frame_ms = len(message) / float(16000 * 2) * 1000.0
+                _above_voice_threshold = _eg_rms >= _eg_hot
+                if not st.get("first_non_silent_mic") and _eg_rms >= 700:
+                    st["first_non_silent_mic"] = True
+                    _diag(
+                        cid, "node.first_non_silent_mic",
+                        ms=round((_eg_now - t0) * 1000), rms=round(_eg_rms),
+                    )
+
+                # A semantic hold is only converted into a real continuation
+                # after sustained microphone evidence. One loud frame is not
+                # enough; that would turn a door knock into a cancelled reply.
+                if (
+                    st.get("semantic_hold_until", 0.0) > _eg_now
+                    and not st.get("semantic_hold_resumed")
+                ):
+                    _hold_voice_ms, _hold_resumed = voice_tool_continuity.sustained_voice_ms(
+                        st.get("semantic_hold_voice_ms", 0.0),
+                        _above_voice_threshold,
+                        _voice_frame_ms,
+                        trigger_ms=120,
+                    )
+                    st["semantic_hold_voice_ms"] = _hold_voice_ms
+                    if _hold_resumed:
+                        st["semantic_hold_resumed"] = True
+                        adaptive = _record_semantic_adaptation(True, _eg_now)
+                        _diag(
+                            cid,
+                            "node.semantic_turn_active_resumed",
+                            reason=st.get("semantic_hold_reason") or "unknown",
+                            evidence_ms=round(_hold_voice_ms),
+                            continuation_ewma_ms=adaptive["continuation_ewma_ms"],
+                        )
+
+                # Read-only lookup work is cancellable when the person resumes.
+                # The event wakes the lookup coroutine; microphone streaming to
+                # Gemini continues normally, so the latest utterance wins.
+                _tool_event = st.get("tool_wait_event")
+                if st.get("tool_wait_active") and _tool_event is not None and not _tool_event.is_set():
+                    _tool_voice_ms, _tool_resumed = voice_tool_continuity.sustained_voice_ms(
+                        st.get("tool_wait_voice_ms", 0.0),
+                        _above_voice_threshold,
+                        _voice_frame_ms,
+                        trigger_ms=180,
+                    )
+                    st["tool_wait_voice_ms"] = _tool_voice_ms
+                    if _tool_resumed:
+                        _tool_event.set()
+                        _diag(
+                            cid,
+                            "node.tool_wait_user_resumed",
+                            evidence_ms=round(_tool_voice_ms),
+                        )
+                # Two-phase barge-in: after barge_in_start, retain a short copy of
+                # the already-captured microphone onset. Do not forward or drop it
+                # until the commit message arrives and the server has judged the
+                # actual audio evidence. A stale start self-clears after one second.
+                _pending_barge = st.get("pending_barge_in")
+                if _pending_barge:
+                    if _eg_now - _pending_barge.get("started_at", 0.0) <= 1.0:
+                        _frame_ms = len(message) / float(16000 * 2) * 1000.0
+                        _pending_barge["frames"].append((bytes(message), _eg_rms, _frame_ms))
+                        if len(_pending_barge["frames"]) > 32:
+                            del _pending_barge["frames"][:-32]
+                        continue
+                    st["pending_barge_in"] = None
+                    _diag(cid, "node.barge_in_evidence_timeout")
+                if _eg_window and _eg_rms >= _eg_hot:
+                    st["last_hot_voice_at"] = _eg_now   # 窗內聽到真的夠大聲＝可信的人聲（插話裁判的依據）
+                if _eg_rms >= _eg_hot:
+                    # 2026-08-01 反應時間量測的起點：這一格夠大聲＝他正在講話。
+                    # 他講整句的期間這裡會一直更新，所以停下來的那一刻就是「他講完」。
+                    # （她講話中時 _eg_hot 是熱門檻、殘響不會誤算成人聲；她沒講話時就是原門檻。）
+                    st["last_voice_at"] = _eg_now
+                    st["await_first"] = True
+                    if st.get("short_opening_recovery_task"):
+                        _invalidate_short_opening_recovery("new_user_audio")
+                if _eg_window and guard_enabled() and _eg_rms < _eg_hot:
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
                         _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
                     continue
+                st["short_opening_input_bytes"] = int(
+                    st.get("short_opening_input_bytes") or 0
+                ) + len(message)
+                if _eg_rms >= 700:
+                    st["short_opening_non_silent"] = True
                 await session.send_realtime_input(
                     audio=types.Blob(data=bytes(message), mime_type="audio/pcm;rate=16000")
                 )
@@ -2229,42 +2959,288 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             turn_complete=True,
                         )
                 elif t == "audio_end":
+                    short_input_bytes = int(st.get("short_opening_input_bytes") or 0)
+                    short_non_silent = bool(st.get("short_opening_non_silent"))
+                    st["short_opening_input_bytes"] = 0
+                    st["short_opening_non_silent"] = False
+                    if st.get("short_opening_recovery_task"):
+                        _invalidate_short_opening_recovery("new_audio_end")
+                    try:
+                        raw_reported_tail_ms = int(obj.get("trailing_silence_ms") or 0)
+                    except (TypeError, ValueError):
+                        raw_reported_tail_ms = 0
+                    reported_tail_ms = max(
+                        0, min(
+                            PROVIDER_EXPLICIT_TURN_TAIL_MS,
+                            raw_reported_tail_ms,
+                        )
+                    )
+                    provider_pad_ms = (
+                        max(0, PROVIDER_EXPLICIT_TURN_TAIL_MS - reported_tail_ms)
+                        if VOICE_ENGINE == "vertex25" else 0
+                    )
+                    _diag(
+                        cid,
+                        "node.audio_stream_end",
+                        reason=str(obj.get("reason") or "client")[:48],
+                        first_non_silent=bool(st.get("first_non_silent_mic")),
+                        reported_tail_ms=reported_tail_ms,
+                        provider_pad_ms=provider_pad_ms,
+                    )
+                    if provider_pad_ms:
+                        await session.send_realtime_input(
+                            audio=types.Blob(
+                                data=b"\x00\x00" * int(16000 * provider_pad_ms / 1000),
+                                mime_type="audio/pcm;rate=16000",
+                            )
+                        )
                     await session.send_realtime_input(audio_stream_end=True)
+                    if should_recover_short_opening(
+                        input_bytes=short_input_bytes,
+                        non_silent=short_non_silent,
+                        asr_turns=st.get("asr_turns"),
+                        assistant_output_bytes=st.get("out"),
+                        recoveries=st.get("short_opening_recoveries"),
+                    ):
+                        activity_seq = int(st.get("short_opening_activity_seq") or 0)
+                        recovery_task = asyncio.create_task(
+                            _recover_short_opening(activity_seq, short_input_bytes)
+                        )
+                        st["short_opening_recovery_task"] = recovery_task
+                        st["bg_tasks"].append(recovery_task)
+                        _diag(
+                            cid,
+                            "node.short_opening_recovery_armed",
+                            input_bytes=short_input_bytes,
+                            wait_ms=SHORT_OPENING_RECOVERY_MS,
+                        )
+                elif t == "barge_in_start":
+                    # Buffer the ordered evidence frames that follow. Existing
+                    # clients send pre-duck pre-roll only; fixed clients append a
+                    # declared post-duck tail so the destructive decision can use
+                    # fresh microphone evidence while retaining the first syllable.
+                    _bi_started_at = time.monotonic()
+                    try:
+                        _post_duck_frames = min(12, max(0, int(obj.get("post_duck_frames") or 0)))
+                    except (TypeError, ValueError):
+                        _post_duck_frames = 0
+                    try:
+                        _post_duck_sustain_ms = min(120, max(60, int(obj.get("post_duck_sustain_ms") or 80)))
+                    except (TypeError, ValueError):
+                        _post_duck_sustain_ms = 80
+                    st["pending_barge_in"] = {
+                        "started_at": _bi_started_at,
+                        "sustain_ms": obj.get("sustain_ms", 150),
+                        "playout_active": in_playout_window(_bi_started_at, st.get("playout_head")),
+                        "post_duck_frames": _post_duck_frames,
+                        "post_duck_sustain_ms": _post_duck_sustain_ms,
+                        "frames": [],
+                    }
+                    _diag(cid, "node.barge_in_evidence_started",
+                          frames=obj.get("evidence_frames") or 0,
+                          post_duck_frames=_post_duck_frames,
+                          playout_active=st["pending_barge_in"]["playout_active"])
                 elif t == "barge_in":
+                    # 2026-07-30 插話裁判（治「喇叭開大→她自己的聲音觸發手機端插話→自己閉嘴」）：
+                    # 手機端的插話偵測分不出「你在說話」跟「她自己的大聲回音」（退回手機播音
+                    # 模式時系統回音消除顧不到那條路、7/16 已點名）。新 App 先送 start、
+                    # 再送預捲音訊、最後 commit；伺服器用同一個持續人聲規則判斷，通過後才把
+                    # 留住的開頭交給 Gemini。舊 App 沒有 start 時，保留 0.6 秒熱門檻判法。
+                    _bi_now = time.monotonic()
+                    _pending_barge = st.get("pending_barge_in")
+                    st["pending_barge_in"] = None
+                    _evidence_ms = 0.0
+                    _onset_index = 0
+                    _evidence_basis = "legacy"
+                    _evidence_threshold = 0.0
+                    if _pending_barge:
+                        _levels = [(rms, frame_ms) for _, rms, frame_ms in _pending_barge["frames"]]
+                        _post_duck_frames = min(
+                            len(_levels),
+                            max(0, int(_pending_barge.get("post_duck_frames") or 0)),
+                        )
+                        if _post_duck_frames:
+                            # New clients keep collecting microphone frames after
+                            # the speaker has been ducked.  Judge only that tail:
+                            # real nearby speech continues, speaker echo collapses.
+                            _decision_levels = _levels[-_post_duck_frames:]
+                            _decision_sustain_ms = _pending_barge.get("post_duck_sustain_ms", 80)
+                            _minimum_evidence_ms = 60.0
+                            _verdict = decide_speaker_evidence(
+                                _decision_levels,
+                                playout_active=False,
+                                after_duck=True,
+                                sustain_ms=_decision_sustain_ms,
+                                minimum_ms=_minimum_evidence_ms,
+                            )
+                        else:
+                            # Existing installed clients only send pre-duck
+                            # pre-roll.  Their adaptive threshold is not safe for
+                            # a destructive interruption while the assistant is
+                            # playing, so apply the dedicated hot evidence gate.
+                            _decision_levels = _levels
+                            _decision_sustain_ms = _pending_barge["sustain_ms"]
+                            _playout_active = bool(_pending_barge.get("playout_active"))
+                            _minimum_evidence_ms = 120.0
+                            _verdict = decide_speaker_evidence(
+                                _decision_levels,
+                                playout_active=_playout_active,
+                                after_duck=False,
+                                sustain_ms=_decision_sustain_ms,
+                                minimum_ms=_minimum_evidence_ms,
+                            )
+                        _accepted = _verdict["accepted"]
+                        _evidence_ms = _verdict["evidence_ms"]
+                        _onset_index = _verdict["onset_index"]
+                        _evidence_threshold = _verdict["threshold"]
+                        _evidence_basis = _verdict["basis"]
+                        # Acceptance uses the safe decision slice above, but
+                        # replay still starts at the original speech onset so a
+                        # genuine interruption does not lose its first syllable.
+                        _, _, _onset_index = sustained_voice_evidence(
+                            _levels,
+                            speaker_threshold(
+                                playout_active=bool(_pending_barge.get("playout_active")),
+                                after_duck=False,
+                            ),
+                            _pending_barge["sustain_ms"],
+                        )
+                    else:
+                        # Evidence-free legacy clients cannot obtain a second,
+                        # hidden speaker verdict. Reject the destructive action;
+                        # current clients always use start -> PCM -> commit.
+                        _accepted = False
+                        _evidence_basis = "legacy_missing_evidence"
+                    if not _accepted:
+                        st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
+                        _diag(cid, "node.barge_in_rejected_echo",
+                              count=st["barge_in_rejected"], evidence_ms=round(_evidence_ms),
+                              evidence_basis=_evidence_basis,
+                              threshold_pcm=round(_evidence_threshold))
+                        try:
+                            await ws.send(json.dumps({"type": "barge_in_ack", "accepted": False,
+                                                      "reason": "echo", "evidence_ms": round(_evidence_ms),
+                                                      "evidence_basis": _evidence_basis}))
+                        except Exception:
+                            pass
+                        continue
                     st["playout_head"] = 0.0   # App 已清掉未播聲音，回音窗立刻收
                     st["client_barge_in"] = True
                     st["barge_in_count"] += 1
-                    await ws.send(json.dumps({"type": "barge_in_ack"}))
-                    fw = st.get("face_ws")
-                    if fw is not None:
-                        try:
-                            await fw.send("reset")
-                        except Exception:
-                            st["face_ws"] = None
-                    _diag(cid, "node.client_barge_in")
+                    if _evidence_basis == "post_duck":
+                        st["barge_post_duck_accepted"] += 1
+                    elif _evidence_basis.startswith("pre_duck"):
+                        st["barge_pre_duck_accepted"] += 1
+                    st["last_voice_at"] = _bi_now
+                    st["await_first"] = True
+                    # Replay from one frame before the detected onset so the
+                    # user's first consonant is not lost, without replaying the
+                    # whole assistant-echo window.
+                    if _pending_barge:
+                        for _audio, _, _ in _pending_barge["frames"][max(0, _onset_index - 1):]:
+                            await session.send_realtime_input(
+                                audio=types.Blob(data=_audio, mime_type="audio/pcm;rate=16000")
+                            )
+                    await ws.send(json.dumps({"type": "barge_in_ack", "accepted": True,
+                                              "evidence_ms": round(_evidence_ms),
+                                              "evidence_basis": _evidence_basis}))
+                    await _reset_face_audio_turn("client_barge_in")
+                    _diag(cid, "node.client_barge_in", evidence_ms=round(_evidence_ms),
+                          evidence_basis=_evidence_basis,
+                          threshold_pcm=round(_evidence_threshold))
                 elif t == "faceaudio":
                     # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
-                    if obj.get("on"):
-                        await _face_audio_on(
+                    if obj.get("on") and not face_direct_enabled():
+                        # 直送路總開關（2026-08-10 晚 · Edward 1.0.60 實測災情後裝）：
+                        # 直送要三邊同時到位（伺服器＋App＋顯卡上的臉引擎），任何一邊沒跟上就會
+                        # 「她要講話卡住／聲音斷／臉凍住／使用者講話沒人聽」。關掉時明白回
+                        # on:false，App 會自動退回舊走法（聲音繞手機轉送臉機）——
+                        # 不用重包 App、不用動顯卡。等三邊都驗齊再開回來。
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": False,
+                            "reason": "direct_disabled",
+                        }))
+                        _diag(cid, "node.faceaudio_direct_disabled")
+                    elif obj.get("on"):
+                        direct_on = await _face_audio_on(
                             obj.get("url") or "",
                             obj.get("session") or "",
                             obj.get("token") or call_token,
                         )
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": bool(direct_on),
+                            "reason": "ready" if direct_on else "connect_failed",
+                        }))
+                        st["face_audio_enabled"] = bool(direct_on)
+                        ready = st.get("face_audio_ready")
+                        if ready:
+                            ready.set()
                     else:
                         await _face_audio_off()
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": False,
+                            "reason": "client_disabled",
+                        }))
+
+    # watchdog 原地補回合時，下一塊 provider 音訊要等 App／Avatar 舊回合收乾淨再進來，
+    # 避免舊 tail 與新一句 PCM 互相穿插。
+    turn_recovery_done = asyncio.Event()
+    turn_recovery_done.set()
 
     async def from_live():
         # session.receive() 每輪結束就收（SDK 行為）；外層 while 讓「一輪接完再等下一輪」＝多輪對話不斷。
         # 2026-07-25 通話延長：整段包一層 try/except——GoAway 預警後底層連線遲早會被
         # Gemini 收掉，這是「預期中的收線」，跟真的斷線／出錯要分開處理；回傳值
         # "reconnect" 交給外層換一條底層連線接著講，"ended" 才是這通真的結束了。
+        observed_recovery_seq = int(st.get("provider_turn_recovery_seq") or 0)
+
+        def _sync_recovered_turn_counters():
+            nonlocal observed_recovery_seq, turn_out, turn_max_gap_ms, turn_last_out
+            current = int(st.get("provider_turn_recovery_seq") or 0)
+            if current == observed_recovery_seq:
+                return
+            observed_recovery_seq = current
+            turn_out = 0
+            turn_max_gap_ms = 0.0
+            turn_last_out = None
+
         try:
             while True:
+                st["face_audio_turn_started"] = False
                 turn_out = 0
                 turn_max_gap_ms = 0.0   # 這一輪送聲音時，相鄰兩塊之間最久的一次空檔（抖動指標）
+                turn_last_out = None    # 這一輪送出的上一塊聲音是幾點（2026-08-01：抖動只跟同一輪比）
                 got = False
                 async for msg in session.receive():
                     got = True
+                    await turn_recovery_done.wait()
+                    _sync_recovered_turn_counters()
+                    # 每輪的真實用量（2026-08-12 Edward「去實際計算一下」）：
+                    # 在這之前，「說明書貴不貴、聲音貴不貴」全靠推估——因為我們**根本沒在量**。
+                    # 這裡把伺服器回報的用量原樣記下來，一天就有真數字可以算錢、可以決定
+                    # 要不要把說明書存起來。拿不到就安靜跳過，絕不影響通話。
+                    _um = getattr(msg, "usage_metadata", None)
+                    if _um is not None:
+                        try:
+                            _by_kind = {}
+                            for _d in (getattr(_um, "response_tokens_details", None) or []) + \
+                                      (getattr(_um, "prompt_tokens_details", None) or []):
+                                _mod = getattr(getattr(_d, "modality", None), "name", None) \
+                                    or str(getattr(_d, "modality", "") or "?")
+                                _by_kind[_mod] = _by_kind.get(_mod, 0) + (getattr(_d, "token_count", 0) or 0)
+                            st["usage_prompt"] = st.get("usage_prompt", 0) + (getattr(_um, "prompt_token_count", 0) or 0)
+                            st["usage_output"] = st.get("usage_output", 0) + (getattr(_um, "response_token_count", 0) or 0)
+                            st["usage_cached"] = st.get("usage_cached", 0) + (getattr(_um, "cached_content_token_count", 0) or 0)
+                            _agg = st.setdefault("usage_by_modality", {})
+                            for _k, _v in _by_kind.items():
+                                _agg[_k] = _agg.get(_k, 0) + _v
+                            _diag(cid, "usage.turn",
+                                  prompt=getattr(_um, "prompt_token_count", 0) or 0,
+                                  output=getattr(_um, "response_token_count", 0) or 0,
+                                  cached=getattr(_um, "cached_content_token_count", 0) or 0,
+                                  by_modality=_by_kind)
+                        except Exception:
+                            pass
                     # 通話延長（2026-07-25）：GoAway＝伺服器預告「這條底層連線快到期了」
                     # （time_left 通常留了緩衝，不是馬上斷）；session_resumption_update
                     # 帶新的 handle，之後重連要帶著這個 handle 才能接上同一通邏輯電話。
@@ -2280,11 +3256,22 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         st["resumption_handle"] = sru.new_handle
                         _diag(cid, "node.session_resumption_update")
                     sc = getattr(msg, "server_content", None)
+                    # watchdog 已經替 App／Avatar 宣告上一輪結束後，provider 偶爾仍會
+                    # 補送同一輪的尾音或字幕。這些資料若重新開啟 provider_turn_active，
+                    # 就會變成使用者什麼都沒說、寧寧卻把上一段再講一次。保留 pending
+                    # 直到真正的 turn_complete 抵達；期間只隔離舊 tail，不重建 session。
+                    recovered_tail = bool(
+                        st.get("provider_turn_recovered_pending")
+                        and not st.get("provider_turn_active")
+                    )
                     if sc:
                         it_pre = getattr(sc, "input_transcription", None)
                         if it_pre and getattr(it_pre, "text", None):
+                            _invalidate_short_opening_recovery("input_transcription")
                             if st.get("user_turn_started_at") is None:
                                 st["user_turn_started_at"] = time.monotonic()
+                                _guardian_begin_real_user_turn(st)
+                            st["voice_turn_vad_pending"] = True
                             current_profile = (
                                 st.get("voice_locale_profile")
                                 or voice_locale_session.current_profile()
@@ -2297,6 +3284,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["locale_user_transcript"] = (
                                 st.get("locale_user_transcript", "") + transcript
                             )[-600:]
+                            st["semantic_turn_text"] = (
+                                st.get("semantic_turn_text", "") + transcript
+                            )[-240:]
                             locale_turn = _resolve_locale_turn(
                                 st["locale_user_transcript"],
                             )
@@ -2314,8 +3304,136 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             _diag(cid, "node.asr_input", chars=len(transcript), language_block=is_hokkien)
                             if is_hokkien:
                                 await _arm_language_block("audio_input")
+                        if (
+                            it_pre
+                            and getattr(it_pre, "finished", False)
+                            and st.get("voice_turn_vad_pending")
+                        ):
+                            st["voice_turn_vad_pending"] = False
+                            semantic_text = st.pop("semantic_turn_text", "")
+                            st["semantic_turn_text"] = ""
+                            vad_stop_at = time.monotonic()
+                            st["voice_turn_seq"] = int(st.get("voice_turn_seq") or 0) + 1
+                            st["voice_turn_id"] = st["voice_turn_seq"]
+                            st["voice_turn_vad_stop_at"] = vad_stop_at
+                            _semantic_shadow = voice_turn_semantics.semantic_turn_shadow_enabled()
+                            _semantic_active = voice_turn_semantics.semantic_turn_active_enabled()
+                            if _semantic_shadow or _semantic_active:
+                                current_profile = (
+                                    st.get("voice_locale_profile")
+                                    or voice_locale_session.current_profile()
+                                )
+                                hint = voice_turn_semantics.classify_turn_end(
+                                    semantic_text,
+                                    current_profile["sessionLocale"],
+                                )
+                                if hint.supported:
+                                    # A new provider-finished input means a
+                                    # resumed thought reached its next boundary.
+                                    # Retire the older hold so the answer to this
+                                    # newer, complete utterance is not suppressed.
+                                    if (
+                                        st.get("semantic_hold_resumed")
+                                        and st.get("semantic_hold_reason")
+                                        and not st.get("semantic_hold_outcome_recorded")
+                                    ):
+                                        st["semantic_turn_active_resumes"] += 1
+                                        st["semantic_hold_outcome_recorded"] = True
+                                        _diag(
+                                            cid,
+                                            "node.semantic_turn_active_continued",
+                                            reason=st.get("semantic_hold_reason"),
+                                        )
+                                        _clear_semantic_hold()
+                                    if _semantic_shadow:
+                                        st["semantic_turn_shadow_total"] += 1
+                                        if hint.decision == "hold":
+                                            st["semantic_turn_shadow_holds"] += 1
+                                        _diag(
+                                            cid,
+                                            "node.semantic_turn_shadow",
+                                            decision=hint.decision,
+                                            reason=hint.reason,
+                                            chars=len(semantic_text),
+                                            provider_finished=True,
+                                        )
+                                    policy = _semantic_policy()
+                                    provider_ms = int(
+                                        st.get("provider_silence_ms")
+                                        or voice_turn_semantics.FAST_TURN_MS
+                                    )
+                                    target_ms = policy.target_ms(hint)
+                                    hold_ms = policy.hold_ms(hint, provider_ms)
+                                    st["voice_turn_target_ms"] = target_ms
+                                    last_voice_at = float(st.get("last_voice_at") or 0.0)
+                                    after_last_voice_ms = (
+                                        round(max(0.0, vad_stop_at - last_voice_at) * 1000)
+                                        if last_voice_at else None
+                                    )
+                                    await ws.send(json.dumps({
+                                        "type": "voice_turn_timing",
+                                        "stage": "vad_stop",
+                                        "turn": st["voice_turn_id"],
+                                        "afterLastVoiceMs": after_last_voice_ms,
+                                        "providerSilenceMs": provider_ms,
+                                        "targetMs": target_ms,
+                                        "class": hint.reason,
+                                        "slowCaller": policy.is_slow_caller(),
+                                    }))
+                                    if hold_ms and _semantic_active:
+                                        hold_started_at = time.monotonic()
+                                        st["semantic_hold_until"] = hold_started_at + hold_ms / 1000.0
+                                        st["semantic_hold_reason"] = hint.reason
+                                        st["semantic_hold_started_at"] = hold_started_at
+                                        st["semantic_hold_ms"] = hold_ms
+                                        st["semantic_hold_last_voice_at"] = last_voice_at
+                                        st["semantic_hold_resumed"] = False
+                                        st["semantic_hold_voice_ms"] = 0.0
+                                        st["semantic_hold_outcome_recorded"] = False
+                                        st["semantic_hold_adaptation_recorded"] = False
+                                        st["semantic_turn_active_holds"] += 1
+                                        adaptive = policy.snapshot()
+                                        _diag(
+                                            cid,
+                                            "node.semantic_turn_active_armed",
+                                            reason=hint.reason,
+                                            hold_ms=hold_ms,
+                                            total_target_ms=target_ms,
+                                            provider_silence_ms=provider_ms,
+                                            adaptive_samples=(
+                                                adaptive["continuations"] + adaptive["releases"]
+                                            ),
+                                            chars=len(semantic_text),
+                                        )
+                        # 她自己查（native）留下的憑證。2026-08-10 之前完全沒讀，
+                        # 所以「她說我幫你查一下、結果憑印象亂講」跟「她真的查了」
+                        # 在日誌上長得一模一樣——誠實紅線最需要證據的地方反而是空的。
+                        # 這裡只記數量，不留查詢內容本身。
+                        gm = getattr(sc, "grounding_metadata", None)
+                        if gm is not None:
+                            _queries = list(getattr(gm, "web_search_queries", None) or [])
+                            _chunks = list(getattr(gm, "grounding_chunks", None) or [])
+                            if _queries or _chunks:
+                                st["native_search_turns"] += 1
+                                st["native_search_queries"] += len(_queries)
+                                st["native_search_sources"] += len(_chunks)
+                                _diag(
+                                    cid, "node.native_search",
+                                    queries=len(_queries), sources=len(_chunks),
+                                )
+
                         ot_pre = getattr(sc, "output_transcription", None)
-                        if ot_pre and getattr(ot_pre, "text", None):
+                        if recovered_tail and ot_pre and getattr(ot_pre, "text", None):
+                            late_chars = len(str(ot_pre.text))
+                            st["provider_turn_recovered_late_caption_chars"] = int(
+                                st.get("provider_turn_recovered_late_caption_chars") or 0
+                            ) + late_chars
+                            _diag(
+                                cid,
+                                "node.recovered_tail_caption_suppressed",
+                                chars=late_chars,
+                            )
+                        if (not recovered_tail) and ot_pre and getattr(ot_pre, "text", None):
                             current_profile = (
                                 st.get("voice_locale_profile")
                                 or voice_locale_session.current_profile()
@@ -2328,16 +3446,96 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["blocked_output_text"] = (st["blocked_output_text"] + output_text)[-600:]
                             if (
                                 output_locale == "zh-TW"
-                                and localization.looks_like_taiwanese_hokkien(output_text)
+                                and localization.looks_like_taiwanese_hokkien_output(
+                                    st["blocked_output_text"]
+                                )
                             ):
-                                await _arm_language_block("model_output")
+                                st["hokkien_output_seen"] = (
+                                    st.get("hokkien_output_seen", 0) + 1
+                                )
+                                _diag(
+                                    cid, "node.hokkien_output_seen",
+                                    chars=len(st["blocked_output_text"]),
+                                )
                             elif (
                                 output_locale == "zh-TW"
                                 and localization.contains_unstable_mandarin_speech(output_text)
                             ):
-                                await _arm_language_block("mandarin_pronunciation")
+                                # 2026-08-10：這裡以前跟台語走同一條路——攔下整段、
+                                # 叫她重講、再用備用配音唸出來。Edward 真機問「最近有什麼
+                                # 電影」踩到：她說「看你的興趣」就中招，結果
+                                #   · 她的聲音被整包丟掉 77 次 ≈ 21.5 秒的話
+                                #   · 系統叫她重講，一輪要重生 20 秒 → 第一聲等了 26 秒
+                                #   · 備用配音（不是寧寧的聲音）把答案唸完 → 使用者聽到
+                                #     「突然跳出一個不同聲音的人」
+                                # 藥比病重太多：一個詞唸得怪，代價卻是整段話消失＋換人講話。
+                                # 台語那道是產品規則（還沒開放）必須攔；唸不準只是好聽與否，
+                                # 改成只記錄不攔。要她少用那幾個詞，靠說明書那句提醒就好。
+                                st["mandarin_pronunciation_seen"] = (
+                                    st.get("mandarin_pronunciation_seen", 0) + 1
+                                )
+                                _diag(
+                                    cid, "node.mandarin_pronunciation_seen",
+                                    count=st["mandarin_pronunciation_seen"],
+                                )
                     data = getattr(msg, "data", None)
-                    if data and not st.get("language_block") and not st.get("client_barge_in"):
+                    if (
+                        data
+                        and not recovered_tail
+                        and not st.get("language_block")
+                        and not st.get("client_barge_in")
+                    ):
+                        _semantic_reason = st.get("semantic_hold_reason")
+                        if _semantic_reason and not st.get("semantic_hold_outcome_recorded"):
+                            _remaining = max(
+                                0.0,
+                                st.get("semantic_hold_until", 0.0) - time.monotonic(),
+                            )
+                            if _remaining and not st.get("semantic_hold_resumed"):
+                                await asyncio.sleep(_remaining)
+                            if st.get("semantic_hold_resumed"):
+                                # The user continued before the old answer became
+                                # audible. Suppress that answer exactly like a
+                                # barge-in; provider AAD still receives the audio
+                                # and owns the actual model interruption.
+                                st["client_barge_in"] = True
+                                st["semantic_turn_active_resumes"] += 1
+                                _diag(
+                                    cid,
+                                    "node.semantic_turn_active_cancelled",
+                                    reason=_semantic_reason,
+                                )
+                            else:
+                                st["semantic_turn_active_releases"] += 1
+                                _record_semantic_adaptation(False)
+                                _diag(
+                                    cid,
+                                    "node.semantic_turn_active_released",
+                                    reason=_semantic_reason,
+                                )
+                            st["semantic_hold_outcome_recorded"] = True
+                            _clear_semantic_hold()
+                    if recovered_tail and data:
+                        st["provider_turn_recovered_late_audio_bytes"] = int(
+                            st.get("provider_turn_recovered_late_audio_bytes") or 0
+                        ) + len(data)
+                        _diag(
+                            cid,
+                            "node.recovered_tail_audio_suppressed",
+                            out_bytes=len(data),
+                            total_bytes=st["provider_turn_recovered_late_audio_bytes"],
+                        )
+                    elif data and not st.get("language_block") and not st.get("client_barge_in"):
+                        # 先把 provider 活性更新，再做任何可能 yield 的工作；否則 watchdog
+                        # 可能在新 PCM 已抵達、但 _mark_first_audio 尚未返回時誤收上一輪。
+                        await turn_recovery_done.wait()
+                        _sync_recovered_turn_counters()
+                        _provider_audio_at = time.monotonic()
+                        _invalidate_short_opening_recovery("provider_audio")
+                        turn_out += len(data)
+                        st["provider_turn_active"] = True
+                        st["provider_turn_last_audio_at"] = _provider_audio_at
+                        st["provider_turn_out_bytes"] = turn_out
                         await _mark_first_audio("model")
                         if st.get("lookup_waiting_answer"):
                             now = time.monotonic()
@@ -2349,43 +3547,29 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 after_result_ms=round((now - result_at) * 1000),
                             )
                             st["lookup_waiting_answer"] = False
-                        st["out"] += len(data)
-                        turn_out += len(data)
                         # 2026-07-29：量「送聲音的手抖不抖」。Edward 7/28 回報「句尾的最後一句
                         # 會卡其中某個字」，但體感沒有數字就查不動——這裡記下相鄰兩塊聲音之間
                         # 最久的一次空檔，收在 turn_done 一起報。手順的時候這個值很小；
                         # 一旦有東西在跟它搶（7/28 那包 76 秒的暖機就是），這裡會立刻看得出來。
+                        # 2026-08-01 量測修正：空檔只跟「這一輪的上一塊」比（算法與理由見
+                        # note_turn_gap）。st["last_out"] 仍要更新——回音濾網要用它。
                         _now_out = time.monotonic()
-                        if st.get("last_out") is not None:
-                            _gap = (_now_out - st["last_out"]) * 1000
-                            if _gap > turn_max_gap_ms:
-                                turn_max_gap_ms = _gap
-                        st["last_out"] = _now_out
-                        # 回音窗 v2（2026-07-29）：鏡射 App 播放節奏、推進「手機大概播到哪」。
-                        # Gemini 送資料比講話快，只看送出時間會讓句子後半的回音落在窗外＝自問自答。
-                        st["playout_head"] = note_playout(st.get("playout_head"), _now_out, len(data))
-                        await ws.send(data)
-                        fw = st.get("face_ws")
-                        if fw is not None:
-                            # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）。
-                            # 加了逾時（2026-07-29）：臉那條線慢的時候，原本會回頭卡住下一塊
-                            # 聲音＝使用者聽到「卡一下」。臉是加分、聲音是必須，所以慢就放掉臉，
-                            # 這通剩下的時間臉不動、但聲音全程順（App 下次送 on 訊息會重連）。
-                            try:
-                                await asyncio.wait_for(fw.send(data), timeout=FACE_SEND_TIMEOUT_S)
-                            except asyncio.TimeoutError:
-                                st["face_ws"] = None
-                                _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S)
-                                asyncio.create_task(_face_audio_close(fw))
-                            except Exception as e:
-                                st["face_ws"] = None
-                                _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
+                        turn_max_gap_ms, _ = note_turn_gap(_now_out, turn_last_out, turn_max_gap_ms)
+                        turn_last_out = _now_out
+                        st["provider_turn_max_gap_ms"] = turn_max_gap_ms
+                        # 唯一音訊出口：先嘗試 Voice→Avatar 直送，再把同一塊送給 App 播放。
+                        # 直送若逾時，_forward_audio 會先通知 App 切回 relay，確保這一塊不遺失。
+                        st["provider_audio_forwarding"] = True
+                        try:
+                            await _forward_audio(data)
+                        finally:
+                            st["provider_audio_forwarding"] = False
                     elif data:
                         reason = "language" if st.get("language_block") else "barge_in"
                         _diag(cid, "node.audio_suppressed", reason=reason, out_bytes=len(data))
                     if sc:
                         ot = getattr(sc, "output_transcription", None)
-                        if ot and getattr(ot, "text", None):
+                        if (not recovered_tail) and ot and getattr(ot, "text", None):
                             # 2026-07-25（卡西法・三修③）：語音線字幕出口也要過同一道防禦性
                             # 清洗，剝掉可能漏出的 <thinking> 內部推理標記，跟文字線同一把關卡。
                             current_profile = (
@@ -2406,7 +3590,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
-                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "ai", st["ai_buf"], st, session)))
+                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                                    cid, "ai", st["ai_buf"], st, session,
+                                    turn_id=st.get("guardian_real_turn_id", 0),
+                                    allow_cue=not st.get("guardian_internal_followup_active"),
+                                )))
                         it = getattr(sc, "input_transcription", None)
                         if it and getattr(it, "text", None):
                             user_text = localization.reconcile_context_transcription(
@@ -2416,25 +3604,62 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             )
                             await ws.send(json.dumps({"type": "caption", "who": "user", "text": user_text}))
                             st["user_buf"] = (st["user_buf"] + user_text)[-200:]
-                            st["bg_tasks"].append(asyncio.create_task(guardian_watch(cid, "user", st["user_buf"], st, session)))
+                            st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                                cid, "user", st["user_buf"], st, session,
+                                turn_id=st.get("guardian_real_turn_id", 0), allow_cue=True,
+                            )))
                             health_watch_user_text(cid, st)  # B2 衛教：同一份字幕順手比對題庫（同步、零模型呼叫）
                         if getattr(sc, "interrupted", False) and not st.get("language_block"):
                             st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
                             _diag(cid, "node.interrupted")
                             await ws.send(json.dumps({"type": "interrupted"}))
-                            fw = st.get("face_ws")
-                            if fw is not None:
-                                try:
-                                    await fw.send("reset")   # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）
-                                except Exception:
-                                    st["face_ws"] = None
+                            # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）。
+                            await _reset_face_audio_turn("model_interrupted")
+                        if (
+                            getattr(sc, "turn_complete", False)
+                            and st.get("provider_turn_recovered_pending")
+                            and not st.get("provider_turn_active")
+                            and turn_out == 0
+                        ):
+                            # watchdog 已替這一輪補過收尾；provider 晚到的原始訊號只吃掉，
+                            # 不可以再向 App／Avatar 補第二次 turn_complete。
+                            st["provider_turn_recovered_pending"] = False
+                            _diag(cid, "node.turn_complete_late_after_recovery")
+                            continue
                         if getattr(sc, "turn_complete", False):
+                            st["provider_turn_active"] = False
+                            st["provider_turn_last_audio_at"] = 0.0
+                            st["provider_turn_out_bytes"] = 0
+                            st["provider_turn_max_gap_ms"] = 0.0
+                            st["provider_turn_recovered_pending"] = False
                             ms = round(turn_out / (24000 * 2) * 1000)
-                            # max_gap_ms＝這一輪送聲音最久的一次空檔。播放端有 600-1100 毫秒
-                            # 的緩衝，所以偶爾一兩百毫秒沒關係；持續衝到接近或超過緩衝，
+                            # max_gap_ms＝這一輪送聲音最久的一次空檔。Avatar 播放端現在只有
+                            # 200-350 毫秒動態緩衝；持續衝到接近或超過緩衝，
                             # 就是使用者會聽到「卡一下／吃掉一個字」的那個瞬間，可以拿這個值追。
                             _diag(cid, "node.turn_done", out_bytes=turn_out, audio_ms=ms,
                                   max_gap_ms=round(turn_max_gap_ms))
+                            _semantic_reason = st.get("semantic_hold_reason")
+                            if _semantic_reason and not st.get("semantic_hold_outcome_recorded"):
+                                if st.get("semantic_hold_resumed"):
+                                    st["client_barge_in"] = True
+                                    st["semantic_turn_active_resumes"] += 1
+                                    _diag(
+                                        cid,
+                                        "node.semantic_turn_active_cancelled",
+                                        reason=_semantic_reason,
+                                        no_audio=True,
+                                    )
+                                else:
+                                    st["semantic_turn_active_releases"] += 1
+                                    _record_semantic_adaptation(False)
+                                    _diag(
+                                        cid,
+                                        "node.semantic_turn_active_released",
+                                        reason=_semantic_reason,
+                                        no_audio=True,
+                                    )
+                                st["semantic_hold_outcome_recorded"] = True
+                                _clear_semantic_hold()
                             barge_cancelled = bool(st.get("client_barge_in"))
                             completed_audio = bool(turn_out and not st.get("language_block") and not barge_cancelled)
                             if st.get("lookup_waiting_answer"):
@@ -2442,7 +3667,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 st["lookup_waiting_answer"] = False
                             if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
                                 await _send_turn_tail()
+                            await _finish_face_audio_turn()
                             turn_out = 0
+                            # 2026-08-01：這兩個原本只在 while 外層歸零，同一條連線第二輪
+                            # 以後會沿用上一輪的最大值＝越報越大、且永遠是舊帳。
+                            turn_max_gap_ms = 0.0
+                            turn_last_out = None
                             st["await_first"] = True
                             if st.get("language_block"):
                                 source = st.get("language_block_source") or "unknown"
@@ -2453,15 +3683,16 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 # Clear the cancelled turn on the App before
                                 # sending a safe replacement turn.
                                 await ws.send(json.dumps({"type": "turn_complete"}))
-                                if barge_cancelled and source in ("model_output", "mandarin_pronunciation"):
+                                if barge_cancelled and source == "model_output":
                                     _diag(cid, "node.language_replacement_skipped", reason="barge_in", source=source)
-                                elif source in ("model_output", "mandarin_pronunciation") and st.get("language_retry_count", 0) < 1:
-                                    # 病歷 d（聲線變）：先讓模型用「她自己的聲音」重講國語版；
-                                    # 重講仍被攔才換安全配音（不同引擎、聲線不同＝最後手段）。
+                                elif source == "model_output" and st.get("language_retry_count", 0) < 1:
+                                    # 病歷 d（聲線變）：先讓模型用「她自己的聲音」重講國語版。
+                                    # 2026-08-10：mandarin_pronunciation 不再走到這裡（唸不準
+                                    # 改成只記錄不攔），所以「重講仍被攔就換安全配音」那條
+                                    # 分支也一併移除——台語輸出第二次仍被攔會落到下面的
+                                    # 台語罐頭句，那本來就是對的收尾，不需要換一個陌生聲線。
                                     st["language_retry_count"] = st.get("language_retry_count", 0) + 1
                                     await _retry_mandarin_output()
-                                elif source == "mandarin_pronunciation":
-                                    await _send_safe_mandarin_tts(blocked_text, source)
                                 else:
                                     await _send_hokkien_fallback(source)
                             else:
@@ -2476,13 +3707,18 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["user_turn_started_at"] = None
                             st["locale_user_transcript"] = ""
                             st["locale_resolved_text"] = ""
+                            if st.get("short_opening_recovery_active"):
+                                # This is transport recovery, not a real user
+                                # exchange; keep it out of durable call memory.
+                                st["ai_buf"] = ""
+                                st["short_opening_recovery_active"] = False
                             # 通話記憶：這一輪講完，先把雙方字幕收進整通紀錄再清緩衝（收線時交聊後管線）
                             _capture_call_turns(st)
                             # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
                             st["user_buf"] = ""
                             st["ai_buf"] = ""
-                            st["user_flagged"] = set()
-                            st["ai_flagged"] = set()
+                            st["guardian_internal_followup_active"] = False
+                            st["guardian_internal_followup_sources"] = ()
                             if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if st.get("locale_reconnect_requested"):
@@ -2542,21 +3778,112 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             if _voice_session_extend_enabled() and st.get("goaway_pending"):
                 _diag(cid, "node.goaway_closed", err=f"{type(exc).__name__}:{str(exc)[:60]}")
                 return "reconnect"
+            # Gemini 3.1 can end a resumable underlying session with API 1008
+            # without sending GoAway first (observed at about 3m15s).  This is
+            # a transport rotation, not the user's call ending.  Require both
+            # the exact provider signal and a resumption handle; every other
+            # 1008/error still propagates as a real failure.
+            if (
+                _voice_session_extend_enabled()
+                and _recoverable_provider_session_abort(
+                    exc, st.get("resumption_handle") or resumption_handle
+                )
+            ):
+                _diag(cid, "node.provider_session_abort_reconnect", code=1008)
+                return "reconnect"
             raise
 
-    async def _goaway_watchdog():
-        # GoAway 保底：萬一遲遲沒有 turn_complete 這種天然空檔（例如對方講很長一段話、
-        # 或整通都沒人開口），不要傻等硬斷線——時間一到就主動出手，逼外層換線。
+    async def _session_watchdog():
+        # 兩種不同責任：provider 漏 turn_complete 時只在原 session 補回合收尾；
+        # 真正 GoAway 到期才換底層連線。兩者不可再共用「重連」處置。
         while True:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.25)
+            now = time.monotonic()
+            stalled = voice_turn_completion.provider_turn_stalled(
+                now,
+                active=st.get("provider_turn_active"),
+                last_audio_at=st.get("provider_turn_last_audio_at") or 0.0,
+                out_bytes=st.get("provider_turn_out_bytes") or 0,
+                blocked=bool(
+                    st.get("language_block")
+                    or st.get("client_barge_in")
+                    or st.get("tool_wait_active")
+                    or st.get("lookup_waiting_answer")
+                    or st.get("action_results")
+                    or st.get("provider_audio_forwarding")
+                ),
+                idle_ms=float(os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS", "2500")),
+            )
+            if stalled:
+                quiet_ms = round(
+                    (now - float(st.get("provider_turn_last_audio_at") or now)) * 1000
+                )
+                out_bytes = int(st.get("provider_turn_out_bytes") or 0)
+                _diag(
+                    cid,
+                    "node.turn_complete_stall",
+                    quiet_ms=quiet_ms,
+                    out_bytes=out_bytes,
+                    action="finish_in_place",
+                )
+                # 先同步宣告這輪已被接管，再做任何 await；新 PCM 會在
+                # turn_recovery_done 等舊回合的 tail／Avatar 收尾完成，不會交錯。
+                turn_recovery_done.clear()
+                st["provider_turn_recovery_in_progress"] = True
+                st["provider_turn_active"] = False
+                st["provider_turn_last_audio_at"] = 0.0
+                st["provider_turn_out_bytes"] = 0
+                max_gap_ms = round(float(st.get("provider_turn_max_gap_ms") or 0.0))
+                st["provider_turn_max_gap_ms"] = 0.0
+                st["provider_turn_recovery_seq"] = int(
+                    st.get("provider_turn_recovery_seq") or 0
+                ) + 1
+                st["provider_turn_recoveries"] = int(
+                    st.get("provider_turn_recoveries") or 0
+                ) + 1
+                st["provider_turn_recovered_pending"] = True
+                try:
+                    await _send_turn_tail()
+                    await _finish_face_audio_turn()
+                    await ws.send(json.dumps({"type": "turn_complete", "recovered": True}))
+                    st["await_first"] = True
+                    st["client_barge_in"] = False
+                    st["user_turn_started_at"] = None
+                    st["locale_user_transcript"] = ""
+                    st["locale_resolved_text"] = ""
+                    _capture_call_turns(st)
+                    st["user_buf"] = ""
+                    st["ai_buf"] = ""
+                    st["guardian_internal_followup_active"] = False
+                    st["guardian_internal_followup_sources"] = ()
+                    if (
+                        st.get("pending_cues")
+                        or st.get("pending_health_cue")
+                        or st.get("pending_promise_cue")
+                    ):
+                        st["bg_tasks"].append(asyncio.create_task(
+                            guardian_flush_pending_cue(cid, session, st)
+                        ))
+                    _diag(
+                        cid,
+                        "node.turn_complete_recovered_in_place",
+                        recovery=st["provider_turn_recoveries"],
+                        audio_ms=round(out_bytes / (24000 * 2) * 1000),
+                        max_gap_ms=max_gap_ms,
+                        session_preserved=True,
+                    )
+                finally:
+                    st["provider_turn_recovery_in_progress"] = False
+                    turn_recovery_done.set()
+                continue
             deadline = st.get("goaway_deadline")
-            if deadline and time.monotonic() >= deadline:
+            if deadline and now >= deadline:
                 return "reconnect_timeout"
 
     # 任一邊結束（使用者掛斷／這條底層連線該換了／session 收）就取消另一邊，乾淨收線或換線
     from_browser_task = asyncio.create_task(from_browser())
     from_live_task = asyncio.create_task(from_live())
-    watchdog_task = asyncio.create_task(_goaway_watchdog())
+    watchdog_task = asyncio.create_task(_session_watchdog())
     try:
         done, _pending = await asyncio.wait(
             [from_browser_task, from_live_task, watchdog_task],
@@ -2565,14 +3892,19 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         if from_browser_task in done:
             call_ended = True   # 瀏覽器連線斷了／使用者掛斷，這才是真的收線
         elif watchdog_task in done and from_live_task not in done:
-            # 一直沒等到天然空檔、GoAway 保底時間到了——強制換線（from_live_task 在
-            # 下面的 finally 會被取消，session.receive() 中途取消是安全的）。
+            # watchdog 只會因真正的 GoAway 到期而結束；漏 turn_complete 已在同一條
+            # Live session 內原地收尾，不再取消 session 或消耗重連額度。
+            watchdog_task.result()
             _diag(cid, "node.goaway_forced_reconnect")
         elif from_live_task in done:
             status = from_live_task.result()
             if status != "reconnect":
                 call_ended = True
     finally:
+        recovery_task = st.get("short_opening_recovery_task")
+        if recovery_task and not recovery_task.done():
+            recovery_task.cancel()
+        st["short_opening_recovery_task"] = None
         for t in (from_browser_task, from_live_task, watchdog_task):
             if not t.done():
                 t.cancel()
@@ -2581,7 +3913,33 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 await t
             except (asyncio.CancelledError, Exception):
                 pass
+    # 這條底層連線的用量總帳（2026-08-12）：一行就看得出這通花在哪——
+    # 說明書（文字）貴還是聲音貴、存起來的部分有沒有真的被算成快取。
+    if st.get("usage_prompt") or st.get("usage_output"):
+        _diag(cid, "usage.leg_total",
+              prompt=st.get("usage_prompt", 0),
+              output=st.get("usage_output", 0),
+              cached=st.get("usage_cached", 0),
+              by_modality=st.get("usage_by_modality") or {},
+              turns=st.get("turn_count", 0))
     return call_ended, st.get("resumption_handle") or resumption_handle
+
+
+def _defer_control_release_for_reconnect(reason, state):
+    """Keep the lease alive when the App deliberately rebuilds a dead preflight socket.
+
+    The installed App closes Voice after five seconds when its microphone
+    pipeline has produced no packets.  That close is a reconnect request, not
+    a user hang-up.  Releasing the whole call here makes the App's subsequent
+    token refresh fail with ``stale_lease`` and presents a false busy line.
+    The App remains the owner of an intentional release; the durable 45-second
+    reaper is the final guard for a crashed client.
+    """
+    return (
+        reason == "call_ended"
+        and int((state or {}).get("in") or 0) == 0
+        and int((state or {}).get("out") or 0) == 0
+    )
 
 
 async def handle(ws):
@@ -2597,9 +3955,12 @@ async def handle(ws):
     allow_care_questions = False   # 只有帶 ?cap_ask=1 的新版 App 才開放口袋問題工具（M1 PR-3）      # 只有帶 ?cap_evt=1 的新版 App 才開放「幫你記行程」工具（2026-07-16）
     fam = 0                   # 熟識度（聊過幾通）：0=第一次見面；越大開場越簡短（Edward 2026-07-10）
     day_call = None           # 當日第幾通（0-based）：只負責開場路線去重，不改變關係熟識度
+    pause_profile = None      # 單通話聽話耐心：responsive / balanced / patient（候選版 A/B）
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
+    client_release = "-"
+    client_protocol = "-"
     voice_locale_session = None
     demo_mode = False
     # 收線時要告訴總機「這一席讓出來了」的原因。2026-07-28 修：這裡原本是空字串，而下面
@@ -2618,6 +3979,12 @@ async def handle(ws):
 
     demo_mode = _q.get("demo") == ["1"]
 
+    client_release = "+".join(filter(None, [
+        str((_q.get("app_version") or [""])[0]).strip()[:24],
+        str((_q.get("app_build") or [""])[0]).strip()[:24],
+    ])) or "-"
+    client_protocol = str((_q.get("client_protocol") or [""])[0]).strip()[:48] or "-"
+
     call_token = (_q.get("token") or [""])[0].strip()
     control_required = os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") == "1"
     if call_token or control_required:
@@ -2631,6 +3998,9 @@ async def handle(ws):
             token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
             voice_shard_id = os.environ.get("MUNEA_VOICE_SHARD_ID", "").strip()
             call_payload = verify_call_token(call_token, token_secret, voice_shard_id=voice_shard_id)
+            required_protocol = int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0)
+            if required_protocol and int(call_payload.get("call_protocol") or 0) < required_protocol:
+                raise CallControlError("incompatible call protocol")
             voice_locale_session = VoiceLocaleSession.from_verified_call_payload(
                 call_payload,
                 allow_legacy=(
@@ -2710,6 +4080,11 @@ async def handle(ws):
                 day_call = max(0, min(99, int(dvals[0])))
             except Exception:
                 pass
+        # ?pause=patient：候選版可逐通 A/B「少搶話 vs 回得快」。只接受三個命名檔位，
+        # 不讓任意 query 毫秒值進到底層；未帶時仍是現行 balanced=800ms。
+        pvals = _q.get("pause")
+        if pvals:
+            pause_profile = _voice_pause_profile(pvals[0])
     except Exception:
         pass
     _CID["n"] += 1
@@ -2724,6 +4099,8 @@ async def handle(ws):
         char=char,
         demo=demo_mode,
         locale=st["voice_locale_profile"]["sessionLocale"],
+        client_release=client_release,
+        client_protocol=client_protocol,
     )
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     # 通話記憶的人別隔離鍵：Gateway 正式路徑的 call token 帶已驗證的 user_id；
@@ -2743,7 +4120,8 @@ async def handle(ws):
         # 就把 15 句配音塞進只有 2 個工人的小隊列，一顆 CPU 上跟送聲音的主線搶，一搶就是好幾分鐘。
         if live_lookup_enabled():
             lookup_cue_future = asyncio.get_running_loop().run_in_executor(
-                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char)
+                _VOICE_CUE_EXECUTOR, _warm_lookup_cue_pool, char,
+                st["voice_locale_profile"]["sessionLocale"])
             st["lookup_cue_task"] = lookup_cue_future
         asr_context_terms = [char, name, user, location, *(topics or [])]
         # 通話延長（2026-07-25）：這通電話對 App／使用者永遠是「同一通」，但底層可能換過
@@ -2760,8 +4138,25 @@ async def handle(ws):
                 live_config, char, name, mood, topics, user, location, allow_reminders, fam,
                 memory_scope, allow_events, demo_mode,
                 allow_care_questions=allow_care_questions,
+                pause_profile=pause_profile,
                 resumption_handle=resumption_handle,
                 locale_profile=voice_locale_session.current_profile())
+            aad = cfg.realtime_input_config.automatic_activity_detection
+            st["provider_silence_ms"] = int(aad.silence_duration_ms)
+            if first_connect:
+                env_silence = os.environ.get("MUNEA_VOICE_SILENCE_MS", "").strip()
+                env_profile = _voice_pause_profile(
+                    os.environ.get("MUNEA_VOICE_PAUSE_PROFILE"))
+                pause_label = pause_profile
+                if not pause_label and env_silence == str(aad.silence_duration_ms):
+                    pause_label = "custom"
+                pause_label = pause_label or env_profile or "adaptive"
+                _diag(
+                    cid,
+                    "turn_taking_config",
+                    pause=pause_label,
+                    silence_ms=aad.silence_duration_ms,
+                )
             if first_connect and cfg.thinking_config is not None:
                 # A/B 實測要有帳可查：這通到底跑在哪一段思考深度，直接寫進通話紀錄。
                 # 沒設（正式機預設）時一個字都不印，日誌不變吵。
@@ -2773,6 +4168,7 @@ async def handle(ws):
                         session, _cli, ws, cid, t0, st, char, location, topics, fam, day_call,
                         call_payload, gate_key, call_token, asr_context_terms,
                         first_connect, resumption_handle, voice_locale_session,
+                        user_name=user,
                     )
             finally:
                 if _key_idx is not None:
@@ -2792,20 +4188,24 @@ async def handle(ws):
         _diag(cid, "node.error", err=f"{type(e).__name__}:{str(e)[:80]}")
     finally:
         if call_payload and call_release_reason:
-            try:
-                await asyncio.to_thread(
-                    post_internal,
-                    os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
-                    os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
-                    f"/v1/internal/calls/{call_payload['call_id']}/release",
-                    {
-                        "lease_version": int(call_payload["lease_version"]),
-                        "event_id": "voice-release-" + uuid.uuid4().hex,
-                        "reason": call_release_reason,
-                    },
-                )
-            except Exception as exc:
-                _diag(cid, "node.control_release_err", err=f"{type(exc).__name__}:{str(exc)[:80]}")
+            if _defer_control_release_for_reconnect(call_release_reason, st):
+                _diag(cid, "node.control_release_deferred", reason="preflight_zero_audio_reconnect")
+            else:
+                try:
+                    await asyncio.to_thread(
+                        post_internal,
+                        os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
+                        os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
+                        f"/v1/internal/calls/{call_payload['call_id']}/release",
+                        {
+                            "lease_version": int(call_payload["lease_version"]),
+                            "event_id": "voice-release-" + uuid.uuid4().hex,
+                            "reason": call_release_reason,
+                            "component": "voice",
+                        },
+                    )
+                except Exception as exc:
+                    _diag(cid, "node.control_release_err", err=f"{type(exc).__name__}:{str(exc)[:80]}")
         if _key_idx is not None:
             _release_client(_key_idx)   # 這通結束，把這把鑰匙的空位放回去給下一通
         for t in st.get("bg_tasks", []):
@@ -2870,12 +4270,34 @@ async def handle(ws):
                     _CALL_MEMORY_EXECUTOR, _persist_call_memory)
         except Exception as exc:
             _diag(cid, "node.call_memory_err", err=f"{type(exc).__name__}:{str(exc)[:60]}")
+        semantic_adaptive = st["semantic_turn_policy"].snapshot()
         _diag(
             cid, "closed", in_bytes=st["in"], out_bytes=st["out"], echo_dropped=st["echo_dropped"],
             asr_turns=st["asr_turns"], asr_chars=st["asr_chars"],
-            barge_ins=st["barge_in_count"], language_blocks=st["language_block_count"],
+            semantic_turn_total=st["semantic_turn_shadow_total"],
+            semantic_turn_holds=st["semantic_turn_shadow_holds"],
+            semantic_turn_active_holds=st["semantic_turn_active_holds"],
+            semantic_turn_active_resumes=st["semantic_turn_active_resumes"],
+            semantic_turn_active_releases=st["semantic_turn_active_releases"],
+            semantic_turn_adaptive_continuations=semantic_adaptive["continuations"],
+            semantic_turn_adaptive_releases=semantic_adaptive["releases"],
+            semantic_turn_adaptive_ewma_ms=semantic_adaptive["continuation_ewma_ms"],
+            barge_ins=st["barge_in_count"],
+            barge_rejected=st["barge_in_rejected"],
+            barge_post_duck_accepted=st["barge_post_duck_accepted"],
+            barge_pre_duck_accepted=st["barge_pre_duck_accepted"],
+            language_blocks=st["language_block_count"],
             lookups=st["lookup_count"], lookup_sources=st["lookup_sources"],
             lookup_failures=st["lookup_failures"],
+            tool_wait_interrupts=st["tool_wait_interrupts"],
+            # 她自己查那條路的帳（2026-08-10）。上面的 lookups 只算「我們代查」那條，
+            # 正式機走的是 native＝她自己查——以前這條完全沒有帳，所以
+            #「她說我幫你查一下、然後憑印象亂講」跟「她真的查了」在日誌上長得一模一樣。
+            native_searches=st["native_search_turns"],
+            native_search_queries=st["native_search_queries"],
+            native_search_sources=st["native_search_sources"],
+            mandarin_pronunciation_seen=st["mandarin_pronunciation_seen"],
+            provider_turn_recoveries=st["provider_turn_recoveries"],
         )
 
 

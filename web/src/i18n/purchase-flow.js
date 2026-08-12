@@ -20,6 +20,8 @@
     unverified: 'purchase.unverified',
     server_verification_failed: 'purchase.serverVerificationFailed',
     signed_transaction_missing: 'purchase.serverVerificationFailed',
+    // 同一筆交易連驗三次都沒過就先停手（不再無限重送）；對使用者來說跟「驗證沒過」是同一件事
+    verify_retry_exhausted: 'purchase.serverVerificationFailed',
     cancelled: 'purchase.cancelled',
     pending: 'purchase.pending',
   });

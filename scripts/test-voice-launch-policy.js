@@ -7,7 +7,31 @@ const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'web', 'src', 'styles.css'), 'utf8');
 const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
 const avatarServer = fs.readFileSync(path.join(root, 'deploy', 'runpod-avatar', 'flashhead_server.py'), 'utf8');
+const voiceCanaryDeploy = fs.readFileSync(path.join(root, 'deploy', 'cloudrun', 'canary-deploy.sh'), 'utf8');
+const voiceProdDeploy = fs.readFileSync(path.join(root, 'deploy', 'cloudrun', 'prod-deploy.sh'), 'utf8');
 const chatEngine = fs.readFileSync(path.join(root, 'engine', 'chat_engine.py'), 'utf8');
+// 2026-07-31：人設書改成一國一本後，語音風格規矩從 live_voice_server.py 搬進
+// engine/persona/voice-style.<國>.txt。守門要跟著看新地方——不然程式改對了、
+// 清單沒跟上，閘門紅著沒人發現（同一個病第六次）。四本都要有，缺一本＝那一國沒紀律。
+const personaDir = path.join(root, 'engine', 'persona');
+const VOICE_STYLE_LOCALES = ['zh-TW', 'ja', 'en', 'es'];
+const voiceStyleBooks = Object.fromEntries(VOICE_STYLE_LOCALES.map((loc) => [
+  loc, fs.readFileSync(path.join(personaDir, `voice-style.${loc}.txt`), 'utf8'),
+]));
+// 各國書用自己的語言寫段落標題（日文是［リアルタイム音声・話す量の上限］），
+// 所以按語言查標題、不是查中文字串。少一段＝那一國沒有這條紀律。
+const VOICE_STYLE_HEADINGS = {
+  volumeCap: {
+    'zh-TW': '[即時語音話量上限]', ja: '[リアルタイム音声・話す量の上限]',
+    en: '[Live speech · how much to say]', es: '[Voz en directo · cuánto hablar]',
+  },
+  energy: {
+    'zh-TW': '[即時語音能量]', ja: '[リアルタイム音声・声の温度]',
+    en: '[Live speech · energy]', es: '[Voz en directo · energía]',
+  },
+};
+const everyVoiceStyleBookHas = (section) =>
+  VOICE_STYLE_LOCALES.every((loc) => voiceStyleBooks[loc].includes(VOICE_STYLE_HEADINGS[section][loc]));
 const apiServer = fs.readFileSync(path.join(root, 'engine', 'server.py'), 'utf8');
 const characters = JSON.parse(fs.readFileSync(path.join(root, 'engine', 'characters.json'), 'utf8'));
 
@@ -19,8 +43,8 @@ expect(app.includes('const base = (this._playbackTurn || 0) <= 1 ? 0.48 : 0.22')
   'first-turn playback buffer is not larger than steady-state buffering');
 expect(app.includes('Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08)'),
   'playback buffer does not adapt after an underrun');
-expect(app.includes('const sameLineDelay = (this._playbackTurn || 0) <= 1 ? 1100 : 600'),
-  'same-line playback still blocks later user turns with the opening delay');
+expect(app.includes('Math.max(200, Math.min(350,') && app.includes('Number(Avatar._lastPrebufferMs)'),
+  'same-line playback accounting is not bounded to the measured 200-350ms Avatar prebuffer');
 expect(app.includes('const tailMs = sameLine ? 120 : 400'),
   'same-line speech tail does not release the microphone promptly');
 expect(app.includes('function preDialConnWarm') && app.includes("preDialConnWarm('boot')") && app.includes("preDialConnWarm('resume')"),
@@ -43,18 +67,22 @@ expect(app.includes('const cfg = developerConfig();') && !app.includes('devAuthC
   'development Voice endpoint is read through an undefined config helper');
 expect(app.includes('this._sameLineWarmup = this._sameLine'),
   'Avatar same-line audio does not start in warmup mode');
-expect(app.includes('prepareOpeningAudioPath(waitMs = 1000)') && app.includes('new Int16Array(24000).buffer'),
-  'Avatar same-line audio is not warmed independently before the greeting');
-expect(app.includes("stage: 'before_greet'") && app.includes("'pending_first_audio'") && app.includes("'local_fallback'"),
-  'inconclusive silent warmup does not preserve same-line verification and local fallback modes');
+expect(app.includes('prepareOpeningAudioPath(waitMs = 600)') &&
+  app.includes('syntheticPcm: false') && !app.includes('new Int16Array(24000).buffer'),
+  'opening readiness still creates a synthetic Avatar PCM/model turn');
+expect(app.includes("stage: 'before_first_user_turn'") && app.includes("'receiver_ready'") && app.includes("'local_fallback'"),
+  'opening receiver readiness does not preserve verified and local fallback modes');
 expect(app.includes("return { mode, verified: stable, receiverAttached }") && !app.includes("opening_audio_not_ready"),
   'an inconclusive silent warmup can still tear down an otherwise healthy call');
 expect(!app.includes('_sameLineWarmupPending'),
   'the first assistant answer is still being consumed as the audio warmup');
-expect(app.includes('await LiveVoice.prepareOpeningAudioPath(1000)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(1000)') < app.indexOf('LiveVoice.greet()'),
-  'the greeting can start before the one-second audio warmup');
+expect(app.includes('await LiveVoice.prepareOpeningAudioPath(600)') && app.indexOf('await LiveVoice.prepareOpeningAudioPath(600)') < app.indexOf('LiveVoice.greet()'),
+  'the first user turn can start before the Avatar receiver is attached');
 expect(app.includes('this._renderStream.addTrack(e.track)') && app.includes('vid.srcObject = this._renderStream'),
   'Avatar audio and video tracks are not combined on the single playback clock');
+expect(app.includes("'jitterBufferTarget' in receiver") && app.includes('receiver.jitterBufferTarget = 160') &&
+  app.includes("'playoutDelayHint' in receiver") && app.includes('receiver.playoutDelayHint = 0.16'),
+  'same-line WebRTC has no bounded receiver jitter buffer hint');
 expect(app.includes('showLiveFrame()') && app.includes("bg.classList.add('livevid')") && app.includes('Avatar.showLiveFrame();'),
   'the live Avatar can be exposed before the first validated frame');
 expect(app.includes("trackProductEvent('voice_playback_underrun'"),
@@ -72,8 +100,9 @@ expect(app.includes("localStorage.setItem('munea.dailyCallOpening'") && app.incl
   'completed calls do not advance the same-day opening route');
 expect(html.includes('src/voice-turn-policy.js'),
   'the tested local barge-in policy is not loaded before the App module');
-expect(app.includes("this.ws.send(JSON.stringify({ type: 'barge_in' }))"),
-  'local barge-in does not notify the voice bridge');
+expect(app.includes("type: 'barge_in_start', ...payload") &&
+  app.includes("type: 'barge_in', ...payload"),
+  'local barge-in does not send the two-phase evidence and commit messages');
 expect(app.includes('policy.DEFAULTS.preRollFrames'),
   'barge-in does not retain microphone pre-roll');
 expect(app.includes('policy.DEFAULTS.openingPreRollFrames'),
@@ -86,16 +115,28 @@ expect(styles.includes('.fh-frame') && !styles.includes('background: #0E1A17'),
   'the face frame still uses a near-black backdrop that reads as a black flash before art paints');
 expect(!app.includes('if (speechActive()) { this.micLevel = 0; return; }'),
   'assistant playback still disables microphone uplink unconditionally');
+const speechActiveStart = app.indexOf('function speechActive() {');
+const speechActiveEnd = app.indexOf('\n}', speechActiveStart) + 2;
+const speechActiveContract = app.slice(speechActiveStart, speechActiveEnd);
+expect(speechActiveStart >= 0 &&
+  speechActiveContract.includes('LiveVoice._playoutUntil') &&
+  speechActiveContract.includes('now <= predictedEnd + 1500') &&
+  speechActiveContract.includes('_faceAudLevel || 0) >= 0.06') &&
+  !speechActiveContract.includes("if (Number(Avatar && Avatar._faceAudLevel"),
+  'Avatar decoded-tail evidence is not bounded to the Voice playout window and can lock microphone uplink');
 expect(voiceServer.includes('localization.requires_taiwanese_hokkien_fallback(obj["text"])'),
   'explicit Hokkien text requests are not blocked before reaching the conversational model');
 expect(voiceServer.includes('await _arm_language_block("audio_input")'),
   'recognized Hokkien audio is not blocked at the server boundary');
 expect(voiceServer.includes('if data and not st.get("language_block")'),
   'Hokkien model audio can still reach the client after the language gate triggers');
-expect(voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK'),
-  'the deterministic Mandarin fallback does not bypass conversational generation');
+expect(voiceServer.includes('_gemini_tts_pcm(\n            localization.TAIWANESE_HOKKIEN_FALLBACK') &&
+  !voiceServer.includes('server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK'),
+  'the deterministic Mandarin fallback may switch away from the companion voice');
 expect(voiceServer.includes('asyncio.to_thread(_hokkien_fallback_pcm, char)'),
   'the deterministic Mandarin fallback is not prewarmed off the call-ready path');
+expect(!voiceServer.includes('encoded = server.tts_b64(text, char, normalized_locale)'),
+  'lookup cues can still switch to a generic second voice');
 // 2026-07-24：prefix_padding_ms 改走 _voice_rhythm_param 三層 fallback（呼叫端明確值→
 // 環境變數→這裡的 300 預設）；不設環境變數＝跟改動前的字面 300ms 完全一樣的行為，
 // 契約檢查同步改成看 fallback 呼叫是否仍以 300 為內建預設。
@@ -118,9 +159,10 @@ expect(voiceServer.includes('TURN_END_SILENCE_MS = 180'),
   'voice turns do not carry a final PCM tail guard');
 expect(voiceServer.includes('st["client_barge_in"] = True'),
   'voice bridge does not suppress stale model audio after local barge-in');
-expect(voiceServer.includes('{"type": "barge_in_ack"}'),
-  'local barge-in can leave the App dropping a newly generated response');
-expect(voiceServer.includes('barge_cancelled and source in ("model_output", "mandarin_pronunciation")'),
+expect(voiceServer.includes('{"type": "barge_in_ack", "accepted": True') &&
+  voiceServer.includes('{"type": "barge_in_ack", "accepted": False'),
+  'local barge-in does not receive an explicit accepted/rejected acknowledgement');
+expect(voiceServer.includes('barge_cancelled and source == "model_output"'),
   'a cancelled model turn can replay language-correction audio after barge-in');
 expect(voiceServer.includes('localization.contains_unstable_mandarin_speech'),
   'user-verified Mandarin mispronunciations do not trigger safe TTS rewriting');
@@ -145,16 +187,42 @@ expect(voiceServer.includes('await asyncio.sleep(1.0)') && voiceServer.includes(
   'opening speech can overlap the proactive greeting instead of using the one-second warmup window');
 expect(voiceServer.includes('"greet_requested": False') && voiceServer.includes('node.proactive_greet_ignored'),
   'duplicate greet requests can start overlapping model turns');
-expect(voiceServer.includes('[即時語音話量上限]') && voiceServer.includes('一般閒聊預設只回答一句'),
-  'live voice does not enforce the one-sentence default');
-expect(voiceServer.includes('[即時語音能量]') && voiceServer.includes('預設比對方穩一點'),
+expect(everyVoiceStyleBookHas('volumeCap'),
+  'a persona book is missing the response-length section');
+expect(voiceStyleBooks['zh-TW'].includes('短是預設，不是硬上限') &&
+  voiceStyleBooks['zh-TW'].includes('健康說明先講結論') &&
+  voiceStyleBooks['zh-TW'].includes('二十到四十秒'),
+  'live voice does not adapt response length to the task');
+expect(everyVoiceStyleBookHas('energy'),
+  'a persona book is missing the delivery-energy section');
+expect(voiceStyleBooks['zh-TW'].includes('預設比對方穩一點'),
   'live voice opening can still default to a high-energy delivery');
-expect(avatarServer.includes('self.slot.audio_out.playout_held()'),
-  'Avatar video can start consuming frames before the audio prebuffer releases');
-expect((avatarServer.includes('OPENING_PREBUFFER_S = 1.0') ||
-        avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "1.0"')) &&
+expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_S)') &&
+       avatarServer.includes('0.35, max(-0.35, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "0"))'),
+  'Avatar video is not held on the real turn gate with a bounded signed correction');
+expect([voiceCanaryDeploy, voiceProdDeploy].every((deployScript) =>
+  deployScript.includes('MUNEA_VOICE_ENGINE=31') &&
+  deployScript.includes('MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS,MUNEA_VERTEX_LOCATION,MUNEA_VOICE_MODEL_OVERRIDE') &&
+  deployScript.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01')),
+  'Voice deploy can silently change the approved Gemini 3.1 voice engine or break the Gateway shard identity');
+expect(voiceServer.includes('"voiceEngine": VOICE_ENGINE') &&
+       voiceServer.includes('"voiceModel": MODEL') &&
+       voiceServer.includes('"voiceName":'),
+  'Voice service identity does not expose the audible engine/model/cast for App evidence');
+expect(app.includes('voiceEngine: o.voiceEngine') &&
+       app.includes('voiceModel: o.voiceModel') &&
+       app.includes('voiceName: o.voiceName'),
+  'App diagnostics cannot prove which audible voice was used by an installed build');
+expect(avatarServer.includes('MUNEA_FH_OPENING_PREBUFFER_S", "0.35"') &&
+       avatarServer.includes('OPENING_PREBUFFER_S = max(') &&
        avatarServer.includes('slot.audio_out.arm_prebuffer(OPENING_PREBUFFER_S)'),
-  'the first Avatar turn does not get a one-second post-PCM warmup buffer');
+  'the first Avatar turn does not get the configurable post-PCM warmup buffer');
+expect(avatarServer.includes('MUNEA_FH_AUDIO_PREBUFFER_MIN_S') &&
+       avatarServer.includes('MUNEA_FH_AUDIO_PREBUFFER_MAX_S') &&
+       avatarServer.includes('min(0.35') &&
+       avatarServer.includes('adaptive_min_s=AUDIO_PREBUFFER_MIN_S') &&
+       avatarServer.includes('adaptive_max_s=AUDIO_PREBUFFER_MAX_S'),
+  'steady Avatar turns do not use the bounded adaptive prebuffer');
 expect(voiceServer.includes('"node.asr_input"'),
   'ASR/VAD tuning cannot be audited without storing raw transcripts');
 // 2026-07-29 更新：原版寫死「live_config 不准出現內建 Google 搜尋」——那是 7/17
@@ -190,10 +258,13 @@ expect(voiceServer.includes('if native_search_enabled() and not demo_mode:') &&
   voiceServer.includes('寧可說不知道，也不要拿網路上的東西當健康建議'),
   'native search is enabled without the rule that health questions must never be answered from search results');
 const lookupFlow = voiceServer.slice(voiceServer.indexOf('async def _run_live_lookup'));
-// 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，呼叫點仍必須在
-// 真的打網路查詢之前。
-expect(lookupFlow.indexOf('await _send_lookup_cue(category)') >= 0 &&
-  lookupFlow.indexOf('await _send_lookup_cue(category)') < lookupFlow.indexOf('search_current_information(cli') &&
+// 2026-07-30：過場句與查詢材料都跟當輪 responseLocale 走；呼叫點仍必須在真的打網路
+// 查詢之前，而且網路查詢仍包在總 timeout 裡。用穩定的行為標記，不綁單行排版。
+const lookupCueCall = 'await _send_lookup_cue(category, response_locale)';
+const lookupNetworkCall = 'search_current_information(';
+expect(lookupFlow.indexOf(lookupCueCall) >= 0 &&
+  lookupFlow.indexOf(lookupCueCall) < lookupFlow.indexOf(lookupNetworkCall) &&
+  lookupFlow.includes('cli, query, lookup_location, locale=response_locale,') &&
   lookupFlow.includes('asyncio.wait_for('),
   'lookup network I/O can start before the spoken cue or run without a timeout');
 expect(['node.lookup_started', 'node.lookup_cue_sent', 'node.lookup_done',
@@ -214,17 +285,39 @@ expect(app.includes('nowMs - this._silentKeepaliveAt >= 500'),
   'gated-mic keepalive is not rate-limited to one small packet per 500ms (full-rate silence burns Gemini input tokens during opening/mute)');
 expect(!app.includes('if (!this.micOpen) { this.micLevel = 0; return; }'),
   'the microphone pipeline waits for the greeting again instead of sending silent standby frames');
-expect(app.includes('const micPipelineReady = this._setupMicPipeline(micPromise);') &&
-  app.indexOf('const micPipelineReady = this._setupMicPipeline(micPromise);') < app.indexOf('this.ws = new WebSocket(url)'),
-  'the microphone pipeline is no longer built in parallel with (before) the WebSocket handshake');
+expect(app.includes('this._captureOpeningMicFrame(openingBuf, openingRms, openingFrameMs)') &&
+  app.includes('const openingCapture = this._drainOpeningMicCapture()') &&
+  app.includes('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))'),
+  'the first user utterance is still discarded while Voice is becoming ready');
+expect(app.includes("this._markOpeningHeard('pre_ready_buffer'") &&
+  app.includes("this._markOpeningHeard('live_microphone'") &&
+  app.includes("setLocalizedRuntimeHint('heard')"),
+  'the user gets no immediate acknowledgement that the first utterance was heard');
+expect(app.includes('this._primePipelinePromise = this._setupMicPipeline(this._primeMicPromise, true);') &&
+  app.includes('const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);') &&
+  app.indexOf('const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);') < app.indexOf('this.ws = new WebSocket(url)'),
+  'the microphone pipeline must start at the call-button gesture and still precede the WebSocket handshake');
+expect(avatarServer.includes('and (not self.slot.active_session or not self.slot.healthy)') &&
+  avatarServer.includes('Never snap a live call back to the static poster'),
+  'a live Avatar call still snaps to the static poster after a 350ms GPU gap');
+expect(app.includes('requestVideoFrameCallback') && app.includes('_startFramePresentationProbe(vid)'),
+  'the long-call face watchdog still relies only on iOS legacy decoded-frame counters');
 expect(app.includes('this._armUplinkWatch()') && app.includes("'microphone_uplink_slow'") && app.includes("'microphone_uplink_rebuilt'"),
   'the 3-second uplink watchdog with automatic pipeline rebuild is missing');
 expect(app.includes('(this._micRebuilds || 0) >= 2'),
   'uplink pipeline rebuilds are not capped at two attempts');
 expect(app.includes("this._armDeadLineWatch('ready_timeout', 10000)") &&
   app.includes("this._armDeadLineWatch('no_audio_both_ways', 5000)") &&
+  app.includes("if (phase === 'no_audio_both_ways')") &&
+  app.includes("'dead_line_kept_open'") &&
   app.includes("'dead_line_reconnect'"),
-  'a dead line can leave the user waiting for the 30-second readiness gate instead of auto-reconnecting');
+  'the ready-timeout reconnect or the zero-uplink keep-open recovery is missing');
+const zeroUplinkGuard = app.slice(
+  app.indexOf("if (phase === 'no_audio_both_ways')"),
+  app.indexOf("const sessionKey", app.indexOf("if (phase === 'no_audio_both_ways')")),
+);
+expect(zeroUplinkGuard.includes('return;') && !zeroUplinkGuard.includes('this.ws.close()'),
+  'a ready Voice socket can still be hard-closed solely because microphone packets are late');
 
 // ── 臉部影像流看門（2026-07-16 Edward 真機：嘴巴卡頓後畫面凍住不再動、ICE 未 failed 就沒人管）──
 expect(app.includes('Avatar._armFaceWatch();') && app.includes("'face_stream_stalled'"),
@@ -235,5 +328,17 @@ expect(app.includes('(this._faceRebuilds || 0) >= 2'),
   'face stream rebuilds are not capped at two attempts before degrading');
 expect(app.includes("'face_fallback_voice_only'") && app.includes('LiveVoice._sameLineFellBack = true;'),
   'voice-only degradation is missing or leaves same-line audio dead when the face is torn down');
+const voiceOnlyStart = app.indexOf('_fallbackVoiceOnly(reason) {');
+const voiceOnlyEnd = app.indexOf('\n  stop() {', voiceOnlyStart);
+const voiceOnlyFallback = app.slice(voiceOnlyStart, voiceOnlyEnd);
+expect(voiceOnlyStart >= 0 && voiceOnlyEnd > voiceOnlyStart &&
+  !voiceOnlyFallback.includes('try { this.stop();') &&
+  voiceOnlyFallback.includes("voiceCallMark('avatar_transport_preserved'") &&
+  app.includes("if (CallControl.active) { this._fallbackVoiceOnly('stall_preserve_paired_lease'); return; }"),
+  'audio-only degradation can still close the paired Avatar transport and stale the whole call lease');
+expect(app.includes('let _hangupOnLeaveT = null;') &&
+  app.includes("if (document.visibilityState !== 'hidden') return;") &&
+  app.includes("else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio();"),
+  'a transient iOS WebView visibility change can still hang up an active call immediately');
 
 console.log('Voice launch policy PASS: buffering, language gate, tail guard, varied opening, and barge-in');

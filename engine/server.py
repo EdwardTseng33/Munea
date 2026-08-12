@@ -142,6 +142,7 @@ AI_RATE_LIMITED_PATHS = {
     "/perception/topic-plan",
     "/perception/snapshot",
     "/proactive/opening",
+    "/quiz-questions",   # 一次出 10 題＝一次 LLM 呼叫，沒閘的話有人狂建活動就狂燒
 }
 AI_RATE_WINDOW = 60            # 滑動視窗秒數
 AI_RATE_DEFAULT_LIMIT = 60     # 視窗內同一 actor 對同一端點的次數上限
@@ -405,6 +406,8 @@ ADMIN_POST_PATHS = {
     # 管理鑰匙呼叫的，沒有用戶登入證可帶——漏列在這裡＝鬧鐘永遠被會員門擋下。
     # 三個入口的處理端本來就各自再驗一次管理鑰匙（admin_authorized），不是開放門。
     "/admin/daily-briefing",
+    # 顯卡時鐘巡邏（2026-08-01）：同上是定時鬧鐘用管理鑰匙呼叫的，處理端自己再驗一次
+    "/admin/worker-clock-patrol",
     "/admin/memory-consolidate",
     "/admin/memory-living-profile",
     # 閒置清理（2026-07-22）：免費帳號 60 天未上線自動刪除。同上是定時鬧鐘
@@ -424,6 +427,7 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/invoice/mark-sent",
     "/admin/enterprise/invoice/mark-paid",
     "/admin/enterprise/monthly-close",
+    "/admin/enterprise/seats/sweep",
     "/admin/enterprise/billing-settings",
     "/admin/enterprise/billing-settings/save",
 }
@@ -2570,6 +2574,19 @@ def proactive_opening_response(data):
     if today_care_items(person_id):
         score += 0.12
         reasons.append("今天有重要日子（回診/紀念日）")
+    # 會看變化的主動關心（2026-07-31 · 調研排第一：真實部署有效的那一項）。
+    # 身體數據「跟自己比」跑掉時，她該多關心一點——但**只調頻率與語氣、不講原因、
+    # 不報數字**，跟心情訊號完全同一個做法。這樣才守得住 7/17「檔位2 知道但不多嘴」
+    # 的拍板：身體數據異常是家人在看的，不是她拿來嚇長輩的。
+    # ⚠ 要讓她「講出為什麼多打來」是另一件事，需要 Edward 重新定調，不在這裡。
+    try:
+        _notable = (load_health_context(person_id=person_id) or {}).get("notable") or []
+        if _notable:
+            style = "gentle"
+            score += 0.14
+            reasons.append("身體數據跟平常不太一樣 → 多關心一點（語氣放輕、不點破原因）")
+    except Exception as e:
+        log_fallback_exception("attach health notable to proactive score", e)
     score = round(max(0.0, min(1.0, score)), 2)
     should = score >= 0.5
     opener = ""
@@ -2596,6 +2613,180 @@ def proactive_opening_response(data):
             "followUp": (health_followup.due_followups(person_id, limit=1) or [None])[0]}
 
 
+def resolve_location_text(free_text, country=None):
+    """把一句地名（他自己講的、或他自己填的）對回一個查得到天氣的地方。
+
+    回 (一級行政區名, 座標)；對不到就回 (None, None)——**絕不猜**。
+    跨行政區同名的地名（台北台中都有大安區、美國好幾州都有 Springfield）刻意不收，
+    猜錯的後果是她每天報成別的城市的天氣，而長輩不會知道為什麼。
+
+    2026-07-31 Edward 定調「問一次就記住」後補；正本清單在 web/src/regions/，
+    引擎這份由 node scripts/gen-region-index.js 產生。
+    """
+    text = (free_text or "").replace("臺", "台").strip()
+    if not text:
+        return (None, None)
+    try:
+        import region_index
+    except Exception as e:
+        log_fallback_exception("load region index", e)
+        return (None, None)
+
+    order = [c for c in ([country.upper()] if country else []) if c in region_index.REGIONS]
+    order += [c for c in region_index.REGIONS if c not in order]
+
+    def _norm(value):
+        return (value or "").replace("臺", "台").strip()
+
+    for code in order:
+        book = region_index.REGIONS[code]
+        # 先比一級（他講了縣市／都道府県／省／州）
+        for name, coords in book["tier1"].items():
+            if _norm(name) and _norm(name) in text:
+                return (name, coords)
+        # 再比二級（他只講區／市町村／市——很常見：「我住南港區興南街」）
+        for city, region in book["tier2_to_tier1"].items():
+            if _norm(city) and _norm(city) in text:
+                return (region, book["tier1"].get(region))
+    return (None, None)
+
+
+def resolve_person_region(person_id=None):
+    """這位長輩的天氣要看哪一區：本人自己填的 → 她從對話記起來的 → 都沒有回 (None, None)。
+
+    回 (一級行政區名, 座標)。座標給境外用（日本、西班牙、美國走全球氣象資料源）；
+    台灣照舊用縣市名走中央氣象署。
+
+    2026-07-31 Edward 定調「問一次就記住、之後不必重問」後補。原本天氣只吃全域
+    MUNEA_REGION（試營運單一長輩），多人與跨國上線後那等於「大家都看台北的天氣」。
+    """
+    country = None
+    candidates = []
+    try:
+        profile = load_person_profile() or {}
+        country = (profile.get("country") or "").upper() or None
+        for value in (profile.get("county"), profile.get("district")):
+            if value:
+                candidates.append(value)
+        # 舊資料是「台北市大安區」這種合成字串，整串也丟進去比
+        if profile.get("county") and profile.get("district"):
+            candidates.insert(0, f"{profile['county']}{profile['district']}")
+    except Exception as e:
+        log_fallback_exception("resolve region from person profile", e)
+    try:
+        living = load_living_profile(person_id) or {}
+        if living.get("livesIn"):
+            candidates.append(living["livesIn"])
+    except Exception as e:
+        log_fallback_exception("resolve region from living profile", e)
+
+    for text in candidates:
+        region, coords = resolve_location_text(text, country)
+        if region:
+            return (region, coords)
+    return (None, None)
+
+
+# ===== 顯卡時鐘巡邏（Edward 2026-08-01 拍板 A 案）=====
+#
+# 為什麼要有這支：GPU 租賃主機的時鐘由機房控制、容器內無權校時。tw-06 從 2026-07-23 起
+# 快了 257 秒，通話證被誤判過期＝整條通話全滅；7/31 再量還是快 260 秒，前後歪了 9 天沒人
+# 發現，最後是 Edward 自己看到通話打不通才追出來、寫信請廠商校時（8/1 廠商修好，實測 0.8 秒）。
+#
+# 7/24 其實就寫好了警報（deploy/gateway/monitor.py），但那是一支要有人定時叫起來的巡邏，
+# 排程從來沒建過——工具是好的，只是沒人按下開始。deploy/ 不在大腦的映像裡，所以這裡放
+# 一支輕量版：只做時鐘這一件事，複用大腦既有的 Slack 告警線。完整版巡邏（心跳、佇列、
+# 容量）仍以 deploy/gateway/monitor.py 為準，兩邊的警戒線要一起改。
+#
+# 為什麼總機的心跳看不出這件事：總機記的 last_heartbeat_at 是「總機自己的時鐘」蓋的章，
+# 一台時鐘壞掉的卡從那裡看永遠很新鮮。只有直接問卡「你幾點」才問得出來。
+WORKER_CLOCK_SKEW_THRESHOLD_SECONDS = 90.0   # 跟 deploy/gateway/monitor.py 同一條線
+
+
+def _worker_clock_skew(url, app_key, timeout=8.0):
+    """直接問這張卡「你現在幾點」，跟我們的時鐘比。回 (差幾秒, 錯誤訊息)。
+
+    取請求前後時間的中點來比，網路來回的時間才不會被算進誤差裡。
+    """
+    probe = url.rstrip("/") + "/health?key=" + urllib.parse.quote(app_key, safe="")
+    try:
+        started = time.time()
+        with urllib.request.urlopen(probe, timeout=timeout) as response:
+            body = json.loads(response.read().decode("utf-8"))
+        finished = time.time()
+    except Exception as e:
+        return None, str(e)[:200]
+    reported = body.get("server_time")
+    if reported is None:
+        # 舊版的卡沒有這個欄位——那不是「時鐘正常」，是「量不到」，要照實回報
+        return None, "這張卡沒有回報自己的時間（舊版程式，重啟後才會有）"
+    try:
+        return float(reported) - ((started + finished) / 2.0), ""
+    except (TypeError, ValueError):
+        return None, "回報的時間看不懂：%r" % (reported,)
+
+
+def worker_clock_patrol_response(data=None):
+    """巡一次所有工作卡的時鐘，歪太多就叫。給 Cloud Scheduler 定時打。"""
+    data = data or {}
+    gateway_url = str(data.get("gatewayUrl") or os.environ.get("MUNEA_CALL_CONTROL_URL") or "").strip()
+    app_key = str(os.environ.get("MUNEA_APP_KEY") or "").strip()
+    # 兩把鑰匙不一樣、拿錯會被擋在門外（2026-08-01 首掛踩過）：
+    #   MUNEA_GATEWAY_ADMIN_KEY = 問總機要工作卡清單用的（Authorization: Bearer）
+    #   MUNEA_APP_KEY           = 直接問某張卡 /health 用的（?key=）
+    gateway_key = str(os.environ.get("MUNEA_GATEWAY_ADMIN_KEY") or "").strip()
+    threshold = float(data.get("thresholdSeconds") or WORKER_CLOCK_SKEW_THRESHOLD_SECONDS)
+    if not gateway_url or not app_key or not gateway_key:
+        return {"ok": False, "error": "gateway_or_key_missing", "checked": 0}
+
+    try:
+        request = urllib.request.Request(
+            gateway_url.rstrip("/") + "/health",
+            headers={"Authorization": "Bearer " + gateway_key, "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(request, timeout=10) as response:
+            health = json.loads(response.read().decode("utf-8"))
+    except Exception as e:
+        notify.alert("gpu_down", "時鐘巡邏", "問不到總機的工作卡清單：%s" % str(e)[:160])
+        return {"ok": False, "error": "gateway_unreachable", "detail": str(e)[:200], "checked": 0}
+
+    workers = ((health.get("snapshot") or {}).get("workers")) or []
+    checked, offenders, unreadable = [], [], []
+    for worker in workers:
+        if not isinstance(worker, dict):
+            continue
+        worker_id = str(worker.get("worker_id") or "").strip()
+        url = str(worker.get("url") or "").strip()
+        if not worker_id or not url:
+            continue
+        skew, error = _worker_clock_skew(url, app_key)
+        if skew is None:
+            unreadable.append({"worker": worker_id, "reason": error})
+            continue
+        checked.append({"worker": worker_id, "skewSeconds": round(skew, 1)})
+        if abs(skew) > threshold:
+            offenders.append({"worker": worker_id, "skewSeconds": round(skew, 1)})
+
+    if offenders:
+        lines = "、".join("%s 快 %.0f 秒" % (o["worker"], o["skewSeconds"]) for o in offenders)
+        # critical：時鐘歪到這個地步，通話證會被誤判過期＝使用者現在就打不進來
+        notify.alert(
+            "gpu_down", "顯卡時鐘",
+            "%s（警戒線 %.0f 秒）。容器內無權校時，要寫信請機房校正宿主機時間。" % (lines, threshold),
+        )
+    elif unreadable and not checked:
+        notify.alert("gpu_down", "時鐘巡邏", "所有工作卡都問不到自己的時間：%s" % json.dumps(unreadable, ensure_ascii=False)[:200])
+
+    return {
+        "ok": True,
+        "checked": len(checked),
+        "thresholdSeconds": threshold,
+        "workers": checked,
+        "offenders": offenders,
+        "unreadable": unreadable,
+    }
+
+
 def refresh_daily_briefing(region=None, person_id=None):
     """每日簡報功課：抓真天氣＋真空品＋明天預告＋本週話題（多則）＋今天回診 → 一句人話 → 存感知抽屜（帶當天到期）。
     設計為清晨定時跑（預設 06:30、掛 Cloud Scheduler）；也可由管理端手動觸發 POST /admin/daily-briefing。
@@ -2606,8 +2797,12 @@ def refresh_daily_briefing(region=None, person_id=None):
     Cloud Scheduler 打的入口也不用改，只要把 /admin/daily-briefing 的 handler 改成呼叫那層迴圈即可。"""
     import perception_engine
     person_id = person_id or PRIMARY_CARE_RECIPIENT_ID
+    # 沒指定就自己查這位長輩住哪（本人填的優先、否則用她記起來的）；都沒有才退回全域預設
+    coords = None
+    if not region:
+        region, coords = resolve_person_region(person_id)
     try:
-        briefing = perception_engine.build_briefing(region)  # 天氣＋空品＋明天預告（內部已零例外、都失敗回 None 不瞎編）
+        briefing = perception_engine.build_briefing(region, coords)  # 天氣＋空品＋明天預告（內部已零例外、都失敗回 None 不瞎編）
     except Exception as e:
         log_fallback_exception("build daily briefing", e)
         return {"ok": False, "brain": "butler", "action": "daily_briefing", "error": "briefing_failed"}
@@ -2616,11 +2811,21 @@ def refresh_daily_briefing(region=None, person_id=None):
     except Exception as e:
         log_fallback_exception("load today care items for briefing", e)
         briefing["scheduleToday"] = []
-    try:
-        topics = perception_engine.fetch_weekly_topics(count=3)  # 本週話題（暖新聞＋生活健康＋懷舊，有護欄、找不到寧可少給）
-    except Exception as e:
-        log_fallback_exception("fetch weekly topics for briefing", e)
-        topics = []
+    # 本週話題預設關閉（2026-08-01 Edward 拍板）。
+    # 為什麼砍：這疊素材是每天清晨叫模型配搜尋「生」出來的閒聊話題（7/31 那份是少棒奪冠、
+    # 8/1 是輪椅捐贈）。它跟開場路線「帶個輕鬆話題來」一湊，就成了「手上有一疊像新聞的東西
+    # ＋被要求開個有內容的頭」→ 7/31 深夜真機她講出「這次奧運台灣選手很有精神」，而當天
+    # 那份資料裡一個奧運的字都沒有＝憑空編新聞（紅線：長輩會當真、還會轉述給別人）。
+    # 分工改成：天天問、答案一天只變一次的（天氣／明天／空品／回診）＝清晨備好、秒答；
+    # 隨口問、答案隨時在變的（新聞時事店家）＝他問了才即時查，沒問就不主動報。
+    # 要退回：MUNEA_BRIEFING_WEEKLY_TOPICS=1（素材產生器本身完好、只是預設不叫它）。
+    topics = []
+    if os.environ.get("MUNEA_BRIEFING_WEEKLY_TOPICS", "0").strip() == "1":
+        try:
+            topics = perception_engine.fetch_weekly_topics(count=3)
+        except Exception as e:
+            log_fallback_exception("fetch weekly topics for briefing", e)
+            topics = []
     briefing["topics"] = topics
     briefing["newsLine"] = topics[0]["line"] if topics else ""  # 相容舊欄位（單則、給還沒升級的讀取端）
     expires = briefing["date"] + "T23:59:59+08:00"  # 當天有效、隔天自然過期
@@ -3136,12 +3341,22 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
     if not briefing:
         # 簡報保鮮：沒有今天的就背景補做（去抖：同時只一條、失敗後 5 分鐘不狂試——高併發下不再拖垮語音）
         _maybe_refresh_briefing_bg()
+    living_profile = load_living_profile()
+    # 所在地三層來源（2026-07-31 Edward：問一次就記住、之後不必重問）：
+    # ① 本人在個人資料填的（最權威、他自己改得掉）
+    # ② 她從對話記起來的（活的側寫 livesIn）——長輩不填表、但會講
+    # ③ 都沒有＝空的，說明書會叫她在他問到地方相關的事時自然問一次
+    # 刻意不讓 ② 自動覆蓋 ①：AI 不改用戶自己填的資料（聽錯就回不去了），
+    # 要改由個人資料頁顯示「她記得你住在X」給他確認。
+    resolved_location = str(data.get("location") or "").strip()
+    if not resolved_location:
+        resolved_location = str((living_profile or {}).get("livesIn") or "").strip()
     return {
         "persona": persona,
         "guardian": guardian,
         "memories": memories,
         "perception": perception,
-        "livingProfile": load_living_profile(),
+        "livingProfile": living_profile,
         # 他自己的身體數據（檔位 2）。語音那條路的 Voice 程式沒有雲端鑰匙、也認不出來電者，
         # 所以它會先向 Brain 要好、從 data 餵進來（跟「上次聊天」同一個模子）。
         # 餵不進來（Brain 不通、認不出人）就自己撈；撈不到就是空的——圍籬會告訴她「你看不到」。
@@ -3150,7 +3365,7 @@ def build_reply_context(history, char=DEFAULT_CHAR, data=None):
         "dailyBriefing": briefing,                     # 今日簡報（清晨備好的真天氣/空品/行程/暖聞）
         "userMood": user_mood,                          # 情緒球：使用者當下心情（拿來自然關心）
         "interests": interests,                         # 用戶挑的興趣話題（開場方向＋接話素材）
-        "location": str(data.get("location") or "").strip()[:24],  # 所在地（可到區）→ 在地推薦定位
+        "location": resolved_location[:40],            # 所在地（本人填的優先、否則用她記得的）→ 在地推薦定位
         "locale": locale,
     }
 
@@ -3165,10 +3380,13 @@ def reply_context_instruction(context):
     relationship_memory = relationship_state.get("relationshipMemory") or {}
     tone_overrides = relationship_state.get("toneOverrides") or {}
     relationship_line = (
-        f"[Relationship state] rapport={relationship_state.get('rapportLevel') or 'new'}; "
-        f"preferredAddress={relationship_state.get('preferredAddress') or ''}; "
-        f"toneOverrides={json.dumps(tone_overrides, ensure_ascii=False)}; "
-        f"relationshipMemory={json.dumps(relationship_memory, ensure_ascii=False)}."
+        # 2026-07-30 瘦身：空欄位不再傾倒英文欄名＋空括號（新用戶時整行幾乎全空、
+        # 卻佔幾百字；她的說明書每輪重新計費，格式肥肉直接割）。有值才寫、用短中文。
+        "（關係狀態：熟稔 " + str(relationship_state.get('rapportLevel') or 'new')
+        + (("；稱呼偏好 " + str(relationship_state.get('preferredAddress'))) if relationship_state.get('preferredAddress') else "")
+        + (("；語氣調整 " + json.dumps(tone_overrides, ensure_ascii=False)) if tone_overrides else "")
+        + (("；關係記憶 " + json.dumps(relationship_memory, ensure_ascii=False)) if relationship_memory else "")
+        + "）"
     )
     now_ctx = context.get("now") or {}
     time_line = ""
@@ -3182,7 +3400,13 @@ def reply_context_instruction(context):
         _brief_topics = [{"line": brief["newsLine"]}]
     if (brief.get("briefingLine") or brief.get("tomorrowLine") or brief.get("careHints")
             or brief.get("scheduleToday") or _brief_topics):
-        seg = "（今日簡報（已核實的真實資料，可自然帶進關心、不要照唸）："
+        # 2026-08-01 Edward：「不要講簡報，用戶不需要知道我們早上會去爬資料。」
+        # 舊標題直接把內部叫法（今日簡報）遞到她面前，她就會說出「我今天的簡報說…」
+        # 「系統給我的資料」這種話——長輩只會覺得「你哪來的簡報」。
+        # 資料照給、來源不准講：她要像「本來就知道今天天氣」的朋友，不是在唸手上的單子。
+        seg = ("（你今天已經知道的事（真實資料，可自然帶進關心、不要照唸；"
+               "**絕對不要提起這些是哪裡來的**——不准說「簡報」「系統」「我今天查過」"
+               "「我這邊的資料」，就像朋友本來就知道今天天氣那樣講）：")
         if brief.get("briefingLine"):
             seg += brief["briefingLine"] + "。"
         if brief.get("tomorrowLine"):
@@ -3192,7 +3416,11 @@ def reply_context_instruction(context):
         if brief.get("scheduleToday"):
             seg += "今天的重要日子：" + "、".join(brief["scheduleToday"]) + "（要記得溫柔提醒）。"
         if _brief_topics:
-            seg += "這週可以聊的話題（挑一兩則自然帶入、別一次唸完）：" + "、".join(t["line"] for t in _brief_topics)
+            # 2026-08-01：這疊素材預設已經不再產生（見 refresh_daily_briefing）。
+            # 萬一被打開，也只准「他自己聊到相關的事」時接一句，**開場永遠不准用**——
+            # 開場拿它當話題正是 7/31 那句假奧運新聞的成因。
+            seg += ("他若自己聊到相關的事，可以接的閒聊素材（**開場絕對不要用、不要當新聞報**"
+                    "、一次最多一則）：" + "、".join(t["line"] for t in _brief_topics))
         brief_line = seg + "）"
     living = context.get("livingProfile") or {}
     living_parts = []
@@ -3234,8 +3462,16 @@ def reply_context_instruction(context):
     ) if _um else ""
     _ints = context.get("interests") or []
     interests_line = (
+        # 2026-08-01：舊版這裡寫「搭今日簡報或最近的真時事更好」——等於明著叫她開場
+        # 用時事起頭，但她手上根本沒有「最近的時事」這種東西（那是要現查的）。
+        # 7/31 深夜那句假奧運新聞，這行是最直接的推手之一。改成：從話題方向起頭可以，
+        # 但**用問的**、不准自己補時事內容；真要講時事只有一條路——他問了、你查了。
         "（他勾選過想聊的話題：" + "、".join(_ints) + "。"
-        "開場或冷場時可以從這幾個方向自然起頭（搭今日簡報或最近的真時事更好）；"
+        # 2026-08-01 Edward 拍板：「開頭只要打招呼就好」——興趣不再是開場素材，
+        # 只當「冷場或他先聊到」時的方向；而且只能用問的，不准自己補近況。
+        "**這不是開場素材**（開場只打招呼）；冷場或他自己聊到時才從這幾個方向接，"
+        "而且**用問的**（問他最近還有沒有在做、喜不喜歡），"
+        "**不准自己補上時事、比賽、活動或任何你沒查過的近況**；"
         "聊到相關話題時多帶點料、多分享一個真實的亮點或小知識。"
         "但這是參考不是劇本——他想聊別的就跟著他走，別硬拉回來、別一次全部聊完。）"
     ) if _ints else ""
@@ -3247,22 +3483,47 @@ def reply_context_instruction(context):
     # 長輩聽到的就是「一直被問在XX區晃晃了嗎、有什麼好餐廳」＋一直卡。
     # 而「幫長輩推薦餐廳」本來就多半是假需求：他在那裡住了幾十年、比 AI 熟；
     # 長輩問在地問題多半是要「確認」（那家店還開嗎、明天市場開不開）不是要「發現」。
+    # 2026-07-31 Edward 重新定調：所在地的價值＝「問一次就記住、之後不必重問」＋
+    # 「推薦要摻進她記得的喜好與身體狀況」。原文寫於 2026-07-17，當時查詢還沒上正式機
+    # （要 8-9 秒又常失敗），所以整段寫成「你查不了就老實說不知道」。
+    # 查詢已於 2026-07-27 上正式機（1.3 秒），那句變成「明明查得到卻推說不知道」的舊指令，
+    # 這裡改掉。「不主動推、不當話題起頭」的紀律照舊保留——那是真機回報的教訓、沒有過期。
     location_line = (
         f"（他住在「{_loc}」——這是**背景知識、不是話題**：拿來聽懂他講的地名、把天氣講對、"
         "知道他要去的地方在哪。"
         "**絕對不要拿它當話題起頭**：不要主動問「最近有去哪走走嗎」「你們那邊有什麼好吃的」、"
         "不要主動推薦餐廳或景點。他在那裡住了幾十年、比你熟太多；而且長輩很多行動不便、不常出門、"
         "早就有吃了二三十年的固定那幾家——一直找他出門、一直推薦店家，是在戳他做不到、"
-        "或根本不需要的事，跟禁語「出去走走」是同一個錯。"
-        "**他自己開口問**附近哪裡吃、某家店還開不開、市場今天有沒有開時——"
-        "**你查不了，就老實說**：「這我就不知道了欸，你要不要打去問問看？」。"
-        "他問這種問題多半是想「確認」、不是想「發現」——他心裡通常已經有答案、也比你熟；"
-        "順著問他「你都去哪一家？」讓他講，比你硬掰一個店名好一百倍。）"
+        "或根本不需要的事，跟禁語「出去走走」是同一個錯。\n"
+        "**他自己開口問**附近哪裡吃、有什麼好去處、某家店還開不開時——"
+        "**這一通有查詢能力就真的去查**（查完只講查到的真店名真地點；查不到才老實說沒查到、"
+        "不准憑印象掰店名）。挑要講哪一家時，**用你記得的他**去挑，不要給對誰都通用的清單："
+        "牙口不好就別推硬的、行動不便就挑近的或有位子坐的、身體有狀況就避開對他不利的"
+        "（例如血糖高就別主打甜點）、他講過喜歡或討厭什麼就順著。**一次講一兩家就好**，"
+        "他有興趣再多講。\n"
+        "他問這種問題有時候是想「確認」而不是「發現」——聽起來像在確認（某家店還開不開、"
+        "市場今天有沒有開）而你查不到準的，就順著問他「你都去哪一家？」讓他講，"
+        "比硬掰一個店名好一百倍。）"
     ) if _loc else ""
+    # 沒有所在地時：允許她問一次、並且把答案記起來——不要每次問天氣都重問一遍。
+    location_ask_line = (
+        "（你還不知道他住哪裡。**他問到天氣、附近哪裡吃、附近有什麼好去處**這類跟地方有關的事時，"
+        "先很自然地問一次「你住在哪一區呀？」——**只問這一次**：他答了就記起來"
+        "（這屬於「值得長期記住的事實」），之後再問同樣的事就直接用，不要重問。\n"
+        "**他講完地名，一定要當場確認一次**（地名很容易聽錯，記錯了之後每次天氣都會報錯地方）：\n"
+        "・聽得清楚：把它**複誦進你的回話裡**當作確認，不要另外問一句——"
+        "像「台北市南港區喔，我記起來了，那邊今天……」。他聽到不對會自己更正。\n"
+        "・**沒把握（同音字、聽不清、只聽到一半）：直接問清楚、給他選**——"
+        "像「你說的是台北市的南港區嗎？還是南崗？」。**寧可多問一句，也不要記錯**。\n"
+        "他不想講就算了、別追問，改用他講得出來的範圍回答。"
+        "**不要為了問而問**：他沒問到跟地方有關的事，就不要主動問他住哪。）"
+    ) if not _loc else ""
     culture_line = (
-        "（聊到影劇/戲劇/歌曲/新聞這類會隨時間變的話題：**你查不到現在在紅什麼**——"
-        "只有「今日簡報」的本週話題是真的、可以講。**不要憑印象講可能過時或根本不存在的劇名歌名**"
-        "（你記得的多半是舊的、甚至是編的）。簡報裡沒有就老實說「這我就不知道了欸，最近都在看什麼？」——"
+        # 2026-08-01：閒聊素材預設已停產（見 refresh_daily_briefing），這裡不再指向它；
+        # 而且不准講出內部叫法。會變的東西只有兩條路：他問了你去查，或老實說不知道。
+        "（聊到影劇/戲劇/歌曲/新聞這類會隨時間變的話題：**你查不到現在在紅什麼**，"
+        "也**沒有「今天的新聞」可以報**。**不要憑印象講可能過時或根本不存在的劇名歌名**"
+        "（你記得的多半是舊的、甚至是編的）。就老實說「這我就不知道了欸，最近都在看什麼？」——"
         "把話丟回給他、聽他講，比你硬掰一個劇名好一百倍。）"
     )
     return "\n".join([
@@ -3281,6 +3542,7 @@ def reply_context_instruction(context):
         mood_recorded_line,
         interests_line,
         location_line,
+        location_ask_line,
         culture_line,
         "（智慧鏡頭：可溫柔用台灣諺語、生活智慧、簡單的反思提問陪伴；對方有信仰才順著其信仰語彙。絕不捏造經文、不強加宗教、不說教；危機時安全規則優先於一切。）",
         health_line,
@@ -3979,8 +4241,11 @@ def normalize_person_profile(data):
         "nick": _clean_text(data.get("nick") or data.get("nickname"), 40),
         "birthYear": _clean_year(data.get("birthYear") if data.get("birthYear") is not None else data.get("birth_year")),
         "birthMonth": _clean_month(data.get("birthMonth") if data.get("birthMonth") is not None else data.get("birth_month")),
-        "county": _clean_text(data.get("county"), 20),
-        "district": _clean_text(data.get("district"), 20),
+        # 2026-07-31 跨國：西班牙省名/市名可到 26 字（Santa Cruz de Tenerife / San Cristóbal de La Laguna），
+        # 原本 20 字上限會把地名截半 → 放寬到 60；country 是 ISO 兩碼國別（決定要用哪一國的行政區清單）。
+        "county": _clean_text(data.get("county"), 60),
+        "district": _clean_text(data.get("district"), 60),
+        "country": (_clean_text(data.get("country"), 2) or "").upper(),
         "updatedAt": data.get("updatedAt") or data.get("updated_at") or utc_now(),
     }
 
@@ -4246,7 +4511,14 @@ def north_star_summary(data=None):
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
-    all_events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=1000)
+    # 跨全部帳號讀（不是只讀 demo 那一戶——2026-07-30 這張看板全 0 的根因，見
+    # load_all_accounts_product_events 的說明）。測試帳號仍然照舊在下一行濾掉。
+    event_limit = 20000
+    all_events = load_all_accounts_product_events(
+        limit=event_limit,
+        since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        fallback_on_error=True,
+    )
     events = [event for event in all_events if not is_analytics_excluded_event(event)]
     excluded_events = len(all_events) - len(events)
     meaningful_days = set()
@@ -4289,6 +4561,8 @@ def north_star_summary(data=None):
         "familyInteractions": family_interactions,
         "eventCount": len(events),
         "excludedEventCount": excluded_events,
+        # 撞到上限就明講，別讓看板把「只算到一部分」講成「這就是全部」
+        "truncated": len(all_events) >= event_limit,
         "backend": data_backend_status(),
     }
 
@@ -4358,6 +4632,26 @@ def admin_usage_summary(data=None):
     }
 
 
+def _normalize_account_enterprise(enterprise=None):
+    """名冊的「這一戶是哪一家企業的席次」。不是企業席次就回 None——
+    前端拿到 None 就完全不顯示企業字樣，不要印一個空白的公司名讓人以為抓不到資料。"""
+    if not isinstance(enterprise, dict) or not enterprise:
+        return None
+    seat_id = str(enterprise.get("seatId") or enterprise.get("seat_id") or "")
+    if not seat_id:
+        return None
+    return {
+        "seatId": seat_id,
+        "seatStatus": str(enterprise.get("seatStatus") or enterprise.get("seat_status") or ""),
+        "clientId": str(enterprise.get("clientId") or enterprise.get("client_id") or ""),
+        "clientName": str(enterprise.get("clientName") or enterprise.get("client_name") or ""),
+        "planTier": str(enterprise.get("planTier") or enterprise.get("plan_tier") or ""),
+        "contractEnd": enterprise.get("contractEnd") or enterprise.get("contract_end"),
+        "graceUntil": enterprise.get("graceUntil") or enterprise.get("grace_until"),
+        "waitingUntil": enterprise.get("waitingUntil") or enterprise.get("waiting_until"),
+    }
+
+
 def _normalize_account_owner(owner=None):
     """名冊的「這一戶是誰登入的」：登入方式／信箱／註冊與最後登入時間。
 
@@ -4424,6 +4718,9 @@ def normalize_admin_account_summary(item=None):
             "byRole": dict(sorted(roles.items())),
         },
         "isTestAccount": bool(item.get("isTestAccount") or item.get("is_test_account") or False),
+        # 企業席次資訊（沒有就是 None）。這一層逐欄重建、漏列就等於沒有——
+        # 2026-07-29 的 owner 跟 profileName 都是漏在這裡才發現（部署後打接口才看得到）。
+        "enterprise": _normalize_account_enterprise(item.get("enterprise")),
     }
 
 
@@ -4597,6 +4894,35 @@ def _account_points_map(accounts):
     return points
 
 
+def _account_plan_map(accounts):
+    """每一戶目前的方案（讀真正的訂閱帳，不從購買事件推算）。查不到回空 dict。"""
+    account_ids = [a.get("accountId") for a in accounts if a.get("accountId")]
+    if not account_ids:
+        return {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            return backend.load_account_plans(account_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load per-account plans", e)
+    return {}
+
+
+def _account_enterprise_map(accounts):
+    """每一戶「是不是某家企業的席次、是哪一家」。查不到（含企業表還沒建）回空 dict——
+    名冊照舊顯示，不因為這個附加資訊查不到就整頁壞掉。"""
+    account_ids = [a.get("accountId") for a in accounts if a.get("accountId")]
+    if not account_ids:
+        return {}
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            return backend.load_account_enterprise_seats(account_ids) or {}
+    except Exception as e:
+        log_fallback_exception("load per-account enterprise seats", e)
+    return {}
+
+
 def _account_usage_minutes_map(accounts):
     """每一戶的聊聊分鐘（總計＋本月）。查不到就回空 dict，前端顯示「—」而不是編一個 0。
 
@@ -4620,6 +4946,8 @@ def _enrich_accounts_with_activity(accounts, days=30):
     index, unattributed = _account_activity_index(days=days)
     points_map = _account_points_map(accounts)
     minutes_map = _account_usage_minutes_map(accounts)
+    plan_map = _account_plan_map(accounts)
+    enterprise_map = _account_enterprise_map(accounts)
     single = len(accounts) == 1
     for acct in accounts:
         aid = acct.get("accountId") or ""
@@ -4635,7 +4963,9 @@ def _enrich_accounts_with_activity(accounts, days=30):
                 agg["plan"] = unattributed["plan"]
         voice = round(agg["voiceMinutes"], 1)
         avatar = round(agg["avatarMinutes"], 1)
-        acct["plan"] = _normalize_account_plan(agg["plan"])
+        # 方案以訂閱帳為準；訂閱帳查不到才退回用購買事件推算（舊行為）——
+        # 後台改方案不產生購買事件，只靠事件推算會顯示「點數發了、身分沒變」。
+        acct["plan"] = plan_map.get(aid) or _normalize_account_plan(agg["plan"])
         # windowMinutes ＝ 近 N 天（由使用事件推算，看短期活躍）；
         # lifetimeMinutes／monthMinutes ＝ 真正的聊聊分鐘帳（credit_ledger 每分鐘扣 1 點一筆），
         # 用來看「誰是大戶」——那個問題要的是累積量，不是最近 30 天。
@@ -4653,6 +4983,9 @@ def _enrich_accounts_with_activity(accounts, days=30):
         }
         acct["status"] = _derive_account_status(agg["lastActiveAt"], agg["eventCount"])
         acct["points"] = int(points_map.get(acct.get("accountId") or "", 0) or 0)
+        # 方案是自己買的還是企業給的——名冊光看 free/plus/pro 分不出來（2026-07-30 Edward）。
+        # 沒有企業席次就是 None，前端不顯示任何企業字樣。
+        acct["enterprise"] = enterprise_map.get(aid) or None
     return accounts
 
 
@@ -6026,16 +6359,21 @@ def admin_bond_depth(data=None):
     }
 
 
-def load_admin_growth_product_events(limit=20000):
-    """後台『成長與黏著』：跟其他 admin_* 只抓近 N 天不同——黏著度／留存／啟用漏斗都要
-    抓到『比某個時間窗更早』的資料，才能定出每個人自己的『第 0 天』、也才能誠實回報
-    資料到底留了多深，所以這裡刻意不帶 since_iso、直接抓全部（量體目前還小，全撈划算；
-    之後量體大了要再依時間分頁）。"""
+def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_error=False):
+    """後台看板共用：跨『全部帳號』讀 product_events。
+
+    ⚠ 別改回 load_product_events()：那支帶 account_id 過濾，而後台路徑本來就不綁登入身分
+    （auth_gate.required=False），帳號會退回環境變數裡的 demo 帳號。2026-07-30 查出北極星
+    看板長年顯示全 0 就是這個原因——它只讀得到 demo 那一戶的一百多筆，然後那些又因為是
+    測試帳號被濾掉，結果永遠是 0，而真正的八百多筆真實紀錄從頭到尾沒進視野。
+
+    帶 since_iso＝只看那段時間窗（北極星）；不帶＝從最早一筆全撈（成長與黏著要算第 0 天）。
+    """
     limit = max(1, min(50000, int(limit or 20000)))
     backend = data_backend()
     fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_events = backend.load_admin_product_events(limit=limit)
+        remote_events = backend.load_admin_product_events(limit=limit, since_iso=since_iso)
         if remote_events is not None:
             normalized_remote = [normalize_product_event(e) for e in remote_events]
             record_admin_data_source(
@@ -6046,13 +6384,20 @@ def load_admin_growth_product_events(limit=20000):
             )
             return normalized_remote
     except Exception as e:
-        if backend.enabled() and not is_missing_table_error(e):
+        # 兩種性格，由呼叫端選：
+        # - 成長與黏著（預設）＝連不上就報錯，寧可整頁講「現在讀不到」，不要端半套數字。
+        # - 北極星＝老實降級成本機檔案，並在回應標成 degraded（這是它原本就有的行為，別弄丟）。
+        if not fallback_on_error and backend.enabled() and not is_missing_table_error(e):
             raise e
-        log_fallback_exception("load admin product events for growth metrics", e)
+        log_fallback_exception("load product events across all accounts", e)
     raw_store = read_json_file(PRODUCT_EVENTS_PATH, default_product_events_store())
     raw_events = raw_store.get("events", []) if isinstance(raw_store, dict) else []
     store = normalize_product_events_store(raw_store)
-    events = store["events"][:limit]
+    events = store["events"]
+    if since_iso:
+        # 退回本機檔案時也要守同一個時間窗，否則北極星在降級狀態下會偷偷把更早的資料算進來
+        events = [e for e in events if str(e.get("eventTime") or "") >= str(since_iso)]
+    events = events[:limit]
     record_admin_data_source(
         "product_events",
         "json",
@@ -6063,6 +6408,11 @@ def load_admin_growth_product_events(limit=20000):
         degradation_reason=fallback_reason,
     )
     return events
+
+
+def load_admin_growth_product_events(limit=20000):
+    """『成長與黏著』專用：不帶時間窗，要從最早一筆算起才定得出每個人自己的第 0 天。"""
+    return load_all_accounts_product_events(limit=limit)
 
 
 def load_admin_growth_subscription_rows(limit=20000):
@@ -6397,6 +6747,17 @@ def safe_diagnostic_duration_ms(value):
         return 0
 
 
+def safe_diagnostic_metric_ms(value, maximum=10000):
+    """Return a bounded positive millisecond metric or None when malformed."""
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if parsed != parsed or parsed <= 0 or parsed > maximum:
+        return None
+    return int(round(parsed))
+
+
 def safe_diagnostic_endpoint(value):
     raw = str(value or "").strip()[:512]
     if not raw:
@@ -6428,6 +6789,9 @@ def admin_voice_diagnostics_summary(data=None):
     by_failed_stage = {}
     by_last_success = {}
     total_ms = []
+    barge_local_stop_ms = []
+    barge_accepted = 0
+    barge_rejected = 0
     for event in events:
         if event.get("eventName") != "voice_call_diagnostic":
             continue
@@ -6437,6 +6801,23 @@ def admin_voice_diagnostics_summary(data=None):
         last_success = str(props.get("lastSuccessfulStage") or "")[:80]
         duration_ms = safe_diagnostic_duration_ms(props.get("totalMs"))
         context = props.get("context") if isinstance(props.get("context"), dict) else {}
+        trace_barge_stop_ms = []
+        stages = props.get("stages") if isinstance(props.get("stages"), list) else []
+        for stage in stages:
+            if not isinstance(stage, dict):
+                continue
+            stage_name = str(stage.get("stage") or "")
+            details = stage.get("details") if isinstance(stage.get("details"), dict) else {}
+            if stage_name == "barge_in_local_stop":
+                stop_ms = safe_diagnostic_metric_ms(details.get("localStopMs"))
+                if stop_ms is not None:
+                    trace_barge_stop_ms.append(stop_ms)
+                    barge_local_stop_ms.append(stop_ms)
+            elif stage_name == "barge_in_server_ack":
+                if details.get("accepted") is True:
+                    barge_accepted += 1
+                elif details.get("accepted") is False:
+                    barge_rejected += 1
         by_outcome[outcome] = by_outcome.get(outcome, 0) + 1
         if failed_stage:
             by_failed_stage[failed_stage] = by_failed_stage.get(failed_stage, 0) + 1
@@ -6455,9 +6836,13 @@ def admin_voice_diagnostics_summary(data=None):
             "routeMode": str(context.get("routeMode") or "")[:40],
             "voiceEndpoint": safe_diagnostic_endpoint(context.get("voiceEndpoint")),
             "avatarEndpoint": safe_diagnostic_endpoint(context.get("avatarEndpoint")),
+            "bargeInCount": len(trace_barge_stop_ms),
+            "bargeInMaxLocalStopMs": max(trace_barge_stop_ms) if trace_barge_stop_ms else None,
         })
     traces.sort(key=lambda item: item.get("eventTime") or "", reverse=True)
     successful = sum(by_outcome.get(name, 0) for name in ("connected", "completed"))
+    sorted_barge_ms = sorted(barge_local_stop_ms)
+    p95_index = max(0, ((95 * len(sorted_barge_ms) + 99) // 100) - 1) if sorted_barge_ms else 0
     return {
         "ok": True,
         "windowDays": days,
@@ -6468,6 +6853,17 @@ def admin_voice_diagnostics_summary(data=None):
             "byFailedStage": dict(sorted(by_failed_stage.items(), key=lambda item: (-item[1], item[0]))),
             "byLastSuccessfulStage": dict(sorted(by_last_success.items(), key=lambda item: (-item[1], item[0]))),
             "averageTotalMs": round(sum(total_ms) / len(total_ms)) if total_ms else None,
+            "bargeIn": {
+                "count": len(sorted_barge_ms),
+                "accepted": barge_accepted,
+                "rejected": barge_rejected,
+                "averageLocalStopMs": round(sum(sorted_barge_ms) / len(sorted_barge_ms)) if sorted_barge_ms else None,
+                "p95LocalStopMs": sorted_barge_ms[p95_index] if sorted_barge_ms else None,
+                "within300Rate": round(
+                    sum(1 for value in sorted_barge_ms if value <= 300) / len(sorted_barge_ms),
+                    4,
+                ) if sorted_barge_ms else None,
+            },
         },
         "recent": traces[:limit],
         "privacy": {
@@ -6809,6 +7205,26 @@ def enterprise_seats_grant_response(data=None):
 # 薄薄一層：路由與參數驗證在這裡，計費／請款單產出／月報產出全部呼叫
 # engine/enterprise_billing.py 既有的公開函式，不重寫一份計費邏輯。
 
+def enterprise_seats_sweep_response(data=None):
+    """/admin/enterprise/seats/sweep：席次到期自動處理（2026-07-30 Edward
+    「到期自動會轉會員身分」）。三件事一起巡：合約到期的進 30 天緩衝期、緩衝期跑完的
+    釋出並收回會員資格、等待中的席次到了個人訂閱到期日換企業接手。
+
+    預設乾跑，跟 60 天閒置清除同一個規矩——沒明講 dryRun=false 就只出報告不動資料。
+    也可以用環境變數 MUNEA_ENTERPRISE_SWEEP_DRY_RUN=0 讓定時任務不必每次帶參數。
+    """
+    data = data or {}
+    if data.get("dryRun") is not None or data.get("dry_run") is not None:
+        raw = data.get("dryRun") if data.get("dryRun") is not None else data.get("dry_run")
+        dry_run = truthy(raw)
+    else:
+        env = str(os.environ.get("MUNEA_ENTERPRISE_SWEEP_DRY_RUN") or "").strip().lower()
+        dry_run = env not in {"0", "false", "no", "off"}
+    result = enterprise_seats.sweep_seat_lifecycle(
+        dry_run=dry_run, actor=str(data.get("actor") or "admin"), now=data.get("now"))
+    return {"ok": True, **result}
+
+
 def enterprise_invoices_response(data=None):
     """3.6 /admin/enterprise/invoices：請款單列表，含狀態、逾期天數、累計欠款。"""
     data = data or {}
@@ -7010,9 +7426,13 @@ def default_billing_store():
             "signupTrialCredits": 5,
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
-            "familyMembersMax": 1,
-            "familyCircleInvite": False,
-            "familyCircleJoin": False,
+            # Edward 2026-07-31：免費也給 1 位家人（本人＋1＝2）。原本免費＝只有自己、
+            # 而且邀請與加入都是 False，等於免費版根本沒有家庭圈，那個分頁永遠是空的。
+            # 付費牆在點數（免費只有一次 5 分鐘），不在人數；滿 2 位照樣提示升級。
+            # 邀請與加入要一起開：只開邀請的話，免費 A 邀免費 B，B 會被擋在門外＝邀請沒人接得到。
+            "familyMembersMax": 2,
+            "familyCircleInvite": True,
+            "familyCircleJoin": True,
         },
         "usageLedger": {
             "period": time.strftime("%Y-%m"),
@@ -7725,6 +8145,10 @@ ADMIN_CREDIT_GRANT_MAX = 2000  # 單次發點上限：防手滑打錯位數（�
 ADMIN_ALLOWED_PLANS = {"free", "plus", "pro"}
 ADMIN_PLAN_MONTHLY_CREDITS = {"plus": 100, "pro": 200}
 ADMIN_PLAN_FAMILY_MEMBERS_MAX = {"plus": 4, "pro": 12}
+# 後台手動開通付費方案的預設期限（Edward 2026-07-31 拍板「改會籍要給 30 天」）。
+# 為什麼一定要有期限：內部授權沒有 Apple 的續訂週期，沒人會去更新到期日。
+# 給死期＝到期系統自動回免費，不必靠人記得去關；要更久用 days 指定（上限 ADMIN_EXTEND_DAYS_MAX）。
+ADMIN_GRANT_DEFAULT_DAYS = 30
 
 
 def _resolve_admin_target_identity(account_id):
@@ -7834,6 +8258,16 @@ def admin_set_plan_response(data, headers=None):
         return {"ok": False, "error": {"code": "account_id_required"}}
     if plan not in ADMIN_ALLOWED_PLANS:
         return {"ok": False, "error": {"code": "invalid_plan"}}
+    # 開通付費方案要給幾天（改回免費時用不到）。沿用延長天數那支的上限，避免兩支各有一套規矩。
+    grant_days = ADMIN_GRANT_DEFAULT_DAYS
+    raw_days = data.get("days")
+    if raw_days not in (None, ""):
+        try:
+            grant_days = int(raw_days)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": {"code": "invalid_days"}}
+        if grant_days <= 0 or grant_days > ADMIN_EXTEND_DAYS_MAX:
+            return {"ok": False, "error": {"code": "days_out_of_range", "limit": ADMIN_EXTEND_DAYS_MAX}}
     target = _resolve_admin_target_identity(account_id)
     if not target:
         return {"ok": False, "error": {"code": "account_not_found"}}
@@ -7860,6 +8294,21 @@ def admin_set_plan_response(data, headers=None):
         else:
             subscription.update({"status": "active", "willRenew": False, "lastVerifiedAt": now_iso})
             provider = billing.get("provider") if billing.get("provider") == "apple_storekit2" else "manual-admin-grant"
+            # 手動開通會「沿用」帳號原本的 subscription（上面 dict(billing.get("subscription"))），
+            # 所以更早的試買／前一次開通留下的 expiresAt 會一起被帶進來。內部授權沒有續訂週期、
+            # 沒人會去更新那個日期——留著的下場是：開通當下十一項顯示全對，隔天 App 一讀，
+            # reconcile_billing_expiry() 看到「方案 pro、狀態 active、但到期日已過」就判定過期，
+            # 靜靜把方案降回 free（Edward 2026-07-31 親踩：手機顯示 FREE、管理名冊卻還是 pro）。
+            #
+            # 修法（Edward 同日拍板「改會籍要給 30 天」）：內部授權一律換上新的到期日，
+            # 預設 ADMIN_GRANT_DEFAULT_DAYS 天、可用 days 指定。有死期＝到期系統自動回免費，
+            # 不必靠人記得去關；也不再有「沿用一張早就過期的日期」這種暗坑。
+            # 真的 Apple 訂閱不碰它的到期日——那必須以 Apple 為單一事實來源
+            #（要加碼天數走 admin_extend_plan_days，那支已經處理好會被 Apple 蓋掉的取捨）。
+            if provider != "apple_storekit2":
+                subscription["expiresAt"] = (
+                    datetime.now(timezone.utc) + timedelta(days=grant_days)
+                ).isoformat().replace("+00:00", "Z")
             billing = {
                 **billing,
                 "activePlan": plan,
@@ -7904,6 +8353,9 @@ def admin_set_plan_response(data, headers=None):
             "accountName": target.get("accountName"),
             "previousPlan": previous_plan,
             "newPlan": plan,
+            # 稽核要看得到「給到哪一天」，不然事後查不出這筆會籍為什麼還在／為什麼沒了
+            "grantDays": grant_days if plan != "free" else None,
+            "expiresAt": ((billing.get("subscription") or {}).get("expiresAt")) if plan != "free" else None,
         },
     })
     return {
@@ -7912,6 +8364,9 @@ def admin_set_plan_response(data, headers=None):
         "accountName": target.get("accountName"),
         "previousPlan": previous_plan,
         "activePlan": plan,
+        # 後台要能直接顯示「開通到什麼時候」，不必再打一次查詢
+        "grantDays": grant_days if plan != "free" else None,
+        "expiresAt": ((billing.get("subscription") or {}).get("expiresAt")) if plan != "free" else None,
         "billing": billing,
         "walletSummary": (grant or {}).get("walletSummary"),
     }
@@ -8328,7 +8783,13 @@ def apple_transaction_response(data, auth_gate=None):
         append_audit_event({
             "eventType": "apple_transaction_rejected",
             "targetTable": "credit_transactions",
-            "details": {"reason": str(exc), "actorType": "authenticated_user"},
+            # 帶上交易編號與商品代號才分得出「同一筆一直重送」與「每次購買都失敗」——
+            # 這兩件事的嚴重程度差很多，只記原因四個字看不出來（2026-07-30 查 168 筆時卡在這）
+            "details": {
+                "reason": str(exc),
+                "actorType": "authenticated_user",
+                **(getattr(exc, "detail", None) or {}),
+            },
         })
         return {"ok": False, "verified": False, "error": {"code": str(exc)}}
 
@@ -8709,18 +9170,37 @@ def account_deletion_response(data, auth_gate=None):
     }
 
 
-def _sys_for(char):
-    """組這個角色的系統人格：人格 + 醫療界線 +（真人才帶）記憶側寫。"""
-    c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
-    base = eng.CORE + c["persona"] + eng.RED  # 記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
+def _sys_for(char, locale=None):
+    """組這個角色的系統人格：人格 + 醫療界線 +（真人才帶）記憶側寫。
+
+    2026-07-31 起照語系拿書：日文用戶拿日文版說明書（含當地急難號碼、當地醫療體系、
+    對長輩該有的敬語距離），不再是「台灣版＋一張叫她忽略台灣內容的紙條」。
+    該語系還沒授書就自動退回中文版（不開天窗），但上架守門會擋著不准開那個語系。
+    """
+    book_locale = locale or eng.DEFAULT_PERSONA_LOCALE
+    # 2026-07-31：角色性格也要照語系拿。原本這裡固定讀繁中版，
+    # 於是英文說明書中間夾著 714 字中文（還寫著「要講台灣國語」），
+    # 實跑時她整段用中文回答英文用戶。
+    _chars = eng.characters_for(book_locale)
+    c = _chars.get(char, _chars[DEFAULT_CHAR])
+    # 記憶單一來源＝memory_items（由 reply_context_instruction 注入），不再疊舊 user_profile 側寫
+    base = eng.core_instruction("offline", book_locale) + c["persona"] + eng.red_lines(book_locale)
     return base, c
 
 
 def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     """帶完整對話脈絡，用該角色的腦＋記憶回話。"""
-    base, _ = _sys_for(char)
     context = context or build_reply_context(history, char, data)
-    base = base + reply_context_instruction(context) + localization.reply_language_instruction(context.get("locale"))
+    base, _ = _sys_for(char, context.get("locale"))
+    # 2026-07-31 Edward 拍板「不准憑空講急難號碼」：號碼的唯一來源＝經過核定的當地指引。
+    # 這條線原本沒帶這段（只有語音線有），等於號碼只能從說明書裡來——正是要禁的。
+    # safetyRegion 不明時 regional_safety_instruction 會給不含號碼的通用句，
+    # 說明書則要求她改用問的（「你現在人在哪裡？」）。
+    _safety_region = ((context.get("localeContext") or {}).get("safetyRegion")
+                      or (data or {}).get("safetyRegion"))
+    base = (base + reply_context_instruction(context)
+            + localization.reply_language_instruction(context.get("locale"))
+            + localization.regional_safety_instruction(context.get("locale"), _safety_region))
     # B2 衛教（2026-07-24）：按最後一句用戶的話命中策展題庫才注入；沒命中＝空字串、不佔說明書。
     last_user = ""
     for h in reversed(history or []):
@@ -8751,7 +9231,8 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
         log_fallback_exception("attach clinic visit cue", e)
     base += health_kb.injection_for(last_user, profile=_health_profile,
                                     hour=(context.get("now") or {}).get("hour"),
-                                    recent_topic=_recent_topic)
+                                    recent_topic=_recent_topic,
+                                    locale=context.get("locale"))
     # 欄位相容：text 或 content 皆可（跟 conversation_text 一致），缺角色預設 user；空句略過。
     contents = []
     for h in (history or []):
@@ -8795,6 +9276,134 @@ def chat_response(data, char=DEFAULT_CHAR):
         "audio": tts_b64(t, char, data.get("locale")),
         "aiContext": ai_context_summary(context),
     }
+
+
+# ===== 機智問答：由寧寧當場出題（Edward 2026-08-01 拍板 B 案）=====
+#
+# 原本 App 裡是 19 題寫死的示範題庫，四國各自改寫過（不是翻譯——台灣問「哪個節日吃湯圓」，
+# 西班牙版問的是跨年夜吃什麼）。改成當場出題之後，題目永遠新鮮、還能配合他的興趣與所在地。
+#
+# 代價是「AI 當場產內容」的風險，所以這裡的重點不是出題、是**把關**：
+# 出得再好，只要有一題不能用，整份就退回 App 內建題庫——寧可老題目，不要出錯的題目。
+
+QUIZ_MAX_COUNT = 12
+QUIZ_MIN_COUNT = 3
+QUIZ_OPTIONS = 4
+QUIZ_Q_MAX_CHARS = 60
+QUIZ_OPT_MAX_CHARS = 24
+
+# 一出現就整份退回的字眼：政治、宗教、族群、醫療診斷、金錢。
+# 機智問答是全家一起玩的，出到這些不是「答錯」而是「不該問」。
+QUIZ_FORBIDDEN = (
+    "政黨", "選舉", "總統", "統獨", "藍綠", "政治",
+    "宗教", "信仰", "神明", "上帝", "佛祖",
+    "族群", "省籍", "原住民",
+    "診斷", "病因", "癌", "腫瘤", "處方", "劑量", "幾毫克",
+    "股票", "投資", "保險", "貸款",
+    "election", "president", "political", "religion", "diagnosis", "prescription", "dosage",
+    "選挙", "政治", "宗教", "診断", "処方",
+    "elecciones", "política", "religión", "diagnóstico", "receta",
+)
+
+
+def quiz_question_instruction(locale, interests, place, count):
+    """給寧寧的出題指示。難度、配比、禁區都寫死在這裡，不靠她自由發揮。"""
+    lang = localization.normalize_locale(locale)
+    place_line = f"他住在{place}。" if place else ""
+    interest_line = ("他平常喜歡聊：" + "、".join(interests) + "。") if interests else ""
+    return (
+        f"你是陪長輩聊天的照護夥伴。請出 {count} 題機智問答給一位長輩玩，用 {lang} 出題。\n"
+        f"{place_line}{interest_line}\n"
+        "出題規則：\n"
+        "1. 難度＝那個文化裡的長輩「一定知道」的生活常識，不是冷知識、不是考試題。"
+        "答錯會讓人不好意思，答對要有成就感。\n"
+        "2. 配比：一半是身體與安全的常識（走路、睡眠、飲水、過馬路、天氣），"
+        "一半是當地的生活文化（節慶、food、俗語、老歌、季節水果）。\n"
+        "3. 文化題要用**當地人從小聽到大的版本**，不要把別國的題目翻譯過來。\n"
+        "4. 每題四個選項，只有一個明確正確；其他三個要明顯不對，不可以模稜兩可。\n"
+        f"5. 題目最多 {QUIZ_Q_MAX_CHARS} 字，選項最多 {QUIZ_OPT_MAX_CHARS} 字。\n"
+        "6. 「絕對不可以」出這幾類：政治、選舉、宗教、族群、醫療診斷或用藥、金錢投資、"
+        "需要查證的數字或年份（人口、統計、某年發生什麼事）。\n"
+        "7. 不要重複同一個主題，不要出你自己不確定答案的題。\n"
+        "只回 JSON，格式：{\"questions\":[{\"q\":\"題目\",\"opts\":[\"選項1\",\"選項2\",\"選項3\",\"選項4\"],\"a\":0}]}"
+        "（a 是正確選項在 opts 裡的位置，從 0 算起）。不要加任何說明文字。"
+    )
+
+
+def quiz_question_ok(item):
+    """一題一題驗。任何一題不合格，呼叫端就整份丟掉——不做「挑好的留下」，
+    因為挑剩的那份題數會變少、配比也跑掉，不如老實退回內建題庫。"""
+    if not isinstance(item, dict):
+        return False
+    q = str(item.get("q") or "").strip()
+    opts = item.get("opts")
+    a = item.get("a")
+    if not q or len(q) > QUIZ_Q_MAX_CHARS:
+        return False
+    if not isinstance(opts, list) or len(opts) != QUIZ_OPTIONS:
+        return False
+    cleaned = [str(o or "").strip() for o in opts]
+    if any((not o) or len(o) > QUIZ_OPT_MAX_CHARS for o in cleaned):
+        return False
+    if len(set(cleaned)) != QUIZ_OPTIONS:        # 選項重複＝等於少一個選項
+        return False
+    if not isinstance(a, int) or a < 0 or a >= QUIZ_OPTIONS:
+        return False
+    blob = (q + " " + " ".join(cleaned)).lower()
+    if any(bad.lower() in blob for bad in QUIZ_FORBIDDEN):
+        return False
+    return True
+
+
+def quiz_questions_response(data):
+    data = data or {}
+    try:
+        count = int(data.get("count") or 10)
+    except Exception:
+        count = 10
+    count = max(QUIZ_MIN_COUNT, min(QUIZ_MAX_COUNT, count))
+    locale_context = localization.locale_context_from_request(data)
+    locale = locale_context["uiLocale"]
+    interests = [str(x).strip() for x in (data.get("interests") or []) if str(x or "").strip()][:5]
+    place = str(data.get("place") or "").strip()[:40]
+
+    instruction = quiz_question_instruction(locale, interests, place, count)
+    for model in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        try:
+            r = eng.client.models.generate_content(
+                model=model,
+                contents=instruction,
+                config=types.GenerateContentConfig(
+                    temperature=0.9,
+                    response_mime_type="application/json",
+                ),
+            )
+            payload = json.loads(r.text or "{}")
+            items = payload.get("questions")
+            if not isinstance(items, list) or len(items) < count:
+                continue
+            items = items[:count]
+            if not all(quiz_question_ok(item) for item in items):
+                # 有一題不合格就整份不要。這不是保守，是因為長輩玩到一題怪的，
+                # 對整個 App 的信任就掉了——那比題目重複的代價大得多。
+                continue
+            return {
+                "ok": True,
+                "source": "ai",
+                "locale": locale,
+                "questions": [
+                    {
+                        "q": str(item["q"]).strip(),
+                        "opts": [str(o).strip() for o in item["opts"]],
+                        "a": int(item["a"]),
+                    }
+                    for item in items
+                ],
+            }
+        except Exception as e:
+            log_fallback_exception(f"generate quiz questions with {model}", e)
+    # 出不出來、或出的題過不了關：誠實說一聲，App 會用內建題庫，玩得起來就好
+    return {"ok": False, "source": "fallback", "locale": locale, "questions": []}
 
 
 def relationship_state_from_turn(data, context, stored_memories):
@@ -9585,6 +10194,8 @@ class H(BaseHTTPRequestHandler):
                 self._json({"reply": t, "audio": tts_b64(t, char, data.get("locale"))})
             elif self.path == "/chat":
                 self._json(chat_response(data, char))
+            elif self.path == "/quiz-questions":
+                self._json(quiz_questions_response(data))
             elif self.path == "/voice-session":
                 self._json(voice_session(data))
             elif self.path == "/voice-note":
@@ -9665,6 +10276,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(refresh_daily_briefing(data.get("region"), data.get("personId") or data.get("person_id")))
+            elif self.path == "/admin/worker-clock-patrol":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(worker_clock_patrol_response(data))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":
@@ -9897,6 +10514,20 @@ class H(BaseHTTPRequestHandler):
                             "eventType": "enterprise_monthly_close_run",
                             "targetTable": "enterprise_invoices",
                             "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {}), "period": response.get("period")},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/seats/sweep":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_seats_sweep_response(data)
+                    # 真的動了資料才記稽核（乾跑只是出報告、不必留痕）。
+                    if response.get("ok") and not response.get("dryRun"):
+                        append_audit_event({
+                            "eventType": "enterprise_seat_lifecycle_sweep",
+                            "targetTable": "enterprise_seats",
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
                         })
                     self._json(response)
             elif self.path == "/admin/enterprise/billing-settings":

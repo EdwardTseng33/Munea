@@ -16,6 +16,7 @@ torch 替身（FakeTorch）驗證 make_slot_stream_run_pipeline() 的排程邏�
 跑法：python scripts/test_flashhead_slot_stream.py
 """
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -106,6 +107,30 @@ def test_slot_cuda_stream_defaults_to_none():
     print("test_slot_cuda_stream_defaults_to_none: PASS")
 
 
+def test_video_gate_supports_signed_offset_without_escaping_empty_turn():
+    server_source = (ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py").read_text(
+        encoding="utf-8"
+    )
+    out = fec.AudioOutBuffer(48000, prebuffer_s=0.22)
+    assert out.playout_held() and out.video_playout_held(0.22), (
+        "an empty turn must hold both tracks"
+    )
+    out.push([1] * 960)
+    assert out.playout_held(), "audio must keep the configured prebuffer"
+    remaining = out.hold_until_ts - time.time()
+    assert 0.17 <= remaining <= 0.23
+    assert not out.video_playout_held(0.22), (
+        "video should consume the generated 220ms hold before audio"
+    )
+    assert out.video_playout_held(-0.05), (
+        "a negative offset must hold video after the audio gate"
+    )
+    assert 'MUNEA_FH_AUDIO_PREBUFFER_S", "0.35"' in server_source
+    assert 'MUNEA_FH_VIDEO_LEAD_MS", "0"' in server_source
+    assert "max(-0.35" in server_source
+    print("test_video_gate_supports_signed_offset_without_escaping_empty_turn: PASS")
+
+
 def test_make_slot_stream_run_pipeline_order_and_passthrough():
     torch_mod = FakeTorch()
     my_stream = FakeStream("slot0")
@@ -192,12 +217,56 @@ def test_flashhead_server_default_flag_values_unchanged():
     print("test_flashhead_server_default_flag_values_unchanged: PASS")
 
 
+def test_opus_fec_is_enabled_before_peer_connections():
+    server_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py"
+    source = server_path.read_text(encoding="utf-8")
+    assert '"fec": "1"' in source
+    assert '"packet_loss": str(OPUS_PACKET_LOSS_PCT)' in source
+    assert source.index("_munea_opus_init") < source.index("RTCPeerConnection(")
+    assert '"opus_expected_packet_loss_pct": OPUS_PACKET_LOSS_PCT' in source
+    print("test_opus_fec_is_enabled_before_peer_connections: PASS")
+
+
+def test_antiflicker_defaults_preserve_quiet_mouth_motion():
+    core_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_engine_core.py"
+    server_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_server.py"
+    core = core_path.read_text(encoding="utf-8")
+    server = server_path.read_text(encoding="utf-8")
+    assert 'MUNEA_FH_AF_LO", "1"' in core
+    assert 'MUNEA_FH_AF_HI", "8"' in core
+    assert '"antiflicker_lo": ANTIFLICKER_LO' in server
+    assert '"antiflicker_hi": ANTIFLICKER_HI' in server
+    assert '"antiflicker_speech": False' in server
+    print("test_antiflicker_defaults_preserve_quiet_mouth_motion: PASS")
+
+
+def test_antiflicker_only_filters_idle_video():
+    old_value = fec.ANTIFLICKER
+    try:
+        fec.ANTIFLICKER = True
+        assert fec.should_apply_antiflicker(emit_audio=False) is True
+        assert fec.should_apply_antiflicker(emit_audio=True) is False
+        fec.ANTIFLICKER = False
+        assert fec.should_apply_antiflicker(emit_audio=False) is False
+    finally:
+        fec.ANTIFLICKER = old_value
+    core_path = ROOT / "deploy" / "runpod-avatar" / "flashhead_engine_core.py"
+    core = core_path.read_text(encoding="utf-8")
+    assert "apply_filter=should_apply_antiflicker(emit_audio)" in core
+    assert "prev = frames[-1]" in core
+    print("test_antiflicker_only_filters_idle_video: PASS")
+
+
 def main():
     test_env_flag_enabled_contract()
     test_slot_cuda_stream_defaults_to_none()
+    test_video_gate_supports_signed_offset_without_escaping_empty_turn()
     test_make_slot_stream_run_pipeline_order_and_passthrough()
     test_make_slot_stream_run_pipeline_propagates_exceptions()
     test_flashhead_server_default_flag_values_unchanged()
+    test_opus_fec_is_enabled_before_peer_connections()
+    test_antiflicker_defaults_preserve_quiet_mouth_motion()
+    test_antiflicker_only_filters_idle_video()
     print("FlashHead slot-stream unit test: ALL PASS")
 
 

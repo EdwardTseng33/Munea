@@ -146,8 +146,15 @@ class RedLineTest(unittest.TestCase):
         self.assertIn("照原話記下來就好", cue)
 
     def test_the_prompt_layer_states_the_same_red_lines(self):
+        # 2026-07-31 人設書分國：這些規則從程式碼搬進 engine/persona/*.zh-TW.txt。
+        # 守的東西沒變（規則被刪就亮紅燈），只是要把程式碼與繁中書合起來看。
         with open(os.path.join(HERE, "chat_engine.py"), encoding="utf-8") as f:
             src = f.read()
+        for _kind in ("core", "red", "lookup-offline", "lookup-online"):
+            _path = os.path.join(HERE, "persona", _kind + ".zh-TW.txt")
+            if os.path.exists(_path):
+                with open(_path, encoding="utf-8") as _bf:
+                    src += _bf.read()
         self.assertIn("⑥-VISIT", src)
         for phrase in ("絕不解讀醫囑", "絕不評論醫生的判斷對不對",
                        "不是第二個醫生", "最多三個問題"):

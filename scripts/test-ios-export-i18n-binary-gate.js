@@ -29,7 +29,18 @@ const currentManifest = JSON.parse(
 const currentRequiredLocales = currentManifest.locales
   .filter((entry) => entry.binaryLocalizationEnabled)
   .map((entry) => entry.nativeLocale);
-assert.deepEqual(currentRequiredLocales, ['zh-Hant']);
+// 這裡不寫死清單——寫死的話語系一開就紅，而紅的原因跟程式對不對無關。
+// 真正要守的是：包裡收的語言必須全部出自 supportedLocales，而且繁中永遠在。
+// （2026-08-01：原本寫死 ['zh-Hant']，Edward 拍板開三語當晚就卡在這裡。）
+assert.ok(currentRequiredLocales.length > 0, 'App 包至少要收一種語言');
+assert.ok(
+  currentRequiredLocales.every((locale) => supportedLocales.includes(locale)),
+  `App 包收了目錄外的語言：${currentRequiredLocales.filter((l) => !supportedLocales.includes(l)).join(', ')}`,
+);
+assert.ok(
+  currentRequiredLocales.includes('zh-Hant'),
+  '繁中是預設語言，永遠要在 App 包裡',
+);
 
 function gitBashPath() {
   if (process.platform !== 'win32') return 'bash';

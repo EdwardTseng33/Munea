@@ -29,9 +29,25 @@ def main() -> None:
     assert "(now - self.last_in) > 1.0 and len(self.acc) < cs" in source
     resume_block = source[
         source.index("if todo is not None:") :
-        source.index("self._gen_chunk(todo[0], todo[1], todo[2])")
+        source.index("self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])")
     ]
-    assert "self.slot.audio_out.clear()" in resume_block
+    assert "self.slot.audio_out.clear()" not in resume_block, (
+        "idle-to-speech must not reset the audio clock or re-arm a mid-turn prebuffer"
+    )
+    assert "emit_audio=False" in source, (
+        "idle motion must not enqueue generated silence into the speech buffer"
+    )
+    finish_block = source[source.index("def finish(self):") : source.index("def _on_fault", source.index("def finish(self):"))]
+    assert "self.slot.audio_out.queue(pcm_int16)" in source, (
+        "original Voice PCM must enter the audible queue before lip rendering"
+    )
+    assert "self.slot.audio_out.release_playout()" in source, (
+        "first rendered video must release the shared start gate without re-queueing PCM"
+    )
+    assert "self.slot.audio_out.mark_input_complete()" in finish_block, (
+        "after audio/render decoupling, input EOF must classify post-speech silence immediately"
+    )
+    assert "self._complete_pending = False" in finish_block
     print("FlashHead idle contract: PASS")
 
 

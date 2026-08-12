@@ -65,6 +65,7 @@ engine/notification_deliveries.json
 
 Video/
 .munea-turn-cred
+.munea-admin-token
 
 # FlashHead PoC 產出（大二進位 demo，不進 repo）
 deploy/flashhead-poc/outputs/
@@ -75,3 +76,12 @@ deploy/flashhead-poc/assets/*.mp4
 deploy/glows/glows_ed25519
 deploy/glows/.env
 .vercel
+
+# 局部畫面驗收的輸出（開發自驗用、不進版控）
+docs/qa/i18n/local-browser-precheck/_targeted/
+
+# 本機工作副本／暫存產出（不進版控）
+# 2026-08-07：.worktrees 底下是完整程式庫的多份副本（實測 22 萬個檔案），
+# 沒擋住的話每次算差異都要掃過它們——桌機版 Claude 的差異畫面也被它撐大。
+.worktrees/
+.codex-tmp/

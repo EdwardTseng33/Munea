@@ -65,6 +65,18 @@ VERIFY_OUTPUT="$(bash deploy/cloudrun/canary-verify.sh "$WHAT" "$TAG" "$PROFILE"
 printf '%s\n' "$VERIFY_OUTPUT"
 VERIFIED_REVISION="$(printf '%s\n' "$VERIFY_OUTPUT" | sed -n 's/^revision=//p' | tail -n 1)"
 [ -n "$VERIFIED_REVISION" ] || { echo "⛔ canary verifier 未回傳 exact revision"; exit 1; }
+VERIFIED_LOCALE_MODE="$(printf '%s\n' "$VERIFY_OUTPUT" | sed -n 's/^locale_mode=//p' | tail -n 1)"
+if [ "$WHAT" = "voice" ]; then
+  [ -n "$VERIFIED_LOCALE_MODE" ] || {
+    echo "⛔ Voice canary verifier 未回傳 locale mode"
+    exit 1
+  }
+  if [ "$VERIFIED_LOCALE_MODE" = "strict" ]; then
+    echo "⛔ strict LocaleContext revision 目前只允許 0% canary 驗收，禁止切流量。"
+    echo "   exact-build App E2E、四語真實通話與發布證據完成後，才能另案解除此閘門。"
+    exit 1
+  fi
+fi
 
 SERVICE_JSON="$(gcloud_run run services describe "$SVC" --region "$REGION" --project "$PROJECT" --format=json)"
 PROMOTION_META="$(printf '%s' "$SERVICE_JSON" | "${PYTHON[@]}" -c '

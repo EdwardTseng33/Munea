@@ -70,6 +70,22 @@ for (const key of [
   assert.ok(globalHeaders.some((header) => header.key === key), `Missing hosting header ${key}`);
 }
 
+// 網頁本身必須每次回來確認有沒有新版。主機預設 max-age=3600，等於每次改版都有
+// 一小時空窗，回訪的人拿到的還是舊頁面（2026-07-30 換示範影片時踩到）。
+// 靜態檔那條規則排在後面會蓋掉這個值，圖片影片仍快取一天。
+const globalCache = globalHeaders.find((header) => header.key === "Cache-Control")?.value || "";
+assert.match(
+  globalCache,
+  /max-age=0/,
+  "HTML must revalidate every visit, otherwise a deploy takes up to an hour to reach returning visitors",
+);
+const assetCache = (hosting.headers || []).find((entry) => /mp4/.test(entry.source))?.headers || [];
+assert.match(
+  assetCache.find((header) => header.key === "Cache-Control")?.value || "",
+  /max-age=\d{3,}/,
+  "static assets should still be cached",
+);
+
 // 四語系合約：每個語系一個真網址，彼此用 hreflang 互指。
 // 靠 JS 當場換字的舊做法，Google 只看得到中文版 —— 這裡守住不准回頭。
 const locales = [
@@ -159,6 +175,45 @@ for (const page of pages) {
       /apps\.apple\.com/i,
       `${page.file} must not link to the App Store before the app is live`,
     );
+  }
+}
+
+// 示範影片：每個語系播自己那支（英日西的夥伴要講當地語言），而且檔案真的在。
+// 打招呼與待機那兩支是無聲動畫，沒有語言問題，維持一份共用。
+for (const l of locales) {
+  const html = read(l.dir ? `${l.dir}/index.html` : "index.html");
+  const suffix = l.code === "zh" ? "" : `-${l.code}`;
+  for (const who of ["realfemale", "realmale"]) {
+    const mp4 = `${who}-talk-demo${suffix}.mp4`;
+    assert.match(
+      html,
+      new RegExp(`/assets/${mp4.replaceAll(".", "\\.")}`),
+      `${l.code} demo video should be ${mp4}`,
+    );
+    assert.ok(
+      fs.existsSync(path.join(appSite, "assets", mp4)),
+      `missing demo video asset ${mp4}`,
+    );
+  }
+}
+
+// 條款／隱私／客服：每個語系要連自己語言那一份（三語版本在 app-site/legal/<code>/）。
+// 四個語系的頁尾一路都連中文版，是 2026-07-31 才抓到的——翻譯早就做好了、只是沒接上。
+for (const l of locales) {
+  const html = read(l.dir ? `${l.dir}/index.html` : "index.html");
+  for (const page of ["privacy", "terms", "support"]) {
+    const href = l.code === "zh" ? `/${page}` : `/legal/${l.code}/${page}.html`;
+    assert.match(
+      html,
+      new RegExp(`href="${href.replaceAll(".", "\\.")}"`),
+      `${l.code} footer should link to ${href}`,
+    );
+    if (l.code !== "zh") {
+      assert.ok(
+        fs.existsSync(path.join(appSite, "legal", l.code, `${page}.html`)),
+        `missing translated legal page: ${l.code}/${page}.html`,
+      );
+    }
   }
 }
 

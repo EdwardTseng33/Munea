@@ -452,8 +452,13 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(profile["captionLocale"], "en")
         self.assertEqual(profile["speechLanguageCode"], "en-US")
         self.assertTrue(profile["openingMessage"].startswith("Hi,"))
-        self.assertNotIn("119", profile["regionalSafetyInstruction"])
+        # 2026-07-31 補上日本安全區之後改寫：這條守的本意是「台灣專屬的號碼不可以
+        # 外洩到日本的通話」，不是「不准出現 119」——日本的消防救急剛好也是 119。
+        # 所以改成守台灣專屬的 1925／1995，並要求日本的指引真的是日本的。
         self.assertNotIn("1925", profile["regionalSafetyInstruction"])
+        self.assertNotIn("1995", profile["regionalSafetyInstruction"])
+        self.assertNotIn("Taiwan", profile["regionalSafetyInstruction"])
+        self.assertIn("Japan", profile["regionalSafetyInstruction"])
         self.assertEqual(profile["localeContext"]["countryCode"], "JP")
         self.assertEqual(profile["localeContext"]["safetyRegion"], "JP")
 
@@ -559,7 +564,9 @@ class LocalizationTests(unittest.TestCase):
     def test_regional_safety_policy_sources_are_explicit_and_official(self):
         self.assertEqual(
             set(localization.REGIONAL_SAFETY_POLICY_SOURCES),
-            {"ES", "MX"},
+            # 2026-07-31 四語上架籌備：日本與美國安全區補上（實測抓到英文書寫了 911、
+            # 但通話的急難句沒設 US，美國長輩會只聽到「聯絡當地緊急服務」）
+            {"ES", "MX", "JP", "US"},
         )
         self.assertIn(
             "interior.gob.es",
@@ -630,6 +637,12 @@ class LocalizationTests(unittest.TestCase):
         self.assertFalse(localization.looks_like_taiwanese_hokkien("勇敢說出自己的想法嘛"))
         self.assertFalse(localization.looks_like_taiwanese_hokkien(localization.TAIWANESE_HOKKIEN_FALLBACK))
 
+    def test_streamed_output_requires_phrase_level_hokkien_evidence(self):
+        self.assertFalse(localization.looks_like_taiwanese_hokkien_output("咧"))
+        self.assertFalse(localization.looks_like_taiwanese_hokkien_output("我咧"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien_output("我咧等你"))
+        self.assertTrue(localization.looks_like_taiwanese_hokkien_output("拍謝，我閣咧學"))
+
     def test_assistant_output_gate_maps_known_terms_and_blocks_residual_hokkien(self):
         self.assertEqual(
             localization.assistant_output_text("食飽未？拍謝喔", "zh-TW"),
@@ -680,7 +693,10 @@ class LocalizationTests(unittest.TestCase):
         )
 
     def test_live_asr_hints_follow_conversation_locale(self):
-        self.assertEqual(localization.asr_language_hints("zh-TW"), ["cmn-Hant-TW"])
+        self.assertEqual(
+            localization.asr_language_hints("zh-TW"),
+            ["cmn-Hant-TW", "en-US"],
+        )
         self.assertEqual(localization.asr_language_hints("en-US"), ["en-US"])
         self.assertEqual(localization.asr_language_hints("ja"), ["ja-JP"])
         self.assertEqual(localization.asr_language_hints("es-MX"), ["es-ES"])
@@ -702,6 +718,57 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("saved conversation language", instruction)
         self.assertIn("never changes country", instruction)
 
+
+
+class SafetyRegionFromTimeZoneTests(unittest.TestCase):
+    """急難號碼只能由地理決定，而且「不知道」必須表現成不知道。
+
+    2026-08-01：App 建立帳號時把時區寫死 Asia/Taipei、也從來沒送過國家，
+    後端於是預設 safetyRegion=TW——西班牙／美國／日本的使用者會被用自己的
+    語言叫去打台灣的 119 與 1925（1925 在國外根本不存在）。
+    """
+
+    def test_device_time_zone_selects_the_market(self):
+        for time_zone, expected in (
+            ("Asia/Taipei", "TW"),
+            ("Asia/Tokyo", "JP"),
+            ("Europe/Madrid", "ES"),
+            ("America/New_York", "US"),
+            ("America/Mexico_City", "MX"),
+        ):
+            context = localization.build_locale_context({"timeZone": time_zone})
+            self.assertEqual(context["safetyRegion"], expected, time_zone)
+
+    def test_unknown_time_zone_never_claims_taiwan(self):
+        # 人在德國、手機是西班牙文——我們沒核定德國，就不准假裝知道。
+        context = localization.build_locale_context(
+            {"conversationLocale": "es", "timeZone": "Europe/Berlin"},
+        )
+        self.assertEqual(context["safetyRegion"], "")
+        guidance = localization.regional_safety_instruction("es", context["safetyRegion"])
+        self.assertNotIn("119", guidance)
+        self.assertNotIn("1925", guidance)
+        self.assertIn("servicio local de emergencias", guidance)
+
+    def test_language_never_selects_the_hotline(self):
+        # 同一支英文手機，人在美國跟人在台灣，拿到的號碼必須不一樣。
+        in_us = localization.build_locale_context(
+            {"conversationLocale": "en", "timeZone": "America/Chicago"},
+        )
+        in_tw = localization.build_locale_context(
+            {"conversationLocale": "en", "timeZone": "Asia/Taipei"},
+        )
+        self.assertEqual(in_us["safetyRegion"], "US")
+        self.assertEqual(in_tw["safetyRegion"], "TW")
+        self.assertIn("911", localization.regional_safety_instruction("en", in_us["safetyRegion"]))
+        self.assertIn("1925", localization.regional_safety_instruction("en", in_tw["safetyRegion"]))
+
+    def test_explicit_trusted_region_still_wins(self):
+        # 閘道給的可信 safetyRegion 優先於時區推測，行為不變。
+        context = localization.build_locale_context(
+            {"timeZone": "Asia/Taipei", "safetyRegion": "JP"},
+        )
+        self.assertEqual(context["safetyRegion"], "JP")
 
 if __name__ == "__main__":
     unittest.main()

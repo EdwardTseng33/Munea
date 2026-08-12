@@ -4,12 +4,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Munea | Asistente de salud con IA · el acompañante de cuidado de toda la familia · App para iPhone</title>
+<title>Munea | Por fin alguien recuerda su salud · IA de cuidado</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/paining-logo.png" type="image/png">
-<meta name="description" content="Munea es un asistente de salud con IA que vive en tu móvil: una cara que se mueve, una voz que suena real, que recuerda lo que le cuentas y mantiene unida a la familia. No es un sistema de cuidados de larga duración: es compañía que aparece cada día. App para iPhone.">
+<meta name="description" content="La Munea App es un asistente de salud con IA que vive en tu móvil: una cara que se mueve, una voz que suena real, que recuerda lo que le cuentas y mantiene unida a la familia. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar, metido en el día a día. Descarga gratuita.">
 <link rel="canonical" href="https://munea.net/es">
 <link rel="alternate" hreflang="zh-Hant" href="https://munea.net/">
 <link rel="alternate" hreflang="en" href="https://munea.net/en">
@@ -19,8 +19,8 @@
 <meta name="theme-color" content="#3AA8A0">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Munea 沐寧">
-<meta property="og:title" content="Munea | Asistente de salud con IA para toda la familia">
-<meta property="og:description" content="Un asistente de salud con IA en tu móvil: una cara que se mueve, una voz que suena real y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es compañía diaria.">
+<meta property="og:title" content="Munea App | Asistente de salud con IA · acompañamiento de mayores y cuidado familiar">
+<meta property="og:description" content="La Munea App — un asistente de salud con IA en tu móvil. Una cara que se mueve, una voz que suena real y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar.">
 <meta property="og:url" content="https://munea.net/es">
 <meta property="og:image" content="https://munea.net/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
@@ -30,11 +30,19 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta property="og:locale:alternate" content="ja_JP">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Munea | Asistente de salud con IA para toda la familia">
-<meta name="twitter:description" content="Un asistente de salud con IA en tu móvil: una cara que se mueve, una voz que suena real y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es compañía diaria.">
+<meta name="twitter:title" content="Munea App | Asistente de salud con IA · acompañamiento de mayores y cuidado familiar">
+<meta name="twitter:description" content="La Munea App — un asistente de salud con IA en tu móvil. Una cara que se mueve, una voz que suena real y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar.">
 <meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
+<!-- 品牌識別資料。原本只宣告「我是一個 App」，Google 因此不知道官網／App Store／粉專是同一家，
+     搜「沐寧」時被同名的相聲團與餐廳擠掉（2026-08-11 實測：App Store 頁第 1，官網沒進第一頁）。
+     改成三個實體互指：Organization 是品牌本體、WebSite 是這個網站、MobileApplication 是產品。
+     ⚠ @id 一律用固定的 siteUrl、不用 canonical——否則四個語系會被當成四個不同的品牌，反而更散。 -->
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"MobileApplication","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"Un asistente de salud con IA en tu móvil: una cara que se mueve, una voz que suena real y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es compañía diaria.","url":"https://munea.net/es","image":"https://munea.net/assets/og-image.jpg","inLanguage":"es","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"https://munea.net/#organization","name":"沐寧 Munea","alternateName":["Munea","沐寧","Munea App","沐寧 App"],"url":"https://munea.net/","logo":{"@type":"ImageObject","url":"https://munea.net/assets/paining-logo.png","width":256,"height":256},"image":"https://munea.net/assets/og-image.jpg","email":"edwardt0303@gmail.com","sameAs":["https://apps.apple.com/tw/app/id6788658125","https://www.facebook.com/profile.php?id=61592697779724"]},
+{"@type":"WebSite","@id":"https://munea.net/#website","url":"https://munea.net/","name":"沐寧 Munea","alternateName":"Munea","inLanguage":"es","publisher":{"@id":"https://munea.net/#organization"}},
+{"@type":"MobileApplication","@id":"https://munea.net/#app","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"La Munea App — un asistente de salud con IA en tu móvil. Una cara que se mueve, una voz que suena real y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar.","url":"https://munea.net/es","image":"https://munea.net/assets/og-image.jpg","inLanguage":"es","installUrl":"https://apps.apple.com/tw/app/id6788658125","sameAs":"https://apps.apple.com/tw/app/id6788658125","publisher":{"@id":"https://munea.net/#organization"},"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+]}
 </script>
 <link rel="stylesheet" href="/warm.css?v=10">
 <style>
@@ -83,30 +91,34 @@
   .pane{aspect-ratio:auto!important;background:#e9f2ed!important;display:grid;place-items:center;padding:30px}
   .dev{width:min(250px,74%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27}
   .dev img{width:100%;height:100%;object-fit:cover;position:static;display:block}
-  .callphone{position:relative;width:min(252px,76%);aspect-ratio:780/1688;border-radius:34px;overflow:hidden;box-shadow:0 0 0 9px #15110e}
+  /* 模擬手機畫面的字級原本是寫死的 px：中文「阿宏／在線」短、看不出問題，
+     換成英文 online、西班牙文 en línea／En directo 就整排爆出框（2026-07-30 抓到）。
+     改成跟著手機框寬度等比縮（252px 時就是原本的尺寸，框變小就一起變小），
+     四個語系都會自己合身、不必為每種語言各調一次。 */
+  .callphone{position:relative;width:min(252px,76%);aspect-ratio:780/1688;border-radius:34px;overflow:hidden;box-shadow:0 0 0 9px #15110e;container-type:inline-size}
   .callphone>img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
   .cscreen{position:absolute;inset:0;color:#fff}
-  .csb{position:absolute;top:0;left:0;right:0;height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 20px;font-size:12px;font-weight:700;color:#33403D}
+  .csb{position:absolute;top:0;left:0;right:0;height:min(34px,13.5cqw);display:flex;align-items:center;justify-content:space-between;padding:0 min(18px,7.1cqw) 0 min(20px,7.9cqw);font-size:min(12px,4.8cqw);font-weight:700;color:#33403D}
   .csb .isl{position:absolute;left:50%;top:9px;transform:translateX(-50%);width:56px;height:15px;background:#15110e;border-radius:100px}
   .csb .sic{display:flex;align-items:center;gap:4px}
   .csb .sic svg{height:11px;width:auto;fill:#33403D}
-  .chead{position:absolute;top:44px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-  .chead .cname{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:15px;color:#33403D;text-shadow:0 1px 3px rgba(255,255,255,.5)}
+  .chead{position:absolute;top:min(44px,17.5cqw);left:min(15px,6cqw);right:min(15px,6cqw);display:flex;justify-content:space-between;align-items:flex-start;gap:min(8px,3.2cqw)}
+  .chead .cname{display:inline-flex;align-items:center;gap:min(6px,2.4cqw);min-width:0;font-weight:700;font-size:min(15px,6cqw);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#33403D;text-shadow:0 1px 3px rgba(255,255,255,.5)}
   .chead .cname i{width:7px;height:7px;border-radius:50%;background:#3AA8A0}
-  .chead .cname small{font-weight:500;font-size:11px;color:#5A6963}
-  .chead .cstat{background:rgba(51,64,61,.58);color:#fff;border-radius:100px;padding:4px 9px;font-size:10px;font-weight:600;white-space:nowrap}
-  .cfoot{position:absolute;bottom:18px;left:15px;right:15px}
+  .chead .cname small{font-weight:500;font-size:min(11px,3.7cqw);color:#5A6963}
+  .chead .cstat{flex:0 0 auto;background:rgba(51,64,61,.58);color:#fff;border-radius:100px;padding:min(4px,1.6cqw) min(9px,3.2cqw);font-size:min(10px,3.6cqw);font-weight:600;white-space:nowrap}
+  .cfoot{position:absolute;bottom:min(18px,7.1cqw);left:min(15px,6cqw);right:min(15px,6cqw)}
   .cwave{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:16px;margin-bottom:14px}
   .cwave i{width:3px;border-radius:3px;background:#7CF0C8;transform-origin:bottom;animation:cwv 1.1s ease-in-out infinite}
   .cwave i:nth-child(2n){animation-duration:.85s}
   .cwave i:nth-child(3n){animation-duration:1.35s}
   @keyframes cwv{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
   @media(prefers-reduced-motion:reduce){.cwave i{animation:none}}
-  .crow{display:flex;align-items:center;justify-content:center;gap:10px}
-  .crow .cb{width:44px;height:44px;border-radius:50%;background:rgba(20,17,14,.42);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
+  .crow{display:flex;align-items:center;justify-content:center;gap:min(10px,4cqw)}
+  .crow .cb{width:min(44px,17.5cqw);height:min(44px,17.5cqw);flex:0 0 auto;border-radius:50%;background:rgba(20,17,14,.42);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
   .crow .cb.on{background:#3AA8A0}
-  .crow .cb svg{width:20px;height:20px;stroke:#fff}
-  .crow .cend{display:inline-flex;align-items:center;gap:6px;background:#E5533D;color:#fff;border-radius:100px;padding:11px 17px;font-size:14px;font-weight:700;white-space:nowrap}
+  .crow .cb svg{width:min(20px,7.9cqw);height:min(20px,7.9cqw);stroke:#fff}
+  .crow .cend{display:inline-flex;align-items:center;gap:min(6px,2.4cqw);background:#E5533D;color:#fff;border-radius:100px;padding:min(11px,4.4cqw) min(17px,6.7cqw);font-size:min(14px,5.6cqw);min-width:0;font-weight:700;white-space:nowrap}
 
   /* 導覽列 */
   .navlinks a.nav-cta{height:42px;padding:0 22px;display:inline-flex;align-items:center;font-size:15px}
@@ -280,9 +292,9 @@
   <div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
   <div class="wrap hero-grid">
     <div>
-      <div class="eyebrow">Asistente de salud con IA · cuidado para toda la familia</div>
-      <h1><span class="word">Hay alguien que</span><br><span class="word hl">siempre te recordará</span></h1>
-      <p class="sub">Munea es un acompañante de cuidado con IA que vive en tu móvil: una cara que se mueve, una voz que suena real, que recuerda lo que le cuentas, acompaña a cada persona de la casa y mantiene unida a la familia.</p>
+      <div class="eyebrow">Asistente de salud con IA · acompañamiento de mayores · cuidado familiar</div>
+      <h1><span class="word">Por fin alguien</span><br><span class="word hl">recuerda su salud</span></h1>
+      <p class="sub">Munea es una compañera de salud con IA con cara, voz y memoria de ti. Charla contigo, recuerda cómo has estado, te avisa de la medicación y las revisiones, y os mantiene unidos aunque estéis lejos.</p>
       <div class="hero-actions">
         <a class="btn btn-appstore" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener" aria-label="Consigue Munea en el App Store">
           <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
@@ -313,7 +325,7 @@
     <div class="sec-head reveal">
       <div class="eyebrow center">Munea, hecha para la familia</div>
       <h2>Seas quien seas, alguien te recuerda</h2>
-      <p>Los abuelos en casa, la hija que vive lejos, el nieto que quiere acercarse más: Munea guarda un sitio para cada uno.</p>
+      <p>Los abuelos en casa, la hija que vive lejos, el nieto que quiere acercarse más: acompañamiento de mayores y cuidado familiar, con un sitio para cada uno.</p>
     </div>
     <div class="pcar reveal">
       <div class="pslide active">
@@ -375,9 +387,9 @@
           <span class="pz-idx">Función 01</span>
           <span class="badge"><span class="d"></span><span>Seguimiento de tendencias con IA</span></span>
           <h3>Medicación, revisiones y las cifras del cuerpo: ella lo va mirando por ti</h3>
-          <p>Munea cuida de la salud por ti: los recordatorios de medicación y de revisiones te llegan con su voz tranquila, y los pasos, el pulso, la tensión o el sueño entran solos desde Salud de Apple.</p>
+          <p>Munea cuida de la salud por ti: los recordatorios de medicación y de revisiones te llegan al móvil justo a su hora, y los pasos, el pulso, la tensión o el sueño entran solos desde Salud de Apple.</p>
           <ul class="flist">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span><b>Avisos de medicación y revisiones</b>: en voz alta y a su hora, sin reproches si se te pasa</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span><b>Avisos de medicación y revisiones</b>: te llegan al móvil a su hora, sin reproches si se te pasa</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span><b>La evolución de un vistazo</b>: pasos, pulso, tensión y sueño</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span><b>Sincronización con Salud de Apple</b>: entra solo, sin apuntar nada a mano</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2z"/><path d="M6 8a6 6 0 1112 0c0 7 2 9 2 9H4s2-2 2-9"/></svg><span><b>Avisos en el móvil</b>: llegan aunque la app no esté abierta</span></li>
@@ -387,7 +399,7 @@
 
       <!-- 功能 02 -->
       <article class="pz reverse reveal">
-        <div class="pz-vis"><span class="pz-step">Compañía y conversación</span><div class="ph pane"><div class="callphone"><img src="/assets/real-male-full.jpg" alt="Acompañante realista en videollamada" loading="lazy"><div class="cscreen"><div class="csb"><span>8:36</span><span class="isl"></span><span class="sic"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg viewBox="0 0 16 12"><path d="M8 12L1 4a10 10 0 0114 0z"/></svg><svg viewBox="0 0 26 12"><rect x="0.7" y="1" width="21" height="10" rx="2.6" fill="none" stroke="#33403D" stroke-width="1"/><rect x="2.2" y="2.5" width="15" height="7" rx="1.4"/><rect x="23" y="4" width="2" height="4" rx="1"/></svg></span></div><div class="chead"><span class="cname"><i></i>Ahong <small>en línea</small></span><span class="cstat">En directo · 00:03</span></div><div class="cfoot"><div class="cwave"><i style="height:6px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i></div><div class="crow"><span class="cb" aria-label="Subtítulos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6.5" width="18" height="11" rx="2.5"/><path d="M9.5 11a2 2 0 100 2M15.5 11a2 2 0 100 2"/></svg></span><span class="cb on" aria-label="Micrófono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span><span class="cend"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M21 15.5c-1.2 0-2.4-.2-3.5-.6a1 1 0 00-1 .2l-2.2 2.2a15 15 0 01-6.6-6.6l2.2-2.2a1 1 0 00.2-1A11 11 0 018.5 4a1 1 0 00-1-1H4a1 1 0 00-1 1 17 17 0 0017 17 1 1 0 001-1v-3.5a1 1 0 00-1-1z"/></svg><span>Colgar</span></span></div></div></div></div></div></div>
+        <div class="pz-vis"><span class="pz-step">Compañía y conversación</span><div class="ph pane"><div class="callphone"><img src="/assets/real-male-full.jpg" alt="Acompañante realista en videollamada" loading="lazy"><div class="cscreen"><div class="csb"><span>8:36</span><span class="isl"></span><span class="sic"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg viewBox="0 0 16 12"><path d="M8 12L1 4a10 10 0 0114 0z"/></svg><svg viewBox="0 0 26 12"><rect x="0.7" y="1" width="21" height="10" rx="2.6" fill="none" stroke="#33403D" stroke-width="1"/><rect x="2.2" y="2.5" width="15" height="7" rx="1.4"/><rect x="23" y="4" width="2" height="4" rx="1"/></svg></span></div><div class="chead"><span class="cname"><i></i>Ahong <small>en línea</small></span><span class="cstat">En vivo · 00:03</span></div><div class="cfoot"><div class="cwave"><i style="height:6px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i></div><div class="crow"><span class="cb" aria-label="Subtítulos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6.5" width="18" height="11" rx="2.5"/><path d="M9.5 11a2 2 0 100 2M15.5 11a2 2 0 100 2"/></svg></span><span class="cb on" aria-label="Micrófono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span><span class="cend"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M21 15.5c-1.2 0-2.4-.2-3.5-.6a1 1 0 00-1 .2l-2.2 2.2a15 15 0 01-6.6-6.6l2.2-2.2a1 1 0 00.2-1A11 11 0 018.5 4a1 1 0 00-1-1H4a1 1 0 00-1 1 17 17 0 0017 17 1 1 0 001-1v-3.5a1 1 0 00-1-1z"/></svg><span>Colgar</span></span></div></div></div></div></div></div>
         <div class="pz-txt">
           <span class="pz-idx">Función 02</span>
           <span class="badge"><span class="d"></span><span>Como una videollamada real</span></span>
@@ -435,14 +447,14 @@
     <div class="vgrid reveal">
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/real-female-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realfemale-talk-demo.mp4" aria-label="Demo de vídeo con IA de Munea · voz femenina natural"></video>
+          <video class="vplay" poster="/assets/real-female-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realfemale-talk-demo-es.mp4" aria-label="Demo de vídeo con IA de Munea · voz femenina natural"></video>
           <button class="vsound" type="button" aria-label="Con sonido" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="Con sonido" data-off="Silenciar">Con sonido</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">Mujer realista</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/real-male-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realmale-talk-demo.mp4" aria-label="Demo de vídeo con IA de Munea · voz masculina serena"></video>
+          <video class="vplay" poster="/assets/real-male-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realmale-talk-demo-es.mp4" aria-label="Demo de vídeo con IA de Munea · voz masculina serena"></video>
           <button class="vsound" type="button" aria-label="Con sonido" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="Con sonido" data-off="Silenciar">Con sonido</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">Hombre realista</span></figcaption>
@@ -543,7 +555,7 @@
   <div class="wrap">
     <div class="cta-box reveal">
       <h2>Deja que Munea empiece<br>hoy mismo a recordarte.</h2>
-      <p>App para iPhone, descarga gratuita. Los planes y precios se ven dentro de la app. Por ahora solo está disponible en el App Store de Taiwán.</p>
+      <p>Descarga gratuita. Los planes y precios se ven dentro de la app. Por ahora solo está disponible en el App Store de Taiwán.</p>
       <a class="btn btn-appstore" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener" aria-label="Consigue Munea en el App Store"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="as-t"><small>En el App Store</small><b>Descarga gratis</b></span></a>
     </div>
   </div>
@@ -554,7 +566,7 @@
     <div class="foot-grid">
       <div>
         <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30" loading="lazy"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
-        <p class="desc">El asistente de salud con IA que te recuerda: una cara que se mueve y una voz que no te olvida, para mantenerte cerca de los tuyos. No es un sistema de cuidados de larga duración, es compañía en el día a día.</p>
+        <p class="desc">La Munea App — el asistente de salud con IA que te recuerda. Una cara que se mueve y una voz que no te olvida, para mantenerte cerca de los tuyos. No es un sistema de cuidados de larga duración, es acompañamiento de mayores y cuidado familiar en el día a día.</p>
       </div>
       <div class="foot-col">
         <h4>Conoce Munea</h4>
@@ -564,9 +576,9 @@
       </div>
       <div class="foot-col">
         <h4>Condiciones y contacto</h4>
-        <a href="/support">Soporte</a>
-        <a href="/terms">Condiciones de socio</a>
-        <a href="/privacy">Política de privacidad</a>
+        <a href="/legal/es/support.html">Soporte</a>
+        <a href="/legal/es/terms.html">Términos del servicio</a>
+        <a href="/legal/es/privacy.html">Política de privacidad</a>
         <a class="ext" href="https://munea-b2b.vercel.app" target="_blank" rel="noopener">Empresas y centros de cuidado</a>
         <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a>
       </div>

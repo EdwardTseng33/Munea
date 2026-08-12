@@ -22,6 +22,10 @@ EVENTS = [
             "firstFailedStage": "avatar_first_frame",
             "lastSuccessfulStage": "voice_ready",
             "totalMs": 30000,
+            "stages": [
+                {"stage": "barge_in_local_stop", "status": "pass", "details": {"localStopMs": 330}},
+                {"stage": "barge_in_server_ack", "status": "pass", "details": {"accepted": False}},
+            ],
             "context": {
                 "appVersion": "1.0.18",
                 "routeMode": "gateway",
@@ -39,6 +43,12 @@ EVENTS = [
             "reason": "user_ended",
             "lastSuccessfulStage": "call_connected",
             "totalMs": 90000,
+            "stages": [
+                {"stage": "barge_in_local_stop", "status": "pass", "details": {"localStopMs": 170}},
+                {"stage": "barge_in_server_ack", "status": "pass", "details": {"accepted": True}},
+                {"stage": "barge_in_local_stop", "status": "pass", "details": {"localStopMs": 260}},
+                {"stage": "barge_in_server_ack", "status": "pass", "details": {"accepted": True}},
+            ],
             "context": {"appVersion": "1.0.18", "routeMode": "development_direct"},
         },
     },
@@ -51,6 +61,11 @@ EVENTS = [
             "reason": "invalid_client_payload",
             "firstFailedStage": "voice_socket_connecting",
             "totalMs": "not-a-number",
+            "stages": [
+                {"stage": "barge_in_local_stop", "details": {"localStopMs": "not-a-number"}},
+                {"stage": "barge_in_local_stop", "details": {"localStopMs": 20000}},
+                {"stage": "barge_in_server_ack", "details": {"accepted": "false"}},
+            ],
             "context": {
                 "voiceEndpoint": "wss://user:super-secret@voice.example/connect?token=hidden-token",
                 "avatarEndpoint": "https://avatar.example/offer?key=hidden-key#debug",
@@ -75,8 +90,18 @@ def main():
         "voice_socket_connecting": 1,
     }
     assert result["totals"]["averageTotalMs"] == 40000
+    assert result["totals"]["bargeIn"] == {
+        "count": 3,
+        "accepted": 2,
+        "rejected": 1,
+        "averageLocalStopMs": 253,
+        "p95LocalStopMs": 330,
+        "within300Rate": 0.6667,
+    }
     assert result["recent"][0]["callId"] == "call-failed"
     assert result["recent"][0]["lastSuccessfulStage"] == "voice_ready"
+    assert result["recent"][0]["bargeInCount"] == 1
+    assert result["recent"][0]["bargeInMaxLocalStopMs"] == 330
     assert result["privacy"] == {
         "rawAudioStored": False,
         "rawTranscriptStored": False,

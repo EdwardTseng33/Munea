@@ -131,5 +131,49 @@ class WiringTest(unittest.TestCase):
                       self._read(os.path.join("..", "scripts", "service-watchdog.mjs")))
 
 
+
+class RecoveryIsReportedTest(unittest.TestCase):
+    """壞掉會講、**好了也要會講**（2026-08-12 · Edward 儲值後儀表仍卡在 down 16 小時）。
+
+    原本只有 unknown 才自己探一次，判成 down 之後就再也不探——所以額度補回來、
+    鑰匙實測也通了，儀表還是寫著 down。只會報壞消息的儀表，跟壞掉的儀表一樣不能信。
+    """
+
+    def setUp(self):
+        ai_health.reset_for_test()
+
+    def test_a_down_verdict_still_probes_and_can_recover(self):
+        for _ in range(ai_health.DOWN_AFTER_FAILURES):
+            ai_health.record_failure("額度用完")
+        self.assertEqual(ai_health.status(allow_probe=False)["state"], "down")
+
+        calls = []
+        real = ai_health._probe
+        def fake_probe():
+            calls.append(1)
+            ai_health.record_success()
+            return True
+        ai_health._probe = fake_probe
+        try:
+            out = ai_health.status()
+        finally:
+            ai_health._probe = real
+        self.assertTrue(calls, "判成 down 之後就不再探了——永遠不會知道已經好了")
+        self.assertTrue(out["probed"])
+        self.assertEqual(out["state"], "ok")
+        self.assertTrue(out["ok"])
+
+    def test_still_down_when_the_probe_also_fails(self):
+        for _ in range(ai_health.DOWN_AFTER_FAILURES):
+            ai_health.record_failure("額度用完")
+        real = ai_health._probe
+        ai_health._probe = lambda: (ai_health.record_failure("還是不行"), False)[1]
+        try:
+            out = ai_health.status()
+        finally:
+            ai_health._probe = real
+        self.assertEqual(out["state"], "down", "探了還是失敗就該繼續說壞")
+        self.assertFalse(out["ok"])
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

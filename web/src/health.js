@@ -96,17 +96,20 @@ window.MuneaHealth = (function () {
     try { localStorage.setItem('munea.health.askedAt', String(Date.now())); } catch (e) {}
   }
 
-  // 這一頁現在該長什麼樣。整頁只有一顆按鍵，按鍵做什麼由這裡決定：
-  //   'off'      還沒連過      → 按鍵「連接」→ 跳系統授權視窗
-  //   'checking' 連過、還在讀   → 不下結論，先說檢查中
-  //   'ok'       讀得到         → 按鍵「解除連接」（沐寧停止讀取；iPhone 授權要去健康 App 收）
-  //   'empty'    讀完了、沒東西 → 按鍵「去健康 App 打開項目」
-  //   'error'    讀取出錯       → 按鍵「再試一次」，並把原因講出來
+  // 使用者只需要理解兩種狀態，加上一個動作（Edward 2026-07-30 拍板）：
+  //   'off' 未連接 → 按鍵「連接」
+  //   'on'  已連接 → 按鍵「解除連接」
+  //
+  // 「已連接」的定義＝**真的讀得到資料**。讀不到就是沒連上，不另外發明狀態——
+  // 讀不到的原因（沒開項目／這支手機沒紀錄／讀取失敗）是我們內部的事，
+  // 不該變成使用者要理解的第三、第四種狀態。原因寫在下面的說明文字裡就好。
+  //
+  // 'checking' 只是還沒讀完的過場，不是狀態：畫面沿用上一次的結論，
+  // 不會先跳一個「讀不到」再自己改口。
   function uiState() {
     if (!connected()) return 'off';
-    if (lastReadError) return 'error';
-    if (!readDone && hasData !== true) return 'checking';
-    return hasData === false ? 'empty' : 'ok';
+    if (!readDone) return hasData === true ? 'on' : 'checking';
+    return hasData === true ? 'on' : 'off';
   }
 
   // 把使用者送到「健康」App 自己開項目（App 不能代替他開，蘋果不給）
@@ -134,7 +137,11 @@ window.MuneaHealth = (function () {
 
   // 讀取實況：讓人能確定「到底讀到了沒」，而不是只看到一片空白自己猜。
   function readEvidence() {
-    if (!connected() || !lastReadAt) return '';
+    // 只要真的讀過就把結果說出來，不再要求「連接旗子是開的」（Edward 2026-08-01）——
+    // 「我在健康 App 開了，這裡還是說沒資料」最需要看到的就是這一行：
+    // 是 14:20 讀過了一項都沒有（＝項目沒開對），還是根本沒讀（＝App 沒去讀）。
+    // 之前綁在 connected() 上，剛好在讀不到的時候整行消失，等於把唯一的線索藏起來。
+    if (!lastReadAt) return '';
     const at = new Date(lastReadAt);
     const clock = String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0');
     if (lastReadError) return fill(t('health.readFailedAt', '{time} 讀取失敗：{reason}', { time: clock, reason: lastReadError }), { time: clock, reason: lastReadError });
@@ -151,67 +158,96 @@ window.MuneaHealth = (function () {
   function renderConnectionState() {
     const view = uiState();
     const on = view !== 'off';
+    // 第一次還沒問過授權 → 按「連接」跳系統視窗；
+    // 問過了（蘋果一輩子只跳一次）→ 按「連接」直接帶去健康 App。
+    // 兩種對使用者來說都只是「連接」這一個動作，不必知道差別。
+    const firstTime = !askedBefore();
     const btn = document.getElementById('cnHealthBtn');
     if (btn) {
-      btn.classList.toggle('done', view === 'ok');
-      // 只有真的讀得到、按下去才是「解除」；其他狀態都不是解除，別套解除的紅色樣式
-      btn.classList.toggle('disconnect', view === 'ok');
+      btn.classList.toggle('done', on);
+      btn.classList.toggle('disconnect', on);
       btn.classList.remove('arm');
       delete btn.dataset.disconnectArmed;
-      btn.dataset.action = view === 'off' ? 'connect'
-        : view === 'ok' ? 'disconnect'
-        : view === 'error' ? 'retry'
-        : view === 'checking' ? 'none'
-        : 'openHealth';
-      btn.textContent =
-        view === 'off' ? t('health.connect', btn.dataset.label || '連接')
-        : view === 'ok' ? t('health.disconnect', '解除連接')
-        : view === 'error' ? t('health.retry', '再試一次')
-        : view === 'checking' ? t('health.checking', '檢查中…')
-        : t('health.openHealthApp', '去健康 App');
-      btn.disabled = view === 'checking';
+      btn.dataset.action = on ? 'disconnect' : (firstTime ? 'connect' : 'openHealth');
+      btn.textContent = on
+        ? t('health.disconnect', '解除連接')
+        : t('health.connect', btn.dataset.label || '連接');
+      btn.disabled = false;
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     }
     const state = document.getElementById('healthSettingsState');
     if (state) state.classList.toggle('off', !on);
     const stateLabel = document.getElementById('healthSettingsStateLabel');
-    if (stateLabel) stateLabel.textContent =
-      view === 'off' ? t('health.notConnected', '未連接')
-      : view === 'checking' ? t('health.checking', '檢查中…')
-      : view === 'error' ? t('health.readFailed', '讀取失敗')
-      : view === 'empty' ? t('health.noReadableData', '讀不到資料')
-      : t('health.connected', '已連接');
+    if (stateLabel) stateLabel.textContent = on
+      ? t('health.connected', '已連接')
+      : t('health.notConnected', '未連接');
     const detail = document.getElementById('cnHealthDetail');
-    if (detail) detail.textContent =
-      view === 'off' ? t('health.availableDetail', '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧')
-      : view === 'checking' ? t('health.checkingDetail', '正在確認讀不讀得到')
-      : view === 'error' ? t('health.readFailedDetail', '這次沒讀成功')
-      : view === 'empty' ? t('health.noReadableDataDetail', '目前讀不到資料')
-      : t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧');
+    if (detail) detail.textContent = on
+      ? t('health.syncingDetail', '正在同步步數、心率、睡眠、血壓與血氧')
+      : t('health.availableDetail', '自動含手錶與其他裝置 · 步數/心率/睡眠/血壓/血氧');
+    // 說明文字負責講「為什麼現在是未連接」——原因放這裡，不變成另一種狀態。
     const help = document.getElementById('cnHealthHelp');
-    if (help) help.textContent =
-      // 還沒連：先提醒授權視窗裡的項目預設是關的。
-      // 這是「連了卻沒資料」最大的來源——很多人直接按允許，等於一項都沒開。
-      view === 'off' ? t(
-        'health.notConnectedHelp',
-        '按下「連接」後手機會跳出一個畫面，請把要給沐寧看的項目一項一項打開再按允許——那些項目預設是關著的。',
-      )
-      : view === 'checking' ? t('health.checkingHelp', '正在跟「健康」App 要今天的資料，稍等一下。')
-      : view === 'error' ? t('health.readFailedHelp', '這次沒有讀成功。按「再試一次」；還是不行的話，到「健康」App 看看沐寧的項目是不是被關掉了。')
-      : view === 'empty' ? t(
-        'health.noReadableDataHelp',
-        '沐寧還讀不到任何一項。可能是授權時項目沒有打開，也可能是這支手機還沒有這些紀錄。按上面的按鍵去「健康」App 把項目打開就好。',
-      )
-      : t(
+    if (help) help.textContent = on
+      ? t(
         'health.disconnectHelp',
         '「解除連接」是叫沐寧不要再讀，iPhone 給的授權還是開著的——要完全收回，請到「健康」App →個人照片→「App 與服務」→沐寧 關掉項目。',
-      );
+      )
+      : view === 'checking'
+        ? t('health.checkingHelp', '正在跟「健康」App 要今天的資料，稍等一下。')
+        : firstTime
+          // 授權視窗裡的項目預設是關的——很多人直接按允許，等於一項都沒開，
+          // 這是「按了連接卻沒資料」最大的來源，所以先講在前面。
+          ? t(
+            'health.notConnectedHelp',
+            '按下「連接」後手機會跳出一個畫面，請把要給沐寧看的項目一項一項打開再按允許——那些項目預設是關著的。',
+          )
+          : t(
+            'health.reconnectHelp',
+            '沐寧目前讀不到資料。授權畫面只會跳一次，所以按「連接」我會帶你到「健康」App，在那裡把沐寧的項目打開就好。',
+          );
     const evidence = document.getElementById('cnHealthReadState');
     if (evidence) {
       const line = readEvidence();
       evidence.textContent = line;
       evidence.hidden = !line;
     }
+    renderHealthSteps(on, firstTime, view);
+  }
+
+  // 「接下來要點哪幾下」——只在讀不到資料、而且授權視窗已經跳過（不會再跳）時出現。
+  //
+  // 為什麼用文字不用連結：蘋果沒有開放任何一條路能直接跳到「健康 →App 與服務 →沐寧」。
+  // x-apple-health://Sources/ 不是官方的、各版行為不一（Edward 的機器上就退回摘要頁），
+  // 帶 App 名字的那種蘋果明確不支援。Strava 與 MyFitnessPal 的說明文件都是同一個做法：
+  // 不靠連結，把路徑一步一步寫出來。連結照舊送他過去，但畫面上先讓他知道要找什麼。
+  function renderHealthSteps(on, firstTime, view) {
+    const box = document.getElementById('cnHealthSteps');
+    if (!box) return;
+    const show = !on && !firstTime && view !== 'checking';
+    box.hidden = !show;
+    if (!show) return;
+    const title = document.getElementById('cnHealthStepsTitle');
+    if (title) title.textContent = t('health.stepsTitle', '到「健康」App 之後，這樣打開：');
+    const list = document.getElementById('cnHealthStepsList');
+    if (list) {
+      const steps = [
+        t('health.step1', '右上角自己的照片（或名字縮寫）'),
+        t('health.step2', '往下找到「App 與服務」'),
+        t('health.step3', '點「沐寧」'),
+        t('health.step4', '把要給沐寧看的項目一項一項打開（預設是關的）'),
+      ];
+      list.textContent = '';
+      steps.forEach(text => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        list.appendChild(li);
+      });
+    }
+    const alt = document.getElementById('cnHealthStepsAlt');
+    if (alt) alt.textContent = t(
+      'health.stepsAlt',
+      '也可以從手機的「設定」→「健康」→「資料取用與裝置」→「沐寧」進去，是同一個地方。開好之後切回沐寧就會自動重讀。',
+    );
   }
 
   function emitConnectionState() {
@@ -245,8 +281,35 @@ window.MuneaHealth = (function () {
   }
 
   // 讀最新健康摘要，餵回網頁
+  // 重裝 App 之後自動接回（2026-07-31 Edward 實測回報：健康 App 顯示已授權、
+  // 沐寧卻說未連結）。原因：「已連結」看的是我們自己存在手機裡的旗子，
+  // 重裝就被清掉了；但蘋果的授權還在（那個視窗一輩子只跳一次、補不回來）。
+  // 這裡在「旗子沒立、但外掛在、而且真的讀得到值」時把旗子補立回去——
+  // 完全無害：讀不到就什麼都不做，不會憑空把沒連的人標成已連。
+  let relinkTried = false;
+  async function relinkIfAlreadyAuthorized() {
+    if (connected() || relinkTried) return false;
+    // **他自己按過「解除連接」就不准自動接回**——那是他的決定，不是重裝造成的失憶。
+    // （解除時會蓋一個時間戳，重裝會連這個一起清掉，所以兩種情況分得開。）
+    try { if (localStorage.getItem('munea.health.disconnectedAt')) return false; } catch (e) {}
+    relinkTried = true;                       // 一次啟動只試一次，不重複打擾原生層
+    const p = plugin();
+    if (!p || typeof p.getSummary !== 'function') return false;
+    try {
+      const s = await p.getSummary();
+      if (!hasAnyValue(s)) return false;      // 讀不到值＝真的沒連或沒分享項目
+      try { localStorage.setItem('munea.devicesOn', '1'); } catch (e) {}
+      lastSummary = s;
+      return true;
+    } catch (e) { return false; }
+  }
+
   async function refresh(options) {
-    if (!connected()) return null;
+    if (!connected()) {
+      // 沒立旗子時先探一次：授權可能還在（重裝清掉的只是我們的旗子）
+      const relinked = await relinkIfAlreadyAuthorized();
+      if (!relinked) return null;
+    }
     const p = plugin();
     if (!p) return null;
     if (refreshPromise) return refreshPromise;
@@ -321,15 +384,25 @@ window.MuneaHealth = (function () {
 
   // 去「健康」App，回來自動重讀一次，剛打開的項目直接長出來、不用再按一次
   async function goHealthAppAndReread() {
-    const onBack = () => {
-      if (document.visibilityState === 'visible') {
-        document.removeEventListener('visibilitychange', onBack);
-        refresh({ force: true });
-      }
-    };
-    document.addEventListener('visibilitychange', onBack);
     await openHealthApp();
   }
+
+  // 每次切回沐寧就重讀一次（Edward 2026-08-01）
+  //
+  // 舊寫法只在「從沐寧按連接跳去健康 App」那一次掛監聽。可是很多人是自己從桌面打開健康
+  // App 改設定、再切回來——那條路沒人在聽，畫面就停在改之前的狀態，看起來像「我明明開了
+  // 它還說沒連」。改成只要回到前景就重讀，不管他是怎麼去的。
+  //
+  // 冷卻期照舊（不加 force），所以連續切換不會一直去打擾系統；真的剛改過權限時，
+  // 冷卻期內第一次讀不到會由下一次切回來補上。
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!available()) return;
+    // 刻意不檢查 connected()：他可能按過解除、或重裝過，我們的旗子是關的，但 iPhone 給的
+    // 授權其實還在——refresh() 開頭會先探一次（relinkIfAlreadyAuthorized）。在這裡先擋掉，
+    // 那些人不管在健康 App 開了什麼，切回來都不會重讀，畫面永遠說沒資料。
+    refresh({ force: true });
+  });
 
   // 整頁只有一顆按鍵。它做什麼由狀態決定（uiState），不再有第二顆做類似事情的鍵。
   function bindConnectionUi() {
@@ -343,9 +416,8 @@ window.MuneaHealth = (function () {
       }
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (action === 'none') return;
-      if (action === 'openHealth') { goHealthAppAndReread(); return; }
-      if (action === 'retry') { lastReadError = ''; renderConnectionState(); refresh({ force: true }); return; }
+      // 「連接」但系統視窗不會再跳（問過了）→ 帶去健康 App，回來自動重讀
+      if (action === 'openHealth') { lastReadError = ''; goHealthAppAndReread(); return; }
       // 解除連接：兩段式確認，避免長輩誤觸
       if (btn.dataset.disconnectArmed !== '1') {
         btn.dataset.disconnectArmed = '1';

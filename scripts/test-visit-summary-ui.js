@@ -144,6 +144,31 @@ expect(!/setAria\('#reportClose'/.test(app),
   '①i 又回到只在非 zh-TW 才跑的 JS setAria——中文讀屏使用者會拿到舊字');
 ok(`①i ${ARIA_BOUND.length} 個 aria-label 走宣告式綁定，四語系都有值`);
 
+/* ①j 紙面姓名（Edward 2026-07-30 拍板「要有」）。
+   這條鎖兩件事，兩件都是出過事才會知道的：
+
+   ① **只能用真名，不准退回暱稱或角色名。**「阿嬤」在診間對比病歷毫無用處，
+      印一個看似有身分卻不能比對的名字，比留空更誤導；角色名是 AI 的名字。
+   ② **不准順手多印生日／身分證號／地址。** 拍板的是「要有姓名」，不是一整組
+      身分資料。這張紙會被影印、被放在診間桌上，多一個識別欄位就多一分外洩代價。 */
+const nameFn = app.slice(app.indexOf('function visitSummaryPatientName()'),
+  app.indexOf('function visitPartialNames'));
+expect(nameFn.length > 80, '①j 找不到 visitSummaryPatientName，這條測試已失效需重寫');
+expect(/p\.name/.test(nameFn), '①j 沒有取個人資料的真名欄位');
+expect(!/\bp\.nick\b/.test(nameFn), '①j 退回了暱稱——「阿嬤」在診間無法比對病歷，比留空更誤導');
+expect(!/cname\(/.test(nameFn), '①j 退回了角色名——那是 AI 的名字，不是病人的');
+expect(/muneaSafeDisplayText/.test(nameFn), '①j 姓名沒過共用文字守門（辨識雜訊會被印到紙上）');
+// 不得把其他身分欄位帶上紙面
+const sheetFn = app.slice(app.indexOf('function visitSummaryAsHTML'), app.indexOf('function muneaExportPlugin'));
+['birth', 'idNumber', 'city', 'address', 'phone'].forEach(field => expect(
+  !new RegExp(`\\b(?:p|profile)\\.${field}\\b`).test(sheetFn),
+  `①j 紙面帶上了「${field}」——拍板的是姓名，不是一整組身分資料`));
+// PDF 與純文字兩份給出去的身分要一致，不然同一份摘要有兩種身分
+const textFn = app.slice(app.indexOf('function visitSummaryAsText'), app.indexOf('function visitSummaryAsHTML'));
+expect(textFn.includes('visitSummaryPatientName'), '①j 純文字版沒有姓名，跟 PDF 身分不一致');
+expect(sheetFn.includes('visitSummaryPatientName'), '①j PDF 版沒有姓名');
+ok('①j 紙面只印真名、不退回暱稱／角色名，且不夾帶其他身分欄位');
+
 /* ② 紅線：畫面不得出現判定字眼 */
 const FORBIDDEN = ['偏高', '偏低', '過高', '過低', '異常', '不正常', '需注意', '警告', '危險',
   '疑似', '診斷', '嚴重', '正常值', '標準值'];
@@ -169,9 +194,21 @@ function stripHtmlComments(markup) {
   return markup.replace(/<!--[\s\S]*?-->/g, '');
 }
 
-// 只掃摘要相關的程式與樣板字串，避免掃到全 App 無關文案
-const summaryCode = stripDisclaimers(stripComments(
-  app.slice(app.indexOf('const VISIT_SUMMARY_SNAP_KEY'), app.indexOf('function visitSummaryAsText') + 2600)));
+// 只掃摘要相關的程式與樣板字串，避免掃到全 App 無關文案。
+//
+// 切片邊界要用**真實的程式標記**，不可以用 `indexOf(...) + 2600` 這種魔術數字：
+// 那個數字一旦程式碼長度改變就會切在半個註解中間，剝註解的正則因為
+// `/*` 找不到成對的 `*/` 而失效，於是註解裡解釋「為什麼不能寫某個字」的字
+// 反而被當成違規（2026-07-30 真的發生過）。下面 assert 就是在擋這件事。
+const summaryStart = app.indexOf('const VISIT_SUMMARY_SNAP_KEY');
+const summaryEnd = app.indexOf('function muneaExportPlugin');
+expect(summaryStart >= 0 && summaryEnd > summaryStart,
+  '② 找不到摘要程式區塊的邊界，這條測試已失效需重寫');
+const summaryRaw = app.slice(summaryStart, summaryEnd);
+// 區塊註解必須成對，否則剝不乾淨、掃出來的結果不可信
+expect((summaryRaw.match(/\/\*/g) || []).length === (summaryRaw.match(/\*\//g) || []).length,
+  '② 切片裡的區塊註解不成對＝剝註解會失效，掃描結果不可信');
+const summaryCode = stripDisclaimers(stripComments(summaryRaw));
 FORBIDDEN.forEach(word => expect(!summaryCode.includes(word), `② 摘要畫面出現判定字眼「${word}」＝越過醫材紅線`));
 const modalHtml = stripDisclaimers(stripHtmlComments(html.slice(html.indexOf('id="reportModal"'), html.indexOf('id="fontModal"'))));
 FORBIDDEN.forEach(word => expect(!modalHtml.includes(word), `② 摘要版型出現判定字眼「${word}」`));

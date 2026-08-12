@@ -1,0 +1,322 @@
+{
+ "locale": "es",
+ "country": "España",
+ "safetyRegion": "ES",
+ "updatedAt": "2026-07-31",
+ "emergency": {
+  "112": {
+   "name": "Emergencias 112",
+   "scope": "Urgencias médicas, incendios y policía — número único europeo, gratuito, 24/7",
+   "usage": "疊層內所有急難話術一律用 112（取代主庫 119）",
+   "verifiedAt": "2026-07-31",
+   "source": "docs/qa/i18n/emergency-numbers-verification-2026-07-31.md（內政部）"
+  },
+  "024": {
+   "name": "Línea 024 de atención a la conducta suicida",
+   "scope": "24 horas, todos los días del año, gratuita y confidencial",
+   "usage": "心理危機一律用 024（取代主庫 1925）",
+   "verifiedAt": "2026-07-31",
+   "source": "https://www.sanidad.gob.es/linea024/home.htm"
+  },
+  "061": {
+   "name": "Urgencias sanitarias 061",
+   "scope": "只有部分自治區有的救護專線",
+   "usage": "疊層話術刻意不使用——涵蓋不全，統一走 112 才不會把長輩推向沒人接的電話",
+   "verifiedAt": "2026-07-31",
+   "source": "docs/qa/i18n/emergency-numbers-verification-2026-07-31.md"
+  },
+  "016": {
+   "name": "Teléfono 016 (violencia de género)",
+   "scope": "24 h, gratuito, no deja rastro en la factura; WhatsApp 600 000 016",
+   "usage": "P0 十題話術暫未用到，查證完成、保留備用",
+   "verifiedAt": "2026-07-31",
+   "source": "https://violenciagenero.igualdad.gob.es/informacion-3/recursos/telefono016/"
+  }
+ },
+ "institutions": {
+  "seguridadSocial": {
+   "term": "Seguridad Social",
+   "note": "公醫體系統稱；對應台灣「健保」的位置。疊層不做「免費／有給付」的具體宣稱（西班牙保健服務給付範圍與台灣不同、逐項查證前不寫）"
+  },
+  "centroDeSalud": {
+   "term": "centro de salud",
+   "note": "基層醫療中心，長輩看病的第一站；轉介卡的入口之一"
+  },
+  "medicoDeCabecera": {
+   "term": "médico de cabecera",
+   "note": "家庭醫師；所有 L5 轉介卡優先指向這裡（對應主庫「家醫科」）"
+  },
+  "farmacia": {
+   "term": "farmacia / farmacéutico de confianza",
+   "note": "西班牙社區藥局密度極高、口頭諮詢不收費、是保健品與交互作用的第一入口；取代主庫「健保給付的用藥整合」說法——疊層只寫「preguntar no cuesta nada」，不宣稱任何官方給付服務"
+  },
+  "serviciosSociales": {
+   "term": "servicios sociales del ayuntamiento",
+   "note": "市政社會服務；對應台灣 1966 長照專線的入口。喘息服務＝programas de respiro familiar（Ley de Dependencia 39/2006 框架下由自治區／市政府執行，各地名稱與額度不同，疊層只指路、不承諾額度）"
+  },
+  "herbolario": {
+   "term": "herbolario",
+   "note": "草藥／天然產品店，西班牙長輩熟悉的通路；TW-EDU-30 的中醫層改編為 remedios tradicionales 時的文化錨點之一"
+  }
+ },
+ "regulatory": {
+  "melatonin": {
+   "status": "≤1,9 mg＝食品補充劑（complemento alimenticio）可自由販售；≥2 mg＝藥品，須處方（Circadin 2 mg，適應症：55 歲以上原發性失眠短期治療）",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://www.aemps.gob.es/informa/la-aemps-retira-el-complemento-alimenticio-melatonin-3-mg-capsulas/",
+    "https://www.aesan.gob.es/AECOSAN/web/noticias_y_actualizaciones/noticias/2013/melatonina.htm",
+    "https://cima.aemps.es/cima/dochtml/p/07392003/P_07392003.html"
+   ],
+   "note": "AEMPS 曾下架標示 3 mg／5 mg 的「補充劑」產品——2 mg 起即視為具藥理作用。疊層兩張卡（sleep-melatonin-blocked、lex-melatonin）都照此照實寫，並保留「我不替你決定、去問醫師藥師」的守門立場"
+  },
+  "magnesiumSupplementCap": {
+   "status": "補充劑來源的鎂每日 250 mg 上限（EFSA 對 supplemental magnesium 的可容忍上限；食物來源不計入）",
+   "note": "與主庫台灣營養師建議數字一致；EFSA 意見書屬既有共識、本次未線上重查——建議人審抽查；TW-EDU-15（夜間抽筋）的 dailyCap 也照此寫 250 mg，刻意不沿用主庫的 350 mg（那是美國 UL、非歐盟數字）",
+   "verifiedAt": "沿用主庫 2026-07-29 查證＋EFSA 共識"
+  },
+  "redYeastRice": {
+   "status": "紅麴（levadura roja de arroz）在西班牙以補充劑流通，但**歐盟自 2022 年起硬性限量＋強制警語**：每日份量 monacolina K 必須 < 3 mg（Reglamento (UE) 2022/860 修 (CE) 1925/2006 附件 III）；標示必須寫「孕婦哺乳、未滿 18 歲、**逾 70 歲不得食用**」「已在服用降膽固醇藥物者不得併用」「不得與其他紅麴產品併用」「身體不適請就醫」。另 Reglamento (UE) 2024/2041（2024-07-29）已把「monacolina K 有助維持正常血膽固醇」這句健康宣稱從歐盟核准清單刪除——現在連標榜療效都不合法。",
+   "note": "這是本次（2026-07-31）線上查證的重點在地化：**逾 70 歲不得食用**這條台灣主庫沒有，而 Munea 主要用戶正是這個年齡層——lipid-red-yeast-caution 的話術與 dailyCap 都照實寫進去了（並標明 3 mg 是法定上限、不是建議劑量）。與 statin 併用的橫紋肌溶解警告照主庫保留。同一條事實也讓 TW-EDU-16 的 supp-red-yeast 從「只寫交互作用」升級為有法規靠山——該卡本次未改寫，建議下次巡檢時同步補年齡警語。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch + WebFetch（本 session）",
+   "sources": [
+    "https://www.boe.es/buscar/doc.php?id=DOUE-L-2022-80828",
+    "https://www.boe.es/buscar/doc.php?id=DOUE-L-2024-81204",
+    "https://eur-lex.europa.eu/legal-content/ES/ALL/?uri=OJ:L_202402041",
+    "https://www.aesan.gob.es/AECOSAN/web/noticias_y_actualizaciones/novedades_legislativas/2024/Reglamento_UE_2024_2041.htm"
+   ]
+  },
+  "anticoagulantNaming": {
+   "status": "疊層內抗凝血藥一律舉 Sintrom（acenocumarol）為例",
+   "note": "西班牙最常用的口服抗凝血藥是 acenocumarol（商品名 Sintrom），不是台灣主庫寫的 warfarin（華法林）；長輩聽得懂的是「el Sintrom」。交互作用機轉（魚油／Q10／銀杏／蔓越莓 vs 香豆素類抗凝血藥）兩者通用"
+  },
+  "calciumUpperLimit": {
+   "status": "TW-EDU-17 沿用主庫的成人每日鈣總攝取上限 2000-2500 mg（含食物），話術明寫「是安全上限、不是目標」",
+   "note": "此數字為既有國際共識、本次未針對西班牙線上重查——建議人審抽查",
+   "verifiedAt": "沿用主庫 2026-07-29"
+  },
+  "metabolicSyndromeWaist": {
+   "status": "西班牙同時流通兩套腰圍切點，**都不是台灣的 90／80**：① 歐洲人（IDF／harmonized）男 ≥ 94 cm、女 ≥ 80 cm——西班牙本地研究認為對西班牙人口適用，是代謝症候群診斷用的那組；② 西班牙心臟學會共識與西班牙心臟基金會對民眾的衛教則用 ESC 2007 的男 ≥ 102 cm、女 ≥ 88 cm 當「腹部肥胖」。代謝症候群本身＝五項中三項（腰圍／三酸甘油酯／HDL／血壓／空腹血糖）。",
+   "note": "**這是本批最容易抄錯的一個數字**（台灣男 90 直接搬過去就錯）。wt-waist-first 的話術刻意兩層都講：94／80 是「已經有內臟脂肪」的訊號、102／88 是「警訊更明確」，並明寫這是提醒去看醫師的訊號、不是診斷。西班牙專業界自己對切點就有分歧（共識文件明講最難達成共識的就是這個），所以疊層不挑邊、不宣稱單一官方數字——建議人審確認這個雙層寫法可接受。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch + WebFetch（本 session）",
+   "sources": [
+    "https://secardiologia.es/blog/1678-documento-consenso-sindrome-metabolico",
+    "https://semergen.es/files/docs/grupos/HTA/sindrome_metabolico.pdf",
+    "https://fundaciondelcorazon.com/prevencion/riesgo-cardiovascular/obesidad-abdominal.html",
+    "https://www.revespcardiol.org/es-una-nueva-definicion-mundial-del-articulo-13082533"
+   ]
+  },
+  "euAllergens14": {
+   "status": "歐盟強制標示過敏原＝ 14 類（Reglamento (UE) 1169/2011 附件 II）：含麩質穀物、甲殼類、蛋、魚、花生、大豆、乳（含乳糖）、堅果（frutos de cáscara）、芹菜、芥末、芝麻、二氧化硫與亞硫酸鹽、羽扇豆（altramuces）、軟體動物。包裝食品必須在成分表中以字體／樣式／底色突顯；**未包裝食品（餐廳、酒吧、散裝）依西班牙 Real Decreto 126/2015 也必須提供**，符合條件時可口頭告知。",
+   "note": "跟台灣清單不同：台灣有芒果、沒有芹菜／芥末／羽扇豆／軟體動物。allergy-label 整張照歐盟 14 類改寫，並加了一句台灣主庫沒有的在地權利——「在酒吧或餐廳，即使沒有包裝，你問他們就有義務告訴你」（這對西班牙長輩外食文化最實用）。羽扇豆（altramuces）在西班牙是常見下酒菜，不能省略。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://www.aesan.gob.es/AECOSAN/web/seguridad_alimentaria/subdetalle/alimentos_no_envasados.htm",
+    "https://www.boe.es/buscar/pdf/2015/BOE-A-2015-2293-consolidado.pdf",
+    "https://eletiquetadocuentamucho.aesan.gob.es/preguntas.html"
+   ]
+  },
+  "proteinOlderAdults": {
+   "status": "高齡蛋白質建議＝ ESPEN 等歐洲臨床營養指引的每日每公斤體重 1.0-1.2 g（健康長者），生病或壓力狀態更高；低於 0.8 g/kg 與肌少症風險顯著相關。**腎功能不全或肝功能不全者必須另外調整、不可自行加量。**",
+   "note": "疊層刻意**不講 g/kg 數字**——長輩在電話裡算不了體重乘除，講了只會變成錯誤自我加量。sarco-protein-每餐 改用可執行的份量語言（一顆蛋／一杯牛奶或優格／一罐沙丁魚／一塊手掌大的肉／一份扁豆），sarco-protein-supp 的 dailyCap 只寫「有腎臟問題就由醫師或 dietista-nutricionista 決定總量」。西班牙的營養師職稱是 dietista-nutricionista（不是 nutriólogo，那是拉美用法）——疊層全批統一用前者。數字本身屬國際共識、未針對西班牙官方文件逐條重查，建議人審抽查。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://www.murciasalud.es/preevid/26365",
+    "https://scielo.isciii.es/scielo.php?script=sci_arttext&pid=S0212-16112018000100065"
+   ]
+  },
+  "saltSubstitutesPotassium": {
+   "status": "西班牙超市普遍販售的「sal light／sal ligera／60% menos de sodio」＝以**氯化鉀（cloruro potásico）取代部分氯化鈉**（Hacendado 60% menos de sodio、Sal Costa ligera 等）。西班牙腎臟醫學界共識明確：慢性腎臟病患者應避免含氯化鉀的代鹽，因為受損的腎排不掉鉀 → 高血鉀（hiperpotasemia）。高血鉀在「慢性腎病＋心衰竭」族群盛行率達 40%。**同時**：IECA（-pril）／ARA-II（-sartán）／保鉀利尿劑（螺內酯、依普利酮、阿米洛利）／NSAID／trimetoprim 本身就會升鉀，與代鹽疊加風險最高；eGFR < 30 與糖尿病族群風險最高。",
+   "note": "**這批最重要的在地化事實**。台灣主庫的「薄鹽／低鈉鹽」在西班牙的對應通路不是藥局而是**任何一家超市**，且名稱是 light／ligera／menos sodio（不是「代鹽」）。ckd-salt-substitute-danger 照此改寫，並加了主庫沒有的一句——降壓藥本身也升鉀，所以是疊加而非單一來源。**該卡刻意不帶任何 contraindications**（主庫設計，test_chronic_topics 有守）：帶警告的卡若掛上禁忌，會被自己的禁忌從最該聽的人面前濾掉。疊層不加。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://alcer.org/2020/10/18/la-hiperpotasemia-afecta-a-hasta-un-40-de-los-pacientes-con-enfermedad-renal-cronica-e-insuficiencia-cardiaca/",
+    "https://www.nefrologiaaldia.org/es-articulo-homeostasis-manejo-del-potasio-el-318",
+    "https://www.saludcastillayleon.es/portalmedicamento/en/noticias-destacados/destacados/hiperpotasemias-medicamentosas-mecanismos-accion-monitoriza",
+    "https://www.revclinesp.es/es-consenso-sobre-el-manejo-hiperpotasemia-articulo-S0014256521000175",
+    "https://soysuper.com/p/sal-baja-sodio-60-menos-hacendado-bote-250-g"
+   ]
+  },
+  "nsaidsAndKidney": {
+   "status": "AEMPS ficha técnica：重度腎功能不全**禁用** ibuprofeno；輕中度須減量起始。西班牙臨床共識：**paracetamol 是老人與腎病患者的首選止痛藥**（肝功能不全者除外）。NSAID 同時也是藥物性高血鉀的來源之一。",
+   "note": "在地化重點＝**ibuprofeno 在西班牙是家家戶戶的萬用止痛藥**（比台灣的「消炎止痛藥」更具體、更普及），Voltarén（diclofenaco）與 Enantyum（dexketoprofeno）是長輩叫得出名字的兩個商品名，已收進 ckd-painkillers 的 askedFor。話術給的是**藥局櫃檯真的講得出口的一句話**：「tengo el riñón regular, ¿esto lo puedo tomar?」（對應主庫「我腎功能不好」）。**刻意不收 Nolotil（metamizol）**——它在西班牙用量極大，但風險是顆粒性白血球缺乏症、不是腎，收進來會讓這張卡答非所問。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://cima.aemps.es/cima/pdfs/es/ft/67278/67278_ft.pdf",
+    "https://www.murciasalud.es/preevid/14835",
+    "https://www.alcergiralda.org/2025/06/19/ibuprofeno-y-salud-renal-lo-que-necesitas-saber/"
+   ]
+  },
+  "unregulatedHerbalProducts": {
+   "status": "AEMPS 已下架多項「天然」減肥產品與 té detox（Soraya Cápsulas、HHS Kuka Café、Soraya Slim Coffee Café、Lipo Solución、Té Detox），原因是**未標示的藥物成分**（sibutramina — 歐盟已因心血管風險撤市；部分另含 sildenafilo）。西班牙文獻另記載：減肥製劑誤用 Aristolochia（廣防己）取代 Stephania（漢防己）導致腎衰竭的案例。西班牙處方藥禁止網路販售；未經 AEMPS 核准的傳統植物藥不得以藥品形式流通。",
+   "note": "**ckd-unknown-herbs 是在地化、不是翻譯**（本批指定）：台灣的馬兜鈴酸禁令（民國 92 年）對西班牙人沒有意義，改寫成西班牙真實的三個入口——**herbolario 沒保證的產品／「減肥」草藥／網路買的**。守住主庫的分別：危險的是**不知道來路**（no saber qué lleva el bote），不是植物療法本身；話術明寫「有註冊、在藥局或正經 herbolario 買、有告訴醫師 → 是另一回事」。腎衰竭那句寫成「hay casos descritos」（有案例記載）而非統計數字——不編西班牙數字。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch + WebFetch（本 session）",
+   "sources": [
+    "https://www.aemps.gob.es/informa/la-aemps-retira-productos-por-contener-sibutramina/",
+    "https://www.aemps.gob.es/medicamentos-de-uso-humano/medicamentos-ilegales/",
+    "https://www.aemps.gob.es/informa/notasinformativas/medicamentosusohumano-3/medPlantas/2011/ni-muh_06-2011_plantasmed/"
+   ]
+  },
+  "smokingCessationFunding": {
+   "status": "SNS 給付戒菸藥物：**bupropión、vareniclina、citisina/citisiniclina**。給付條件（現行）＝納入戒菸支持方案並有臨床追蹤、明確戒菸動機、每日 ≥ 10 支、Fagerström 依賴度 ≥ 7、**每一自然年只給付一次嘗試**、每張處方最多一個月量、須醫師處方。基層有 consulta/unidad de deshabituación tabáquica。",
+   "note": "主庫寫「醫院有戒菸門診、費用有補助」——西班牙可對應但**條件比台灣嚴格且具體**，所以話術照實寫成「para quien entra en un programa de apoyo y cumple los requisitos（va con receta y se financia un intento al año）」，不寫「免費」。三個學名（bupropión／vareniclina／citisiniclina）點名是刻意的——長輩去問時講得出名字。**不寫 Fagerström ≥ 7 與每日 10 支這兩個門檻**：那是醫師評估用的，講給長輩聽只會讓他自己判斷「我不夠格」而不去問。",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://www.somospacientes.com/noticias/al-dia/tratamientos/farmacos-para-dejar-de-fumar-financiados-por-sanidad/",
+    "https://www.riojasalud.es/alianza-riojana-por-la-salud/saludable/a-fondo/receta-para-dejar-de-fumar",
+    "https://www.elsevier.es/es-revista-atencion-primaria-27-articulo-efectividad-del-programa-financiacion-deshabituacion-S0212656725001702"
+   ]
+  }
+ },
+ "styleNotes": [
+  "全部 usted 稱呼、España（不是拉美）用法：la tensión＝血壓、el azúcar＝血糖、ardor de estómago＝火燒心、sofocos＝熱潮紅、bajón＝情緒低落",
+  "TW-EDU-30 由中醫層改編為「remedios tradicionales」輕量版：manzanilla／tila 草藥茶文化＋herbolario＋藥局諮詢文化；中醫證型、穴位、冬令進補不硬翻",
+  "TW-EDU-31 只保留西班牙人真的在吃的品項；雞精、牛樟芝、納豆激酶、苦瓜胜肽、GABA、靈芝略過不寫（敗向安全：沒翻的方案引擎自動不端出）",
+  "統計數字在地化原則：台灣盛行率數字不搬運——能以西班牙事實支撐的改寫（65 歲以上過半有高血壓），無把握的改為不帶數字的常態化話術",
+  "絕不出現台灣或他國號碼（119／1925／1966／911／988）；急難一律 112、心理危機一律 024、長照喘息一律 servicios sociales del ayuntamiento",
+  "TW-EDU-25 的 stress-acupressure（內關穴）與 TW-EDU-27 的 period-tcm（中醫調理／四物湯）整張略過不寫——西班牙沒有對應的文化錨點與合格中醫師轉介路徑，硬翻＝憑空造制度（敗向安全：沒翻的方案引擎自動不端出）",
+  "台灣盛行率數字改寫實例：白內障 70 歲以上九成、攝護腺肥大五成／七成、口腔衰弱三分之二——三處全部拆掉數字、改成「muy común／la mayoría de los hombres／muy frecuente」，保留安心效果、不搬運也不另編西班牙數字",
+  "急難號碼分級：主庫寫「打 119」的卡（吞嚥哽塞、心悸胸痛、跌倒爬不起來）一律換 112；主庫只寫「儘快就醫」的卡（膝蓋、痛風、便秘、皮膚癢、頸肩）不補號碼，改寫 urgencias／médico de cabecera；主庫寫 1925 的卡（青少年、工作壓力、產後憂鬱）一律換 024",
+  "抗凝血藥舉例在新增 6 張卡（葡萄糖胺／葉黃素／銀杏／鈣＋D／鎂／鐵劑）延用 Sintrom，與第一批一致",
+  "代謝五題（33-37）三條紅線：① 長輩「瘦下來」永遠先問「¿es porque usted lo está buscando?」——絕不恭喜，wt-refer 與 sarco-refer 都保留「adelgazar sin explicación hay que estudiarlo」；② lipid-statin-dont-stop 是 leadWith，開口第一句就是「la pastilla del colesterol no se deja por su cuenta」；③ allergy-refer 是呼吸道急症、明寫 112 並加「no se vaya conduciendo usted」",
+  "誠實話術不軟化（Edward 指名兩句）：低碳＝「al cabo de uno o dos años se parece a las demás」、斷食＝「el resultado se parece bastante a comer esa misma cantidad de menos」——不改寫成比較好聽的版本",
+  "TW-EDU-34 觸發字刻意不收 barriga／tripa 兩個裸字：西班牙人「me duele la tripa／la barriga」是肚子痛（TW-EDU-11 的詞庫抓不到這兩句），收了會讓胃痛的人被端上減重建議。改用 cintura／michelines／kilos／engord／adelgaz／delgad／hígado graso 等只出現在體重語境的字根；barriga／tripa 仍留在 wt-waist-first 的 askedFor（題被叫出來後才用來排序）",
+  "本批觸發字全部走字根（colesterol／triglicérid／estatina／vastatina／engord／adelgaz／múscul／proteín／alergi／alérgic／intoleran／cetogénic），不用整句——重音字母會斷字根（múscul 抓不到 muscular、alergi 抓不到 alérgico），所以有重音的字一律成對收",
+  "慢性病三題（38-40）的三條紅線：① ckd-salt-substitute-danger **不帶任何禁忌**（主庫設計，帶了會被自己的禁忌濾掉最該聽的人），且在地化為超市的 sal light／ligera／menos sodio、並補上「降壓藥本身也升鉀」的疊加；② lung-controller-vs-reliever 是 leadWith、開口第一句就是兩支吸入劑的分工，**不軟化**；③ stroke-dont-stop-antiplatelet 明寫「絕不自己停」＋「看牙、開刀、內視鏡前一定要講」，並把決定權明確還給那位醫師（「esa decisión no le toca a usted」）",
+  "38-40 觸發字全部走字根，並刻意避開三個西班牙特有的誤觸：① **只收 riñón（單數帶重音），不收 riñones**——「me duelen los riñones」在西班牙是腰痛的意思，收了會讓腰痛的人被端上腎臟病衛教（實測：該句現在不觸發任何題）；② 循環類只收整句 **para la circulación**，不收裸字 circulación——否則「腿的循環不好」會被中風題接走；③ **不收 sal／salado 進 TW-EDU-38 的 keywords**——會買 sal light 的人多半是為了血壓，題目該落在血壓題（同主庫設計）",
+  "刻意不進話術的數字：Fagerström ≥ 7 與每日 10 支（戒菸給付門檻，講了會讓他自己判斷不夠格）、doble cocción 的 75%（那是馬鈴薯的單一數字）、Código Ictus 的 3／4.5 小時（時間窗近年延長且因人而異，寫死會造成「超過就別去了」）、FAST 認知率 15%（單一調查）。有出處且有用的數字則保留：透析瘻管「unos seis meses」、磷添加物的 E-450／451／452",
+  "38-40 的制度詞對照：健保→Seguridad Social／centro de salud；腎臟科回診→consulta de nefrología／consulta de enfermedad renal avanzada（ERCA）；營養師→dietista-nutricionista；戒菸門診→consulta de deshabituación tabáquica；長照 1966→servicios sociales del ayuntamiento ＋ valoración de la Ley de Dependencia ＋ programas de respiro familiar；119→112",
+  "stroke-depression-is-part-of-it 額外補了一句 024（主庫該卡沒有轉介號碼）：中風後憂鬱與自殺風險是真實的，且與既有 stress-refer 的寫法一致。這是本批唯一一處『疊層加了主庫沒有的安全出口』——建議人審確認",
+  "TW-EDU-03 recibe la tarjeta bp-salt-substitute-caution y las palabras de sal (sal light／sal liger／sal de régimen／sustituto de la sal／sodio／sal con potasio) ——**刻意放在血壓題、不放腎臟題**：會去買 sal light 的人幾乎都是為了血壓（同主庫設計）。TW-EDU-38 因此仍不收任何 sal／sodio 字根，兩題各自有一張同主題的卡（血壓題是「多數人可用，但腎不好或吃降壓藥要先問」，腎臟題是「對你就是危險的」），語氣不同、對象不同。**兩張都不帶禁忌**——帶警告的卡若掛禁忌會被自己的禁忌濾掉最該聽的人。裸字 sal 絕不可收（會命中 salir／salud）；改用 sodio 當字根，可涵蓋「menos de sodio／bajo en sodio／sin sodio」。",
+  "29 張 blocked 卡補上西班牙文 askedFor（2026-07-31 · 引擎把 askedFor 接上與觸發字同一個比對器＝小寫＋詞頭錨定之後）：疊層的 askedFor 是敗向安全的（沒給就清空，免得中文點名字漏進西語對話），所以「他點名了才回答」這個新機制在西語端原本 29 張全是啞的。選字三原則：① 用**西班牙人真的講得出口的商品名**（Nolotil／Enantyum／Omeprazol／Almax／Gaviscon／Frenadol／Couldina／Gelocatil／Duphalac／Micralax／Orfidal／Dormidina／Zyloric／Adenuric／Fosamax／Prolia／Ozempic／Wegovy／Saxenda／Mounjaro／Prozac），這是這裡真正的問法；② **字根不能太短**——`sen`（番瀉葉）因為會命中 sentir／sentado／sensación 整個棄用、改 glicerina；③ **題內不能太寬**，否則「這個我不能建議」會蓋掉同一題裡做得到的事：TW-EDU-28 刻意不收 hierro（會蓋掉補鐵飲食卡）、TW-EDU-09 不收 crema（會蓋掉保濕卡）、TW-EDU-18 不收 psiquiatra、TW-EDU-13 不收 dentista、TW-EDU-36 不收 pruebas de alergia（正規過敏檢查是該做的事）、TW-EDU-03 不收 saltarme la pastilla（那句 bp-take-meds-on-time 有正面答案）。**TW-EDU-29（孕哺）全部綁在藥上、不綁食物**（medicamento／medicación／antigripal／paracetamol／ibuprofeno／calmante，刻意不收 puedo tomar）——「¿puedo comer papaya estando embarazada?」不該被端上「我不能judge你的用藥」。"
+ ],
+ "vaccination": {
+  "calendar": {
+   "term": "Calendario común de vacunación e inmunización a lo largo de toda la vida",
+   "note": "西班牙的疫苗表涵蓋全生命期、不是只有兒童；由 CISNS（跨自治區衛生委員會）核定、各自治區各自執行。TW-EDU-12 全題照此改寫，取代主庫的「公費疫苗／衛生所」說法",
+   "verifiedAt": "2026-07-31",
+   "verifiedBy": "WebSearch（本 session）",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/calendario/docs/CalendarioVacunacion_Todalavida.pdf",
+    "https://www.saludcastillayleon.es/profesionales/en/vacunaciones/calendario-comun-vacunacion-inmunizacion-largo-toda-vida-re"
+   ]
+  },
+  "gripe": {
+   "status": "每年秋季開打；建議對象含 60 歲以上；對建議對象免費，於 centro de salud 施打",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/gripe_covid19/gripe.htm",
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/gripe_covid19/docs/recomendacionesVacunacionGripe_2025_2026.pdf"
+   ]
+  },
+  "neumococo": {
+   "status": "官方原文：「Se recomienda la vacunación frente a neumococo a partir de los 65 años de edad.」另有各年齡風險族群",
+   "note": "使用的結合型疫苗價數（VNC20／VNC21）各自治區不同、且逐年換版——疊層話術刻意不寫廠牌與價數，只寫「65 歲起有建議、去 centro de salud 問」",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/vacunas/ciudadanos/enfNeumococicaInvasiva.htm"
+   ]
+  },
+  "herpesZoster": {
+   "status": "65 歲起建議接種（2 劑、間隔至少 8 週）；2026-01-01 起建議擴及 80 歲以上、安養機構住民、60 歲以上身心障礙者，並補齊 65-80 歲全部世代",
+   "note": "西班牙長輩口語叫 culebrilla——疊層 keywords 兩種講法都收",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/vacunas/ciudadanos/zoster.htm",
+    "https://www.sanidad.gob.es/areas/promocionPrevencion/vacunaciones/programasDeVacunacion/docs/HerpesZoster_RecomendacionesVacunacion.pdf"
+   ]
+  },
+  "regionalVariation": {
+   "status": "接種活動的日期、預約方式、實際採用的疫苗版本由各自治區決定，差異明顯",
+   "note": "因此 TW-EDU-12 一律以「pregunte en su centro de salud cuáles le tocan a usted」收尾——只指路、不承諾任何一區的具體給付或日期（同 seguridadSocial 的既有立場）",
+   "verifiedAt": "2026-07-31"
+  }
+ },
+ "chronicCare": {
+  "renalDiet": {
+   "potassium": {
+    "status": "西班牙腎臟科標準教法：蔬菜去皮切小塊後**浸泡 12-24 小時、至少換水 2 次**，再用**doble cocción**（水煮後倒掉、換乾淨滾水完成）。馬鈴薯可去除高達 75% 的鉀，冷凍蔬菜去除率高於新鮮（部分 > 90%）。**蒸與烤幾乎去不掉鉀**，因此改用這兩種烹調時前置浸泡是必要的。湯／燉汁含鉀最高（料可吃、湯少喝）。",
+    "note": "『doble cocción』與『remojo』是西班牙腎友衛教的標準詞彙——直接沿用，不自創說法。話術寫「se va buena parte del potasio」而不寫 75%：那是馬鈴薯的單一數字，套到所有蔬菜會變成誤導。",
+    "verifiedAt": "2026-07-31",
+    "sources": [
+     "https://www.revistanefrologia.com/es-reduccion-del-contenido-potasio-judias-articulo-S0211699516300285",
+     "https://www.osakidetza.euskadi.eus/contenidos/informacion/hd_publicaciones/es_hdon/adjuntos/Guia_Alimentacion_Insuficiencia_Renal_C.pdf",
+     "https://fundacionrenal.com/contenido/control-potasio/"
+    ]
+   },
+   "phosphorus": {
+    "status": "加工食品中的**磷酸鹽添加物**＝「fósforo oculto」：E-450（difosfatos）、E-451（trifosfatos）、E-452（polifosfatos）。標示這些添加物的產品磷含量與磷／蛋白質比值都較高，且**添加型無機磷的吸收率遠高於食物天然磷**；歐盟標示規範不要求標出磷含量，食物成分表也多半沒收錄。",
+    "note": "在地化＝把主庫的台灣品項（火鍋料、三合一咖啡）換成西班牙貨架上真的有的：fiambres／embutidos、quesitos y quesos fundidos、refrescos de cola、bollería、precocinados、pan de molde。**E 編號是西班牙人看得懂的抓手**（歐盟標示制度），台灣主庫沒有這一層。",
+    "verifiedAt": "2026-07-31",
+    "sources": [
+     "https://scielo.isciii.es/scielo.php?script=sci_arttext&pid=S0211-69952014000400010",
+     "https://www.sciencedirect.com/science/article/pii/S0211699521000291"
+    ]
+   },
+   "protein": {
+    "status": "西班牙營養師職稱＝ **dietista-nutricionista**（與代謝五題一致）；腎臟科／ERCA 門診可要求飲食諮詢。透析前後蛋白質目標相反（透析前限制、透析後需足量）＝ ckd-stage-decides-everything 的核心事實。",
+    "note": "疊層**不寫任何 g/kg 數字**（同 TW-EDU-37 的決定）：長輩在電話裡算不了，講了只會變成錯誤自我調整。話術改寫「la cantidad justa y de buena calidad」＋指路 dietista-nutricionista。",
+    "verifiedAt": "2026-07-31"
+   }
+  },
+  "dialysisAccess": {
+   "status": "西班牙血管通路臨床指引（SEN／Guía Clínica Española del Acceso Vascular para Hemodiálisis 2017）：自體動靜脈瘻管（FAV nativa）建議在開始血液透析**前約 6 個月**建立（人工血管 3-6 週）。**中心靜脈導管（CVC）與顯著較高的死亡風險相關，尤其透析第一年**，應盡量避免。腹膜透析（diálisis peritoneal）＝居家治療，由 ERCA 門診提供結構化資訊後由病人共同選擇（consulta ERCA / prediálisis）。",
+   "note": "主庫的「拖到喘不過氣被送急診、脖子插管」在西班牙完全成立——ckd-dialysis-not-the-end 照寫，並補上西班牙指引的 6 個月數字（有出處，非編造）。制度詞用 **consulta de enfermedad renal avanzada（ERCA）**，取代主庫的「腎臟科回診」。刻意**不寫給付**（同 seguridadSocial 立場）。",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://revistanefrologia.com/es-guia-clinica-espanola-del-acceso-vascular-hemodialisis-articulo-S0211699517302175",
+    "https://servei.org/wp-content/uploads/Guia_clinica_acceso_vascular.pdf",
+    "https://nefrologiaaldia.org/es-articulo-utilizacion-de-la-dialisis-peritoneal-indicaciones-y-contraindicacione-707",
+    "https://www.revistanefrologia.com/es-estudio-erca-caracteristicas-basales-evaluacion-articulo-S021169951930061X"
+   ]
+  },
+  "renalAnaemia": {
+   "status": "腎性貧血主因＝**內生性 eritropoyetina 生成不足**（＋紅血球壽命縮短、尿毒素與發炎抑制骨髓、hepcidina 上升導致鐵利用障礙）。治療＝ AEE（agentes estimulantes de la eritropoyesis，西班牙常用 darbepoetina α／epoetina β）＋必要時補鐵；**單補鐵不足以矯正**。",
+   "note": "ckd-anemia-is-different 照此寫，並保留主庫「自己去買鐵劑不一定補得起來」的誠實立場。**不寫針劑品牌與劑量**——只給一句他在診間講得出口的話（「me canso mucho y me ven muy pálido」）。與 TW-EDU-28（一般貧血題）分工不衝突：那題講缺鐵，這張講的是腎友的例外。",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://nefrologiaaldia.org/es-articulo-anemia-en-la-enfermedad-renal-cronica-178",
+    "https://mgyf.org/anemia-enfermedad-renal-cronica-protocolo-estudio-abordaje-derivacion-nefrologia/"
+   ]
+  },
+  "inhalerCare": {
+   "status": "西班牙吸入技術錯誤率高、年齡愈大愈高；**farmacia comunitaria 與 atención primaria 的護理師都會實地檢查吸入技術**（已有跨層級研究：醫院急診觀察區＋基層藥師門診＋社區藥局）。護理師應在開藥當下教學（建議 ≥ 15 分鐘）並定期複查。**Rehabilitación respiratoria**＝肌力訓練＋衛教＋呼吸物理治療，建議不少於 8 週／20 次，可改善呼吸困難、運動耐力與生活品質，基層也有方案。",
+   "note": "在地化的下一步不是「回診時帶去」而是**「farmacia 或 centro de salud 的護理師」**——西班牙藥局密度極高、免費口頭諮詢，是最低門檻的入口（與既有 farmacia 條目一致）。lung-inhaler-technique 與 lung-breathing-and-moving 都照此指路。**不寫週數與次數**（各中心不同），只寫「programas de unas semanas」。",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://scielo.isciii.es/scielo.php?pid=S1130-63432019000600007&script=sci_arttext&tlng=es",
+    "https://comunidad.semfyc.es/article/uso-correcto-de-inhaladores-en-personas-con-enfermedad-pulmonar-obstructiva-cronica-una-cuestion-de-profesionales-y-poblacion",
+    "https://www.archbronconeumol.org/es-rehabilitacion-respiratoria-articulo-S0300289614000878"
+   ]
+  },
+  "codigoIctus": {
+   "status": "**Código Ictus**＝西班牙全國性的急性中風快速通道，由 112 接到疑似中風即啟動。民眾端辨識口訣＝ **CARA – BRAZO – HABLA – TIEMPO**（FAST 的西班牙版）：臉歪／單臂無力／講話講不清楚／時間就是大腦。再灌流治療有時間窗（各文獻提到 Código Ictus 以症狀出現後數小時內為核心），**因此「症狀開始的時間」是打 112 時最關鍵的一句話**；睡醒才發現者以「最後被看到正常的時間」為準。西班牙民眾對 FAST 的認知率偏低（有調查僅約 15%）。",
+   "note": "**這是本批最重要的在地化**：主庫「臉歪、手垂、話講不清楚 → 打 119」在西班牙有正式對應制度，所以話術除了換 112，還要教他**講出「creo que es un ictus」**（觸發 Código Ictus）與**報出開始時間**。stroke-fast-recognize 與 stroke-refer 都照此寫。**刻意不寫 3／4.5 小時**：血栓抽吸的時間窗近年已延長且因人而異，寫死數字會讓「超過就別去了」的誤解成形——改寫「solo se puede en las primeras horas」。認知率 15% 那個數字**未寫進話術**（單一調查、非官方統計）。",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.comunidad.madrid/servicios/salud/codigo-ictus",
+    "https://www.cofm.es/es/blog/codigo-ictus-cada-minuto-cuenta/",
+    "https://isanidad.com/348711/solo-el-15-de-la-poblacion-conoce-el-metodo-fast-para-detectar-un-ictus/"
+   ]
+  },
+  "dependencyAndRespite": {
+   "status": "中風後照顧者的入口＝ **servicios sociales del ayuntamiento → valoración de la Ley de Dependencia（39/2006）**，由此進入 ayuda a domicilio、fisioterapia、productos de apoyo、居家無障礙改造補助與 **programas de respiro familiar**。執行、名稱與額度由各自治區決定，普遍有等候期。",
+   "note": "**主庫的長照專線 1966 在此完全替換掉**（絕不出現）。與既有 serviciosSociales 條目一致：只指路、不承諾額度與時程。stroke-caregiver-support 與 stroke-fall-and-home 都導向同一個窗口（同一次 dependencia 申請就能連帶處理居家改造），這比分開講更符合西班牙的實際流程。",
+   "verifiedAt": "2026-07-31"
+  },
+  "strokeSecondaryPrevention": {
+   "status": "西班牙口語與品牌對照：抗血小板＝ **Adiro**（AAS 100 mg，長輩最常講的名字）、clopidogrel；抗凝血＝ **Sintrom**（acenocumarol）與新型口服抗凝血藥。ginkgo 與 nattokinasa 與上述併用會升高出血風險（ginkgo × 抗凝血的交互作用已寫在既有的 tcm-herb-interaction）。",
+   "note": "「通血路」的西班牙對應＝ **sueros/vitaminas「para la circulación」puestas en vena、ginkgo、nattokinasa、ajo en cápsulas、「limpiezas de la sangre」**——這是本批指定的在地化，已全部點名。出血警告照主庫保留並綁在 Adiro／clopidogrel／Sintrom 三個他叫得出來的名字上。**「para la circulación」同時收進 keywords**（整句片語、不是裸字 circulación）——這樣「腿的血液循環不好」不會被中風題接走。",
+   "verifiedAt": "2026-07-31"
+  }
+ }
+}

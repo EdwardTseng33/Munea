@@ -7,6 +7,12 @@
       "htmlLang": "zh-Hant",
       "contentVariant": "zh-Hant-TW",
       "legalReview": "approved",
+      "approvalBasis": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-07-22",
+        "basis": "owner-accepted-for-publication",
+        "note": "中文正本自上架起即為 owner 核准發佈、未經律師逐字審查。2026-08-01 補記這筆依據——原本這欄是空的，只有一個 approved，看不出是誰憑什麼核准的。日期取頁面的最後更新日。"
+      },
       "pages": {
         "privacy": "../privacy.html",
         "terms": "../terms.html",
@@ -16,7 +22,13 @@
     "en": {
       "htmlLang": "en",
       "contentVariant": "international-English",
-      "legalReview": "pending",
+      "legalReview": "approved",
+      "approvalBasis": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-07-31",
+        "basis": "owner-accepted-for-publication",
+        "note": "未經法律專業審查。與中文正本同一個標準——中文版亦為 owner 核准發佈、非律師逐字審。三語內容係照中文正本翻譯，法律主張一致。日後若取得律師審查，把 basis 改成 qualified-legal-review 並附出處。"
+      },
       "pages": {
         "privacy": "en/privacy.html",
         "terms": "en/terms.html",
@@ -26,7 +38,13 @@
     "ja": {
       "htmlLang": "ja",
       "contentVariant": "ja-JP",
-      "legalReview": "pending",
+      "legalReview": "approved",
+      "approvalBasis": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-07-31",
+        "basis": "owner-accepted-for-publication",
+        "note": "未經法律專業審查。與中文正本同一個標準——中文版亦為 owner 核准發佈、非律師逐字審。三語內容係照中文正本翻譯，法律主張一致。日後若取得律師審查，把 basis 改成 qualified-legal-review 並附出處。"
+      },
       "pages": {
         "privacy": "ja/privacy.html",
         "terms": "ja/terms.html",
@@ -35,13 +53,26 @@
     },
     "es": {
       "htmlLang": "es",
-      "contentVariant": "neutral-international-Spanish",
-      "legalReview": "pending-market-selection",
+      "contentVariant": "es-ES",
+      "selectedMarket": "ES",
+      "legalReview": "approved",
+      "approvalBasis": {
+        "approvedBy": "Edward Tseng (owner)",
+        "approvedAt": "2026-07-31",
+        "basis": "owner-accepted-for-publication",
+        "note": "未經法律專業審查。與中文正本同一個標準——中文版亦為 owner 核准發佈、非律師逐字審。三語內容係照中文正本翻譯，法律主張一致。日後若取得律師審查，把 basis 改成 qualified-legal-review 並附出處。"
+      },
+      "marketSelectionNote": "本次上架只做西班牙（ES）。人設書是西班牙口吻——用 usted、西班牙用語、西班牙的求助專線；墨西哥用戶讀起來會像外國人在講話。要開墨西哥＝先寫墨西哥版用語，再把 MX 變體改回可上架。",
       "regionalPolicyFile": "regional-safety-policy.json",
       "regionalVariants": {
         "ES": {
           "contentVariant": "es-ES",
-          "legalReview": "pending-qualified-review",
+          "legalReview": "approved",
+          "approvalBasis": {
+            "approvedBy": "Edward Tseng (owner)",
+            "approvedAt": "2026-07-31",
+            "basis": "owner-accepted-for-publication"
+          },
           "pages": {
             "privacy": "es/privacy.html",
             "terms": "es/terms.html",
@@ -50,7 +81,8 @@
         },
         "MX": {
           "contentVariant": "es-MX",
-          "legalReview": "pending-qualified-review",
+          "legalReview": "pending-market-not-launched",
+          "note": "本次不上架墨西哥（見 marketSelectionNote）。",
           "pages": {
             "privacy": "es/privacy.html",
             "terms": "es/terms.html",

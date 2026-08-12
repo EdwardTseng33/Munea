@@ -38,6 +38,12 @@
       "port": 5000
     },
     {
+      "name": "munea-b2b-static",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3112", "--directory", "munea-b2b"],
+      "port": 3112
+    },
+    {
       "name": "munea-b2b-dev",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vercel", "dev", "--cwd", "E:/Claude/Munea/munea-b2b", "--listen", "3111", "--yes"],

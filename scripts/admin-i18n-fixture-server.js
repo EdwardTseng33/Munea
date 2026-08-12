@@ -23,7 +23,25 @@ function meta(source) {
   };
 }
 
+const COMPANION_TEMPLATES = [
+  "nening-real-female",
+  "companion-real-male",
+  "munea-2d-xiaoyun",
+  "munea-2d-mimi",
+];
+let companionCursor = 0;
+
+const ENTERPRISE_SEATS = [
+  { seatId: "seat-1", seatStatus: "active", clientId: "ent-1", clientName: "陽光長照中心",
+    planTier: "pro", contractEnd: "2027-03-31", graceUntil: null, waitingUntil: null },
+  { seatId: "seat-2", seatStatus: "grace", clientId: "ent-2", clientName: "康寧護理之家",
+    planTier: "plus", contractEnd: "2026-07-01", graceUntil: "2026-08-15T00:00:00Z", waitingUntil: null },
+];
+let enterpriseCursor = 0;
+
 function account(id, name, localeContext, plan, points, status) {
+  const companionTemplateId = COMPANION_TEMPLATES[companionCursor++ % COMPANION_TEMPLATES.length];
+  const enterpriseSeat = ENTERPRISE_SEATS[enterpriseCursor++] || null;
   return {
     accountId: id,
     accountName: `${name} household`,
@@ -41,7 +59,12 @@ function account(id, name, localeContext, plan, points, status) {
       timezone: localeContext.timeZone,
       regionCode: localeContext.countryCode,
     },
-    companion: { templateId: "nening-real-female", displayName: "Munea" },
+    // 每戶給不同的角色款式，並刻意帶「用戶自己取的暱稱」——後台那欄要顯示我們的角色編號、
+    // 不是這個暱稱（2026-07-30 Edward 拍板）。四款不同才驗得出對照表真的在用。
+    companion: { templateId: companionTemplateId, displayName: "用戶取的暱稱" },
+    // 企業席次：只給前兩戶，而且刻意一戶生效中、一戶在緩衝期——
+    // 名冊那行小字與明細卡的「哪天自動轉回免費」都要驗得到（2026-07-30）。
+    enterprise: enterpriseSeat,
     familyMembers: { count: 3, byRole: { elder: 1, child: 2 } },
     plan,
     points,

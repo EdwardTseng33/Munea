@@ -62,14 +62,15 @@ class FakeClock:
 def _load_decode_call_token(leeway_seconds, now):
     source = FLASHHEAD_SERVER.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(FLASHHEAD_SERVER))
-    func_node = next(
-        (node for node in ast.walk(tree)
-         if isinstance(node, ast.FunctionDef) and node.name == "_decode_call_token"),
-        None,
-    )
-    assert func_node is not None, "could not find _decode_call_token in flashhead_server.py"
-    func_source = ast.get_source_segment(source, func_node)
-    assert func_source, "ast.get_source_segment returned nothing for _decode_call_token"
+    wanted = {"_call_token_worker_matches", "_decode_call_token"}
+    func_nodes = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name in wanted
+    ]
+    assert {node.name for node in func_nodes} == wanted, "could not find call token helpers"
+    func_nodes.sort(key=lambda node: node.lineno)
+    func_source = "\n\n".join(ast.get_source_segment(source, node) for node in func_nodes)
+    assert func_source, "ast.get_source_segment returned no call token helpers"
 
     namespace = {
         "base64": base64,
@@ -181,6 +182,15 @@ def test_worker_id_mismatch_rejected():
     print("test_worker_id_mismatch_rejected: PASS")
 
 
+def test_base_worker_slot_claim_only_matches_its_process():
+    token = _make_token({"exp": 1030.0, "worker_id": "runpod-box", "slot_id": 2})
+    decode = _load_decode_call_token(leeway_seconds=330, now=1000.0)
+    assert decode(token, SECRET, "runpod-box-p1") is not None
+    assert decode(token, SECRET, "runpod-box-p0") is None
+    assert decode(token, SECRET, "other-box-p1") is None
+    print("test_base_worker_slot_claim_only_matches_its_process: PASS")
+
+
 def test_missing_token_or_secret_returns_none():
     decode = _load_decode_call_token(leeway_seconds=330, now=1000.0)
     assert decode("", SECRET, WORKER) is None
@@ -203,6 +213,7 @@ def main():
     test_token_minted_by_fast_clock_has_no_upper_bound_rejection()
     test_bad_signature_rejected()
     test_worker_id_mismatch_rejected()
+    test_base_worker_slot_claim_only_matches_its_process()
     test_missing_token_or_secret_returns_none()
     test_malformed_token_without_dot_returns_none()
     print("Call token clock-leeway regression test: ALL PASS")

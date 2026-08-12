@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
+from collections import deque
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, Response
@@ -18,9 +21,31 @@ STATUS: dict[str, Any] = {
     "last_run_at": 0.0,
     "last_success_at": 0.0,
     "last_result": None,
+    "last_failure_waiting": 0,
     "last_error": "",
     "cycles": 0,
 }
+
+# 開卡/收卡帳本（2026-07-31 · Edward 早上問「為什麼開了一張 5090」、
+# 我們只能靠 pod 命名反推——因為 run_once 的決定只存 last_result 一格、
+# 下一輪 no_change 就蓋掉，雲端日誌從來沒有這一筆）。
+# 兩路並行：①每筆非 no_change 動作立刻 print 進 Cloud Run 日誌（永久帳）
+# ②記憶體環形帳本供 /events 直接查（重啟會清空、日誌才是正本）。
+EVENTS: deque[dict[str, Any]] = deque(maxlen=100)
+
+
+def _record_event(result: dict[str, Any]) -> None:
+    action = str(result.get("action") or "")
+    if action in ("", "no_change"):
+        return
+    event = {
+        "at": time.time(),
+        "at_iso": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        **result,
+    }
+    EVENTS.append(event)
+    print("[runpod-controller] event: " + json.dumps(event, ensure_ascii=False),
+          flush=True)
 
 
 def _validated_config() -> Config:
@@ -84,12 +109,27 @@ async def _controller_loop(stop: asyncio.Event) -> None:
                 "last_error": "",
                 "cycles": int(STATUS["cycles"]) + 1,
             })
+            _record_event(result)
         except Exception as exc:
+            # 失敗的時候順手記下「當下有沒有人在等」——健康檢查靠這個決定要不要叫人。
+            # 開不出備援，沒人在等的時候只是浪費；有人在等就是打不通，兩者不能同一個等級。
+            waiting = 0
+            try:
+                snap = controller.gateway.snapshot() or {}
+                waiting = max(
+                    int(snap.get("queue_depth") or 0),
+                    int(snap.get("avatar_active") or 0),
+                    int(snap.get("active_calls") or 0),
+                )
+            except Exception:
+                waiting = 0   # 連總機都問不到就當沒人在等，這種情況本來就會被 stalled 抓到
             STATUS.update({
                 "last_error": f"{type(exc).__name__}: {str(exc)[:300]}",
+                "last_failure_waiting": waiting,
                 "cycles": int(STATUS["cycles"]) + 1,
             })
-            print("[runpod-controller] run_once failed: " + STATUS["last_error"], flush=True)
+            print("[runpod-controller] run_once failed (waiting=%d): %s"
+                  % (waiting, STATUS["last_error"]), flush=True)
         try:
             await asyncio.wait_for(stop.wait(), timeout=controller.config.poll_seconds)
         except asyncio.TimeoutError:
@@ -152,6 +192,40 @@ def _health_payload() -> tuple[dict[str, Any], int]:
         payload.update({"ok": False, "state": "starting"})
         return payload, 200
 
+    # 這裡要分兩種「跑不完」，因為它們該叫的人完全不同
+    # （Edward 2026-08-07：看門狗從早上 8 點叫到下午，但服務本身根本沒壞）。
+    #
+    #   ① 管家自己壞了（程式爆掉、連不到總機）→ 真的要叫工程的人來看 → 503
+    #   ② 對方不讓我開卡（餘額不足、機房沒貨）→ 管家運作完全正常，只是被拒絕。
+    #      報成 503 等於天天喊「服務掛了」，查過去卻發現服務好好的——狼來了喊久了，
+    #      真的掛掉那次就沒人理。這種要回 200，但把原因寫在狀態上讓人看得見。
+    #
+    # 不是靜音：state 會明說 provider_unavailable、last_error 原樣保留，
+    # 該補錢的事實一眼看得到，只是不再偽裝成服務故障。
+    err = str(STATUS.get("last_error") or "")
+    provider_blocked = any(k in err.lower() for k in (
+        "balance is too low", "add funds", "insufficient",
+        "no instances currently available", "out of capacity",
+    ))
+    # 但「開不出卡」什麼時候該叫，要看有沒有人在等：
+    #   沒人在等 → 開不出來不影響任何人，回 200（別喊狼來了）
+    #   有人在等 → 有人打進來卻沒機器接，那是真的服務中斷，一定要叫
+    waiting = int(STATUS.get("last_failure_waiting") or 0)
+    if provider_blocked and waiting == 0:
+        payload.update({
+            "ok": True,
+            "state": "provider_unavailable",
+            "note": "備援開不出來（餘額不足或機房沒貨），但目前沒有人在等；管家本身運作正常",
+        })
+        return payload, 200
+    if provider_blocked:
+        payload.update({
+            "ok": False,
+            "state": "provider_unavailable_with_demand",
+            "note": "有人在等卻開不出備援——餘額不足或機房沒貨，這會讓使用者打不通",
+        })
+        return payload, 503
+
     # Cycles are not completing. This has to fail the uptime check: ok=false on
     # an HTTP 200 let a stalled control loop read as healthy from the outside.
     payload.update({"ok": False, "state": "stalled"})
@@ -168,3 +242,10 @@ def health(response: Response) -> dict[str, Any]:
 @app.get("/")
 def root(response: Response) -> dict[str, Any]:
     return health(response)
+
+
+@app.get("/events")
+def events() -> dict[str, Any]:
+    """最近的開卡/收卡動作（新到舊）。重啟會清空；完整歷史看 Cloud Run 日誌
+    的 "[runpod-controller] event:" 行。"""
+    return {"events": list(reversed(EVENTS)), "count": len(EVENTS)}

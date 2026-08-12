@@ -105,6 +105,8 @@ for (const sourcePath of ['engine/apple_store.py', 'web/src/store.js']) {
   );
 }
 const storeBridge = fs.readFileSync(path.join(ROOT, 'web', 'src', 'store.js'), 'utf8');
+const appShell = fs.readFileSync(path.join(ROOT, 'web', 'src', 'app.js'), 'utf8');
+const appHtml = fs.readFileSync(path.join(ROOT, 'web', 'index.html'), 'utf8');
 const nativeStoreBridge = fs.readFileSync(
   path.join(ROOT, 'ios', 'App', 'App', 'StorePlugin.swift'),
   'utf8',
@@ -119,12 +121,38 @@ for (const field of ['displayName', 'description', 'displayPrice']) {
 assert(storeBridge.includes('getProducts: getProducts'));
 assert(storeBridge.includes('PRODUCT_CACHE'));
 assert(storeBridge.includes('displayPrice: String(item.displayPrice || \'\')'));
+assert(appHtml.includes('src/i18n/purchase-flow.js'));
+assert(appShell.includes('window.MuneaStore.getProducts()'));
+assert(appShell.includes('product.displayPrice'));
+assert(appShell.includes('muneaPurchaseFlow()'));
+assert(appShell.includes("document.querySelector('#topUpModal .tu-card.on')"));
+assert(appShell.includes("clearBtnBusy(b, muneaT('purchase.manageSubscription'"));
 assert(
   !/displayPrice:\s*['"][^'"]*(?:NT\$|US\$|[$€¥￥])/.test(storeBridge),
   'Store bridge must never hard-code a localized display price',
 );
 
 const hanPattern = /[\u3400-\u9fff\uf900-\ufaff]/u;
+function visibleFallbackBetween(startId, endId) {
+  const start = appHtml.indexOf(`id="${startId}"`);
+  const end = appHtml.indexOf(`id="${endId}"`, start + 1);
+  assert(start >= 0 && end > start, `Could not isolate ${startId} fallback markup`);
+  return appHtml
+    .slice(start, end)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+for (const [startId, endId] of [
+  ['topUpModal', 'planModal'],
+  ['planModal', 'visitModal'],
+]) {
+  assert(
+    !hanPattern.test(visibleFallbackBetween(startId, endId)),
+    `${startId} fallback markup contains accidental Han copy`,
+  );
+}
 const forbiddenPricePattern = /(?:NT\$|US\$|[$€¥￥]|\b(?:USD|TWD|JPY|EUR)\b)/i;
 for (const localeKey of localeKeys) {
   const locale = manifest.locales[localeKey];
@@ -160,8 +188,13 @@ for (const localeKey of localeKeys) {
 }
 
 const spanish = manifest.locales.es;
-assert.equal(spanish.appStoreLocale, null, 'Spanish IAP locale must wait for the market decision');
-assert.equal(spanish.selectedVariant, null);
+assert.equal(spanish.appStoreLocale, null, 'Spanish IAP stays variant-based; the storefront locale lives in marketVariants');
+assert.equal(spanish.selectedVariant, 'es-ES', '2026-07-30 decision: first Spanish market is Spain (es-ES)');
+assert.deepEqual(
+  spanish.selectedVariants,
+  ['es-ES'],
+  'Only es-ES is selected; es-MX must stay prepared but unselected until its own market decision',
+);
 assert.deepEqual(
   spanish.candidateAppStoreLocales,
   ['es-ES', 'es-MX'],

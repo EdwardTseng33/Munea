@@ -70,7 +70,13 @@ class VoiceLocaleSessionTests(unittest.TestCase):
         self.assertEqual(profile["speechLanguageCode"], "en-US")
         self.assertEqual(profile["localeContext"]["uiLocale"], "ja")
         self.assertEqual(profile["localeContext"]["countryCode"], "JP")
-        self.assertNotIn("119", profile["regionalSafetyInstruction"])
+        # 要守的是「台灣的號碼不可以漏到日本使用者那裡」。
+        # 原本寫 assertNotIn("119") ——但日本的消防救護本來就是 119，
+        # 2026-07-31 四國急難指引補上正確號碼後這條就一直是紅的（跟程式對不對無關）。
+        # 改成挑真正只有台灣有的 1925，並要求那段話講的是日本。
+        instruction = profile["regionalSafetyInstruction"]
+        self.assertNotIn("1925", instruction)
+        self.assertIn("Japan", instruction)
 
     def test_top_level_client_locale_aliases_are_never_trusted(self):
         session = VoiceLocaleSession.from_verified_call_payload({

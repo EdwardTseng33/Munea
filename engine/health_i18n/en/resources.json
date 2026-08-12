@@ -1,0 +1,595 @@
+{
+ "locale": "en",
+ "region": "US",
+ "verifiedAt": "2026-07-31",
+ "verifiedBy": "US health content pass, batches 1+2+3+4 (kb-i18n-20260731 / kb-rest-20260731 / metab-i18n-20260731 / chronic-i18n-20260731); emergency numbers per docs/qa/i18n/emergency-numbers-verification-2026-07-31.md",
+ "emergency": {
+  "all": {
+   "number": "911",
+   "use": "Medical / fire / police emergencies",
+   "hours": "24/7",
+   "note": "Single combined emergency number nationwide. Replaces every use of Taiwan's fire/ambulance number in localized copy."
+  },
+  "crisis": {
+   "number": "988",
+   "name": "988 Suicide & Crisis Lifeline",
+   "hours": "24/7",
+   "callOrText": true,
+   "note": "Call OR text the same three digits. Replaces Taiwan's mental-health hotline in localized copy.",
+   "sources": [
+    "https://988lifeline.org/",
+    "https://www.samhsa.gov/mental-health/988"
+   ]
+  },
+  "eldercare": {
+   "number": "1-800-677-1116",
+   "name": "Eldercare Locator",
+   "hours": "Mon-Fri 08:00-21:00 US Eastern — NOT 24 hours",
+   "use": "Connects callers to their local Area Agency on Aging: respite care, caregiver support, senior services. Replaces Taiwan's long-term-care hotline in localized copy.",
+   "note": "Every mention in say text must keep the 'weekdays' caveat. Emergencies always go to 911, never this line.",
+   "sources": [
+    "https://eldercare.acl.gov/"
+   ]
+  }
+ },
+ "numberPolicy": "No non-US hotline or emergency number may appear anywhere in the en overlay (no Taiwan, Japan, Spain, or EU numbers). The numbers allowed in en say text are 911, 988, 1-800-677-1116 (Eldercare Locator) and 1-800-QUIT-NOW (state tobacco quitlines, added in batch 4 for the COPD quit-smoking card).",
+ "systemTerms": {
+  "healthInsurance": "Say 'Medicare' (federal, 65+), 'Medicaid' (low income), or 'your insurance' — never Taiwan NHI framing. Coverage claims in copy are limited to the two verified ones below (MTM and acupuncture).",
+  "primaryCare": "Entry-point doctor is 'your primary care doctor' (PCP) — the US equivalent of Taiwan's 家醫科 referral in refer cards.",
+  "pharmacistReview": {
+   "term": "medication review ('brown bag' review) at the pharmacy",
+   "medicare": "Medicare Part D plans must offer Medication Therapy Management (MTM) to members who qualify: a free annual Comprehensive Medication Review by a pharmacist covering prescriptions, OTC, vitamins, and supplements. Eligible members are auto-enrolled. Used in supp-ask-pharmacist and lex-pharmacist to replace Taiwan's NHI-funded 用藥整合.",
+   "sources": [
+    "https://www.medicare.gov/health-drug-plans/part-d/what-plans-cover/plan-rules/safety-management-programs",
+    "https://www.ncoa.org/article/medication-therapy-management/"
+   ]
+  },
+  "respiteCare": {
+   "term": "respite care, found via the Eldercare Locator / local Area Agency on Aging",
+   "note": "Replaces Taiwan 長照 1966 喘息服務 in sleep-respite-service and mood-caregiver-respite.",
+   "sources": [
+    "https://eldercare.acl.gov/"
+   ]
+  },
+  "acupunctureMedicare": {
+   "claim": "Medicare covers acupuncture ONLY for chronic low back pain: up to 12 sessions in 90 days, 8 more if improving (max 20 per 12 months), through Medicare-enrolled providers.",
+   "usedIn": "tcm-see-doctor",
+   "sources": [
+    "https://www.medicare.gov/coverage/acupuncture",
+    "https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=373"
+   ]
+  },
+  "vaccineCoverage": {
+   "claim": "Medicare Part B covers influenza, pneumococcal and COVID-19 vaccines (plus hepatitis B for medium/high risk) with no cost-sharing. Shingles (RRZV/Shingrix), RSV and Tdap run through Part D; since the Inflation Reduction Act took effect 1 Jan 2023, Part D plans must cover all ACIP-recommended adult vaccines at $0 cost-sharing — but generally only in-network. Beneficiaries with no Part D plan can still be billed for shingles/RSV.",
+   "usedIn": "vax-free-eligibility",
+   "replaces": "Taiwan's government-funded (公費) flu + pneumococcal eligibility card.",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/vaccines",
+    "https://www.ncoa.org/article/medicare-and-medicaid-now-fully-cover-preventive-vaccines/",
+    "https://www.medicareinteractive.org/understanding-medicare/medicare-prescription-drug-coverage-part-d/medicare-part-d-costs/part-d-covered-vaccinations",
+    "https://aspe.hhs.gov/sites/default/files/documents/3854c8f172045f5e5a4e000d1928124d/part-d-covered-vaccines-no-cost-sharing.pdf"
+   ]
+  },
+  "adultImmunizationSchedule": {
+   "note": "CDC/ACIP adult schedule items relevant to 65+: annual influenza (HD-IIV3, RIV3 or aIIV3 preferred at 65+); pneumococcal conjugate (ACIP lowered routine age from 65 to 50); RSV; 2-dose recombinant zoster (Shingrix) from age 50; COVID-19. en copy deliberately does NOT hard-code ages or dose counts — the schedule moves, and the card tells the user to have the pharmacy or doctor look up what they are due for.",
+   "usedIn": "vax-why, vax-side-effects",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.cdc.gov/vaccines/hcp/imz-schedules/adult-notes.html",
+    "https://www.cdc.gov/vaccines/hcp/imz-schedules/downloads/adult/adult-combined-schedule.pdf",
+    "https://www.pharmacytimes.com/view/acip-lowers-pneumococcal-vaccination-recommendation-to-age-50"
+   ]
+  },
+  "boneDensityMedicare": {
+   "claim": "Medicare Part B covers a bone mass measurement (DXA) once every 24 months for qualifying beneficiaries — estrogen-deficient women at clinical risk, x-ray evidence of osteopenia/osteoporosis/vertebral fracture, >3 months of corticosteroids, primary hyperparathyroidism, or monitoring an FDA-approved osteoporosis drug — at $0 when the provider accepts assignment.",
+   "usedIn": "osteo-dexa",
+   "replaces": "Taiwan NHI (健保) DXA reimbursement line.",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/bone-mass-measurements",
+    "https://www.goodrx.com/insurance/medicare/does-medicare-cover-bone-density-test"
+   ]
+  },
+  "annualWellnessVisit": {
+   "claim": "The Medicare Annual Wellness Visit is $0 for beneficiaries with Part B (after the first 12 months of Part B) and is required to include detection of cognitive impairment, plus a review of functional ability and safety that covers fall risk.",
+   "usedIn": "mci-checkup",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/yearly-wellness-visits",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC9517732/",
+    "https://www.mayoclinichealthsystem.org/hometown-health/speaking-of-health/medicare-annual-wellness-visit"
+   ]
+  },
+  "otcHearingAids": {
+   "claim": "FDA final rule effective 17 Oct 2022 created an OTC category: air-conduction hearing aids may be sold without a prescription, medical exam or audiologist visit to adults 18+ with perceived mild-to-moderate hearing loss. More severe loss remains prescription.",
+   "usedIn": "mci-hearing-vision",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.fda.gov/medical-devices/hearing-aids/otc-hearing-aids-what-you-should-know",
+    "https://www.federalregister.gov/documents/2022/08/17/2022-17230/medical-devices-ear-nose-and-throat-devices-establishing-over-the-counter-hearing-aids"
+   ]
+  },
+  "speechSwallowEvaluation": {
+   "note": "US equivalent of Taiwan's 語言治療師 swallow assessment: a speech-language pathologist (SLP) or ENT. Copy says 'with a doctor's order it's usually covered' rather than naming a specific Medicare benefit, because coverage depends on setting and plan.",
+   "usedIn": "swallow-eval, swallow-refer"
+  },
+  "medicalNutritionTherapyCKD": {
+   "claim": "Medicare Part B covers Medical Nutrition Therapy (MNT) with a registered dietitian for non-dialysis chronic kidney disease (stages 3-4), for diabetes, and for 36 months after a kidney transplant: 3 hours in the first calendar year, 2 hours per year afterwards, $0 to the beneficiary. A physician referral is required; more hours can be added if the doctor documents a change in condition.",
+   "usedIn": "ckd-protein-ask-dietitian",
+   "replaces": "Taiwan's 腎臟科營養師飲食諮詢 (NHI-funded) line in the zh master.",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/medical-nutrition-therapy-services",
+    "https://www.kidney.org/news-stories/advocacy/what-kidney-patients-need-to-know-about-medical-nutrition-therapy"
+   ]
+  },
+  "kidneyDiseaseEducation": {
+   "claim": "Medicare Part B covers Kidney Disease Education (KDE): up to 6 sessions in a lifetime for beneficiaries with stage 4 CKD (eGFR 15-29), on referral from the doctor managing the kidney condition. Standard Part B cost-sharing applies (20% after the deductible) — the copy therefore says the benefit exists, not that it is free.",
+   "usedIn": "ckd-dialysis-not-the-end",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/kidney-disease-education",
+    "https://www.cms.gov/Regulations-and-Guidance/Guidance/Transmittals/downloads/R117bp.pdf"
+   ]
+  },
+  "smokingCessationCoverage": {
+   "claim": "Medicare Part B covers up to 8 face-to-face tobacco-cessation counseling visits in a 12-month period with no deductible or coinsurance when the provider accepts assignment. Part D covers the prescription quit medicines (varenicline, bupropion). 1-800-QUIT-NOW reaches the caller's state quitline: free coaching, and most states mail free nicotine patches/gum to eligible callers.",
+   "usedIn": "lung-quit-smoking",
+   "replaces": "Taiwan's 戒菸門診 + 補助 line in the zh master.",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/counseling-to-prevent-tobacco-use-tobacco-caused-disease",
+    "https://www.medicareinteractive.org/understanding-medicare/medicare-covered-services/preventive-services/smoking-cessation-counseling",
+    "https://www.cdc.gov/tobacco/hcp/patient-care/quitlines-and-other-resources.html"
+   ]
+  },
+  "pulmonaryRehab": {
+   "claim": "Medicare Part B covers pulmonary rehabilitation for moderate to very severe COPD (GOLD II-IV) on referral from the treating physician: up to 36 sessions, with another 36 possible if the MAC approves. Standard Part B cost-sharing applies, so the copy says 'covered', never 'free'.",
+   "usedIn": "lung-breathing-and-moving",
+   "replaces": "Taiwan's 醫院肺部復健課 line.",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/pulmonary-rehabilitation-programs",
+    "https://med.noridianmedicare.com/web/jeb/specialties/cardiology/cardiac-and-pulmonary-rehabilitation-programs"
+   ]
+  },
+  "inhalerTechniqueCheck": {
+   "term": "ask a pharmacist or a respiratory therapist to watch you use the inhaler; ask about a spacer",
+   "note": "Reviews and pharmacy studies repeatedly find most patients make at least one error, and roughly half make a critical one; reported rates range widely by device and study (66%-92% for at least one error). en copy deliberately says 'most people' rather than quoting a percentage — the range is too wide to state one number honestly.",
+   "usedIn": "lung-inhaler-technique",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC7151665/",
+    "https://www.ajmc.com/view/study-half-of-patients-make-critical-errors-when-using-inhalers",
+    "https://www.nature.com/articles/s41533-025-00422-0"
+   ]
+  },
+  "homeModificationsNotCovered": {
+   "claim": "Original Medicare does NOT cover grab bars or bathroom/home modifications (classed as convenience items, not DME). Some Medicare Advantage plans include home-safety benefits; state Medicaid HCBS waivers frequently do cover home modifications; Area Agencies on Aging often run home-repair/modification programs. An occupational therapist home-safety visit is covered under the Medicare home health benefit when ordered.",
+   "usedIn": "stroke-fall-and-home",
+   "replaces": "Taiwan 長照 residential-modification subsidy (無障礙改造補助) — there is no direct US equivalent, so the card states the gap honestly instead of implying a benefit that does not exist.",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicareadvantage.com/coverage/does-medicare-cover-grab-bars",
+    "https://www.theseniorlist.com/research/medicare-benefits-home-improvements/"
+   ]
+  },
+  "maintenanceTherapyJimmo": {
+   "claim": "Under the Jimmo v. Sebelius settlement (2013) and the resulting CMS manual clarifications, Medicare coverage of skilled therapy turns on whether skilled care is needed — not on whether the patient will improve. Skilled therapy to maintain function or slow decline is covered across home health, SNF, outpatient therapy and (to a degree) inpatient rehab. 'You have plateaued' is not, by itself, a valid reason to end covered therapy.",
+   "usedIn": "stroke-rehab-window",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.cms.gov/medicare/medicare-fee-for-service-payment/snfpps/downloads/jimmo-factsheet.pdf",
+    "https://medicareadvocacy.org/jimmo-v-sebelius-improvement-standard-case-summary/",
+    "https://www.apta.org/your-practice/payment/medicare-payment/coverage-issues/skilled-maintenance-therapy-under-medicare"
+   ]
+  },
+  "paidFamilyCaregiver": {
+   "claim": "Nearly every state Medicaid program now offers a self-directed / consumer-directed home care option (names vary: CDPAP, IHSS, Structured Family Caregiving, Community First Choice), and in many states a family member can be hired and paid as the attendant. Eligibility requires Medicaid plus the state's level-of-care criteria. Copy says 'in many states', never 'in your state'.",
+   "usedIn": "stroke-caregiver-support",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.kff.org/medicaid/medicaids-home-care-support-for-family-caregivers-in-2025/",
+    "https://nashp.org/paying-family-caregivers-through-medicaid-consumer-directed-programs-state-opportunities-and-innovations/"
+   ]
+  },
+  "speechSwallowEvaluationStroke": {
+   "term": "swallow evaluation by a speech-language pathologist (SLP)",
+   "note": "Same US care lane already recorded under speechSwallowEvaluation for TW-EDU-13; reused for the post-stroke dysphagia card. Post-stroke dysphagia runs roughly 30-65% and pneumonia is the leading cause of death in the acute phase, which is why the card refuses to treat 'coughs a little at meals' as normal.",
+   "usedIn": "stroke-swallow-and-pneumonia",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.frontiersin.org/journals/neurology/articles/10.3389/fneur.2022.834240/full",
+    "https://www.ahajournals.org/doi/10.1161/strokeaha.111.000663"
+   ]
+  }
+ },
+ "regulatoryNotes": {
+  "melatonin": {
+   "status": "OTC dietary supplement in the US (opposite of Taiwan, where it is prescription-only). The Taiwan 'this is a prescription drug' card was fully rewritten for en.",
+   "facts": [
+    "Sold over the counter under DSHEA; no FDA pre-market approval of content or claims.",
+    "Best evidence: jet lag and circadian (body-clock timing) problems, short-term use.",
+    "AASM clinical practice guideline suggests clinicians NOT use melatonin for sleep-onset or sleep-maintenance chronic insomnia in adults (weak recommendation, low certainty); CBT-I is first-line.",
+    "Label accuracy is poor: JAMA 2023 analysis of 25 melatonin gummy products found 22 of 25 mislabeled, actual content 74%-347% of label, one product contained CBD instead of melatonin."
+   ],
+   "usedIn": "sleep-melatonin-blocked, lex-melatonin",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://pubmed.ncbi.nlm.nih.gov/27998379/",
+    "https://aasm.org/missing-the-mark-melatonin-finding-best-treatment-insomnia/",
+    "https://www.cbsnews.com/news/melatonin-gummies-inaccurately-labeled-study/",
+    "https://aasm.org/study-finds-that-melatonin-content-of-supplements-varies-widely/"
+   ]
+  },
+  "magnesiumUpperLimit": {
+   "note": "en copy uses 350 mg/day as the supplemental magnesium ceiling (US NIH ODS Tolerable Upper Intake Level for supplemental Mg in adults). The zh master says 250 mg/day per Taiwan dietitian guidance — deliberately localized, not a translation error.",
+   "usedIn": "sleep-magnesium-supplement",
+   "sources": [
+    "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/"
+   ]
+  },
+  "vitaminCUpperLimit": {
+   "note": "2,000 mg/day adult UL — same figure as zh master; matches US NIH ODS.",
+   "usedIn": "lex-vitamin-c",
+   "sources": [
+    "https://ods.od.nih.gov/factsheets/VitaminC-HealthProfessional/"
+   ]
+  },
+  "licorice": {
+   "note": "FDA consumer warning: real black licorice (glycyrrhizin) can raise blood pressure and lower potassium, notably in people 40+. Basis for the licorice line in tcm-herb-interaction (zh master's 甘草 warning, localized to the US licorice-candy/tea context).",
+   "sources": [
+    "https://www.fda.gov/consumers/consumer-updates/black-licorice-trick-or-treat"
+   ]
+  },
+  "redYeastRice": {
+   "note": "Sold as a supplement in the US; contains monacolin K (lovastatin-like), so the statin-interaction / muscle-damage warning from the zh master carries over unchanged and is highly relevant to US users.",
+   "usedIn": "supp-red-yeast"
+  },
+  "statsUsed": [
+   "Hypertension 65+: 'more than half, closer to two out of three' — conservative under both the 140/90 (~63%) and 130/80 (~74%) NHANES definitions.",
+   "Diabetes 65+: 'nearly three in ten' — CDC National Diabetes Statistics Report, 29.2% of Americans 65+.",
+   "Supplement use: 'about seven in ten older Americans' — CDC/NCHS Data Brief 399 (70.4% of adults 60+ used a dietary supplement in the past 30 days).",
+   "CKD causes: 'diabetes and high blood pressure are the two leading causes of kidney failure in this country' — standard CDC/NIDDK framing, no invented figure.",
+   "Post-stroke depression: 'around a third of survivors' — AHA/ASA scientific statement on poststroke depression.",
+   "Additive phosphorus: 'your body takes up nearly all of it, where the phosphorus in real food comes in around half' — additive P absorbed ~90-100%, organic P ~40-60%.",
+   "Inhaler technique: no percentage stated in copy on purpose; published critical-error rates range 50%-92% depending on device and study."
+  ],
+  "quinineLegCramps": {
+   "note": "FDA has repeatedly warned against off-label quinine (Qualaquin) for nocturnal leg cramps: serious haematologic reactions including thrombocytopenia and HUS/TTP, kidney damage, hearing loss, and reported deaths. Approved only for uncomplicated P. falciparum malaria. This replaces the zh master's vaguer '國外已經不建議' with the actual US regulatory fact.",
+   "usedIn": "cramp-quinine-blocked",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.fda.gov/drugs/postmarket-drug-safety-information-patients-and-providers/fda-drug-safety-communication-new-risk-management-plan-and-patient-medication-guide-qualaquin",
+    "https://www.medscape.com/viewarticle/724798"
+   ]
+  },
+  "oralPhenylephrine": {
+   "note": "FDA proposed order (7 Nov 2024) to remove oral phenylephrine from the OTC monograph as a nasal decongestant — an efficacy finding, explicitly not a safety concern. Used to give US seniors a concrete reason to ask the pharmacist about cold-aisle products.",
+   "usedIn": "cold-ask-pharmacist",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.pharmacytimes.com/view/fda-proposes-removal-of-otc-oral-phenylephrine-from-cough-cold-products",
+    "https://publications.aap.org/aapnews/news/30657/FDA-proposes-to-end-use-of-oral-phenylephrine"
+   ]
+  },
+  "acetaminophenDoubling": {
+   "note": "Multi-symptom cold/flu products commonly contain acetaminophen, so combining them with a separate pain reliever is an easy accidental overdose; oral decongestants can raise blood pressure. Stated qualitatively (no dose numbers) — dosing stays blocked.",
+   "usedIn": "cold-ask-pharmacist"
+  },
+  "folicAcid": {
+   "note": "CDC: 400 mcg of folic acid daily for all women who could become pregnant, starting before conception, because the neural tube closes before most people know they are pregnant. Replaces the zh master's Taiwan HPA (國健署) citation. The 4,000 mcg high-risk figure is deliberately NOT in the say text — that is a prescriber's decision.",
+   "usedIn": "preg-folate",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.cdc.gov/folic-acid/about/intake-and-sources.html",
+    "https://www.cdc.gov/birth-defects/about/neural-tube-defects.html"
+   ]
+  },
+  "pregnancyFoodSafety": {
+   "note": "US listeria/mercury framing substituted for the zh master's list: unpasteurized milk and soft cheeses, deli meat and hot dogs unless heated through, raw sprouts, raw/undercooked fish and eggs, high-mercury fish (shark, swordfish, king mackerel, tilefish), alcohol. Caffeine amount deliberately deferred to the OB, matching the master's boundary.",
+   "usedIn": "preg-food-safety"
+  },
+  "calciumUpperLimit": {
+   "note": "en copy uses ~2,000 mg/day total calcium (food + supplements) as the ceiling for adults over 50 — the US NIH ODS Tolerable Upper Intake Level for that age band. The zh master says 2000-2500 mg for adults generally; narrowed deliberately for a 65+ US audience.",
+   "usedIn": "osteo-calcium-vitd-supp",
+   "sources": [
+    "https://ods.od.nih.gov/factsheets/Calcium-HealthProfessional/"
+   ]
+  },
+  "magnesiumNightCramps": {
+   "note": "Kept the master's honesty: trials of magnesium for nocturnal leg cramps in older adults mostly failed to show clear benefit; evidence is better for pregnancy-related cramps. Supplement ceiling stated as 350 mg/day (US NIH ODS UL), same figure as the sleep topic.",
+   "usedIn": "cramp-magnesium",
+   "sources": [
+    "https://ods.od.nih.gov/factsheets/Magnesium-HealthProfessional/"
+   ]
+  },
+  "taiwanPrevalenceStatsDropped": {
+   "note": "Rule: never swap a Taiwan prevalence figure for an invented US one. These master cards carried Taiwan numbers and were rewritten as reassurance with no figure at all: eye-normalize (cataracts 90% of 70+), noct-normalize (BPH ~50% of men 50+, >70% of 70+), swallow-normalize (two-thirds of institutionalised elders with oral frailty), palp-normalize (arrhythmia in 65+). The two US figures that ARE quoted elsewhere in this overlay (hypertension, diabetes, supplement use) come from CDC/NHANES and are listed under statsUsed."
+  },
+  "metabolicSyndromeUS": {
+   "claim": "US criteria (NCEP ATP III as updated by the 2005 AHA/NHLBI scientific statement): any 3 of 5 — waist over 40 inches (102 cm) in men or 35 inches (88 cm) in women; triglycerides 150 mg/dL or higher (or on drug treatment); HDL under 40 mg/dL in men or under 50 mg/dL in women (or on treatment); blood pressure 130/85 mmHg or higher (or on treatment); fasting glucose 100 mg/dL or higher (or on treatment).",
+   "waistWarning": "THE EASIEST THING TO COPY WRONG. The zh master uses Taiwan's HPA thresholds — 90 cm men / 80 cm women. Those were replaced, not converted: en says 40 inches / 35 inches. Never carry the Taiwan waist numbers into en.",
+   "asianAmericanNote": "AHA/NHLBI explicitly allows a lower waist threshold for people prone to insulin resistance, 'particularly Asian Americans' — wt-waist-first tells those users to ask their doctor rather than quoting a second number, because the exact cut-point varies by source.",
+   "usedIn": "wt-waist-first, wt-metabolic-syndrome",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ahajournals.org/doi/10.1161/CIRCULATIONAHA.105.169405",
+    "https://www.ahajournals.org/doi/10.1161/01.ATV.0000189155.75833.c7",
+    "https://www.ahajournals.org/doi/10.1161/CIRCULATIONAHA.109.192644"
+   ]
+  },
+  "statinMuscleSymptoms": {
+   "claim": "US statin labeling (e.g. Lipitor, Crestor) instructs patients to promptly report unexplained muscle pain, tenderness or weakness, particularly with malaise or fever; myopathy can progress to rhabdomyolysis with acute kidney injury from myoglobinuria, and rare fatalities have been reported. Dark (tea/cola-coloured) urine is the lay sign of myoglobinuria.",
+   "howItIsSaid": "lipid-refer keeps the master's instruction to stop the statin and get seen right away, and names it explicitly as the ONE exception to lipid-statin-dont-stop — otherwise the two cards contradict each other.",
+   "usedIn": "lipid-refer, lipid-statin-dont-stop, lipid-red-yeast-caution",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/020702s081lbl.pdf",
+    "https://www.accessdata.fda.gov/drugsatfda_docs/label/2023/021366s043s044lbl.pdf"
+   ]
+  },
+  "solubleFiberHealthClaim": {
+   "note": "FDA authorised health claim (21 CFR 101.81): beta-glucan soluble fiber from whole oats, barley and psyllium reduces the risk of coronary heart disease; the supporting intake is 3 g/day of oat/barley beta-glucan. This is why lipid-fiber can honestly say 'the FDA lets oat boxes say so' — no dose is stated in the say text.",
+   "usedIn": "lipid-fiber",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-E/section-101.81"
+   ]
+  },
+  "majorFoodAllergensUS": {
+   "claim": "Nine major food allergens must be declared on US packaged food: milk, eggs, fish, crustacean shellfish, tree nuts, peanuts, wheat, soybeans, and sesame. Sesame became the ninth under the FASTER Act, effective 1 January 2023. Declaration appears either in parentheses in the ingredient list or in a 'Contains' statement.",
+   "differsFromTaiwan": "The zh master lists Taiwan's mandatory allergens, which include mango and sulfites and do not single out sesame. The en card was rewritten to the US nine — a straight translation would have told an American to look for mango labelling that does not exist and would have omitted sesame.",
+   "usedIn": "allergy-label",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.fda.gov/food/food-allergies/faster-act-sesame-ninth-major-food-allergen",
+    "https://www.fda.gov/consumers/consumer-updates/allergic-sesame-food-labels-now-must-list-sesame-allergen"
+   ]
+  },
+  "igGFoodSensitivityPanels": {
+   "claim": "Food-specific IgG/IgG4 testing is not a test for allergy — IgG reflects food exposure, not reaction. AAAAI's Choosing Wisely guidance advises against ordering food IgE panels without a consistent history, and IgG panels are not FDA-cleared for diagnosing food allergy; in practice they drive unnecessary elimination and nutritional deficiency. Real diagnosis belongs to a board-certified allergist.",
+   "usedIn": "allergy-test-blocked",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.aaaai.org/aaaai/media/medialibrary/pdf%20documents/media/choosing-wiselyt.pdf",
+    "https://education.aaaai.org/pipro/choosingwisely_fa"
+   ]
+  },
+  "anaphylaxisEscalation": {
+   "claim": "Anaphylaxis is an airway emergency: epinephrine first, then emergency care. allergy-refer carries 911 because the zh master itself says 立刻打119.",
+   "nuanceFlaggedForHumanReview": "The 2023 US anaphylaxis practice parameter update allows selected patients who respond promptly and completely, carry a second auto-injector, and have someone with them to avoid activating EMS. Munea's card deliberately does NOT offer that option to a senior user talking to an AI companion — under-escalating an airway emergency was judged the larger safety defect, the same call already made for vax-refer.",
+   "usedIn": "allergy-refer",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.aaaai.org/Aaaai/media/Media-Library-PDFs/Allergist%20Resources/Statements%20and%20Practice%20Parameters/Anaphylaxis-Practice-Paramaters-2023.pdf",
+    "https://acaai.org/resource/if-i-use-epinephrine-for-an-allergic-reaction-do-i-have-to-call-911/"
+   ]
+  },
+  "glp1WeightLossDrugs": {
+   "policy": "wt-diet-pills-blocked stays blocked: no candidacy judgement ('is it right for you'), no doses, no brand steering. What was added for the US, where these drugs are everywhere: an honest acknowledgement that this is a real prescription route worth raising with a clinician, plus a warning about compounded and online-sourced versions.",
+   "facts": [
+    "FDA has alerted providers and patients to dosing errors with compounded injectable semaglutide, some requiring hospitalization — patients and prescribers miscalculating doses drawn from vials.",
+    "FDA has flagged counterfeit products labelled as compounded tirzepatide and issued 2025-2026 warning letters to online sellers claiming equivalence to Ozempic/Wegovy/Mounjaro/Zepbound.",
+    "The zh master's warning about unidentified diet pills bought online localises cleanly onto this."
+   ],
+   "usedIn": "wt-diet-pills-blocked",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.fda.gov/drugs/drug-alerts-and-statements/fdas-concerns-unapproved-glp-1-drugs-used-weight-loss",
+    "https://www.fda.gov/drugs/human-drug-compounding/fda-alerts-health-care-providers-compounders-and-patients-dosing-errors-associated-compounded"
+   ]
+  },
+  "fattyLiverMASLD": {
+   "claim": "Fatty liver disease was renamed in 2023: NAFLD -> MASLD, NASH -> MASH. Lifestyle remains first-line, with guideline targets of 5-10% body weight loss; 3-5% reduces liver fat and ~7% also improves inflammation.",
+   "usUpdateToTheMaster": "The zh master says there is no drug for it. That is no longer true in the US: resmetirom was FDA-approved in March 2024 for the advanced form (MASH with fibrosis). The en card keeps the master's message (weight is the treatment) but adds one clause saying a prescription exists for the advanced form and is a liver specialist's decision — asserting 'there is no drug' to a US user would be false.",
+   "usedIn": "wt-fatty-liver",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.niddk.nih.gov/health-information/liver-disease/nafld-nash/treatment",
+    "https://www.aasld.org/liver-fellow-network/core-series/back-basics/steatotic-liver-disease-cutting-through-fat",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC12174658/"
+   ]
+  },
+  "unintentionalWeightLoss": {
+   "claim": "Unintentional weight loss in adults over 65 — more than 5% of body weight over 6 to 12 months — carries increased morbidity and mortality; malignancy accounts for up to a third of cases, with non-malignant causes (GI disease, thyroid, dementia, depression, medications) more common overall.",
+   "redLine": "Lead card wt-unintended-loss asks 'did you mean to?' and explicitly refuses to congratulate. wt-refer and sarco-refer both keep the phrase 'unexplained weight loss' / 'lost weight without trying'. Never treat a senior's weight loss as good news.",
+   "usedIn": "wt-unintended-loss, wt-refer, sarco-refer",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.aafp.org/pubs/afp/issues/2021/0700/p34.html"
+   ]
+  },
+  "proteinForOlderAdults": {
+   "claim": "PROT-AGE / ESPEN-type guidance for people over 65 is 1.0-1.2 g protein per kg body weight per day (above the 0.8 g/kg RDA), more with illness or active training, spread across meals rather than loaded into one — roughly 25-30 g per meal.",
+   "kidneyCaveat": "Low-protein diets of 0.6-0.8 g/kg are used to slow chronic kidney disease progression, and CKD is common and often undiagnosed in people over 70. So the kidney caveat sits in the plain food card (sarco-protein-每餐) as well as the supplement card — the master only puts contraindications on the supplement card, and the overlay cannot add contraindications, so the caveat has to live in the say text.",
+   "howItIsSaid": "en states 25-30 g per meal rather than g/kg — a US senior does not weigh in kilograms — and hands the personal number to a doctor or dietitian.",
+   "usedIn": "sarco-protein-每餐, sarco-protein-supp",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://pubmed.ncbi.nlm.nih.gov/23867520/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10272976/"
+   ]
+  },
+  "dietComparisonHonesty": {
+   "note": "The master's two honest lines were kept verbatim in meaning, not softened. Low-carb: DIETFITS (JAMA 2018, n=609) found no significant 12-month difference between healthy low-fat and healthy low-carb — en says 'a year or two out it comes out about the same as the other approaches'. Intermittent fasting: systematic reviews of isocaloric trials find effects comparable to daily calorie restriction, with weight loss explained by reduced intake — en says 'it works about the same as simply eating that much less'.",
+   "usedIn": "diet-low-carb-honest, diet-fasting-honest",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://jamanetwork.com/journals/jama/fullarticle/2673150",
+    "https://pubmed.ncbi.nlm.nih.gov/36126910/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC11930668/"
+   ]
+  },
+  "unitConversionsThisBatch": {
+   "note": "Metric figures in the zh master were converted, not re-invented: 1-2 kg per month of weight loss -> 'two to four pounds a month'; waist 90/80 cm -> the US 40/35 inch criterion (a replacement, see metabolicSyndromeUS). Aerobic target stated as 'half an hour, five days a week' to match the existing bp-walk card rather than introducing a second phrasing of 150 minutes."
+  },
+  "saltSubstitutes": {
+   "note": "US red line for this batch. Potassium-chloride salt substitutes (Morton Lite Salt, NoSalt, Nu-Salt) sit on every US grocery shelf, so the trap is bigger here than in Taiwan. CKD patients cannot excrete the potassium load; hyperkalemia causes weakness and arrhythmia. AAKP, the Academy of Nutrition and Dietetics and NKF jointly asked FDA to reconsider permitting salt substitutes in standardized foods on exactly this ground. ACE inhibitors, ARBs and spironolactone raise serum potassium independently, so the copy names them. Deliberately carries NO contraindications in the master (a kidney contraindication would hide the card from the very people it is written for) — the overlay changes wording only and adds none.",
+   "usedIn": "ckd-salt-substitute-danger, bp-salt-substitute-caution",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.kidney.org/kidney-topics/hyperkalemia-high-potassium",
+    "https://aakp.org/re-fda-proposal-to-permit-salt-substitutes-to-reduce-sodium-in-standardized-foods/",
+    "https://www.ccjm.org/content/86/9/601",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10863666/"
+   ]
+  },
+  "phosphateAdditives": {
+   "note": "Additive (inorganic) phosphorus is absorbed nearly completely, versus roughly 40-60% for phosphorus naturally present in food — which is why the en card tells people to read the INGREDIENT list for 'PHOS' rather than the Nutrition Facts panel. Manufacturers are not required to declare the amount of added phosphate; NKF has petitioned FDA on this. Named US sources: enhanced/deli meats, colas and dark sodas, processed cheese, non-dairy creamer, instant puddings, packaged baked goods.",
+   "usedIn": "ckd-phosphorus-is-hidden",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.kidney.org/kidney-topics/phosphorus-and-your-ckd-diet",
+    "https://www.kidney.org/news-stories/national-kidney-foundation-leads-letter-to-fda-regarding-inclusion-phosphorus",
+    "https://www.jrnjournal.org/article/S1051-2276(17)30201-7/abstract"
+   ]
+  },
+  "nsaidsAndKidneys": {
+   "note": "OTC NSAIDs — ibuprofen (Advil, Motrin), naproxen (Aleve) — are the classic hidden kidney hit in the US, and they are hidden inside combination cold/sinus/'PM' products. NKF: people with reduced kidney function should avoid NSAIDs unless a doctor says otherwise. The card deliberately does NOT name a substitute analgesic (that is the pharmacist's call, and acetaminophen has its own ceiling); it gives the patient one sentence to say at the counter instead.",
+   "usedIn": "ckd-painkillers",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.kidney.org/kidney-topics/pain-medicines-and-kidney-disease",
+    "https://www.kidney.org/news-stories/watch-out-your-kidneys-when-you-use-medicines-pain"
+   ]
+  },
+  "unregulatedSupplementsKidney": {
+   "note": "LOCALIZED, NOT TRANSLATED. The zh master anchors on Taiwan's 2003 aristolochic-acid ban, which means nothing to a US listener. The US anchor is the regulatory gap: under DSHEA the FDA does not review supplements for safety, purity or label accuracy before sale, and FDA has issued a consumer warning to stop using botanical products containing aristolochic acid after finding 18 of 38 tested US botanical products contaminated (import alert 54-10). Aristolochic acid causes irreversible kidney damage and urothelial cancer. The master's distinction is preserved exactly: the danger is UNKNOWN PROVENANCE, not herbal medicine as such — licensed practitioner + sealed reputable product (USP/NSF seal) versus market-stall powder, gifts brought back from a trip, or unlabelled pills bought online.",
+   "usedIn": "ckd-unknown-herbs",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.accessdata.fda.gov/cms_ia/importalert_141.html",
+    "https://www.kidney-international.org/article/S0085-2538(15)53279-1/fulltext",
+    "https://www.supplysidesj.com/supplement-regulations/aristolochic-acid-poses-botanical-contamination-concern"
+   ]
+  },
+  "anemiaOfCKD": {
+   "note": "Primary cause is reduced renal erythropoietin production (plus disordered iron metabolism from chronic inflammation), so OTC iron alone frequently does not correct it and unnecessary iron is not harmless. Real treatments are IV iron and ESAs / HIF-PHI agents. The card's job is to stop self-prescribed iron and produce one sentence the patient can say at the visit.",
+   "usedIn": "ckd-anemia-is-different",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ncbi.nlm.nih.gov/books/NBK539871/",
+    "https://www.frontiersin.org/journals/medicine/articles/10.3389/fmed.2021.642296/full"
+   ]
+  },
+  "dialysisAccessPlanning": {
+   "note": "Fistula-first: AV fistula carries the lowest infection risk; central venous catheters carry up to ~5x the vascular-access infection risk and higher malfunction and mortality, yet remain how most US patients start — usually because the decision was made in an emergency. Home options (peritoneal dialysis, home hemodialysis) and pre-emptive transplant evaluation both require lead time, which is the whole point of the card.",
+   "usedIn": "ckd-dialysis-not-the-end",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ncbi.nlm.nih.gov/books/NBK559085/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC10714686/"
+   ]
+  },
+  "asthmaSabaOnly": {
+   "note": "GINA 2019 onwards no longer recommends SABA-only treatment for adults and adolescents with asthma: an ICS-containing regimen is required, with as-needed ICS-formoterol preferred. Reflected in the reliever-overuse card as 'a plain albuterol rescue inhaler on its own is no longer considered adequate treatment' — a statement of what guidelines say, with NO dosing, device or product recommendation. The 'more than a couple of times a week (night wakings count)' marker is a control threshold, not a dose instruction.",
+   "usedIn": "lung-reliever-frequency-warning",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://ginasthma.org/gina-2019-recommendations-about-reliever-medications-in-steps-3-5/",
+    "https://respiratory-research.biomedcentral.com/articles/10.1186/s12931-019-1159-y"
+   ]
+  },
+  "copdExacerbationSigns": {
+   "note": "Anthonisen cardinal symptoms — increased dyspnea, increased sputum volume, increased sputum purulence — kept as the master's 'two out of three' rule. US addition: ask for a written COPD action plan, which is standard US practice and has a Medicare-recognised care-planning lane.",
+   "usedIn": "lung-exacerbation-three-signs",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.medicare.gov/coverage/pulmonary-rehabilitation-programs"
+   ]
+  },
+  "beFast": {
+   "note": "Many US hospitals now teach BE-FAST (Balance, Eyes, Face, Arm, Speech, Time) rather than FAST, because plain FAST misses posterior-circulation strokes. The en cards teach BE-FAST and put the emphasis on last-known-well time. Treatment windows are deliberately NOT hard-coded (IV thrombolysis classically 4.5h with extended-window and thrombectomy selection out to 24h on advanced imaging; the guidance keeps moving) — the copy says only that eligibility depends on the clock.",
+   "usedIn": "stroke-fast-recognize, stroke-refer",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ahajournals.org/doi/10.1161/STROKEAHA.116.015169",
+    "https://www.ahajournals.org/doi/10.1161/JAHA.123.035696",
+    "https://www.ahajournals.org/doi/10.1161/STROKEAHA.125.053826"
+   ]
+  },
+  "chelationAndCirculationRemedies": {
+   "note": "US equivalent of Taiwan's 通血路 point-drip culture: chelation therapy, IV 'circulation'/vitamin drips, ginkgo, nattokinase (and high-dose fish oil). FDA has never approved any OTC chelation product and warned marketers of unapproved chelation drugs; documented harms include dehydration, kidney failure and death. Ginkgo raises bleeding risk with antiplatelets/anticoagulants (also flagged in the existing mci-brain-supp card); nattokinase is marketed as fibrinolytic and stacks with blood thinners. The master's bleeding-risk warning therefore carries over intact and, if anything, harder.",
+   "usedIn": "stroke-blocked-remedies",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.fda.gov/drugs/medication-health-fraud/questions-and-answers-unapproved-chelation-products",
+    "https://www.nccih.nih.gov/health/ginkgo",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC11991284/"
+   ]
+  },
+  "postStrokeDepression": {
+   "note": "Roughly one third of stroke survivors experience depression, highest in the first year; AHA/ASA issued a scientific statement and recommends routine screening. Treatment supports recovery, and SSRIs/SNRIs have not shown increased bleeding risk in stroke survivors on antithrombotics in recent AHA-reported research — relevant because families ask exactly that question.",
+   "usedIn": "stroke-depression-is-part-of-it",
+   "verifiedAt": "2026-07-31",
+   "sources": [
+    "https://www.ahajournals.org/doi/10.1161/str.0000000000000113",
+    "https://www.heart.org/en/news/2024/02/01/common-antidepressants-appear-safe-for-most-stroke-survivors"
+   ]
+  }
+ },
+ "skippedAsCulturallyUntranslatable": {
+  "TW-EDU-01": [
+   "sleep-acupressure"
+  ],
+  "TW-EDU-30": [
+   "tcm-listen",
+   "tcm-acupressure",
+   "tcm-tonic-caution"
+  ],
+  "TW-EDU-31": [
+   "lex-essence-chicken",
+   "lex-antrodia",
+   "lex-nattokinase",
+   "lex-bitter-melon",
+   "lex-maca",
+   "lex-gaba"
+  ],
+  "policy": "Fail-safe: solutions with no honest US localization are omitted from the overlay, so the layer never serves them in en. Every topic's L5 refer card is translated, so all 29 topics stay live. Acupressure-point cards (P6/HT7 etc.) are skipped consistently across TW-EDU-01, 25 and 30 — the point-location instructions do not survive translation for a US audience; the acupuncture card in TW-EDU-30 is kept because licensed acupuncture is an established US care lane.",
+  "TW-EDU-25": [
+   "stress-acupressure"
+  ],
+  "batch3Note": "TW-EDU-33 to 37 (metabolic set): nothing skipped — all 39 solutions localised, including every L5 referral card. Red yeast rice, DASH, Mediterranean, lactose and protein cards all have honest US equivalents, and no master contraindication failed to hold in the US.",
+  "batch4Note": "TW-EDU-38/39/40 (chronic set): nothing skipped — all 33 solutions localised, including every L5 referral card and both blocked cards. Two cards were localised rather than translated: ckd-unknown-herbs (Taiwan's aristolochic-acid ban -> the US supplement regulation gap and FDA's contamination warning) and stroke-blocked-remedies (通血路 point drips -> chelation therapy, IV 'circulation' drips, ginkgo, nattokinase). Also back-filled in this batch: TW-EDU-03/bp-salt-substitute-caution, which the zh master gained with the chronic set and the en overlay had been missing — so TW-EDU-03 is now complete in en."
+ },
+ "escalationPolicy": {
+  "rule": "A US emergency number appears only where the zh master itself escalates to an emergency. Master says 打119 / 叫救護車 -> 911. Master says 1925 -> 988 (call or text). Master says only 'see a doctor promptly' -> no number at all, because over-escalating ordinary discomfort conflicts with the crisis rules.",
+  "carriesEmergencyNumber": {
+   "swallow-refer": "911 — master says 立刻打119 for active choking",
+   "palp-refer": "911 x2 — master says 打119 for cardiac and stroke signs",
+   "osteo-refer": "911 — master says 叫救護車 after a fall",
+   "teen-refer": "988 — master says 1925 安心專線",
+   "stress-refer": "988 — master says 1925 安心專線",
+   "preg-refer": "988 — master says 安心專線 1925 for postpartum depression",
+   "vax-refer": "911 — JUDGMENT CALL, flagged for human review. Master says 立刻就醫，不要等 rather than 119, but the trigger list is anaphylaxis (breathing difficulty, facial swelling, whole-body rash) and the US standard answer is 911. Under-escalating anaphylaxis was judged the larger safety defect.",
+   "lipid-refer": "911 — master says 立刻就醫或打 119 for chest pain with cold sweat. The statin/rhabdomyolysis half deliberately carries no number: the master says 儘快就醫, so en says stop the statin and get seen right away.",
+   "allergy-refer": "911 — master says 立刻打 119 或衝急診 for anaphylaxis. Airway emergency; epinephrine first if prescribed, then call.",
+   "ckd-refer": "911 — master says 直接打 119 for shortness of breath lying flat and for confusion; the fluid-overload / hyperkalemia half stays same-day-doctor without a number.",
+   "lung-refer": "911 — master says 立刻打 119 for airway emergency signs (few words per breath, blue lips, breathless at rest, rescue inhaler not working).",
+   "stroke-fast-recognize": "911 — master says 打 119 and記時間; en keeps both the call and the last-known-well time.",
+   "stroke-refer": "911 — master says 立刻打 119 for FAST signs."
+  },
+  "deliberatelyNoNumber": [
+   "knee-refer",
+   "gout-refer",
+   "consti-refer",
+   "eye-refer",
+   "itch-refer",
+   "noct-refer",
+   "mci-refer",
+   "cramp-refer",
+   "cold-refer",
+   "neck-refer",
+   "period-refer",
+   "iron-refer",
+   "preg-refer (the obstetric half — 'call your OB or go to labor and delivery')",
+   "wt-refer",
+   "diet-refer",
+   "sarco-refer"
+  ],
+  "erWithoutANumber": "eye-refer, noct-refer and mci-refer say 'the emergency room' / 'get seen today' without a phone number. The master escalates those (儘速就醫 / 急症，立刻就醫 / 立刻就醫) but does not dial 119, so neither do we.",
+  "batch4Note": "All three chronic topics escalate with 911 exactly where the zh master dials 119. bp-salt-substitute-caution (back-filled into TW-EDU-03 in this batch) carries no number: the master says ask your doctor or pharmacist, not call anyone."
+ }
+}

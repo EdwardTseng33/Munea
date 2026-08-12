@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Munea｜「人を気づかうAI」をあなたのサービスへ・企業ESG × 介護施設プラン</title>
+<meta name="description" content="Munea（沐寧）は台湾の介護現場と従業員のご家族に、本物の顔と声を持つAIの寄り添いを提供します。小規模なパイロットから始め、効果を確かめてから広げる。ケアの成果は毎月見えるかたちで。">
+<meta name="theme-color" content="#3AA8A0">
+<link rel="canonical" href="https://munea-b2b.vercel.app/ja">
+<link rel="alternate" hreflang="zh-Hant" href="https://munea-b2b.vercel.app/">
+<link rel="alternate" hreflang="en" href="https://munea-b2b.vercel.app/en">
+<link rel="alternate" hreflang="ja" href="https://munea-b2b.vercel.app/ja">
+<link rel="alternate" hreflang="es" href="https://munea-b2b.vercel.app/es">
+<link rel="alternate" hreflang="x-default" href="https://munea-b2b.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Munea 沐寧">
+<meta property="og:url" content="https://munea-b2b.vercel.app/ja">
+<meta property="og:title" content="Munea｜「人を気づかうAI」をあなたのサービスへ">
+<meta property="og:description" content="本物の顔と声を持つAIの寄り添い。小さく試し、効果を確かめてから広げる。ケアの成果が見えます。">
+<meta property="og:image" content="https://munea-b2b.vercel.app/assets/app-chat.png">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:locale:alternate" content="zh_TW">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Munea｜「人を気づかうAI」をあなたのサービスへ">
+<meta name="twitter:description" content="本物の顔と声を持つAIの寄り添い。小さく試し、効果を確かめてから広げる。ケアの成果が見えます。">
+<link rel="icon" href="/assets/paining-logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ Munea Warm Humane theme（同官網 warm.css 規範） ============ */
+  :root{
+    --cream:#FAF7F2; --cream-2:#F3EEE4; --surface:#ffffff; --mint:#E8F2EE; --mint-2:#DCEDE6;
+    --teal:#3AA8A0; --teal-d:#2E8A83; --teal-dd:#236C66;
+    --coral:#F4A261; --coral-d:#E08B45; --coral-soft:#FBE7D2;
+    --ink:#33403D; --muted:#6B7B76; --line:#E7E0D6;
+    --shadow:0 22px 50px -26px rgba(46,138,131,.34);
+    --shadow-sm:0 10px 28px -18px rgba(46,138,131,.30);
+    --shadow-lg:0 40px 80px -40px rgba(46,138,131,.42);
+    --r:26px; --nav-h:76px;
+    /* 字體隨語系給：中文頁才載中文字型（一套約 500KB），英日西頁只載 Poppins＋系統字 */
+    --f-body:"Poppins","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Meiryo,sans-serif; --f-head:"Poppins","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",Meiryo,sans-serif; --f-serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif; --wb:normal;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 16px)}
+  body{font-family:var(--f-body);background:var(--cream);color:var(--ink);line-height:1.85;font-size:16.5px;-webkit-font-smoothing:antialiased;overflow-x:hidden;word-break:var(--wb);overflow-wrap:break-word}
+  h1,h2,h3,h4,.en{font-family:var(--f-head)}
+  h1,h2,h3,h4,.punch{word-break:var(--wb);overflow-wrap:break-word;text-wrap:balance}
+  .serif{font-family:var(--f-serif)}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+  a{text-decoration:none;color:inherit}
+  img{max-width:100%;display:block}
+  .nb{white-space:nowrap}
+  .num{font-family:var(--f-head)}
+
+  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--f-head);font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-d);margin-bottom:14px}
+  .eyebrow::before{content:"";width:22px;height:1.5px;background:var(--coral)}
+  .eyebrow.center{justify-content:center}
+  .eyebrow.center::after{content:"";width:22px;height:1.5px;background:var(--coral)}
+
+  /* ── 按鈕（官網膠囊型） ── */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;font-size:16px;padding:15px 28px;border-radius:100px;border:none;cursor:pointer;transition:transform .25s,box-shadow .25s,background .25s;font-family:inherit;position:relative;overflow:hidden}
+  .btn-teal{background:var(--teal);color:#fff;box-shadow:0 14px 28px -12px rgba(46,138,131,.7)}
+  .btn-teal:hover{background:var(--teal-d);transform:translateY(-3px);box-shadow:0 20px 36px -14px rgba(46,138,131,.75)}
+  .btn-ghost{background:#fff;color:var(--teal-d);border:1.5px solid var(--mint-2)}
+  .btn-ghost:hover{border-color:var(--teal);background:var(--mint);transform:translateY(-2px)}
+  .btn svg{width:18px;height:18px;flex-shrink:0;transition:transform .25s}
+  .btn-teal:hover svg{transform:translateX(4px)}
+  .btn::after{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at center,rgba(255,255,255,.5),transparent 60%);opacity:0;transform:scale(.4);transition:opacity .4s,transform .4s}
+  .btn:active::after{opacity:.5;transform:scale(1);transition:0s}
+  .btn:active{transform:translateY(0) scale(.98)}
+  .btn-xl{font-size:18px;padding:16px 40px}
+  :focus-visible{outline:2.5px solid var(--teal);outline-offset:3px;border-radius:4px}
+  ::selection{background:var(--coral-soft);color:var(--coral-d)}
+
+  /* ── 捲動進度條 ── */
+  .progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--teal),var(--coral));z-index:200;transition:width .1s linear}
+
+  /* ── 導覽列（官網寫法） ── */
+  header.site{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(250,247,242,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(231,224,214,.7)}
+  nav.bar{display:flex;align-items:center;justify-content:space-between;height:var(--nav-h);gap:20px}
+  .logo{white-space:nowrap;font-family:var(--f-head);font-weight:700;font-size:22px;letter-spacing:-.025em;display:inline-flex;align-items:center;gap:11px;color:var(--ink)}
+  .logo-mark{width:30px;height:30px;flex-shrink:0;display:inline-grid;place-items:center;filter:drop-shadow(0 3px 8px rgba(244,162,97,.28))}
+  .logo-mark img{width:100%;height:100%;object-fit:contain;transition:transform 1.1s cubic-bezier(.5,.1,.2,1)}
+  .logo:hover .logo-mark img{transform:rotate(360deg)}
+  .logo-word{line-height:1}
+  .logo-word b{color:var(--teal);font-weight:700}
+  .logo-zh{font-family:var(--f-body);font-size:.78em;font-weight:700;letter-spacing:.04em;margin-left:9px;opacity:.95}
+  .navlinks{display:flex;gap:26px;align-items:center;margin-left:auto}
+  .navlinks a{white-space:nowrap;font-size:15px;font-weight:500;color:var(--muted);transition:.2s;position:relative}
+  .navlinks a:not(.nav-cta)::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;background:var(--coral);border-radius:2px;transition:width .25s}
+  .navlinks a:not(.nav-cta):hover{color:var(--ink)}
+  .navlinks a:not(.nav-cta):hover::after{width:100%}
+  .nav-cta{background:var(--teal);color:#fff;height:42px;padding:0 22px;display:inline-flex;align-items:center;border:none;border-radius:100px;font-family:inherit;font-weight:600;font-size:14.5px;cursor:pointer;transition:.25s;white-space:nowrap}
+  .nav-cta:hover{background:var(--teal-d);transform:translateY(-1px);box-shadow:0 10px 22px -10px rgba(46,138,131,.7)}
+  /* ── 語言切換（中／英／日／西・選項是連到別的網址的真連結）── */
+  .lang-switch{position:relative;font-family:"Poppins",sans-serif;flex-shrink:0}
+  .lang-trigger{display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 13px;background:#fff;border:1.5px solid var(--mint-2);color:var(--teal-d);font-family:inherit;font-weight:600;font-size:13px;border-radius:100px;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s;line-height:1}
+  .lang-trigger:hover{border-color:var(--teal);background:var(--mint)}
+  .lang-trigger .globe{width:15px;height:15px;flex-shrink:0}
+  .lang-trigger .chev{width:11px;height:11px;opacity:.65;transition:transform .25s}
+  .lang-switch[data-open="true"] .lang-trigger{border-color:var(--teal);background:var(--mint);box-shadow:0 8px 18px -10px rgba(46,138,131,.55)}
+  .lang-switch[data-open="true"] .lang-trigger .chev{transform:rotate(180deg)}
+  .lang-menu{position:absolute;top:calc(100% + 9px);right:0;min-width:172px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:2px;opacity:0;transform:translateY(-7px) scale(.96);transform-origin:top right;pointer-events:none;transition:opacity .2s,transform .2s cubic-bezier(.2,.8,.2,1);z-index:120}
+  .lang-switch[data-open="true"] .lang-menu{opacity:1;transform:none;pointer-events:auto}
+  .lang-opt{display:flex;align-items:center;gap:10px;width:100%;text-decoration:none;font-family:inherit;font-weight:600;font-size:14px;color:var(--muted);padding:10px 12px;border-radius:11px;transition:background .18s,color .18s}
+  .lang-opt:hover{background:var(--mint);color:var(--ink)}
+  .lang-opt .tick{width:7px;height:7px;border-radius:50%;background:transparent;flex-shrink:0;transition:background .2s,box-shadow .2s}
+  .lang-opt .sub{margin-left:auto;font-size:11px;font-weight:600;color:#b9c6c1;letter-spacing:.04em}
+  .lang-opt[aria-selected="true"]{color:var(--teal-d);background:var(--mint)}
+  .lang-opt[aria-selected="true"] .tick{background:var(--coral);box-shadow:0 0 0 4px rgba(244,162,97,.18)}
+  .nc-short{display:none}
+  @media(max-width:600px){
+    .nc-long{display:none}
+    .nc-short{display:inline}
+    .nav-cta{height:38px;padding:0 16px;font-size:13.5px}
+    .lang-trigger{height:38px;padding:0 11px;gap:6px;font-size:12.5px}
+  }
+  /* 英日西的選單字比中文長，1080px 以下就擠不進導覽列（中文仍照原本的 900px）。
+     ⚠ 這裡不能只寫 :lang(en)——中文頁的 lang 是 zh-Hant，:lang(en) 不會命中它，
+     所以三個語系各列一條，中文頁完全不受影響。 */
+  @media(max-width:1080px){
+    html:lang(en) .navlinks a:not(.nav-cta),
+    html:lang(ja) .navlinks a:not(.nav-cta),
+    html:lang(es) .navlinks a:not(.nav-cta){display:none}
+    html:lang(en) .navlinks,
+    html:lang(ja) .navlinks,
+    html:lang(es) .navlinks{gap:10px}
+  }
+  /* 窄機（≤430px）導覽列擠不下：語言鍵只留地球圖示，語系名收進選單裡 */
+  @media(max-width:430px){
+    .lang-trigger .lang-current,.lang-trigger .chev{display:none}
+    .lang-trigger{padding:0 10px}
+  }
+  body{padding-top:var(--nav-h)}
+
+  /* ── 區塊通用 ── */
+  section{padding:84px 0 30px;position:relative}
+  h2{font-size:clamp(26px,3.6vw,38px);font-weight:700;letter-spacing:-.01em;line-height:1.4}
+  .sec-sub{font-size:16.5px;color:var(--muted);margin:14px 0 44px;max-width:820px;text-wrap:pretty}
+  .center-head{text-align:center}
+  .center-head .sec-sub{margin-left:auto;margin-right:auto}
+  .grid{display:grid;gap:20px;margin-bottom:36px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:30px 28px 26px;box-shadow:var(--shadow-sm);transition:transform .35s,box-shadow .35s}
+  .card:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+  .card h3{font-size:19.5px;font-weight:700;margin:14px 0 10px;line-height:1.5}
+  .card p{font-size:15px;color:var(--muted);line-height:1.85}
+  .icb{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:var(--mint)}
+  .icb svg{width:25px;height:25px;stroke:var(--teal-d);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .icb.coral{background:var(--coral-soft)}
+  .icb.coral svg{stroke:var(--coral-d)}
+  .tag{display:inline-block;font-family:var(--f-head);font-size:13px;font-weight:700;padding:4px 13px;border-radius:100px;margin-bottom:12px}
+  .tag.teal{background:var(--mint);color:var(--teal-dd)}
+  .tag.coral{background:var(--coral-soft);color:var(--coral-d)}
+
+  .punch{background:var(--mint);border-left:3px solid var(--teal);border-radius:0 14px 14px 0;padding:26px 32px;margin:6px 0 36px;font-size:18px;line-height:1.95}
+  .punch em{font-style:normal;font-weight:700;color:var(--teal-d)}
+
+  /* ── Hero ── */
+  .hero{padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(10px);z-index:0;pointer-events:none}
+  .blob.a{width:460px;height:460px;background:radial-gradient(circle,#cfe9e2,transparent 70%);top:-120px;right:-90px;opacity:.6}
+  .blob.b{width:340px;height:340px;background:radial-gradient(circle,#fbe2c9,transparent 70%);bottom:-90px;left:-80px;opacity:.55}
+  .hero-grid{display:grid;grid-template-columns:1.2fr .9fr;gap:56px;align-items:center;position:relative;z-index:1}
+  .hero h1{font-size:clamp(30px,4.6vw,46px);font-weight:700;line-height:1.35;letter-spacing:-.01em;margin-bottom:22px}
+  .hero h1 em{font-style:normal;color:var(--teal-d);position:relative}
+  .hero h1 em::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:.18em;background:rgba(244,162,97,.32);border-radius:6px;z-index:-1}
+  .hero .sub{font-size:18px;color:var(--muted);max-width:560px;margin-bottom:34px;text-wrap:pretty}
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap}
+  .hero-note{margin-top:24px;font-size:13.5px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap;font-weight:500}
+  .hero-note span{display:inline-flex;align-items:center;gap:6px}
+  .hero-note svg{width:15px;height:15px;stroke:var(--teal);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .hero-note .golive{color:var(--teal-d);font-weight:700;display:inline-flex;align-items:center;gap:6px}
+
+  /* ── Hero 影片相框（官網 .hero-media 同款） ── */
+  .hero-media{position:relative;z-index:1}
+  .hero-media .frame{position:relative;border-radius:30px;overflow:hidden;box-shadow:var(--shadow-lg);background:#e7f0eb;aspect-ratio:9/16;max-width:320px;margin:0 auto}
+  .hero-media .frame video{width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
+  .hero-media .glow{position:absolute;inset:-20px;border-radius:42px;background:radial-gradient(60% 60% at 28% 18%,rgba(58,168,160,.20),transparent 70%),radial-gradient(55% 55% at 82% 92%,rgba(244,162,97,.16),transparent 70%);z-index:-1;filter:blur(8px)}
+  .float-chip{position:absolute;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-sm);padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;z-index:3}
+  .float-chip .ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}
+  .float-chip .ic svg{width:15px;height:15px}
+  .hero-media .fc-1{top:-20px;left:-16px;animation:floaty 7s ease-in-out infinite}
+  .hero-media .fc-2{bottom:-20px;right:-16px;animation:floaty 7s ease-in-out infinite 1.6s}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+  /* ── 手機框（官網質感・框內放影片） ── */
+  .phone{position:relative;width:min(272px,84%);aspect-ratio:780/1688;margin:0 auto;border-radius:38px;background:#2b2b27;padding:9px;box-shadow:0 0 0 0 #2b2b27,var(--shadow-lg)}
+  .phone::before{content:"";position:absolute;top:17px;left:50%;transform:translateX(-50%);width:84px;height:22px;background:#2b2b27;border-radius:100px;z-index:3}
+  .phone .scr{width:100%;height:100%;border-radius:30px;overflow:hidden;background:#e7f0eb}
+  .phone .scr img,.phone .scr video{width:100%;height:100%;object-fit:cover;object-position:center top}
+  .phone-cap{margin-top:16px;text-align:center;font-size:13.5px;color:var(--muted)}
+  .dev-badge{position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);z-index:4;white-space:nowrap;font-size:11.5px;font-weight:700;color:var(--teal-d);background:#fff;border:1px solid var(--line);border-radius:100px;padding:4px 13px;box-shadow:var(--shadow-sm)}
+
+  /* ── 痛點清單 ── */
+  .pain .card h3{margin-top:4px}
+  .pain ul{list-style:none;margin-top:12px}
+  .pain li{padding:8px 0 8px 24px;position:relative;font-size:14.5px;color:var(--muted);line-height:1.75;border-bottom:1px dashed var(--line)}
+  .pain li:last-child{border-bottom:none}
+  .pain li::before{content:"◆";position:absolute;left:2px;top:10px;font-size:10px;color:var(--coral)}
+
+  /* ── 合作方案（五軌・成交導向） ── */
+  .sol-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:36px}
+  .sol{background:#fff;border-radius:var(--r);padding:32px 30px 26px;border:1px solid var(--line);display:flex;flex-direction:column;box-shadow:var(--shadow-sm);transition:transform .35s,box-shadow .35s}
+  .sol:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+  .sol.hl{border:2px solid var(--coral)}
+  .sol.hl2{border:2px solid var(--teal)}
+  .sol h3{font-size:19.5px;font-weight:700;line-height:1.65;margin:12px 0 14px}
+  .sol h3 em{font-style:normal;color:var(--teal-d)}
+  .math{background:var(--coral-soft);border-radius:14px;padding:12px 16px;font-size:13.5px;line-height:1.8;color:var(--coral-d);margin-bottom:16px;font-weight:500}
+  .sol.hl2 .math{background:var(--mint);color:var(--teal-dd)}
+  .s-list{list-style:none;margin-bottom:18px}
+  .s-list li{padding:7px 0 7px 24px;position:relative;font-size:14.5px;color:var(--muted);line-height:1.75;border-bottom:1px dashed var(--line)}
+  .s-list li:last-child{border-bottom:none}
+  .s-list li::before{content:"✓";position:absolute;left:2px;top:8px;font-weight:700;color:var(--teal);font-size:13px}
+  .s-list b{color:var(--ink);font-weight:700}
+  .s-price{margin-top:auto;padding-top:14px;font-family:var(--f-head);font-weight:700;font-size:22px;color:var(--teal-d);line-height:1.4}
+  .s-price span{font-family:var(--f-body);font-weight:500;font-size:13px;color:var(--muted)}
+  .s-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:14.5px;font-weight:700;color:var(--teal-d);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:.2s}
+  .s-cta:hover{color:var(--teal-dd);transform:translateX(3px)}
+  .sol-wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:28px;flex-wrap:wrap;background:var(--mint);border:1.5px dashed var(--teal)}
+  .sol-wide .sw-txt{flex:1;min-width:300px}
+  .sol-wide h3{margin-top:8px}
+  .sol-wide .s-price{margin-top:0;padding-top:0;font-size:18px}
+  .sol-wide .math{background:#fff;color:var(--teal-dd)}
+
+  /* ── 產品畫面畫廊（格狀全覽・免捲動） ── */
+  .gal-wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+  .gallery{display:grid;grid-template-columns:repeat(5,1fr);gap:34px 22px;padding:16px 0 30px}
+  .gal-item{margin:0}
+  .gal-item .phone{width:100%}
+  @media(max-width:1023px){.gallery{grid-template-columns:repeat(3,1fr);max-width:720px;margin:0 auto}}
+  @media(max-width:760px){.gallery{grid-template-columns:repeat(2,1fr);max-width:460px}}
+  @media(max-width:430px){.gallery{grid-template-columns:1fr;max-width:250px}}
+
+  /* ── 核心技術區（定位宣言＋有聲示範＋三層卡＋B2B 對照） ── */
+  .tag.ink{background:var(--ink);color:#fff}
+  .pioneer{background:linear-gradient(120deg,var(--teal-d),var(--teal));border-radius:var(--r);padding:34px 38px;text-align:center;color:#fff;box-shadow:var(--shadow);margin-bottom:44px;position:relative;overflow:hidden}
+  .pioneer .p-glow{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(244,162,97,.35),transparent 70%);top:-120px;right:-60px}
+  .pioneer .p-tag{position:relative;display:inline-block;font-family:var(--f-head);font-size:12.5px;font-weight:700;letter-spacing:.12em;background:rgba(255,255,255,.18);color:#fff;padding:5px 14px;border-radius:100px;margin-bottom:12px}
+  .pioneer p{position:relative;font-family:var(--f-serif);font-size:clamp(16.5px,2.2vw,20px);font-weight:600;line-height:1.9;max-width:780px;margin:0 auto;text-wrap:pretty}
+  .pioneer p b{color:var(--coral-soft)}
+  .tech-demo{margin-bottom:44px}
+  .td-cap{display:flex;align-items:center;justify-content:center;gap:10px;font-family:var(--f-head);font-size:12.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-d);margin-bottom:20px}
+  .td-cap::before,.td-cap::after{content:"";width:22px;height:1.5px;background:var(--coral)}
+  .vdemo{margin:0}
+  .vgrid{display:flex;flex-wrap:wrap;gap:26px;justify-content:center}
+  .vframe{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;background:var(--cream-2);border:1px solid var(--line);max-width:340px;margin:0 auto;box-shadow:var(--shadow)}
+  .vframe .vplay{width:100%;height:100%;object-fit:cover;display:block}
+  .vsound{position:absolute;left:12px;bottom:12px;display:inline-flex;align-items:center;gap:7px;padding:8px 14px 8px 12px;border:none;border-radius:999px;background:var(--teal-dd);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;line-height:1;cursor:pointer}
+  .vsound svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .vsound .ic-off{display:none}
+  .vsound.on{background:var(--ink)}
+  .vsound.on .ic-on{display:none}
+  .vsound.on .ic-off{display:inline}
+  .vcap{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:14px;text-align:center}
+  .vcap .vlab{font-weight:700;color:var(--ink);font-size:16px}
+  .vcap .vhint{font-size:12.5px;color:var(--muted)}
+  .layers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:26px}
+  .layer{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px 26px 22px;box-shadow:var(--shadow-sm);transition:transform .35s,box-shadow .35s}
+  .layer:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+  .layer h3{font-size:19px;font-weight:700;margin:8px 0 10px}
+  .layer ul{list-style:none}
+  .layer li{padding:7px 0 7px 24px;position:relative;font-size:14.5px;color:var(--muted);line-height:1.75;border-bottom:1px dashed var(--line)}
+  .layer li:last-child{border-bottom:none}
+  .layer li::before{content:"✓";position:absolute;left:2px;top:8px;font-weight:700;color:var(--teal);font-size:13px}
+  .layer li b{color:var(--ink);font-weight:700}
+  .tech-close{background:var(--mint);border-left:3px solid var(--teal);border-radius:0 14px 14px 0;padding:26px 32px;margin-bottom:26px}
+  .tech-close .tc-tag{display:inline-block;font-family:var(--f-head);font-size:12.5px;font-weight:700;color:var(--teal-dd);background:#fff;border-radius:100px;padding:4px 13px;margin-bottom:10px}
+  .tech-close p{font-family:var(--f-serif);font-size:17px;font-weight:600;line-height:1.95;color:var(--ink);text-wrap:pretty}
+  .b2b-map{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:32px 32px 24px;box-shadow:var(--shadow-sm);margin-bottom:36px}
+  .b2b-map h3{font-size:19px;font-weight:700;margin-bottom:14px;text-align:center}
+  .map-item{display:grid;grid-template-columns:1fr 34px 1.35fr;align-items:center;gap:10px;padding:13px 0;border-bottom:1px dashed var(--line);font-size:14.5px;line-height:1.7}
+  .map-item:last-child{border-bottom:none}
+  .map-item .mp{font-weight:700;color:var(--ink)}
+  .map-item .ma{text-align:center;color:var(--coral);font-weight:700}
+  .map-item .ms{color:var(--muted)}
+  .map-item .ms b{color:var(--teal-d)}
+
+  /* ── Demo 密碼閘 ── */
+  .demo-sec{background:var(--mint);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-bottom:84px}
+  .demo-box{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
+  .demo-lock{position:relative;min-height:420px;display:grid;place-items:center;padding:50px 24px}
+  .demo-lock .blurbg{position:absolute;inset:-24px;background:url('/assets/app-chat.png') center 18%/cover no-repeat;filter:blur(22px) saturate(.82);opacity:.5}
+  .demo-lock .veil{position:absolute;inset:0;background:rgba(250,247,242,.62)}
+  .lock-card{position:relative;z-index:2;text-align:center;max-width:420px;width:100%;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:var(--r);padding:38px 32px 34px;box-shadow:var(--shadow-lg)}
+  .lock-card .lk{font-size:34px;line-height:1;margin-bottom:14px}
+  .lock-card h3{font-size:20px;font-weight:700;margin-bottom:8px}
+  .lock-card p{font-size:13.5px;color:var(--muted);margin-bottom:22px}
+  .lock-form{display:flex;gap:10px}
+  .lock-form input{flex:1;min-width:0;font-family:inherit;font-size:15px;padding:12px 18px;border:1.5px solid var(--mint-2);border-radius:100px;background:var(--cream);color:var(--ink);outline:none;transition:border-color .2s}
+  .lock-form input:focus{border-color:var(--teal)}
+  .lock-form .btn{flex-shrink:0;padding:12px 24px;font-size:15px}
+  .lock-err{margin-top:12px;font-size:13px;color:#C25A3A;min-height:20px}
+  .shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .demo-open{display:none;padding:36px 36px 40px}
+  .demo-open.show{display:block;animation:fadein .6s ease}
+  @keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .live-badge{display:inline-block;font-size:13px;font-weight:700;color:#C0392B;letter-spacing:.08em;margin-bottom:10px;animation:livepulse 1.6s ease-in-out infinite;font-family:var(--f-head)}
+  @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.45}}
+  /* ── 真臉真聲訪客體驗（解鎖後） ── */
+  .chat-shell{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .chat-shell>h3{font-size:24px;font-weight:700;margin-bottom:12px}
+  .call-lead{max-width:540px;margin:0 auto 24px;color:var(--muted);line-height:1.9;font-size:15.5px;text-wrap:pretty}
+  @media(max-width:900px){.chat-frame{width:100%;height:70vh;max-height:none}}
+
+  /* ── 費用 ── */
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:22px}
+  .price-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:32px 28px 26px;display:flex;flex-direction:column;box-shadow:var(--shadow-sm);transition:transform .35s,box-shadow .35s}
+  .price-card:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+  .price-card.hl{border:2px solid var(--teal)}
+  .price-card h3{font-size:17.5px;font-weight:700;margin-bottom:4px}
+  .price-card .who{font-size:13px;color:var(--muted);margin-bottom:16px}
+  .price-card .amt{font-family:var(--f-head);font-weight:700;font-size:27px;color:var(--teal-d);line-height:1.3}
+  .price-card .unit{font-size:14px;color:var(--muted);margin:2px 0 16px}
+  .price-card ul{list-style:none;margin-top:14px}
+  .price-card .was{font-size:13.5px;color:var(--muted);text-decoration:line-through;font-weight:500;margin-left:6px}
+  .save-badge{display:inline-flex;align-items:center;gap:6px;background:var(--coral-soft);color:var(--coral-d);font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:99px;align-self:flex-start}
+  .price-card li{padding:7px 0 7px 24px;position:relative;font-size:14px;color:var(--muted);line-height:1.7;border-bottom:1px dashed var(--line)}
+  .price-card li:last-child{border-bottom:none}
+  .price-card li::before{content:"✓";position:absolute;left:2px;top:8px;font-size:13px;font-weight:700;color:var(--teal)}
+  .trial-band{background:var(--mint);border:1.5px solid var(--teal);border-radius:18px;padding:24px 30px;margin-bottom:22px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+  .trial-band .big{font-family:var(--f-serif);font-weight:700;font-size:23px;color:var(--teal-dd);white-space:nowrap}
+  .trial-band p{flex:1;min-width:280px;font-size:15px;color:var(--ink);line-height:1.85}
+  .tbl-scroll{overflow-x:auto;margin-bottom:16px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--shadow-sm)}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;line-height:1.7}
+  th{background:var(--mint);font-weight:700;text-align:left;padding:13px 16px;border-bottom:2px solid var(--mint-2);white-space:nowrap;font-size:13.5px;color:var(--teal-dd)}
+  td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.strong{font-weight:700;white-space:nowrap}
+  .fine{font-size:13px;color:var(--muted);margin-bottom:36px}
+
+  /* ── 政策順風 ── */
+  .policy-box{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:36px 36px 30px;margin-bottom:36px;box-shadow:var(--shadow-sm)}
+  .policy-box ul{list-style:none;margin:18px 0 24px}
+  .policy-box li{padding:12px 0 12px 34px;position:relative;border-bottom:1px dashed var(--line);font-size:15.5px;line-height:1.85}
+  .policy-box li:last-child{border-bottom:none}
+  .policy-box li::before{content:"◆";position:absolute;left:6px;top:16px;color:var(--coral);font-size:11px}
+  .policy-box li b{font-weight:700}
+  .policy-box .punch{margin-bottom:0}
+
+  /* ── 試辦流程 ── */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;margin-bottom:36px}
+  .steps::before{content:"";position:absolute;top:26px;left:12.5%;right:12.5%;height:2px;background:var(--mint-2)}
+  .step{position:relative;text-align:center;padding:0 14px}
+  .step .no{position:relative;z-index:2;width:52px;height:52px;margin:0 auto 16px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-family:var(--f-head);font-weight:700;font-size:20px;box-shadow:0 0 0 7px var(--cream),0 12px 24px -12px rgba(46,138,131,.7)}
+  .step:last-child .no{background:var(--coral);box-shadow:0 0 0 7px var(--cream),0 12px 24px -12px rgba(224,139,69,.8)}
+  .step h4{font-size:16.5px;font-weight:700;margin-bottom:6px}
+  .step p{font-size:13.5px;color:var(--muted);line-height:1.75}
+
+  /* ── 尾段 CTA ── */
+  .final{padding:0 0 84px;border:none}
+  .final .cta-box{background:linear-gradient(120deg,var(--teal-d),var(--teal));border-radius:36px;padding:66px 48px;text-align:center;color:#fff;position:relative;overflow:hidden}
+  .final .glow{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(244,162,97,.42),transparent 70%);top:-140px;right:-60px}
+  .final .glow2{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%);bottom:-120px;left:-40px}
+  .final .quote{font-family:var(--f-serif);font-size:clamp(21px,3vw,27px);font-weight:700;line-height:1.75;max-width:720px;margin:0 auto 16px;position:relative}
+  .final .quote em{font-style:normal;color:var(--coral-soft)}
+  .final .sub{color:rgba(255,255,255,.92);margin-bottom:36px;font-size:16.5px;position:relative}
+  .final .hero-actions{justify-content:center;position:relative}
+  .final .btn-teal{background:#fff;color:var(--teal-dd);box-shadow:0 14px 28px -12px rgba(35,108,102,.5)}
+  .final .btn-teal:hover{background:var(--cream-2);transform:translateY(-3px)}
+  .final .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
+  .final .btn-ghost:hover{background:rgba(255,255,255,.12);border-color:#fff}
+
+  /* ── 頁尾（官網深色寫法） ── */
+  footer{background:#2b3733;color:#cfd8d5;padding:52px 0 36px;text-align:center}
+  footer .logo{color:#fff;justify-content:center;margin-bottom:14px}
+  footer .logo-mark{filter:drop-shadow(0 3px 10px rgba(244,162,97,.4))}
+  footer .logo-word b{color:var(--teal)}
+  .foot-legal{max-width:760px;margin:18px auto 0;font-size:13px;color:#8a9893;line-height:2.1}
+  .foot-legal a{color:#cfd8d5;transition:.2s}
+  .foot-legal a:hover{color:var(--coral)}
+  .foot-site{margin-top:18px;font-size:14px}
+  .foot-site a{color:#cfd8d5;border-bottom:1px solid rgba(207,216,213,.35);padding-bottom:2px;transition:.2s}
+  .foot-site a:hover{color:var(--coral);border-color:var(--coral)}
+
+  /* ── 預約彈窗 ── */
+  .modal-back{position:fixed;inset:0;z-index:300;background:rgba(51,64,61,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+  .modal-back.open{opacity:1;pointer-events:auto}
+  .modal-card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow-lg);width:min(560px,100%);max-height:calc(100vh - 40px);overflow-y:auto;padding:36px 34px 30px;position:relative;transform:translateY(16px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  .modal-back.open .modal-card{transform:none}
+  .modal-x{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--mint);border:none;color:var(--teal-d);cursor:pointer;display:grid;place-items:center;transition:.2s;font-family:inherit}
+  .modal-x:hover{background:var(--mint-2);transform:rotate(90deg)}
+  .modal-x svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
+  .modal-card h3{font-size:22px;font-weight:700;margin-bottom:6px;padding-right:40px}
+  .modal-card .bm-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
+  .f-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 14px;margin-bottom:20px}
+  .f-grid .full{grid-column:1/-1}
+  .f-grid label{display:flex;flex-direction:column;gap:6px;font-size:13.5px;font-weight:700;color:var(--ink)}
+  .f-grid label .req{color:var(--coral-d)}
+  .f-grid input,.f-grid select,.f-grid textarea{font-family:inherit;font-size:15px;font-weight:400;padding:11px 15px;border:1.5px solid var(--mint-2);border-radius:14px;background:var(--cream);color:var(--ink);outline:none;transition:border-color .2s;width:100%}
+  .f-grid input:focus,.f-grid select:focus,.f-grid textarea:focus{border-color:var(--teal)}
+  .f-grid input.err,.f-grid select.err{border-color:#C25A3A}
+  .f-grid textarea{resize:vertical;min-height:76px}
+  .f-grid fieldset{border:1.5px solid var(--mint-2);border-radius:14px;padding:12px 15px 10px}
+  .f-grid legend{font-size:13.5px;font-weight:700;color:var(--ink);padding:0 6px}
+  .chks{display:flex;flex-wrap:wrap;gap:8px 16px}
+  .chks label{flex-direction:row;align-items:center;gap:7px;font-weight:500;font-size:14px;cursor:pointer}
+  .chks input{width:17px;height:17px;accent-color:var(--teal);padding:0}
+  .modal-card .btn-teal{width:100%}
+  .bm-alt{margin-top:16px;text-align:center;font-size:13.5px;color:var(--muted)}
+  .copy-mail{background:none;border:none;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--teal-d);cursor:pointer;border-bottom:1.5px dashed var(--teal);padding:0 1px 1px;transition:.2s}
+  .copy-mail:hover{color:var(--teal-dd);border-bottom-style:solid}
+  .bm-err{font-size:13px;color:#C25A3A;text-align:center;min-height:18px;margin-top:8px}
+  .book-ok{text-align:center;padding:14px 6px 4px}
+  .book-ok .ok-mark{width:62px;height:62px;margin:0 auto 16px;border-radius:50%;background:var(--mint);color:var(--teal-d);display:flex;align-items:center;justify-content:center}
+  .book-ok .ok-mark svg{width:30px;height:30px}
+  .book-ok h4{font-size:20px;font-weight:700;margin-bottom:8px}
+  .book-ok p{font-size:14.5px;color:var(--muted);line-height:1.7}
+
+  /* ── 捲動漸入 ── */
+  .reveal{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+    .reveal{opacity:1;transform:none}
+  }
+
+  /* ── RWD（手機優先收斂） ── */
+  @media(max-width:900px){
+    .wrap{padding:0 22px}
+    .navlinks a:not(.nav-cta){display:none}
+    .navlinks{gap:10px}
+    .hero{padding:44px 0 56px}
+    .hero-grid{grid-template-columns:1fr;gap:44px}
+    .hero .sub{font-size:16.5px}
+    .hero-media .frame{max-width:360px}
+    .hero-media .float-chip{display:none}
+    section{padding:60px 0 22px}
+    .g3,.g2,.price-grid,.sol-grid,.layers{grid-template-columns:1fr}
+    .sol-wide{flex-direction:column;align-items:flex-start;gap:8px}
+    .pioneer{padding:28px 22px}
+    .b2b-map{padding:24px 20px 18px}
+    .map-item{grid-template-columns:1fr;gap:3px;padding:14px 0}
+    .map-item .ma{display:none}
+    .map-item .mp::before{content:"痛點｜";color:var(--coral-d);font-size:12.5px}
+    .map-item .ms::before{content:"沐寧解法｜";color:var(--teal-d);font-size:12.5px;font-weight:700}
+    .demo-open{padding:22px 18px 30px}
+    .steps{grid-template-columns:1fr;gap:26px}
+    .steps::before{top:26px;bottom:26px;left:25px;right:auto;width:2px;height:auto}
+    .step{display:flex;text-align:left;gap:18px;align-items:flex-start;padding:0}
+    .step .no{margin:0;flex-shrink:0}
+    .gal-item{width:206px}
+    .trial-band{padding:20px 22px}
+    .lock-form{flex-direction:column}
+    .lock-form .btn{justify-content:center}
+    .final .cta-box{padding:48px 26px}
+    .f-grid{grid-template-columns:1fr}
+    .modal-card{padding:30px 22px 26px}
+  }
+  /* ── 時代數字牆＋國際驗證（2026-07-22 圖文並茂改版） ── */
+  .statband{padding:96px 0 72px}
+  .statband .center-head{margin-bottom:46px}
+  .stat-wall{display:grid;grid-template-columns:repeat(4,1fr);gap:26px}
+  .stat-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:38px 26px 32px;text-align:center;box-shadow:var(--shadow-sm)}
+  .stat-card .sv{font-family:var(--f-head);font-weight:700;font-size:44px;line-height:1.1;color:var(--teal-d)}
+  .stat-card .su{font-size:20px;margin-left:2px;color:var(--teal)}
+  .stat-card .sl{font-weight:700;margin-top:14px;font-size:15.5px}
+  .stat-card .sd{font-size:13px;color:var(--muted);margin-top:7px;line-height:1.7}
+  .stat-src{font-size:12px;color:var(--muted);text-align:center;margin-top:26px}
+  .proof{padding:70px 0;background:linear-gradient(180deg,var(--mint) 0%,var(--cream) 100%)}
+  .proof-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:34px;align-items:center}
+  .proof-bars{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:30px 28px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:20px}
+  .pb-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;font-size:14.5px}
+  .pb-head b{font-family:var(--f-head);font-size:22px;color:var(--teal-d)}
+  .pb-track{height:12px;border-radius:99px;background:var(--cream-2);overflow:hidden}
+  .pb-track i{display:block;height:100%;width:var(--w);border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--coral))}
+  .proof-note{display:flex;flex-direction:column;gap:14px;font-size:15.5px}
+  .proof-cite{font-size:12.5px;color:var(--muted)}
+  @media(max-width:860px){.stat-wall{grid-template-columns:repeat(2,1fr)}.proof-grid{grid-template-columns:1fr}.stat-card .sv{font-size:34px}}
+</style>
+</head>
+<body>
+<div class="progress"></div>
+
+<!-- ═══════════ 導覽列 ═══════════ -->
+<header class="site">
+  <nav class="bar wrap">
+    <a class="logo" href="#top" aria-label="Munea ホーム">
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </a>
+    <div class="navlinks">
+      <a href="#value">Muneaの価値</a>
+      <a href="#solutions">導入プラン</a>
+      <a href="#tech">技術</a>
+      <a href="#demo">デモ</a>
+      <a href="#pricing">料金</a>
+      <button class="nav-cta" type="button" data-modal="demo"><span class="nc-long">30分のご相談を予約</span><span class="nc-short">相談を予約</span></button>
+      <div class="lang-switch" data-open="false">
+        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換語言 / Switch language">
+          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+          <span class="lang-current">日本語</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" aria-label="切換語言 / Switch language">
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="zh-Hant" href="https://munea-b2b.vercel.app/"><span class="tick"></span>中文<span class="sub">繁中</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="en" href="https://munea-b2b.vercel.app/en"><span class="tick"></span>English<span class="sub">EN</span></a>
+          <a class="lang-opt is-active" role="option" aria-selected="true" hreflang="ja" href="https://munea-b2b.vercel.app/ja"><span class="tick"></span>日本語<span class="sub">日本語</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="es" href="https://munea-b2b.vercel.app/es"><span class="tick"></span>Español<span class="sub">ES</span></a>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══════════ Hero ═══════════ -->
+<header class="hero" id="top">
+  <div class="blob a"></div><div class="blob b"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">台湾の介護現場・従業員のご家族の介護を支えるソリューション</div>
+      <h1>手が届かない時間は、<br><em>人を気づかうAI</em>に</h1>
+      <p class="sub">本物の顔と声で、ご高齢の方と毎日きちんと話します。夜間、閑散時間、離れて暮らす時間。人手では埋めきれない時間を受け止めます。利用状況とケアの成果は毎月見えるので、ESGにもご家族にも説明できます。</p>
+      <div class="hero-actions">
+        <button class="btn btn-teal" type="button" data-modal="demo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
+          協業のご相談を予約</button>
+        <a class="btn btn-ghost" href="#demo">まずニンニンと話してみる</a>
+      </div>
+      <div class="hero-note">
+        <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>小さく試して、効果を確かめてから広げる</span>
+        <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>ソフトウェアのみ。ダウンロードすればすぐ使え、導入工事は不要</span>
+        <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>ライブデモを体験 ↓</a>
+      </div>
+    </div>
+    <div class="hero-media">
+      <div class="glow"></div>
+      <div class="frame">
+        <video id="heroVid" poster="/assets/real-female-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="MuneaのAIパートナー、ニンニン。動きながら寄り添っています">
+          <source src="/assets/realfemale-hello.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span>お母さまに服薬をお知らせしました</span></div>
+      <div class="float-chip fc-2"><span class="ic" style="background:var(--coral-soft);color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span>話したことを覚えています</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ 核心價值 ═══════════ -->
+<section class="statband"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">なぜ今なのか</div>
+    <h2>台湾は超高齢社会に入り、人手が追いつきません</h2>
+  </div>
+  <div class="stat-wall reveal">
+    <div class="stat-card"><div class="sv num">1<span class="su">／5</span></div><div class="sl">5人に1人が高齢者</div><div class="sd">台湾は2025年に正式に超高齢社会へ</div></div>
+    <div class="stat-card"><div class="sv num">87.5<span class="su">%</span></div><div class="sl">の介護施設が慢性的な人手不足</div><div class="sd">4分の1の施設は介護職員1名の補充に半年かかる</div></div>
+    <div class="stat-card"><div class="sv num">15<span class="su">本のたばこ</span></div><div class="sl">長期的な孤独が健康に与える代償</div><div class="sd">1日15本の喫煙に相当するリスクという研究結果</div></div>
+    <div class="stat-card"><div class="sv num">+22<span class="su">%</span></div><div class="sl">AI高齢者ケア市場の年成長率</div><div class="sd">世界市場は2026年に670億米ドル規模の見込み</div></div>
+  </div>
+  <p class="stat-src">出典：台湾衛生福利部 2025・台湾介護施設人手不足調査 2025・Nature 高齢者の孤独研究 2025・Grand View Research 2026</p>
+</div></section>
+
+<section id="value"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">なぜMuneaなのか</div>
+    <h2>チャットボットが1つ増えるのではなく、ケアの空白が埋まります</h2>
+    <p class="sec-sub">買い手が本当に求めているのはAIという言葉ではありません。ご高齢の方が使い続け、現場がひと目で分かり、ご家族が実感できる結果です。</p>
+  </div>
+  <div class="grid g3">
+    <div class="card reveal">
+      <div class="icb"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></div>
+      <h3>覚えている寄り添い</h3>
+      <p>長期記憶があるから、会話はいつも前回の続きから始まります。膝の具合、お孫さんの結婚、よく歩く古い商店街。ぜんぶ覚えています。親しくなるほど、2回目、3回目と自分から話しかけたくなります。</p>
+    </div>
+    <div class="card reveal">
+      <div class="icb"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg></div>
+      <h3>気づける見守り</h3>
+      <p>日々の会話から気分の落ち込みや危険のサインを聞き取ります。声の調子がいつもと違う、体調の不調を口にした、心配なことを言った。そんなとき、その場でご家族と介護者にお知らせし、「何かおかしい」を「早く気づけた」に変えます。</p>
+    </div>
+    <div class="card reveal">
+      <div class="icb"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+      <h3>見える安心</h3>
+      <p>ご家族はアプリを開くだけで、今日のご様子、気分、リマインドの実施状況が分かります。離れて暮らす心配の置き場ができ、一本一本の電話だけに頼らずに済みます。</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ═══════════ 用戶痛點 ═══════════ -->
+<section class="pain"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">買い手の課題マップ</div>
+    <h2>誰が責任を持ち、誰が使い、誰が価値を感じるのか</h2>
+    <p class="sec-sub">決まる提案は、管理者の人手の問題、現場の業務フローの問題、ご高齢の方が使ってくれるか、ご家族が安心できるか。この4つに同時に答える必要があります。</p>
+  </div>
+  <div class="grid g2">
+    <div class="card reveal">
+      <span class="tag coral">ご家族</span>
+      <h3>離れて暮らす子どもの心配</h3>
+      <ul>
+        <li>日中は親がひとり。一日じゅう、ちゃんと話す相手がいない</li>
+        <li>そばにいないので、今日どう過ごしたか分からない</li>
+        <li>薬は飲んだか、受診の時期か。離れた場所からのリマインドはいつも後手に回る</li>
+      </ul>
+    </div>
+    <div class="card reveal">
+      <span class="tag coral">介護施設・ヘルスセンター</span>
+      <h3>人手が逼迫する介護の現場</h3>
+      <ul>
+        <li>巡回と記録の時間が、介護職員の一日の大半を奪う</li>
+        <li>ご家族からの問い合わせが多く、現場が対応に疲弊する</li>
+        <li>閑散時間と夜間の寄り添いの空白を、誰も埋められない</li>
+      </ul>
+    </div>
+    <div class="card reveal">
+      <span class="tag coral">企業ESG</span>
+      <h3>従業員が親を介護する見えない負担</h3>
+      <ul>
+        <li>遠方の親が気がかりで、休暇・集中力の低下・人材の定着に響く</li>
+        <li>サステナビリティ報告書のS（社会）に、実感のある具体策が足りない</li>
+        <li>福利厚生の予算を使っても、従業員に届いた実感がない</li>
+      </ul>
+    </div>
+    <div class="card reveal">
+      <span class="tag coral">高齢者村・シニア住宅</span>
+      <h3>コミュニティサービスの差別化という難題</h3>
+      <ul>
+        <li>夜間と閑散時間は人手が薄く、寄り添いが続かない</li>
+        <li>入居者の孤独感が強く、居場所の感覚をつくりにくい</li>
+        <li>入居者獲得の競争が激しく、サービスの違いを出しにくい</li>
+      </ul>
+    </div>
+  </div>
+  <div class="punch reveal">パイロットは技術のお披露目ではありません。確かめるのは3つ：<em>ご高齢の方が話したくなるか、現場の二重作業が減るか、ご家族がより安心できるか</em>。</div>
+</div></section>
+
+<!-- ═══════════ 解決方案 ═══════════ -->
+<section class="proof"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">海外で実証済み</div>
+    <h2>AIによる高齢者の寄り添い。米国の州政府が3年続けて、成果が出ています</h2>
+    <p class="sec-sub">ニューヨーク州は2022年から、ひとり暮らしのご高齢の方の自宅にAIの話し相手を届けています。州の公式な追跡結果：</p>
+  </div>
+  <div class="proof-grid reveal">
+    <div class="proof-bars">
+      <div class="pb"><div class="pb-head"><span>孤独感が減ったと回答</span><b>94%</b></div><div class="pb-track"><i style="--w:94%"></i></div></div>
+      <div class="pb"><div class="pb-head"><span>全体的な状態が良くなった</span><b>97%</b></div><div class="pb-track"><i style="--w:97%"></i></div></div>
+      <div class="pb"><div class="pb-head"><span>世界とのつながりを感じる</span><b>79%</b></div><div class="pb-track"><i style="--w:79%"></i></div></div>
+      <div class="pb"><div class="pb-head"><span>利用満足度</span><b>4.6／5</b></div><div class="pb-track"><i style="--w:92%"></i></div></div>
+    </div>
+    <div class="proof-note">
+      <p><b>ご高齢の方が自分から話しかけるのは1日30回以上、週6日</b>。使わされているのではなく、自分から話したくなっています。</p>
+      <p>2025年だけで3,500人が参加を申し込み、州は支援を拡大し続けています。</p>
+      <p>Muneaは、すでに実証されたこの同じことを台湾のご高齢の方に届けます。台湾華語で、本物の顔と声で、ひとりひとりを覚えて。</p>
+      <p class="proof-cite">出典：ニューヨーク州高齢者局（NYSOFA）公式プログラム報告 2022–2026</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="solutions"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">優先市場と協業のかたち</div>
+    <h2>現場に最も近く、いちばん確かめやすい場所から</h2>
+    <p class="sec-sub">第一段階は介護・デイサービス、シニア住宅、企業の家族介護支援に集中します。その他の協業は、パイロットでニーズを確認してからご相談します。</p>
+  </div>
+  <div class="sol-grid">
+    <div class="sol hl2 reveal">
+      <span class="tag teal">🏥 介護施設／デイサービス</span>
+      <h3>手が回らない時間を、<em>まず埋める</em></h3>
+      <div class="math">まず小規模に試し、ご高齢の方が使いやすいか、ご家族がより安心できるかを見ます。検証していない省力化の数字は、先にお約束しません。</div>
+      <ul class="s-list">
+        <li><b>ご家族はアプリで近況を確認</b>：問い合わせ量と安心感が変わるかを見ます</li>
+        <li><b>ケアのサインを整理</b>：どの状況で人が引き継ぐかを施設と一緒に決めます</li>
+      </ul>
+      <div class="s-price"><span class="nb">NT$499〜</span><span>／床・月</span></div>
+      <button class="s-cta" type="button" data-modal="trial">現場パイロットの評価を申し込む →</button>
+    </div>
+    <div class="sol hl reveal">
+      <span class="tag coral">🏢 企業ESG／人事</span>
+      <h3>家族介護の支援を、<em>従業員が本当に使う福利厚生</em>に</h3>
+      <div class="math">まず少人数の従業員のご両親に使っていただき、使い勝手と介護の負担の変化を見ます。ESGでは匿名の総数のみを扱い、個人の健康状態や会話の内容を会社にお渡しすることは一切ありません。</div>
+      <ul class="s-list">
+        <li><b>従業員のご家族専用の寄り添い</b>：会社が席を用意し、従業員のご両親にMuneaが寄り添います</li>
+        <li><b>家族アプリと連動</b>：従業員はいつでもご両親の様子を確認できます</li>
+        <li><b>10アカウント以上は毎月の成果レポート付き</b>：利用率・見守り・異常の要約</li>
+      </ul>
+      <div class="s-price"><span class="nb">NT$499〜</span><span>／人・月・App Store の個人版より1席あたりNT$100お得</span></div>
+      <button class="s-cta" type="button" data-modal="trial">従業員家族パイロットの評価を申し込む →</button>
+    </div>
+    <div class="sol reveal">
+      <span class="tag teal">🏘️ 高齢者村／シニア住宅</span>
+      <h3>「人を気づかうコミュニティ」<em>が次の入居の決め手に</em></h3>
+      <div class="math">部屋に話し相手がいて、夜間や閑散時間も空白がなければ、入居者は住み続けたくなります。1世帯を1年多く引き留められれば、フロア全体の年間席料をはるかに上回ります。</div>
+      <ul class="s-list">
+        <li><b>入居者ごとの寄り添い</b>：ひとりひとりを覚え、話すほど親しくなります</li>
+        <li><b>夜間・閑散時間も空白なし</b>：人手が薄い時間帯も寄り添いが続きます</li>
+        <li><b>入居募集の差別化</b>：見学時に見せられ、言葉にできる強み</li>
+      </ul>
+      <div class="s-price"><span class="nb">NT$499〜</span><span>／戸・月（施設席料を基準・規模に応じて協議）</span></div>
+      <button class="s-cta" type="button" data-modal="trial">現場パイロットの評価を申し込む →</button>
+    </div>
+    <div class="sol reveal">
+      <span class="tag coral">🩺 ヘルスセンター／クリニック・薬局</span>
+      <h3>会員の定着を生む<em>ケアの付加価値</em></h3>
+      <div class="math">受診リマインドが届けば再来につながり、「覚えていてくれる」と感じた会員は継続します。ケアの付加価値は、いちばん価格で比べられにくい違いです。</div>
+      <ul class="s-list">
+        <li><b>健康教育の寄り添い</b>：ケアの知識を会話のかたちで届けます</li>
+        <li><b>受診と服薬のリマインド</b>：時間になったらスマホに通知、取りこぼしません</li>
+        <li><b>会員サービスの差別化</b>：他社は製品を売り、御社はケアの相棒を提供します</li>
+      </ul>
+      <div class="s-price"><span>席単位・会員規模に応じてお見積り（数量に応じた段階制）</span></div>
+      <button class="s-cta" type="button" data-modal="trial">まずニーズ評価から →</button>
+    </div>
+    <div class="sol sol-wide reveal">
+      <div class="sw-txt">
+        <span class="tag coral">🤝 アライアンス／販売パートナー</span>
+        <h3>Muneaをサービスの一つに加えて、<em>新しい収益の柱を</em></h3>
+        <div class="math" style="margin-bottom:10px;">既存の顧客基盤にそのまま価値を足せます。製品チームを自前で抱える必要はありません。販売レベニューシェア、共同プラン、パイロット現場のパートナーなど、いずれもご相談いただけます。</div>
+        <div class="s-price"><span>レベニューシェア・共同マーケティングはご相談</span></div>
+      </div>
+      <button class="btn btn-teal" type="button" data-modal="demo">協業のご相談</button>
+    </div>
+  </div>
+</div></section>
+
+<!-- ═══════════ 產品畫面 ═══════════ -->
+<section>
+  <div class="wrap">
+    <div class="center-head reveal">
+      <div class="eyebrow center">アプリの画面</div>
+      <h2>ご高齢の方が目にするのは、これだけシンプルです</h2>
+      <p class="sec-sub">大きな文字、少ないボタン、話しかけるだけ。すべての画面がご高齢の方の指と目のために設計されています。</p>
+    </div>
+  </div>
+  <div class="gal-wrap">
+  <div class="gallery reveal">
+    <figure class="gal-item">
+      <div class="phone"><div class="scr"><img src="/assets/app-home.png" alt="Munea アプリのホーム画面" loading="lazy"></div><span class="dev-badge">開発版の実画面</span></div>
+      <figcaption class="phone-cap">ホーム：今日の寄り添いは、ひと声の挨拶から</figcaption>
+    </figure>
+    <figure class="gal-item">
+      <div class="phone"><div class="scr"><img src="/assets/app-chat.png" alt="Munea アプリのリアルタイム会話" loading="lazy"></div><span class="dev-badge">開発版の実画面</span></div>
+      <figcaption class="phone-cap">リアルタイム会話：本物の顔と声、ビデオ通話のように自然に</figcaption>
+    </figure>
+    <figure class="gal-item">
+      <div class="phone"><div class="scr"><img src="/assets/app-status.png" alt="Munea アプリの健康状態" loading="lazy"></div><span class="dev-badge">開発版の実画面</span></div>
+      <figcaption class="phone-cap">健康状態：服薬・気分・活動をひと目で</figcaption>
+    </figure>
+    <figure class="gal-item">
+      <div class="phone"><div class="scr"><img src="/assets/app-family.png" alt="Munea アプリの家族サークル" loading="lazy"></div><span class="dev-badge">開発版の実画面</span></div>
+      <figcaption class="phone-cap">家族サークル：ご家族がリアルタイムで近況を確認</figcaption>
+    </figure>
+    <figure class="gal-item">
+      <div class="phone"><div class="scr"><img src="/assets/app-settings.png" alt="Munea アプリの設定" loading="lazy"></div><span class="dev-badge">開発版の実画面</span></div>
+      <figcaption class="phone-cap">設定：リマインドと好みを、その方にちょうど良く</figcaption>
+    </figure>
+  </div>
+  </div>
+</section>
+
+<!-- ═══════════ 核心技術 ═══════════ -->
+<section id="tech"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">技術</div>
+    <h2>人には退勤時間があります。気づかいにはありません。</h2>
+    <p class="sec-sub">本物の顔と声、台湾のご高齢の方の話し方が分かること、話したことを覚えていること。ずっと寄り添える3つの土台です。</p>
+  </div>
+
+  <div class="pioneer reveal">
+    <div class="p-glow"></div>
+    <span class="p-tag">台湾の現場のために</span>
+    <p>リアルタイムの音声と顔で本物の対話をつくり、キャラクターの人格、ケアの境界線、台湾の繁体字中国語、ご家族への報告の流れを、ひとつの体験にまとめています。証明できない「初」や「先行」を、購入の理由にはしません。</p>
+  </div>
+
+  <div class="tech-demo reveal">
+    <span class="td-cap">見て確かめる・音声をオンにして</span>
+    <div class="vgrid">
+      <figure class="vdemo">
+        <div class="vframe">
+          <video class="vplay" poster="/assets/real-female-hero-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="Munea AI ビデオデモ・自然な女性の声"><source src="/assets/realfemale-talk-demo-ja.mp4" type="video/mp4"></video>
+          <button class="vsound" type="button" aria-label="音声をオンにする" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">音声オン</span></button>
+        </div>
+        <figcaption class="vcap"><span class="vlab">ニンニン・自然な女性の声</span><span class="vhint">音声をオンにして、声と表情がどう重なるか聞いてみてください</span></figcaption>
+      </figure>
+      <figure class="vdemo">
+        <div class="vframe">
+          <video class="vplay" poster="/assets/real-male-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="Munea AI ビデオデモ・落ち着いた男性の声"><source src="/assets/realmale-talk-demo-ja.mp4" type="video/mp4"></video>
+          <button class="vsound" type="button" aria-label="音声をオンにする" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">音声オン</span></button>
+        </div>
+        <figcaption class="vcap"><span class="vlab">アユエン・落ち着いた男性の声</span><span class="vhint">同じエンジンで、寄り添う人を変えられます</span></figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="layers reveal">
+    <div class="layer">
+      <span class="tag teal">対話のレイヤー</span>
+      <h3>ご高齢の方が話し続けたくなる鍵</h3>
+      <ul>
+        <li><b>その場で生成される本物の顔</b>。口を開き、表情があります</li>
+        <li><b>聞き取って、返事をします</b>。途中で割り込んでも大丈夫です</li>
+        <li><b>顔と声が揃います</b>。口の動きが声に合います</li>
+        <li><b>台湾の繁体字中国語で話します</b>。台湾ならではの言い回しも分かります</li>
+        <li><b>気持ちに合わせた話し方</b>。疲れているときは、そっと寄り添います</li>
+      </ul>
+    </div>
+    <div class="layer">
+      <span class="tag coral">ケアのレイヤー</span>
+      <h3>会話を見守りに変える</h3>
+      <ul>
+        <li><b>話したことを覚えています</b>。長期記憶で、話すほど親しくなります</li>
+        <li><b>服薬と受診のリマインド</b>。時間になったらスマホに通知します</li>
+        <li><b>気分と異変の察知</b>。いつもと違うことに気づきます</li>
+        <li><b>ご家族と介護者にすぐ通知</b>。何かあれば人を呼びます</li>
+        <li><b>家族の健康サークル</b>。お互いの状態が見えます</li>
+      </ul>
+    </div>
+    <div class="layer">
+      <span class="tag ink">技術のレイヤー</span>
+      <h3>すべてを静かに支える土台</h3>
+      <ul>
+        <li><b>自社開発のリアルタイム音声・映像エンジン</b>。そこにいるように感じられます</li>
+        <li><b>ケアに特化した知能の中核</b>。ご高齢の方を理解し、節度を守ります</li>
+        <li><b>クラウドのサービス構成</b>。パイロットの規模に応じて容量とネットワークを検証します</li>
+        <li><b>セキュリティと個人情報の保護</b>。データはケアのためだけに使います</li>
+        <li><b>医療の境界を守ります</b>：診断はせず、服薬はお知らせのみです</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tech-close reveal">
+    <span class="tc-tag">なぜ「家族みんなの健康に寄り添うAIケアアシスタント」なのか</span>
+    <p>対話のレイヤーがご高齢の方の口を開き、ケアのレイヤーが話された一言ずつを見守りに変え、技術のレイヤーがそのすべてを安定して動かします。3つが重なると、ひとりひとりを覚え、見えて聞こえて、何かあれば人を呼ぶアシスタントになります。</p>
+  </div>
+
+</div></section>
+
+<!-- ═══════════ Demo 密碼閘 ═══════════ -->
+<section class="demo-sec" id="demo"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">パートナー向けプレビュー</div>
+    <h2>見て確かめる。ニンニンと直接話してみてください</h2>
+    <p class="sec-sub">動画でもテキストチャットでもありません。解除するとそのまま3分間、本物の顔と声の体験に入ります。やり取りはマイクと声だけです。</p>
+  </div>
+  <div class="demo-box reveal">
+    <!-- 鎖定畫面 -->
+    <div class="demo-lock" id="demoLock">
+      <div class="blurbg" aria-hidden="true"></div>
+      <div class="veil" aria-hidden="true"></div>
+      <div class="lock-card" id="lockCard">
+        <div class="lk">🔒</div>
+        <h3>合言葉を入力</h3>
+        <p>合言葉はご招待のメッセージに記載しています。まだお持ちでない場合は、右上の「30分のご相談を予約」から。私たちが直接ご案内します。</p>
+        <form class="lock-form" id="demoForm" autocomplete="off">
+          <input type="password" id="demoPass" placeholder="合言葉を入力" aria-label="合言葉">
+          <button class="btn btn-teal" type="submit">解除する</button>
+        </form>
+        <div class="lock-err" id="lockErr" role="alert" aria-live="polite"></div>
+      </div>
+    </div>
+    <!-- 解鎖內容：單一真臉真聲通話入口，不提供文字體驗 -->
+    <div class="demo-open" id="demoOpen">
+      <div class="chat-shell">
+        <div class="live-badge">● LIVE</div>
+        <h3>今すぐ、ニンニンと話してみてください</h3>
+        <p class="call-lead">これは隔離されたゲスト体験です。ログインなし、実際の利用者の記憶や健康データは持ち込まず、リマインドも作成しません。Chrome または Safari をお使いいただき、マイクを許可してください。映像サービスの初回起動には少し時間がかかることがあります。体験は台湾の繁体字中国語（華語）で行われます。</p>
+        <a class="btn btn-teal btn-xl" href="/call.html">3分間のライブ体験を始める</a>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ═══════════ 合作模式與費用 ═══════════ -->
+<section id="pricing"><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">プランと参考料金</div>
+    <h2>席単位。使った分だけ。</h2>
+    <p class="sec-sub">ソフトウェアのみのサブスクリプションで、従業員がアプリをダウンロードすればすぐ使えます。構築や導入工事は不要です。企業でまとめてご契約いただくと、1席あたり App Store の個人版よりNT$100お得になります（Plus 599→499、Pro 1199→1099）。10アカウント以上は毎月の成果レポート付き、四半期・分析レポートは別途有料のオプションです。以下は参考の出発点で、通話が無制限という意味ではありません。</p>
+  </div>
+  <div class="price-grid">
+    <div class="price-card hl reveal">
+      <h3>介護施設の席</h3>
+      <div class="who">入居型施設・デイサービス・高齢者村・シニア住宅</div>
+      <div class="amt nb">NT$499〜</div>
+      <div class="unit">1床（戸）あたり・月額</div>
+      <ul>
+        <li>ご高齢の方専用の寄り添いの席</li>
+        <li>家族アプリと連動</li>
+        <li>毎月の運営データレポート（利用率・見守り・異常の要約）</li>
+        <li>ソフトウェアのみ・施設のタブレットでもご本人のスマホでも使えます</li>
+      </ul>
+    </div>
+    <div class="price-card reveal">
+      <h3>企業ESGの席</h3>
+      <div class="who">上場・中堅大手企業の人事／サステナビリティ部門</div>
+      <div class="amt nb">NT$499〜<span class="was">個人版 NT$599</span></div>
+      <div class="unit">1人あたり・月額（Plus 499・Pro 1099）</div>
+      <span class="save-badge">まとめて契約で1席NT$100お得</span>
+      <ul>
+        <li>従業員のご家族専用の寄り添いの席</li>
+        <li>家族アプリと連動（従業員はいつでもご両親の様子を確認できます）</li>
+        <li>10アカウント以上・毎月の成果レポート付き（利用率・見守り・異常の要約）</li>
+      </ul>
+    </div>
+    <div class="price-card reveal">
+      <h3>ESG成果レポートサービス</h3>
+      <div class="who">企業席のオプション・サステナビリティ報告書向け</div>
+      <div class="amt nb">規模に応じてお見積り</div>
+      <div class="unit">四半期／分析レポート・別途有料のオプション</div>
+      <ul>
+        <li>四半期ごとの匿名成果レポート（参加数・利用率・満足度）</li>
+        <li>GRIの社会側面／従業員ウェルビーイング指標に対応</li>
+        <li>サステナビリティ報告書にそのまま引用できる文章と図表</li>
+        <li>年1回のオンライン成果レビュー</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tbl-scroll reveal"><table>
+    <tr><th>協業のかたち</th><th>対象</th><th>課金方法</th><th>参考レンジ</th></tr>
+    <tr><td class="strong">施設の席</td><td>介護施設・デイサービス・高齢者村・シニア住宅</td><td>1床（戸）あたりの席・月額</td><td class="nb">NT$499〜／床・月</td></tr>
+    <tr><td class="strong">企業ESGの席</td><td>企業の人事／サステナビリティ部門</td><td>従業員家族の席・月額（個人版より1席NT$100安く）</td><td class="nb">NT$499〜／人・月</td></tr>
+    <tr><td class="strong">ヘルスセンターの席</td><td>ヘルスセンター・クリニック・薬局</td><td>会員の席・月額</td><td>会員規模に応じてお見積り</td></tr>
+    <tr><td class="strong">ESG成果レポートサービス</td><td>企業席のオプション・サステナビリティ報告書向け</td><td>四半期／年次</td><td>規模に応じてお見積り</td></tr>
+    <tr><td class="strong">アライアンス／ホワイトラベル／API</td><td>販売チャネル・保険・通信・プラットフォーム事業者</td><td>レベニューシェア・プラットフォーム利用許諾＋利用量</td><td>協業の深さに応じてご相談</td></tr>
+  </table></div>
+  <p class="fine">上記は参考レンジです。正式なお見積りは規模とカスタマイズの範囲により別途ご相談のうえ、双方で合意した契約が優先します。</p>
+</div></section>
+
+<!-- ═══════════ 政策順風 ═══════════ -->
+<section><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">政策の追い風</div>
+    <h2>2026年は台湾のケアテクノロジー政策にとって大きな年です</h2>
+    <p class="sec-sub">Muneaの導入と組み合わせられる公的資源：</p>
+  </div>
+  <div class="policy-box reveal">
+    <ul>
+      <li><b>入居型施設の質の向上インセンティブ計画（2024–2027）</b>：衛生福利部の介護基金による支援で、「スマート支援ケア技術」の指標を含みます。スマートケアの導入は指標計画に組み込むことができ、関連書類の準備をお手伝いします。</li>
+      <li><b>介護3.0 スマート支援機器レンタル給付（2026年7月開始）</b>：介護世帯ごとに3年で6万台湾ドルのレンタル枠。Muneaは<b>申請を計画中</b>です（審議中の計画であり、確定した給付対象ではありません）。対象になればご家庭の負担は大きく下がる見込みです。</li>
+    </ul>
+    <div class="punch">私たちの原則：<em>補助は加点であって、前提ではありません</em>。プラン自体の価値（現場に戻る時間、ご家族の安心、従業員の実感）がまず成り立つこと。補助は、その判断を少し楽にするだけのものです。</div>
+  </div>
+</div></section>
+
+<!-- ═══════════ 試辦流程 ═══════════ -->
+<section><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">パイロットの進め方</div>
+    <h2>30分のデモから始まります</h2>
+    <p class="sec-sub">最初から大きな契約は求めません。まず見て、試して、目標を満たしてから正式導入へ。</p>
+  </div>
+  <div class="steps reveal">
+    <div class="step">
+      <div class="no num">1</div>
+      <div>
+        <h4>30分のデモ</h4>
+        <p>オンラインでも現地でも、実際にMuneaと話して、人をどう覚え、気持ちをどう受け止めるかをご覧ください。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="no num">2</div>
+      <div>
+        <h4>現場の評価</h4>
+        <p>対象となる方の状況、言語、ネットワーク環境をうかがい、2週間以内に専用のパイロット計画書をご提出します。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="no num">3</div>
+      <div>
+        <h4>2〜4週間の現場パイロット</h4>
+        <p>まず10〜20名の参加者を選び、毎週ふりかえります。使いやすさ、ご家族の反応、人が引き継ぐ必要があった場面を確認します。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="no num">4</div>
+      <div>
+        <h4>目標達成で正式導入へ</h4>
+        <p>事前に決めた目標に沿って、拡大・調整・中止を判断します。正式な料金と責任範囲は契約で確認します。</p>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ═══════════ 服務承諾 ═══════════ -->
+<section><div class="wrap">
+  <div class="center-head reveal">
+    <div class="eyebrow center">サービスの境界とお約束</div>
+    <h2>介護の現場には、誠実なパートナーがふさわしい</h2>
+    <p class="sec-sub">3つのことを、先にはっきりお伝えします：</p>
+  </div>
+  <div class="grid g3">
+    <div class="card reveal">
+      <span class="tag teal">位置づけ</span>
+      <div class="icb"><svg viewBox="0 0 24 24"><path d="M12 21s-8-4.5-8-11a5 5 0 019-3 5 5 0 019 3c0 6.5-8 11-8 11z"/></svg></div>
+      <h3>補助であり、代替ではありません</h3>
+      <p>Muneaは「ケアと見守りを補助するツール」です。人によるケアや緊急時の医療判断に代わるものではなく、診断や医療上の助言も行いません。危険のサインの通報の流れと責任範囲は、契約で明確に定めます。</p>
+    </div>
+    <div class="card reveal">
+      <span class="tag teal">個人情報</span>
+      <div class="icb"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div>
+      <h3>データはケアのためだけに</h3>
+      <p>ご高齢の方の会話と健康データは、台湾の個人資料保護法に従って取得・処理します。同意書、データ処理の取り決め、保存期間、利用目的の限定まで一式を整えています。データをサービス以外の目的に使うことはありません。</p>
+    </div>
+    <div class="card reveal">
+      <span class="tag teal">言語</span>
+      <div class="icb"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg></div>
+      <h3>台湾の繁体字中国語</h3>
+      <p>サービスは台湾華語を中心に、台湾の話し方に合わせて調整しています。台湾語（台湾閩南語）は改善を続けており、導入前に現場の言語ニーズに応じて評価できます。日本語など他の言語には現時点で対応していません。</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- ═══════════ CTA 尾段 ═══════════ -->
+<section class="final">
+  <div class="wrap reveal">
+    <div class="cta-box">
+      <div class="glow"></div><div class="glow2"></div>
+      <p class="quote">みんながAIに「答えること」を教えるなかで、<br>私たちはAIに<em>人を気づかうこと</em>を教えました。</p>
+      <p class="sub">まず見て、試して、目標を満たしてから広げる。</p>
+      <div class="hero-actions">
+        <button class="btn btn-teal" type="button" data-modal="demo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
+          協業のご相談を予約</button>
+        <a class="btn btn-ghost" href="#demo">まずニンニンと話してみる</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
+  <p class="foot-legal">
+    嘉瑪科技股份有限公司 ｜ Munea · 健康に寄り添うAIケアアシスタント ｜ 2026年7月 ｜ <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a><br>
+    本ページに記載の料金は参考の枠組みであり、正式なお見積りは双方で合意した契約が優先します。「介護スマート支援機器レンタル給付」は申請を計画中の事項であり、確定した給付対象ではありません。<br>
+    Muneaはケアと見守りを補助するツールであり、人によるケア、医療診断、緊急救援サービスに代わるものではありません。
+  </p>
+  <p class="foot-site"><a href="https://munea.net/">Munea App 公式サイト — ご家庭向けの画面はこちら →</a></p>
+</div></footer>
+
+<!-- ═══════════ 預約彈窗 ═══════════ -->
+<div class="modal-back" id="bookBack" role="dialog" aria-modal="true" aria-labelledby="bmTitle" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-x" type="button" id="bookClose" aria-label="ウィンドウを閉じる"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h3 id="bmTitle">30分のご相談を予約</h3>
+    <p class="bm-sub" id="bmSub">ご記入いただければ1営業日以内にご返信し、オンラインまたは現地でのデモを手配します。</p>
+    <form id="bookForm" novalidate>
+      <div class="f-grid">
+        <label><span>お名前 <span class="req">＊</span></span><input name="name" type="text" autocomplete="name" required></label>
+        <label><span>団体・企業名 <span class="req">＊</span></span><input name="org" type="text" autocomplete="organization" required></label>
+        <label>ご所属
+          <select name="role">
+            <option value="長照機構">介護施設</option>
+            <option value="健康中心">ヘルスセンター</option>
+            <option value="企業人資永續">企業の人事・サステナビリティ</option>
+            <option value="高齡村">高齢者村</option>
+            <option value="策略聯盟">アライアンス</option>
+            <option value="其他">その他</option>
+          </select>
+        </label>
+        <label>電話番号<input name="phone" type="tel" autocomplete="tel"></label>
+        <label class="full"><span>メール <span class="req">＊</span></span><input name="email" type="email" autocomplete="email" required></label>
+        <fieldset class="full">
+          <legend>ご関心のあるプラン（複数選択可）</legend>
+          <div class="chks">
+            <label><input type="checkbox" name="plan" value="機構席次">施設の席</label>
+            <label><input type="checkbox" name="plan" value="ESG 席次">ESGの席</label>
+            <label><input type="checkbox" name="plan" value="白牌合作">ホワイトラベル</label>
+            <label><input type="checkbox" name="plan" value="其他">その他</label>
+          </div>
+        </fieldset>
+        <label class="full">ご要望<textarea name="msg" rows="3" placeholder="特に知りたいこと、ご連絡しやすい時間帯など…"></textarea></label>
+      </div>
+      <button class="btn btn-teal" type="submit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
+        送信</button>
+      <div class="bm-err" id="bmErr" role="alert" aria-live="polite"></div>
+      <p class="bm-alt">メールでも承ります <button type="button" class="copy-mail" id="copyMail" data-mail="edwardt0303@gmail.com">edwardt0303@gmail.com（クリックでコピー）</button></p>
+    </form>
+    <div class="book-ok" id="bookOk" hidden>
+      <div class="ok-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <h4>受け付けました。ありがとうございます！</h4>
+      <p>1営業日以内に担当者からご連絡し、オンラインまたは現地でのデモを手配します。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ── 這一頁的語系與文案（由 b2b-src/i18n/*.json 產生）── */
+  var LANG = "ja";
+  var T = {"errPass":"合言葉が違うようです。もう一度お試しいただくか、そのままデモをご予約ください。","soundOn":"音声オン","soundOff":"ミュート","trialTitle":"パイロット評価を申し込む","trialSub":"現場と対象の方の情報をご記入ください。1営業日以内にご返信し、2〜4週間・10〜20名規模の小さなパイロットの計画をお手伝いします。","demoTitle":"30分のご相談を予約","demoSub":"ご記入いただければ1営業日以内にご返信します。現状の棚卸し、ライブ体験、次のパイロットのご提案までを含みます。","formErr":"「お名前・団体名・メール」をご記入のうえ送信してください。","sending":"送信中…","copied":"{mail} をコピーしました！"};
+
+  /* ── 語言選單：只管開合，選項本身是連到別的網址的真連結 ── */
+  var sw = document.querySelector('.lang-switch');
+  if (sw) {
+    var swTrigger = sw.querySelector('.lang-trigger');
+    var setSwOpen = function(o){
+      sw.setAttribute('data-open', o ? 'true' : 'false');
+      if (swTrigger) swTrigger.setAttribute('aria-expanded', o ? 'true' : 'false');
+    };
+    setSwOpen(false);
+    if (swTrigger) swTrigger.addEventListener('click', function(e){
+      e.stopPropagation();
+      setSwOpen(sw.getAttribute('data-open') !== 'true');
+    });
+    document.addEventListener('click', function(e){ if (!sw.contains(e.target)) setSwOpen(false); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape') setSwOpen(false); });
+  }
+
+  /* ── 捲動進度條 ── */
+  var bar = document.querySelector('.progress');
+  function prog(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    if (bar) bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', prog, {passive:true});
+  prog();
+
+  /* ── 捲動漸入 ── */
+  var reveals = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -32px 0px' });
+    reveals.forEach(function(el){ io.observe(el); });
+  } else {
+    reveals.forEach(function(el){ el.classList.add('in'); });
+  }
+
+  /* ── Demo 密碼閘 ── */
+  var KEY = 'munea_demo_unlocked';
+  var lockEl = document.getElementById('demoLock');
+  var openEl = document.getElementById('demoOpen');
+  var form = document.getElementById('demoForm');
+  var pass = document.getElementById('demoPass');
+  var err = document.getElementById('lockErr');
+  var card = document.getElementById('lockCard');
+
+  function prewarmVoiceAvatar(passValue){
+    if (!passValue) return;
+    fetch('/api/call-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: passValue })
+    }).then(function(r){
+      if (!r.ok) throw new Error('prewarm key ' + r.status);
+      return r.json();
+    }).then(function(cfg){
+      if (!cfg || !cfg.avatarHttp || !cfg.avatarKey) return;
+      return fetch(cfg.avatarHttp.replace(/\/$/, '') + '/health?key=' + encodeURIComponent(cfg.avatarKey));
+    }).catch(function(){
+      /* 預熱失敗不擋頁面；call.html 仍會做一次正式喚醒與重試。 */
+    });
+  }
+
+  function unlock(){
+    lockEl.style.display = 'none';
+    openEl.classList.add('show');
+    try { prewarmVoiceAvatar(sessionStorage.getItem('munea_pass') || ''); } catch(e){}
+  }
+
+  form.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var v = (pass.value || '').replace(/\s+/g,'').toLowerCase();
+    if (v === 'munea666') {
+      try {
+        sessionStorage.setItem(KEY, '1');
+        sessionStorage.setItem('munea_pass', pass.value); /* call.html 讀這把免再輸入 */
+      } catch(e){}
+      err.textContent = '';
+      unlock();
+    } else {
+      err.textContent = T.errPass;
+      card.classList.remove('shake');
+      void card.offsetWidth;
+      card.classList.add('shake');
+      pass.select();
+    }
+  });
+
+  /* ── Hero 影片：打招呼播完換待機循環（官網同款） ── */
+  var hv = document.getElementById('heroVid');
+  if (hv) hv.addEventListener('ended', function(){
+    if (hv.dataset.i) return;
+    hv.dataset.i = '1';
+    hv.src = '/assets/realfemale-idle.mp4';
+    hv.loop = true;
+    hv.play();
+  });
+
+  /* ── 核心技術示範：開聲音切換（官網 vsound 同款・女聲＋男聲兩卡，一次只響一支） ── */
+  document.querySelectorAll('#tech .vdemo .vsound').forEach(function(vsBtn){
+    var vid = vsBtn.closest('.vframe').querySelector('.vplay');
+    if (!vid) return;
+    vsBtn.addEventListener('click', function(){
+      var tx = vsBtn.querySelector('.vs-tx');
+      if (vid.muted) {
+        /* 其他影片全靜音＋按鈕復位，只開這支 */
+        document.querySelectorAll('video').forEach(function(v){ if (v !== vid) v.muted = true; });
+        document.querySelectorAll('#tech .vsound.on').forEach(function(b){
+          if (b === vsBtn) return;
+          b.classList.remove('on'); b.setAttribute('aria-pressed', 'false');
+          var t = b.querySelector('.vs-tx'); if (t) t.textContent = T.soundOn;
+        });
+        vid.muted = false;
+        vid.play();
+        vsBtn.classList.add('on');
+        vsBtn.setAttribute('aria-pressed', 'true');
+        if (tx) tx.textContent = T.soundOff;
+      } else {
+        vid.muted = true;
+        vsBtn.classList.remove('on');
+        vsBtn.setAttribute('aria-pressed', 'false');
+        if (tx) tx.textContent = T.soundOn;
+      }
+    });
+  });
+
+  /* 同 session 已解鎖過 → 直接顯示真臉真聲入口 */
+  try {
+    if (sessionStorage.getItem(KEY) === '1') unlock();
+  } catch(e){}
+
+  /* ── 預約彈窗 ── */
+  var MAIL = 'edwardt0303@gmail.com';
+  var back = document.getElementById('bookBack');
+  var bTitle = document.getElementById('bmTitle');
+  var bSub = document.getElementById('bmSub');
+  var bForm = document.getElementById('bookForm');
+  var bErr = document.getElementById('bmErr');
+  var mode = 'demo'; /* demo＝預約展示；trial＝申請試辦 */
+
+  function openModal(m){
+    mode = (m === 'trial') ? 'trial' : 'demo';
+    if (mode === 'trial') {
+      bTitle.textContent = T.trialTitle;
+      bSub.textContent = T.trialSub;
+    } else {
+      bTitle.textContent = T.demoTitle;
+      bSub.textContent = T.demoSub;
+    }
+    bErr.textContent = '';
+    /* 重開時還原表單、收起成功卡（上次直送成功後會藏起表單） */
+    var okBox = document.getElementById('bookOk');
+    if (okBox) okBox.hidden = true;
+    bForm.style.display = '';
+    back.classList.add('open');
+    back.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    var first = bForm.querySelector('input[name="name"]');
+    setTimeout(function(){ if (first) first.focus(); }, 260);
+  }
+  function closeModal(){
+    back.classList.remove('open');
+    back.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('[data-modal]').forEach(function(btn){
+    btn.addEventListener('click', function(){ openModal(btn.getAttribute('data-modal')); });
+  });
+  document.getElementById('bookClose').addEventListener('click', closeModal);
+  back.addEventListener('click', function(ev){ if (ev.target === back) closeModal(); });
+  document.addEventListener('keydown', function(ev){
+    if (ev.key === 'Escape' && back.classList.contains('open')) closeModal();
+  });
+
+  bForm.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var f = bForm.elements;
+    var name = (f.name.value || '').trim();
+    var org = (f.org.value || '').trim();
+    var role = f.role.value;
+    var phone = (f.phone.value || '').trim();
+    var email = (f.email.value || '').trim();
+    var msg = (f.msg.value || '').trim();
+    var plans = [];
+    bForm.querySelectorAll('input[name="plan"]:checked').forEach(function(c){ plans.push(c.value); });
+
+    /* 必填檢查：姓名、單位、Email */
+    var missing = [];
+    [['name', name], ['org', org], ['email', email]].forEach(function(p){
+      var el = f[p[0]];
+      if (!p[1]) { el.classList.add('err'); missing.push(p[0]); }
+      else { el.classList.remove('err'); }
+    });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      f.email.classList.add('err');
+      if (missing.indexOf('email') < 0) missing.push('email');
+    }
+    if (missing.length) {
+      bErr.textContent = T.formErr;
+      return;
+    }
+    bErr.textContent = '';
+
+    var subject = (mode === 'trial' ? '【申請試辦】' : '【預約展示】') + (org || '未填單位') + '－Munea B2B 合作';
+    var body = [
+      '姓名：' + name,
+      '單位名稱：' + org,
+      '身分：' + role,
+      '電話：' + (phone || '未填'),
+      'Email：' + email,
+      '想了解的方案：' + (plans.length ? plans.join('、') : '未勾選'),
+      '留言：' + (msg || '無'),
+      '',
+      '由 Munea B2B 合作頁' + (mode === 'trial' ? '「申請試辦評估」' : '「預約 30 分鐘場域診斷」') + '表單送出（訪客語系：' + LANG + '）'
+    ].join('\n');
+
+    function openMail(){
+      window.location.href = 'mailto:' + MAIL +
+        '?subject=' + encodeURIComponent(subject) +
+        '&body=' + encodeURIComponent(body);
+    }
+
+    /* 先試「直送到我們信箱」（不需訪客有信箱 App）；後端沒設寄信鑰匙或失敗 → 自動退回開啟寄信 */
+    var submitBtn = bForm.querySelector('button[type="submit"]');
+    var btnOld = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn){ submitBtn.disabled = true; submitBtn.textContent = T.sending; }
+    fetch('/api/lead', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, org: org, role: role, phone: phone, email: email, msg: msg, plans: plans, mode: mode, lang: LANG })
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.ok){
+        bForm.style.display = 'none';
+        bErr.textContent = '';
+        var okBox = document.getElementById('bookOk');
+        if (okBox){ okBox.hidden = false; }
+      } else {
+        openMail();
+      }
+    }).catch(function(){ openMail(); }).then(function(){
+      if (submitBtn){ submitBtn.disabled = false; submitBtn.textContent = btnOld; }
+    });
+  });
+
+  /* ── Email 點擊複製 ── */
+  var copyBtn = document.getElementById('copyMail');
+  copyBtn.addEventListener('click', function(){
+    var mail = copyBtn.getAttribute('data-mail');
+    function done(){
+      var old = copyBtn.textContent;
+      copyBtn.textContent = T.copied.replace('{mail}', mail);
+      setTimeout(function(){ copyBtn.textContent = old; }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(mail).then(done, function(){ fallback(); });
+    } else { fallback(); }
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = mail; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>

@@ -27,8 +27,16 @@
 <meta name="twitter:title" content="{{og.title}}">
 <meta name="twitter:description" content="{{og.description}}">
 <meta name="twitter:image" content="{{meta.ogImage}}">
+<!-- 品牌識別資料。原本只宣告「我是一個 App」，Google 因此不知道官網／App Store／粉專是同一家，
+     搜「沐寧」時被同名的相聲團與餐廳擠掉（2026-08-11 實測：App Store 頁第 1，官網沒進第一頁）。
+     改成三個實體互指：Organization 是品牌本體、WebSite 是這個網站、MobileApplication 是產品。
+     ⚠ @id 一律用固定的 siteUrl、不用 canonical——否則四個語系會被當成四個不同的品牌，反而更散。 -->
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"MobileApplication","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"{{og.description}}","url":"{{meta.canonical}}","image":"{{meta.ogImage}}","inLanguage":"{{meta.htmlLang}}","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"{{meta.siteUrl}}/#organization","name":"沐寧 Munea","alternateName":["Munea","沐寧","Munea App","沐寧 App"],"url":"{{meta.siteUrl}}/","logo":{"@type":"ImageObject","url":"{{meta.siteUrl}}/assets/paining-logo.png","width":256,"height":256},"image":"{{meta.ogImage}}","email":"{{meta.contactEmail}}","sameAs":["{{meta.appStoreUrl}}","{{meta.facebookUrl}}"]},
+{"@type":"WebSite","@id":"{{meta.siteUrl}}/#website","url":"{{meta.siteUrl}}/","name":"沐寧 Munea","alternateName":"Munea","inLanguage":"{{meta.htmlLang}}","publisher":{"@id":"{{meta.siteUrl}}/#organization"}},
+{"@type":"MobileApplication","@id":"{{meta.siteUrl}}/#app","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"{{og.description}}","url":"{{meta.canonical}}","image":"{{meta.ogImage}}","inLanguage":"{{meta.htmlLang}}","installUrl":"{{meta.appStoreUrl}}","sameAs":"{{meta.appStoreUrl}}","publisher":{"@id":"{{meta.siteUrl}}/#organization"},"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+]}
 </script>
 <link rel="stylesheet" href="/warm.css?v=10">
 <style>
@@ -77,30 +85,34 @@
   .pane{aspect-ratio:auto!important;background:#e9f2ed!important;display:grid;place-items:center;padding:30px}
   .dev{width:min(250px,74%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27}
   .dev img{width:100%;height:100%;object-fit:cover;position:static;display:block}
-  .callphone{position:relative;width:min(252px,76%);aspect-ratio:780/1688;border-radius:34px;overflow:hidden;box-shadow:0 0 0 9px #15110e}
+  /* 模擬手機畫面的字級原本是寫死的 px：中文「阿宏／在線」短、看不出問題，
+     換成英文 online、西班牙文 en línea／En directo 就整排爆出框（2026-07-30 抓到）。
+     改成跟著手機框寬度等比縮（252px 時就是原本的尺寸，框變小就一起變小），
+     四個語系都會自己合身、不必為每種語言各調一次。 */
+  .callphone{position:relative;width:min(252px,76%);aspect-ratio:780/1688;border-radius:34px;overflow:hidden;box-shadow:0 0 0 9px #15110e;container-type:inline-size}
   .callphone>img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
   .cscreen{position:absolute;inset:0;color:#fff}
-  .csb{position:absolute;top:0;left:0;right:0;height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 20px;font-size:12px;font-weight:700;color:#33403D}
+  .csb{position:absolute;top:0;left:0;right:0;height:min(34px,13.5cqw);display:flex;align-items:center;justify-content:space-between;padding:0 min(18px,7.1cqw) 0 min(20px,7.9cqw);font-size:min(12px,4.8cqw);font-weight:700;color:#33403D}
   .csb .isl{position:absolute;left:50%;top:9px;transform:translateX(-50%);width:56px;height:15px;background:#15110e;border-radius:100px}
   .csb .sic{display:flex;align-items:center;gap:4px}
   .csb .sic svg{height:11px;width:auto;fill:#33403D}
-  .chead{position:absolute;top:44px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-  .chead .cname{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:15px;color:#33403D;text-shadow:0 1px 3px rgba(255,255,255,.5)}
+  .chead{position:absolute;top:min(44px,17.5cqw);left:min(15px,6cqw);right:min(15px,6cqw);display:flex;justify-content:space-between;align-items:flex-start;gap:min(8px,3.2cqw)}
+  .chead .cname{display:inline-flex;align-items:center;gap:min(6px,2.4cqw);min-width:0;font-weight:700;font-size:min(15px,6cqw);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#33403D;text-shadow:0 1px 3px rgba(255,255,255,.5)}
   .chead .cname i{width:7px;height:7px;border-radius:50%;background:#3AA8A0}
-  .chead .cname small{font-weight:500;font-size:11px;color:#5A6963}
-  .chead .cstat{background:rgba(51,64,61,.58);color:#fff;border-radius:100px;padding:4px 9px;font-size:10px;font-weight:600;white-space:nowrap}
-  .cfoot{position:absolute;bottom:18px;left:15px;right:15px}
+  .chead .cname small{font-weight:500;font-size:min(11px,3.7cqw);color:#5A6963}
+  .chead .cstat{flex:0 0 auto;background:rgba(51,64,61,.58);color:#fff;border-radius:100px;padding:min(4px,1.6cqw) min(9px,3.2cqw);font-size:min(10px,3.6cqw);font-weight:600;white-space:nowrap}
+  .cfoot{position:absolute;bottom:min(18px,7.1cqw);left:min(15px,6cqw);right:min(15px,6cqw)}
   .cwave{display:flex;align-items:flex-end;justify-content:center;gap:3px;height:16px;margin-bottom:14px}
   .cwave i{width:3px;border-radius:3px;background:#7CF0C8;transform-origin:bottom;animation:cwv 1.1s ease-in-out infinite}
   .cwave i:nth-child(2n){animation-duration:.85s}
   .cwave i:nth-child(3n){animation-duration:1.35s}
   @keyframes cwv{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
   @media(prefers-reduced-motion:reduce){.cwave i{animation:none}}
-  .crow{display:flex;align-items:center;justify-content:center;gap:10px}
-  .crow .cb{width:44px;height:44px;border-radius:50%;background:rgba(20,17,14,.42);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
+  .crow{display:flex;align-items:center;justify-content:center;gap:min(10px,4cqw)}
+  .crow .cb{width:min(44px,17.5cqw);height:min(44px,17.5cqw);flex:0 0 auto;border-radius:50%;background:rgba(20,17,14,.42);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
   .crow .cb.on{background:#3AA8A0}
-  .crow .cb svg{width:20px;height:20px;stroke:#fff}
-  .crow .cend{display:inline-flex;align-items:center;gap:6px;background:#E5533D;color:#fff;border-radius:100px;padding:11px 17px;font-size:14px;font-weight:700;white-space:nowrap}
+  .crow .cb svg{width:min(20px,7.9cqw);height:min(20px,7.9cqw);stroke:#fff}
+  .crow .cend{display:inline-flex;align-items:center;gap:min(6px,2.4cqw);background:#E5533D;color:#fff;border-radius:100px;padding:min(11px,4.4cqw) min(17px,6.7cqw);font-size:min(14px,5.6cqw);min-width:0;font-weight:700;white-space:nowrap}
 
   /* 導覽列 */
   .navlinks a.nav-cta{height:42px;padding:0 22px;display:inline-flex;align-items:center;font-size:15px}
@@ -426,14 +438,14 @@
     <div class="vgrid reveal">
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/real-female-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realfemale-talk-demo.mp4" aria-label="{{demo.alt1}}"></video>
+          <video class="vplay" poster="/assets/real-female-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realfemale-talk-demo{{meta.demoSuffix}}.mp4" aria-label="{{demo.alt1}}"></video>
           <button class="vsound" type="button" aria-label="{{demo.soundOn}}" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="{{demo.soundOn}}" data-off="{{demo.mute}}">{{demo.soundOn}}</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">{{demo.label1}}</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/real-male-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realmale-talk-demo.mp4" aria-label="{{demo.alt2}}"></video>
+          <video class="vplay" poster="/assets/real-male-poster.jpg" muted playsinline loop preload="none" data-src="/assets/realmale-talk-demo{{meta.demoSuffix}}.mp4" aria-label="{{demo.alt2}}"></video>
           <button class="vsound" type="button" aria-label="{{demo.soundOn}}" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="{{demo.soundOn}}" data-off="{{demo.mute}}">{{demo.soundOn}}</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">{{demo.label2}}</span></figcaption>
@@ -555,9 +567,9 @@
       </div>
       <div class="foot-col">
         <h4>{{foot.contactTitle}}</h4>
-        <a href="/support">{{foot.linkSupport}}</a>
-        <a href="/terms">{{foot.linkTerms}}</a>
-        <a href="/privacy">{{foot.linkPrivacy}}</a>
+        <a href="{{meta.legalSupport}}">{{foot.linkSupport}}</a>
+        <a href="{{meta.legalTerms}}">{{foot.linkTerms}}</a>
+        <a href="{{meta.legalPrivacy}}">{{foot.linkPrivacy}}</a>
         <a class="ext" href="{{meta.b2bUrl}}" target="_blank" rel="noopener">{{foot.linkB2B}}</a>
         <a href="mailto:{{meta.contactEmail}}">{{meta.contactEmail}}</a>
       </div>

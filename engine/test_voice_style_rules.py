@@ -3,15 +3,42 @@
 ①句尾不要一直反問 ②故事要有寓意、有收尾 ③內容預設台灣在地。
 規則若被改掉或誤刪，這裡會亮紅燈。"""
 import os
+import importlib
+import re
+import sys
+import tempfile
 import unittest
 
 SRC = os.path.join(os.path.dirname(__file__), "live_voice_server.py")
+PERSONA_DIR = os.path.join(os.path.dirname(__file__), "persona")
+sys.path.insert(0, os.path.dirname(__file__))
+os.environ.setdefault("GEMINI_API_KEY", "test")
+os.environ.setdefault("MUNEA_DATABASE_PROVIDER", "json")
+
+
+def _voice_style_book(locale):
+    path = os.path.join(PERSONA_DIR, f"voice-style.{locale}.txt")
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _shipped_voice_style_locales():
+    if not os.path.isdir(PERSONA_DIR):
+        return []
+    return sorted(
+        name[len("voice-style."):-len(".txt")]
+        for name in os.listdir(PERSONA_DIR)
+        if name.startswith("voice-style.") and name.endswith(".txt")
+    )
 
 
 class VoiceStyleRulesTest(unittest.TestCase):
     def setUp(self):
+        # 2026-07-31 口語風格分國：規則從程式碼搬進 engine/persona/voice-style.<語系>.txt。
+        # 這支守的東西沒變（規則被刪就要亮紅燈），只是現在要連書一起看——
+        # 兩邊合起來當作「說明書的全文」。
         with open(SRC, encoding="utf-8") as f:
-            self.src = f.read()
+            self.src = f.read() + _voice_style_book("zh-TW")
 
     def test_priority_contract_present_and_first(self):
         """優先權契約（五層、小者優先）必須存在，且在說明書組裝的最前面。"""
@@ -33,6 +60,52 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self.assertIn("前三輪每輪最多一句話", self.src)
         self.assertIn("不要一接通就高能量歡迎", self.src)
         self.assertIn("不管你們多熟", self.src)
+
+    def test_response_length_is_task_adaptive(self):
+        """語音預設精簡，但不能把解釋、比較、健康資訊與故事硬砍成兩句。"""
+        self.assertIn("短是預設，不是硬上限", self.src)
+        for task_shape in ("直接答案", "健康說明", "比較、做法", "故事要講完整", "工具結果"):
+            self.assertIn(task_shape, self.src)
+        self.assertIn("二十到四十秒", self.src)
+        self.assertIn("我的看法是", self.src)
+        self.assertIn("嗯，我的看法是", self.src)
+        self.assertIn("安靜等他", self.src)
+        self.assertNotIn("一般閒聊預設只回答一句", self.src)
+        # 2026-08-04 GPT Live 對齊：舊的視訊框架／熟識度規則不能再用全域
+        # 「一次一兩句」蓋掉上面的任務式話量。需要短的場景仍由風格書明確指定，
+        # 但健康說明、比較、做法與故事要能完整講完。
+        for conflicting_rule in (
+            "句子短、口語、一次一兩句",
+            "一次還是一兩句、問完停下來聽",
+            "一次還是一兩句、不長篇",
+            "仍別長篇",
+        ):
+            self.assertNotIn(conflicting_rule, self.src)
+        self.assertIn("一次只推進一件事", self.src)
+        self.assertIn("對方明確想深入、比較、聽完整說明或故事時再自然展開", self.src)
+
+    def test_turn_taking_waits_for_unfinished_thoughts_and_chunks_long_answers(self):
+        """GPT Live 對齊：不把沉默一律當句點；長回答要像說話，不像朗讀稿。"""
+        self.assertIn("未完線索", self.src)
+        self.assertIn("把短暫沉默當成他還在想", self.src)
+        self.assertIn("先說結論", self.src)
+        self.assertIn("口語路標", self.src)
+        self.assertIn("對方一插話就停", self.src)
+        self.assertIn("不硬把原稿講完", self.src)
+
+    def test_prosody_follows_acoustic_emotion_without_forced_fillers(self):
+        self.assertIn("[即時語音韻律與情緒]", self.src)
+        self.assertIn("不要只看逐字內容", self.src)
+        self.assertIn("聲量柔一級、語速慢一級", self.src)
+        self.assertIn("每個重點之間要有可接話的空隙", self.src)
+        self.assertIn("不要戲劇化模仿情緒", self.src)
+        self.assertIn("不要固定塞", self.src)
+
+    def test_realtime_contract_is_single_and_labeled(self):
+        """Realtime 行為只留一份短契約，避免多組人格例句互相拉扯。"""
+        self.assertEqual(1, self.src.count("[即時通話互動契約]"))
+        for action in ("一次只推進一件事", "一次問一件", "不要猜他做了什麼", "消化成口語"):
+            self.assertIn(action, self.src)
 
     def test_video_call_persona_frame_present(self):
         """2026-07-16 Edward「像與真實世界的人視訊聊天」：相處框架要在、且是行為比喻不是身分宣稱。"""
@@ -95,8 +168,8 @@ class VoiceStyleRulesTest(unittest.TestCase):
         flow = self.src[self.src.index("async def _run_live_lookup"):]
         # 2026-07-25 去罐頭化：_send_lookup_cue 改吃 category 參數挑貼題過場話，
         # 呼叫點仍必須在真的打網路查詢之前。
-        self.assertLess(flow.index("await _send_lookup_cue(category)"),
-                        flow.index("search_current_information(cli"))
+        self.assertLess(flow.index("await _send_lookup_cue(category, response_locale)"),
+                        flow.index("search_current_information("))
         for event in ("node.lookup_started", "node.lookup_cue_sent", "node.lookup_done",
                       "node.lookup_failed", "node.lookup_answer_audio"):
             self.assertIn(event, self.src)
@@ -134,6 +207,131 @@ class VoiceStyleRulesTest(unittest.TestCase):
         self_awareness = self.src[self.src.index("純語音的現實：你們之間只有「聲音」"):
                                    self.src.index("讓他消化或接話。）")]
         self.assertNotIn("長輩", self_awareness)
+
+
+
+class EveryShippedVoiceStyleBookTest(unittest.TestCase):
+    """已授書的每一國，語音風格的七節都必須在。
+
+    授書＝用另一種語言重寫一整套口語規則。漏抄一節不會有錯誤訊息——
+    電話照樣打得通，只是那一國的長輩會遇到一個講太多、一直反問、
+    一接通就很high 的她。所以逐本檢查骨架。
+    """
+
+    SECTIONS_BY_LOCALE = {
+        "zh-TW": ("[即時語音話量上限]", "[即時語音能量]", "[即時語音韻律與情緒]", "[開場升溫]",
+                  "[句尾收法]", "[說故事與在地內容]", "[接住情緒與陪伴引導]"),
+        "ja": ("[リアルタイム音声・話す量の上限]", "[リアルタイム音声・声の温度]", "[リアルタイム音声・韻律と感情]",
+               "[話しはじめの温度]", "[文の終わり方]", "[話と、その土地のこと]",
+               "[気持ちを受けとめ、寄り添って導く]"),
+        "en": ("[Live speech · how much to say]", "[Live speech · energy]", "[Live speech · prosody and emotion]",
+               "[Warming up at the start]", "[How to end a sentence]",
+               "[Stories and local things]", "[Holding a feeling and walking with them]"),
+        "es": ("[Voz en directo · cuánto hablar]", "[Voz en directo · energía]", "[Voz en directo · prosodia y emoción]",
+               "[El arranque, de menos a más]", "[Cómo terminar una frase]",
+               "[Historias y cosas de aquí]", "[Sostener lo que siente y acompañarle]"),
+    }
+
+    def test_every_book_keeps_the_seven_sections(self):
+        for locale in _shipped_voice_style_locales():
+            sections = self.SECTIONS_BY_LOCALE.get(locale)
+            self.assertIsNotNone(
+                sections,
+                f"{locale}：授了語音風格書卻沒登記章節骨架——這支守不到它，等於沒守",
+            )
+            book = _voice_style_book(locale)
+            for section in sections:
+                self.assertIn(section, book, f"{locale}：語音風格缺了 {section} 這一節")
+
+    def test_every_book_forbids_back_to_back_questions(self):
+        """「不准連續兩輪都用問題收尾」是 Edward 兩次真機回報後立的硬規矩，每一國都要有。"""
+        markers = {
+            "zh-TW": "不准連續兩輪都用問題收尾",
+            "ja": "二巡続けて質問で終えてはいけません",
+            "en": "never end two turns in a row with a question",
+            "es": "nunca termine dos turnos seguidos con una pregunta",
+        }
+        for locale in _shipped_voice_style_locales():
+            marker = markers.get(locale)
+            if not marker:
+                continue
+            self.assertIn(marker, _voice_style_book(locale),
+                          f"{locale}：少了「不准連續兩輪反問」的硬規矩")
+
+
+class VoicePromptBudgetTest(unittest.TestCase):
+    """提示預算與搜尋模式互斥契約。
+
+    這不是把字數當品質；它防止已刪掉的重複規則、例句與互斥搜尋說明悄悄長回來。
+    醫療、安全、權限與工具規則仍由上面的行為測試各自守住。
+
+    2026-08-10（Edward 拍板「先分節」）改成**只算內容、不算排版**：
+    說明書從一整段長文改成分節條列後，換行讓字數多了約 80——那些是排版、不是新規則。
+    照舊寫法，「把長文切成小節」這種只有好處的改動會被守門擋下來，而真正該擋的
+    重複規則反而可以靠刪掉幾個空白偷渡進來。改成把空白全部去掉再量，排版怎麼改都
+    不影響額度，長回來的規則一個字都躲不掉——比舊寫法更緊，不是更鬆。
+    """
+
+    @staticmethod
+    def _content_len(prompt):
+        """只算真正的內容：空白、換行、縮排一律不計。"""
+        return len(re.sub(r"\s+", "", prompt))
+
+    @staticmethod
+    def _render(search_enabled, **kwargs):
+        # 2026-08-10：量之前先把「今日簡報」隔開。那是**當天的資料**、不是規則，
+        # 而且它存在 engine/perception_snapshots.json——同一輪測試裡前面幾支會寫進去，
+        # 於是這支量到的長度會跟著前面跑過什麼而變（實測差 202 字），紅燈紅得莫名其妙。
+        # 這支守的是「刪掉的重複規則有沒有偷偷長回來」，所以只量規則、不量當天資料。
+        env_backup = {
+            key: os.environ.get(key)
+            for key in ("MUNEA_VOICE_LIVE_LOOKUP", "MUNEA_PERCEPTION_SNAPSHOTS_PATH")
+        }
+        os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1" if search_enabled else "0"
+        os.environ["MUNEA_PERCEPTION_SNAPSHOTS_PATH"] = os.path.join(
+            tempfile.gettempdir(), "munea-prompt-budget-no-briefing.json")
+        try:
+            import live_voice_server
+            module = importlib.reload(live_voice_server)
+            return module.system_instruction(**kwargs)
+        finally:
+            for key, old in env_backup.items():
+                if old is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = old
+
+    def test_prompt_budget_for_current_production_shape(self):
+        prompt = self._render(True)
+        self.assertLessEqual(self._content_len(prompt), 16200)
+        self.assertEqual(1, prompt.count("[即時通話互動契約]"))
+        self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
+        self.assertNotIn("[即時資訊｜無搜尋]", prompt)
+        self.assertNotIn("Voice 伺服器會先替你播放", prompt)
+
+    def test_prompt_budget_for_capability_rich_call(self):
+        prompt = self._render(
+            True,
+            allow_reminders=True,
+            allow_events=True,
+            allow_care_questions=True,
+            user="阿明",
+            name="寧寧",
+        )
+        self.assertLessEqual(self._content_len(prompt), 17900)
+        for hard_rule in (
+            "絕對不准用查到的網路內容回答",
+            "只有工具回覆 status=ok 才能說設好了",
+            "你是幫他**保管問題**、不是**回答問題**",
+        ):
+            self.assertIn(hard_rule, prompt)
+
+    def test_no_search_mode_is_explicit_and_non_conflicting(self):
+        prompt = self._render(False)
+        self.assertLessEqual(self._content_len(prompt), 16500)
+        self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
+        self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
+        self.assertIn("你沒有辦法上網查東西", prompt)
 
 
 if __name__ == "__main__":

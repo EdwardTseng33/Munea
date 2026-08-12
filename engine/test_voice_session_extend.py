@@ -102,6 +102,46 @@ class _FakeWs:
         raise StopAsyncIteration
 
 
+class _CloseAfterRecoveredWs(_FakeWs):
+    """收到 watchdog 補出的 turn_complete 後模擬使用者掛斷。
+
+    若恢復仍靠重連，_run_voice_session 會先返回 call_ended=False；若正確留在原 Live
+    session，則 from_browser 會在這個明確掛斷後才結束。
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.recovered = asyncio.Event()
+
+    async def send(self, data):
+        await super().send(data)
+        if isinstance(data, str) and '"recovered": true' in data:
+            self.recovered.set()
+
+    async def __anext__(self):
+        await self.recovered.wait()
+        raise StopAsyncIteration
+
+
+class _CloseAfterTurnCountWs(_FakeWs):
+    def __init__(self, target):
+        super().__init__()
+        self.target = target
+        self.turn_count = 0
+        self.done = asyncio.Event()
+
+    async def send(self, data):
+        await super().send(data)
+        if isinstance(data, str) and '"type": "turn_complete"' in data:
+            self.turn_count += 1
+            if self.turn_count >= self.target:
+                self.done.set()
+
+    async def __anext__(self):
+        await self.done.wait()
+        raise StopAsyncIteration
+
+
 def _msg(**kwargs):
     return pytypes.SimpleNamespace(**kwargs)
 
@@ -132,7 +172,228 @@ class _FakeSession:
         self.tool_responses.append(kwargs)
 
 
+class _StalledTurnSession(_FakeSession):
+    async def receive(self):
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x01\x00" * 24000,
+            tool_call=None,
+        )
+        await asyncio.Event().wait()
+
+
+class _RecoveredThenContinuedSession(_FakeSession):
+    """第一輪漏 turn_complete，稍後才補到；接著在同一 session 正常完成第二輪。"""
+
+    async def receive(self):
+        if self._call_index:
+            return
+        self._call_index += 1
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x01\x00" * 24000,
+            tool_call=None,
+        )
+        await asyncio.sleep(0.35)
+        # 第一輪晚到的 turn_complete：應被去重，不能再送 App 一次。
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None, output_transcription=None,
+                interrupted=False, turn_complete=True,
+            ),
+            data=None,
+            tool_call=None,
+        )
+        # 第二輪沿用同一個 Live session，正常送聲音與 turn_complete。
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x02\x00" * 12000,
+            tool_call=None,
+        )
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None, output_transcription=None,
+                interrupted=False, turn_complete=True,
+            ),
+            data=None,
+            tool_call=None,
+        )
+
+
+class _RecoveredLateTailThenContinuedSession(_FakeSession):
+    """watchdog 收尾後，provider 又補舊尾音／字幕，再正常完成下一輪。"""
+
+    async def receive(self):
+        if self._call_index:
+            return
+        self._call_index += 1
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x01\x00" * 24000,
+            tool_call=None,
+        )
+        await asyncio.sleep(0.35)
+        # 這是已被 watchdog 收掉的第一輪 tail，聲音與字幕都不可再送給 App。
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None,
+                output_transcription=_msg(text="沒有發燒就好，我再說一次。"),
+                interrupted=False,
+                turn_complete=False,
+            ),
+            data=b"\x03\x00" * 12000,
+            tool_call=None,
+        )
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None, output_transcription=None,
+                interrupted=False, turn_complete=True,
+            ),
+            data=None,
+            tool_call=None,
+        )
+        # 下一個正常回合仍沿用同一條 session，不能被 quarantine 吃掉。
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=None,
+            data=b"\x02\x00" * 12000,
+            tool_call=None,
+        )
+        yield _msg(
+            go_away=None,
+            session_resumption_update=None,
+            server_content=_msg(
+                input_transcription=None, output_transcription=None,
+                interrupted=False, turn_complete=True,
+            ),
+            data=None,
+            tool_call=None,
+        )
+
+
 class RunVoiceSessionGoAwayReconnectTests(unittest.IsolatedAsyncioTestCase):
+    async def test_missing_turn_complete_finishes_in_place_and_preserves_session(self):
+        previous = os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS")
+        os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = "50"
+        try:
+            session = _StalledTurnSession([])
+            ws = _CloseAfterRecoveredWs()
+            st = voice._new_call_state()
+
+            call_ended, handle = await voice._run_voice_session(
+                session, cli=None, ws=ws, cid=3, t0=0.0, st=st, char="a05",
+                location=None, topics=None, fam=0, day_call=None,
+                call_payload=None, gate_key="", call_token="",
+                asr_context_terms=["a05"], first_connect=False,
+                resumption_handle="orphaned-handle",
+                voice_locale_session=VoiceLocaleSession({}),
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("MUNEA_VOICE_TURN_STALL_IDLE_MS", None)
+            else:
+                os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = previous
+
+        self.assertTrue(call_ended)  # 只因假 App 明確掛斷，不是 watchdog 逼換線
+        self.assertEqual(handle, "orphaned-handle")
+        self.assertFalse(st["provider_turn_active"])
+        self.assertEqual(st["provider_turn_recoveries"], 1)
+        self.assertEqual(st["provider_turn_recovery_seq"], 1)
+        self.assertFalse(st["provider_turn_recovery_in_progress"])
+        events = [item for item in ws.sent if isinstance(item, str)]
+        recovered = [item for item in events if '"turn_complete"' in item and '"recovered": true' in item]
+        self.assertEqual(len(recovered), 1)
+
+    async def test_late_turn_complete_is_deduplicated_and_next_turn_stays_same_session(self):
+        previous = os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS")
+        os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = "50"
+        try:
+            session = _RecoveredThenContinuedSession([])
+            ws = _CloseAfterTurnCountWs(target=2)
+            st = voice._new_call_state()
+
+            call_ended, handle = await voice._run_voice_session(
+                session, cli=None, ws=ws, cid=4, t0=0.0, st=st, char="a05",
+                location=None, topics=None, fam=0, day_call=None,
+                call_payload=None, gate_key="", call_token="",
+                asr_context_terms=["a05"], first_connect=False,
+                resumption_handle="same-session-handle",
+                voice_locale_session=VoiceLocaleSession({}),
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("MUNEA_VOICE_TURN_STALL_IDLE_MS", None)
+            else:
+                os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = previous
+
+        self.assertTrue(call_ended)
+        self.assertEqual(handle, "same-session-handle")
+        self.assertEqual(session._call_index, 1)
+        self.assertEqual(st["provider_turn_recoveries"], 1)
+        turn_events = [
+            item for item in ws.sent
+            if isinstance(item, str) and '"type": "turn_complete"' in item
+        ]
+        self.assertEqual(len(turn_events), 2)  # recovered 第一輪＋正常第二輪，晚到訊號未重複
+        self.assertEqual(sum('"recovered": true' in item for item in turn_events), 1)
+
+    async def test_late_tail_after_recovery_is_suppressed_without_eating_next_turn(self):
+        previous = os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS")
+        os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = "50"
+        try:
+            session = _RecoveredLateTailThenContinuedSession([])
+            ws = _CloseAfterTurnCountWs(target=2)
+            st = voice._new_call_state()
+
+            call_ended, handle = await voice._run_voice_session(
+                session, cli=None, ws=ws, cid=5, t0=0.0, st=st, char="a05",
+                location=None, topics=None, fam=0, day_call=None,
+                call_payload=None, gate_key="", call_token="",
+                asr_context_terms=["a05"], first_connect=False,
+                resumption_handle="late-tail-handle",
+                voice_locale_session=VoiceLocaleSession({}),
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("MUNEA_VOICE_TURN_STALL_IDLE_MS", None)
+            else:
+                os.environ["MUNEA_VOICE_TURN_STALL_IDLE_MS"] = previous
+
+        self.assertTrue(call_ended)
+        self.assertEqual(handle, "late-tail-handle")
+        self.assertEqual(session._call_index, 1)
+        self.assertEqual(st["provider_turn_recoveries"], 1)
+        self.assertEqual(st["provider_turn_recovered_late_audio_bytes"], 24000)
+        self.assertGreater(st["provider_turn_recovered_late_caption_chars"], 0)
+        binary = [item for item in ws.sent if isinstance(item, (bytes, bytearray))]
+        # 第一輪 48k + watchdog 180ms tail 17.28k + 下一輪 24k；遲到的 24k 不在其中。
+        self.assertEqual(sum(map(len, binary)), 89280)
+        captions = [item for item in ws.sent if isinstance(item, str) and '"type": "caption"' in item]
+        self.assertFalse(any("我再說一次" in item for item in captions))
+        turn_events = [
+            item for item in ws.sent
+            if isinstance(item, str) and '"type": "turn_complete"' in item
+        ]
+        self.assertEqual(len(turn_events), 2)
+        self.assertEqual(sum('"recovered": true' in item for item in turn_events), 1)
+
     async def test_goaway_then_turn_complete_returns_reconnect_with_handle(self):
         go_away = _msg(go_away=_msg(time_left="5s"))
         resumption = _msg(session_resumption_update=_msg(new_handle="handle-xyz", resumable=True))

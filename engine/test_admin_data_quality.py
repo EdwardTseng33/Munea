@@ -42,6 +42,13 @@ class FakeProductEventsBackend:
             raise self.error
         return list(self.events or [])[:limit]
 
+    def load_admin_product_events(self, limit=20000, since_iso=None):
+        # 北極星改成跨全部帳號取數後走這支（真實後端不篩 account_id）。
+        # 假後端本來就只給一份事件，這裡照樣回同一份，測的是取數之外的行為。
+        if self.error:
+            raise self.error
+        return list(self.events or [])[:limit]
+
 
 def test_latest_record_timestamp_ignores_invalid_values():
     assert latest_record_timestamp([

@@ -87,6 +87,16 @@ function applyNonUserFacingReview(relativePath, candidates, review = loadNonUser
         'backend-template-identity',
         'legacy-brand-migration-sentinel',
         'legacy-storage-identity',
+        'debug-panel-diagnostic',
+        'developer-fixture',
+        'zh-intent-matcher',
+        'family-feed-recipient-locale',
+        'brand-proper-noun',
+        // 畫面上的預設值，程式一開頁就依狀態覆蓋（2026-08-01）：這些元素刻意不掛
+        // data-i18n——掛了會被巡邏的翻譯層把程式算出來的真話蓋回寫死的那一句
+        //（同一天踩三次：蘋果健康「目前未同步」、情緒卡點了不會變、用藥卡「尚未服用」）。
+        // 使用者看不到這些字，但它們仍是原始碼裡的中文，所以要在這裡登記、不是放著不管。
+        'markup-placeholder-overwritten-at-runtime',
       ]
         .includes(entry.reasonCode)
     ) {
@@ -361,6 +371,23 @@ function bindingForIndex(bindings, index) {
   return binding ? { key: binding.key, type: binding.type } : null;
 }
 
+// 模板字串裡的中文若「每一個漢字」都落在 ${ muneaT('key', '…') } 的翻譯呼叫
+// 引數範圍內，整條視為已綁定——組字外殼只是 HTML 標籤與插值，不該誤報成未接。
+// 只要有任何一個漢字落在翻譯呼叫之外（原樣中文、插值裡的裸字串），照舊算未綁。
+function templateInterpolationBinding(source, bindings, start, end) {
+  const hanPattern = /\p{Script=Han}/gu;
+  const slice = source.slice(start, end);
+  let match;
+  let found = null;
+  while ((match = hanPattern.exec(slice)) !== null) {
+    const absoluteIndex = start + match.index;
+    const hit = bindings.find(({ start: s, end: e }) => absoluteIndex >= s && absoluteIndex < e);
+    if (!hit) return null;
+    if (!found) found = hit;
+  }
+  return found ? { key: found.key, type: found.type } : null;
+}
+
 function isRegexLiteralStart(source, index) {
   let cursor = index - 1;
   while (cursor >= 0 && /\s/.test(source[cursor])) cursor -= 1;
@@ -421,13 +448,17 @@ function scanJavaScript(source, catalogKeys = loadCatalogKeys()) {
         continue;
       }
       if (char === quote) {
+        let binding = bindingForIndex(bindings, start);
+        if (!binding && quote === '`') {
+          binding = templateInterpolationBinding(source, bindings, start, i);
+        }
         pushCandidate(
           candidates,
           source,
           start,
           quote === '`' ? 'template-string' : 'string',
           value,
-          bindingForIndex(bindings, start),
+          binding,
         );
         state = 'code';
         quote = '';

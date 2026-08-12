@@ -128,6 +128,20 @@ async def async_main():
                 data = await resp.json()
                 assert data["backend_index"] == 0, "expected /offer routed to backend 0, got %r" % data
 
+            # Durable Call Control registers the Pod as one base worker with
+            # two capacity slots. Its signed token therefore uses the base
+            # worker id plus a 1-based slot_id, which must route just as
+            # deterministically as the historical -pN representation.
+            token_base_slot_2 = _make_token({
+                "worker_id": "test-box", "slot_id": 2, "call_id": "call-base-2",
+            })
+            async with client.post(base + "/offer", params={"token": token_base_slot_2},
+                                    json={"sdp": "base-slot-sdp", "type": "offer"}) as resp:
+                data = await resp.json()
+                assert data["backend_index"] == 1, (
+                    "expected base worker slot 2 routed to backend 1, got %r" % data
+                )
+
             # /switch?slot=1 -- explicit slot routing, no token needed.
             async with client.post(base + "/switch", params={"slot": "1", "char": "a06"}) as resp:
                 data = await resp.json()
@@ -191,6 +205,7 @@ async def async_main():
                     await ws.close()
 
         print("test_offer_routes_by_token_worker_id: PASS")
+        print("test_offer_routes_base_worker_slot_claim: PASS")
         print("test_switch_routes_by_explicit_slot: PASS")
         print("test_demo_session_routes_to_backend_zero: PASS")
         print("test_health_aggregates_all_backends: PASS")

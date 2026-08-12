@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """FlashHead 臉聲同線終驗：驗解析度、影音雙軌、嘴聲差與句尾完整度。"""
 import argparse, os, time, wave, asyncio
+from fractions import Fraction
 from urllib.parse import quote
 import numpy as np, requests, websockets
+import av
 from PIL import Image
 from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
 
@@ -42,6 +44,63 @@ T0 = None
 vframes = []   # (t, ndarray)
 aframes = []   # (t, np.int16 array)
 stop = {"v": False}
+
+
+def save_av_evidence(path, video_frames, audio_frames, fps=25):
+    """Save the received tracks on one preserved wall-clock timeline."""
+    if not video_frames or not audio_frames:
+        return
+    sample_rate = int(audio_frames[0][2])
+    end_s = max(video_frames[-1][0], audio_frames[-1][0]
+                + len(audio_frames[-1][1]) / sample_rate)
+    pcm = np.zeros(max(1, int(np.ceil(end_s * sample_rate))), dtype=np.int16)
+    for received_at, samples, frame_rate in audio_frames:
+        if int(frame_rate) != sample_rate:
+            continue
+        start = max(0, int(round(received_at * sample_rate)))
+        stop_at = min(len(pcm), start + len(samples))
+        if stop_at > start:
+            pcm[start:stop_at] = samples[:stop_at - start]
+
+    container = av.open(path, mode="w")
+    width, height = video_frames[0][1].shape[1], video_frames[0][1].shape[0]
+    try:
+        video_stream = container.add_stream("libx264", rate=fps)
+    except Exception:
+        video_stream = container.add_stream("mpeg4", rate=fps)
+    video_stream.width = width
+    video_stream.height = height
+    video_stream.pix_fmt = "yuv420p"
+    audio_stream = container.add_stream("aac", rate=sample_rate)
+    audio_stream.layout = "mono"
+
+    source_index = 0
+    frame_count = max(1, int(np.ceil(end_s * fps)))
+    for index in range(frame_count):
+        target_s = index / fps
+        while (source_index + 1 < len(video_frames)
+               and video_frames[source_index + 1][0] <= target_s):
+            source_index += 1
+        frame = av.VideoFrame.from_ndarray(video_frames[source_index][1], format="rgb24")
+        frame.pts = index
+        frame.time_base = Fraction(1, fps)
+        for packet in video_stream.encode(frame):
+            container.mux(packet)
+    for packet in video_stream.encode():
+        container.mux(packet)
+
+    audio_step = 1024
+    for start in range(0, len(pcm), audio_step):
+        samples = pcm[start:start + audio_step]
+        audio_frame = av.AudioFrame.from_ndarray(samples.reshape(1, -1), format="s16", layout="mono")
+        audio_frame.sample_rate = sample_rate
+        audio_frame.pts = start
+        audio_frame.time_base = Fraction(1, sample_rate)
+        for packet in audio_stream.encode(audio_frame):
+            container.mux(packet)
+    for packet in audio_stream.encode():
+        container.mux(packet)
+    container.close()
 
 async def recv_video(tr):
     while not stop["v"]:
@@ -122,7 +181,17 @@ async def main():
     await aud.send("finish")   # 明確要求服務補算最後不足一個模型 chunk 的句尾
     await asyncio.sleep(max(4.0, DURATION_S + 3.0))   # 讓整句與最後補算塊演完
     stop["v"] = True
-    await aud.close(); await pc.close()
+    try:
+        await asyncio.wait_for(aud.close(), timeout=3.0)
+    except Exception:
+        pass
+    for task in tasks:
+        task.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+    try:
+        await asyncio.wait_for(pc.close(), timeout=3.0)
+    except Exception:
+        pass
 
     if not vframes:
         raise RuntimeError("沒有收到任何WebRTC影像格")
@@ -172,13 +241,14 @@ async def main():
           flush=True)
     print(f"[t] 收到影像格 {len(vframes)}、聲音包 {len(aframes)}"
           f"、解析度 {received_sizes[0][0]}x{received_sizes[0][1]}", flush=True)
-    # 存證：聲音軌存 wav、講話中段影格存 3 張
+    # 存證：完整同時鐘影音、聲音軌 WAV、講話起點影格。
     if aframes:
         srr = aframes[0][2]
         pcm = np.concatenate([a for _, a, _ in aframes])
         ww = wave.open(os.path.join(OUT, "received.wav"), "wb")
         ww.setnchannels(1); ww.setsampwidth(2); ww.setframerate(srr)
         ww.writeframes(pcm.tobytes()); ww.close()
+    save_av_evidence(os.path.join(OUT, "received-av.mp4"), vframes, aframes)
     saved = 0
     evidence_anchor = a_on or measured_mouth_on
     for t, a in vframes:

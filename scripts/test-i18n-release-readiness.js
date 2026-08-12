@@ -101,9 +101,11 @@ for (const locale of requiredLocales) {
     'web/src/i18n/app-screen-manifest.json + web/src/i18n/app-binding-manifest.json + web/src/i18n/app-surface-manifest.json',
     `${locale} App integration gate must include the complete shipping surface manifest`,
   );
+  // 2026-07-31 文案搬遷歸零：這關從「必須還在擋」反轉成「必須是綠的」。
+  // 再變紅＝有人加了沒綁鍵的新文案（worklist 契約會一起亮）。
   assert(
-    entry.blockers.some(({ gate }) => gate === 'sourceCopyMigration'),
-    `${locale} must remain blocked while hard-coded App WebView copy exists`,
+    !entry.blockers.some(({ gate }) => gate === 'sourceCopyMigration'),
+    `${locale} source copy migration reached zero on 2026-07-31 and must stay green`,
   );
   assert(
     entry.blockers.some(({ gate }) => gate === 'localeDataReadiness'),
@@ -183,27 +185,49 @@ for (const locale of requiredLocales) {
   );
 }
 
+// 語系開關那兩關（runtimeLocalization／binaryLocalization）要跟著開關表走，不寫死。
+// 2026-08-01 Edward 拍板把三語放進 App 包（release-candidate）讓 8/2 實機走查做得起來，
+// 這兩關就轉綠了；其餘關卡照舊擋著，那才是真正還沒驗的部分。
+const catalogManifestForGates = JSON.parse(
+  fs.readFileSync('web/src/i18n/catalog-manifest.json', 'utf8'),
+);
+const localeSwitch = Object.fromEntries(
+  catalogManifestForGates.locales.map((entry) => [entry.locale, entry]),
+);
+
 for (const locale of ['en', 'ja', 'es']) {
   const entry = report.locales[locale];
-  assert.equal(entry.gates.runtimeLocalization.passed, false);
+  assert.equal(entry.gates.runtimeLocalization.passed, Boolean(localeSwitch[locale].runtimeEnabled));
   assert.equal(entry.gates.appUiIntegration.passed, true);
-  assert.equal(entry.gates.sourceCopyMigration.passed, false);
+  // 2026-07-31 歸零後：搬遷關對三語一樣轉綠
+  assert.equal(entry.gates.sourceCopyMigration.passed, true);
   assert.equal(entry.gates.voiceIntegration.passed, false);
-  assert.equal(entry.gates.binaryLocalization.passed, false);
+  assert.equal(
+    entry.gates.binaryLocalization.passed,
+    Boolean(localeSwitch[locale].binaryLocalizationEnabled),
+  );
   assert.equal(entry.gates.appStoreScreenshots.passed, false);
   assert.equal(entry.gates.inAppPurchaseLocalization.passed, false);
   assert.equal(entry.gates.marketAvailability.passed, false);
 }
 
-assert.equal(report.locales.es.storeLocale, null, 'Spanish market variant must remain undecided');
-assert.deepEqual(report.locales.es.selectedStoreVariants, []);
+assert.equal(report.locales.es.storeLocale, null, 'Spanish stays variant-based; the storefront locale lives in the selected variant');
+assert.deepEqual(
+  report.locales.es.selectedStoreVariants,
+  ['es-ES'],
+  '2026-07-30 decision: first Spanish market is Spain (es-ES); es-MX stays prepared but unselected',
+);
 assert.deepEqual(
   Object.keys(report.locales.es.candidateStoreVariants),
   ['es-ES', 'es-MX'],
 );
-for (const variant of Object.values(report.locales.es.candidateStoreVariants)) {
+for (const [variantKey, variant] of Object.entries(report.locales.es.candidateStoreVariants)) {
   assert.equal(variant.ready, false);
-  assert.equal(variant.gates.selected, false);
+  assert.equal(
+    variant.gates.selected,
+    variantKey === 'es-ES',
+    'only the decided es-ES variant may be selected',
+  );
   assert.equal(variant.gates.metadata, false);
   assert.equal(variant.gates.publicUrls, false);
   assert.equal(variant.gates.screenshots, false);

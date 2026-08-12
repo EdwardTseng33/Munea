@@ -102,11 +102,12 @@ try {
   assert.equal(evidence.schema, 'munea.i18n-visual-qa.v1');
   assert.equal(evidence.result, 'pass');
   assert.equal(evidence.locale, 'en');
-  assert.equal(evidence.screens.length, 38);
-  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 114);
+  // 2026-08-10：39 個畫面（原 38）＋ screen:onboarding-intro；每畫面 3 種機型＝117 張
+  assert.equal(evidence.screens.length, 39);
+  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 117);
   assert.equal(
     new Set(evidence.screens.flatMap(({ captures }) => captures.map(({ sha256 }) => sha256))).size,
-    114,
+    117,
   );
   assert.equal(evidence.binaryBytes, fs.statSync(candidateIpa(temp)).size);
 

@@ -239,13 +239,170 @@ def test_audible_output_keeps_original_24k_samples():
     original = (np.sin(np.linspace(0, 20 * np.pi, 40000)) * 12000).astype(np.int16)
 
     feeder.push24k(original.tobytes())
+    expected_total = len(original)
+    assert slot.audio_out.depth_samples == expected_total
+    assert np.array_equal(slot.audio_out.buf, original)
     assert _drain_all(feeder, n_max=1) == 1
 
-    expected_samples = int(round(CHUNK_SAMPLES * feeder.sr_in / feeder.sr_eng))
     assert slot.audio_out.sample_rate == OUTPUT_SAMPLE_RATE
-    assert slot.audio_out.depth_samples == expected_samples
-    assert np.array_equal(slot.audio_out.buf, original[:expected_samples])
+    assert slot.audio_out.depth_samples == expected_total, "rendering must not duplicate or consume PCM"
+    assert np.array_equal(slot.audio_out.buf, original)
     print("test_audible_output_keeps_original_24k_samples: PASS")
+
+
+def test_audio_ingress_waits_for_video_once_then_stays_continuous():
+    original_time = fec.time.time
+    clock = [300.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        slot = make_slot(0, "s0")
+        slot.audio_out = fec.AudioOutBuffer(OUTPUT_SAMPLE_RATE, prebuffer_s=0.2)
+        emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+        feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+        pcm = np.arange(OUTPUT_SAMPLE_RATE * 2, dtype=np.int16)
+        feeder.push24k(pcm.tobytes())
+
+        assert slot.audio_out.playout_held() is True
+        before = slot.audio_out.depth_samples
+        assert np.count_nonzero(slot.audio_out.pop_frame()) == 0
+        assert slot.audio_out.depth_samples == before
+
+        assert _drain_all(feeder, n_max=1) == 1
+        assert slot.audio_out.playout_held() is True
+        clock[0] += slot.audio_out.last_prebuffer_s
+        first = slot.audio_out.pop_frame()
+        assert np.array_equal(first, pcm[:slot.audio_out.frame_samples])
+        assert slot.audio_out.played_samples == slot.audio_out.frame_samples
+        assert slot.audio_out.underrun_count == 0
+        slot.audio_out.clear()
+        assert slot.audio_out.played_samples == 0
+    finally:
+        fec.time.time = original_time
+    print("test_audio_ingress_waits_for_video_once_then_stays_continuous: PASS")
+
+
+def test_real_audio_invalidates_inflight_idle_frames():
+    """待機 GPU 還在跑時真語音抵達，晚到的待機畫格不得插在嘴型前面。"""
+    slot = make_slot(0, "s0")
+    feeder_holder = {}
+    real_pcm = np.full(2400, 1200, dtype=np.int16)
+
+    def emb_fn(pipeline, arr, start_idx, end_idx):
+        return {"pipeline_tag": pipeline["tag"]}
+
+    def run_fn(pipeline, emb):
+        feeder_holder["feeder"].push24k(real_pcm.tobytes())
+        video = np.full((FRAME_NUM, 2, 2, 3), 77, dtype=np.uint8)
+        return FakeTensor(video)
+
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+    feeder_holder["feeder"] = feeder
+    slot.feeder = feeder
+    feeder._idle_on = True
+    idle_seq = feeder._real_input_seq
+
+    feeder._gen_chunk(
+        np.zeros(CHUNK_SAMPLES, dtype=np.float32),
+        emit_audio=False,
+        idle_input_seq=idle_seq,
+    )
+
+    assert slot.sink.depth() == 0, "late idle frames must be discarded after real PCM arrives"
+    assert slot.audio_out.depth_samples == len(real_pcm), "real PCM must remain queued"
+    assert len(slot.audio_dq) == slot.audio_dq.maxlen, (
+        "real input must preserve the model's fixed-length embedding context"
+    )
+    assert feeder._round_pending is True, "idle work must not consume the real turn first-frame marker"
+    assert slot.idle_invalidation_count == 1, "health gate must expose the handled idle/real race"
+    print("test_real_audio_invalidates_inflight_idle_frames: PASS")
+
+
+def test_lip_catchup_skips_only_expired_frames():
+    assert fec.lip_catchup_frame_count(0.0, 0.0, 0.0, 24, 25) == 0
+    assert fec.lip_catchup_frame_count(1.0, 0.2, 0.4, 24, 25) == 20
+    assert fec.lip_catchup_frame_count(10.0, 0.0, 0.0, 8, 25) == 6
+    assert fec.lip_catchup_frame_count(1.0, 0.0, None, 8, 25) == 0
+    print("test_lip_catchup_skips_only_expired_frames: PASS")
+
+
+def test_lip_timeline_survives_mid_turn_pause():
+    original_time = fec.time.time
+    clock = [500.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        slot = make_slot(0, "s0")
+        emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+        feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+        pcm = np.arange(OUTPUT_SAMPLE_RATE // 10, dtype=np.int16)
+        feeder.push24k(pcm.tobytes())
+        assert feeder.timeline_base_s == 0.0
+
+        with slot.audio_out.lock:
+            slot.audio_out.buf = np.zeros(0, dtype=np.int16)
+            slot.audio_out.depth_samples = 0
+            slot.audio_out.played_samples = len(pcm)
+        clock[0] += 1.0
+        feeder.push24k(pcm.tobytes())
+        assert round(feeder.timeline_base_s, 3) == 0.1
+    finally:
+        fec.time.time = original_time
+    print("test_lip_timeline_survives_mid_turn_pause: PASS")
+
+
+def test_new_round_marker_waits_for_its_own_gpu_chunk():
+    """An older GPU chunk must not consume a marker created after it started."""
+    original_time = fec.time.time
+    clock = [100.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        slot = make_slot(0, "s0")
+        emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+        feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+        base_sink = slot.sink
+
+        class MarkerInterleavingSink:
+            def depth(self):
+                return base_sink.depth()
+
+            def push_many(self, frames, ready_ts=None, fps=None):
+                base_sink.push_many(frames, ready_ts, fps)
+                # Simulate PCM ingress starting round 2 after this old chunk's
+                # t_frames_ready was captured but before its metric is recorded.
+                feeder._round_pending = True
+                slot.round_count = 2
+                slot.round_start_ts = 101.0
+
+        slot.sink = MarkerInterleavingSink()
+        feeder._round_pending = True
+        slot.round_count = 1
+        slot.round_start_ts = 99.0
+        feeder._gen_chunk(np.zeros(CHUNK_SAMPLES, dtype=np.float32), emit_audio=True)
+        assert list(slot.round_latencies) == [], "old chunk must not emit a negative latency"
+        assert feeder._round_pending is True, "newer marker must remain pending"
+
+        slot.sink = base_sink
+        clock[0] = 101.5
+        feeder._gen_chunk(np.zeros(CHUNK_SAMPLES, dtype=np.float32), emit_audio=True)
+        assert list(slot.round_latencies) == [500.0]
+        assert feeder._round_pending is False
+    finally:
+        fec.time.time = original_time
+    print("test_new_round_marker_waits_for_its_own_gpu_chunk: PASS")
+
+
+def test_audio_finish_does_not_count_natural_tail_as_underrun():
+    slot = make_slot(0, "s0")
+    emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+    pcm = np.arange(slot.audio_out.frame_samples, dtype=np.int16)
+    feeder.push24k(pcm.tobytes())
+    slot.audio_out.release_playout()
+    feeder.finish()
+    assert np.array_equal(slot.audio_out.pop_frame(), pcm)
+    slot.audio_out.pop_frame()
+    assert slot.audio_out.underrun_count == 0
+    assert slot.audio_out._turn_complete is True
+    print("test_audio_finish_does_not_count_natural_tail_as_underrun: PASS")
 
 
 def test_audio_prebuffer_starts_when_first_pcm_arrives():
@@ -286,6 +443,77 @@ def test_audio_prebuffer_starts_when_first_pcm_arrives():
     finally:
         fec.time.time = original_time
     print("test_audio_prebuffer_starts_when_first_pcm_arrives: PASS")
+
+
+def test_audio_prebuffer_adapts_without_counting_natural_silence():
+    """Only real starvation raises 200-350 ms; stable turns decay it."""
+    original_time = fec.time.time
+    clock = [200.0]
+    fec.time.time = lambda: clock[0]
+    try:
+        audio = fec.AudioOutBuffer(
+            OUTPUT_SAMPLE_RATE,
+            prebuffer_s=0.2,
+            adaptive_min_s=0.2,
+            adaptive_max_s=0.35,
+        )
+        pcm = np.arange(audio.frame_samples, dtype=np.int16)
+
+        for compute_ms in (450.0, 470.0, 480.0):
+            audio.observe_generation(compute_ms, 960.0)
+        audio.push(pcm)
+        assert audio.last_prebuffer_s == 0.2
+
+        clock[0] = 200.2
+        assert np.array_equal(audio.pop_frame(), pcm)
+        clock[0] = 200.22
+        audio.pop_frame()
+        audio.pop_frame()
+        assert audio.underrun_count == 1, "one starvation gap must be one event, not 20ms ticks"
+
+        clock[0] = 200.30
+        audio.push(pcm)
+        assert list(audio.underrun_gap_ms)[-1] == 80.0
+        assert round(audio.adaptive_prebuffer_s, 2) == 0.25
+
+        audio.mark_input_complete()
+        audio.pop_frame()
+        audio.pop_frame()
+        assert audio.underrun_count == 1, "natural response-end silence is not an underrun"
+
+        audio.clear()
+        for compute_ms in (900.0, 910.0, 920.0):
+            audio.observe_generation(compute_ms, 960.0)
+        audio.push(pcm)
+        assert audio.last_prebuffer_s == 0.25, "slow compute alone must not add fixed wait"
+
+        # Three genuinely stable turns remove the one underrun increment.
+        for _ in range(3):
+            audio.mark_input_complete()
+            audio.clear()
+            audio.push(pcm)
+        assert audio.adaptive_prebuffer_s == 0.2
+
+        audio.clear()
+        audio.arm_prebuffer(0.6)
+        audio.push(pcm)
+        assert audio.last_prebuffer_s == 0.6, "opening one-shot must override adaptation"
+
+        cold_start = fec.AudioOutBuffer(
+            OUTPUT_SAMPLE_RATE,
+            prebuffer_s=0.7,
+            adaptive_min_s=0.2,
+            adaptive_max_s=0.35,
+        )
+        for compute_ms in (1152.8, 465.0, 430.0, 440.0, 471.3, 450.0, 455.0, 460.0, 468.0):
+            cold_start.observe_generation(compute_ms, 960.0)
+        assert cold_start.generation_p95_ms == 471.3
+        assert cold_start.adaptive_prebuffer_s == 0.2, (
+            "one cold-start maximum must not erase the steady-state latency gain"
+        )
+    finally:
+        fec.time.time = original_time
+    print("test_audio_prebuffer_adapts_without_counting_natural_silence: PASS")
 
 
 def test_fault_isolation_one_slot_does_not_crash_others():
@@ -387,6 +615,8 @@ def test_health_snapshot_math():
     slot.frame_width = 768
     slot.frame_height = 768
     slot.round_count = 3
+    slot.round_latencies.extend([480.0, 520.0])
+    slot.idle_invalidation_count = 2
     body = fec.health_snapshot(slot, wake_ts=time.time() - 10)
     assert body["gen_compute_ms_rolling"]["budget_ms"] == 960.0
     assert body["gen_compute_ms_rolling"]["n_samples"] == 5
@@ -397,10 +627,57 @@ def test_health_snapshot_math():
     assert body["gen_compute_ms_rolling"]["headroom_p95_pct"] == expect_headroom
     assert 9.9 <= body["uptime_s"] <= 10.5
     assert body["round_count"] == 3
+    assert body["round_latency_integrity"] == {
+        "negative_count": 0,
+        "min_ms": 480.0,
+    }
     assert body["frames"] == 0
     assert body["output_resolution"] == {"width": 768, "height": 768}
     assert body["video_underrun"]["count"] == 0
+    assert body["audio_sender"] == {
+        "rebase_count": 0,
+        "max_late_ms": 0.0,
+        "recent_late_ms": [],
+    }
+    assert body["video_sync"] == {
+        "catchup_events": 0,
+        "catchup_frames": 0,
+        "idle_invalidations": 2,
+        "audio_played_ms": 0.0,
+    }
+    assert body["model_turn_state"] == {
+        "motion_resets": 0,
+        "motion_reset_failures": 0,
+        "seed": 42,
+        "seed_resets": 0,
+        "first_chunk_retries": 0,
+        "first_chunk_retry_failures": 0,
+        "first_chunk_align_events": 0,
+        "first_chunk_align_frames": 0,
+    }
     print("test_health_snapshot_math: PASS")
+
+
+def test_audio_sender_late_wakeup_rebases_without_skipping_pts():
+    started = 10.0
+    sample_rate = 24000
+    next_pts = 4800
+    target = started + next_pts / sample_rate
+
+    unchanged, late_ms, rebased = fec.pace_audio_sender_clock(
+        started, next_pts, sample_rate, target + 0.02
+    )
+    assert unchanged == started and late_ms == 20.0 and not rebased
+
+    adjusted, late_ms, rebased = fec.pace_audio_sender_clock(
+        started, next_pts, sample_rate, target + 0.10
+    )
+    assert rebased and late_ms == 100.0
+    assert round(adjusted + next_pts / sample_rate, 6) == round(target + 0.10, 6)
+    # PTS remains next_pts; only the wall-clock anchor moves, so the next 20 ms
+    # frame is paced 20 ms later instead of being returned immediately.
+    assert round(adjusted + (next_pts + 480) / sample_rate, 6) == round(target + 0.12, 6)
+    print("test_audio_sender_late_wakeup_rebases_without_skipping_pts: PASS")
 
 
 def test_frame_size_contract():
@@ -450,7 +727,11 @@ def test_antiflicker_freezes_static_background_keeps_motion():
     n = 6
     frames = np.zeros((n, 8, 8, 3), dtype=np.uint8)
     for i in range(n):
-        noise = rng.integers(-2, 3, size=(8, 8, 3))
+        # Keep the synthetic background inside ANTIFLICKER_LO. The old -2..2
+        # range could differ by four levels between adjacent frames, which is
+        # deliberately blended (not frozen) by the production filter and made
+        # this assertion fail deterministically under the real 1/8 defaults.
+        noise = rng.integers(-1, 1, size=(8, 8, 3))
         frames[i] = np.clip(base.astype(np.int16) + noise, 0, 255).astype(np.uint8)
         # 「嘴巴」那格做真動作：0 <-> 200 交替（差異遠超 AF_HI，必須通過）
         frames[i, 6, 6] = 200 if i % 2 == 0 else 0
@@ -487,6 +768,81 @@ def test_antiflicker_freezes_static_background_keeps_motion():
     print("test_antiflicker_freezes_static_background_keeps_motion: PASS")
 
 
+def test_turn_reset_restores_model_motion_seed_once():
+    """A new assistant turn resets model motion; character switching does not deadlock."""
+    slot = make_slot(0, "s0")
+
+    class MotionPipeline:
+        def __init__(self):
+            self.person_name = "munea"
+            self.calls = []
+            self.generator = self
+            self.seeds = []
+
+        def reset_person_name(self, person_name=None):
+            self.calls.append(person_name)
+
+        def manual_seed(self, seed):
+            self.seeds.append(seed)
+
+    pipeline = MotionPipeline()
+    slot.pipeline = pipeline
+    emb_fn, run_fn = make_mock_pipeline_fns({"s0": 42})
+    feeder = fec.Feeder(slot, emb_fn, run_fn, sr_eng=SAMPLE_RATE, auto_start=False)
+
+    feeder.reset()
+    assert pipeline.calls == ["munea"]
+    assert pipeline.seeds == [42]
+    assert slot.motion_reset_count == 1
+    assert slot.turn_seed_reset_count == 1
+    assert slot.motion_reset_failures == 0
+
+    feeder.reset(reset_pipeline_motion=False)
+    assert pipeline.calls == ["munea"], "character switch owns the model reset"
+    assert pipeline.seeds == [42], "character switch owns the generator reset"
+    assert slot.motion_reset_count == 1
+    assert slot.turn_seed_reset_count == 1
+    print("test_turn_reset_restores_model_motion_seed_once: PASS")
+
+
+def test_first_chunk_quality_metrics_detect_static_speech():
+    quiet = np.zeros(2400, dtype=np.int16)
+    speech = np.full(2400, 5000, dtype=np.int16)
+    assert fec.pcm_rms(quiet) == 0.0
+    assert fec.pcm_rms(speech) > fec.FIRST_CHUNK_SPEECH_RMS
+
+    frames = np.zeros((4, 100, 100, 3), dtype=np.uint8)
+    assert fec.mouth_motion_peak(frames) == 0.0
+    assert fec.first_chunk_av_skew_ms(frames, speech, fps=25) == float("inf")
+    frames[1, 60:65, 45:55] = 255
+    assert fec.mouth_motion_peak(frames) > fec.FIRST_CHUNK_MOUTH_MOTION
+    assert fec.first_chunk_av_skew_ms(frames, speech, fps=25) == 40.0
+
+    slow = np.zeros((12, 8, 8, 3), dtype=np.uint8)
+    better = np.zeros((12, 8, 8, 3), dtype=np.uint8)
+    static = np.zeros((12, 8, 8, 3), dtype=np.uint8)
+    chosen, chosen_skew, _ = fec.select_first_chunk_candidate([
+        (slow, 280.0, 0.04),
+        (better, 120.0, 0.03),
+        (static, float("inf"), 0.08),
+    ])
+    assert chosen is better and chosen_skew == 120.0
+    source = Path(fec.__file__).read_text(encoding="utf-8")
+    assert "def align_first_chunk_frames" not in source
+    assert "first chunk preserved frames=" in source
+    assert "first chunk align drop=" not in source
+    assert fec.first_chunk_requires_retry(200.0) is False
+    assert fec.first_chunk_requires_retry(float("inf")) is True
+    assert fec.first_chunk_requires_retry(None) is False
+    print("test_first_chunk_quality_metrics_detect_static_speech: PASS")
+
+
+def test_first_chunk_mouth_gate_is_not_too_permissive():
+    assert fec.FIRST_CHUNK_RETRY is False
+    assert fec.FIRST_CHUNK_MOUTH_MOTION >= 0.015
+    print("test_first_chunk_mouth_gate_is_not_too_permissive: PASS")
+
+
 def main():
     test_admission_find_free_and_full()
     test_admission_release_and_reclaim()
@@ -495,14 +851,25 @@ def main():
     test_health_n1_shape_matches_capacity_contract()
     test_cross_slot_isolation()
     test_audible_output_keeps_original_24k_samples()
+    test_audio_ingress_waits_for_video_once_then_stays_continuous()
+    test_real_audio_invalidates_inflight_idle_frames()
+    test_lip_catchup_skips_only_expired_frames()
+    test_lip_timeline_survives_mid_turn_pause()
+    test_new_round_marker_waits_for_its_own_gpu_chunk()
+    test_audio_finish_does_not_count_natural_tail_as_underrun()
     test_audio_prebuffer_starts_when_first_pcm_arrives()
+    test_audio_prebuffer_adapts_without_counting_natural_silence()
     test_fault_isolation_one_slot_does_not_crash_others()
     test_switch_slot_char_isolation()
     test_health_snapshot_math()
+    test_audio_sender_late_wakeup_rebases_without_skipping_pts()
     test_frame_size_contract()
     test_force_release_slot_used_by_unhealthy_path()
     test_antiflicker_freezes_static_background_keeps_motion()
-    print("FlashHead multi-slot smoke test: ALL PASS")
+    test_turn_reset_restores_model_motion_seed_once()
+test_first_chunk_quality_metrics_detect_static_speech()
+test_first_chunk_mouth_gate_is_not_too_permissive()
+print("FlashHead multi-slot smoke test: ALL PASS")
 
 
 if __name__ == "__main__":

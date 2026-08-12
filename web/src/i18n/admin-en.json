@@ -240,7 +240,32 @@
     "沒開過": "never opened",
     "還沒開過 App": "Never opened the app",
     "今天有動作": "Active today",
-    "還沒有真實用戶——有人註冊後，這裡會列出每一家。": "No real members yet — each household will appear here once someone signs up."
+    "還沒有真實用戶——有人註冊後，這裡會列出每一家。": "No real members yet — each household will appear here once someone signs up.",
+    "使用狀況": "Usage",
+    "登入紀錄": "Sign-in history",
+    "最後開 App": "Last opened app",
+    "近 30 天通話": "Calls, past 30 days",
+    "還沒開過": "Never opened",
+    "沒有紀錄": "No record",
+    "1 點約 1 分鐘": "1 credit ≈ 1 minute",
+    "這裡是": "You are on",
+    "測試機": "the test server",
+    "本機預覽": "a local preview",
+    "擬真女孩 01": "Realistic Female 01",
+    "擬真男孩 01": "Realistic Male 01",
+    "動畫女孩 01": "Animated Female 01",
+    "動畫男孩 01": "Animated Male 01",
+    "動畫貓 01": "Animated Cat 01",
+    "動畫狗 01": "Animated Dog 01",
+    "企業席次": "Enterprise seat",
+    "緩衝期": "Grace period",
+    "等待接手": "Awaiting handover",
+    "在 App 內購買": "Purchased in app",
+    "生效中": "Active",
+    "（未填公司名）": "(company name blank)",
+    "合約已到期 · 緩衝期中": "Contract ended · in grace period",
+    "等待個人訂閱到期": "Waiting for personal plan to expire",
+    "聊聊分鐘": "Chat minutes"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },
@@ -266,6 +291,9 @@
     { "source": "閒置滿 {0} 天", "target": "Idle for {0} days" },
     { "source": "{0} 天沒動作", "target": "{0} days without activity" },
     { "source": "{0} 天前有動作", "target": "Last activity {0} days ago" },
-    { "source": "目前只有測試帳號（已隱藏 {0} 個）——有真實用戶註冊後，這裡就會列出來。", "target": "Only test accounts right now ({0} hidden) — real members will appear here once they sign up." }
+    { "source": "目前只有測試帳號（已隱藏 {0} 個）——有真實用戶註冊後，這裡就會列出來。", "target": "Only test accounts right now ({0} hidden) — real members will appear here once they sign up." },
+    { "source": "{0} 自動轉回免費", "target": "Reverts to Free on {0}" },
+    { "source": "{0} 由企業接手", "target": "Enterprise takes over on {0}" },
+    { "source": "合約到 {0}", "target": "Contract through {0}" }
   ]
 }

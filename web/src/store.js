@@ -95,6 +95,46 @@ window.MuneaStore = (function () {
       return Array.isArray(value) ? value : [];
     } catch (e) { return []; }
   }
+  // 驗不過就再也不會過的原因：這種交易留在手機裡只會被蘋果一直重送，直接結案。
+  // （2026-07-30 正式庫查到 168 筆全同一個帳號、最新一筆就發生在查詢當下＝一直在空轉打伺服器）
+  var PERMANENT_FAILURES = [
+    'invalid_signed_transaction',      // 憑證連格式都不對
+    'apple_product_not_allowed',       // 不是我們賣的商品
+    'apple_bundle_mismatch',           // 別的 App 的交易
+    'apple_transaction_revoked',       // 蘋果已經撤銷（退款）
+    'apple_transaction_id_invalid',
+    'apple_transaction_id_mismatch'
+  ];
+  // 簽章驗不過（apple_signature_verification_failed）故意不列進來：那也可能是伺服器一時
+  // 抓不到蘋果的驗證憑證，屬於「現在不行、等一下可能行」。結案＝用戶付的錢永遠拿不到東西。
+  var FAIL_KEY = 'munea.store.verifyFailures.v1';
+  var MAX_VERIFY_ATTEMPTS = 3;
+  function failureKey(txid, authUserId) { return String(txid || '') + '@' + String(authUserId || ''); }
+  function verifyFailures() {
+    try {
+      var value = JSON.parse(localStorage.getItem(FAIL_KEY) || '{}');
+      return value && typeof value === 'object' ? value : {};
+    } catch (e) { return {}; }
+  }
+  function noteVerifyFailure(txid, authUserId) {
+    if (!txid) return;
+    var all = verifyFailures();
+    var key = failureKey(txid, authUserId);
+    all[key] = (all[key] || 0) + 1;
+    try { localStorage.setItem(FAIL_KEY, JSON.stringify(all)); } catch (e) {}
+  }
+  // 次數綁在「這筆交易 ＋ 目前登入的人」上：換回原本買它的帳號就是新的一組、重新給 3 次機會
+  function verifyAttemptsExhausted(txid, authUserId) {
+    if (!txid) return false;
+    return (verifyFailures()[failureKey(txid, authUserId)] || 0) >= MAX_VERIFY_ATTEMPTS;
+  }
+  function clearVerifyFailures(txid, authUserId) {
+    if (!txid) return;
+    var all = verifyFailures();
+    if (!(failureKey(txid, authUserId) in all)) return;
+    delete all[failureKey(txid, authUserId)];
+    try { localStorage.setItem(FAIL_KEY, JSON.stringify(all)); } catch (e) {}
+  }
   function brainBase() {
     try {
       var override = localStorage.getItem('munea.brainUrl');
@@ -142,9 +182,18 @@ window.MuneaStore = (function () {
     var pid = data.productId || '';
     var txid = String(data.transactionId || '');
     var seen = processedTransactions();
+    var authState = window.MuneaAuth && typeof window.MuneaAuth.state === 'function' ? window.MuneaAuth.state() : {};
+    var authUserId = authState && authState.authUserId;
+    if (verifyAttemptsExhausted(txid, authUserId)) return { ok: false, reason: 'verify_retry_exhausted' };
     try {
       var verified = await verify(data);
-      if (!verified.ok) return verified;
+      if (!verified.ok) {
+        // 不結案的交易蘋果會在每次啟動時重送，於是同一筆錯誤會被送到天荒地老。
+        // 分兩條路：這輩子都過不了的直接結案；還有機會的留著，但記次數、不要一直空打。
+        if (PERMANENT_FAILURES.indexOf(verified.reason) >= 0) await finish(data);
+        else noteVerifyFailure(txid, authUserId);
+        return verified;
+      }
       if (txid && seen.indexOf(txid) >= 0) { await finish(data); return { ok: true, duplicate: true, verified: true }; }
       if (typeof window.__muneaApplyPurchase !== 'function') return { ok: false };
       if (verified.payload && verified.payload.billing) data.billing = verified.payload.billing;
@@ -157,6 +206,7 @@ window.MuneaStore = (function () {
       if (txid) {
         seen.push(txid);
         localStorage.setItem(TX_KEY, JSON.stringify(seen.slice(-200)));
+        clearVerifyFailures(txid, authUserId);   // 過了就把先前的失敗次數清掉，別讓舊帳影響以後
       }
       await finish(data);
       return { ok: true, duplicate: !!verified.payload.idempotentReplay, verified: true };

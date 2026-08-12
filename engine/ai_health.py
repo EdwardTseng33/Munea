@@ -91,11 +91,18 @@ def status(now=None, allow_probe=True):
     now = now or time.time()
     verdict = _verdict(now)
     probed = False
-    if verdict == STATE_UNKNOWN and allow_probe:
+    # 2026-08-12（Edward 儲值後才發現）：原本只有 unknown 才自己探一次，
+    # **判成 down 之後就再也不探**——所以它會告訴你倒了，卻永遠不會告訴你已經好了。
+    # 這次額度用完，Edward 儲了值、鑰匙實測也通了，儀表卻整整 16 小時還寫著 down。
+    # 一個只會報壞消息、不會報復原的儀表，跟壞掉的儀表一樣不能信。
+    if verdict in (STATE_UNKNOWN, STATE_DOWN) and allow_probe:
         if now - _state["probedAt"] >= PROBE_TTL_S:
             with _lock:
                 _state["probedAt"] = now
-            _probe()
+            if _probe():
+                # 探到活的就把連敗歸零——不然 _verdict 會繼續判 down
+                with _lock:
+                    _state["consecutiveFailures"] = 0
             probed = True
             verdict = _verdict(now)
     last_ok = _state["lastOkAt"]

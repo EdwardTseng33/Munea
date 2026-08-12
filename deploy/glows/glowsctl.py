@@ -49,6 +49,10 @@ def _token():
     raise SystemExit("缺鑰匙：deploy/glows/.env 裡放 GLOWS_SDK_TOKEN=...")
 
 
+class GlowsError(RuntimeError):
+    """GLOWS 回了錯誤（認證失敗、額度不足、參數錯…）——要讓呼叫端知道，不能靜靜當成沒資料。"""
+
+
 def _call(method, path, params=None, body=None):
     url = BASE + path
     if params:
@@ -60,7 +64,17 @@ def _call(method, path, params=None, body=None):
         data = json.dumps(body).encode("utf-8")
         req.add_header("Content-Type", "application/json")
     with urllib.request.urlopen(req, data, timeout=60) as r:
-        return json.loads(r.read().decode("utf-8"))
+        j = json.loads(r.read().decode("utf-8"))
+    # GLOWS 認證失敗時回的是 HTTP 200 加 {"code":176,"msg":"check jwt token failed"}，
+    # 不是 401。以前這裡直接把它交出去，list_instances() 再 .get("instances") 撈不到、
+    # 回一個空陣列——於是「通行碼壞了」看起來就跟「一張卡都沒有」一模一樣
+    #（2026-08-06 帳號欠費後查機器，畫面說 0 台，其實是根本沒查成功）。
+    # 自動開卡的流程若照這個空陣列判斷，會以為卡全掉了而重開一輪，或反過來以為沒事。
+    # 錯就要出聲：認證/業務錯誤一律當成失敗丟出去。
+    if isinstance(j, dict) and isinstance(j.get("code"), int) and j.get("code") != 0:
+        raise GlowsError("GLOWS 回報錯誤 code=%s msg=%s（%s %s）"
+                         % (j.get("code"), j.get("msg"), method, path))
+    return j
 
 
 # ---------------------------------------------------------------------------

@@ -245,9 +245,11 @@ assert.equal(notifications.boundHanCandidates, 64);
 assert.equal(notifications.reviewedNonUserFacingHanCandidates, 9);
 assert.equal(notifications.unboundHanCandidates, 0);
 assert.deepEqual(notifications.reviewFailures, []);
-assert.ok(
-  appWebView.unboundHanCandidates > 0,
-  'The App must remain blocked while unbound localized copy exists',
+// 2026-07-31 搬遷歸零：這條從「還有未綁就要擋 App」反轉成「不准出現新的未綁」。
+assert.equal(
+  appWebView.unboundHanCandidates,
+  0,
+  'App copy reached zero unbound on 2026-07-31 — new copy must ship bound or reviewed',
 );
 assert.equal(
   appWebView.boundHanCandidates

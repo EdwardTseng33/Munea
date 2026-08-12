@@ -11,7 +11,7 @@
     "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
-    "brain": 94,
+    "brain": 97,
     "gateway": 23,
     "voice": 4
   },
@@ -384,6 +384,20 @@
     {
       "surface": "brain",
       "method": "POST",
+      "path": "/admin/enterprise/seats/sweep",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
       "path": "/admin/family-health",
       "auth": "operator",
       "criticality": "high",
@@ -628,6 +642,20 @@
       "idempotency": "operation-defined",
       "rateLimit": "none",
       "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/worker-clock-patrol",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
       "envelope": "json-object",
       "tests": [
         "scripts/admin-smoke.ps1"
@@ -1101,6 +1129,18 @@
       "path": "/push/devices",
       "auth": "user",
       "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/quiz-questions",
+      "auth": "user",
+      "criticality": "standard",
       "idempotency": "operation-defined",
       "rateLimit": "none",
       "pii": "account",

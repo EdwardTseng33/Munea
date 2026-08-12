@@ -122,7 +122,11 @@ def main():
     if "history" in case:
         history = list(case.get("history") or [])
         history.append({"role": "user", "text": case["newUserLine"]})
+        # 2026-07-31 考卷分國：劇本帶哪一國，這通就用那一國的人設說明書與安全規則。
+        # 沒帶＝繁中（既有 30 題劇本一律沒有這個欄位，行為完全不變）。
         data = {"personId": person_id}
+        if case.get("locale"):
+            data["locale"] = case["locale"]
         try:
             context = server.build_reply_context(history, char=case.get("character") or "寧寧", data=data)
             reply_raw = server.reply_conv(history, char=case.get("character") or "寧寧", data=data, context=context)
@@ -138,7 +142,13 @@ def main():
         return
 
     try:
-        sys_instruction = lv.system_instruction(char=case.get("character") or "寧寧")
+        _profile = None
+        if case.get("locale"):
+            _profile = server.localization.voice_session_locale_profile(
+                server.localization.build_locale_context({"conversationLocale": case["locale"],
+                                                          "uiLocale": case["locale"]}))
+        sys_instruction = lv.system_instruction(
+            char=case.get("character") or "寧寧", locale_profile=_profile)
     except Exception as e:
         print(json.dumps({"ok": False, "error": f"system_instruction failed: {e}"}, ensure_ascii=False))
         return

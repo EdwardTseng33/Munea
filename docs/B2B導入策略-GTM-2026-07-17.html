@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>沐寧 Munea · B2B 導入策略｜GTM × 業務 × 定價（2026-07-17）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700;900&family=Noto+Sans+TC:wght@400;500;700&family=Fraunces:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF6EF; --paper-deep:#F3EBDD; --ink:#2A2118; --ink-soft:#54473A;
+    --gold:#D4912A;              /* 裝飾用：邊框、色塊、bullet */
+    --gold-strong:#96601A;       /* 大字（≥18px）金色文字 */
+    --gold-label:#6E430D;        /* 小字（<18px）金色文字 */
+    --gold-wash:rgba(212,145,42,0.10);
+    --sage:#4A7A6F; --sage-text:#35594E; --sage-wash:rgba(74,122,111,0.10);
+    --alert:#8A3222; --alert-wash:rgba(169,63,43,0.07);
+    --line:#E4D9C6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;letter-spacing:0 !important;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Noto Serif TC','Noto Sans TC',serif;
+    font-size:16.5px; line-height:1.85;
+    word-break:keep-all; overflow-wrap:break-word;
+  }
+  h1,h2,h3,h4,.lead,.punch{word-break:keep-all;overflow-wrap:break-word;text-wrap:balance;}
+  .wrap{max-width:1020px;margin:0 auto;padding:0 40px;}
+  .num{font-family:'Fraunces','Noto Serif TC',serif;font-style:italic;}
+  .nb{white-space:nowrap;}
+
+  /* ── Hero ─────────────────────────── */
+  .hero{padding:88px 0 60px;border-bottom:1px solid var(--line);}
+  .eyebrow{font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;color:var(--gold-label);text-transform:uppercase;margin-bottom:18px;}
+  .hero h1{font-size:44px;font-weight:900;line-height:1.35;margin-bottom:22px;}
+  .hero h1 em{font-style:normal;color:var(--gold-strong);}
+  .hero .sub{font-size:19px;color:var(--ink-soft);max-width:760px;}
+  .hero .meta{margin-top:26px;font-family:'Noto Sans TC',sans-serif;font-size:14px;color:var(--ink-soft);}
+
+  /* ── Section scaffolding ──────────── */
+  section{padding:64px 0 8px;}
+  .sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:8px;}
+  .sec-no{font-family:'Fraunces',serif;font-style:italic;font-size:30px;color:var(--gold-strong);font-weight:600;}
+  h2{font-size:29px;font-weight:900;line-height:1.4;}
+  .sec-sub{font-size:16.5px;color:var(--ink-soft);margin:6px 0 34px;max-width:820px;}
+
+  /* ── Cards ────────────────────────── */
+  .grid{display:grid;gap:18px;margin-bottom:34px;}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  .g2{grid-template-columns:repeat(2,1fr);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:24px 24px 20px;}
+  .card h3{font-size:18px;font-weight:700;margin-bottom:10px;line-height:1.5;}
+  .card p{font-size:15px;color:var(--ink-soft);line-height:1.8;}
+  .card .big{font-family:'Fraunces','Noto Serif TC',serif;font-size:30px;font-weight:600;color:var(--gold-strong);display:block;margin-bottom:6px;font-style:italic;}
+  .tag{display:inline-block;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:700;padding:2px 12px;border-radius:99px;margin-bottom:12px;}
+  .tag.gold{background:var(--gold-wash);color:var(--gold-label);}
+  .tag.sage{background:var(--sage-wash);color:var(--sage-text);}
+  .tag.alert{background:var(--alert-wash);color:var(--alert);}
+
+  /* ── Punch（warm-paper）───────────── */
+  .punch{background:var(--gold-wash);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:24px 30px;margin:10px 0 36px;font-size:18px;line-height:1.95;}
+  .punch em{font-style:normal;font-weight:700;color:var(--gold-strong);}
+  .punch.alert-tone{background:var(--alert-wash);border-left-color:#A93F2B;}
+  .punch.alert-tone em{color:var(--alert);}
+
+  /* ── Tables ───────────────────────── */
+  .tbl-scroll{overflow-x:auto;margin-bottom:36px;border:1px solid var(--line);border-radius:10px;background:#fff;}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;line-height:1.7;}
+  th{background:var(--paper-deep);font-family:'Noto Sans TC',sans-serif;font-weight:700;text-align:left;padding:13px 16px;border-bottom:2px solid var(--line);white-space:nowrap;font-size:14px;}
+  td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink);}
+  tr:last-child td{border-bottom:none;}
+  td.strong{font-weight:700;white-space:nowrap;}
+  .ok{color:var(--sage-text);font-weight:700;}
+  .mid{color:var(--gold-label);font-weight:700;}
+  .bad{color:var(--alert);font-weight:700;}
+
+  /* ── Chart frame ──────────────────── */
+  .chart{background:#fff;border:1px solid var(--line);border-radius:10px;padding:28px 26px 18px;margin-bottom:36px;overflow-x:auto;}
+  .chart .cap{font-family:'Noto Sans TC',sans-serif;font-size:13.5px;color:var(--ink-soft);margin-top:10px;line-height:1.7;}
+  svg{display:block;max-width:100%;height:auto;}
+
+  /* ── Flow strip（裝置數學）─────────── */
+  .flow{display:flex;align-items:stretch;gap:0;margin-bottom:14px;flex-wrap:wrap;}
+  .flow .step{flex:1;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px 22px;position:relative;}
+  .flow .arrow{display:flex;align-items:center;padding:0 10px;color:var(--gold-strong);font-size:26px;font-family:'Fraunces',serif;}
+  .flow .step .k{font-family:'Fraunces','Noto Serif TC',serif;font-style:italic;font-size:27px;font-weight:600;color:var(--gold-strong);}
+  .flow .step .t{font-size:14.5px;color:var(--ink-soft);margin-top:4px;line-height:1.7;}
+
+  /* ── Checklist ────────────────────── */
+  ul.clean{list-style:none;margin-bottom:34px;}
+  ul.clean li{padding:10px 0 10px 34px;position:relative;border-bottom:1px dashed var(--line);font-size:15.5px;line-height:1.8;}
+  ul.clean li:last-child{border-bottom:none;}
+  ul.clean li::before{content:"◆";position:absolute;left:6px;color:var(--gold-strong);font-size:13px;top:14px;}
+  ul.clean li b{font-weight:700;}
+
+  footer{border-top:1px solid var(--line);margin-top:56px;padding:34px 0 60px;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;color:var(--ink-soft);line-height:2;}
+
+  @media (max-width:860px){
+    .g3,.g2{grid-template-columns:1fr;}
+    .hero h1{font-size:32px;}
+    h2{font-size:24px;}
+    .wrap{padding:0 22px;}
+    .flow{flex-direction:column;}
+    .flow .arrow{transform:rotate(90deg);justify-content:center;padding:2px 0;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<div class="hero"><div class="wrap">
+  <div class="eyebrow">Munea 沐寧 · B2B Go-to-Market</div>
+  <h1>一台會關心人的螢幕，<br>三種場景，<em>一條由補助鋪好的路</em></h1>
+  <p class="sub">沐寧的 B2B 不是「把 App 賣給公司」，而是把我們練出來的三樣真本事——安全守護、長期記憶、台灣照護分寸——裝進一台開機就能用的螢幕，先賣給最痛、正在找解法、而且政府幫忙出錢的地方。</p>
+  <div class="meta">2026-07-17 · 蘇菲彙整 · 依程式實查的產品真相與最新成本容量撰寫 ｜ 內部策略文件 · 數字含未驗項（見第 8 節誠實聲明）</div>
+</div></div>
+
+<!-- ═══════════ 0 一眼看懂 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">0</span><h2>一眼看懂：賣什麼、賣給誰、為什麼會贏</h2></div>
+  <p class="sec-sub">三十秒版本。後面每一節都是這三句話的展開。</p>
+  <div class="grid g3">
+    <div class="card"><span class="tag gold">賣什麼</span>
+      <h3>同一台「沐寧螢幕」× 三種場景劇本</h3>
+      <p>照護陪伴版（機構／居家）、商用介紹版（門市／展場／衛教）、加上純軟體的主動外撥關懷。硬體找台灣代工夥伴掛牌，我們出靈魂。</p></div>
+    <div class="card"><span class="tag gold">先賣給誰</span>
+      <h3>照護場域 ＋ 單機商用，雙前鋒</h3>
+      <p>長照機構、養生村、有裝置就能用的門市與診所——都不需要我們還沒有的東西，今天的技術就穩穩接得住。</p></div>
+    <div class="card"><span class="tag gold">為什麼會贏</span>
+      <h3>護城河真、補助路通</h3>
+      <p>安全守護＋記憶＋照護分寸是兩年也抄不完的累積；長照 3.0 剛上路的租賃補助讓家庭月付幾百元就用得起。</p></div>
+  </div>
+</div></section>
+
+<!-- ═══════════ 1 產品真相 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">1</span><h2>產品真相：我們的護城河與缺口</h2></div>
+  <p class="sec-sub">這份盤點來自逐檔翻程式，不是簡報稿。策略建立在「真的有」上面，缺的照實列。</p>
+  <div class="grid g2">
+    <div class="card"><span class="tag sage">真的有 · 別人難抄</span>
+      <h3>三樣練出來的真本事</h3>
+      <p><b>① 三層安全守護</b>——每句話背景判讀自傷／急症／受虐訊號，命中就通報家人並自然轉介專線。<br>
+      <b>② 長期記憶</b>——通話結束萃取重點、跟舊記憶對帳，下次開場自然接續「上次你說……」。<br>
+      <b>③ 台灣照護分寸</b>——家人傳話、用藥看診提醒、Apple 健康同步、危機轉介，整套為台灣家庭調過。</p></div>
+    <div class="card"><span class="tag alert">今天是零 · 要誠實</span>
+      <h3>兩塊缺口＋兩個天花板</h3>
+      <p><b>① 讀客戶文件回答</b>（企業知識庫）——完全沒有，做客服的地基缺這塊。<br>
+      <b>② 場景可換</b>——人格與邊界寫死在程式裡，換場景是工程不是換設定。<br>
+      <b>天花板</b>：同時通話僅驗證 <span class="nb">5–10 路</span>穩；影像單向（只有她的臉、無雙向視訊）。</p></div>
+  </div>
+  <div class="punch">結論一句話：<em>順著護城河賣、繞開缺口賣</em>——先開「不需要知識庫、不怕併發」的門，把需要地基的門排在有客戶付錢養地基之後。</div>
+</div></section>
+
+<!-- ═══════════ 2 三個問題的答案 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">2</span><h2>三個核心問題的答案</h2></div>
+  <p class="sec-sub">Edward 提出的三個導入路線，逐一拍板。</p>
+  <div class="grid g3">
+    <div class="card"><span class="tag gold">Q1 · App 整包 vs 模組</span>
+      <h3>都要，分客戶</h3>
+      <p>沒有自己 App 的機構 → <b>白牌整包</b>（換上他們的招牌直接用）。有 App 生態的保險電信 → <b>嵌入模組</b>。第一波先賣白牌整包：離現況最近、最快收錢。</p></div>
+    <div class="card"><span class="tag gold">Q2 · 硬體怎麼解</span>
+      <h3>找代工掛牌，不自己造</h3>
+      <p>長輩不會用 App 是最大障礙。答案是一台「開機就是沐寧、常亮、自動接聽」的螢幕——找台灣平板代工夥伴認證，健康版與商用版<b>共用同一台</b>。已拍板：現在物色、先接觸不簽約。</p></div>
+    <div class="card"><span class="tag gold">Q3 · 即時對話模型外賣</span>
+      <h3>裝置綁定可先推，接聽客服放最後</h3>
+      <p>Edward 點破的關鍵：<b>一台裝置＝一個對話位</b>，人多塞爆的問題物理上不存在；一台裝置的知識量窄，直接寫進劇本、不用先蓋知識庫。雲端接聽客服（尖峰湧入＋深知識）留到地基補齊。</p></div>
+  </div>
+</div></section>
+
+<!-- ═══════════ 3 買方痛點地圖 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">3</span><h2>買方痛點地圖：從「他為什麼需要」倒推</h2></div>
+  <p class="sec-sub">B2B 成交的起點不是我們的功能表，是對方今天睡不著的那件事。</p>
+  <div class="tbl-scroll"><table>
+    <tr><th>買家</th><th>他今天的痛</th><th>我們實質解掉什麼</th><th>他為什麼付錢</th><th>今天接得住？</th></tr>
+    <tr><td class="strong">居家長照／日照</td><td>照服員荒、一人顧五十人；家屬天天來電問狀況</td><td>每天一通主動關懷；情緒健康訊號回報；危機通報</td><td>減人力負擔、服務差異化、早期預警省住院</td><td class="ok">高</td></tr>
+    <tr><td class="strong">養生村／銀髮宅</td><td>夜間人力薄、住民孤獨、家屬要安心</td><td>房內常伴、夜間問候、家屬安心回報</td><td>差異化賣點、住民滿意度</td><td class="ok">高</td></tr>
+    <tr><td class="strong">保險（長照／健康險）</td><td>理賠來自退化與住院、想要黏著</td><td>服藥提醒、健康預警、陪伴減緩退化</td><td>降理賠＋外溢保單加值</td><td class="ok">中高</td></tr>
+    <tr><td class="strong">電信／長輩機</td><td>銀髮資費要黏著加值</td><td>打包成「長輩陪伴服務」隨資費賣</td><td>加值營收、降退租</td><td class="mid">中高</td></tr>
+    <tr><td class="strong">門市／展場／診所（單機）</td><td>介紹人力貴、離峰沒人顧、衛教重複講</td><td>一台不休息的介紹員／衛教員</td><td>比工讀生便宜一半、24 小時在線</td><td class="mid">中（裝置綁定後成立）</td></tr>
+    <tr><td class="strong">一般企業接聽客服</td><td>客服人力貴、回不完</td><td>回答「他們公司」的問題</td><td>省客服人力</td><td class="bad">低（缺知識庫＋怕尖峰）</td></tr>
+  </table></div>
+</div></section>
+
+<!-- ═══════════ 4 GTM 三波 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">4</span><h2>進場三波：順著技術確定性賣</h2></div>
+  <p class="sec-sub">第一波賣「今天就穩」的，第二波賣「蓋一層就能賣」的，第三波才碰「要解天花板」的。</p>
+
+  <div class="chart">
+    <svg viewBox="0 0 960 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GTM 三波時間軸">
+      <line x1="70" y1="250" x2="930" y2="250" stroke="#E4D9C6" stroke-width="2"/>
+      <text x="70"  y="278" font-size="14" fill="#54473A">現在</text>
+      <text x="345" y="278" font-size="14" fill="#54473A">3 個月</text>
+      <text x="630" y="278" font-size="14" fill="#54473A">6 個月</text>
+      <text x="880" y="278" font-size="14" fill="#54473A">之後</text>
+      <rect x="70" y="34" width="300" height="62" rx="9" fill="rgba(212,145,42,0.14)" stroke="#D4912A" stroke-width="2"/>
+      <text x="86" y="60" font-size="16" font-weight="700" fill="#2A2118">第一波 · 雙前鋒（0–3 月）</text>
+      <text x="86" y="84" font-size="14" fill="#54473A">照護白牌整包 ＋ 單機商用版（同一台螢幕）</text>
+      <rect x="345" y="114" width="300" height="62" rx="9" fill="rgba(74,122,111,0.12)" stroke="#4A7A6F" stroke-width="2"/>
+      <text x="361" y="140" font-size="16" font-weight="700" fill="#2A2118">第二波（3–6 月）</text>
+      <text x="361" y="164" font-size="14" fill="#54473A">保險電信嵌入模組 ＋ 主動外撥關懷</text>
+      <rect x="630" y="194" width="300" height="62" rx="9" fill="#F3EBDD" stroke="#B9A88C" stroke-width="2"/>
+      <text x="646" y="220" font-size="16" font-weight="700" fill="#2A2118">第三波（6 月後）</text>
+      <text x="646" y="244" font-size="14" fill="#54473A">接聽型客服／大知識量導購平台</text>
+      <text x="70" y="126" font-size="14" fill="#6E430D">↑ 不需知識庫、不怕併發、政府補助可搭</text>
+      <text x="345" y="206" font-size="14" fill="#54473A">↑ 先蓋：場景劇本包＋知識庫</text>
+    </svg>
+    <p class="cap">每一波的位置＝它需要的地基何時就緒。第二波的地基（場景劇本包、知識庫）由第一波客戶的建置費一起養出來。</p>
+  </div>
+
+  <div class="tbl-scroll"><table>
+    <tr><th>波次</th><th>開哪扇門</th><th>形態</th><th>進場前必須為真</th></tr>
+    <tr><td class="strong">第一波 0–3 月</td><td>長照機構／養生村白牌 ＋ 門市展場診所單機</td><td>同一台沐寧螢幕 × 照護劇本／商用劇本</td><td>白牌換裝（輕）；伺服器端計費；真人併發壓測釘住「一卡幾人」；硬體夥伴打樣</td></tr>
+    <tr><td class="strong">第二波 3–6 月</td><td>保險／電信嵌入 ＋ 主動外撥關懷</td><td>嵌進對方 App／排程外撥服務</td><td>場景劇本包設定層；基礎知識庫（向量欄位已開好、待接上）；多客戶帳務</td></tr>
+    <tr><td class="strong">第三波 6 月後</td><td>接聽型客服／全型錄導購</td><td>多客戶雲端平台</td><td>解同時通話天花板；雙向視訊；深度知識庫</td></tr>
+  </table></div>
+</div></section>
+
+<!-- ═══════════ 5 定價 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">5</span><h2>商業模式與定價</h2></div>
+  <p class="sec-sub">成本底：一分鐘全包約 <span class="nb">NT$0.6–0.9</span>（語音＋顯卡動臉）。定價錨在「取代的人力」而不是成本加成。</p>
+
+  <div class="grid g2">
+    <div class="card"><span class="tag gold">機構照護版</span>
+      <h3>按長輩人頭 · 每月</h3>
+      <span class="big num nb">NT$600–900</span>
+      <p>每天一通主動關懷（約 300 分／月）。我方每人月成本約 <span class="nb">180–270</span> → 毛利 <span class="nb">55–70%</span>。500 人以上可折至 <span class="nb">450–600</span> 仍正毛利。對機構＝照服員月薪的零頭。</p></div>
+    <div class="card"><span class="tag gold">單機商用版</span>
+      <h3>按裝置 · 月租</h3>
+      <span class="big num nb">NT$8,000–15,000</span>
+      <p>門市導購／展場介紹／診所衛教。價值錨＝「不休息的介紹員」，比工讀生月薪便宜一半以上。展場短租 <span class="nb">NT$3,000–5,000／天</span>；頭兩個客戶另收 <span class="nb">NT$5–15 萬</span>建置費（客戶付錢養出我們的場景包）。</p></div>
+    <div class="card"><span class="tag gold">家用租賃版</span>
+      <h3>按家庭 · 月租（走補助）</h3>
+      <span class="big num nb">NT$1,500–1,600</span>
+      <p>錨定長照 3.0 租賃額度（<span class="nb">6 萬／3 年</span> ≈ <span class="nb">1,667／月</span>）。納入給付後家庭自付只剩部分負擔——一般戶約三成、低收全免。詳見第 6 節。</p></div>
+    <div class="card"><span class="tag gold">嵌入模組／外撥</span>
+      <h3>平台費＋用量</h3>
+      <span class="big num nb">NT$2.5–3.5／分</span>
+      <p>錨國際同類服務行情、留三到四成折扣空間仍正毛利。主動外撥另計：每通成功 <span class="nb">NT$8–20</span> 或月方案。</p></div>
+  </div>
+
+  <div class="chart">
+    <svg viewBox="0 0 960 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="機構版每人每月經濟結構">
+      <text x="24" y="30" font-size="16" font-weight="700" fill="#2A2118">機構照護版 · 每位長輩每月的錢怎麼分（以中位 NT$750 試算）</text>
+      <rect x="24"  y="60"  width="252" height="46" rx="7" fill="#F3EBDD" stroke="#B9A88C" stroke-width="2"/>
+      <rect x="276" y="60"  width="588" height="46" rx="7" fill="rgba(212,145,42,0.16)" stroke="#D4912A" stroke-width="2"/>
+      <text x="40"  y="89"  font-size="15" font-weight="700" fill="#2A2118">成本 ≈ 225</text>
+      <text x="300" y="89"  font-size="15" font-weight="700" fill="#2A2118">毛利 ≈ 525（約 70%）</text>
+      <text x="24"  y="140" font-size="14" fill="#54473A">成本＝語音對話＋顯卡動臉，按實際聊幾分鐘攤；一張常駐顯卡月租約 NT$11–17 千，可服務一整間機構的排程通話。</text>
+      <text x="24"  y="168" font-size="14" fill="#54473A">量級感：一間 100 人的機構＝月收 NT$7 萬、月成本約 NT$3 萬（含一張常駐卡＋語音），毛利約 57%。</text>
+      <text x="24"  y="210" font-size="14" fill="#8A3222">⚠ 成本中的顯卡承載數字尚未全數通過真人壓測，簽約報價前必須先驗（見第 8 節）。</text>
+    </svg>
+  </div>
+
+  <div class="punch">定價鐵律：<em>B2B 與 C 端兩條價不打架</em>——C 端 NT$3／分是零售武器；B2B 按人頭、按裝置、按授權包裝，錨在「取代的人力與省下的住院」，不是把零售價除給企業。</div>
+</div></section>
+
+<!-- ═══════════ 6 補助三軌 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">6</span><h2>補助三軌：讓「要不要花錢試」變成「政府出錢為什麼不試」</h2></div>
+  <p class="sec-sub">「補我們」出研發推廣費；「補客戶」直接讓報價變便宜——後者才是業務降阻力的主菜。</p>
+
+  <div class="grid g3">
+    <div class="card"><span class="tag gold">軌道 1 ⭐ 補終端家庭</span>
+      <h3>長照 3.0 智慧科技輔具全租賃</h3>
+      <p><b>2026-07-01 剛上路。</b>長照家庭每 3 年 6 萬元租賃額度，「安全看視類」官方定義與沐寧守護能力幾乎同一句話。首批 17 件不含我們，但審議機制持續收新品——門是開的。</p></div>
+    <div class="card"><span class="tag sage">軌道 2 ✅ 補我們</span>
+      <h3>數產署 AI 創新服務研發補助</h3>
+      <p>申請中（7/24 截止、上限 2,000 萬）。計畫書 B 端主推「獨立互動站」＝正是本策略第一波的單機商用版，這筆錢就是養第一波建置的。</p></div>
+    <div class="card"><span class="tag alert">軌道 3 🔍 補機構客戶</span>
+      <h3>機構導入獎勵（查證中）</h3>
+      <p>衛福部機構品質計畫、六都智慧照顧試辦、中小企業數位轉型券、保險外溢保單——四條的額度與窗口待逐一查證回填。</p></div>
+  </div>
+
+  <div class="chart">
+    <svg viewBox="0 0 960 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="補助前後家庭月付對比">
+      <text x="24" y="30" font-size="16" font-weight="700" fill="#2A2118">家用租賃版 · 納入長照給付前後，家庭每月實際掏多少</text>
+      <text x="24"  y="82" font-size="15" fill="#54473A">未納入給付（原價）</text>
+      <rect x="250" y="60" width="600" height="34" rx="7" fill="#F3EBDD" stroke="#B9A88C" stroke-width="2"/>
+      <text x="836" y="83" font-size="15" font-weight="700" fill="#2A2118" text-anchor="end">NT$1,600／月</text>
+      <text x="24"  y="142" font-size="15" fill="#54473A">納入後 · 一般戶（自付三成）</text>
+      <rect x="250" y="120" width="180" height="34" rx="7" fill="rgba(212,145,42,0.16)" stroke="#D4912A" stroke-width="2"/>
+      <text x="444" y="143" font-size="15" font-weight="700" fill="#6E430D">≈ NT$480</text>
+      <text x="24"  y="202" font-size="15" fill="#54473A">納入後 · 低收入戶（全免）</text>
+      <rect x="250" y="180" width="10" height="34" rx="3" fill="rgba(74,122,111,0.35)" stroke="#4A7A6F" stroke-width="2"/>
+      <text x="276" y="203" font-size="15" font-weight="700" fill="#35594E">NT$0</text>
+      <text x="24" y="240" font-size="14" fill="#8A3222">⚠ 租賃組自付比率待對公報附表確認；終端用戶限已進長照系統（失能等級 2–8）者。</text>
+    </svg>
+    <p class="cap">進場第一步很輕：向受衛福部委託的輔具暨長照基金會（02-2874-7573）確認「AI 陪伴守護螢幕」可否走安全看視類登錄、下輪審議時程——一通電話，答案直接決定硬體規格要塞哪些認證。</p>
+  </div>
+
+  <div class="punch alert-tone">行銷紅線：申請與文宣<em>只能講「照顧安全、看視、提醒」</em>，絕不能碰「診斷、醫療」——一碰就落入醫療器材管理，是完全不同的世界。</div>
+</div></section>
+
+<!-- ═══════════ 7 裝置數學 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">7</span><h2>為什麼「裝置綁定」讓容量不再是問題</h2></div>
+  <p class="sec-sub">Edward 點破的一步棋：一台裝置一次只面對一個人，容量從「不可預測的尖峰」變成「數裝置就能算」。</p>
+  <div class="flow">
+    <div class="step"><span class="k num">10 台</span><div class="t">裝置賣出去（門市／展場／機構房間）</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="k num">2–3 路</span><div class="t">實際同時在講話（單機使用率約兩三成）</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="k num">5–10 路</span><div class="t">今天已驗證的同時通話上限——放得下</div></div>
+  </div>
+  <p style="font-size:15px;color:var(--ink-soft);margin-bottom:34px;">同理，長照外撥可排程：100 位長輩每天各一通 10 分鐘、分散在白天，平均同時約 <span class="nb">1.4 路</span>、尖峰 <span class="nb">3–4 路</span>。<b>兩條前鋒加起來仍在天花板內。</b>規模到約 30 台裝置前，須先查清天花板是 Google 給的額度還是自己機器的問題（額度可申請調高）。</p>
+</div></section>
+
+<!-- ═══════════ 8 誠實聲明 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">8</span><h2>誠實聲明：哪些數字站得住、哪些還要驗</h2></div>
+  <p class="sec-sub">對外報價與簽服務承諾之前，這張表是底線。</p>
+  <div class="tbl-scroll"><table>
+    <tr><th>數字</th><th>狀態</th><th>說明</th></tr>
+    <tr><td>語音每分鐘成本 <span class="nb">NT$0.33–0.60</span></td><td class="ok">官方定價查證</td><td>Google 官方費率換算，可信</td></tr>
+    <tr><td>一張卡穩服務 1 人（高畫質 768）</td><td class="ok">真機實測</td><td>全庫唯一貨真價實的驗收數字</td></tr>
+    <tr><td>一張卡 2 人（現行 640 畫質）</td><td class="mid">決策值 · 未驗</td><td>真人雙人 60 分鐘壓測還沒過——簽約前必驗</td></tr>
+    <tr><td>每分鐘全包 <span class="nb">NT$0.6–0.9</span></td><td class="mid">拼算值</td><td>語音實價 × 容量決策值組合，方向可信、精度待驗</td></tr>
+    <tr><td>同時通話天花板 <span class="nb">5–10 路</span></td><td class="mid">實測但根因未明</td><td>是額度還是機器問題未查清，30 台裝置規模前必查</td></tr>
+    <tr><td>機構版毛利 <span class="nb">55–70%</span></td><td class="mid">推估</td><td>依上列成本推導，隨壓測結果校準</td></tr>
+    <tr><td>長照租賃自付比率</td><td class="bad">待查</td><td>公報附表逐條確認後才能寫進家用文宣</td></tr>
+  </table></div>
+</div></section>
+
+<!-- ═══════════ 9 行動 ═══════════ -->
+<section><div class="wrap">
+  <div class="sec-head"><span class="sec-no">9</span><h2>30 天行動清單</h2></div>
+  <p class="sec-sub">每一條都是「打電話、見人、驗數字」等級的具體動作，不是方向宣言。</p>
+  <ul class="clean">
+    <li><b>輔具通路探路</b>——電洽輔具暨長照基金會：AI 陪伴守護螢幕可否走「安全看視類」登錄？下輪品項審議何時？（答案直接決定硬體規格）</li>
+    <li><b>硬體夥伴物色</b>——接觸 2–3 家台灣平板／智慧螢幕代工，拿打樣成本與時程；規格單直接含輔具登錄所需認證。先接觸、不簽約（已拍板）。</li>
+    <li><b>數產署補助送件</b>——7/24 截止，補齊公司資料與意向書（既有車道、照排程走）。</li>
+    <li><b>真人併發壓測</b>——把「一張卡幾人」用 60 分鐘真人通話釘死；這是所有 B2B 報價與服務承諾的地基。</li>
+    <li><b>伺服器端計費</b>——通話時長改由伺服器自己算，不再信裝置回報；企業對帳的信任基礎。</li>
+    <li><b>首發示範腳本</b>——為「長照機構白牌」與「單機商用」各備一套 15 分鐘現場演示（現有雲端展示版可改裝），見客戶用。</li>
+    <li><b>機構端補助查證</b>——衛福部機構品質計畫／六都試辦／數位轉型券／外溢保單四條的額度與窗口，回填本策略第 6 節。</li>
+  </ul>
+  <div class="punch">本策略的核心賭注只有一句：<em>「會關心人」是比「會回答問題」更稀缺的能力</em>——全市場都在做後者，我們把前者做成了產品。第一波就賣這個。</div>
+</div></section>
+
+<footer><div class="wrap">
+  沐寧 Munea · B2B 導入策略 ｜ 2026-07-17 蘇菲彙整 · Edward 拍板方向（裝置綁定優先、補助降阻力、硬體先物色不簽約）<br>
+  完整依據：docs/B2B導入策略-GTM與定價-2026-07-17.md（文字版）· 產品能力程式實查 · 高併發正式架構-640首發 · 真768容量驗收 · 長期照顧服務申請及給付辦法（114-06-19 修正）<br>
+  數字紀律：標示「未驗」者不得對外承諾；行銷不得使用醫療宣稱。
+</div></footer>
+
+</body>
+</html>

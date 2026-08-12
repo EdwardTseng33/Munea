@@ -4,6 +4,7 @@
   const STORAGE_KEY = 'munea.voiceCallDiagnostics.v1';
   const MAX_HISTORY = 12;
   const MAX_STAGES = 80;
+  const MAX_TURNS = 16;
   const SECRET_KEY = /(token|secret|password|authorization|appkey|app_key|sdp|transcript|caption|reply|text)/i;
   let active = null;
   let reporter = null;
@@ -95,7 +96,60 @@
       firstFailedStage: trace.firstFailedStage || '',
       context: trace.context || {},
       stages,
+      turnTimings: (trace.turnTimings || []).slice(-MAX_TURNS),
     };
+  }
+
+  function turnSummary(turn) {
+    const at = turn.at || {};
+    const server = turn.server || {};
+    return {
+      turn: turn.turn,
+      targetMs: server.targetMs ?? null,
+      turnClass: server.turnClass || '',
+      slowCaller: !!server.slowCaller,
+      lastHumanToVadMs: server.lastHumanToVadMs ?? null,
+      vadToVoiceMs: server.vadToVoiceMs ?? null,
+      voiceToAvatarMs: at.avatar_pcm_received && at.voice_first_pcm
+        ? Math.max(0, at.avatar_pcm_received - at.voice_first_pcm) : null,
+      avatarToWebrtcMs: at.webrtc_playout && at.avatar_pcm_received
+        ? Math.max(0, at.webrtc_playout - at.avatar_pcm_received) : null,
+      lastHumanToWebrtcMs: at.webrtc_playout && at.last_human_voice
+        ? Math.max(0, at.webrtc_playout - at.last_human_voice) : null,
+      basis: turn.basis || '',
+    };
+  }
+
+  function markTurn(turnId, stage, details) {
+    if (!active || active.outcome !== 'in_progress') return null;
+    const id = Math.max(0, Number(turnId) || 0);
+    if (!id || !stage) return null;
+    if (!active.turnTimings) active.turnTimings = [];
+    let turn = active.turnTimings.find(item => item.turn === id);
+    if (!turn) {
+      turn = { turn: id, at: {}, server: {}, basis: '' };
+      active.turnTimings.push(turn);
+      if (active.turnTimings.length > MAX_TURNS) active.turnTimings.shift();
+    }
+    const safe = safeDetails(details);
+    turn.at[String(stage)] = (
+      stage === 'last_human_voice' && Number.isFinite(safe.observedAt)
+        ? safe.observedAt : wallNow()
+    );
+    if (stage === 'vad_stop') {
+      turn.server.lastHumanToVadMs = Number.isFinite(safe.afterLastVoiceMs) ? safe.afterLastVoiceMs : null;
+      turn.server.targetMs = Number.isFinite(safe.targetMs) ? safe.targetMs : null;
+      turn.server.turnClass = safe.turnClass || '';
+      turn.server.slowCaller = !!safe.slowCaller;
+    } else if (stage === 'voice_first_pcm') {
+      turn.server.vadToVoiceMs = Number.isFinite(safe.afterVadMs) ? safe.afterVadMs : null;
+      turn.basis = safe.basis || turn.basis;
+    } else if (safe.basis) {
+      turn.basis = safe.basis;
+    }
+    persist(active);
+    if (stage === 'webrtc_playout') report('voice_turn_e2e', turnSummary(turn));
+    return turnSummary(turn);
   }
   function abandonPreviousTrace() {
     const history = readHistory();
@@ -120,6 +174,7 @@
       firstFailedStage: '',
       context: safeDetails(context),
       stages: [],
+      turnTimings: [],
     };
     persist(active);
     mark('dial_tapped', 'pass', context);
@@ -183,6 +238,7 @@
     fail,
     end,
     setReporter,
+    markTurn,
     current: () => active ? publicSummary(active) : null,
     history: () => readHistory().map(publicSummary),
     endpoint,

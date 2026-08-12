@@ -42,16 +42,21 @@ _TIME_ZONE_RE = re.compile(r"^(?:UTC|[A-Za-z_+-]+(?:/[A-Za-z0-9_+-]+)+)$")
 _DATA_REGION_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 _SPEECH_CODES = {"zh-TW": "cmn-TW", "en": "en-US", "ja": "ja-JP", "es": "es-ES"}
 _ASR_LANGUAGE_HINTS = {
-    "zh-TW": ["cmn-Hant-TW"],
+    # Taiwan users commonly open with a very short "Hello"/"OK" before
+    # continuing in Mandarin. Vertex native audio can otherwise discard that
+    # sub-two-second turn when only Mandarin is hinted. Keep Mandarin first so
+    # recognition bias remains local, with English as the narrow code-switch
+    # fallback rather than changing the session or response language.
+    "zh-TW": ["cmn-Hant-TW", "en-US"],
     "en": ["en-US"],
     "ja": ["ja-JP"],
     "es": ["es-ES"],
 }
 _REPLY_INSTRUCTIONS = {
     "zh-TW": "請一律使用自然的繁體台灣中文回覆，絕不使用簡體字。",
-    "en": "Reply in warm, plain English. Keep voice responses short and easy to follow.",
-    "ja": "自然でやさしい日本語で答えてください。音声で聞き取りやすい短い文を優先してください。",
-    "es": "Responde en español claro y cálido. Para voz, usa frases cortas y fáciles de entender.",
+    "en": "**Every single word of your reply must be in English.** **And never address the person as \"Munea\" — that is the product's name, not theirs. Use their own name, or no name at all.** Even one Chinese sentence is a failure — the person cannot read it. Reply in warm, plain English. Keep voice responses short and easy to follow.",
+    "ja": "**返答は一字残らず日本語で書いてください。****また、相手を「Munea」と呼んではいけません——それは製品の名前で、その人の名前ではありません。ご本人の名前で呼ぶか、呼びかけなしで話してください。**中国語の文が一つでも混ざれば失敗です——相手には読めません。自然でやさしい日本語で答えてください。音声で聞き取りやすい短い文を優先してください。",
+    "es": "**Toda la respuesta debe estar en español, sin excepción.** **Y nunca llame a la persona «Munea»: ese es el nombre del producto, no el suyo. Use su nombre, o ninguno.** Una sola frase en chino ya es un fallo: la persona no puede leerla. Responde en español claro y cálido. Para voz, usa frases cortas y fáciles de entender.",
 }
 _OPENING_MESSAGES = {
     "zh-TW": "嗨，我在這裡。想從哪件事聊起都可以。",
@@ -78,10 +83,10 @@ _TAIWAN_EMERGENCY_GUIDANCE = {
     "es": "Si alguien está en peligro inmediato en Taiwán, llama al 119. Para apoyo de salud mental, llama al 1925 y pide ayuda a una persona cercana de confianza.",
 }
 _SPAIN_EMERGENCY_GUIDANCE = {
-    "zh-TW": "如果有人在西班牙有立即危險，請立刻撥打 112，並請附近可信任的人到場協助。",
-    "en": "If anyone is in immediate danger in Spain, call 112 and ask a trusted person nearby to help.",
-    "ja": "スペインで差し迫った危険がある場合は112へ連絡し、近くの信頼できる人にも助けを求めてください。",
-    "es": "Si alguien está en peligro inmediato en España, llama al 112 y pide ayuda a una persona de confianza cercana.",
+    "zh-TW": "如果有人在西班牙有立即危險，請立刻撥打 112；想不開、有自殺念頭時可撥 024（24 小時、免費），並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Spain, call 112. For thoughts of suicide, 024 is the free 24-hour line. Ask a trusted person nearby to help.",
+    "ja": "スペインで差し迫った危険がある場合は112へ。死にたい気持ちのときは024（24時間・無料）へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en España, llama al 112. Ante ideas de suicidio, el 024 atiende las 24 horas y es gratuito. Pide ayuda a una persona de confianza cercana.",
 }
 _MEXICO_EMERGENCY_GUIDANCE = {
     "zh-TW": "如果有人在墨西哥有立即危險，請立刻撥打 911，並請附近可信任的人到場協助。",
@@ -89,14 +94,32 @@ _MEXICO_EMERGENCY_GUIDANCE = {
     "ja": "メキシコで差し迫った危険がある場合は911へ連絡し、近くの信頼できる人にも助けを求めてください。",
     "es": "Si alguien está en peligro inmediato en México, llama al 911 y pide ayuda a una persona de confianza cercana.",
 }
+_JAPAN_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在日本有立即危險，請立刻撥打 119（消防／救護）；報警是 110。要不要叫救護車拿不定主意時可撥 #7119（部分地區未開通）。心理支持可撥 0120-279-338，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in Japan, call 119 for fire and ambulance (110 for police). If unsure whether to call an ambulance, #7119 offers guidance in many areas. For mental-health support, call 0120-279-338, and ask a trusted person nearby to help.",
+    "ja": "日本で差し迫った危険がある場合は、119番（消防・救急）へ。警察は110番です。救急車を呼ぶか迷うときは#7119（地域により未対応）。こころの相談はよりそいホットライン0120-279-338（24時間・無料）へ連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Japón, llama al 119 (bomberos y ambulancia); el 110 es para la policía. Si dudas si llamar a una ambulancia, el #7119 orienta en muchas zonas. Para apoyo psicológico, llama al 0120-279-338 y pide ayuda a una persona de confianza cercana.",
+}
+
+_UNITED_STATES_EMERGENCY_GUIDANCE = {
+    "zh-TW": "如果有人在美國有立即危險，請立刻撥打 911（醫療、消防、警察共用）；想不開時可撥打或傳簡訊到 988，並請附近可信任的人到場協助。",
+    "en": "If anyone is in immediate danger in the United States, call 911 (medical, fire and police). For thoughts of suicide, call or text 988, and ask a trusted person nearby to help.",
+    "ja": "アメリカで差し迫った危険がある場合は911番（救急・消防・警察）へ。死にたい気持ちのときは988に電話またはテキストで連絡し、近くの信頼できる人にも助けを求めてください。",
+    "es": "Si alguien está en peligro inmediato en Estados Unidos, llama al 911 (sanitario, bomberos y policía). Ante ideas de suicidio, llama o envía un mensaje al 988, y pide ayuda a una persona de confianza cercana.",
+}
+
 _REGIONAL_EMERGENCY_GUIDANCE = {
     "TW": _TAIWAN_EMERGENCY_GUIDANCE,
     "ES": _SPAIN_EMERGENCY_GUIDANCE,
     "MX": _MEXICO_EMERGENCY_GUIDANCE,
+    "JP": _JAPAN_EMERGENCY_GUIDANCE,
+    "US": _UNITED_STATES_EMERGENCY_GUIDANCE,
 }
 REGIONAL_SAFETY_POLICY_SOURCES = {
     "ES": "https://www.interior.gob.es/opencms/en/contacta-con-nosotros/contacto-prueba-3-hide/index.html",
     "MX": "https://www.gob.mx/911/articulos/que-es-el-911emergencias?idiom=es",
+    "JP": "https://www.fdma.go.jp/mission/enrichment/appropriate/appropriate003.html",
+    "US": "https://988lifeline.org/",
 }
 
 # Launch gate: `cmn-TW` is Taiwan Mandarin, not Taiwanese Hokkien. The current
@@ -117,13 +140,35 @@ _TAIWANESE_HOKKIEN_REQUEST_RE = re.compile(
 _TAIWANESE_HOKKIEN_STRONG_PHRASES = (
     "食飽未", "呷飽未", "拍謝", "歹勢", "按怎", "按呢", "啥物", "毋知",
     "毋通", "袂使", "無要緊", "無代誌", "有影", "足感心",
+    # 2026-08-10 補：把「阮」降級成弱證據後，「阮兜足遠的」「阮今仔日真歡喜」
+    # 這種真台語會漏掉。這幾個詞國語不會這樣講，單獨命中很安全。
+    "阮兜", "恁兜", "伊兜", "今仔日", "昨昏", "明仔載",
 )
 _TAIWANESE_HOKKIEN_EXCLUSIVE_MARKERS = (
-    "阮", "恁", "佮", "攏", "毋", "袂", "咧", "𪜶", "媠", "遐",
+    "恁", "佮", "攏", "袂", "𪜶", "媠",
+)
+# 2026-08-10：這四個字原本跟上面那組一樣「出現一次就算台語」，但它們在台灣人講的
+# 國語裡本來就會出現，單獨咬到就是誤判——而誤判的代價是她整段話被攔掉、換一個
+# 陌生聲線重講（Edward 8/10 真機踩到）：
+#   咧 → 「你在幹嘛咧」「這個我不太懂咧」＝台灣國語超常用的語尾
+#   毋 → 「毋庸置疑」「毋寧」＝國語書面語
+#   遐 → 「遐想」「遐邇聞名」＝國語詞
+#   阮 → 姓氏（阮先生、阮小姐）
+# 改成「弱證據」：要再配上另一個獨有字、整句台語詞、或台語句型才算數。
+# 注意 _TAIWANESE_HOKKIEN_STRONG_PHRASES 裡的「毋知」「毋通」是完整台語詞，
+# 仍然單獨命中——真台語不會因為這次放寬而漏掉。
+_TAIWANESE_HOKKIEN_WEAK_MARKERS = (
+    "阮", "毋", "咧", "遐",
 )
 _TAIWANESE_HOKKIEN_CONTEXT_RE = re.compile(
     r"(?:伊.{0,3}(?:欲|咧|有|講|食|去|來)|(?:欲|閣).{0,3}(?:去|來|食|睏|講|買|做)|"
-    r"予.{0,3}(?:你|伊|我)|甲你|敢有|真好食|足(?:好|濟))"
+    r"予.{0,3}(?:你|伊|我)|甲你|敢有|真好食|"
+    # 台語的「咧」放在動詞前面（我咧等你＝我正在等你）；台灣人講國語的「咧」放句尾
+    # （你在幹嘛咧）。位置就是分辨點——只咬「咧＋動詞」，句尾的語尾詞放行。
+    r"咧(?:等|食|睏|做|創|講|看|走|想|寫|開|洗|買|賣|行|坐|忙|哭|笑|讀|學|聽)|"
+    # 台語的「足＋形容詞」＝很…（足好、足遠、足貴）。國語的「足」多是足夠／足球／充足，
+    # 所以只列台語常搭的形容詞，不用「足＋任一字」那種會反咬的寫法。
+    r"足(?:好|濟|遠|近|貴|俗|熱|寒|媠|讚|甜|鹹|忝|爽))"
 )
 
 # Keep product copy canonical while giving speech synthesis an explicit,
@@ -250,9 +295,16 @@ def build_locale_context(values=None):
         context["currency"],
         _CURRENCY_CODE_RE,
     )
+    # 沒人告訴我們使用者在哪一國時，用「手機的時區」推——時區是真的地理訊號，
+    # 不是語言。原本這裡直接吃預設值 TW，等於在沒有任何根據的情況下宣稱
+    # 「這個人在台灣」，於是西班牙／美國／日本的使用者會被用他自己的語言叫去打
+    # 台灣的 119 與 1925（2026-08-01 實測三國全中）。1925 在國外根本不存在。
+    # 時區也推不出來的（例如人在德國、手機是西班牙文）→ 留空，
+    # regional_safety_instruction 會改用通用建議「請聯絡所在地的緊急服務」——
+    # 那句話在哪裡都成立，永遠不會是錯的。
     context["safetyRegion"] = _normalize_code(
         values.get("safetyRegion"),
-        context["safetyRegion"],
+        _region_from_time_zone(context["timeZone"]),
         _REGION_CODE_RE,
     )
     context["legalRegion"] = _normalize_code(
@@ -597,6 +649,43 @@ def _normalize_code(value, fallback, pattern):
     return normalized
 
 
+# 時區 → 國家。只列我們真的核定過急難指引的市場（見 REGIONAL_SAFETY_POLICY_SOURCES）。
+# 這是地理推地理，不是語言推地理——LocaleContext 的原則沒有被打破。
+# 沒列到的時區一律推不出來（回空字串），使用者就會拿到通用的「聯絡所在地緊急服務」。
+_TIME_ZONE_REGIONS = {
+    "Asia/Taipei": "TW",
+    "Asia/Tokyo": "JP",
+    "Europe/Madrid": "ES",
+    "Atlantic/Canary": "ES",
+    "Africa/Ceuta": "ES",
+    "America/Mexico_City": "MX",
+    "America/Cancun": "MX",
+    "America/Monterrey": "MX",
+    "America/Tijuana": "MX",
+}
+_US_TIME_ZONES = {
+    "America/New_York", "America/Chicago", "America/Denver", "America/Phoenix",
+    "America/Los_Angeles", "America/Anchorage", "America/Detroit",
+    "America/Indiana/Indianapolis", "America/Kentucky/Louisville",
+    "America/Boise", "Pacific/Honolulu",
+}
+
+
+def _region_from_time_zone(time_zone):
+    """Return the market code a device time zone points at, or "" when unknown.
+
+    Only geography selects a safety region. A language tag never does — an
+    English phone can be in the UK (999), a Spanish phone can be in Mexico
+    (911), so the reply language must not pick the hotline.
+    """
+    key = str(time_zone or "").strip()
+    if not key:
+        return ""
+    if key in _US_TIME_ZONES:
+        return "US"
+    return _TIME_ZONE_REGIONS.get(key, "")
+
+
 def _normalize_text(value, fallback, pattern, lowercase=False):
     if value is None:
         return fallback
@@ -827,7 +916,12 @@ def requests_taiwanese_hokkien(text):
 
 
 def looks_like_taiwanese_hokkien(text):
-    """Fail closed for high-signal Hokkien wording while launch support is off."""
+    """Fail closed for high-signal Hokkien wording while launch support is off.
+
+    2026-08-10：弱證據字（阮／毋／咧／遐）單獨出現不算數——它們在台灣人講的國語裡
+    本來就會出現，單獨咬到會把正常對話誤判成台語、整段話被攔掉。要兩個弱證據字，
+    或弱證據字＋台語句型，才算。強台語詞與獨有字維持一個就命中，真台語不會漏。
+    """
     if taiwanese_hokkien_release_enabled():
         return False
     value = str(text or "")
@@ -835,7 +929,31 @@ def looks_like_taiwanese_hokkien(text):
         return True
     if any(token in value for token in _TAIWANESE_HOKKIEN_EXCLUSIVE_MARKERS):
         return True
-    return bool(_TAIWANESE_HOKKIEN_CONTEXT_RE.search(value))
+    has_context = bool(_TAIWANESE_HOKKIEN_CONTEXT_RE.search(value))
+    if has_context:
+        return True
+    weak_hits = sum(1 for token in _TAIWANESE_HOKKIEN_WEAK_MARKERS if token in value)
+    return weak_hits >= 2
+
+
+def looks_like_taiwanese_hokkien_output(text):
+    """Require phrase-level evidence before replaying streamed model output.
+
+    Output transcription arrives in short fragments. A single marker can be
+    an unstable partial transcription; blocking that fragment makes the model
+    regenerate and users hear the whole answer again.
+    """
+    if taiwanese_hokkien_release_enabled():
+        return False
+    value = str(text or "")
+    if any(phrase in value for phrase in _TAIWANESE_HOKKIEN_STRONG_PHRASES):
+        return True
+    marker_hits = {
+        token for token in _TAIWANESE_HOKKIEN_EXCLUSIVE_MARKERS if token in value
+    }
+    if len(marker_hits) >= 2 or _TAIWANESE_HOKKIEN_CONTEXT_RE.search(value):
+        return True
+    return bool(re.search(r"(?:我|你|伊).{0,2}咧.{0,2}(?:等|講|食|做|看|想|去|來)", value))
 
 
 def requires_taiwanese_hokkien_fallback(text):
@@ -898,8 +1016,17 @@ def unstable_replacement_targets():
     return tuple(target for _, target in _TAIWAN_MANDARIN_SPEECH_REPLACEMENTS)
 
 
-def voice_opening_instruction(familiarity=0, topics=None, location=None, opening_index=None):
-    """Rotate concrete opening directions instead of repeating mood check-ins."""
+def voice_opening_instruction(familiarity=0, topics=None, location=None, opening_index=None,
+                              has_name=True):
+    """Rotate concrete opening directions instead of repeating mood check-ins.
+
+    has_name=False 代表「我們不知道他叫什麼」（個人資料沒填暱稱／名稱）。
+    2026-08-08 Edward 真機：她開口叫他「伯伯」——他從來沒填過任何稱呼。
+    病根跟 8/1 編奧運新聞一模一樣：開場指令**寫死**「用他的稱呼開頭」，
+    手上沒有稱呼她就生一個聽起來合理的；而「不知道就不要加稱呼」那條規則
+    躺在一萬七千字說明書的另一端，搶不過眼前這句直接指令。
+    改法同樣是那條教訓：不要只寫「不准編」，要讓**指令本身不再要求她做不到的事**。
+    """
     try:
         familiarity = max(0, int(familiarity or 0))
     except (TypeError, ValueError):
@@ -910,22 +1037,71 @@ def voice_opening_instruction(familiarity=0, topics=None, location=None, opening
         route_index = familiarity
     liked = [str(topic).strip() for topic in (topics or []) if str(topic).strip()]
     place = str(location or "").strip()
-    routes = (
-        "只做一句短招呼，直接告訴對方你在，接著把話權留給對方；這次不要先問問題。",
-        (
-            "從對方喜歡的主題「" + liked[route_index % len(liked)] + "」挑一個具體、輕鬆的小切口，"
-            "但不要假裝知道他今天做過什麼。"
-        ) if liked else "用一個具體又輕鬆的生活小題目開場，不問心情、不盤問近況。",
-        (
-            "用「" + place + "」當作輕巧的在地切口，但不捏造天氣、店家或活動；沒有查證就只做普通招呼。"
-        ) if place else "用現在接起電話的自然情境開場，像朋友剛碰面，不做制式問候調查。",
-        "像熟朋友一樣直接分享一句輕巧、可接可不接的話，再停下來；不要問對方今天開不開心。",
+    # 2026-08-01（Edward 7/31 深夜真機：她開場說「你看新聞了嗎？這次奧運台灣選手超有精神」，
+    # 而當天備好的資料裡一個奧運的字都沒有）。病根就在這裡：舊版第 2、4 條路線叫她
+    # 「挑一個具體的小切口」「直接分享一句輕巧的話」，卻沒說**材料從哪來**。開場又規定
+    # 要短、要有內容、要立刻開口，她手上沒東西就自己生一個聽起來很合理的——而「新聞只能
+    # 講備好的」那條規則躺在一萬七千多字說明書的另一端，搶不過眼前這句直接指令。
+    # 改法：每條路線都綁死材料來源，並且給她一條「不必編也能過關」的路（短招呼永遠合格）。
+    # 只寫「不准編」沒用，要同時給替代做法——7/29 誠實防線學到的同一件事。
+    # 2026-08-01 Edward 拍板：「開頭只要打招呼就好，可以理解一下當下的時間該說早安／午安／
+    # 晚安、給一些情緒價值或樂趣、與記憶。不需要用時事來開頭。」
+    # 所以四條路線全部收斂成「招呼」這一件事，只是溫度來源不同：時段、心意、記憶、輕鬆。
+    # 材料一律限定在她真的有的東西（現在幾點、上面寫著的記憶），沒有就退回純招呼。
+    # 2026-08-01 Edward 定版：「就是暱稱、名稱加上時間的招呼，與記憶是否需要詢問什麼問題之類。」
+    # 並明確拿掉「我在喔」「我在這裡」——那是機器人式的存在宣告，真人朋友接起電話不會那樣講。
+    # 所以開場只有兩種長相，輪流用：①稱呼＋時段招呼，講完停 ②稱呼＋時段招呼＋一句從記憶來的問句。
+    # 2026-08-08：稱呼只有在**真的知道**的時候才准出現在指令裡。
+    # 不知道就明說「不知道」＋給她照樣合格的替代做法（直接招呼），
+    # 而不是留一句「用他的稱呼開頭」讓她自己去湊一個。
+    if has_name:
+        greet_core = ("用他的稱呼開頭，接一句照現在時間的招呼"
+                      "（早上早安、下午午安、晚上晚安、太晚就順口提早點休息）")
+    else:
+        greet_core = ("**你不知道他叫什麼——不要加任何稱呼，也不要自己想一個**"
+                      "（不准用「先生」「小姐」「阿公」「阿嬤」「伯伯」「阿姨」這類憑外貌或年紀猜的叫法，"
+                      "你根本沒見過他）。直接講一句照現在時間的招呼就好"
+                      "（早上早安、下午午安、晚上晚安、太晚就順口提早點休息）——"
+                      "沒有稱呼一點都不失禮，叫錯才傷人")
+    ask_route = (
+        greet_core + "，然後接一句問句——問的內容只能來自**上面真的寫著**的他的事"
+        "（他講過的、記著的，像上次說的不舒服、要去做的事）；"
+        "**上面沒寫的一律不准問、也不准自己補細節**，想不到可問的就只招呼、講完停。"
     )
-    forbidden = "「今天開心嗎」「有開心嗎」「心情好嗎」「今天過得怎麼樣」「最近好嗎」"
+    # Edward 8/1 補：「有時輕鬆一點、有時有溫度一點」——四條輪流，語氣不要每通一樣。
+    warm_route = (
+        greet_core + "，再加一點溫度——只能是**此刻成立**的話"
+        "（像「你來啦」「接到你真好」，或一句祝福「祝你今天順順的」），講完就停；"
+        "**不准說「今天想到你」「等你好久」「這幾天都在想」這類**——"
+        "你沒有兩通之間的日子，那是憑空生出來的心情。"
+    )
+    routes = (
+        greet_core + "，講完就停下來把話權留給對方；這次不要問問題。",
+        ask_route,
+        greet_core + "，語氣輕鬆一點、可以有一點點俏皮，講完就停；不要問對方今天開不開心。",
+        warm_route,
+    )
+    # 2026-08-01 Edward：「不要講什麼『我在喔』『我在這裡』」——那是機器人式的存在宣告，
+    # 真人朋友接起電話不會先報告自己存在。
+    forbidden = (
+        "「今天開心嗎」「有開心嗎」「心情好嗎」「今天過得怎麼樣」「最近好嗎」"
+        "「我在喔」「我在這裡」「我一直都在」"
+    )
+    # 興趣與所在地只當「他先聊到才接」的方向，不再當開場素材（Edward 8/1：開頭只要打招呼）。
+    ctx_note = ""
+    if liked:
+        ctx_note = "（他喜歡的話題有「" + "、".join(liked[:3]) + "」——那是**他先聊到才接**的方向，不是開場素材。）"
+    elif place:
+        ctx_note = "（他住在「" + place + "」——那是他先聊到才接的方向，不是開場素材。）"
     return (
         "本通開場路線：" + routes[route_index % len(routes)]
         + " 禁止使用或改寫成這些制式問候：" + forbidden
-        + "。不要每通都先查問情緒或近況；開場只能一句，講完就停。"
+        + "。不要每通都先查問情緒或近況；開場只能一句，講完就停。" + ctx_note
+        # 開場專屬鐵律：釘在她真正會照做的那句指令旁邊，不放在說明書遠處。
+        + "\n**開場這一句絕對不准提新聞、時事、比賽、活動、或誰誰誰最近怎樣**"
+        "——不管你覺得多合理、多像真的。他自己先問，你才去查了再講；他沒問，"
+        "就當作你今天沒有任何消息。**想不到內容就只講一句招呼**——"
+        "短招呼永遠是合格的開場，編一句有內容的不是。"
     )
 
 

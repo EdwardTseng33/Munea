@@ -71,6 +71,27 @@ def test_process_worker_id_and_port_roundtrip():
     print("test_process_worker_id_and_port_roundtrip: PASS")
 
 
+def test_token_process_index_accepts_base_worker_slot_claims():
+    assert frc.token_process_index(
+        {"worker_id": "runpod-4090", "slot_id": 1}, "runpod-4090", 2
+    ) == 0
+    assert frc.token_process_index(
+        {"worker_id": "runpod-4090", "slot_id": 2}, "runpod-4090", 2
+    ) == 1
+    assert frc.token_process_index(
+        {"worker_id": "runpod-4090-p1", "slot_id": 99}, "runpod-4090", 2
+    ) == 1
+    for payload in (
+        {"worker_id": "runpod-4090"},
+        {"worker_id": "runpod-4090", "slot_id": 0},
+        {"worker_id": "runpod-4090", "slot_id": 3},
+        {"worker_id": "foreign", "slot_id": 1},
+        None,
+    ):
+        assert frc.token_process_index(payload, "runpod-4090", 2) is None
+    print("test_token_process_index_accepts_base_worker_slot_claims: PASS")
+
+
 def test_round_robin_picker():
     rr = frc.RoundRobinPicker(3)
     picks = [rr.pick() for _ in range(7)]
@@ -394,6 +415,7 @@ def main():
     test_decode_token_payload_unverified()
     test_worker_process_index()
     test_process_worker_id_and_port_roundtrip()
+    test_token_process_index_accepts_base_worker_slot_claims()
     test_round_robin_picker()
     test_pick_backend_index_switch_explicit_slot()
     test_pick_backend_index_demo_session_always_zero()
