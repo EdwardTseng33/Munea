@@ -4135,7 +4135,13 @@ const LiveVoice = {
   _noteUserMicActivity(rms, frameMs, speakerActive) {
     if (speakerActive || !this.micOpen) { this._userSpeechMs = 0; return; }
     const floor = Math.max(0, Number(this._bargeState && this._bargeState.noiseFloor) || 0.006);
-    const threshold = Math.min(0.04, Math.max(0.018, floor * 3));
+    // 2026-08-12 底線 0.018→0.024（Edward 1.0.68 實機「收音太敏感」＋當晚總帳實證）：
+    // 那通 160 秒裡「偵測到人聲」35 次、其中 13 次等了 4 秒一個字都認不出＝環境聲
+    // （電視/回音殘響）在 0.02~0.04 這帶反覆觸發「聽到了」提示與插話候選；他真正
+    // 講話的音量都在 0.06~0.12。0.024 切在兩群中間：小聲講話（0.03+）照樣過，
+    // 底噪那帶不再一直誤報。安靜房間的自適應底噪乘 3 本來就會把門檻抬高，這裡
+    // 只動「最低保證」那一格。
+    const threshold = Math.min(0.04, Math.max(0.024, floor * 3));
     if (rms >= threshold) {
       this._lastHumanVoiceAt = Date.now();
       this._userSpeechQuietMs = 0;
@@ -5428,6 +5434,13 @@ const FaceWave = {
     return v < FaceWave.QUIET_FLOOR ? 0 : (v - FaceWave.QUIET_FLOOR) / (1 - FaceWave.QUIET_FLOOR);
   },
   level() {
+    // 撥號中波紋一律靜止（Edward 8/12：「撥號中就開始在收音了，有問題」）。
+    // 麥克風確實從撥號手勢就先錄著——那是為了不漏掉他的第一句話（接通立刻補送）；
+    // 但畫面不該在還沒接通時就跳收音動態，看起來像偷聽。錄歸錄、畫面等真的接通才動。
+    try {
+      const sc = document.getElementById('chat');
+      if (sc && sc.dataset.state === 'connecting') return 0;
+    } catch (e) {}
     let her = false;
     try { her = typeof speechActive === 'function' && speechActive(); } catch (e) {}
     const mic = (typeof LiveVoice !== 'undefined' && LiveVoice.micLevel) || 0;
