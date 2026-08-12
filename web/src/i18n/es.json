@@ -449,6 +449,7 @@
   "voice.call.offline": "Sin conexión",
   "voice.call.speaking": "Hablando",
   "voice.call.dialing": "Llamando",
+  "voice.call.connected": "Conectado. Ya puede hablar",
   "voice.call.developerConnecting": "Conectando directamente para desarrollo…",
   "voice.call.developerReady": "La conexión de prueba para desarrollo está lista…",
   "voice.call.firstWarmup": "Preparando todo. La primera llamada puede tardar unos 30 segundos…",

@@ -885,12 +885,18 @@ html[lang="es"] #connect .cn-row .cn-btn {
 }
 .fh-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 /* 活臉與伺服器條件圖使用同一個 1080x1080 正方形框；只做等比例縮放。
-   單一垂直遮罩避免四邊交叉形成橢圓疊影，左右像素直接與同源背景對齊。 */
+   單一垂直遮罩避免四邊交叉形成橢圓疊影，左右像素直接與同源背景對齊。
+   2026-08-12 淡出帶 82%→92%（Edward 1.0.66/67 實機「領口有重疊影像」）：
+   兩個角色的領口都落在方框高度的 90~91%（量的是立繪像素：a05 膚色→上衣邊界在
+   y≈1170、a06 白領→深毛衣在 y≈1180），82% 起淡出＝領口區一半是會動的活臉、
+   一半是不動的底圖，模型動作一大（原生 512 後動作變活潑）兩層領口就同時可見。
+   把淡出往下移到 92% 起＝領口完全由活臉畫（只剩一層、跟著動），淡出帶只跨過
+   素色衣料（動的布疊靜的布、低對比看不出來）。 */
 .fh-overlay {
   position: absolute; left: 0; top: 9.895833%; width: 100%; height: auto; aspect-ratio: 1 / 1;
   overflow: hidden; opacity: 0; transition: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 82%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 92%, transparent 100%);
 }
 .face-bg.livevid .fh-overlay { opacity: 1; }
 .fh-overlay video {

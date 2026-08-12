@@ -449,6 +449,7 @@
   "voice.call.offline": "未在線",
   "voice.call.speaking": "正在說話",
   "voice.call.dialing": "撥號中",
+  "voice.call.connected": "接通了，直接說話就可以",
   "voice.call.developerConnecting": "開發測試直連中…",
   "voice.call.developerReady": "開發測試管線已就緒…",
   "voice.call.firstWarmup": "新引擎暖身中，首次約需半分鐘…",

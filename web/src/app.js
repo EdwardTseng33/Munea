@@ -726,6 +726,7 @@ function setCallHint(text, busy) {
 function setLocalizedCallHint(state, busy = false) {
   const rendererCopy = muneaRendererCopy();
   const fallbackKeys = {
+    connected: 'voice.call.connected',
     connecting: 'voice.connecting',
     developerConnecting: 'voice.call.developerConnecting',
     developerReady: 'voice.call.developerReady',
@@ -5297,14 +5298,19 @@ const AvSyncMeter = {
   start(videoEl) {
     if (this.on) return;
     try {
-      if (localStorage.getItem('munea.debug') !== '1') return;   // debug-only：munea.debug=1 才啟動；預設不建 canvas、不取像素、不顯示浮層（2026-07-11 ②）
+      // 2026-08-12（Edward：長通話聲嘴會漂、但 6 分鐘內的自動驗收都過）：從 debug 專用
+      // 改成整通都量、逐輪把「聲音起→嘴巴動」的差記進帳（av_onset_lag_ms），拿他真機
+      // 長通話的帳看第幾分鐘開始歪。浮層照舊只有 munea.debug=1 才顯示；平時無畫面、
+      // 且只在「她正在講話」的時間窗內取像素（見 _loop），不整通燒電。
       this._video = videoEl || document.getElementById('faceVid');
       this._canvas = document.createElement('canvas'); this._canvas.width = 48; this._canvas.height = 48;
       this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
-      this._overlay = document.createElement('div');
-      this._overlay.style.cssText = 'position:fixed;left:10px;bottom:12px;z-index:99999;background:rgba(12,14,20,.78);color:#fff;font:600 12px/1.5 -apple-system,system-ui,sans-serif;padding:7px 10px;border-radius:10px;pointer-events:none;white-space:pre;letter-spacing:.2px;';
-      this._overlay.textContent = '延遲量測：聽聲音、看嘴巴中…';
-      document.body.appendChild(this._overlay);
+      if (localStorage.getItem('munea.debug') === '1') {
+        this._overlay = document.createElement('div');
+        this._overlay.style.cssText = 'position:fixed;left:10px;bottom:12px;z-index:99999;background:rgba(12,14,20,.78);color:#fff;font:600 12px/1.5 -apple-system,system-ui,sans-serif;padding:7px 10px;border-radius:10px;pointer-events:none;white-space:pre;letter-spacing:.2px;';
+        this._overlay.textContent = '延遲量測：聽聲音、看嘴巴中…';
+        document.body.appendChild(this._overlay);
+      }
       this._samples = []; this._prev = null; this._audioHot = this._videoHot = this._pendA = false;
       this.on = true; this._loop();
     } catch (e) {}
@@ -5337,6 +5343,13 @@ const AvSyncMeter = {
   _loop() {
     if (!this.on) return;
     const now = performance.now();
+    // 只在「她此刻應該正在講話」（含 1.2 秒餘韻）的時間窗內取像素；其餘時間每 300ms 醒來看一眼就好
+    const speakingWindow = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil + 1200);
+    if (!speakingWindow) {
+      this._audioHot = this._videoHot = this._pendA = false; this._prev = null;
+      this._raf = 0; setTimeout(() => { if (this.on && !this._raf) this._loop(); }, 300);
+      return;
+    }
     const ar = this._audioRms(), mm = this._mouthMotion();
     if (ar > 0.045 && !this._audioHot) { this._audioHot = true; this._tA = now; this._pendA = true; }   // 聲音：靜→起
     else if (ar < 0.02) this._audioHot = false;
@@ -5344,7 +5357,12 @@ const AvSyncMeter = {
       this._videoHot = true;
       if (this._pendA) {
         const d = (now - this._tA) / 1000;
-        if (d > 0.05 && d < 5.5) { this._samples.push(d); if (this._samples.length > 6) this._samples.shift(); this._pendA = false; this._render(); this._maybeTune(); }
+        if (d > 0.05 && d < 5.5) {
+          this._samples.push(d); if (this._samples.length > 6) this._samples.shift(); this._pendA = false;
+          // 逐輪記帳：整通的「聲音起→嘴巴動」序列。長通話會不會越漂越多，帳一拉開看斜率就知道。
+          try { trackProductEvent('av_onset_lag_ms', { ms: Math.round(d * 1000), turn: (typeof LiveVoice !== 'undefined' && LiveVoice._playbackTurn) || 0 }); } catch (e) {}
+          this._render(); this._maybeTune();
+        }
       }
     } else if (mm < 0.014) this._videoHot = false;
     this._raf = requestAnimationFrame(() => this._loop());
@@ -5361,6 +5379,7 @@ const AvSyncMeter = {
   _maybeTune() {
     // 舊水管拆除（1.24.6）：新引擎＝臉聲同線原生對齊、退回也用寫死小等待——校時器只准看、不准動手
     //（它是舊雙管世界的拐杖，在新世界會把聲音越推越後＝嘴先動的機制源；量測顯示照舊、供機器人成績單用）
+    if (!this._overlay) return;   // 2026-08-12 整通量測上線後的保險：沒開 debug 浮層＝純記帳模式，絕不動手調時間
     try { if (typeof faceEngine === 'function' && faceEngine() === 'flashhead') return; } catch (e) {}
     if ((localStorage.getItem('munea.avSyncAuto') || '1') !== '1') return;   // 7/11 起預設開（Edward 拍板對齊為正解）；munea.avSyncAuto=0 可關
     if (this._samples.length < 3) return;
@@ -5481,6 +5500,39 @@ const FaceWave = {
   },
 };
 window.MuneaFaceWave = FaceWave;
+
+/* 接通提示音（2026-08-12 · Edward 1.0.66/67 實機「第一句等很久、以為當機、會再問一次」）：
+   長輩按下通話後有一段安靜的等待（領顯卡、暖機、她準備開口），眼睛沒盯著字幕就以為當機。
+   在「真的接通、可以講話了」那一刻給一聲很輕的兩音提示（本地合成、零延遲、不走模型），
+   把「線通了」跟「她開口」在耳朵上拆開——聽到叮聲就知道沒當機，也就不會再問第二次
+   引發插話連鎖。音量刻意壓低（比她說話小很多），只做信號、不做鈴聲。 */
+const CallChime = {
+  _ctx: null,
+  // 建聲音引擎要在使用者手勢裡做（瀏覽器規矩）：撥號那一下就是手勢
+  arm() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!this._ctx) this._ctx = new AC();
+      if (this._ctx.state === 'suspended') { const p = this._ctx.resume(); if (p && p.catch) p.catch(() => {}); }
+    } catch (e) {}
+  },
+  play() {
+    try {
+      const ctx = this._ctx; if (!ctx || ctx.state !== 'running') return;
+      const t0 = ctx.currentTime + 0.02;
+      [[659.25, 0], [880, 0.13]].forEach(([freq, at]) => {   // E5→A5 上行兩音＝「通了」的語感
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, t0 + at);
+        gain.gain.linearRampToValueAtTime(0.055, t0 + at + 0.02);
+        gain.gain.linearRampToValueAtTime(0, t0 + at + 0.14);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t0 + at); osc.stop(t0 + at + 0.16);
+      });
+    } catch (e) {}
+  },
+};
 
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
@@ -8265,6 +8317,7 @@ async function connectCall() {
   ), 'chat')) return;
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
+  CallChime.arm();   // 提示音引擎要趁這個手勢建好，等接通那刻才響得出來
   // 2026-08-01（Edward 真機：「按下去會 lag 一陣子才轉撥通中，會以為當機」）：
   // 畫面的「撥通中」原本要等帳號確認／點數／向總機叫號整趟跑完（那幾支各 0.7-1.2 秒）
   // 才切——手指按下去到畫面有反應中間空白一大段。改成**先把畫面切過去、再去跑那些事**；
@@ -8491,6 +8544,8 @@ async function connectCall() {
       } catch (e) {}
       markConnected();                       // 1 秒獨立暖機完成，現在才切成真正接通並開始計時
       voiceCallMark('call_connected', 'pass');
+      CallChime.play();                                  // 「線通了」用耳朵就聽得到（Edward 8/12：等太久以為當機）
+      setLocalizedCallHint('connected');                 // 接通了、可以直接講——她預設等使用者先開口
       if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
       try { FaceIdle.stop(); } catch (e) {}
       // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
