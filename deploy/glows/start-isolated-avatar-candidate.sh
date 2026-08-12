@@ -6,6 +6,7 @@ candidate_frame_size="${2:-512}"
 candidate_port="${3:-8890}"
 candidate_release="${4:-1.0.66-first-lip-preserve}"
 candidate_video_lead_ms="${5:-0}"
+candidate_release_commit="${6:-0d651ba3}"
 formal_pid="$(pgrep -fo '/root/flashhead_server.py')"
 if [[ -z "${formal_pid}" ]]; then
   echo "formal FlashHead process not found" >&2
@@ -27,7 +28,7 @@ export MUNEA_CALL_TOKEN_SECRET=
 export MUNEA_CALL_PROTOCOL_REQUIRED=0
 export MUNEA_ALLOW_LEGACY_APP_KEY=1
 export MUNEA_RELEASE_VERSION="${candidate_release}"
-export MUNEA_RELEASE_COMMIT=0c0028f7
+export MUNEA_RELEASE_COMMIT="${candidate_release_commit}"
 
 cd /root/SoulX-FlashHead
 exec /root/miniconda3/envs/workenv/bin/python -u "${candidate_root}/flashhead_server.py"

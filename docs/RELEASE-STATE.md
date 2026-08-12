@@ -1,11 +1,13 @@
 # Munea Release State
 
-## 2026-08-12 台灣｜1.0.66 Build 537 實機首句 Gate FAIL
+## 2026-08-12 台灣｜1.0.66 Build 537 首句嘴型中斷修復（Avatar 正式上線 · App 實機回驗 pending）
 
-- **實機結果優先**：安裝版 `1.0.66 (537)` 仍出現首句嘴型講到一半被切斷／卡住，且語音內容與嘴型不一致；本版不得送審或稱穩定。
+- **原始實機失敗**：安裝版 `1.0.66 (537)` 曾出現首句嘴型講到一半被切斷／卡住，且語音內容與嘴型不一致；因此舊版證據已作廢並重新驗收。
 - **根因**：正式 Avatar 的首塊校正會只刪嘴型畫格、不刪相同時間的語音；正式日誌已有一次刪除 15 幀（約 600ms）。舊的聲嘴起音分數只證明起點接近，不能證明音節／內容對齊。
-- **處置**：候選修復已移除 video-only 首塊裁切並加入反向回歸測試；App 1.0.66 的插話候選仍由 Voice 最終裁決，該拒絕回音事件沒有執行 App 停聲，因此本輪暫不新增 App build。
-- **目前階段**：`code fixed + unit/release checks PASS + Avatar candidate deployment pending + full A/V acceptance pending`。未取得完整影音驗收前不得切正式或恢復送審判定。
+- **處置**：已移除 video-only 首塊裁切，改為聲音與影片共用時鐘的 signed playout offset；正式值為 `-80ms`，完整保留每個音節對應的嘴型。App 1.0.66 的插話仍由 Voice 最終裁決，拒絕的回音事件不會執行 App 停聲，因此本輪不新增 App build。
+- **候選完整影音**：同線驗收保存完整 `received-av.mp4`，不是只留 WAV 或起音分數；首句嘴型連續，沒有裁掉開頭或中途跳回 poster。
+- **正式服務 Gate**：Avatar `1.0.66-first-lip-preserve@0d651ba3` 已部署到正式 8888，保留回滾目錄 `/root/munea-backup-before-first-lip-preserve-20260812-0449`。正式 Voice→Avatar 連續 3 通×1 輪 PASS，首聲 `672／688／734ms`、聲嘴 `+15／+16／+15ms`、連續性相關 `0.9658／0.9754／0.9727`；首塊裁切事件、缺音、RTP speech gap、Avatar underrun、自主重播與意外斷線皆 0。
+- **目前階段**：`source fixed + production Avatar deployed + automated full-chain 3/3 PASS + full A/V evidence PASS + installed iPhone recheck pending`。這是 server-only 修復，現有 1.0.66 不用重包；但安裝版 iPhone 的真人視聽回驗完成前，仍不稱完整穩定或恢復送審。
 
 ## 2026-08-12 台灣｜1.0.66 Build 537：1.0.65 實機阻擋修復候選（Voice 正式上線 · App E2E pending）
 
