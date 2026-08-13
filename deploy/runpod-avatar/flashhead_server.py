@@ -376,6 +376,8 @@ class FlashHead:
             adaptive_max_s=AUDIO_PREBUFFER_MAX_S,
         )
         slot.sink = FrameSink(slot.tgt_fps)
+        # 聲嘴對錶（2026-08-13）：畫格出口綁聲音錶——聲音永遠是主時鐘
+        slot.sink.audio_pos_fn = slot.audio_out.played_pos_s
         slot.SYNC_BUFFER_MS = 350
         run_pipeline_for_slot = self._run_pipeline
         if SLOT_STREAM:

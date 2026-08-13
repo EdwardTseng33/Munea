@@ -392,8 +392,8 @@ def test_new_round_marker_waits_for_its_own_gpu_chunk():
             def depth(self):
                 return base_sink.depth()
 
-            def push_many(self, frames, ready_ts=None, fps=None):
-                base_sink.push_many(frames, ready_ts, fps)
+            def push_many(self, frames, ready_ts=None, fps=None, start_audio_pos=None):
+                base_sink.push_many(frames, ready_ts, fps, start_audio_pos=start_audio_pos)
                 # Simulate PCM ingress starting round 2 after this old chunk's
                 # t_frames_ready was captured but before its metric is recorded.
                 feeder._round_pending = True
@@ -675,6 +675,11 @@ def test_health_snapshot_math():
         "late_frames": 0,
         "idle_invalidations": 2,
         "audio_played_ms": 0.0,
+        # 聲嘴對錶（2026-08-13）：出口丟遲到段/扣早到格的帳＋最後一次畫-聲差
+        "av_resync_events": 0,
+        "av_resync_frames": 0,
+        "av_hold_events": 0,
+        "last_av_offset_ms": None,
     }
     assert body["model_turn_state"] == {
         "motion_resets": 0,
