@@ -20,6 +20,14 @@ def _voice_style_book(locale):
         return handle.read()
 
 
+def _voice_sections_book(locale):
+    path = os.path.join(PERSONA_DIR, f"voice-sections.{locale}.txt")
+    if not os.path.exists(path):
+        return ""
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
 def _shipped_voice_style_locales():
     if not os.path.isdir(PERSONA_DIR):
         return []
@@ -33,10 +41,12 @@ def _shipped_voice_style_locales():
 class VoiceStyleRulesTest(unittest.TestCase):
     def setUp(self):
         # 2026-07-31 口語風格分國：規則從程式碼搬進 engine/persona/voice-style.<語系>.txt。
+        # 2026-08-13 分節搬遷：剩下寫死在程式碼裡的中文段落也搬進 voice-sections.<語系>.txt
+        #（原因：英文／西文說明書裡本來夾著兩千多個中文字，因為這些段落沒有分語系）。
         # 這支守的東西沒變（規則被刪就要亮紅燈），只是現在要連書一起看——
-        # 兩邊合起來當作「說明書的全文」。
+        # 三邊合起來當作「說明書的全文」。
         with open(SRC, encoding="utf-8") as f:
-            self.src = f.read() + _voice_style_book("zh-TW")
+            self.src = f.read() + _voice_style_book("zh-TW") + _voice_sections_book("zh-TW")
 
     def test_priority_contract_present_and_first(self):
         """優先權契約（五層、小者優先）必須存在，且在說明書組裝的最前面。"""
