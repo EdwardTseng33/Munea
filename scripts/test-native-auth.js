@@ -165,7 +165,12 @@ function expect(condition, message) {
 
 async function testGateway401Recovery() {
   const appSource = fs.readFileSync('web/src/app.js', 'utf8');
-  const start = appSource.indexOf('const CallControl = {');
+  // 2026-08-13：原本只切 CallControl 這一塊，但 acquire 會先 await
+  //   clientReleaseInfo()（送版號給總機用的）——那個函式就寫在它上面一行、
+  //   沒被切進來，於是整段測試一跑就爆 ReferenceError，兩個 Gateway 情境
+  //   等於完全沒在測。起點往上挪到那個函式，讓它跟著一起進沙箱受測，
+  //   順便把「請求裡真的帶了版號」也一起守住。
+  const start = appSource.indexOf('let _clientReleaseInfoPromise = null;');
   const end = appSource.indexOf('\nfunction getLiveVoiceUrl()', start);
   expect(start >= 0 && end > start, 'CallControl source could not be isolated');
   const requests = [];
@@ -177,7 +182,7 @@ async function testGateway401Recovery() {
       status: 200,
       async json() {
         return {
-          status: 'connect', call_id: 'call-1', lease_version: 1,
+          status: 'connect', call_id: 'call-1', lease_version: 1, call_protocol: 3,
           voice: { url: 'wss://voice.example' }, worker: { url: 'https://avatar.example' },
         };
       },
@@ -195,6 +200,7 @@ async function testGateway401Recovery() {
     },
     window: {
       crypto: { randomUUID() { return 'stable-idempotency-key'; } },
+      MuneaVersion: { current: '1.0.54', callProtocol: 3 },
       MuneaAuth: {
         async recoverRejectedSession() {
           recoverCalls += 1;
@@ -224,11 +230,20 @@ async function testGateway401Recovery() {
   expect(requests[1].options.headers.Authorization === 'Bearer fresh-token', 'retry did not use the recovered token');
   expect(requests[0].options.body === requests[1].options.body, 'Gateway retry changed the idempotent request body');
   expect(requests[1].options.body.includes('stable-idempotency-key'), 'Gateway retry lost the idempotency key');
+  // 版號要真的送到總機——舊版通話協定不相容時，總機是靠這幾個欄位擋的。
+  const body = JSON.parse(requests[0].options.body);
+  expect(body.app_version === '1.0.54', 'call request did not carry the app version');
+  expect(body.client_protocol === 3, 'call request did not carry the call protocol');
 }
 
 async function testGatewayAccountBootstrapRecovery() {
   const appSource = fs.readFileSync('web/src/app.js', 'utf8');
-  const start = appSource.indexOf('const CallControl = {');
+  // 2026-08-13：原本只切 CallControl 這一塊，但 acquire 會先 await
+  //   clientReleaseInfo()（送版號給總機用的）——那個函式就寫在它上面一行、
+  //   沒被切進來，於是整段測試一跑就爆 ReferenceError，兩個 Gateway 情境
+  //   等於完全沒在測。起點往上挪到那個函式，讓它跟著一起進沙箱受測，
+  //   順便把「請求裡真的帶了版號」也一起守住。
+  const start = appSource.indexOf('let _clientReleaseInfoPromise = null;');
   const end = appSource.indexOf('\nfunction getLiveVoiceUrl()', start);
   const requests = [];
   let bootstrapCalls = 0;
