@@ -109,7 +109,10 @@ def check(path, existing_topics, existing_ids, batch=()):
             if not s.get("escalateWhen"):
                 err(f"{sid} 是轉介卡卻沒列紅旗")
         for w in s.get("askedFor") or []:
-            if len(w) >= 8:
+            # 2026-08-13：長度上限是為了擋「寫成一整句」，但英文成分名（metformin）
+            # 本來就長、又是使用者真的會唸出來的字。純英數的點名字放寬到 16。
+            limit = 16 if re.fullmatch(r"[A-Za-z0-9 .\-]+", w) else 8
+            if len(w) >= limit:
                 err(f"{sid} 的點名字寫得像整句：{w!r}")
 
         # 電話號碼：只准那四支
