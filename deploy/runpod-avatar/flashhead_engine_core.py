@@ -251,7 +251,25 @@ def env_flag_enabled(value):
 # each Slot owns one instance so they can never cross-talk.
 # ---------------------------------------------------------------------------
 class FrameSink:
-    """Stable playback queue (pure FIFO, trimmed only when backed up)."""
+    """Playback queue with an audio-clock outlet (2026-08-13 聲嘴對錶).
+
+    Edward 8/13 實機儀器抓到的結構病：畫格出口原本是「不看時間的傳送帶」
+    （先到先播、每秒固定張數），聲音卻照自己的鐘走——兩邊只是碰巧對上。
+    顯卡某一塊算慢 0.6-1.5 秒，那一段嘴型就整段遲到照播（量到 45 秒的
+    遲到畫格、追齊機制 0 次觸發），受端看到 0.5-1.3 秒的「嘴慢尖峰」。
+
+    對錶規則（聲音永遠是主時鐘、聲音永遠不等畫面）：
+      - 每格畫面帶著「這格對應的聲音位置」入隊（idle 畫格沒有聲音＝不帶錶）
+      - 出口每次取格先對錶：這格的聲音**還沒播到**（早到超過 LEAD）＝先不播、
+        維持上一格；這格的聲音**早就播過**（遲到超過 LAG）＝整段丟掉追到現在
+      - 沒掛錶（audio_pos_fn 未設）＝行為與舊版逐位元相同（傳送帶）
+    """
+
+    # 允許畫面領先聲音的幅度（FlashHead 設計上嘴會微微先動）；再早就先扣住
+    AV_LEAD_S = 0.28
+    # 允許畫面落後聲音的幅度；再晚整段丟掉、嘴直接跳回「現在」
+    AV_LAG_S = 0.16
+
     def __init__(self, tgt_fps):
         self.tgt_fps = tgt_fps
         self.target_depth = max(1, int(round(tgt_fps * 1.5)))
@@ -261,12 +279,22 @@ class FrameSink:
         self.lock = threading.Lock()
         self.last_pop_latency_ms = None
         self.underrun_count = 0
+        # 聲音錶：wake() 時綁 audio_out.played_pos_s；沒綁＝舊行為
+        self.audio_pos_fn = None
+        # 對錶儀表（進 health_snapshot.video_sync）
+        self.av_resync_events = 0
+        self.av_resync_frames = 0
+        self.av_hold_events = 0
+        self.last_av_offset_ms = None
 
-    def push_many(self, frames, chunk_gen_ts, tgt_fps):
+    def push_many(self, frames, chunk_gen_ts, tgt_fps, start_audio_pos=None):
         with self.lock:
             n = frames.shape[0]
+            fps = float(tgt_fps or self.tgt_fps or 1)
             for i in range(n):
-                self.q.append(frames[i])
+                pos = (None if start_audio_pos is None
+                       else float(start_audio_pos) + i / fps)
+                self.q.append((frames[i], pos))
                 self.count += 1
             if len(self.q) > self.max_depth:
                 drop_n = len(self.q) - self.target_depth
@@ -280,7 +308,37 @@ class FrameSink:
             if not self.q:
                 self.underrun_count += 1
                 return None
-            return self.q.popleft()
+            frame, pos = self.q[0]
+            played = None
+            if pos is not None and self.audio_pos_fn is not None:
+                try:
+                    played = self.audio_pos_fn()
+                except Exception:
+                    played = None
+            if played is not None:
+                offset = pos - float(played)
+                self.last_av_offset_ms = round(offset * 1000, 1)
+                if offset > self.AV_LEAD_S:
+                    # 這格的聲音還沒播到：先扣住（recv 端維持上一格），聲音不等畫面
+                    self.av_hold_events += 1
+                    return None
+                if offset < -self.AV_LAG_S:
+                    # 這格的聲音早播完了：把遲到的整段丟掉、追到「現在」
+                    dropped = 0
+                    while self.q:
+                        head_frame, head_pos = self.q[0]
+                        if head_pos is None or (head_pos - float(played)) >= -0.02:
+                            break
+                        self.q.popleft()
+                        dropped += 1
+                    self.av_resync_events += 1
+                    self.av_resync_frames += dropped
+                    if not self.q:
+                        self.underrun_count += 1
+                        return None
+                    frame, pos = self.q[0]
+            self.q.popleft()
+            return frame
 
     def clear(self):
         with self.lock:
@@ -447,6 +505,11 @@ class AudioOutBuffer:
                 self.next_prebuffer_s = self.adaptive_prebuffer_s
             self._turn_complete = True
             self._underrun_started_ts = None
+
+    def played_pos_s(self):
+        """聲音錶讀數：真正交給 WebRTC 的樣本數換算成秒（靜音補零不計）。"""
+        with self.lock:
+            return self.played_samples / max(1, self.sample_rate)
 
     def playout_held(self):
         """True while audio and video must stay on their shared start gate."""
@@ -931,6 +994,7 @@ class Feeder:
                 print("[feeder] slot" + str(self.slot.index)
                       + " stale idle chunk dropped (real input arrived)", flush=True)
                 return
+        chunk_frames_cut = 0
         if emit_audio and timeline_start_s is not None and len(frames):
             queued_video_s = self.slot.sink.depth() / max(1, self.slot.tgt_fps)
             audio_played_s = (self.slot.audio_out.played_samples
@@ -944,6 +1008,7 @@ class Feeder:
             )
             if drop_count:
                 frames = frames[drop_count:]
+                chunk_frames_cut = drop_count
                 self.slot.video_catchup_events += 1
                 self.slot.video_catchup_frames += drop_count
                 print("[video-sync] slot" + str(self.slot.index)
@@ -969,7 +1034,13 @@ class Feeder:
                 print("[feeder] slot" + str(self.slot.index)
                       + " stale idle chunk dropped before sink push", flush=True)
                 return
-            self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps)
+            chunk_audio_pos = None
+            if emit_audio and timeline_start_s is not None:
+                # lip_catchup 若剪掉開頭 drop_count 格，剩下畫格的錶要跟著往後撥
+                chunk_audio_pos = (float(timeline_start_s)
+                                   + chunk_frames_cut / max(1, self.slot.tgt_fps))
+            self.slot.sink.push_many(frames, t_frames_ready, self.slot.tgt_fps,
+                                     start_audio_pos=chunk_audio_pos)
         if valid_samples is None:
             valid_samples = len(chunk_16k)
         if output_pcm is None:
@@ -1283,6 +1354,12 @@ def health_snapshot(slot, wake_ts=None):
             "idle_invalidations": slot.idle_invalidation_count,
             "audio_played_ms": (round(ao.played_samples / ao.sample_rate * 1000, 1)
                                 if ao else 0),
+            # 聲嘴對錶（2026-08-13）：出口丟了幾段遲到畫格、扣住幾次早到畫格、
+            # 最後一次量到的畫-聲差。av_resync_frames 長期為 0 ＝對錶沒在工作。
+            "av_resync_events": sink.av_resync_events if sink else 0,
+            "av_resync_frames": sink.av_resync_frames if sink else 0,
+            "av_hold_events": sink.av_hold_events if sink else 0,
+            "last_av_offset_ms": sink.last_av_offset_ms if sink else None,
         },
         "model_turn_state": {
             "motion_resets": slot.motion_reset_count,
