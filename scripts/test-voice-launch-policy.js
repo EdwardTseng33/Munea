@@ -5,7 +5,12 @@ const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'web', 'src', 'app.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'web', 'src', 'styles.css'), 'utf8');
-const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8');
+// 2026-08-13：情境段落（通話契約、設提醒、即時查詢……）也從 live_voice_server.py
+// 搬進 engine/persona/voice-sections.<國>.txt，理由跟 voice-style 一樣——
+// 原本那些寫死的中文段落會整段夾進英文／西文說明書裡。守門一樣要跟著看新地方：
+// 這裡把程式碼和中文分節檔接起來當「說明書全文」，規則被刪掉照樣亮紅燈。
+const voiceServer = fs.readFileSync(path.join(root, 'engine', 'live_voice_server.py'), 'utf8')
+  + fs.readFileSync(path.join(root, 'engine', 'persona', 'voice-sections.zh-TW.txt'), 'utf8');
 const avatarServer = fs.readFileSync(path.join(root, 'deploy', 'runpod-avatar', 'flashhead_server.py'), 'utf8');
 const chatEngine = fs.readFileSync(path.join(root, 'engine', 'chat_engine.py'), 'utf8');
 // 2026-07-31：人設書改成一國一本後，語音風格規矩從 live_voice_server.py 搬進
@@ -30,6 +35,19 @@ const VOICE_STYLE_HEADINGS = {
 };
 const everyVoiceStyleBookHas = (section) =>
   VOICE_STYLE_LOCALES.every((loc) => voiceStyleBooks[loc].includes(VOICE_STYLE_HEADINGS[section][loc]));
+// 情境段落也是一國一本。段名（[[call-contract]] 這種）是程式取段的鑰匙，
+// 四本必須完全一樣——少一段，那一國那個開關就會靜靜退回中文書，測試全綠也照樣缺。
+// 數量不寫死：以中文正本為準推導，正本加段時這裡自動跟著要求四國都補。
+const sectionNamesOf = (loc) => {
+  const book = fs.readFileSync(path.join(personaDir, `voice-sections.${loc}.txt`), 'utf8');
+  return [...book.matchAll(/^\[\[([a-z-]+)\]\]$/gm)].map((m) => m[1]).sort().join(',');
+};
+const zhSectionNames = sectionNamesOf('zh-TW');
+expect(zhSectionNames.length > 0, 'voice-sections zh-TW book has no [[section]] markers');
+VOICE_STYLE_LOCALES.forEach((loc) => {
+  expect(sectionNamesOf(loc) === zhSectionNames,
+    `voice-sections.${loc}.txt sections do not match the zh-TW book (missing sections silently fall back to Chinese)`);
+});
 const apiServer = fs.readFileSync(path.join(root, 'engine', 'server.py'), 'utf8');
 const characters = JSON.parse(fs.readFileSync(path.join(root, 'engine', 'characters.json'), 'utf8'));
 
