@@ -3245,6 +3245,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             _agg = st.setdefault("usage_by_modality", {})
                             for _k, _v in _by_kind.items():
                                 _agg[_k] = _agg.get(_k, 0) + _v
+                            # 2026-08-13：總帳原本印 turn_count，但那個欄位從來沒有人寫，
+                            # 每通都印 turns=0——於是「一通幾輪、每輪多少」算不出來，
+                            # 而那正是我們補這套計量要回答的問題。改成數這裡自己收到幾次用量。
+                            st["usage_turns"] = st.get("usage_turns", 0) + 1
                             _diag(cid, "usage.turn",
                                   prompt=getattr(_um, "prompt_token_count", 0) or 0,
                                   output=getattr(_um, "response_token_count", 0) or 0,
@@ -3927,13 +3931,39 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     # 這條底層連線的用量總帳（2026-08-12）：一行就看得出這通花在哪——
     # 說明書（文字）貴還是聲音貴、存起來的部分有沒有真的被算成快取。
     if st.get("usage_prompt") or st.get("usage_output"):
+        _turns = st.get("usage_turns", 0)
+        _mod = st.get("usage_by_modality") or {}
+        _text_in = _mod.get("TEXT", 0)
+        _audio_in = _mod.get("AUDIO", 0)
         _diag(cid, "usage.leg_total",
               prompt=st.get("usage_prompt", 0),
               output=st.get("usage_output", 0),
               cached=st.get("usage_cached", 0),
-              by_modality=st.get("usage_by_modality") or {},
-              turns=st.get("turn_count", 0))
+              by_modality=_mod,
+              turns=_turns,
+              per_turn=(st.get("usage_prompt", 0) // _turns) if _turns else 0,
+              est_usd=round(_estimate_leg_usd(_text_in, _audio_in,
+                                              st.get("usage_output", 0)), 4))
     return call_ended, st.get("resumption_handle") or resumption_handle
+
+
+# 每百萬 token 的牌價（美金）· gemini-3.1-flash-live-preview · 查於 2026-08-13。
+# **這是估算，不是帳單**：牌價會變、也可能有我們看不到的折扣或快取折抵。
+# 用途是讓「一通電話大概多少錢」變成看得到的數字，再拿去跟真實帳單對。
+# 對不上就以帳單為準，把這裡的數字改掉（或用環境變數蓋過去）。
+_PRICE_TEXT_IN = float(os.environ.get("MUNEA_PRICE_TEXT_IN_PER_M", "0.75"))
+_PRICE_AUDIO_IN = float(os.environ.get("MUNEA_PRICE_AUDIO_IN_PER_M", "1.00"))
+_PRICE_OUT = float(os.environ.get("MUNEA_PRICE_OUT_PER_M", "12.00"))
+
+
+def _estimate_leg_usd(text_in, audio_in, out):
+    """這條連線大概花了多少錢（美金）。算不出來就回 0，絕不讓它影響通話。"""
+    try:
+        return (text_in * _PRICE_TEXT_IN
+                + audio_in * _PRICE_AUDIO_IN
+                + out * _PRICE_OUT) / 1_000_000.0
+    except Exception:
+        return 0.0
 
 
 def _defer_control_release_for_reconnect(reason, state):
