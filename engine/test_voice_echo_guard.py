@@ -192,6 +192,16 @@ def main():
     check("過場音快取有語系隔離",
           "cache_key = (str(char or \"\"), normalized_locale, text)" in srv)
 
+    # 用量總帳（2026-08-12 立、8/13 補齊）：這套是為了回答「一通電話多少錢」。
+    # 8/13 抓到總帳每通都印 turns=0——turn_count 這個欄位從來沒有人寫過，
+    # 於是「一通幾輪、每輪多少」根本算不出來，計量等於半殘。
+    check("每輪用量有真的在數", 'st["usage_turns"] = st.get("usage_turns", 0) + 1' in srv)
+    check("總帳用真的數到的輪數，不是那個沒人寫的欄位",
+          'turns=_turns' in srv and 'turns=st.get("turn_count", 0)' not in srv)
+    check("總帳算得出一通大概多少錢", "est_usd=" in srv and "_estimate_leg_usd(" in srv)
+    check("算錢失敗不准影響通話", "def _estimate_leg_usd" in srv and
+          srv.split("def _estimate_leg_usd")[1].split("def ")[0].count("except Exception") >= 1)
+
     print()
     if FAILS:
         print(f"❌ {len(FAILS)} 項未過：" + "、".join(FAILS))
