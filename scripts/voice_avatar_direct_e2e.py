@@ -838,6 +838,16 @@ class EvidenceRun:
                     ),
                     "avatar_playout_complete": avatar_playout_complete_for_turn,
                     "avatar_video_frames": self.avatar_video_frames,
+                    # 2026-08-13 聲嘴漂移曲線（Edward「越講越歪」）：既有指標只量
+                    # 每輪「第一次開口」的差；漂移要看整輪逐段的變化，所以把整輪的
+                    # 「聲音音量」與「嘴巴動量」兩條同時鐘序列原樣存下來，
+                    # 由 scripts/analyze_av_drift.py 離線畫曲線。只加帳、不動行為。
+                    "av_series": {
+                        "audio": [[round(float(s), 3), round(float(r), 4)]
+                                  for s, r in self.avatar_audio_levels],
+                        "motion": [[round(float(s), 3), round(float(m), 4)]
+                                   for s, m in self.avatar_video_motion],
+                    },
                 })
 
                 # Between turns this is the exact risk gate: the same socket must
