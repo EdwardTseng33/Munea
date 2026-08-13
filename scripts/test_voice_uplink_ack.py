@@ -47,17 +47,27 @@ def main():
     results.append(check("每通重新證明（_uplinkOk 每通歸零）",
                          "this._uplinkOk = false" in app))
 
-    # ③ App：叮聲只住在「證明過才亮」的關卡裡；關卡有 2.5 秒保底、保底走 warn 帳
-    results.append(check("叮聲只有一個出口（在確認關卡裡）",
+    # ③ App：接通狀態＝能講話才算（Edward 8/13 拍板）。整個接通動作（切狀態/計時/
+    #    叮聲/提示/開場）都住在 _goConnected 關卡裡，證明到了才一次全做。
+    results.append(check("叮聲只有一個出口（在接通關卡裡）",
                          app.count("CallChime.play()") == 1))
-    gate = re.search(r"const _confirmConnectedUx = [\s\S]{0,900}?CallChime\.play\(\)", app)
-    results.append(check("叮聲被 _confirmConnectedUx 關卡包住", bool(gate)))
-    results.append(check("有 2.5 秒保底（舊伺服器不卡死）",
-                         bool(re.search(r"_confirmConnectedUx\('timeout'\), 2500\)", app))))
+    gate = re.search(r"const _goConnected = [\s\S]{0,1200}?CallChime\.play\(\)", app)
+    results.append(check("叮聲被 _goConnected 關卡包住", bool(gate)))
+    results.append(check("切「通話中」狀態也住在關卡裡（畫面說接通＝真的能講話）",
+                         bool(re.search(r"const _goConnected = [\s\S]{0,700}?markConnected\(\)", app))
+                         and app.count("\n      markConnected();") == 0))
+    results.append(check("新伺服器等不到證明＝誠實收線、不准假接通",
+                         bool(re.search(r"_ackCapable \? _failHonestly\(\) : _goConnected\('timeout'\)", app))
+                         and "showCallStatusCard('activationPending');       // 「服務尚未完成接通」＝實話" in app))
+    results.append(check("新伺服器最多等 6 秒、舊伺服器 2.5 秒保底",
+                         bool(re.search(r"_ackCapable \? 6000 : 2500,", app))))
     results.append(check("保底走 warn 帳（哪通心虛帳上看得到）",
                          "basis === 'uplink_ok' ? 'pass' : 'warn'" in app))
     results.append(check("等到 uplink_ok 才走 pass 路",
-                         "LiveVoice.onUplinkOk = () => _confirmConnectedUx('uplink_ok')" in app))
+                         "LiveVoice.onUplinkOk = () => _goConnected('uplink_ok')" in app))
+    results.append(check("伺服器 ready 有宣告 uplinkAck、App 有讀",
+                         '"type": "ready", "uplinkAck": True' in server
+                         and "o.uplinkAck === true" in app))
 
     failed = results.count(False)
     if failed:

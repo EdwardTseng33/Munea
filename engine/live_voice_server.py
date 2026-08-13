@@ -2029,7 +2029,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 "voiceModel": MODEL,
                 "voiceName": (eng.CHARS.get(char) or eng.CHARS["寧寧"]).get("voice") or "Leda",
             }))
-            await ws.send(json.dumps({"type": "ready"}))
+            # uplinkAck=true（2026-08-13）：告訴 App「這一版伺服器會在收到你第一格
+            # 麥克風封包時回 uplink_ok」。App 據此決定「接通」狀態要等真的證明
+            # （新伺服器），還是走舊的保底時間（老伺服器）——Edward 8/13：畫面說
+            # 接通就必須能講話，不能講話就維持撥號中。
+            await ws.send(json.dumps({"type": "ready", "uplinkAck": True}))
         except Exception:
             pass
         _diag(cid, "node.ready", ms=round((time.monotonic() - t0) * 1000))
