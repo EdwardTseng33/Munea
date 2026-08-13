@@ -1,5 +1,15 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-13 21:20 蘇菲｜🔪 聲嘴對錶已上正式臉機（候選 e1fea3cf＝dc87c152＋#595 嫁接 · Avatar production · call-path risk）
+
+- **結構刀**：畫格出口（FrameSink）掛上聲音錶——每格帶「對應聲音位置」，出口對錶：早到 >0.28s 扣住、遲到 >0.16s 整段丟追現在；聲音永遠是主時鐘。生成端保留 Codex 8/12「不刪畫格只記帳」（在生成端刪會對錯字；還債改在出口、帶錶丟不會錯字）。
+- **⚠ 主線與正式機分流已確認**：正式機跑的 `dc87c152` 只存在 `codex/fix-opening-long-avsync-20260812` 分支（**未合併回 main**、且含 main 沒有的 512→640 放大輸出）。本次候選＝該分支＋cherry-pick #595（衝突兩處已解），**直接拿 main 蓋會倒退畫質功能**。請 Codex 盡快把該分支合回 main、終結雙頭。
+- **前後對照（同一把尺：假手機 3 輪長講、逐段量）**：刀前 74 段裡 ≥350ms 尖峰 14 個（含中段成叢、尾段 1157ms）；**刀後 36 段裡中段尖峰 0 個**、殘餘 2 個都在「整輪最後一段」（641/578ms）＝新起句首塊生成延遲（0.6-1.5s）未解，是下一刀（round 首塊加速）。驗收器 turn1 skew 265ms 略超 250 門檻（首輪冷啟）、turn2/3 aligned 0/47ms。
+- **部署**：SSH 新門牌 **26847**（機器已換代 `ins-eg6x3xkg`、舊記錄 26697 全過期）；備份 `/root/munea-backup-before-av-clock-20260813-125910`；兩槽重啟後 512 推論→640 輸出照舊。回滾＝備份三檔復原＋重啟。
+- **🔴 帳務**：GLOWS 餘額只剩 **9.76 Credits ≈ 20 小時**——臉卡明天傍晚就會停機，已提醒 Edward 儲值。
+- 儀器：`scripts/voice_avatar_direct_e2e.py`（av_series 傾印）＋`scripts/analyze_av_drift.py`；證據目錄 avdrift-r2（刀前）/avdrift-after（刀後）。
+
+
 ### 2026-08-13 11:45 蘇菲｜接通狀態＝能講話才算（PR #588 已合併）＋正式 Voice 已切 `munea-voice-00126-yey`（call-path risk）
 
 - **Edward 8/13 拍板 UX 規矩**：「畫面說接通就必須能說話；還不能說話就維持撥號中。」App 端整個接通動作（markConnected 切狀態與計時／叮聲／提示／開場）全部移進 `_goConnected` 關卡：`uplink_ok` 到了才一次全做。新伺服器 6 秒等不到＝誠實收線亮「服務尚未完成接通」；舊伺服器 2.5 秒保底（相容、warn 帳）。守門 `test_voice_uplink_ack` 12 條、四突變驗過。
