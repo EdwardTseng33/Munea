@@ -340,7 +340,7 @@ def run_scenario(item, personas, tmp_root, line="text"):
             return {
                 "id": item["id"], "label": item["label"], "categories": item["categories"],
                 "persona": persona_key, "personaBrief": persona["brief"], "transcript": [],
-                "status": "skipped", "verdict": "ERROR",
+                "status": "skipped", "verdict": "SKIP",
                 "verdictReason": "語音線不支援劇本指定的 AI 開場白（Live API 不收 model 角色內容），這條只在文字線考",
             }
         live_replies, live_briefing, live_error = pregenerate_live_replies(item, persona, case_dir)
@@ -498,7 +498,7 @@ def run_scenario(item, personas, tmp_root, line="text"):
 
 def aggregate(results):
     n = len(results)
-    counts = {"PASS": 0, "REVIEW": 0, "FAIL": 0, "ERROR": 0}
+    counts = {"PASS": 0, "REVIEW": 0, "FAIL": 0, "ERROR": 0, "SKIP": 0}
     hard_rule_violation_total = 0
     raw_leak_total = 0
     dim_sums = {}
@@ -533,7 +533,10 @@ def aggregate(results):
         "itemsRun": n,
         "passCount": counts["PASS"], "reviewCount": counts["REVIEW"],
         "failCount": counts["FAIL"], "errorCount": counts["ERROR"],
-        "passRate": round(counts["PASS"] / n, 3) if n else 0.0,
+        "skipCount": counts["SKIP"],
+        # 設計上跳過的題（例如語音線塞不進「AI 先開口」的劇本）根本沒考，
+        # 留在分母裡會讓通過率無緣無故變低，看起來像退步。
+        "passRate": round(counts["PASS"] / max(1, n - counts["SKIP"]), 3) if n else 0.0,
         "hardRuleViolationTotal": hard_rule_violation_total,
         "rawArtifactLeakTotal": raw_leak_total,
         "dimensionAverages": dim_avgs,
@@ -543,12 +546,15 @@ def aggregate(results):
 
 def print_table(summary, results):
     print("=" * 76)
-    print(f"聊天品質評測 v1（19條劇本／多輪／鐵律+7維）   跑於 {summary['runAt']}")
+    print(f"聊天品質評測 v1（{summary['itemsRun']} 條劇本／多輪／鐵律+7維）   跑於 {summary['runAt']}")
     print("-" * 76)
-    print(f"整條 PASS：{summary['passCount']}/{summary['itemsRun']}  "
-          f"REVIEW：{summary['reviewCount']}  FAIL：{summary['failCount']}  ERROR：{summary['errorCount']}")
+    _skipped = summary.get("skipCount", 0)
+    _scored = summary["itemsRun"] - _skipped
+    print(f"整條 PASS：{summary['passCount']}/{_scored}  "
+          f"REVIEW：{summary['reviewCount']}  FAIL：{summary['failCount']}  ERROR：{summary['errorCount']}"
+          + (f"  跳過：{_skipped}（這條線考不了、不算分）" if _skipped else ""))
     print(f"PASS 率：{summary['passRate']*100:.1f}%（首輪建基準，不卡關門檻）")
-    print(f"鐵律違反總數：{summary['hardRuleViolationTotal']} 項（跨 19 條 x 8 項 x 各輪次）")
+    print(f"鐵律違反總數：{summary['hardRuleViolationTotal']} 項（跨 {_scored} 條劇本 x 各輪次）")
     lat = summary.get("firstAudioLatency")
     if lat:
         print(f"第一聲反應（語音線 {lat['turns']} 輪）：中位數 {lat['medianMs']}ms／"

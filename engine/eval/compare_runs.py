@@ -53,7 +53,8 @@ def main():
     rows = [
         ("跑了幾題", "itemsRun", 0), ("PASS 題數", "passCount", 0),
         ("REVIEW 題數", "reviewCount", 0), ("FAIL 題數", "failCount", 0),
-        ("ERROR 題數", "errorCount", 0), ("鐵律違反總數", "hardRuleViolationTotal", 0),
+        ("ERROR 題數", "errorCount", 0), ("跳過題數", "skipCount", 0),
+        ("鐵律違反總數", "hardRuleViolationTotal", 0),
     ]
     for name, key, _ in rows:
         va, vb = sa.get(key), sb.get(key)
