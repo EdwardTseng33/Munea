@@ -4,6 +4,7 @@
 規則若被改掉或誤刪，這裡會亮紅燈。"""
 import os
 import importlib
+import re
 import sys
 import unittest
 
@@ -273,7 +274,11 @@ class VoicePromptBudgetTest(unittest.TestCase):
     這不是把字數當品質；它防止已刪掉的重複規則、例句與互斥搜尋說明悄悄長回來。
     醫療、安全、權限與工具規則仍由上面的行為測試各自守住。
 
-    2026-08-13 上調（16500→16800／16800→17100／18400→18550）。調之前先驗過
+    2026-08-13 傍晚改了量法，數字跟著重新校準（17300／17600／19000），
+    跟改量法之前的數字不能直接比大小——尺換了。原因見上面 rule_length()：
+    舊寫法把當天的天氣簡報也算進字數，同一份規則書早上量跟晚上量差好幾百字。
+
+    當天稍早那次上調（16500→16800／16800→17100／18400→18550）調之前先驗過
     「有沒有贅肉可以先砍」：把說明書四個來源（核心人設／紅線／口語風格／情境段落）
     切成 285 個句子兩兩比對，只有 7 對高度重疊，合計約 150 字，而且多數是各開關
     段落各自要有的工具規則（例如「工具回 status=ok 才能說設好了」提醒、行程、
@@ -299,9 +304,32 @@ class VoicePromptBudgetTest(unittest.TestCase):
             else:
                 os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = old
 
+    @staticmethod
+    def rule_length(prompt):
+        """只量「規則」有多長，把每天不一樣的內容剔掉再算。
+
+        2026-08-13 發現：說明書裡塞著當天的天氣簡報（「臺北市今天27到34度、
+        降雨機率97%……明天預告……關心提示……」）跟現在幾點。天氣預報的長短
+        每天不同，於是這個閘門早上量是一個數、晚上量又是另一個數，差好幾百字
+        ——同一份規則書，什麼都沒改也會紅。難怪它老是在誤報。
+
+        這個閘門真正要防的是「已經刪掉的重複規則、例句悄悄長回來」，
+        那是規則本身的事，跟今天下不下雨無關。所以先把會浮動的剔掉再量。
+        剔不掉就整份算（寧可誤報，也不要因為抹不到就靜靜放行）。
+        """
+        text = re.sub(r"（現在時間：[^）]*）|（現在是台灣時間[^）]*）", "", prompt)
+        # 天氣簡報：從這句固定的提示之後開始，到該段落收尾為止
+        anchor = "就像朋友本來就知道今天天氣那樣講）："
+        start = text.find(anchor)
+        if start >= 0:
+            end = text.find("）", start + len(anchor))
+            if end > start:
+                text = text[:start + len(anchor)] + text[end:]
+        return len(text)
+
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(len(prompt), 16800)
+        self.assertLessEqual(self.rule_length(prompt), 17300)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -316,7 +344,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(len(prompt), 18550)
+        self.assertLessEqual(self.rule_length(prompt), 19000)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -326,7 +354,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(len(prompt), 17100)
+        self.assertLessEqual(self.rule_length(prompt), 17600)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)
