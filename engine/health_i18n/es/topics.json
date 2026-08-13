@@ -226,6 +226,31 @@
       "menos sodio"
      ],
      "say": "La sal light, la «ligera» y las de «60% menos de sodio» sí le quitan buena parte del sodio, y para la mayoría de la gente son una buena opción. Pero conviene saber qué hacen: **cambian el sodio por potasio**. A quien tiene el riñón regular ese potasio se le acumula — da flojera por todo el cuerpo y, si la cosa se va de la mano, puede alterarle el ritmo del corazón. Y hay otro detalle: **varias pastillas de la tensión ya suben el potasio de por sí** (las que acaban en «-pril» o en «-sartán», y algunos diuréticos). Así que si tiene algo de riñón o toma medicación para la tensión, **pregúntele a su médico o a su farmacéutico antes de cambiar de sal** — es una pregunta de un minuto. Y para comer menos salado, lo más seguro sigue siendo dar sabor con ajo, cebolla, limón, pimentón y pimienta negra."
+    },
+    "bp-potassium-foods": {
+     "label": "De dónde sacar el potasio, el magnesio y el calcio (y cuánta evidencia hay)",
+     "say": "Si todo el mundo le dice que coma más verdura y fruta es por el potasio: ayuda al cuerpo a soltar el sodio de más. La evidencia se sostiene bastante bien: juntando decenas de ensayos, quien ya tiene la tensión alta y añade potasio baja la máxima unos 4 o 5 puntos. No es enorme, pero es constante — y **quien más gana es quien comía muy salado y poca verdura**. Fuentes fáciles aquí: plátano, patata con piel, boniato, espinacas, acelgas, tomate, legumbres, naranja, melón, yogur natural. El magnesio está en la verdura de hoja verde, los frutos secos y los cereales integrales; el calcio en la leche, el yogur, el tofu, las sardinillas y el sésamo. No hace falta cambiarlo todo de golpe: empiece por una ración más de verdura en cada comida y una pieza de fruta al día. Una excepción importante: **si tiene el riñón mal o toma un medicamento que sube el potasio, consúltelo antes de aumentarlo.** Pasarse de potasio también es peligroso."
+    },
+    "bp-isometric-exercise": {
+     "label": "Ejercicio isométrico — sentadilla en la pared y apretar (evidencia nueva, y no poca)",
+     "say": "Esto sorprendió a mucha gente. El ejercicio en el que se hace fuerza sin moverse — la sentadilla apoyado en la pared, o apretar un agarre — baja la tensión más que caminar. Juntando unos 270 ensayos, esa categoría bajó de media 8,2 puntos; caminar, entre 4 y 5. La pauta son cuatro series de 2 minutos de esfuerzo con 2 minutos de descanso, tres días por semana, y se nota a las 8 o 10 semanas. La intensidad: «cuesta, pero puedo aguantar». Versión para mayores: espalda en la pared, un paso adelante con los pies, doblar las rodillas solo un poco y aguantar 2 minutos. Si de pie hay inestabilidad, sentado: coger una toalla por los dos extremos y tirar hacia fuera, o apretarla fuerte durante 2 minutos. **La regla que más importa: respirar con normalidad todo el rato. Nunca aguantar la respiración.** Si se marea o le duele la cabeza, pare."
+    },
+    "bp-weight-alcohol": {
+     "label": "Cuánto valen el peso, el alcohol y el café",
+     "say": "Tres cosas mueven la tensión directamente. Le doy los números. **El peso**: aproximadamente 1 punto menos de máxima por cada kilo perdido. Cinco kilos son 4 o 5 puntos, casi lo que hace una pastilla. **El alcohol**: aquí hay un umbral. Si ya toma dos copas al día o menos, dejarlo apenas mueve la tensión. Pero **si toma más de dos al día, reducir a la mitad baja la máxima de media 5 o 6 puntos** — para quien bebe bastante, esta es la jugada más rentable del tema. **El café**: a quien lo toma a diario apenas le afecta, así que no hace falta dejarlo. Ahora bien, a quien no lo toma habitualmente, una taza puede subirle unos 10 puntos un rato, así que no tome café en la media hora antes de medirse."
+    },
+    "bp-food-remedies": {
+     "label": "Remedios de cocina — lo que tiene algo detrás y lo que solo consuela",
+     "say": "Le separo lo fuerte de lo flojo con honestidad. Dos tienen algo detrás. **El té de hibisco (flor de Jamaica)**: juntando estudios, baja la máxima unos 5 a 7 puntos, aunque los ensayos varían mucho. Sin azúcar, dos o tres tazas al día, es una bebida diaria estupenda. **El ajo**: usado en la cocina, quien tiene la tensión alta puede bajar algunos puntos. En cambio: el agua de apio, el vinagre de manzana, la cebolla en vino, las infusiones «depurativas» — no hay investigación decente en personas que sostenga «esto baja la tensión». Tómelos como comida y como bebida. Pero **no sustituyen a la medicación, y sobre todo no se salte una toma porque hoy se ha tomado algo de esto** — ahí está el peligro. Y si con la medicación se le queda tan baja que se marea, no se la ajuste usted: llámelo al centro de salud."
+    },
+    "bp-supplements-honest": {
+     "label": "¿Merecen la pena los suplementos? (En general, no)",
+     "dailyCap": "EPA + DHA por debajo de 2 g al día, aceite de pescado total por debajo de 3 g. Extracto de ajo envejecido, 600 a 1200 mg",
+     "say": "He echado la cuenta. Para la tensión en concreto, casi ningún suplemento sale a cuenta. **La coenzima Q10**: la revisión que junta los ensayos no encontró un efecto claro sobre la tensión. Ese dinero se queda en el bolsillo. **El aceite de pescado**: unos 2,5 puntos en la máxima, muy poco. Tiene otros argumentos cardiovasculares, pero no lo compre para bajar la tensión. Que el EPA + DHA de la etiqueta no pase de 2 gramos al día, ni el total de 3. **El zumo de remolacha**: unos 3,5 puntos a corto plazo; que aguante todo el día no está bien demostrado. El más sólido del grupo es el **extracto de ajo envejecido**, con una media de unos 8 puntos en personas con tensión alta, parecido a caminar. La dosis habitual es 600 a 1200 mg al día. Si toma anticoagulantes o tiene una operación cerca, consulte antes tanto el ajo concentrado como el aceite de pescado."
+    },
+    "bp-herb-drug-clash": {
+     "label": "Lo que choca con la medicación de la tensión",
+     "say": "Hay varias cosas que chocan con los medicamentos. **La levadura roja de arroz**: lleva de forma natural el mismo compuesto que las pastillas del colesterol, así que juntarlas arriesga una rotura muscular. No deje ninguna de las dos por su cuenta: lleve los dos botes al farmacéutico. **El regaliz**: no el aroma de las golosinas, sino la raíz, las infusiones de regaliz y los preparados de herbolario que lo llevan. Tomado a diario hace retener sodio y perder potasio, y la tensión sube. Y tarda unos diez días en volver a su sitio después de dejarlo. **Los descongestionantes** (pseudoefedrina, fenilefrina) de los antigripales y los sprays nasales: cierran los vasos y suben tensión y pulso a la vez. Diga «tengo la tensión alta» antes de comprar nada sin receta. **Los antiinflamatorios** (ibuprofeno, naproxeno): tomados de forma continuada suben la tensión y le restan efecto a su medicación."
     }
    }
   },
@@ -282,6 +307,43 @@
     "dm-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "**La bajada de azúcar es lo más urgente de este tema**: si suda frío y le tiemblan las manos pero está despierto y puede tragar — tome enseguida un par de terrones de azúcar o un zumo; **y recuerde: si se queda atontado o deja de responder, hay que llamar al 112 de inmediato** (las dos cosas van juntas, no vale quedarse solo con la primera). Si ya está inconsciente, 112 directamente. Y con muchísima sed, confusión y respiración rápida con un olor raro a manzana — a urgencias sin esperar."
+    },
+    "dm-carb-exchange": {
+     "label": "Puede comer pan y arroz — la pregunta es cuánto",
+     "say": "Lo primero y más importante: **no es que no pueda; es cuánto.** Las dietistas cuentan en raciones de hidratos, y una ración son 15 gramos. En cosas que se ven: un tercio de taza de arroz o pasta cocidos es una ración, así que una taza llena son unas tres. Una rebanada de pan es una ración. Media taza de patata, boniato, maíz, guisantes o legumbres cocidas es una. Aquí es donde tropieza casi todo el mundo: **la patata, el boniato, el maíz, los guisantes, la calabaza y las legumbres están en el lado del almidón, no en el de la verdura.** El día que las coma, baje el pan o el arroz en la misma medida. Y recorte en este orden: primero las bebidas azucaradas, después la ración de almidón. No recorte la verdura ni la proteína."
+    },
+    "dm-exercise-rx": {
+     "label": "La pauta de ejercicio — 150 minutos por semana, más fuerza dos o tres veces",
+     "say": "Se lo dejo en algo que se pueda seguir. **150 minutos semanales de actividad aeróbica moderada**, repartidos en al menos tres días. No pase dos días seguidos sin nada: en ese hueco se pierde el beneficio. Moderado quiere decir que respira más fuerte y suda un poco, pero puede hablar en frases enteras. Si podría cantar, es demasiado suave. Andar rápido, bici, natación, bailar valen. **Fuerza dos o tres veces por semana**, nunca dos días seguidos: el músculo se rehace en el día de descanso. No hace falta gimnasio: levantarse de la silla y sentarse, 10 repeticiones por serie, dos o tres series. Tirar de una banda elástica. Botellas de agua como pesas. Media sentadilla agarrado al respaldo. Esta parte es la que más ayuda al azúcar. Incluso **caminar 10 minutos entre 30 y 60 minutos después de comer** rebaja de forma notable el pico de después de la comida."
+    },
+    "dm-exercise-meds": {
+     "label": "Si usa insulina o ciertas pastillas, el ejercicio pide unos pasos más",
+     "say": "Si se pincha insulina, o toma una pastilla que hace que el cuerpo saque insulina (el farmacéutico le dice cuál), hay que añadir algunas cosas al ejercicio. **No haga ejercicio en ayunas**, y menos recién puesta la dosis. El montaje clásico de problemas es salir a andar antes de amanecer y desayunar al volver. **Lleve azúcar encima.** Pastillas de glucosa o un brick pequeño de zumo en el bolsillo. Chocolate y galletas no: llevan grasa, se absorben lento y no le sacan del apuro. No se vaya solo a un sitio apartado. A quien le acompañe, dígale: «tengo diabetes; si me ve raro o me traba, deme azúcar primero». Una tarjeta en la cartera con su nombre, su enfermedad, su médico y un teléfono de contacto merece la pena."
+    },
+    "dm-hypo-1515": {
+     "label": "La bajada de azúcar — cómo reconocerla y la regla del 15-15",
+     "say": "Las bajadas llegan de golpe. Lo típico: sudor frío, temblor de manos, el corazón acelerado, mareo, un hambre voraz, palidez. En las personas mayores no suele ser eso, sino **cansancio repentino, hablar trabado o confuso, moverse despacio, ponerse de mal humor**. En casa suelen leerlo como enfado. Ese es el error. Si está despierto y traga, use el 15-15. Tome **15 gramos de azúcar rápido**: 3 o 4 pastillas de glucosa, 120 ml de zumo, 150 ml de refresco normal, una cucharada de azúcar o de miel, o unos caramelos. Espere 15 minutos y vuelva a medir si hay glucómetro. Si sigue bajo o sigue encontrándose mal, repita la misma cantidad. **Una excepción importante**: quien toma un inhibidor de las alfa-glucosidasas (acarbosa, miglitol) **no se recupera con azúcar de mesa: tiene que ser glucosa** en pastillas o gel. Con esa pastilla, glucosa siempre encima. Si no está bien despierto o no puede tragar, **no le meta nada en la boca y llame al 112**."
+    },
+    "dm-fruit": {
+     "label": "La fruta no está prohibida — dos raciones al día, y no en zumo",
+     "say": "Puede comer fruta, y conviene: la fibra, el potasio y las vitaminas valen la pena. La clave es la cantidad y la forma. **Dos raciones al día.** Una ración es más o menos del tamaño de su puño, o un bol pequeño de fruta troceada: una manzana pequeña, una naranja mediana, media plátano grande, unas 15 uvas, un vaso de fresas, una taza de melón. Así que un plátano grande son dos raciones: la fruta del día. Dos cosas mandan. **No la haga zumo ni compre zumo** — la fibra se rompe, el azúcar entra mucho más rápido, y un vaso suelen ser tres o cuatro piezas que se beben en un minuto. Entera y masticada. Y **repártala**: una por la mañana y otra por la tarde. Toda de golpe da un pico. A mucha gente le sienta mejor entre horas que justo encima de la comida."
+    },
+    "dm-folk-food": {
+     "label": "Melón amargo, canela, vinagre de manzana, agua de okra — uno por uno",
+     "say": "Le voy con los que más preguntan, uno a uno y sin adornos. **El melón amargo**: juntando los ensayos internacionales, no se midió ninguna ventaja frente al placebo ni frente a la medicación, y los estudios eran de baja calidad. Una revisión de 2023 lo dijo claro: con la evidencia actual no se puede concluir. Así que — **como verdura, estupendo** (mucha fibra, pocas calorías, va bien como primer plato) pero no como tratamiento. **La canela**: los resultados se dispersan mucho; en conjunto el efecto es pequeño o poco claro. En la cocina, bien; comprarla para eso, no. **El vinagre de manzana**: estudios pequeños sugieren un efecto modesto sobre el azúcar de después de comer, nada que cambie su medicación. Y sin diluir daña el esmalte. **El agua de okra**: sin evidencia en personas. Una cosa sobre las etiquetas: **«contribuye al metabolismo normal de los hidratos» es una frase autorizada para complementos alimenticios, no una indicación de tratamiento** — un complemento no es un medicamento."
+    },
+    "dm-supplement-truth": {
+     "label": "Cómo leer los suplementos — topes, quién no debe, y qué no compensa comprar",
+     "dailyCap": "Cromo: la dieta cubre lo poco que se necesita (unos 25 a 35 mcg). Los productos suelen pasar de 200 mcg y no hay un límite seguro a largo plazo",
+     "say": "La frase más útil primero: **nada de lo que se vende para el azúcar sustituye a la medicación, y la mayoría hace menos de lo que uno cree.** Ese dinero cunde más en la compra y en unos zapatos cómodos. **El cromo**: la asociación americana de diabetes no lo recomienda, porque los estudios no han confirmado beneficio en diabetes. El cuerpo necesita muy poco y la comida normal lo cubre. Los botes suelen traer 200 mcg o más por cápsula, y no hay un límite superior seguro establecido a largo plazo: es decir, nadie lo sabe. **El ácido alfa-lipoico**: hay algo de evidencia para los síntomas del hormigueo, pero no es un producto para bajar el azúcar. **La berberina** sí baja el azúcar en estudios pequeños, y precisamente por eso no es inofensiva: **sumada a la medicación puede dejarle demasiado bajo**, y choca con una lista larga de fármacos. Regla común: añada una sola cosa cada vez, y avise a quien le lleva la diabetes de que la empieza."
+    },
+    "dm-foot-care": {
+     "label": "Mírese los pies todos los días, revisión una vez al año",
+     "say": "Tras años de azúcar alto los nervios del pie se apagan: se puede romper la piel y no dolerle. Y la circulación es peor, así que cura despacio. La mayoría de las amputaciones empiezan por una herida pequeña que nadie vio. **Una cosa cada día**: después de la ducha, siéntese y mire los dos pies — plantas, talones, los dos lados y cada espacio entre los dedos. Si no puede agacharse, ponga un espejo en el suelo; si no ve bien, que le ayuden. Busque roces, ampollas, puntos rojos, cambios de color, piel macerada entre los dedos. **Pruebe el agua del baño con el codo**, no con el pie. Séquese bien, sobre todo entre los dedos. Crema en el empeine y la planta, nunca entre los dedos. Lo que no debe hacer usted: nada de cuchillas ni limas agresivas en durezas y callos, nada de parches de callicida, y no dormir con una bolsa de agua caliente en los pies. Y **que le revisen los pies al menos una vez al año**."
+    },
+    "dm-annual-checks": {
+     "label": "Las revisiones del año — apúntelas en una tarjeta y entréguela",
+     "say": "El azúcar no es solo el número del dedo. Hay una lista corta que debe hacerse con calendario, y es justo la parte que más se olvida. Lo básico: **la hemoglobina glicosilada al menos dos veces al año**. **El perfil de lípidos una vez al año.** **La albúmina en orina una vez al año**, que es el aviso temprano del riñón. **Una revisión de los pies al menos anual.** Y **el fondo de ojo una vez al año**: la retinopatía no da ningún síntoma al principio, y cuando cambia la vista suele estar avanzada. Lo que puede hacer hoy: apunte esas cinco en una tarjeta y désela a su médico en la próxima consulta con una pregunta — «¿cuáles de estas me he hecho este año?». Que le anote las fechas ahí mismo y la reutiliza el año que viene."
     }
    }
   },
@@ -400,6 +462,39 @@
     "consti-refer": {
      "label": "Cuándo ir al médico",
      "say": "Si ve sangre en las heces o se le ponen negras, si está adelgazando sin explicación, o si de repente no puede ir de ninguna manera y le duele mucho la barriga con vómitos — eso hay que verlo con el médico cuanto antes; no se arregla cambiando la dieta.  Si le cuesta respirar, está confuso o tiene un dolor que no puede soportar, no espere: llame al 112."
+    },
+    "consti-fiber-slow": {
+     "label": "La fibra se sube poco a poco — y no le funciona a todo el mundo",
+     "say": "Suba la fibra poquito a poco, semana a semana. Decidirlo hoy y pasarse el día comiendo verdura suele traer hinchazón y gases, y entonces se abandona. Dese de cuatro a seis semanas, y suba el agua al mismo tiempo. Y algo honesto: **la fibra no le funciona a todo el mundo.** Si al añadirla se hincha más o le duele, o siente ganas pero no consigue expulsar nada, puede que el problema no sea «poca fibra» sino un colon lento o una salida que no se relaja. Eso lo tiene que ver un médico. Añadir más fibra solo le hará pasarlo peor."
+    },
+    "consti-psyllium": {
+     "label": "Plantago ovata (psyllium) — cómo tomarlo, con cuánta agua, y a qué distancia de las pastillas",
+     "dailyCap": "Empiece con 5 g al día y suba hasta unos 10 g. Siempre con un vaso lleno (240 ml o más) de agua",
+     "say": "El plantago ovata es la fibra de farmacia que sí tiene ensayos clínicos detrás, cosa rara en este pasillo. Cómo tomarlo: **empiece con 5 gramos**, después del desayuno, en un vaso lleno de agua y bébalo enseguida — no lo deje reposar hasta que espese. Suba hasta unos 10 gramos, repartidos mañana y noche. Cuatro normas. **Una: sin agua suficiente puede formar un tapón en la garganta o el intestino, y eso es realmente peligroso.** **Dos: sepárelo dos horas de sus otros medicamentos**, porque bloquea la absorción. **Tres: nada de esto si hay dificultad para tragar, o antecedentes de obstrucción o estrechez intestinal.** **Cuatro: no encaja en una persona encamada que no puede beber esa cantidad.** Los primeros días habrá más gases; suele asentarse."
+    },
+    "consti-posture": {
+     "label": "La postura en el váter — un taburete bajo bajo los pies",
+     "say": "La postura se puede cambiar. Ponga un taburete de unos 20 centímetros bajo los pies para que las rodillas queden más altas que las caderas, inclínese hacia delante y apoye los codos en los muslos. Eso endereza el ángulo del recto y cuesta menos. Dos cosas importan más que el taburete. **No aguante la respiración empujando**: hacer fuerza dispara la tensión, y en los mayores eso cuenta. Y **no esté sentado más de 10 minutos**. Deje el móvil fuera. Las sesiones largas son de donde salen las hemorroides. Si no sale, levántese y espere a la siguiente ganas. Con honestidad: el taburete se ha medido con beneficio en personas sanas, pero los ensayos en gente realmente estreñida no han mostrado una diferencia clara. Probarlo es gratis — y si no le hace nada, no es culpa suya."
+    },
+    "consti-massage": {
+     "label": "Masaje de la barriga — dirección, momento y duración",
+     "say": "Se lo puede hacer usted o hacérselo a quien cuida, y **la dirección importa: en el sentido de las agujas del reloj**: subir por la parte baja derecha, cruzar bajo las costillas y bajar por el lado izquierdo. Eso sigue el recorrido del colon. El momento son 30 a 60 minutos después de comer, con la mano plana y templada, con firmeza pero sin dolor, 5 a 10 minutos cada vez, una o dos veces al día. La evidencia es media: hay ensayos con más deposiciones y menos hinchazón, pero los estudios son pequeños. Lo que tiene a favor: es seguro, no cuesta nada, y quien lo hace puede ir hablando con quien lo recibe. No lo haga tras cirugía abdominal, sobre una herida, ni si al apretar duele."
+    },
+    "consti-drug-cause": {
+     "label": "Mucho estreñimiento en realidad lo causa la medicación",
+     "say": "Esto casi nunca se lo cuentan: **mucho estreñimiento es la medicación, no el intestino.** Los sospechosos habituales — los analgésicos opioides por encima de todos, y también los antiinflamatorios corrientes; el hierro; el calcio; los antiácidos con aluminio; algunos fármacos de la tensión, sobre todo los antagonistas del calcio; los antidepresivos; los ansiolíticos y las pastillas para dormir; los antitusivos; los antihistamínicos. Si esto empezó hace poco, piense qué se ha añadido hace poco. Las fechas suelen encajar. **Pero no deje nada por su cuenta**: cada uno de esos se recetó por algo. Lo que sí toca: meta todos los medicamentos y complementos en una bolsa, llévelos al médico o al farmacéutico y pregunte directamente: «¿hay aquí algo que pueda estar causándolo, y hay alternativa?»."
+    },
+    "consti-elder-causes": {
+     "label": "En los mayores suelen ser varias causas a la vez",
+     "say": "El estreñimiento en una persona mayor casi nunca es una sola cosa. Vaya repasándolas. **La dentadura o la prótesis no funcionan, así que la verdura desaparece** y queda arroz blando con algo salado. Eso se arregla en el dentista, o troceando, cociendo muy blando o haciendo purés. Decirle que coma más verdura no cambia nada. **Miedo a levantarse de noche o a tener que pedir ayuda, así que no bebe en todo el día.** Pase el líquido a las horas de luz, recuérdeselo a horas fijas, y compruebe si el baño está lejos o es inseguro de noche. **Todo el día sentado o en la cama**: el intestino se para con el cuerpo. El hipotiroidismo, la diabetes y el párkinson también enlentecen. Si ha ido a peor en el último año o dos, con frío y mucho cansancio, dígalo: un análisis lo aclara."
+    },
+    "consti-coffee": {
+     "label": "Un café por la mañana (a algunas personas les funciona de verdad)",
+     "say": "Un café caliente por la mañana funciona de verdad en algunas personas: los estudios miden un aumento claro de las contracciones del colon, comparable a comer. El descafeinado también funciona, así que no es solo la cafeína. Úselo sin más: una taza con el desayuno, y combínelo con lo de sentarse en el váter 30 minutos después de comer. Dos avisos. Si además tiene ardor o reflujo, el café puede empeorarle: sáltese este truco. Y **el café no cuenta como agua**. El agua se bebe igual."
+    },
+    "consti-fruit-honest": {
+     "label": "Kiwi, ciruelas pasas, plátano, agua con miel — qué se sostiene",
+     "say": "Se lo ordeno por solidez de la evidencia. Lo más firme son el **kiwi y las ciruelas pasas**: ahí hay ensayos de verdad. Dos kiwis al día, o cinco o seis ciruelas. **Peras, manzanas y frutos rojos** son opciones sensatas por agua y fibra, pero se han estudiado poco directamente en personas estreñidas — llámelos razonables, no probados. **El yogur** depende por completo de la cepa; eso lo hablo aparte. **El plátano y el agua con miel** piden bajar expectativas: el plátano poco maduro puede endurecer más, y el agua con miel es sobre todo consuelo. Y algo que casi nadie sabe: **las ciruelas, la manzana y la pera llevan sorbitol, y en exceso dan gases y descomposición. Una ración al día** — no los tome como si fueran un medicamento."
     }
    }
   },
@@ -659,6 +754,44 @@
     "reflux-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "Si le cuesta tragar, pierde peso sin explicación o las heces se le ponen negras, hay que ir al digestivo para descartar cosas del esófago y del estómago. **Y lo más importante: el ardor puede disfrazar un infarto — si viene con sudor frío, ahogo, dolor que se va al brazo izquierdo o a la mandíbula, o empeora al moverse, trátelo como cosa del corazón: llame al 112 inmediatamente.**"
+    },
+    "reflux-left-side": {
+     "label": "Duerma sobre el lado izquierdo",
+     "say": "Duerma **sobre el lado izquierdo**. No es un dicho de abuela: se ha medido con sondas durante la noche. Sobre el izquierdo, el ácido pasa el menor tiempo en el esófago; sobre el derecho, el máximo; boca arriba, en medio. Y desde el izquierdo también se limpia más rápido. El truco práctico es un cojín largo detrás de la espalda: dormidos todos volvemos a la posición plana, así que hace falta algo que sujete. Con honestidad: no es como una pastilla que actúa en una hora; es del nivel «menos noches malas». Pero es gratis y lo puede probar esta noche."
+    },
+    "reflux-after-meal-walk": {
+     "label": "Camine 10 o 15 minutos después de comer, o mastique chicle sin azúcar",
+     "say": "Después de comer no se siente con el móvil: levántese y camine despacio 10 o 15 minutos. Hay estudios que compararon «andar después de comer» con «masticar chicle sin azúcar» midiendo el ácido del esófago, y los dos lo bajaron de verdad. **En el grupo que masticó chicle 30 minutos tras la comida, el tiempo de exposición al ácido bajó más de un 30%** — masticar mantiene la saliva, la saliva neutraliza, y además le hace tragar. Andar tiene además un extra para quien se hincha: los gases circulan. Solo caminar: nada de ir tan rápido que se ahogue, y nada que comprima la barriga, como abdominales, justo después de comer."
+    },
+    "reflux-small-meals": {
+     "label": "Quédese en tres cuartos, coma menos cantidad más veces, y despacio",
+     "say": "Pare cuando lleve unas tres cuartas partes y haga cuatro o cinco comidas pequeñas en vez de tres grandes. Llenar demasiado sube la presión en el estómago y la válvula de abajo del esófago no aguanta. Y **coma despacio**: mastique más cada bocado, no hable con la boca llena, evite las pajitas y baje las bebidas con gas. Todo eso es tragar menos aire. Cerca de la mitad de lo que la gente llama hinchazón es aire tragado. Un punto que se pasa por alto: **si la dentadura no ajusta o cuesta masticar, la comida baja casi entera** — eso se arregla primero en el dentista, porque cambiando la forma de comer no se compensa."
+    },
+    "reflux-belt-bend": {
+     "label": "Afloje el cinturón, y no se agache ni cargue justo después de comer",
+     "say": "Afloje el cinturón un agujero y deje de apretarse la cintura: esto se nota al momento. Una cintura apretada es presión constante hacia arriba sobre el estómago. En la hora o dos después de comer, no se agache hacia delante: nada de fregar el suelo de rodillas, ni cargar peso, ni tender inclinado. Para coger algo, doble las rodillas y mantenga la espalda recta. Y el tabaco afloja esa válvula de abajo del esófago; ahí no hay versión intermedia. Si dejarlo aún no toca, quitar cinco cigarrillos al día ya es mejor que no hacer nada."
+    },
+    "reflux-gas-foods": {
+     "label": "Hinchazón — encuentre la una o dos cosas que le dan gases",
+     "say": "Si tiene muchos gases y la barriga tirante, mire si esto está en su día a día: col, coliflor, brócoli, coles de Bruselas, cebolla, ajo, espárragos; legumbres y soja; boniato, maíz, y los productos «sin azúcar» con sorbitol o xilitol; y todo lo que lleve gas. Ninguno es malo y no hay que quitarlos todos. **Retire uno cada vez durante una o dos semanas** y encuentre el que de verdad le sienta mal. Después vuelva a comer el resto. La cocina también cuenta: ponga las legumbres a remojo antes de cocer y deje la verdura más blanda. Pasa mucho mejor que cruda y dura."
+    },
+    "reflux-milk-lactose": {
+     "label": "¿Se hincha con la leche? Pruebe primero si es la lactosa",
+     "say": "Si la hinchazón o la carrera al baño llegan después de la leche o de un batido nutricional en polvo, la intolerancia a la lactosa es una apuesta razonable. Es muy común en adultos, y **es un rasgo, no un intestino estropeado.** La prueba es simple: quite todos los lácteos dos semanas. Si mejora claramente, tómese un vaso otra vez; si vuelve la hinchazón, ya tiene la respuesta. No tiene por qué dejar los lácteos para siempre: leche sin lactosa, yogur o queso curado, tomarla con comida, o medio vaso cada vez. Casi todo el mundo encuentra su nivel. Eso sí, reponga el calcio por otro lado: sardinillas, tofu, verdura de hoja verde, bebidas enriquecidas."
+    },
+    "reflux-breathing": {
+     "label": "Respiración diafragmática (vale la pena, pero no es el plato principal)",
+     "say": "Se puede practicar. Tumbado o sentado, una mano en el pecho y otra en la barriga; coja aire despacio por la nariz de modo que suba la barriga y el pecho no se mueva, y suelte más tiempo del que ha tardado en coger. Cinco a diez minutos, dos veces al día, y al menos una hora después de comer. La idea es reforzar el diafragma, que rodea justo la válvula de abajo del esófago. Con honestidad: juntando los ensayos pequeños, las puntuaciones de síntomas mejoran, pero los métodos varían mucho y la conclusión no está asentada. Es gratis e inofensivo, así que tómelo como acompañamiento — pero que no le sustituya lo anterior."
+    },
+    "reflux-ginger": {
+     "label": "Jengibre (tiene investigación detrás, pero tres grupos deben preguntar antes)",
+     "dailyCap": "Hasta 4 g al día en total — unas tres o cuatro rodajas finas",
+     "say": "El jengibre es de los pocos alimentos de este tema con investigación detrás. Juntando ensayos, supera al placebo en la sensación de plenitud y de llenarse enseguida, y acelera de verdad el vaciado del estómago. Puede tomarlo en infusión o en la comida — **hasta 4 gramos al día en total**, unas tres o cuatro rodajas finas. Tres grupos deben consultar antes con el médico o el farmacéutico: quien toma anticoagulantes, quien tiene piedras en la vesícula y quien tiene una operación en menos de dos semanas. Y si su síntoma principal es el ardor más que la plenitud, a algunas personas el jengibre les quema más. No se fuerce."
+    },
+    "reflux-supplement-skip": {
+     "label": "¿Merecen la pena los suplementos «para el estómago»?",
+     "dailyCap": "No recomendados para esto. Evite el uso prolongado de cualquiera que lleve regaliz",
+     "say": "Preguntan mucho por los suplementos de estómago — extracto de regaliz (DGL), zumo de aloe vera, melatonina y parecidos. Con honestidad: **en personas con reflujo solo hay estudios pequeños o preliminares, nada grande ni sólido. El efecto no es fiable.** Guarde el dinero de momento. Lo que ya hemos visto — bajar peso, no comer en las dos o tres horas antes de acostarse, subir la cabecera de la cama 15 a 20 centímetros, dormir del lado izquierdo — tiene mucha más evidencia, no cuesta nada, y trabaja para usted todas las noches. Un aviso: **el regaliz en cantidad sube la tensión y baja el potasio.** Eso importa especialmente con tensión alta, con el riñón mal, o tomando diuréticos."
     }
    }
   },
@@ -1765,6 +1898,165 @@
     "lex-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "Después de tomar cualquier suplemento, si la piel o el blanco de los ojos se ponen amarillos, le salen ronchas, nota palpitaciones o dolor muscular con debilidad — **déjelo de inmediato y vaya al médico cuanto antes, llevando el bote**. Y la regla más importante de todas: **jamás deje una medicina recetada para sustituirla por un suplemento** — ese cambio nunca sale a cuenta.  Y si se le hinchan los labios o los párpados, le salen ronchas o le cuesta respirar, puede ser una anafilaxia. No espere: llame al 112."
+    },
+    "lex-drug-clash": {
+     "label": "Las combinaciones que sí hacen daño",
+     "askedFor": [
+      "interacción",
+      "interacciones",
+      "tomar juntos",
+      "con mi medicación",
+      "es compatible"
+     ],
+     "say": "Estas son las parejas que conviene tener en la cabeza. **Anticoagulantes (Sintrom, aspirina y similares) × aceite de pescado, ginkgo, ajo concentrado, cúrcuma, nattoquinasa**: se suma el riesgo de sangrado. **Pastillas del colesterol × levadura roja de arroz**: el mismo mecanismo dos veces, con riesgo de rotura muscular. **Medicación de la diabetes × cualquier cosa vendida para el azúcar** (berberina, melón amargo): puede quedarse demasiado bajo. **Medicación del tiroides × calcio o hierro**: bloquean la absorción; sepárelos cuatro horas. **Diuréticos × productos con regaliz**: baja el potasio. **Hierba de San Juan × una lista larga**, incluidos anticoagulantes, antidepresivos y algunos fármacos del corazón. La respuesta a todo esto es la misma: **antes de empezar nada nuevo, enséñele todos los botes al farmacéutico.** Es gratis y es la comprobación más fiable que hay."
+    },
+    "lex-stop-med": {
+     "label": "¿Puedo dejar la medicación y tomar un suplemento?",
+     "askedFor": [
+      "dejar la medicación",
+      "quitarme las pastillas",
+      "en vez de",
+      "sustituir",
+      "algo natural"
+     ],
+     "say": "Eso no lo decido yo, ni debo. Pero hay algo que sí está claro. **No deje por su cuenta un medicamento recetado para tomar un suplemento.** La tensión, el azúcar y el colesterol avanzan en silencio: el «me encontraba bien y lo dejé» se ve meses después, y a veces ya no se deshace. Dicho eso, tres cosas sí son suyas. **Una: querer tomar menos pastillas es algo legítimo que decirle a su médico.** No se lo calle. **Dos: lleve números.** Las tensiones tomadas en casa, los cambios de peso — de ese material depende que se pueda bajar algo. **Tres: si se puede reducir, se hace por escalones y con controles.** Hay medicamentos que rebotan mal si se cortan de golpe."
+    },
+    "lex-lutein": {
+     "label": "Luteína",
+     "dailyCap": "Normalmente 10 mg al día. Quien fuma debe evitar fórmulas oculares con betacaroteno en dosis alta",
+     "askedFor": [
+      "luteína",
+      "suplemento para la vista",
+      "vitaminas para los ojos",
+      "mácula",
+      "pantallas"
+     ],
+     "say": "La luteína tiene evidencia real en **quien ya tiene degeneración macular intermedia o avanzada**: como parte de una fórmula concreta, frena la progresión. Esa parte es genuina. Pero **la evidencia es floja para que alguien con los ojos sanos la tome «de prevención» o por el cansancio de las pantallas.** Prefiero decirlo claro. La mayoría de la vista cansada viene de parpadear poco y de tener la pantalla demasiado cerca. Mire a lo lejos 20 segundos cada 20 minutos, ilumine bien la habitación, ponga la pantalla algo por debajo de los ojos — gratis y más fiable. Un punto de seguridad: **si fuma, evite las fórmulas oculares con betacaroteno en dosis alta** — esa combinación aumenta el riesgo de cáncer de pulmón."
+    },
+    "lex-calcium": {
+     "label": "Calcio",
+     "dailyCap": "No más de 500 mg de una vez en suplemento; total de dieta y pastillas, 1000 a 1200 mg al día",
+     "askedFor": [
+      "calcio",
+      "pastillas de calcio",
+      "huesos",
+      "osteoporosis",
+      "en vez de leche"
+     ],
+     "say": "El calcio es de los que van **primero por la comida**: lácteos, sardinillas con espina, tofu cuajado con calcio, verdura de hoja verde, bebidas enriquecidas. El suplemento rellena el hueco, no sustituye al plato. En pastilla, **no más de 500 mg de una vez**: el cuerpo solo absorbe hasta cierto punto, y el exceso trae estreñimiento y piedras en el riñón. Que el total entre comida y suplemento se quede en 1000 a 1200 mg al día. **Hace falta vitamina D suficiente para absorberlo**, así que tome el sol o añádala. Sepárelo **cuatro horas** de la medicación del tiroides, del hierro y de algunos antibióticos. Si ha tenido piedras en el riñón o le han dicho que tiene el calcio alto en sangre, pregunte antes de empezar."
+    },
+    "lex-iron-zinc": {
+     "label": "Hierro y zinc — solo si falta, y pasarse hace daño",
+     "dailyCap": "Ambos solo con un análisis que confirme la falta. Zinc: no pasar de 40 mg al día de forma prolongada",
+     "askedFor": [
+      "hierro",
+      "pastillas de hierro",
+      "zinc",
+      "anemia",
+      "anémico",
+      "no me sabe la comida"
+     ],
+     "say": "Estos dos son estrictamente «solo si falta». **Si no le falta no hay beneficio, y sí hay daño.** **El hierro**: no lo tome durante meses sin que le hayan dicho que tiene anemia. El hierro sobrante se acumula y daña el hígado y otros órganos. Cuando toque tomarlo: una hora lejos del té y el café, y con vitamina C se absorbe mejor. Las heces negras son normales, pero **no se distinguen de un sangrado digestivo**, así que diga siempre «estoy tomando hierro» en cualquier consulta. **El zinc**: sale cuando se pierde el gusto o cuesta cerrar una herida, pero por encima de 40 mg al día de forma sostenida provoca falta de cobre y otro problema distinto. Para los dos, el primer paso es un análisis, no un bote."
+    },
+    "supp-konjac-fiber": {
+     "label": "Konjac / glucomanano (fibra)",
+     "dailyCap": "Unos 3 g al día. Siempre con un vaso lleno de agua, y nunca justo antes de tumbarse",
+     "askedFor": [
+      "konjac",
+      "glucomanano",
+      "fibra",
+      "saciante",
+      "para adelgazar",
+      "quitar el hambre"
+     ],
+     "say": "El glucomanano del konjac se hincha con agua, así que hay evidencia modesta para la sensación de saciedad y para el colesterol. Para el peso, si hay efecto, es pequeño. **Lo importante aquí es tomarlo con seguridad.** Los polvos y las cápsulas van **con un vaso lleno de agua**, y **nunca justo antes de tumbarse o de acostarse**. Sin líquido suficiente puede hincharse en la garganta o el esófago y obstruir: eso le ha pasado a gente de verdad. No lo use si le cuesta tragar o le han dicho que tiene el esófago estrecho. **Sepárelo dos horas de los demás medicamentos.** Y las gelatinas de konjac son un riesgo de atragantamiento: córtelas pequeñas para mayores y niños."
+    },
+    "lex-glucosamine": {
+     "label": "Glucosamina (el bote de las rodillas)",
+     "dailyCap": "Habitualmente 1500 mg al día. Pruébelo tres meses; si no nota nada, déjelo",
+     "askedFor": [
+      "glucosamina",
+      "condroitina",
+      "rodilla",
+      "articulaciones",
+      "cartílago",
+      "artrosis"
+     ],
+     "say": "De los suplementos más vendidos, y de los que tienen la evidencia más movediza. Juntando los ensayos grandes, **en conjunto se parece bastante al placebo.** Hay algún dato de una pequeña ventaja en personas con más dolor, pero nada fiable. Así que plantéelo así: probarlo es cosa suya, pero **dele tres meses, y si usted mismo no nota diferencia, déjelo y ponga el dinero en otra cosa.** No es algo para tomar cinco años por fe. Lo que ese dinero sí compra con seguridad: reforzar la parte de delante del muslo, y perder un kilo — la rodilla carga varias veces su peso en cada paso. Muchos productos vienen del marisco, así que mire la etiqueta si tiene alergia. Si tiene diabetes, vigile sus números."
+    },
+    "lex-red-yeast-rice": {
+     "label": "Levadura roja de arroz",
+     "dailyCap": "No combinar con una pastilla del colesterol recetada",
+     "askedFor": [
+      "levadura roja",
+      "arroz rojo",
+      "monacolina",
+      "colesterol",
+      "estatina natural"
+     ],
+     "say": "La levadura roja de arroz lleva de forma natural prácticamente el mismo compuesto que las pastillas del colesterol. Aquí «natural» no significa suave. **Tomada junto con una pastilla del colesterol recetada, arriesga una rotura muscular que puede dañar el riñón.** La cantidad varía muchísimo entre productos y la etiqueta no le dice cuán fuerte es el suyo: unos apenas llevan nada y otros llevan una dosis de fármaco entera. Evítela en embarazo, lactancia o con problemas de hígado. Si la está tomando, **lleve el bote a la próxima consulta**. Callarlo es la opción peligrosa."
+    },
+    "lex-nattokinase": {
+     "label": "Nattoquinasa",
+     "dailyCap": "Según la etiqueta. No con anticoagulantes sin criterio médico; suspender 14 días antes de una operación",
+     "askedFor": [
+      "nattoquinasa",
+      "natto",
+      "coágulos",
+      "diluir la sangre",
+      "circulación"
+     ],
+     "say": "La nattoquinasa se vende para «aclarar la sangre», y hay algo de base de laboratorio para eso — que es justo el motivo para tener cuidado, no entusiasmo. **Encima de un anticoagulante o un antiagregante sube el riesgo de sangrado**, y no hay evidencia buena de que prevenga infartos o ictus como sí hace la medicación. Y hay un detalle curioso que conviene saber: **el natto como alimento hace lo contrario** en un aspecto — lleva mucha vitamina K, que va en contra del Sintrom. O sea que el suplemento y el alimento tiran en direcciones distintas, y ninguno se añade a la ligera si toma anticoagulantes. Suspéndalo al menos 14 días antes de cualquier cirugía o extracción dental, y avise al cirujano."
+    },
+    "lex-ginkgo": {
+     "label": "Ginkgo biloba",
+     "dailyCap": "Normalmente 120 a 240 mg al día. Suspender 14 días antes de cirugía o del dentista",
+     "askedFor": [
+      "ginkgo",
+      "ginkgo biloba",
+      "memoria",
+      "circulación",
+      "cerebro"
+     ],
+     "say": "El ginkgo se vende para la memoria, los acúfenos y la circulación. Con honestidad: **la evidencia es floja en los tres.** Un ensayo grande de prevención no encontró efecto sobre la demencia. En acúfenos, los resultados juntos apenas se distinguen del placebo. Y las precauciones sí son claras: **suma riesgo de sangrado con anticoagulantes**, **puede bajar el umbral de convulsión en personas con epilepsia**, y hay que **suspenderlo 14 días antes de una cirugía o una extracción dental**. Si lo que preocupa es la memoria, ese dinero rinde más en la audición, la tensión, el sueño y el tiempo con otras personas: todo eso tiene mejor evidencia que cualquier bote."
+    },
+    "lex-maca": {
+     "label": "Maca y jalea real",
+     "dailyCap": "Según la etiqueta. Consulte antes si ha tenido un cáncer hormonal",
+     "askedFor": [
+      "maca",
+      "jalea real",
+      "energía",
+      "vitalidad",
+      "cansancio",
+      "libido"
+     ],
+     "say": "La maca se vende para la vitalidad y para «ese tema». Los estudios son pequeños y la evidencia floja: como alimento vale, como milagro decepciona. **Sobre la jalea real hay un aviso de seguridad que tengo que darle.** Hay bastantes casos descritos de reacciones alérgicas graves, crisis de asma y anafilaxia después de tomarla, y casi todos ocurrieron en personas que ya tenían asma, alergia respiratoria o dermatitis. Con esos antecedentes, no se la recomiendo. Si aun así va a probarla, tome muy poquito la primera vez y con alguien cerca — y si se le cierra la garganta, se le hinchan los labios, le salen ronchas o le cuesta respirar, **llame al 112 inmediatamente**. Para las dos: **si ha tenido un cáncer hormonal (mama, próstata…), consulte antes al médico** — cómo actúan sobre las hormonas no está claro. Y si lo que quiere es recuperar energía, mire primero tres cosas: cuántas horas duerme, si sale y se mueve durante el día, y si le han descartado anemia o un problema de tiroides. Eso gana a cualquier bote."
+    },
+    "lex-bitter-melon": {
+     "label": "Melón amargo, berberina y los suplementos «para el azúcar»",
+     "dailyCap": "No sustituyen a la medicación de la diabetes. La berberina interacciona con muchos fármacos — consulte antes",
+     "askedFor": [
+      "melón amargo",
+      "berberina",
+      "suplemento para el azúcar",
+      "bajar el azúcar",
+      "algo natural para la diabetes"
+     ],
+     "say": "**Ninguno de estos sustituye a la medicación de la diabetes**, y esa es la frase que más importa. **El melón amargo**: juntando los ensayos, no se midió ventaja sobre el placebo, y los estudios eran de baja calidad. Estupendo como verdura, no como tratamiento. **La berberina** sí baja el azúcar en estudios pequeños, y precisamente por eso no es inofensiva. **Sumada a la medicación puede dejarle demasiado bajo**, y choca con una lista larga de fármacos, incluidos algunos anticoagulantes y de la tensión. Tampoco es para el embarazo ni la lactancia. Si quiere probar algo, avísele antes a quien le lleva la diabetes, añada una sola cosa cada vez, y mídase más a menudo las dos primeras semanas."
+    },
+    "lex-essence-chicken": {
+     "label": "Caldos concentrados y bebidas «para el hígado»",
+     "dailyCap": "Cuidado con la sal; evítelos con gota, ácido úrico alto o en diálisis",
+     "askedFor": [
+      "caldo",
+      "consomé",
+      "esencia de pollo",
+      "para el hígado",
+      "depurativo",
+      "reconstituyente"
+     ],
+     "say": "Se venden como reconstituyente para quien está bajo de fuerzas, y como regalo para el enfermo. Le hago la cuenta honesta. **Una ración aporta menos proteína aprovechable que un solo huevo**, y cuesta varias veces más. Si alguien necesita proteína de verdad, un huevo, un vaso de leche o un trozo de pescado hacen más por menos. Sobre lo de «depurar el hígado» — **el hígado y el riñón ya hacen ese trabajo**, y ninguna bebida lo mejora. Lo que sí protege el hígado es menos alcohol, un peso razonable y no acumular productos de herbolario sin etiqueta clara. Dos grupos deben evitarlos: **gota o ácido úrico alto** (carga de purinas) y **quien está en diálisis o tiene el riñón mal** (proteína y potasio). Muchos llevan además bastante sal, cosa que importa con la tensión alta. Si es un gesto de cariño en familia, eso tiene su propio valor — pero que no ocupe el sitio de la comida de verdad ni del tratamiento."
     }
    }
   },
@@ -2376,6 +2668,426 @@
     "stroke-refer": {
      "label": "Cuándo pedir ayuda médica",
      "say": "**Cara torcida, un brazo que no se levanta o que no le salgan las palabras: llame al 112 inmediatamente y diga a qué hora empezó.** Y estas tampoco esperan: perder de repente la vista de un ojo o ver doble, un mareo brusco con todo dando vueltas y sin poder mantenerse en pie, o **el peor dolor de cabeza de su vida, de golpe**. Prefiera ir para nada antes que quedarse en casa a ver si se pasa. Y no se vaya conduciendo usted: llame."
+    }
+   }
+  },
+  "TW-EDU-49": {
+   "keywords": [
+    "diarrea",
+    "descomposición",
+    "voy suelto",
+    "cagalera",
+    "no paro de ir al baño",
+    "gastroenteritis",
+    "vómitos y diarrea",
+    "dolor de barriga",
+    "corte de digestión",
+    "antidiarreico",
+    "intoxicación"
+   ],
+   "solutions": {
+    "diar-rehydrate": {
+     "label": "Primero el líquido — y no a base de agua sola a grandes tragos",
+     "askedFor": [
+      "diarrea",
+      "líquido",
+      "qué beber",
+      "suero",
+      "bebida isotónica",
+      "deshidratado"
+     ],
+     "say": "Lo que de verdad complica una diarrea no es la diarrea: es que se va el agua **y la sal** juntas. Así que empiece por ahí. Compre en la farmacia un **suero de rehidratación oral** (el farmacéutico sabe cuál) y bébalo a sorbos: unos 30 a 50 ml cada 5 o 10 minutos. De un trago se vuelve directo al baño. El error más común es tirar de bebida isotónica: **lleva demasiado azúcar y poca sal, y ese azúcar de más arrastra agua al intestino** — se sale más. Si de verdad no tiene otra cosa, rebájela a la mitad con agua."
+    },
+    "diar-eat": {
+     "label": "No hace falta ayunar — cómo comer hoy",
+     "askedFor": [
+      "diarrea",
+      "qué comer",
+      "puedo comer",
+      "ayuno",
+      "arroz",
+      "plátano",
+      "dieta blanda"
+     ],
+     "say": "Antes se decía que había que dejar de comer. Ya no: si le entra, coma — la mucosa del intestino se repara antes. Cosas suaves: arroz blanco, pan tostado, pasta, patata cocida, plátano, zanahoria cocida, pollo hervido. Poca cantidad y cinco o seis veces al día, mejor que tres comidas grandes. Estos días deje aparte la leche y los lácteos, lo graso, los dulces y refrescos, el café y el alcohol. Y algo honesto: la dieta clásica de **solo arroz, plátano, manzana y tostada no ha demostrado ser mejor que una dieta blanda normal**, y alimenta poco. No se obligue a seguirla."
+    },
+    "diar-milk-pause": {
+     "label": "Por qué conviene dejar la leche unos días (no le ha cambiado el cuerpo)",
+     "askedFor": [
+      "leche",
+      "lácteos",
+      "yogur",
+      "lactosa",
+      "queso",
+      "batido"
+     ],
+     "say": "Si después de la diarrea la leche le vuelve a sentar mal, no es que se haya vuelto alérgico. La capa del intestino que digiere la lactosa se ha dañado y tarda una o dos semanas en recuperarse. Déjela unos días o hasta dos semanas y luego pruebe con medio vaso, acompañado de comida. El yogur y el queso curado se toleran antes. Si toma un batido nutricional a diario, no lo retire sin más: cámbielo por uno sin lactosa. En la farmacia se lo indican."
+    },
+    "diar-dehydration-signs": {
+     "label": "Cómo saber si hay deshidratación — la sed no sirve de aviso en los mayores",
+     "askedFor": [
+      "deshidratación",
+      "deshidratado",
+      "cómo saber",
+      "no orina",
+      "boca seca",
+      "mareo"
+     ],
+     "say": "Con la edad se pierde la sensación de sed, así que «no tengo sed» no dice nada. Mire cuatro cosas concretas. **La orina**: medio día sin ir, o de color oscuro como té cargado. **La boca**: mírele la lengua, no los labios. **Al levantarse**: si se marea o se le va la vista. **La piel**: pellizque el dorso de la mano y suelte; debe volver enseguida, no despacio. Con dos de esas, hay que insistir mucho más con el líquido. Si no retiene nada en todo el día, no lo maneje en casa."
+    },
+    "diar-handwash": {
+     "label": "Que no lo pille toda la casa — el gel hidroalcohólico aquí no basta",
+     "askedFor": [
+      "contagio",
+      "se contagia",
+      "lavarse las manos",
+      "gel",
+      "norovirus",
+      "lejía",
+      "limpiar"
+     ],
+     "say": "El virus típico del invierno es justo el que **el gel hidroalcohólico no elimina bien**. Tiene que ser agua y jabón, 20 segundos, entre los dedos y bajo las uñas. Antes de cocinar, antes de dar de comer, después de cada visita al baño. Si hay vómito o heces en el suelo o en el váter, límpielo con lejía diluida (una parte de lejía por cincuenta de agua), y después pase agua. Con guantes y mascarilla: la salpicadura fina del vómito también contagia. Toallas y vajilla aparte unos días. Y lo que casi nadie sabe: **el virus se sigue eliminando por las heces una o dos semanas después de encontrarse bien**, así que no se relaje con el lavado."
+    },
+    "diar-after-antibiotic": {
+     "label": "Diarrea que empieza tras un antibiótico — dígalo en la consulta",
+     "askedFor": [
+      "antibiótico",
+      "antibióticos",
+      "ingresado",
+      "después del medicamento",
+      "olor"
+     ],
+     "say": "Si empezó después de un antibiótico, o después de un ingreso, esto va aparte. El antibiótico se lleva por delante las bacterias buenas y deja sitio a una muy molesta: muchas deposiciones, olor fuerte, a veces fiebre y dolor. **No lo corte por su cuenta con un antidiarreico**: retenerlo lo empeora. En la consulta diga dos datos sin que se los pregunten: qué antibiótico y cuándo. Esa frase cambia el enfoque entero."
+    },
+    "diar-probiotics": {
+     "label": "¿Sirven los probióticos? (Empiezo por donde se tira el dinero)",
+     "dailyCap": "Según la etiqueta, en general un sobre al día — pero no compensa comprarlos para cortar una gastroenteritis normal",
+     "askedFor": [
+      "probiótico",
+      "probióticos",
+      "lactobacilos",
+      "flora intestinal",
+      "funciona"
+     ],
+     "say": "Le doy la respuesta honesta, aunque no coincida con lo que dicen en la tienda. Para una gastroenteritis aguda corriente, **dos ensayos grandes, de casi mil personas cada uno, no encontraron ninguna diferencia entre el probiótico y el placebo**: ni en días de diarrea, ni en vómitos, ni en gravedad. Comprar un bote para cortar este episodio es dinero perdido; póngalo mejor en el suero de rehidratación. Una excepción: la diarrea **causada por antibióticos** sí tiene mejor respaldo — pregúntelo al médico o al farmacéutico. Sepárelo dos horas del antibiótico. Y no lo empiece por su cuenta si tiene las defensas bajas, está en quimioterapia o le han trasplantado: son microorganismos vivos."
+    },
+    "diar-antidiarrheal": {
+     "label": "¿Puede tomar algo para cortarla? Eso no lo decido yo — pero cuatro cosas sí son suyas hoy",
+     "askedFor": [
+      "antidiarreico",
+      "fortasec",
+      "loperamida",
+      "medicamento",
+      "sin receta",
+      "qué tomo"
+     ],
+     "say": "Si conviene tomar un antidiarreico, y cuál, no lo decido yo: según la causa, puede dejar dentro algo que tiene que salir. Pero hay una línea que hasta el farmacéutico marca en seco: **con sangre en las heces, con heces negras o con fiebre alta, no se toma**. Para lo demás, la farmacia es la respuesta más rápida — dígales tres cosas: cuántos días lleva, si hay fiebre y si hay sangre. Mientras tanto, estas cuatro no requieren permiso de nadie: suero a sorbos, comer blando si le entra, apartar los lácteos unos días y lavarse las manos con jabón 20 segundos. La mayoría se resuelve en dos o tres días justo con eso."
+    },
+    "diar-long-term": {
+     "label": "¿Sigue después de dos o tres semanas? Entonces es otra cosa",
+     "askedFor": [
+      "sigo igual",
+      "semanas",
+      "meses",
+      "vuelve",
+      "crónica",
+      "a temporadas"
+     ],
+     "say": "Una diarrea aguda se resuelve en dos o tres días, una semana como mucho. Si lleva dos o tres semanas, o va y viene desde hace meses, ya no es una gastroenteritis: deje de tratarla como tal. Antes de ir al digestivo, haga algo que sirve de verdad: apunte dos semanas — qué días, cuántas veces, qué comió, si hubo dolor, cómo eran las heces. Ese folio ahorra varias vueltas. Si además está perdiendo peso o hay sangre, no espere a tener las notas: pida cita."
+    },
+    "diar-refer": {
+     "label": "Con esto no se queda en casa",
+     "askedFor": [
+      "sangre",
+      "fiebre",
+      "deshidratado",
+      "mucho dolor",
+      "urgencias",
+      "voy al médico"
+     ],
+     "say": "Vaya ya con cualquiera de estas. Sangre en las heces, o heces negras como alquitrán. No retener nada en todo el día, o medio día o más sin orinar. Fiebre alta, dolor muy fuerte de barriga, o dolor fijo en la parte baja derecha. Confusión, cuesta despertarlo, o casi se desmaya al ponerse de pie. Si puede caminar, a urgencias; si apenas responde, **llame al 112**. Cuente cuatro cosas al llegar: cuántos días, cuántas veces al día, el color de las heces y si hay sangre, y si ha tomado antibióticos o ha estado ingresado hace poco. En personas mayores, con diabetes, en diálisis o recién operadas, hay que ir antes: los mismos síntomas se complican mucho más rápido."
+    }
+   }
+  },
+  "TW-EDU-50": {
+   "keywords": [
+    "hormigueo",
+    "se me duerme la mano",
+    "adormecimiento",
+    "manos dormidas",
+    "pinchazos",
+    "no siento",
+    "entumecido",
+    "túnel carpiano",
+    "neuropatía",
+    "se me duermen los pies",
+    "se me duerme",
+    "se duermen",
+    "dormida",
+    "dormidas",
+    "dormido",
+    "hormiguea",
+    "pinchazos en"
+   ],
+   "solutions": {
+    "numb-sudden-red-flag": {
+     "label": "Primero separe una cosa: ¿de golpe o poco a poco?",
+     "askedFor": [
+      "hormigueo",
+      "adormecido",
+      "de repente",
+      "un lado",
+      "medio cuerpo"
+     ],
+     "say": "Lo primero no es dónde le hormiguea, sino **con qué rapidez llegó**. **De golpe** y en todo un lado del cuerpo (un brazo y la pierna del mismo lado), o con la boca torcida, el habla trabada o pérdida de visión en un ojo: eso no es un nervio pinzado, eso se trata como un ictus. **Llame al 112**, no espere a ver si se pasa. El otro patrón — que ha ido apareciendo en meses, en las dos manos, o siempre en los mismos dedos — suele ser compresión de un nervio o algo metabólico, y da tiempo a estudiarlo con calma. Se manejan de forma completamente distinta, por eso empiezo por aquí."
+    },
+    "numb-carpal-night": {
+     "label": "Le despierta de noche y se alivia al sacudir la mano — dos cosas para esta noche",
+     "askedFor": [
+      "me despierta",
+      "por la noche",
+      "sacudir la mano",
+      "túnel carpiano",
+      "pulgar",
+      "índice",
+      "muñeca"
+     ],
+     "say": "Hormigueo en el pulgar, el índice y el corazón, que le despierta de noche y mejora al sacudir la mano: es el patrón típico del nervio comprimido en la muñeca. Dos cosas esta noche. La primera, una **férula de muñeca para dormir**, de farmacia u ortopedia. Lo importante es que mantenga la muñeca **recta**, no doblada: la presión dentro del túnel es mínima con la muñeca neutra, y dormidos todos acabamos con la mano doblada bajo el cuerpo. Puesta cada noche cuatro a seis semanas, la mayoría de los casos leves y moderados mejoran claramente. La segunda, los hábitos de día: no trabajar ni mirar el móvil con la muñeca colgando, escurrir la bayeta presionando en vez de retorciendo, y cada media hora sacudir las manos y estirar la muñeca 10 segundos hacia cada lado. Si tras seis semanas no cambia nada, si se le adelgaza la almohadilla de la base del pulgar o se le caen las cosas, deje de apañarlo en casa y pida un estudio de conducción nerviosa."
+    },
+    "numb-neck": {
+     "label": "Cuando viene del cuello — almohada y postura",
+     "askedFor": [
+      "cuello",
+      "cervical",
+      "hombro",
+      "brazo",
+      "agachar la cabeza",
+      "almohada"
+     ],
+     "say": "Si el hormigueo baja del cuello o el hombro por el brazo hasta los dedos, y empeora al girar o levantar la cabeza, lo más probable es una raíz nerviosa del cuello comprimida. Empiece por la **almohada**: boca arriba, el cuello no debe quedar al aire ni tan alto que la barbilla toque el pecho; de lado, debe rellenar el hueco entre el hombro y la oreja. Suba el móvil a la altura de los ojos en vez de agachar la cabeza. El borde superior de la pantalla, a la altura de los ojos. Cada media hora, meta la barbilla hacia atrás (como haciendo papada), 5 segundos, 10 veces: eso recoloca la cabeza sobre el cuello. **Dormir boca abajo es lo peor** — el cuello pasa la noche girado. Quítelo primero. Si en dos o tres semanas no cambia, a rehabilitación."
+    },
+    "numb-diabetes": {
+     "label": "Si tiene diabetes: solo una cosa lo frena, y una que hay que hacer cada día",
+     "askedFor": [
+      "diabetes",
+      "diabético",
+      "azúcar",
+      "pies",
+      "planta del pie",
+      "como un calcetín"
+     ],
+     "say": "Si el hormigueo empieza en los dos pies — plantas o dedos, como si llevara un calcetín fino — y va a peor de noche, puede ser el azúcar dañando los nervios finos. Se lo digo claro: **no hay ningún fármaco que repare el nervio ya dañado. Lo único demostrado para frenarlo es mantener el azúcar estable.** Parece un rodeo, pero ese es el tratamiento. Y algo cada día: **mírese los pies**. Plantas, entre los dedos, los talones. Si no puede agacharse, ponga un espejo en el suelo o pida ayuda en casa. Cuando la sensibilidad baja, ni una rozadura ni una ampolla duelen, y cuando se ven suelen ser profundas. El resto de la rutina: meta la mano en el zapato antes de calzarse por si hay una piedrecita, nunca descalzo (tampoco en casa), pruebe el agua con el codo, y corte las uñas rectas."
+    },
+    "numb-b12": {
+     "label": "Hay quien anda bajo de vitamina B12 — y eso se ve en un análisis",
+     "askedFor": [
+      "B12",
+      "vitamina B12",
+      "metformina",
+      "vegano",
+      "vegetariano",
+      "operado del estómago"
+     ],
+     "say": "Una de las causas de hormigueo es la falta de vitamina B12, y merece preguntarlo porque se mide y se corrige. ¿Quiénes suelen andar bajos? Quien toma **metformina** desde hace años (entre uno y tres de cada diez tienen la B12 baja o justa), quien lleva mucho tiempo con dieta vegana, quien se ha operado del estómago o de cirugía de la obesidad, y quien toma protectores gástricos de forma prolongada. Si es su caso y tiene hormigueo, en la próxima consulta diga una frase: «¿me pueden mirar también la B12?». Eso sí: **no empiece por su cuenta con dosis altas**. Si no le falta, no le va a quitar el hormigueo, y suplementarse puede tapar las pistas de otro problema de la sangre. Primero medir, luego reponer."
+    },
+    "numb-posture": {
+     "label": "El hormigueo de haberse apoyado — se va en minutos y no es nada",
+     "askedFor": [
+      "se me durmió",
+      "piernas cruzadas",
+      "en cuclillas",
+      "se pasa",
+      "unos minutos"
+     ],
+     "say": "Hay un hormigueo que de verdad no preocupa: dormir sobre el brazo, estar mucho rato con las piernas cruzadas, en cuclillas, o con el codo apoyado en el filo de la mesa durante una llamada larga. Ese se va en pocos minutos, y los pinchazos al volver son el nervio despertándose. La prueba es sencilla: cambie de postura, y si en 5 o 10 minutos mejora claramente, era compresión. Si le pasa a menudo: no duerma con el brazo bajo la cabeza o el cuerpo, no cruce las piernas mucho rato, no apoye el codo en bordes duros, y no se lleve el móvil al baño. Lo que no es compresión: que dure horas, que no mejore al moverse, o que aparezca cada día a la misma hora."
+    },
+    "numb-alcohol": {
+     "label": "El alcohol de muchos años también lo causa — y al dejarlo puede mejorar",
+     "askedFor": [
+      "alcohol",
+      "beber",
+      "vino",
+      "dejar de beber",
+      "cerveza"
+     ],
+     "say": "El alcohol de muchos años es una de las causas más frecuentes de hormigueo en manos y pies, y de las que menos se dicen en voz alta. Daña los nervios finos directamente y además impide absorber varias vitaminas; las dos cosas suman. También suele empezar por los dos pies y subir. La buena noticia: **es de las causas con más posibilidades reales de mejorar** cuando se deja y se recupera la alimentación. Si la cantidad diaria ya no se corta con voluntad, no lo intente a pulso, puede ser peligroso: en el centro de salud o en salud mental hay tratamiento y consulta. Y cuando lo hable con alguien de la familia, plantéelo como «esta es una causa que sí se puede tratar», no como un reproche."
+    },
+    "numb-nerve-glide": {
+     "label": "Dos ejercicios de un minuto para hacer en casa",
+     "askedFor": [
+      "ejercicio",
+      "ejercicios",
+      "estiramiento",
+      "rehabilitación",
+      "qué puedo hacer"
+     ],
+     "say": "Si es del tipo por compresión, hay dos movimientos caseros. La evidencia es media, pero no cuestan nada. **Muñeca**: brazo estirado al frente, palma hacia arriba; con la otra mano tire suavemente de los dedos hacia abajo hasta notar un tirón leve en el antebrazo; 5 segundos, 10 veces, dos o tres tandas al día. **Cuello**: meta la barbilla hacia atrás haciendo papada, 5 segundos, 10 veces. Una regla para los dos: **el hormigueo no puede aumentar mientras los hace.** Si aumenta, reduzca el recorrido. No los haga si le han operado, si se ha fracturado esa muñeca o el cuello, o si tiene una articulación caliente e hinchada: eso primero lo ve rehabilitación."
+    },
+    "numb-blocked": {
+     "label": "«¿Qué tengo? ¿Hay que operar?» — eso no lo valoro, pero le enseño a preguntarlo",
+     "askedFor": [
+      "qué tengo",
+      "qué es",
+      "operar",
+      "operación",
+      "electromiograma",
+      "qué especialista",
+      "pastillas"
+     ],
+     "say": "Qué nervio está comprimido, si hay que operar, si conviene una pastilla para el nervio: eso no lo valoro. La misma mana dormida tiene varias causas posibles y hace falta explorarla y hacer un estudio del nervio. Adivinarlo por teléfono le perjudica. Lo que sí puedo es dejar la pregunta bien hecha. **A quién ir**: neurología o rehabilitación si es solo la mano; traumatología también vale. Si tiene diabetes, empiece por quien se la lleva. **Apunte estas cinco cosas y llévelas escritas**: qué dedos, o toda la mano; cuándo es peor (¿de noche? ¿trabajando? ¿al agachar la cabeza?); desde cuándo y si va a más; si nota falta de fuerza o se le caen las cosas; y si tiene diabetes y qué medicación toma. Con esas cinco la consulta va mucho más rápido, y es mucho más difícil que se lo despachen con un «es la edad»."
+    },
+    "numb-refer": {
+     "label": "Esto es para ahora mismo",
+     "askedFor": [
+      "ictus",
+      "de repente",
+      "sin fuerza",
+      "orina",
+      "esfínteres",
+      "urgencias"
+     ],
+     "say": "Con esto no se espera a una cita. **Hormigueo de golpe en todo un lado del cuerpo**, o con la boca torcida, el habla trabada, pérdida de visión en un ojo o desviarse al andar: **llame al 112**. **Hormigueo con pérdida de fuerza que va a más**: se le caen las cosas, arrastra el pie, le fallan las piernas. **Las dos piernas dormidas junto con no controlar la orina o las heces, o pérdida de sensibilidad en la zona de la entrepierna**: eso es una compresión de la médula, y unas horas cambian el resultado. A urgencias, ya. **Hormigueo que empieza tras un golpe** — una caída, un accidente, un golpe en el cuello o la espalda: llame al 112. En urgencias diga tres cosas: a qué hora empezó (lo más exacto posible), hasta dónde llega el hormigueo, y si hay pérdida de fuerza. La hora es lo que más pesa: algunos tratamientos se eligen por el reloj."
+    }
+   }
+  },
+  "TW-EDU-51": {
+   "keywords": [
+    "acúfenos",
+    "tinnitus",
+    "pitido en el oído",
+    "me pitan los oídos",
+    "zumbido",
+    "ruido en el oído",
+    "oído tapado",
+    "oigo un pitido",
+    "sordera",
+    "oigo peor"
+   ],
+   "solutions": {
+    "tin-sudden-red-flag": {
+     "label": "Primero una pregunta: ¿oye peor por ese oído?",
+     "askedFor": [
+      "acúfenos",
+      "pitido",
+      "de repente",
+      "un oído",
+      "no oigo",
+      "sordera",
+      "oído tapado"
+     ],
+     "say": "La mayoría de los acúfenos aparecen despacio y no corren prisa. Pero hay uno que sí, así que se lo pregunto antes de nada: ¿es **un solo oído**, y en estos días ha empezado a oír peor por ese lado, o lo nota taponado como en un avión? Si es así, puede ser una sordera súbita, y eso se trata como una urgencia: pida otorrino hoy mismo, y si no le dan cita, vaya a urgencias del hospital. No se lo digo para asustarle: el tiempo cambia el resultado. **Quien empieza el tratamiento en las primeras 72 horas se recupera bastante más a menudo que quien espera más de dos semanas.** Por favor, no lo deje para la semana que viene. Si en cambio son los dos oídos, lleva meses o años y la audición no ha caído de golpe, no hay prisa: hablamos de cómo llevarlo."
+    },
+    "tin-not-silence": {
+     "label": "Cuanto más silencio, más se oye — esto lo puede cambiar esta noche",
+     "askedFor": [
+      "por la noche",
+      "al acostarme",
+      "silencio",
+      "más fuerte",
+      "no puedo dormir",
+      "sonido"
+     ],
+     "say": "A mucha gente se le hace insoportable justo al acostarse, cuando la habitación se queda en silencio. No es que el oído vaya a peor: es que ya no hay nada más que escuchar y destaca. Lo de esta noche es sencillo: ponga un sonido bajito en la habitación. Un ventilador flojo, el deshumidificador, o en el móvil lluvia, olas o música tranquila. La norma es **que el volumen quede justo por debajo del pitido**: que se note, pero sin taparlo. No se trata de enmascararlo, sino de que el oído no tenga una sola cosa que escuchar. Ponga el temporizador a 60 minutos para que no suene toda la noche. Hágalo cada noche la primera semana; a la tercera o cuarta cuesta bastante menos acostarse. Con honestidad: no está demostrado que sea mejor que otras cosas. Pero no cuesta prácticamente nada y se nota esa misma noche."
+    },
+    "tin-hearing-aid": {
+     "label": "Si también ha bajado la audición, el audífono suele ser el mayor paso",
+     "askedFor": [
+      "audífono",
+      "audífonos",
+      "audición",
+      "sordera",
+      "oigo mal",
+      "ayuda",
+      "precio"
+     ],
+     "say": "Buena parte de quienes tienen acúfenos también han perdido algo de audición sin darse cuenta. En ese caso el audífono es lo que más suele ayudar: cuando vuelven los sonidos de fuera, el pitido deja de ser lo único que se oye. Con honestidad: las revisiones más estrictas dicen que los ensayos no dan para concluir. Pero las guías de la mayoría de países lo siguen poniendo en primera línea, y hay mucha gente que mejora de verdad. El orden es: **primero una audiometría** — no duele y son unos 20 minutos. Confirme que hay pérdida antes de comprar nada. Sobre ayudas y precios: depende mucho de la comunidad autónoma y de la situación de cada uno. Pregúntelo en su centro de salud o en servicios sociales; yo no me invento requisitos, porque un dato equivocado le hace perder un viaje."
+    },
+    "tin-ginkgo": {
+     "label": "¿Merece la pena el ginkgo? (Se lo digo claro: no)",
+     "dailyCap": "Los productos suelen traer de 120 a 240 mg al día, pero no compensa comprarlo para los acúfenos",
+     "askedFor": [
+      "ginkgo",
+      "ginkgo biloba",
+      "circulación",
+      "suplemento",
+      "algo que tomar",
+      "hay pastillas"
+     ],
+     "say": "El ginkgo es lo que más recomiendan para los acúfenos, así que le doy la respuesta directa. Juntando los ensayos en personas cuya queja principal son los acúfenos, **a los tres y seis meses apenas se distingue del placebo**, y los estudios en sí no son de buena calidad. Es dinero que se pierde con toda probabilidad, y prefiero que lo sepa. Dos grupos con cuidado especial: quien toma anticoagulantes o antiagregantes (Sintrom, aspirina y similares), porque **suma riesgo de sangrado**; y quien tenga una operación o una extracción dental cerca, que debe dejarlo **14 días antes**. Si ya lo toma y le parece que le va bien, no le voy a decir que lo tire. Pero tenga en cuenta esas dos cosas y no se pase a uno más caro. Ese dinero rinde muchísimo más en una audiometría."
+    },
+    "tin-caffeine-honest": {
+     "label": "No hace falta dejar el café — pero hay cosas que sí importan",
+     "askedFor": [
+      "café",
+      "cafeína",
+      "té",
+      "dejar",
+      "dieta",
+      "qué evito"
+     ],
+     "say": "Se dice mucho que con acúfenos hay que dejar el café y el té. Le ahorro ese esfuerzo: **no hay evidencia de que quitar la cafeína mejore los acúfenos**, y dejarla de golpe puede sentarle peor por el dolor de cabeza y el malestar. Si el café es un gusto del día, no se obligue. (Otra cosa es que le quite el sueño: eso se trata como un problema de sueño, aparte.) Lo que sí conviene evitar es **el ruido fuerte**: los auriculares por encima de la mitad del volumen, una noche entera de karaoke, petardos, la radial o la desbrozadora. Eso dispara el pitido en el momento y a la larga daña la audición. Use tapones: los de espuma de un euro cumplen. Y otra: no suba cada vez más el volumen de la tele para oír mejor. Eso juega en su contra."
+    },
+    "tin-sleep-stress": {
+     "label": "El cansancio y dormir mal lo hacen más grande — esto es cierto",
+     "askedFor": [
+      "estrés",
+      "no duermo",
+      "nervios",
+      "ansiedad",
+      "me obsesiona",
+      "no lo soporto"
+     ],
+     "say": "El pitido no ha cambiado de tamaño, pero hay días que se hace insoportable. La clave es la atención. Cuando uno está cansado, alterado o ha dormido mal, la cabeza vuelve una y otra vez a ese sonido; cuanto más lo atiende, más grande parece, y cuanto más grande parece, más molesta. Por eso la mitad del trabajo va al sueño y al ánimo, no al oído. Tres cosas concretas: **salga a caminar 20 minutos cada día**, mejor por la mañana y con sol — con actividad y conversación durante el día, la atención no vuelve al oído; **acuéstese y levántese siempre a la misma hora**, también el fin de semana, con menos de una hora de diferencia; y **los 60 minutos antes de dormir, nada de programas que alteren ni discusiones por el móvil**. Y algo importante: **esto no es un tumor y no le va a dejar sordo.** En la mayoría de los casos no se encuentra ninguna causa alarmante. A mucha gente lo que le quita el sueño es esa preocupación, no el ruido."
+    },
+    "tin-habituation": {
+     "label": "Lo que mejor funciona es aprender a no hacerle caso",
+     "askedFor": [
+      "se cura",
+      "tiene cura",
+      "se quita",
+      "qué hago",
+      "psicólogo",
+      "para siempre"
+     ],
+     "say": "Le digo primero algo que quizá no quiera oír: **en la mayoría de los acúfenos crónicos no hay forma de hacer que el sonido desaparezca.** Y aun así, la mayoría acaba viviendo bien, porque pasa a ser «lo oigo, pero no le hago caso». No es un premio de consolación: es el camino con la evidencia más constante. Trabajando la reacción al ruido, deja de ser una amenaza pegada al oído y pasa a ser un fondo, como el zumbido de la nevera. En la sanidad se llama terapia cognitivo-conductual; el otorrino o salud mental pueden derivarle, y hay programas guiados pensados para acúfenos. Lo que baja en los estudios es **el malestar**, no el volumen — no se lo voy a maquillar. Dos cambios de actitud que ayudan de verdad: no comprobar cada día si sigue ahí (comprobarlo lo alimenta), y no pasar mucho rato solo en una habitación en silencio. La mayoría se acostumbra en unos meses o en uno o dos años. No es que se haya hecho pequeño: es que ha dejado de importar."
+    },
+    "tin-earwax": {
+     "label": "A veces es solo cera — pero no se la saque usted",
+     "askedFor": [
+      "cera",
+      "cerumen",
+      "bastoncillo",
+      "hurgar",
+      "tapón",
+      "oído tapado"
+     ],
+     "say": "A veces se mira y resulta que solo hay un tapón de cera, sobre todo cuando además nota el oído tapado y oye como a través de una pared. Es la versión más fácil de resolver. Pero no se la saque usted. Los bastoncillos empujan la cera hacia dentro, las cucharillas arañan el conducto o llegan al tímpano, y **las velas para los oídos no sirven y han provocado quemaduras**. Que se lo quiten en la consulta: con aspiración o con un instrumento, unos minutos. Si le pasa a menudo, pregunte por gotas para reblandecer la cera — normalmente dos veces al día durante tres a cinco días antes de la cita, y así se extrae mucho mejor. Quien lleva audífono acumula más cera, así que una revisión periódica se nota bastante."
+    },
+    "tin-meds-blocked": {
+     "label": "«¿Será alguna pastilla que tomo?» — eso no lo valoro, pero le digo cómo preguntarlo",
+     "askedFor": [
+      "medicamento",
+      "pastillas",
+      "efecto secundario",
+      "será la medicación",
+      "dejar de tomar",
+      "aspirina",
+      "antibiótico"
+     ],
+     "say": "Hay medicamentos que pueden provocar o aumentar los acúfenos. Si el **suyo** lo ha hecho, no lo valoro: el mismo fármaco se lo produce a una persona y a otra no, y muchos tratan enfermedades que no se pueden dejar. **Le diga quien le diga lo que sea, no deje por su cuenta un medicamento recetado.** Lo que sí puede hacer es preguntar bien. Fotografíe o meta en una bolsa todo lo que toma — recetado, de farmacia sin receta y complementos — y diga: «el pitido empezó por [tal mes], ¿puede haber algo aquí relacionado?». Y añada la pista más útil: si empezó después de cambiar algún medicamento, y cuánto tiempo después. Con eso, el farmacéutico acota enseguida. Si alguno está implicado, casi siempre hay alternativa. Esto no es un «hay que aguantarse»."
+    },
+    "tin-refer": {
+     "label": "Esto no lo deje pasar",
+     "askedFor": [
+      "un oído",
+      "de repente",
+      "mareo",
+      "vértigo",
+      "late",
+      "al ritmo del corazón",
+      "voy al médico"
+     ],
+     "say": "Con esto se acabó el «vamos a ver si se pasa». **Un solo oído y empezado en estos días**, o que oiga peor por ese lado: otorrino hoy; si no hay cita, a urgencias del hospital. **Un pitido que late al ritmo del corazón**, sobre todo en un solo lado. **Acúfeno con vértigo de que todo da vueltas, inestabilidad o vómitos.** **Que empiece tras un golpe en la cabeza**, o junto con hormigueo en la cara, habla trabada o visión doble: eso es urgencias, y **112 si se le traba el habla**. Sobre lo primero, insisto: **una caída brusca de audición en un oído es cuestión de reloj — empezar el tratamiento en las primeras 72 horas cambia las posibilidades de recuperación.** Si hoy se queda con una sola cosa, que sea esta. En la consulta diga tres datos: cuándo empezó, si es un oído o los dos, y si nota que oye peor."
     }
    }
   }
