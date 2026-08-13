@@ -1,5 +1,13 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-13 11:45 蘇菲｜接通狀態＝能講話才算（PR #588 已合併）＋正式 Voice 已切 `munea-voice-00126-yey`（call-path risk）
+
+- **Edward 8/13 拍板 UX 規矩**：「畫面說接通就必須能說話；還不能說話就維持撥號中。」App 端整個接通動作（markConnected 切狀態與計時／叮聲／提示／開場）全部移進 `_goConnected` 關卡：`uplink_ok` 到了才一次全做。新伺服器 6 秒等不到＝誠實收線亮「服務尚未完成接通」；舊伺服器 2.5 秒保底（相容、warn 帳）。守門 `test_voice_uplink_ack` 12 條、四突變驗過。
+- **正式 Voice 已上 `1.0.66@feabf84b`（100%、11:44 台北）**：ready 宣告 `uplinkAck: true`＋第一格麥克風封包回 `uplink_ok`。staging canary 以真 websocket 驗過（`service_identity→ready(uplinkAck:true)→uplink_ok` 序列）；正式 0% canary HTTP 層 PASS 後 promote。**回滾點 `munea-voice-00124-wuv`**（一行指令在 promote 輸出裡）。⚠ 正式 canary 的 call-token 全鏈自動探針我沒有現成 harness——Edward 本日實機通話＝真人 Gate，我在帳上盯 `connected_ux_shown basis` 分佈；Codex 若有 fake-phone token harness 歡迎補一輪 3×3。
+- **效果分兩段**：現有 1.0.69 立即受益（叮聲從「接通後 2~3 秒」變「證明到就響」——之前慢是因為正式機沒有 uplink_ok、App 走 2.5 秒保底）；「維持撥號中直到能講話」的完整規矩隨 1.0.70 打包生效。
+- **同 PR 修了兩個帳面說謊**：①聲嘴儀表在 direct 模式整通空帳（只等 App 播放時鐘、直送模式聲音只在臉音軌上）→ 臉音軌音量也能開窗，**Edward 下一通（1.0.70 起）就有逐輪聲嘴數字**；②產品事件 `avatarMode/voiceProvider` 殘值（static-css／stt-chat-tts）→ 通話中回報 flashhead-live／gemini-live。追帳的人別再被舊值騙。
+- 另：`voice_call_diagnostic` 的 stages 記到第 12 站就截斷（昨晚兩通只看得到 voice_socket_open 之前）——還沒修、先知道有這個限制。
+
 ### 2026-08-12 20:45 蘇菲｜「接通＝證明過才算」已合併（PR #585 · 伺服器端未部署 · call-path risk）
 
 - **Edward 20:13 問「為什麼不等真的接通才顯示接通」→ 定義修正**：接通從「四個零件自報到位」改成「第一格麥克風封包走完全程、伺服器回 `uplink_ok`」才亮叮聲＋「接通了」；2.5 秒保底走 warn 帳（`connected_ux_shown basis=timeout`）。8/10 兩通 `in_bytes=0` 卻顯示接通的縫就是這條。
