@@ -399,7 +399,7 @@
     },
     "consti-refer": {
      "label": "Cuándo ir al médico",
-     "say": "Si ve sangre en las heces o se le ponen negras, si está adelgazando sin explicación, o si de repente no puede ir de ninguna manera y le duele mucho la barriga con vómitos — eso hay que verlo con el médico cuanto antes; no se arregla cambiando la dieta."
+     "say": "Si ve sangre en las heces o se le ponen negras, si está adelgazando sin explicación, o si de repente no puede ir de ninguna manera y le duele mucho la barriga con vómitos — eso hay que verlo con el médico cuanto antes; no se arregla cambiando la dieta.  Si le cuesta respirar, está confuso o tiene un dolor que no puede soportar, no espere: llame al 112."
     }
    }
   },
@@ -1747,14 +1747,6 @@
      ],
      "say": "El ginseng tiene fama de dar energía, pero **su lista de choques con medicamentos es larga**: anticoagulantes como el Sintrom, medicación del azúcar (puede potenciarla y provocar bajadas) y algunas pastillas de la tensión. Además, a quien duerme mal o es de calores puede desvelarle todavía más. Si toma medicación crónica, llévese la lista de sus medicinas a la farmacia y pregunte antes de tomarlo."
     },
-    "lex-maca": {
-     "label": "Maca",
-     "dailyCap": "Siga la etiqueta",
-     "askedFor": [
-      "maca"
-     ],
-     "say": "La maca se vende para la vitalidad y para «ese tema» — los estudios son pequeños y la evidencia floja: como alimento vale, como milagro decepciona. **Si ha tenido un cáncer hormonal (mama, próstata…), consulte antes al médico** — su mecanismo no está claro, y en esos casos ser prudente es lo inteligente."
-    },
     "lex-melatonin": {
      "label": "Melatonina",
      "askedFor": [
@@ -1772,7 +1764,7 @@
     },
     "lex-refer": {
      "label": "Cuándo pedir ayuda médica",
-     "say": "Después de tomar cualquier suplemento, si la piel o el blanco de los ojos se ponen amarillos, le salen ronchas, nota palpitaciones o dolor muscular con debilidad — **déjelo de inmediato y vaya al médico cuanto antes, llevando el bote**. Y la regla más importante de todas: **jamás deje una medicina recetada para sustituirla por un suplemento** — ese cambio nunca sale a cuenta."
+     "say": "Después de tomar cualquier suplemento, si la piel o el blanco de los ojos se ponen amarillos, le salen ronchas, nota palpitaciones o dolor muscular con debilidad — **déjelo de inmediato y vaya al médico cuanto antes, llevando el bote**. Y la regla más importante de todas: **jamás deje una medicina recetada para sustituirla por un suplemento** — ese cambio nunca sale a cuenta.  Y si se le hinchan los labios o los párpados, le salen ronchas o le cuesta respirar, puede ser una anafilaxia. No espere: llame al 112."
     }
    }
   },

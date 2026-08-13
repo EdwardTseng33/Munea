@@ -176,7 +176,15 @@ def main():
 
     # 契約：過場句同聲線（Phase 3 · 7/17 凌晨）
     check("有她本人聲線的配音通道", "_gemini_tts_pcm" in srv and "gemini-2.5-flash-preview-tts" in srv)
-    check("配音失敗自動退回舊路", srv.count("server.tts_b64") >= 3)
+    # 2026-08-13：這條原本守的是「配音失敗自動退回舊路」（server.tts_b64 至少三處）。
+    # 但 8/12 的 #576 是**刻意**把那條退路拆掉的——舊通道唸出來是另一個人的聲音，
+    # 通話講到一半換人比安靜更嚇人。守門沒跟著改，於是 main 上這條一直紅、
+    # 整份上線前檢查等於報廢（「守門清單跟不上程式」又一次）。
+    # 改成守新的意圖：**配音失敗寧可安靜，也絕不換成別人的聲音。**
+    check("配音失敗寧可安靜、不換成另一個人的聲音",
+          "server.tts_b64" not in srv
+          and srv.count("_gemini_tts_pcm(") >= 4
+          and srv.count("or b\"\"") >= 2)
     check("工具說明教她先講一句再查", "說完立刻呼叫本工具" in srv)
     check("聲線跟角色走", "_char_voice_name" in srv)
     check("過場音語言跟當輪回覆語系走",
