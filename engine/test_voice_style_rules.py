@@ -272,6 +272,17 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     這不是把字數當品質；它防止已刪掉的重複規則、例句與互斥搜尋說明悄悄長回來。
     醫療、安全、權限與工具規則仍由上面的行為測試各自守住。
+
+    2026-08-13 上調（16500→16800／16800→17100／18400→18550）。調之前先驗過
+    「有沒有贅肉可以先砍」：把說明書四個來源（核心人設／紅線／口語風格／情境段落）
+    切成 285 個句子兩兩比對，只有 7 對高度重疊，合計約 150 字，而且多數是各開關
+    段落各自要有的工具規則（例如「工具回 status=ok 才能說設好了」提醒、行程、
+    要問醫生三段都要有），砍掉會讓單獨開某個開關時失去規則。也就是說沒有回流的
+    重複可以回收——這個閘門原本要防的東西，現在確實不在裡面。
+
+    多出來的字是 8/13 聊天品質複測抓到的五條真實失分：不主動挖傷心事、轉介求助
+    不要打斷、保住他的面子、保密不能亂答應（紅線⑦）、以及不要用「我看在眼裡」
+    這種眼睛的說法（她只有聲音）。餘裕刻意留得很窄，下次要加東西一樣得先評估。
     """
 
     @staticmethod
@@ -290,7 +301,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(len(prompt), 16500)
+        self.assertLessEqual(len(prompt), 16800)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -305,7 +316,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(len(prompt), 18400)
+        self.assertLessEqual(len(prompt), 18550)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -315,7 +326,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(len(prompt), 16800)
+        self.assertLessEqual(len(prompt), 17100)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)
