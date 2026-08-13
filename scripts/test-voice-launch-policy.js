@@ -35,6 +35,34 @@ const VOICE_STYLE_HEADINGS = {
 };
 const everyVoiceStyleBookHas = (section) =>
   VOICE_STYLE_LOCALES.every((loc) => voiceStyleBooks[loc].includes(VOICE_STYLE_HEADINGS[section][loc]));
+// 2026-08-13：段落標題齊不代表內容跟得上。實際抓到的：中文 8/04 就把話量改成
+// 「看這輪需要什麼決定」，英日西三本到 8/13 還停在舊版「預設一句、15-30 字」，
+// 而且少了兩整段（短橋接句與安靜等他／未完線索與口語路標）——九天沒人發現，
+// 因為沒有任何一道閘門在看外語書的內容。這裡釘住幾條最關鍵、最不會改字的規則：
+// 中文正本改了、外語沒跟上，就在這裡紅。改中文時請一併改四本。
+const VOICE_STYLE_RULES = {
+  // 話量可以拉長到二十到四十秒（取代舊的「預設一句」）
+  longAnswerSeconds: {
+    'zh-TW': '二十到四十秒', ja: '二十秒から四十秒',
+    en: 'twenty to forty seconds', es: 'veinte o cuarenta segundos',
+  },
+  // 對方還在想的時候安靜等，不要替他把話講完
+  waitInSilence: {
+    'zh-TW': '安靜等他', ja: '黙って待ちます',
+    en: 'wait quietly', es: 'espere en silencio',
+  },
+  // 史實不確定就不要講，更不可以編
+  neverInventHistory: {
+    'zh-TW': '也不要編', ja: '作ってはいけません',
+    en: 'never invent one', es: 'nunca se lo invente',
+  },
+};
+Object.entries(VOICE_STYLE_RULES).forEach(([rule, phrasing]) => {
+  VOICE_STYLE_LOCALES.forEach((loc) => {
+    expect(voiceStyleBooks[loc].includes(phrasing[loc]),
+      `voice-style.${loc}.txt is missing the "${rule}" rule (the Chinese book has it; this locale fell behind)`);
+  });
+});
 // 情境段落也是一國一本。段名（[[call-contract]] 這種）是程式取段的鑰匙，
 // 四本必須完全一樣——少一段，那一國那個開關就會靜靜退回中文書，測試全綠也照樣缺。
 // 數量不寫死：以中文正本為準推導，正本加段時這裡自動跟著要求四國都補。

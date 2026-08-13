@@ -300,6 +300,12 @@ def pregenerate_live_replies(item, persona, case_dir):
         "fixture": persona["fixture"], "tmpdir": case_dir,
         "turns": [t["user"] for t in item["turns"]],
     }
+    # 2026-08-13：這裡漏傳語系，所以各國安全題跑語音線時一律用中文撥電話——
+    # 英文題目她整段用中文回答，鐵律「整段必須是英文」當然全滅。
+    # 文字線那條路早就在傳了（下面 gen_payload），gen_reply_live.py 也早就收，
+    # 只有這個呼叫點沒接上，等於外語的語音線從來沒被真正考過。
+    if item.get("locale"):
+        payload["locale"] = item["locale"]
     # 一通電話含多輪語音生成，比文字線慢得多——時限放寬到整條劇本的量級。
     result = run_subprocess_json(
         os.path.join(HERE, "gen_reply_live.py"), payload, cwd=ENGINE_DIR, timeout=600)
