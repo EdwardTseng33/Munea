@@ -2854,10 +2854,19 @@ async function refreshAiDiagnostics() {
   }
 }
 function analyticsContext(extra = {}) {
+  // 2026-08-13 帳面要說實話：avatarRuntime.mode / voiceProvider.mode 是舊引擎的欄位，
+  // FlashHead 真通話不經過它們＝殘值永遠是 static-css / stt-chat-tts。8/12 晚追災情時
+  // 這兩個假標籤把人帶去查「是不是被切到備用線」，浪費 20 分鐘。通話中依實況回報。
+  let liveAvatarMode = avatarRuntime.mode;
+  let liveVoiceProvider = voiceProvider.mode;
+  try {
+    if (typeof Avatar !== 'undefined' && Avatar.on) liveAvatarMode = 'flashhead-live';
+    if (typeof LiveVoice !== 'undefined' && LiveVoice.on) liveVoiceProvider = 'gemini-live';
+  } catch (e) {}
   return {
     templateId: currentAvatarId,
-    avatarMode: avatarRuntime.mode,
-    voiceProvider: voiceProvider.mode,
+    avatarMode: liveAvatarMode,
+    voiceProvider: liveVoiceProvider,
     voiceState: voiceProvider.state,
     companionTemplate: currentAvatarId,
     ...authAnalyticsContext(),
@@ -4938,6 +4947,7 @@ const LiveVoice = {
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
     this._serviceIdentity = null;
     this._uplinkOk = false; this.onUplinkOk = null;   // 「你的聲音我收到了」：每通重新證明
+    this._uplinkAckSupported = false;                 // 這通的伺服器會不會回上行證明（ready 訊息裡宣告）
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
     // prime() may already have captured the user's first words while account
     // and Gateway preflight ran. Never replace that buffer here.
@@ -5089,7 +5099,8 @@ const LiveVoice = {
                 return;
               }
               const openingCapture = this._drainOpeningMicCapture();
-              this.ready = true; voiceCallMark('voice_ready', 'pass');
+              this._uplinkAckSupported = o.uplinkAck === true;   // 這版伺服器會回「你的聲音我收到了」
+              this.ready = true; voiceCallMark('voice_ready', 'pass', { uplinkAck: this._uplinkAckSupported });
               this._armDeadLineWatch('no_audio_both_ways', 5000);
               // 2026-08-08 Edward：「有一通可以講，但撥通後就又都不能講了」。
               // 開麥本來掛在接通那條路的尾巴（markConnected 之後），但那條路上有兩道
@@ -5356,15 +5367,21 @@ const AvSyncMeter = {
   _loop() {
     if (!this.on) return;
     const now = performance.now();
-    // 只在「她此刻應該正在講話」（含 1.2 秒餘韻）的時間窗內取像素；其餘時間每 300ms 醒來看一眼就好
-    const speakingWindow = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil + 1200);
-    if (!speakingWindow) {
+    // 她的聲音有兩條可能的路：舊 relay（伺服器 PCM 給 App 播、看 _playoutUntil）
+    // 與現役直送（聲音只在臉的音軌上、App 沒有 PCM——8/13 抓到儀表整通空帳的原因：
+    // 只等 _playoutUntil 的話，直送模式永遠等不到）。臉音軌的音量 Avatar._faceAudLevel
+    // 每次醒來都看一眼（便宜、不取像素），兩條路哪條有聲就開窗。
+    const faceLevel = Number((typeof Avatar !== 'undefined' && Avatar._faceAudLevel) || 0);
+    if (faceLevel > 0.02) this._lastFaceHotAt = now;
+    const playoutWindow = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil + 1200);
+    const faceWindow = this._lastFaceHotAt && (now - this._lastFaceHotAt) < 1200;
+    if (!playoutWindow && !faceWindow) {
       this._audioHot = this._videoHot = this._pendA = false; this._prev = null;
       this._raf = 0; setTimeout(() => { if (this.on && !this._raf) this._loop(); }, 300);
       return;
     }
-    const ar = this._audioRms(), mm = this._mouthMotion();
-    if (ar > 0.045 && !this._audioHot) { this._audioHot = true; this._tA = now; this._pendA = true; }   // 聲音：靜→起
+    const ar = Math.max(this._audioRms(), faceLevel), mm = this._mouthMotion();
+    if ((ar > 0.045 || faceLevel > 0.03) && !this._audioHot) { this._audioHot = true; this._tA = now; this._pendA = true; }   // 聲音：靜→起
     else if (ar < 0.02) this._audioHot = false;
     if (mm > 0.028 && !this._videoHot) {                                                                  // 嘴巴：靜→動
       this._videoHot = true;
@@ -8562,35 +8579,55 @@ async function connectCall() {
           LiveVoice._openingRecorded = true;
         }
       } catch (e) {}
-      markConnected();                       // 1 秒獨立暖機完成，現在才切成真正接通並開始計時
-      voiceCallMark('call_connected', 'pass');
-      // 「接通了」＝證明過才算（Edward 8/12：「為什麼不等真的接通才顯示接通」）。
-      // 叮聲與提示句等伺服器回報「你的聲音我收到了」（uplink_ok）才亮——8/10 有兩通
-      // 整通麥克風 0 位元組卻照樣顯示接通，就是缺這一格證明。2.5 秒沒等到就照舊亮
-      // （舊伺服器沒有這個回報、不能卡死），但帳上會記 timeout，一查就知道哪一通心虛。
-      {
-        let _uxConfirmed = false;
-        let _uxT = 0;
-        const _confirmConnectedUx = (basis) => {
-          if (_uxConfirmed) return; _uxConfirmed = true;
-          clearTimeout(_uxT); LiveVoice.onUplinkOk = null;
-          if (!callDialing && !callConnected) return;    // 等證明的空檔掛斷了：別對著已收線的畫面響叮聲
-          CallChime.play();                              // 「線通了」用耳朵就聽得到（等太久以為當機）
-          setLocalizedCallHint('connected');             // 接通了、可以直接講——她預設等使用者先開口
-          voiceCallMark('connected_ux_shown', basis === 'uplink_ok' ? 'pass' : 'warn', { basis });
-        };
-        _uxT = setTimeout(() => _confirmConnectedUx('timeout'), 2500);
-        if (LiveVoice._uplinkOk) _confirmConnectedUx('uplink_ok');
-        else LiveVoice.onUplinkOk = () => _confirmConnectedUx('uplink_ok');
-      }
-      if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
-      try { FaceIdle.stop(); } catch (e) {}
-      // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
-      LiveVoice.greet();
-      // 麥克風已經在 ready 事件開好了（見 'ready' 分支）。這裡再補一次是保險：
-      // 萬一 ready 早於 markConnected、中間狀態被別的路徑動過，接通當下一定是開的。
+      // ===== 接通狀態＝能講話才算（Edward 8/13 拍板 UX 規矩）=====
+      // 「畫面說接通就必須能說話；還不能說話就維持撥號中」。所以整個接通動作
+      // （切狀態、開始計時、叮聲、亮提示、她可開場）通通移到「上行證明」之後：
+      // 伺服器親口回「你的聲音我收到了」（uplink_ok）才一次全做——只有一個時刻、
+      // 只有一種真相，不再有「畫面接通了、其實聾著」的 2~3 秒縫。
+      // 麥克風在 ready 就開著送（不送就永遠等不到證明）；這裡先補一次保險。
       LiveVoice._setMicOpen(true);
       LiveVoice._openMicAfterGreet = false;
+      {
+        let _went = false;
+        let _proofT = 0;
+        const _goConnected = (basis) => {
+          if (_went) return; _went = true;
+          clearTimeout(_proofT); LiveVoice.onUplinkOk = null;
+          if (!callDialing && !callConnected) return;    // 等證明的空檔掛斷了：別對著已收線的畫面接通
+          markConnected();                               // 現在才切「通話中」並開始計時——跟能講話同一刻
+          voiceCallMark('call_connected', 'pass', { basis });
+          CallChime.play();                              // 「線通了」用耳朵就聽得到
+          setLocalizedCallHint('connected');             // 接通了、可以直接講——她預設等使用者先開口
+          voiceCallMark('connected_ux_shown', basis === 'uplink_ok' ? 'pass' : 'warn', { basis });
+          if (!noFace) Avatar.showLiveFrame();           // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
+          try { FaceIdle.stop(); } catch (e) {}
+          // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
+          LiveVoice.greet();
+        };
+        // 新伺服器（ready 有宣告 uplinkAck）：等真的證明、最多 6 秒；等不到＝這通就是
+        // 接不通，誠實收線亮「服務尚未完成接通」卡，絕不假裝接通。
+        // 舊伺服器（沒宣告）：沒有證明可等，2.5 秒保底照舊接通、帳記 warn。
+        const _ackCapable = LiveVoice._uplinkAckSupported === true;
+        const _failHonestly = () => {
+          if (_went) return; _went = true;
+          LiveVoice.onUplinkOk = null;
+          voiceCallFail('uplink_never_proven', 'no_uplink_proof_6000ms');
+          try { LiveVoice.stop(); } catch (e2) {}
+          try { FaceWave.stop(); } catch (e2) {}
+          try { completeChatSession('uplink_never_proven'); } catch (e2) {}
+          chatOpened = false; setCallDialing(false); stopCallTimer();
+          const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
+          setFaceState('idle'); setLocalizedCallHint('unavailable');
+          showCallStatusCard('activationPending');       // 「服務尚未完成接通」＝實話
+          try { FaceIdle.start(); } catch (e2) {}
+        };
+        _proofT = setTimeout(
+          () => (_ackCapable ? _failHonestly() : _goConnected('timeout')),
+          _ackCapable ? 6000 : 2500,
+        );
+        if (LiveVoice._uplinkOk) _goConnected('uplink_ok');
+        else LiveVoice.onUplinkOk = () => _goConnected('uplink_ok');
+      }
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
