@@ -1221,7 +1221,8 @@ class Feeder:
                         or (self.t0 is not None
                             and (time.time() - self.last_in) > TAIL_FLUSH_S)):
                     valid = len(self.acc)
-                    if not self._finish_pending:
+                    was_finish = self._finish_pending
+                    if not was_finish:
                         print("[feeder] slot" + str(self.slot.index)
                               + " tail auto-flush valid=" + str(valid), flush=True)
                     padded = np.zeros(cs, dtype=np.float32)
@@ -1234,7 +1235,10 @@ class Feeder:
                     timeline_start_s = (self.timeline_base_s
                                         + self.consumed / max(1, self.sr_eng))
                     self.consumed += valid
-                    todo = (padded, valid, output_pcm, timeline_start_s, False)
+                    # 計時器觸發（可能只是串流停頓、後面還有話）＝修剪墊零格，
+                    # 不讓閉嘴格佔住下一塊真嘴型的時間位置。真收尾（finish）
+                    # 保留原樣——出口對錶下墊零格本就永遠早到、不會播出。
+                    todo = (padded, valid, output_pcm, timeline_start_s, not was_finish)
                 if todo is None and self._complete_pending and len(self.acc) == 0:
                     self._complete_pending = False
                     complete_now = True

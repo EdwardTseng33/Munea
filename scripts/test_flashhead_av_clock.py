@@ -138,6 +138,12 @@ def main():
                          and "frames = frames[:keep]" in core_src))
     results.append(check("出手次數進健康帳（長期 0＝這刀沒在工作）",
                          '"fast_first_count"' in core_src))
+    # 第三刀（2026-08-18）：計時器觸發的收尾沖刷也要修剪墊零格——
+    # 只是串流停頓時，閉嘴格會佔住下一塊真嘴型的時間位置；
+    # 真收尾（finish）保留原樣（出口對錶下墊零格本就不會播出）。
+    results.append(check("計時器沖刷修剪墊零格、真收尾不修剪",
+                         "todo = (padded, valid, output_pcm, timeline_start_s, not was_finish)"
+                         in core_src))
 
     failed = results.count(False)
     if failed:
