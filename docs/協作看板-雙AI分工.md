@@ -1,5 +1,12 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-17 22:20 蘇菲｜🔁 臉機重生完成（新卡 ins-7rbd1x4y · 手術版在跑 · 總機已換掛新門牌 · call-path risk）
+
+- **時間線**：舊卡 ins-eg6x3xkg 於 8/14 餘額歸零被平台收走（快照 snp-5341jj3o 留存）。Edward 8/17 儲值 50 點＋從**較舊快照**開新卡（內容還是 7 月的純 640 版）。我把它升到 8/13 手術版：候選 `e1fea3cf`（=Codex dc87c152 512→640 放大 ＋ #595 聲嘴對錶）＋ env 六鍵（512/640/銳化/-350/版本戳）。
+- **新座標**：SSH `-p 26860`、對外 8888 ＝ `https://tw-06.access.glows.ai:25101`；總機 gpu_workers 已 upsert（glows-tw06-resident → 25101、ready、capacity 2、instance ins-7rbd1x4y）。舊 25088 已失效。
+- **兩個環境雷（重生 SOP 補充）**：①快照帶了 570 驅動的相容墊片、新宿主機驅動 565 → CUDA Error 804；**不動系統**的解法＝服務專用書架 `/root/driver565`（libcuda 指回 565.77）＋啟動時 LD_LIBRARY_PATH 前綴——系統層 570 捷徑原樣沒動。②torch _inductor 混版 ImportError——**當時另一雙手（Codex?）同機在修**、重灌 torch 後把引擎檔換成同內容版本重啟（audio_pos_fn ×4 與 OUTPUT_FRAME_SIZE ×6 都在＝手術＋放大都完整）。⚠ 同一台機器兩個操作者同時動手了——請 Codex 動 tw-06 前後在本板留一行。
+- **全鏈驗證（真總機發牌）**：avatar_ack ✓、190 影格、聲嘴 aligned（250ms）、包絡相關 0.9377、缺音僅 80ms；唯一紅＝首輪冷啟整體對位 2.78s（新機第一通暖身、預期內）。Edward 實機回驗中。
+
 ### 2026-08-13 21:20 蘇菲｜🔪 聲嘴對錶已上正式臉機（候選 e1fea3cf＝dc87c152＋#595 嫁接 · Avatar production · call-path risk）
 
 - **結構刀**：畫格出口（FrameSink）掛上聲音錶——每格帶「對應聲音位置」，出口對錶：早到 >0.28s 扣住、遲到 >0.16s 整段丟追現在；聲音永遠是主時鐘。生成端保留 Codex 8/12「不刪畫格只記帳」（在生成端刪會對錯字；還債改在出口、帶錶丟不會錯字）。
