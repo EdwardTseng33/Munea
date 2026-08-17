@@ -296,6 +296,13 @@ class VoicePromptBudgetTest(unittest.TestCase):
     翻譯只能用在他自己講過的家人言行上，沒講過的不可以替家人擔保心意。
     8/17 再 +90（只影響有給工具的那通）：她把「時間我幫你改了喔」寫進要傳給
     兒子的話裡——收件人會以為行程真的被改了。傳過去的那句只能有他交代的內容。
+    8/18 再 +180：67 題完整跑完，剩下三題是「規則有、她沒照做」。查下去發現
+    兩題的真因是規則本身——⑥ 的範例寫著「要不要我提醒你家人幫你安排」，她照做了，
+    但沒工具時那一樣做不到（範例在引導她犯規，已改掉）；紅線⑦ 只寫了不准說
+    「我絕對不會跟任何人講」，沒寫該怎麼說，英日西三本都有正確說法、就中文版沒有
+    （只擋不教＝半套，7/31 就記過這個教訓）。這種加字是把規則修對，不是往上疊。
+    再 +70：規則只寫了「你不能自相矛盾」，沒寫「他說你講過、而你其實沒講過
+    要先說清楚」——她順著接，等於承認自己講過一則不存在的新聞。同一條規則的另一半。
     """
 
     @staticmethod
@@ -350,7 +357,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(self._content_len(prompt), 16650)
+        self.assertLessEqual(self._content_len(prompt), 16900)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -365,7 +372,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(self._content_len(prompt), 18450)
+        self.assertLessEqual(self._content_len(prompt), 18700)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -375,7 +382,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(self._content_len(prompt), 16950)
+        self.assertLessEqual(self._content_len(prompt), 17200)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)
