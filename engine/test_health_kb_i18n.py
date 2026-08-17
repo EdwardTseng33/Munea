@@ -337,5 +337,46 @@ class WiringTest(unittest.TestCase):
                       self._read("health_selector.py"))
 
 
+class ShippedTopicsReachForeignUsersTest(unittest.TestCase):
+    """2026-08-13 Edward 拍板 A：已上架市場（日／美）不該拿到半套的東西。
+
+    8/13 早上量到的狀況：主庫 49 題，三國疊層都停在 37 題——**當天做的升級，
+    外國用戶一句都聽不到**。缺的整題不會觸發（敗向安全，不會退回中文），
+    所以壞掉的時候很安靜，沒有人會發現。
+
+    這支守「這八題在三國都講得出來」。之後主庫再加卡，這裡會先紅。
+    """
+
+    EIGHT = ("TW-EDU-03", "TW-EDU-04", "TW-EDU-06", "TW-EDU-11",
+             "TW-EDU-31", "TW-EDU-49", "TW-EDU-50", "TW-EDU-51")
+
+    def test_every_card_of_the_eight_exists_in_every_locale(self):
+        for loc in locales_with_overlay():
+            skipped = set((i18n._cache.get(loc) or {}).get("_meta", {}).get("skipped") or {})
+            for tid in self.EIGHT:
+                have = set((i18n.overlay(loc).get(tid) or {}).get("solutions") or {})
+                for s in hs.TOPICS[tid]["solutions"]:
+                    if s["id"] in skipped:
+                        continue          # 刻意不做的（那一國沒有這個東西）
+                    self.assertIn(s["id"], have,
+                                  f"{loc}/{tid}/{s['id']} 沒有疊層——這張卡在 {loc} 講不出來")
+
+    def test_the_three_new_topics_are_reachable_in_every_locale(self):
+        """卡片有翻還不夠，觸發字要是那一國真的會講的話。"""
+        said = {
+            "ja": {"TW-EDU-49": "下痢が止まりません", "TW-EDU-50": "手がしびれる",
+                   "TW-EDU-51": "耳鳴りがうるさい"},
+            "en": {"TW-EDU-49": "I can't stop having diarrhea",
+                   "TW-EDU-50": "my hands go numb at night",
+                   "TW-EDU-51": "ringing in my ears"},
+            "es": {"TW-EDU-49": "tengo diarrea", "TW-EDU-50": "se me duermen las manos",
+                   "TW-EDU-51": "me pitan los oídos"},
+        }
+        for loc, cases in said.items():
+            for tid, text in cases.items():
+                self.assertEqual(health_kb.match_topics(text, locale=loc)[:1], [tid],
+                                 f"{loc}：「{text}」叫不出 {tid}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

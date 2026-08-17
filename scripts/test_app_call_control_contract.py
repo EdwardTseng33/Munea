@@ -119,6 +119,18 @@ def test_voice_and_avatar_are_a_single_required_service() -> None:
     assert "if (CallControl.active) return (CallControl.active.worker" in APP
 
 
+def test_app_rejects_mixed_call_protocols() -> None:
+    version = (ROOT / "web" / "src" / "version.js").read_text(encoding="utf-8")
+    assert "callProtocol: 3" in version
+    assert "voiceProtocol: 'speaker-arbiter-v2'" in version
+    assert "client_protocol: clientRelease.protocol" in APP
+    assert "Number(result.call_protocol || 0) !== clientRelease.protocol" in APP
+    assert "throw new Error('incompatible_call_protocol')" in APP
+    assert "gateway_service_identity" in APP
+    assert "o.type === 'service_identity'" in APP
+    assert "voice_protocol_mismatch" in APP
+
+
 def test_connected_ui_waits_for_server_active_lease() -> None:
     assert "async waitUntilActive(timeoutMs = 15000)" in APP
     assert "result.state === 'active'" in APP
@@ -145,6 +157,8 @@ def test_retired_agent_lock_script_is_not_exposed() -> None:
 
 def test_voice_deploy_wires_call_control_without_breaking_old_app() -> None:
     assert "MUNEA_CALL_CONTROL_URL=$CallControlUrl" in VOICE_DEPLOY
+    assert "MUNEA_CALL_PROTOCOL_REQUIRED=3" in VOICE_DEPLOY
+    assert "MUNEA_VOICE_FACE_DIRECT=1" in VOICE_DEPLOY
     assert "MUNEA_GATEWAY_ADMIN_KEY=$($GatewayAdminSecret):latest" in VOICE_DEPLOY
     assert "MUNEA_CALL_TOKEN_SECRET=$($CallTokenSecret):latest" in VOICE_DEPLOY
     assert "MUNEA_VOICE_SHARD_ID=$VoiceShardId" in VOICE_DEPLOY
@@ -168,6 +182,7 @@ def main() -> None:
         test_developer_gateway_profile_bypasses_zero_credit_block_silently,
         test_development_profile_bypass_does_not_weaken_release,
         test_voice_and_avatar_are_a_single_required_service,
+        test_app_rejects_mixed_call_protocols,
         test_connected_ui_waits_for_server_active_lease,
         test_gateway_billing_replaces_local_point_mutation,
         test_app_cannot_mark_provider_components_ready,

@@ -726,6 +726,7 @@ function setCallHint(text, busy) {
 function setLocalizedCallHint(state, busy = false) {
   const rendererCopy = muneaRendererCopy();
   const fallbackKeys = {
+    connected: 'voice.call.connected',
     connecting: 'voice.connecting',
     developerConnecting: 'voice.call.developerConnecting',
     developerReady: 'voice.call.developerReady',
@@ -2853,10 +2854,19 @@ async function refreshAiDiagnostics() {
   }
 }
 function analyticsContext(extra = {}) {
+  // 2026-08-13 帳面要說實話：avatarRuntime.mode / voiceProvider.mode 是舊引擎的欄位，
+  // FlashHead 真通話不經過它們＝殘值永遠是 static-css / stt-chat-tts。8/12 晚追災情時
+  // 這兩個假標籤把人帶去查「是不是被切到備用線」，浪費 20 分鐘。通話中依實況回報。
+  let liveAvatarMode = avatarRuntime.mode;
+  let liveVoiceProvider = voiceProvider.mode;
+  try {
+    if (typeof Avatar !== 'undefined' && Avatar.on) liveAvatarMode = 'flashhead-live';
+    if (typeof LiveVoice !== 'undefined' && LiveVoice.on) liveVoiceProvider = 'gemini-live';
+  } catch (e) {}
   return {
     templateId: currentAvatarId,
-    avatarMode: avatarRuntime.mode,
-    voiceProvider: voiceProvider.mode,
+    avatarMode: liveAvatarMode,
+    voiceProvider: liveVoiceProvider,
     voiceState: voiceProvider.state,
     companionTemplate: currentAvatarId,
     ...authAnalyticsContext(),
@@ -3072,6 +3082,28 @@ const LIVE_VOICE_URL_DEFAULT = 'wss://munea-voice-491603544409.asia-east1.run.ap
 // 薄門通行碼：App 自動帶、用戶無感；擋「拿到網址直接來撥」的陌生流量（本機引擎沒開門檢查、帶了也無妨）
 const MUNEA_APP_KEY = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
 const CALL_CONTROL_URL_DEFAULT = 'https://munea-call-control-fiu65jd4da-de.a.run.app';
+let _clientReleaseInfoPromise = null;
+async function clientReleaseInfo() {
+  if (_clientReleaseInfoPromise) return _clientReleaseInfoPromise;
+  _clientReleaseInfoPromise = (async () => {
+    const fallback = {
+      version: String((window.MuneaVersion && window.MuneaVersion.current) || ''),
+      build: '',
+      protocol: Number((window.MuneaVersion && window.MuneaVersion.callProtocol) || 0),
+    };
+    try {
+      const plugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+      if (!plugin || typeof plugin.getInfo !== 'function') return fallback;
+      const info = await plugin.getInfo();
+      return {
+        version: String((info && info.version) || fallback.version),
+        build: String((info && info.build) || ''),
+        protocol: fallback.protocol,
+      };
+    } catch (e) { return fallback; }
+  })();
+  return _clientReleaseInfoPromise;
+}
 const CallControl = {
   active: null,
   pending: null,
@@ -3120,11 +3152,15 @@ const CallControl = {
     this._queueSeen = false;
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('call-' + Date.now() + '-' + Math.random());
     let accountRecoveryAttempted = false;
+    const clientRelease = await clientReleaseInfo();
     while (!this.cancelled) {
       const personId = storageGet('munea.cloudPersonId') || '';
       const requestBody = {
         character_id: characterId || 'default',
         idempotency_key: idempotencyKey,
+        app_version: clientRelease.version,
+        app_build: clientRelease.build,
+        client_protocol: clientRelease.protocol,
       };
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(personId)) {
         requestBody.person_id = personId;
@@ -3140,6 +3176,11 @@ const CallControl = {
         throw new Error('call_cancelled');
       }
       if (result.status === 'connect') {
+        voiceCallMark('gateway_service_identity', 'pass', result.gateway_identity || {});
+        if (clientRelease.protocol && Number(result.call_protocol || 0) !== clientRelease.protocol) {
+          await this._disposeResult(result, 'incompatible_call_protocol');
+          throw new Error('incompatible_call_protocol');
+        }
         this.pending = null;
         this.active = result;
         this._startHeartbeat();
@@ -3424,22 +3465,27 @@ function faceSameLineOn() {
     return faceEngine() === 'flashhead';              // FlashHead 模式預設開同線（它天生兩軌同線）
   } catch (e) { return false; }
 }
-// 單一真相：「她現在正在出聲嗎」——所有喇叭出口（本地播放/臉那條線）都在這裡認，統一 0.015 門檻＋400ms 餘韻。
-// 以後新增任何聲音出口只改這一個函式（v5.4.24 教訓：4 處各自判斷=bug 再生產線）。
+// 單一真相：「她現在正在出聲嗎」——Voice PCM 算出的播放水位是主時鐘；同線實際
+// 解碼音量只准在預估句尾後的 bounded grace 內補正。Avatar 要先算嘴型才真正起播，
+// 單靠 PCM 到達時間會提早約 0.4-0.9 秒開麥，喇叭尾音就會被當成使用者插話。
+// grace 嚴格封頂 1.5 秒，避免遠端 idle 音軌的底噪再次把麥克風永久鎖死。
 function speechActive() {
   try {
     const now = performance.now();
-    const face = (window.MuneaAvatar && window.MuneaAvatar._faceAudLevel) || 0;
     const queued = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil);
-    if ((typeof LiveVoice !== 'undefined' && LiveVoice.speaking) || queued || face > 0.015) window.__muneaSpeechTs = now;
     const sameLine = typeof LiveVoice !== 'undefined' && LiveVoice._sameLine && LiveVoice._sameLineFellBack !== true;
+    const predictedEnd = Number((typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil) || 0);
+    const decodedTail = !!(sameLine && predictedEnd && now <= predictedEnd + 1500
+      && Number(Avatar && Avatar._faceAudLevel || 0) >= 0.06);
+    if (queued || decodedTail) window.__muneaSpeechTs = now;
     const tailMs = sameLine ? 120 : 400;
-    return !!(window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs);
+    return !!(queued || decodedTail || (window.__muneaSpeechTs && (now - window.__muneaSpeechTs) < tailMs));
   } catch (e) { return false; }
 }
 const Avatar = {
   pc: null, ws: null, on: false, _waking: false, warm: false, _wakeGen: 0,
   _session: '', _lastError: '', _renderStream: null,
+  _presentedFrames: 0, _frameProbeHandle: 0, _frameProbeVideo: null,
   _videoReady: false, _feedReady: false, _readyNotified: false,
   _notifyReady() {
     if (this._readyNotified || !this._videoReady || !this._feedReady) return;
@@ -3447,6 +3493,24 @@ const Avatar = {
     this._diagNote('影像+聲音上行都就緒');
     voiceCallMark('avatar_ready', 'pass');
     if (typeof window.__muneaOnFaceReady === 'function') window.__muneaOnFaceReady();
+    try {
+      if (typeof LiveVoice !== 'undefined' && LiveVoice.on) LiveVoice._requestFaceDirect();
+    } catch (e) {}
+  },
+  _handlePcmAck(msg, basis = 'avatar_audio_ws_ack') {
+    if (!msg || msg.type !== 'avatar_pcm_received' || Number(msg.turn) <= 0) return;
+    const turn = Number(msg.turn);
+    if (Number.isFinite(Number(msg.prebufferMs))) {
+      this._lastPrebufferMs = Math.max(200, Math.min(350, Number(msg.prebufferMs)));
+    }
+    if (window.MuneaVoiceDiagnostics) window.MuneaVoiceDiagnostics.markTurn(
+      turn, 'avatar_pcm_received', { basis, bytes: Number(msg.bytes) || 0,
+        prebufferMs: this._lastPrebufferMs || 0 }
+    );
+    this._playoutArmedTurn = turn;
+    this._directAckTurn = turn;
+    this._playoutStatsBaseline = null;
+    voiceCallMark('voice_turn_avatar_pcm', 'pass', { turn, bytes: Number(msg.bytes) || 0, basis });
   },
   showLiveFrame() {
     if (!this._videoReady) return false;
@@ -3538,6 +3602,13 @@ const Avatar = {
       this.pc.ontrack = e => {
         // WebRTC 不保證 audio/video 的 ontrack 事件帶同一個 MediaStream 物件。
         // 明確把兩軌合進同一個 render stream，交給唯一播放器 faceVid，避免有影無聲或兩路時鐘漂移。
+        // 支援該 API 的瀏覽器把同線 A/V 保留 160ms 抖動緩衝，吸收長測抓到的
+        // 100ms 網路突波；音畫兩軌設同一目標，不另造第二個聲音時鐘。
+        try {
+          const receiver = e.receiver;
+          if (receiver && 'jitterBufferTarget' in receiver) receiver.jitterBufferTarget = 160;
+          else if (receiver && 'playoutDelayHint' in receiver) receiver.playoutDelayHint = 0.16;
+        } catch (e0) {}
         if (!this._renderStream) this._renderStream = new MediaStream();
         if (e.track && !this._renderStream.getTracks().some(track => track.id === e.track.id)) this._renderStream.addTrack(e.track);
         if (vid.srcObject !== this._renderStream) vid.srcObject = this._renderStream;
@@ -3659,19 +3730,7 @@ const Avatar = {
       this.ws.onmessage = event => {
         try {
           const msg = JSON.parse(String(event.data || ''));
-          if (msg.type === 'avatar_pcm_received' && Number(msg.turn) > 0) {
-            const turn = Number(msg.turn);
-            if (Number.isFinite(Number(msg.prebufferMs))) {
-              this._lastPrebufferMs = Math.max(200, Math.min(350, Number(msg.prebufferMs)));
-            }
-            if (window.MuneaVoiceDiagnostics) window.MuneaVoiceDiagnostics.markTurn(
-              turn, 'avatar_pcm_received', { basis: 'avatar_audio_ws_ack', bytes: Number(msg.bytes) || 0,
-                prebufferMs: this._lastPrebufferMs || 0 }
-            );
-            this._playoutArmedTurn = turn;
-            this._playoutStatsBaseline = null;
-            voiceCallMark('voice_turn_avatar_pcm', 'pass', { turn, bytes: Number(msg.bytes) || 0 });
-          }
+          this._handlePcmAck(msg);
         } catch (e) {}
       };
       await new Promise((resolve, reject) => {
@@ -3701,9 +3760,20 @@ const Avatar = {
       this._pendingPlayoutTurn = id;
       this._audioTurn = id;
       this._playoutArmedTurn = 0;
+      this._directAckTurn = 0;
       this._playoutStatsBaseline = null;
       if (id) this.ws.send('turn:' + id);
     } catch (e) {}
+  },
+  beginDirectTurn(turn) {
+    const id = Math.max(0, Number(turn) || 0);
+    this._pendingPlayoutTurn = id;
+    this._audioTurn = id;
+    // Avatar ACK travels back on a different websocket and can beat the Voice
+    // PCM event by a few milliseconds. Preserve that ACK for the same turn;
+    // otherwise diagnostics would miss the real first WebRTC playout.
+    if (this._directAckTurn !== id) this._playoutArmedTurn = 0;
+    this._playoutStatsBaseline = null;
   },
   feed(buf) { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send(buf); } catch (e) {} },
   reset() { try { if (this.on && this.ws && this.ws.readyState === 1) this.ws.send('reset'); } catch (e) {} },
@@ -3793,6 +3863,10 @@ const Avatar = {
   _frameProgress() {
     const vid = document.getElementById('faceVid');
     if (!vid) return -1;
+    // Long-lived iOS MediaStreams can stop updating the legacy decoded-frame
+    // counters while frames are still being presented. The compositor callback
+    // is the authoritative witness for the freeze watchdog.
+    if ((this._presentedFrames || 0) > 0) return this._presentedFrames;
     try {
       if (vid.getVideoPlaybackQuality) {
         const q = vid.getVideoPlaybackQuality();
@@ -3801,6 +3875,24 @@ const Avatar = {
     } catch (e) {}
     if (typeof vid.webkitDecodedFrameCount === 'number' && vid.webkitDecodedFrameCount > 0) return vid.webkitDecodedFrameCount;
     return vid.currentTime || 0;   // 最後備援：MediaStream 的 currentTime（幀停走時多數瀏覽器跟著停）
+  },
+  _startFramePresentationProbe(vid) {
+    if (!vid || typeof vid.requestVideoFrameCallback !== 'function') return;
+    try {
+      if (this._frameProbeHandle && this._frameProbeVideo &&
+          typeof this._frameProbeVideo.cancelVideoFrameCallback === 'function') {
+        this._frameProbeVideo.cancelVideoFrameCallback(this._frameProbeHandle);
+      }
+    } catch (e) {}
+    this._frameProbeVideo = vid;
+    this._presentedFrames = 0;
+    const tick = (_now, metadata) => {
+      if (!this.on || this._frameProbeVideo !== vid) return;
+      const reported = Number(metadata && metadata.presentedFrames) || 0;
+      this._presentedFrames = Math.max(this._presentedFrames + 1, reported);
+      this._frameProbeHandle = vid.requestVideoFrameCallback(tick);
+    };
+    this._frameProbeHandle = vid.requestVideoFrameCallback(tick);
   },
   _armFaceWatch() {
     clearInterval(this._faceWatchT);
@@ -3823,6 +3915,10 @@ const Avatar = {
     voiceCallFail('face_stream_stalled', 'no_new_frames_4s_while_audio', { rebuilds: this._faceRebuilds || 0 });
     try { trackProductEvent('face_stream_stalled', { rebuilds: this._faceRebuilds || 0 }); } catch (e) {}
     try { this._diagNote(muneaT('avatar.forceFaceFrozen', '臉凍住(有聲4秒無新幀)'), true); } catch (e) {}
+    // 正式 Gateway 把 Voice+Avatar 綁在同一張 lease。通話中關閉一條仍然 connected
+    // 的 Avatar WebRTC，Avatar 會正確回報 component release，但舊總機會把整通標成
+    // stale_lease，接著 App 就失去麥克風。正式通話只能做保留 transport 的視覺降級。
+    if (CallControl.active) { this._fallbackVoiceOnly('stall_preserve_paired_lease'); return; }
     if ((this._faceRebuilds || 0) >= 2) { this._fallbackVoiceOnly('stall_after_rebuilds'); return; }   // 重建額度用完 → 降級純語音
     this._faceRebuilds = (this._faceRebuilds || 0) + 1;
     this._rebuildFace();
@@ -3842,7 +3938,8 @@ const Avatar = {
       }).catch(() => { try { Avatar._fallbackVoiceOnly('rebuild_failed'); } catch (e) {} });
     }, 800);
   },
-  // 第二次重建仍失敗/仍凍 → 降級成純語音繼續通話（不整通當掉）：同線聲音改走本地播放、收掉臉、立繪待機頂上。
+  // 降級成純語音繼續通話：同線聲音改走本地播放、隱藏活臉、立繪待機頂上。
+  // 注意：正式 paired lease 中不可 close Avatar transport；close 會被總機視為整通釋放。
   _fallbackVoiceOnly(reason) {
     if (this._faceFellBack) return;
     this._faceFellBack = true;
@@ -3857,17 +3954,34 @@ const Avatar = {
       }
     } catch (e) {}
     try { const _fa = document.getElementById('faceAud'); if (_fa) _fa.muted = true; } catch (e) {}
-    try { const _fv = document.getElementById('faceVid'); if (_fv) _fv.muted = true; } catch (e) {}
-    try { this.stop(); } catch (e) {}   // 收 WebRTC＋恢復照片層（stop 內含 _fhComposite(false)）
+    try {
+      const _fv = document.getElementById('faceVid');
+      if (_fv) {
+        _fv.muted = true;
+        _fhComposite(false, _fv);
+      }
+      const _bg = document.querySelector('#chat .face-bg');
+      if (_bg) _bg.classList.remove('livevid');
+    } catch (e) {}
+    try { clearInterval(this._faceWatchT); } catch (e) {} this._faceStallMs = 0;
+    // 故意不呼叫 this.stop()：保留 pc/ws/session，直到使用者真的掛斷才釋放 paired lease。
+    voiceCallMark('avatar_transport_preserved', 'pass', { reason: String(reason || '') });
     try { FaceIdle.start(); } catch (e) {}   // 立繪待機動畫頂上，不留凍格
     try { setLocalizedRuntimeHint('audioOnlyFallback'); } catch (e) {}
   },
   stop() {
     this.on = false;
-    this._pendingPlayoutTurn = 0; this._audioTurn = 0; this._playoutArmedTurn = 0;
+    this._pendingPlayoutTurn = 0; this._audioTurn = 0; this._playoutArmedTurn = 0; this._directAckTurn = 0;
     this._playoutStatsBaseline = null; this._playoutStatsBusy = false; this._playoutStatsAt = 0;
     this._videoReady = false; this._feedReady = false; this._readyNotified = false;
     try { clearInterval(this._faceWatchT); } catch (e) {} this._faceStallMs = 0;   // 臉部看門一起收
+    try {
+      if (this._frameProbeHandle && this._frameProbeVideo &&
+          typeof this._frameProbeVideo.cancelVideoFrameCallback === 'function') {
+        this._frameProbeVideo.cancelVideoFrameCallback(this._frameProbeHandle);
+      }
+    } catch (e) {}
+    this._frameProbeHandle = 0; this._frameProbeVideo = null; this._presentedFrames = 0;
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.pc) this.pc.close(); } catch (e) {}
     this.ws = this.pc = null; this._session = '';
@@ -3897,6 +4011,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (vid.videoWidth > 0 && vid.currentTime > 0.05) {
         Avatar._facePlaying = true;
         Avatar._videoReady = true;
+        Avatar._startFramePresentationProbe(vid);
         voiceCallMark('avatar_first_frame', 'pass', { width: vid.videoWidth, height: vid.videoHeight });
         Avatar._notifyReady();
         Avatar._armFaceWatch();   // 首幀確認就開臉部看門（重建成功回來也會重新武裝）：有聲 4 秒無新幀＝凍住
@@ -3911,6 +4026,39 @@ document.addEventListener('DOMContentLoaded', () => {
 const LiveVoice = {
   ws: null, ac: null, mic: null, proc: null, playCtx: null, playHead: 0, on: false,
   micLevel: 0, playLevel: 0, onCaption: null, onReady: null, micOpen: false, _openMicAfterGreet: false, _capBuf: '',
+  _openingCaptureActive: false, _openingCapture: null, _openingVoiceDetectedAt: 0, _openingHeardShown: false,
+  _primePipelinePromise: null, _primeCancelled: false,
+  _faceDirect: false, _faceDirectRequested: false, _faceDirectSession: '', _faceDirectTurn: 0,
+  _requestFaceDirect() {
+    const callToken = CallControl.active && CallControl.active.call_token;
+    const session = Avatar._session || '';
+    const url = getAvatarUrl();
+    if (!this._sameLine || !callToken || !Avatar.on || !session || !url ||
+        !this.ws || this.ws.readyState !== 1) return false;
+    if (this._faceDirectRequested && this._faceDirectSession === session) return true;
+    try {
+      this._faceDirect = false;
+      this._faceDirectRequested = true;
+      this._faceDirectSession = session;
+      this.ws.send(JSON.stringify({ type: 'faceaudio', on: true, url, session }));
+      voiceCallMark('voice_face_direct_requested', 'pass', { endpoint: url });
+      return true;
+    } catch (e) {
+      this._faceDirectRequested = false;
+      this._faceDirectSession = '';
+      voiceCallFail('voice_face_direct_requested', e);
+      return false;
+    }
+  },
+  _beginOpeningCapture() {
+    if (this._openingCaptureActive && this._openingCapture) return;
+    const policy = window.MuneaVoiceTurnPolicy;
+    this._openingCaptureActive = true;
+    this._openingCapture = policy && typeof policy.createOpeningCapture === 'function'
+      ? policy.createOpeningCapture() : null;
+    this._openingVoiceDetectedAt = 0;
+    this._openingHeardShown = false;
+  },
   prime() {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -3922,16 +4070,27 @@ const LiveVoice = {
       if (!this.playCtx || this.playCtx.state === 'closed') this.playCtx = new AudioContext({ sampleRate: 24000 });
       this.playHead = this.playCtx.currentTime;
       if (!this.ac || this.ac.state === 'closed') this.ac = new AudioContext();
+      this._primeCancelled = false;
+      this._beginOpeningCapture();
       this._resumeAudio();
-      if (!this._primeMicPromise) {
+      const currentTrack = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+      const pipelineAlive = !!(this.proc && currentTrack && currentTrack.readyState === 'live');
+      if (!pipelineAlive && !this._primeMicPromise) {
         this._primeMicPromise = navigator.mediaDevices.getUserMedia({ audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: false,
           channelCount: { ideal: 1 },
           sampleRate: { ideal: 48000 },
-        } })
+          } })
           .then(stream => ({ stream })).catch(error => ({ error }));
+      }
+      // Start the real microphone graph inside the original user gesture,
+      // before account/Gateway/Voice waits.  micOpen remains false, so the
+      // processor keeps only the bounded local opening buffer and sends no
+      // private speech until the authenticated Voice socket is ready.
+      if (!pipelineAlive && !this._primePipelinePromise) {
+        this._primePipelinePromise = this._setupMicPipeline(this._primeMicPromise, true);
       }
       return true;
     } catch (e) { return false; }
@@ -3972,10 +4131,26 @@ const LiveVoice = {
       voiceCallMark('microphone_first_packet', 'pass', { bytes: buf.byteLength || 0, silent: buf === this._silentBuf });
     }
   },
+  _markOpeningHeard(source, peakRms, threshold) {
+    if (this._openingHeardShown || (this._playbackTurn || 0) > 0) return;
+    this._openingHeardShown = true;
+    setLocalizedRuntimeHint('heard');
+    voiceCallMark('opening_user_voice_acknowledged', 'pass', {
+      source: source || 'microphone',
+      peakRms: +Math.max(0, Number(peakRms) || 0).toFixed(4),
+      threshold: +Math.max(0, Number(threshold) || 0).toFixed(4),
+    });
+  },
   _noteUserMicActivity(rms, frameMs, speakerActive) {
     if (speakerActive || !this.micOpen) { this._userSpeechMs = 0; return; }
     const floor = Math.max(0, Number(this._bargeState && this._bargeState.noiseFloor) || 0.006);
-    const threshold = Math.min(0.04, Math.max(0.018, floor * 3));
+    // 2026-08-12 底線 0.018→0.024（Edward 1.0.68 實機「收音太敏感」＋當晚總帳實證）：
+    // 那通 160 秒裡「偵測到人聲」35 次、其中 13 次等了 4 秒一個字都認不出＝環境聲
+    // （電視/回音殘響）在 0.02~0.04 這帶反覆觸發「聽到了」提示與插話候選；他真正
+    // 講話的音量都在 0.06~0.12。0.024 切在兩群中間：小聲講話（0.03+）照樣過，
+    // 底噪那帶不再一直誤報。安靜房間的自適應底噪乘 3 本來就會把門檻抬高，這裡
+    // 只動「最低保證」那一格。
+    const threshold = Math.min(0.04, Math.max(0.024, floor * 3));
     if (rms >= threshold) {
       this._lastHumanVoiceAt = Date.now();
       this._userSpeechQuietMs = 0;
@@ -3984,6 +4159,7 @@ const LiveVoice = {
       if (!this._userSpeechLatched && this._userSpeechMs >= 150) {
         this._userSpeechLatched = true;
         this._pendingUserSpeech = { startedAt: performance.now(), peakRms: this._userSpeechPeak, threshold };
+        this._markOpeningHeard('live_microphone', this._userSpeechPeak, threshold);
         try { trackProductEvent('voice_user_speech_detected', { peakRms: +this._userSpeechPeak.toFixed(4), threshold: +threshold.toFixed(4) }); } catch (e) {}
         clearTimeout(this._userSpeechWatchT);
         this._userSpeechWatchT = setTimeout(() => {
@@ -4044,11 +4220,10 @@ const LiveVoice = {
     this._bargeState = policy ? policy.createState(floor) : null;
     this._bargePreRoll = [];
     this._bargeInActive = false;
+    this._bargeProposalPending = false;
     this._bargeSpeechOnsetAt = 0;
     this._duckPreRoll = [];
     this._duckPostRoll = [];
-    this._duckConfirmState = null;
-    this._duckConfirmPassed = false;
   },
   _stopAssistantPlayback() {
     clearTimeout(this._speakTimer);
@@ -4076,66 +4251,32 @@ const LiveVoice = {
       return gain;
     } catch (e) { return null; }
   },
-  // 先把音量壓小、看你是不是真的在講，再決定要不要把她的話砍掉（2026-08-09）。
+  // 收集一小段持續人聲，再交給 Voice 判斷是不是插話（2026-08-11）。
   //
   // 為什麼要多這一關：Edward 8/8 真機「整句話頻繁出現斷字、卡住一個字跳針」。
   // 舊行為＝一判定你插話就硬停播放＋清空臉那邊的緩衝，代價是**要重新囤半秒才出得了聲**。
   // 判對了沒事（你本來就要講話），**判錯了就是斷字**——而在手機開擴音的情況下，
   // 她自己的聲音繞回麥克風本來就容易被誤判。
   //
-  // 業界 2026 的做法不是砍，是**把她的音量壓低約 24 分貝**（audio ducking）：
-  // 判錯了也只是音量抖一下、聽起來像禮讓；判對了再真的停。
-  // 這一關把「誤判的代價」從斷字降成音量抖一下。
-  _duckAssistantAudio() {
-    try {
-      var p=document.getElementById('faceVid');
-      if(p && !this._duckPrevVolume){ this._duckPrevVolume=(p.volume===0?1:p.volume); p.volume=0.06; }   // 0.06 ≈ −24dB
-    } catch (e) {}
-    try {
-      const gain = this._ensureLocalPlaybackGain();
-      if (gain && !this._duckPrevGain) {
-        this._duckPrevGain = gain.gain.value || 1;
-        gain.gain.setTargetAtTime(0.06, this.playCtx.currentTime, 0.01);
-      }
-    } catch (e) {}
-  },
-  _unduckAssistantAudio() {
-    try {
-      var p=document.getElementById('faceVid');
-      if(p && this._duckPrevVolume){ p.volume=this._duckPrevVolume; }
-    } catch (e) {}
-    this._duckPrevVolume=0;
-    try {
-      const gain = this._playGain;
-      if (gain && this.playCtx && this.playCtx.state !== 'closed') {
-        const value = this._duckPrevGain || 1;
-        gain.gain.cancelScheduledValues(this.playCtx.currentTime);
-        gain.gain.setTargetAtTime(value, this.playCtx.currentTime, 0.01);
-      }
-    } catch (e) {}
-    this._duckPrevGain=0;
-  },
+  // 1.0.62 證明「先壓低 24dB」仍是可聽的斷字：手機擴音的回音會反覆觸發候選，
+  // 即使 Voice 最後拒絕，使用者已經先聽到每句被壓扁。候選期不准碰播放；只有
+  // Voice 回 barge_in_ack accepted 後才停止聲音，讓伺服器成為唯一裁決者。
   _maybeBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs) {
     if (this._bargeInActive || this._duckPendingAt) return;
     const policy = window.MuneaVoiceTurnPolicy;
-    // 第一步：只壓音量，不砍話、不清緩衝
+    // 第一步只收證據，不壓音量、不砍話、不清緩衝。
     this._duckPendingAt = performance.now();
     this._duckPreRoll = Array.isArray(preRoll) ? preRoll.slice() : [];
     this._duckPostRoll = [];
-    this._duckConfirmState = policy ? policy.createState(this._bargeState && this._bargeState.noiseFloor) : null;
-    this._duckConfirmPassed = false;
-    this._duckAssistantAudio();
-    voiceCallMark('barge_in_ducked', 'pass', { rms: Math.round(rms*1000)/1000, sustainMs });
+    voiceCallMark('barge_in_candidate_observing', 'pass', { rms: Math.round(rms*1000)/1000, sustainMs, playbackChanged: false });
     var self=this;
     // 第二步：再看短暫確認窗。真人插話會持續講；回音殘響撐不了那麼久。
     const confirmMs = policy ? policy.DEFAULTS.duckConfirmMs : 110;
     this._duckConfirmT = setTimeout(function(){
       self._duckPendingAt = 0;
-      var stillTalking = self._duckConfirmPassed
-        && self._duckPostRoll.length > 0
-        && self._duckConfirmState
-        && self._duckConfirmState.speechMs > 0;
-      if (stillTalking) {
+      // This is only a proposal trigger. The App never decides who spoke and
+      // never cuts playback here; the Voice speaker arbiter owns the verdict.
+      if (self._duckPostRoll.length >= 3) {
         const confirmedSpeechMs = self._bargeSpeechOnsetAt
           ? Math.max(0, performance.now() - self._bargeSpeechOnsetAt)
           : Math.max(0, Number(detectedSpeechMs) || 0) + confirmMs;
@@ -4143,57 +4284,46 @@ const LiveVoice = {
         self._beginBargeIn(
           rms, threshold, sustainMs, evidence, confirmedSpeechMs,
           self._duckPostRoll.length,
-        );   // duck 後仍持續才是真插話
+        );   // 送候選；是否為真人插話只由 Voice 裁決
       } else {
-        self._unduckAssistantAudio();                                               // 誤判 → 音量還原，話沒斷
-        voiceCallMark('barge_in_false_alarm', 'pass', { recoveredMs: confirmMs });
-        try { trackProductEvent('voice_barge_in_false_alarm', {}); } catch (e) {}
+        voiceCallMark('barge_in_candidate_abandoned', 'pass', { recoveredMs: confirmMs });
       }
     }, confirmMs);
   },
   _beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs, postDuckFrames = 0) {
-    if (this._bargeInActive) return;
-    this._bargeInActive = true;
-    this._dropAssistantAudio = true;
+    if (this._bargeInActive || this._bargeProposalPending) return;
+    this._bargeProposalPending = true;
     try { clearTimeout(this._duckConfirmT); } catch (e) {}
     this._duckPendingAt = 0;
-    this._unduckAssistantAudio();
-    const stopStartedAt = performance.now();
-    this._stopAssistantPlayback();
-    const stopOperationMs = Math.max(0, performance.now() - stopStartedAt);
     const policy = window.MuneaVoiceTurnPolicy;
-    const localStopMs = policy && policy.localStopLatencyMs
-      ? policy.localStopLatencyMs(detectedSpeechMs, stopOperationMs)
-      : Math.round(Math.max(0, Number(detectedSpeechMs) || Number(sustainMs) || 0) + stopOperationMs);
     // Two-phase barge-in: ask the server to buffer the following evidence,
     // deliver the retained microphone onset, then commit the interruption.
     // WebSocket ordering guarantees the server judges after hearing evidence.
     const evidence = Array.isArray(preRoll) ? preRoll : [];
     const payload = {
       rms: +rms.toFixed(4),
-      threshold: +threshold.toFixed(4),
+      candidate_threshold: +threshold.toFixed(4),
       sustain_ms: Math.max(0, Number(sustainMs) || 0),
       evidence_frames: evidence.length,
-      post_duck_frames: Math.max(0, Number(postDuckFrames) || 0),
+      // Candidate observation no longer ducks playback. Declaring these as
+      // post-duck evidence would make Voice use the lower quiet-room threshold
+      // on loudspeaker echo and recreate the self-interruption server-side.
+      post_duck_frames: 0,
+      candidate_tail_frames: Math.max(0, Number(postDuckFrames) || 0),
       post_duck_sustain_ms: policy ? policy.DEFAULTS.duckEvidenceMs : 80,
       detected_speech_ms: Math.round(Math.max(0, Number(detectedSpeechMs) || 0)),
-      stop_operation_ms: Math.round(stopOperationMs),
-      local_stop_ms: localStopMs,
       timing_basis: 'audio_callback_estimate',
+      playback_unchanged: true,
     };
     try { this.ws.send(JSON.stringify({ type: 'barge_in_start', ...payload })); } catch (e) {}
     evidence.forEach(frame => this._sendMicBuffer(frame));
     try { this.ws.send(JSON.stringify({ type: 'barge_in', ...payload })); } catch (e) {}
-    try { trackProductEvent('voice_barge_in_local', payload); } catch (e) {}
-    voiceCallMark('barge_in_local_stop', 'pass', {
-      localStopMs,
+    try { trackProductEvent('voice_barge_in_candidate', payload); } catch (e) {}
+    voiceCallMark('barge_in_candidate_sent', 'pass', {
       detectedSpeechMs: payload.detected_speech_ms,
-      stopOperationMs: payload.stop_operation_ms,
-      within300Ms: localStopMs <= 300,
       openingGuard: payload.sustain_ms > ((policy && policy.DEFAULTS.sustainMs) || 150),
       timingBasis: payload.timing_basis,
     });
-    if (this.onListen) this.onListen();
   },
   // 2026-08-08 Edward 拍板：「讓她放棄主動打招呼，改由用戶先說第一句話她才開始回話」。
   //
@@ -4263,6 +4393,33 @@ const LiveVoice = {
     const base = (this._playbackTurn || 0) <= 1 ? 0.48 : 0.22;
     return Math.min(0.72, base + Math.min(3, this._playbackUnderruns || 0) * 0.08);
   },
+  _scheduleLocalPlayback(f) {
+    const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
+    const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._ensureLocalPlaybackGain() || this._avAnalyser || this.playCtx.destination);
+    const now = this.playCtx.currentTime;
+    let offset = 0.18;
+    try {
+      if (typeof Avatar !== 'undefined' && Avatar.on) {
+        const flashhead = (typeof faceEngine === 'function' && faceEngine() === 'flashhead');
+        let ms = flashhead ? 200 : parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
+        if (isNaN(ms) || ms < 0 || ms > 3000) ms = flashhead ? 200 : 900;
+        offset = ms / 1000;
+      }
+    } catch (e) {}
+    offset = Math.max(offset, this._playbackLeadSeconds());
+    if (!this._turnHasScheduledAudio) {
+      this.playHead = now + offset;
+      this._turnHasScheduledAudio = true;
+    } else if (this.playHead < now + 0.06) {
+      this._playbackUnderruns = (this._playbackUnderruns || 0) + 1;
+      this.playHead = now + this._playbackLeadSeconds();
+      try { trackProductEvent('voice_playback_underrun', { turn: this._playbackTurn, count: this._playbackUnderruns }); } catch (e) {}
+    }
+    s.start(this.playHead); this.playHead += b.duration;
+    if (!this._srcs) this._srcs = [];
+    this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); this._toListening(); };
+    this._toListening();
+  },
   _setFaceAudioMuted(muted) {
     // faceAud 永久靜音，只當 analyser 的 MediaStream 來源；faceVid 是唯一同線播放器。
     try { const meter = document.getElementById('faceAud'); if (meter) meter.muted = true; } catch (e) {}
@@ -4284,46 +4441,33 @@ const LiveVoice = {
     } catch (e) {}
     return { bytes, audioLevel, hasStats };
   },
-  async prepareOpeningAudioPath(waitMs = 1000) {
+  async prepareOpeningAudioPath(waitMs = 600) {
     if (!this._sameLine) {
       this._sameLineWarmup = false;
       return { mode: 'local_audio', verified: true, receiverAttached: false };
     }
     this._sameLineWarmup = true;
     this._setFaceAudioMuted(true);
-    const receiverDeadline = Date.now() + 600;
+    const receiverDeadline = Date.now() + Math.max(0, Math.min(600, waitMs || 0));
     while (this.on && !Avatar._faceAudReceiver && Date.now() < receiverDeadline) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    const before = await this._faceAudioSnapshot();
-    // 暖機資料不屬於對話，不送 Gemini；只讓 Avatar 的影音 RTP 與 iPhone 播放路徑先穩定一秒。
-    try {
-      Avatar.reset();
-      Avatar.feed(new Int16Array(24000).buffer);
-      Avatar.finish();
-    } catch (e) {}
-    await new Promise(resolve => setTimeout(resolve, Math.max(1000, waitMs || 0)));
     const after = await this._faceAudioSnapshot();
-    const deltaBytes = Math.max(0, after.bytes - before.bytes);
-    const stable = after.hasStats && (deltaBytes > 600 || after.audioLevel > 0.001);
     const receiverAttached = !!Avatar._faceAudReceiver;
+    // WebRTC 的音訊軌本來就持續送靜音；只確認接收器已掛上即可。
+    // 舊版另外送 1 秒零 PCM 給 Avatar，會建立一個假的模型回合，可能與
+    // 第一個真回答競爭 feeder／GPU 佇列，造成開頭反覆起音又被切掉。
+    const stable = receiverAttached;
     this._sameLineWarmup = false;
     if (stable) {
-      this._sameLineFellBack = false;
-      this._setFaceAudioMuted(false);
-    } else if (receiverAttached) {
-      // FlashHead may suppress a silent warmup packet even though the WebRTC
-      // audio receiver is ready. Let the first real answer verify the route;
-      // the existing three-second watchdog still falls back if it stays mute.
       this._sameLineFellBack = false;
       this._setFaceAudioMuted(false);
     } else {
       this._sameLineFellBack = true;
       this._setFaceAudioMuted(true);
     }
-    try { Avatar.reset(); } catch (e) {}
-    const mode = stable ? 'sameline_verified' : (receiverAttached ? 'pending_first_audio' : 'local_fallback');
-    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, deltaBytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_greet' }); } catch (e) {}
+    const mode = stable ? 'receiver_ready' : 'local_fallback';
+    try { trackProductEvent('voice_sameline_warmup', { result: stable ? 'ready' : mode, bytes: after.bytes, audioLevel: after.audioLevel, hasStats: after.hasStats, receiverAttached, stage: 'before_first_user_turn', syntheticPcm: false }); } catch (e) {}
     return { mode, verified: stable, receiverAttached };
   },
   // ── 同線聲音「中途斷續」監測＋自動退回（2026-07-29 · 穩定度）──
@@ -4358,9 +4502,11 @@ const LiveVoice = {
     }
   },
   _queueSameLineBoundaryFallback(reason, detail) {
-    if (!this._sameLine || this._sameLineFellBack === true || this._slFallbackAfterTurn) return;
-    this._slFallbackAfterTurn = String(reason || 'quality');
-    try { trackProductEvent('sameline_fallback_queued', { reason: this._slFallbackAfterTurn, ...(detail || {}) }); } catch (e) {}
+    // 位元組統計的短停頓只能觀測，不能拆掉本通 Avatar。1.0.62 的查詢「有聲無嘴」
+    // 就是這個 heuristic 在第二次 microstall 後排程 voice-only fallback。真正 4 秒
+    // 無影格的硬故障仍由 Avatar._faceWatchTick 處理，兩者不得混為一談。
+    if (!this._sameLine || this._sameLineFellBack === true) return;
+    try { trackProductEvent('sameline_fallback_suppressed', { reason: String(reason || 'quality'), ...(detail || {}) }); } catch (e) {}
   },
   _scheduleSameLineBoundaryFallback() {
     const reason = this._slFallbackAfterTurn;
@@ -4429,7 +4575,7 @@ const LiveVoice = {
           this._slStalls += 1;
           try { trackProductEvent('sameline_audio_stall', { count: this._slStalls, durationMs: 400, byteDelta, turn: this._playbackTurn || 0 }); } catch (e) {}
           try { trackProductEvent('sameline_audio_microstall', { count: this._slStalls, durationMs: 400, byteDelta, turn: this._playbackTurn || 0 }); } catch (e) {}
-          // 2026-07-30 深夜降級為「只記錄、不動手」：這偵測器在真機上每通誤觸發——
+          // 只記錄、不動手：這偵測器在真機上每通可能誤觸發——
           // 她每輪開口前臉機要 1-2 秒處理，那段「該講卻沒聲」被誤算成斷流（turn 2/3/7
           // 的 telemetry 全是這型）。自動切換帶來的雪崩（忽大忽小/臉不同步/回音自斷）
           // 比它要治的斷續傷害大得多（Edward 7/30 親測退步）。保留計數與事件、
@@ -4474,6 +4620,32 @@ const LiveVoice = {
     if (!this._silentBuf || this._silentBufLen !== len) { this._silentBufLen = len; this._silentBuf = new Int16Array(len).buffer; }
     return this._silentBuf;
   },
+  _captureOpeningMicFrame(buf, rms, frameMs) {
+    if (!this._openingCaptureActive || !buf) return;
+    const policy = window.MuneaVoiceTurnPolicy;
+    if (!policy || typeof policy.captureOpeningFrame !== 'function') return;
+    const observed = policy.captureOpeningFrame(this._openingCapture, buf, rms, frameMs);
+    this._openingCapture = observed.state;
+    if (!observed.detectedNow) return;
+    this._openingVoiceDetectedAt = performance.now();
+    this._markOpeningHeard('pre_ready_buffer', rms, observed.threshold);
+    voiceCallMark('opening_user_voice_detected', 'pass', {
+      rms: +Math.max(0, Number(rms) || 0).toFixed(4),
+      threshold: +Math.max(0, Number(observed.threshold) || 0).toFixed(4),
+      bufferedMs: Math.round(observed.state.bufferedMs || 0),
+    });
+  },
+  _drainOpeningMicCapture() {
+    const policy = window.MuneaVoiceTurnPolicy;
+    this._openingCaptureActive = false;
+    if (!policy || typeof policy.drainOpeningCapture !== 'function') {
+      this._openingCapture = null;
+      return { frames: [], bufferedMs: 0, detected: false, candidate: false };
+    }
+    const drained = policy.drainOpeningCapture(this._openingCapture);
+    this._openingCapture = drained.state;
+    return drained;
+  },
   // 把「麥克風 → 降採樣 → 上行」的送音迴圈接上目前的 mic stream（start 建管、看門狗重建都走這裡）。
   _attachMicProcessor() {
     const src = this.ac.createMediaStreamSource(this.mic);
@@ -4492,7 +4664,17 @@ const LiveVoice = {
         // （42.7ms 音訊 ≈ 1 token；只為保活＋uplink 偵測）；開麥後才全速送真音訊——
         // 開場與按靜音期間的 Gemini 輸入 token 從每分鐘 ~1500 降到 ~128、幾乎不增帳。
         // 內容守門照舊：開麥前送的是全零、不是真收音，你的聲音絕不會在她招呼前灌進去（Edward 2026-07-09 規則不變）。
-        this.micLevel = 0;
+        if (this._openingCaptureActive) {
+          let openingEnergy = 0;
+          for (let i = 0; i < inp.length; i++) openingEnergy += inp[i] * inp[i];
+          const openingRms = Math.sqrt(openingEnergy / inp.length);
+          const openingFrameMs = (inp.length / this.ac.sampleRate) * 1000;
+          const openingBuf = this._f2i(this._down(inp, this.ac.sampleRate, 16000)).buffer;
+          this.micLevel = Math.min(1, openingRms * 8);
+          this._captureOpeningMicFrame(openingBuf, openingRms, openingFrameMs);
+        } else {
+          this.micLevel = 0;
+        }
         const nowMs = performance.now();
         if (!this._silentKeepaliveAt || nowMs - this._silentKeepaliveAt >= 500) {
           this._silentKeepaliveAt = nowMs;
@@ -4520,23 +4702,16 @@ const LiveVoice = {
         this._sendMicBuffer(buf);
         return;
       }
+      if (speakerActive && this._bargeProposalPending) return;
       if (speakerActive && policy) {
         this._postGuardUntil = performance.now() + policy.DEFAULTS.postSpeechGuardMs;   // 她一停口即進守門期
         if (this._duckPendingAt) {
           // Only fresh frames captured after the speaker was ducked can prove
           // that a nearby user is still speaking.  The old path spliced these
           // frames away and later judged the original speaker-echo pre-roll.
+          // These are evidence only. Voice owns the sole speaker verdict.
           this._duckPostRoll.push(buf);
           while (this._duckPostRoll.length > 6) this._duckPostRoll.shift();
-          const confirmed = policy.observe(
-            this._duckConfirmState,
-            rms,
-            frameMs,
-            true,
-            { sustainMs: policy.DEFAULTS.duckEvidenceMs },
-          );
-          this._duckConfirmState = confirmed.state;
-          if (confirmed.shouldInterrupt) this._duckConfirmPassed = true;
           return;
         }
         this._bargePreRoll.push(buf);
@@ -4587,12 +4762,17 @@ const LiveVoice = {
   },
   // 收音管「先建後招呼」（2026-07-16 蟲 b 根治）：getUserMedia 一回來就把送音迴圈建好待命，
   // 不等 WebSocket onopen、更不等她招呼講完——管線本身不等任何人，守門只管內容。
-  async _setupMicPipeline(micPromise) {
+  async _setupMicPipeline(micPromise, allowBeforeStart = false) {
     try {
+      const liveTrack = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+      if (this.proc && liveTrack && liveTrack.readyState === 'live') return { ok: true, reused: true };
       const micResult = await micPromise;
       if (this._primeMicPromise === micPromise) this._primeMicPromise = null;
       if (!micResult || !micResult.stream) return { ok: false, error: (micResult && micResult.error) || 'microphone_unavailable' };
-      if (!this.on) { try { micResult.stream.getTracks().forEach(t => t.stop()); } catch (e) {} return { ok: false, error: 'call_cancelled' }; }
+      if (this._primeCancelled || (!this.on && !allowBeforeStart)) {
+        try { micResult.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        return { ok: false, error: 'call_cancelled' };
+      }
       this.mic = micResult.stream;
       voiceCallMark('microphone_ready', 'pass', { trackState: this.mic.getAudioTracks()[0] && this.mic.getAudioTracks()[0].readyState });
       this._resumeAudio();
@@ -4727,6 +4907,10 @@ const LiveVoice = {
     url += '&cap_evt=1';
     // 能力握手：「接得住 AI 幫你記要問醫生的問題」（口袋問題）→ 舊版不會拿到工具（M1 PR-3）
     url += '&cap_ask=1';
+    const _clientRelease = await clientReleaseInfo();
+    url += '&app_version=' + encodeURIComponent(_clientRelease.version || '');
+    url += '&app_build=' + encodeURIComponent(_clientRelease.build || '');
+    url += '&client_protocol=' + encodeURIComponent(_clientRelease.protocol || 0);
     // 熟識度：帶上「聊過幾通」→ 越熟開場越簡短、像老朋友（Edward 2026-07-10「隨熟識度思考語句量」）
     try { url += '&fam=' + (parseInt(localStorage.getItem('munea.callCount') || '0', 10) || 0); } catch (e) {}
     // 當日開場路線：關係熟識度不能代替「今天已問過幾次」。同一通斷線重連沿用原路線，不誤算新通話。
@@ -4761,7 +4945,13 @@ const LiveVoice = {
     this._slFallbackAfterTurn = ''; this._slSlowLeads = 0; this._slWouldFallbackSent = false;
     try { clearTimeout(this._slBoundaryFallbackT); } catch (e) {} this._slBoundaryFallbackT = null;
     this._firstAudioRecorded = false; this._firstMicPacketRecorded = false;
+    this._serviceIdentity = null;
+    this._uplinkOk = false; this.onUplinkOk = null;   // 「你的聲音我收到了」：每通重新證明
+    this._uplinkAckSupported = false;                 // 這通的伺服器會不會回上行證明（ready 訊息裡宣告）
     this._firstUserCaptionRecorded = false; this._firstAssistantCaptionRecorded = false;
+    // prime() may already have captured the user's first words while account
+    // and Gateway preflight ran. Never replace that buffer here.
+    this._beginOpeningCapture();
     this._userSpeechMs = 0; this._userSpeechQuietMs = 0; this._userSpeechPeak = 0; this._userSpeechLatched = false; this._pendingUserSpeech = null;
     clearTimeout(this._userSpeechWatchT); this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
@@ -4769,10 +4959,9 @@ const LiveVoice = {
     // iOS 只保證在使用者點下通話按鈕的同步呼叫鏈內允許啟動音訊。
     // 先建立並喚醒 AudioContext，也立刻要求麥克風；不要等 WebSocket onopen 才做。
     if (!this.prime()) { this.on = false; voiceCallFail('microphone_requested', this._micUnavailableReason || 'microphone_prime_failed'); return false; }
-    const micPromise = this._primeMicPromise;
     // 收音管先建後招呼（蟲 b 根治）：管線跟 WebSocket 握手「並行」建，不再等 onopen 才動工。
     // 送音迴圈建好就開始跑（ws 還沒 open 時 _sendMicBuffer 自然丟包），open 那一刻立即有上行。
-    const micPipelineReady = this._setupMicPipeline(micPromise);
+    const micPipelineReady = this._primePipelinePromise || this._setupMicPipeline(this._primeMicPromise);
     try { this.ws = new WebSocket(url); this.ws.binaryType = 'arraybuffer'; }
     catch (e) { this.on = false; voiceCallFail('voice_socket_construct', e, { endpoint: url }); return false; }
     return await new Promise(resolve => {
@@ -4781,8 +4970,10 @@ const LiveVoice = {
       this.ws.onopen = async () => {
         voiceCallMark('voice_socket_open', 'pass', { endpoint: url });
         this._sameLine = faceSameLineOn(); this._sameLineFellBack = false; this._sameLineWatchStarted = false;   // 同線收聲狀態每通重置
+        this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = ''; this._faceDirectTurn = 0;
         this._sameLineWarmup = this._sameLine;
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
+        this._requestFaceDirect();
         try { clearTimeout(this._sameLineWatch); } catch (e) {}
         const micSetup = await micPipelineReady;   // 管線多半早就建好了，這裡只是收結果
         if (!micSetup.ok) {
@@ -4799,13 +4990,53 @@ const LiveVoice = {
         if (typeof ev.data === 'string') {
           try {
             const o = JSON.parse(ev.data);
+            if (o.type === 'service_identity') {
+              this._serviceIdentity = o;
+              voiceCallMark('voice_service_identity', 'pass', {
+                version: o.version || '', commit: o.commit || '',
+                callProtocol: Number(o.callProtocol) || 0,
+                voiceProtocol: o.voiceProtocol || '',
+                voiceEngine: o.voiceEngine || '',
+                voiceModel: o.voiceModel || '',
+                voiceName: o.voiceName || '',
+              });
+            }
+            if (o.type === 'faceaudio_status') {
+              const wasDirect = this._faceDirect === true;
+              this._faceDirect = o.on === true;
+              if (wasDirect && !this._faceDirect) this._newAvatarTurn = true;
+              voiceCallMark('voice_face_direct_status', this._faceDirect ? 'pass' : 'fallback', {
+                reason: o.reason || '', turn: Number(o.turn) || 0,
+              });
+              try { trackProductEvent('voice_face_direct_status', {
+                result: this._faceDirect ? 'direct' : 'app_relay', reason: o.reason || '',
+              }); } catch (e) {}
+            }
+            if (o.type === 'avatar_pcm_received') {
+              Avatar._handlePcmAck(o, 'voice_direct_avatar_ack');
+            }
+            if (o.type === 'faceaudio_turn' && Number(o.turn) > 0) {
+              this._faceDirectTurn = Number(o.turn);
+              if (this._sameLine && this._faceDirect) Avatar.beginDirectTurn(this._faceDirectTurn);
+            }
             if (o.type === 'interrupted' && this.playCtx) {
               this._dropAssistantAudio = true;
               this._stopAssistantPlayback();
             }
             if (o.type === 'barge_in_ack') {
-              // The server owns suppression of the cancelled model turn. This
-              // also covers audio that had already queued locally on the phone.
+              // Voice is the sole speaker arbiter. The App only ducks and sends
+              // evidence; playback may stop only after this accepted verdict.
+              const accepted = o.accepted !== false;
+              this._bargeProposalPending = false;
+              if (accepted) {
+                this._bargeInActive = true;
+                this._dropAssistantAudio = true;
+                this._stopAssistantPlayback();
+                if (this.onListen) this.onListen();
+              } else {
+                this._dropAssistantAudio = false;
+                this._resetBargeInDetector();
+              }
               try {
                 trackProductEvent(o.accepted === false ? 'voice_barge_in_rejected' : 'voice_barge_in_accepted', {
                   reason: o.reason || null,
@@ -4819,9 +5050,7 @@ const LiveVoice = {
                 evidenceMs: Number(o.evidence_ms) || 0,
                 evidenceBasis: o.evidence_basis || '',
               });
-              this._dropAssistantAudio = false;
               this._capBuf = '';
-              this._resetBargeInDetector();
             }
             if (o.type === 'voice_turn_timing' && Number(o.turn) > 0) {
               const turn = Number(o.turn);
@@ -4849,8 +5078,29 @@ const LiveVoice = {
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
             }
+            if (o.type === 'uplink_ok') {
+              // 伺服器親口說「你的聲音我收到了」＝上行證明。叮聲與「接通了」等這一句。
+              this._uplinkOk = true;
+              voiceCallMark('uplink_confirmed', 'pass');
+              if (this.onUplinkOk) { try { this.onUplinkOk(); } catch (e) {} }
+            }
             if (o.type === 'ready') {
-              this.ready = true; voiceCallMark('voice_ready', 'pass');
+              const expectedCall = Number((window.MuneaVersion && window.MuneaVersion.callProtocol) || 0);
+              const expectedVoice = String((window.MuneaVersion && window.MuneaVersion.voiceProtocol) || '');
+              const identity = this._serviceIdentity || {};
+              if ((expectedCall && Number(identity.callProtocol || 0) !== expectedCall)
+                  || (expectedVoice && String(identity.voiceProtocol || '') !== expectedVoice)) {
+                voiceCallFail('voice_protocol_mismatch', 'incompatible_voice_service', {
+                  expectedCall, actualCall: Number(identity.callProtocol || 0),
+                  expectedVoice, actualVoice: String(identity.voiceProtocol || ''),
+                });
+                setLocalizedRuntimeHint('reconnecting', true);
+                try { this.ws.close(4412, 'incompatible voice protocol'); } catch (e) {}
+                return;
+              }
+              const openingCapture = this._drainOpeningMicCapture();
+              this._uplinkAckSupported = o.uplinkAck === true;   // 這版伺服器會回「你的聲音我收到了」
+              this.ready = true; voiceCallMark('voice_ready', 'pass', { uplinkAck: this._uplinkAckSupported });
               this._armDeadLineWatch('no_audio_both_ways', 5000);
               // 2026-08-08 Edward：「有一通可以講，但撥通後就又都不能講了」。
               // 開麥本來掛在接通那條路的尾巴（markConnected 之後），但那條路上有兩道
@@ -4858,6 +5108,34 @@ const LiveVoice = {
               // 間歇性正是這樣來的：同一份程式，有時走到、有時沒走到。
               // 改成掛在這裡：腦一接上就開麥。這是「能收音」的最早時機，
               // 而且它在 ready 事件本身，沒有任何提早離開的分支繞得過去。
+              if (openingCapture.frames.length) {
+                openingCapture.frames.forEach(frame => this._sendMicBuffer(frame));
+                voiceCallMark('opening_user_voice_flushed', 'pass', {
+                  frames: openingCapture.frames.length,
+                  bufferedMs: openingCapture.bufferedMs,
+                  detected: openingCapture.detected,
+                  candidate: openingCapture.candidate,
+                  complete: openingCapture.complete,
+                  observedQuietMs: openingCapture.observedQuietMs,
+                  waitAfterDetectionMs: this._openingVoiceDetectedAt
+                    ? Math.round(performance.now() - this._openingVoiceDetectedAt) : null,
+                });
+                if (openingCapture.complete) {
+                  this.ws.send(JSON.stringify({
+                    type: 'audio_end',
+                    reason: 'opening_local_boundary',
+                    trailing_silence_ms: openingCapture.retainedTailMs,
+                  }));
+                  voiceCallMark('opening_user_turn_closed', 'pass', {
+                    bufferedMs: openingCapture.bufferedMs,
+                    observedQuietMs: openingCapture.observedQuietMs,
+                    retainedTailMs: openingCapture.retainedTailMs,
+                  });
+                }
+              }
+              // Flush the preserved opening utterance (and its boundary when
+              // complete) before live callbacks can append newer microphone
+              // frames. The next real audio frame reopens Gemini's input stream.
               this._setMicOpen(true); this._openMicAfterGreet = false;
               if (this.onReady) this.onReady(); this._toListening();
               try { localStorage.setItem('munea.lastChatAt', String(Date.now())); } catch (e2) {}
@@ -4890,7 +5168,7 @@ const LiveVoice = {
                 this._userTurn = '';
               } } catch (eT) {}
               if (interruptedTurn) Avatar.reset();
-              else Avatar.finish();                    // WebSocket 順序保證尾包先到，再要求 Avatar 補算不足一整塊的句尾
+              else if (!this._faceDirect) Avatar.finish(); // direct route 由 Voice 在最後 PCM 後送 finish，避免跨 WS 亂序
               if (!interruptedTurn && this._slFallbackAfterTurn) this._scheduleSameLineBoundaryFallback();
               this._newAvatarTurn = true;
               this._resetAssistantAudioGate();
@@ -4927,9 +5205,11 @@ const LiveVoice = {
           if (this._slFallbackAfterTurn && this._sameLineFellBack !== true) {
             this._sameLineFallBackNow(this._slFallbackAfterTurn);
           }
-          const timingTurn = this._voiceTurnId || ((this._localVoiceTurnId || 0) + 1);
+          const timingTurn = (this._sameLine && this._faceDirect && this._faceDirectTurn) ||
+            this._voiceTurnId || ((this._localVoiceTurnId || 0) + 1);
           this._localVoiceTurnId = timingTurn;
-          Avatar.beginTurn(timingTurn);            // 清上一輪並標記本輪，Avatar 回 ACK 才算真正收到 PCM
+          if (this._sameLine && this._faceDirect) Avatar.beginDirectTurn(timingTurn);
+          else Avatar.beginTurn(timingTurn);       // App relay 才由手機清上一輪；direct route 由 Voice 排序 reset→PCM
           this._slFaceStarted = false; this._slTurnStartAt = 0; this._slPrevBytes = -1; this._slStallStreak = 0;
           if (this._sameLine && !this._sameLineWarmup && this._sameLineFellBack !== true) this._setFaceAudioMuted(false);
           if (this._openMicAfterGreet) { this._setMicOpen(true); this._openMicAfterGreet = false; }
@@ -4941,7 +5221,7 @@ const LiveVoice = {
         }
         this._notePlayout(audioData.byteLength);     // Gemini 會快轉送完資料；用「音訊實際長度」算何時真的播完
         if (this._sameLineWarmup) this._setFaceAudioMuted(true);
-        Avatar.feed(audioData);                                    // 同一份聲音餵給雲端臉（對嘴）
+        if (!(this._sameLine && this._faceDirect)) Avatar.feed(audioData); // direct route 不再繞手機二次上行
         this._toSpeaking();                                        // 收到她的聲音 → 進入「她在說」
         const i16 = new Int16Array(audioData), f = new Float32Array(i16.length);
         for (let k = 0; k < i16.length; k++) f[k] = i16[k] / 0x8000;
@@ -4984,38 +5264,7 @@ const LiveVoice = {
           this._toListening();                                    // 依實際應播完時間換手，不再用「資料停止到貨」誤判句尾
           return;                                                  // 不本地排程（聲音由 faceAud 出）
         }
-        const b = this.playCtx.createBuffer(1, f.length, 24000); b.getChannelData(0).set(f);
-        const s = this.playCtx.createBufferSource(); s.buffer = b; s.connect(this._ensureLocalPlaybackGain() || this._avAnalyser || this.playCtx.destination);   // 共用 gain 讓同線退回／純語音也能真的 duck
-        const now = this.playCtx.currentTime;
-        // 有會動的臉在跑時，聲音多等一下跟臉對齊（臉要往返雲端、比聲音慢約 1 秒）→ 聲音+嘴一起出、不再話先出嘴慢半拍（Edward 2026-07-10）。
-        // 純語音不接臉＝維持 0.18 秒快起播。等多久可在手機上微調：localStorage['munea.faceSyncMs']（毫秒、預設 900、0~3000）。
-        let _off = 0.18;
-        try {
-          if (typeof Avatar !== 'undefined' && Avatar.on) {
-            // 舊水管拆除（1.24.6）：新引擎臉快 3 倍、退回本地播放也只等 0.2 秒＝寫死（連校時器寫進手機的舊毒值一併無視）；
-            // 舊引擎照舊 0.9 秒可手調。不拆＝退回狀態聲音被推後最多 3 秒 → 「嘴跑在聲音前面」（Edward 7/11 症狀④機制源）。
-            const _fh = (typeof faceEngine === 'function' && faceEngine() === 'flashhead');
-            let ms = _fh ? 200 : parseInt(localStorage.getItem('munea.faceSyncMs') || '900', 10);
-            if (isNaN(ms) || ms < 0 || ms > 3000) ms = _fh ? 200 : 900;
-            _off = ms / 1000;
-          }
-        } catch (e) {}
-        _off = Math.max(_off, this._playbackLeadSeconds());
-        if (!this._turnHasScheduledAudio) {
-          this.playHead = now + _off;
-          this._turnHasScheduledAudio = true;
-        } else if (this.playHead < now + 0.06) {
-          this._playbackUnderruns = (this._playbackUnderruns || 0) + 1;
-          this.playHead = now + this._playbackLeadSeconds();
-          try { trackProductEvent('voice_playback_underrun', { turn: this._playbackTurn, count: this._playbackUnderruns }); } catch (e) {}
-        }
-        s.start(this.playHead); this.playHead += b.duration;
-        // 記著正在播的語音，插話時才能一次停乾淨（不留尾巴跟新句疊音）
-        if (!this._srcs) this._srcs = [];
-        this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); this._toListening(); };
-        // 安全網：她若一段時間沒再吐聲音，視同講完、把麥克風打開（防 turn_complete 沒到就卡住）。
-        // 放寬 0.9→2 秒：斷續破洞不再被誤判成「講完」把她攔腰切斷（Edward 2026-07-12）；真講完有 turn_complete 即時接手、不靠這條
-        this._toListening();                                      // 本地備援同樣等排程音訊真的播完才開麥
+        this._scheduleLocalPlayback(f);                            // 本地備援同樣等排程音訊真的播完才開麥
       };
       this.ws.onclose = event => {
         const wasOpen = this.on;
@@ -5028,14 +5277,16 @@ const LiveVoice = {
   stop() {
     if (this._pendingRelay) this._finishRelay(this._relaySpokenId ? 'ack' : 'release');
     this.on = false;
+    this._primeCancelled = true;
     this.ready = false;
     clearTimeout(this._speakTimer); clearTimeout(this._micWatchT); clearTimeout(this._userSpeechWatchT); this._playoutUntil = 0; this._newAvatarTurn = true;
     clearTimeout(this._uplinkWatchT); clearTimeout(this._deadLineWatchT);   // 收音管看門＋死線看門一起收
     this.micOpen = false; this._openMicAfterGreet = false;
+    this._openingCaptureActive = false; this._openingCapture = null; this._openingVoiceDetectedAt = 0;
     try { clearTimeout(this._duckConfirmT); } catch (e) {}
     this._duckPendingAt = 0;
-    this._unduckAssistantAudio();   // 掛斷時把壓低的音量還原，否則下一通會小聲
     this._sameLineWarmup = false;
+    this._faceDirect = false; this._faceDirectRequested = false; this._faceDirectSession = ''; this._faceDirectTurn = 0;
     this._pendingUserSpeech = null; this._resetAssistantAudioGate();
     this._dropAssistantAudio = false; this._resetBargeInDetector();
     try { clearTimeout(this._sameLineWatch); } catch (e) {} this._sameLineWatchStarted = false;   // 同線保底計時器一起收
@@ -5046,14 +5297,14 @@ const LiveVoice = {
     try { if (this.proc) this.proc.disconnect(); } catch (e) {}
     try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
-    const pendingMic = this._primeMicPromise; this._primeMicPromise = null;
+    const pendingMic = this._primeMicPromise; this._primeMicPromise = null; this._primePipelinePromise = null;
     if (pendingMic) pendingMic.then(r => { try { if (r && r.stream) r.stream.getTracks().forEach(t => t.stop()); } catch (e) {} });
     try { if (this.ws) this.ws.close(); } catch (e) {}
     try { if (this.ac) this.ac.close(); } catch (e) {}
     try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
     try { if (window.MuneaAvSyncMeter) MuneaAvSyncMeter.stop(); } catch (e) {}   // 延遲量測器一起收
     this._avAnalyser = null;                                                      // playCtx 關了→分析器作廢，下通重建
-    this._playGain = null; this._duckPrevGain = 0;
+    this._playGain = null;
     this.ws = this.ac = this.mic = this.proc = this._micSrc = this.playCtx = null;
   },
 };
@@ -5071,14 +5322,19 @@ const AvSyncMeter = {
   start(videoEl) {
     if (this.on) return;
     try {
-      if (localStorage.getItem('munea.debug') !== '1') return;   // debug-only：munea.debug=1 才啟動；預設不建 canvas、不取像素、不顯示浮層（2026-07-11 ②）
+      // 2026-08-12（Edward：長通話聲嘴會漂、但 6 分鐘內的自動驗收都過）：從 debug 專用
+      // 改成整通都量、逐輪把「聲音起→嘴巴動」的差記進帳（av_onset_lag_ms），拿他真機
+      // 長通話的帳看第幾分鐘開始歪。浮層照舊只有 munea.debug=1 才顯示；平時無畫面、
+      // 且只在「她正在講話」的時間窗內取像素（見 _loop），不整通燒電。
       this._video = videoEl || document.getElementById('faceVid');
       this._canvas = document.createElement('canvas'); this._canvas.width = 48; this._canvas.height = 48;
       this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
-      this._overlay = document.createElement('div');
-      this._overlay.style.cssText = 'position:fixed;left:10px;bottom:12px;z-index:99999;background:rgba(12,14,20,.78);color:#fff;font:600 12px/1.5 -apple-system,system-ui,sans-serif;padding:7px 10px;border-radius:10px;pointer-events:none;white-space:pre;letter-spacing:.2px;';
-      this._overlay.textContent = '延遲量測：聽聲音、看嘴巴中…';
-      document.body.appendChild(this._overlay);
+      if (localStorage.getItem('munea.debug') === '1') {
+        this._overlay = document.createElement('div');
+        this._overlay.style.cssText = 'position:fixed;left:10px;bottom:12px;z-index:99999;background:rgba(12,14,20,.78);color:#fff;font:600 12px/1.5 -apple-system,system-ui,sans-serif;padding:7px 10px;border-radius:10px;pointer-events:none;white-space:pre;letter-spacing:.2px;';
+        this._overlay.textContent = '延遲量測：聽聲音、看嘴巴中…';
+        document.body.appendChild(this._overlay);
+      }
       this._samples = []; this._prev = null; this._audioHot = this._videoHot = this._pendA = false;
       this.on = true; this._loop();
     } catch (e) {}
@@ -5111,14 +5367,32 @@ const AvSyncMeter = {
   _loop() {
     if (!this.on) return;
     const now = performance.now();
-    const ar = this._audioRms(), mm = this._mouthMotion();
-    if (ar > 0.045 && !this._audioHot) { this._audioHot = true; this._tA = now; this._pendA = true; }   // 聲音：靜→起
+    // 她的聲音有兩條可能的路：舊 relay（伺服器 PCM 給 App 播、看 _playoutUntil）
+    // 與現役直送（聲音只在臉的音軌上、App 沒有 PCM——8/13 抓到儀表整通空帳的原因：
+    // 只等 _playoutUntil 的話，直送模式永遠等不到）。臉音軌的音量 Avatar._faceAudLevel
+    // 每次醒來都看一眼（便宜、不取像素），兩條路哪條有聲就開窗。
+    const faceLevel = Number((typeof Avatar !== 'undefined' && Avatar._faceAudLevel) || 0);
+    if (faceLevel > 0.02) this._lastFaceHotAt = now;
+    const playoutWindow = (typeof LiveVoice !== 'undefined' && LiveVoice._playoutUntil && now < LiveVoice._playoutUntil + 1200);
+    const faceWindow = this._lastFaceHotAt && (now - this._lastFaceHotAt) < 1200;
+    if (!playoutWindow && !faceWindow) {
+      this._audioHot = this._videoHot = this._pendA = false; this._prev = null;
+      this._raf = 0; setTimeout(() => { if (this.on && !this._raf) this._loop(); }, 300);
+      return;
+    }
+    const ar = Math.max(this._audioRms(), faceLevel), mm = this._mouthMotion();
+    if ((ar > 0.045 || faceLevel > 0.03) && !this._audioHot) { this._audioHot = true; this._tA = now; this._pendA = true; }   // 聲音：靜→起
     else if (ar < 0.02) this._audioHot = false;
     if (mm > 0.028 && !this._videoHot) {                                                                  // 嘴巴：靜→動
       this._videoHot = true;
       if (this._pendA) {
         const d = (now - this._tA) / 1000;
-        if (d > 0.05 && d < 5.5) { this._samples.push(d); if (this._samples.length > 6) this._samples.shift(); this._pendA = false; this._render(); this._maybeTune(); }
+        if (d > 0.05 && d < 5.5) {
+          this._samples.push(d); if (this._samples.length > 6) this._samples.shift(); this._pendA = false;
+          // 逐輪記帳：整通的「聲音起→嘴巴動」序列。長通話會不會越漂越多，帳一拉開看斜率就知道。
+          try { trackProductEvent('av_onset_lag_ms', { ms: Math.round(d * 1000), turn: (typeof LiveVoice !== 'undefined' && LiveVoice._playbackTurn) || 0 }); } catch (e) {}
+          this._render(); this._maybeTune();
+        }
       }
     } else if (mm < 0.014) this._videoHot = false;
     this._raf = requestAnimationFrame(() => this._loop());
@@ -5135,6 +5409,7 @@ const AvSyncMeter = {
   _maybeTune() {
     // 舊水管拆除（1.24.6）：新引擎＝臉聲同線原生對齊、退回也用寫死小等待——校時器只准看、不准動手
     //（它是舊雙管世界的拐杖，在新世界會把聲音越推越後＝嘴先動的機制源；量測顯示照舊、供機器人成績單用）
+    if (!this._overlay) return;   // 2026-08-12 整通量測上線後的保險：沒開 debug 浮層＝純記帳模式，絕不動手調時間
     try { if (typeof faceEngine === 'function' && faceEngine() === 'flashhead') return; } catch (e) {}
     if ((localStorage.getItem('munea.avSyncAuto') || '1') !== '1') return;   // 7/11 起預設開（Edward 拍板對齊為正解）；munea.avSyncAuto=0 可關
     if (this._samples.length < 3) return;
@@ -5176,6 +5451,13 @@ const FaceWave = {
     return v < FaceWave.QUIET_FLOOR ? 0 : (v - FaceWave.QUIET_FLOOR) / (1 - FaceWave.QUIET_FLOOR);
   },
   level() {
+    // 撥號中波紋一律靜止（Edward 8/12：「撥號中就開始在收音了，有問題」）。
+    // 麥克風確實從撥號手勢就先錄著——那是為了不漏掉他的第一句話（接通立刻補送）；
+    // 但畫面不該在還沒接通時就跳收音動態，看起來像偷聽。錄歸錄、畫面等真的接通才動。
+    try {
+      const sc = document.getElementById('chat');
+      if (sc && sc.dataset.state === 'connecting') return 0;
+    } catch (e) {}
     let her = false;
     try { her = typeof speechActive === 'function' && speechActive(); } catch (e) {}
     const mic = (typeof LiveVoice !== 'undefined' && LiveVoice.micLevel) || 0;
@@ -5255,6 +5537,39 @@ const FaceWave = {
   },
 };
 window.MuneaFaceWave = FaceWave;
+
+/* 接通提示音（2026-08-12 · Edward 1.0.66/67 實機「第一句等很久、以為當機、會再問一次」）：
+   長輩按下通話後有一段安靜的等待（領顯卡、暖機、她準備開口），眼睛沒盯著字幕就以為當機。
+   在「真的接通、可以講話了」那一刻給一聲很輕的兩音提示（本地合成、零延遲、不走模型），
+   把「線通了」跟「她開口」在耳朵上拆開——聽到叮聲就知道沒當機，也就不會再問第二次
+   引發插話連鎖。音量刻意壓低（比她說話小很多），只做信號、不做鈴聲。 */
+const CallChime = {
+  _ctx: null,
+  // 建聲音引擎要在使用者手勢裡做（瀏覽器規矩）：撥號那一下就是手勢
+  arm() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!this._ctx) this._ctx = new AC();
+      if (this._ctx.state === 'suspended') { const p = this._ctx.resume(); if (p && p.catch) p.catch(() => {}); }
+    } catch (e) {}
+  },
+  play() {
+    try {
+      const ctx = this._ctx; if (!ctx || ctx.state !== 'running') return;
+      const t0 = ctx.currentTime + 0.02;
+      [[659.25, 0], [880, 0.13]].forEach(([freq, at]) => {   // E5→A5 上行兩音＝「通了」的語感
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, t0 + at);
+        gain.gain.linearRampToValueAtTime(0.055, t0 + at + 0.02);
+        gain.gain.linearRampToValueAtTime(0, t0 + at + 0.14);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t0 + at); osc.stop(t0 + at + 0.16);
+      });
+    } catch (e) {}
+  },
+};
 
 // 進聊聊頁：她像朋友一樣「主動先開口」（帶記憶＋今日狀態）
 let callConnected = false;
@@ -8039,6 +8354,7 @@ async function connectCall() {
   ), 'chat')) return;
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
+  CallChime.arm();   // 提示音引擎要趁這個手勢建好，等接通那刻才響得出來
   // 2026-08-01（Edward 真機：「按下去會 lag 一陣子才轉撥通中，會以為當機」）：
   // 畫面的「撥通中」原本要等帳號確認／點數／向總機叫號整趟跑完（那幾支各 0.7-1.2 秒）
   // 才切——手指按下去到畫面有反應中間空白一大段。改成**先把畫面切過去、再去跑那些事**；
@@ -8245,7 +8561,7 @@ async function connectCall() {
       voiceCallMark('opening_audio_warmup', 'pass');
       const openingAudio = noFace
         ? { mode: 'no_avatar', verified: true, receiverAttached: false }
-        : await LiveVoice.prepareOpeningAudioPath(1000);
+        : await LiveVoice.prepareOpeningAudioPath(600);
       // Silent warmup is advisory: some Avatar workers do not emit RTP for
       // zero PCM. A connected receiver continues on the same-line route and
       // real opening audio is checked by the watchdog; no receiver uses local
@@ -8263,16 +8579,55 @@ async function connectCall() {
           LiveVoice._openingRecorded = true;
         }
       } catch (e) {}
-      markConnected();                       // 1 秒獨立暖機完成，現在才切成真正接通並開始計時
-      voiceCallMark('call_connected', 'pass');
-      if (!noFace) Avatar.showLiveFrame();   // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
-      try { FaceIdle.stop(); } catch (e) {}
-      // greet() 現在只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
-      LiveVoice.greet();
-      // 麥克風已經在 ready 事件開好了（見 'ready' 分支）。這裡再補一次是保險：
-      // 萬一 ready 早於 markConnected、中間狀態被別的路徑動過，接通當下一定是開的。
+      // ===== 接通狀態＝能講話才算（Edward 8/13 拍板 UX 規矩）=====
+      // 「畫面說接通就必須能說話；還不能說話就維持撥號中」。所以整個接通動作
+      // （切狀態、開始計時、叮聲、亮提示、她可開場）通通移到「上行證明」之後：
+      // 伺服器親口回「你的聲音我收到了」（uplink_ok）才一次全做——只有一個時刻、
+      // 只有一種真相，不再有「畫面接通了、其實聾著」的 2~3 秒縫。
+      // 麥克風在 ready 就開著送（不送就永遠等不到證明）；這裡先補一次保險。
       LiveVoice._setMicOpen(true);
       LiveVoice._openMicAfterGreet = false;
+      {
+        let _went = false;
+        let _proofT = 0;
+        const _goConnected = (basis) => {
+          if (_went) return; _went = true;
+          clearTimeout(_proofT); LiveVoice.onUplinkOk = null;
+          if (!callDialing && !callConnected) return;    // 等證明的空檔掛斷了：別對著已收線的畫面接通
+          markConnected();                               // 現在才切「通話中」並開始計時——跟能講話同一刻
+          voiceCallMark('call_connected', 'pass', { basis });
+          CallChime.play();                              // 「線通了」用耳朵就聽得到
+          setLocalizedCallHint('connected');             // 接通了、可以直接講——她預設等使用者先開口
+          voiceCallMark('connected_ux_shown', basis === 'uplink_ok' ? 'pass' : 'warn', { basis });
+          if (!noFace) Avatar.showLiveFrame();           // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
+          try { FaceIdle.stop(); } catch (e) {}
+          // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
+          LiveVoice.greet();
+        };
+        // 新伺服器（ready 有宣告 uplinkAck）：等真的證明、最多 6 秒；等不到＝這通就是
+        // 接不通，誠實收線亮「服務尚未完成接通」卡，絕不假裝接通。
+        // 舊伺服器（沒宣告）：沒有證明可等，2.5 秒保底照舊接通、帳記 warn。
+        const _ackCapable = LiveVoice._uplinkAckSupported === true;
+        const _failHonestly = () => {
+          if (_went) return; _went = true;
+          LiveVoice.onUplinkOk = null;
+          voiceCallFail('uplink_never_proven', 'no_uplink_proof_6000ms');
+          try { LiveVoice.stop(); } catch (e2) {}
+          try { FaceWave.stop(); } catch (e2) {}
+          try { completeChatSession('uplink_never_proven'); } catch (e2) {}
+          chatOpened = false; setCallDialing(false); stopCallTimer();
+          const ce = document.getElementById('chat'); if (ce) ce.dataset.state = 'idle';
+          setFaceState('idle'); setLocalizedCallHint('unavailable');
+          showCallStatusCard('activationPending');       // 「服務尚未完成接通」＝實話
+          try { FaceIdle.start(); } catch (e2) {}
+        };
+        _proofT = setTimeout(
+          () => (_ackCapable ? _failHonestly() : _goConnected('timeout')),
+          _ackCapable ? 6000 : 2500,
+        );
+        if (LiveVoice._uplinkOk) _goConnected('uplink_ok');
+        else LiveVoice.onUplinkOk = () => _goConnected('uplink_ok');
+      }
       try { if (window.MuneaAvSyncMeter && typeof Avatar !== 'undefined' && Avatar.on) MuneaAvSyncMeter.start(); } catch (e) {}   // 接了會動的臉才量延遲（左下角讀數 · Edward 2026-07-10）
       // 省點提醒（Edward 2026-07-10）：通話開著卻一直沒人講話 → 寧寧兩段式溫柔提醒、再久自動掛斷、不浪費點數。
       // 時鐘只算「真沉默」（使用者＋AI 都沒講）；使用者一開口整個歸零。11 秒一階。
@@ -8611,10 +8966,25 @@ function init() {
     FaceWave.stop();
     showView('home');
   });
-  // 滑掉/切走 App＝自動掛斷（Edward 2026-07-10）：離開畫面就走「結束通話」完整收線（停聲音/停臉/停計時/記點），不讓通話在背景白燒點數
-  const _hangupOnLeave = () => { try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {} };
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _hangupOnLeave(); });
-  window.addEventListener('pagehide', _hangupOnLeave);
+  // iOS WebView 在音訊路由／系統面板切換時可能短暫 hidden。舊版立刻 click 掛斷，會把
+  // 短暫切換誤當成使用者離開。改成穩定背景 5 秒才收線；回前景就取消。
+  let _hangupOnLeaveT = null;
+  const _cancelHangupOnLeave = () => { clearTimeout(_hangupOnLeaveT); _hangupOnLeaveT = null; };
+  const _hangupOnLeave = (source = 'visibility_hidden') => {
+    _cancelHangupOnLeave();
+    if (!(callConnected || callDialing || callPreflightPending)) return;
+    _hangupOnLeaveT = setTimeout(() => {
+      _hangupOnLeaveT = null;
+      if (document.visibilityState !== 'hidden') return;
+      try { trackProductEvent('voice_background_release', { source, hiddenMs: 5000 }); } catch (e) {}
+      try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {}
+    }, 5000);
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') _hangupOnLeave('visibility_hidden');
+    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} }
+  });
+  window.addEventListener('pagehide', () => _hangupOnLeave('pagehide'));
   // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；其餘＝知道了、收卡
   if ($('#busyCardBtn')) $('#busyCardBtn').addEventListener('click', () => {
     const card = $('#busyCard'); const action = card && card.dataset.action;
@@ -12093,20 +12463,39 @@ function init() {
   if (window.MuneaStore && typeof window.MuneaStore.requestReview === 'function' && window.MuneaStore.available()) {
     window.__muneaRequestReview = function () { return window.MuneaStore.requestReview(); };
   }
+  // 問過就不再問——這是一輩子一次的章，不是「每版一次」。
+  // 2026-08-10 Edward：「評分那個彈窗不要一直跳！用戶不想填跳過了就不要再出現。」
+  // 舊版蓋的章是 munea.reviewAsked.<版號>，所以每出一版就重新問一次；他測版本測得勤，
+  // 感覺就是一直跳。而且蘋果那個視窗**不會回報使用者按了什麼**——我們無從分辨
+  // 「給了五顆星」還是「滑掉不想理」，那就一律當成不想再被打擾。
+  const REVIEW_ASKED_KEY = 'munea.reviewAsked.forever';
+  function reviewAlreadyAsked() {
+    try {
+      if (localStorage.getItem(REVIEW_ASKED_KEY)) return true;
+      // 已經被舊規矩問過的人，不要因為換了新規矩又被問一次。
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('munea.reviewAsked.') === 0) {
+          localStorage.setItem(REVIEW_ASKED_KEY, '1');
+          return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
   window.__muneaMaybeAskReview = function (moment) {
     try {
-      const ver = (window.MuneaVersion && window.MuneaVersion.current) || '0';
-      if (localStorage.getItem('munea.reviewAsked.' + ver)) return;               // 每版最多一次
+      if (reviewAlreadyAsked()) return;                                          // 一輩子最多一次
       if (localStorage.getItem('munea.reviewCoolOff') === '1') return;            // 負面情境冷卻（斷線/錯誤後設）
       const chats = +(localStorage.getItem('munea.stat.chatsCompleted') || 0);
       const okMoment = (moment === 'chat_completed' && chats >= 3) || moment === 'activity_done';
       if (!okMoment) return;
-      // 原生沒接上就直接退場、不蓋「這版問過了」的章——否則這一版的機會會被白白燒掉（2026-07-29 修）
+      // 原生沒接上就直接退場、不蓋「問過了」的章——否則補好原生也叫不動已裝機的人（2026-07-29 修）
       if (typeof window.__muneaRequestReview !== 'function') {
         trackProductEvent('review_prompt_skipped', { moment: moment, reason: 'native_unavailable' });
         return;
       }
-      localStorage.setItem('munea.reviewAsked.' + ver, '1');
+      localStorage.setItem(REVIEW_ASKED_KEY, '1');
       trackProductEvent('review_prompt_shown', { moment: moment });
       window.__muneaRequestReview();
     } catch (e) {}
@@ -13036,10 +13425,15 @@ function runBootSplash() {
   // 第一次要接開場三頁，播久一點；平常只要蓋住載入那一兩秒就好
   const hold = needIntro ? 2400 : 1600;
   window.setTimeout(() => {
+    // 開場頁要在啟動頁「開始淡出之前」就鋪好。
+    // 原本是等淡出跑完 500ms 才顯示——那半秒底下露出來的是 App 首頁，
+    // 使用者看到的就是「啟動頁 → 閃一下首頁 → 開場頁」（Edward 2026-08-10 真機回報）。
+    // 配套：.boot-splash 的層級要比 .onb 高一階，否則排在後面的開場頁會直接蓋掉
+    // 還在淡出的啟動頁，動畫等於沒播。
+    if (needIntro) openOnboardingIntro();
     splash.classList.add('is-leaving');
     window.setTimeout(() => {
       splash.hidden = true;
-      if (needIntro) openOnboardingIntro();
     }, 500);
   }, hold);
 }

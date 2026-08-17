@@ -232,6 +232,31 @@
       "salt-free"
      ],
      "say": "Salt substitutes do cut the sodium roughly in half, and for most people that's a sensible trade. **But they work by swapping in potassium — and kidneys that aren't in good shape can't clear it. Too much potassium leaves you weak all over and can throw the heart rhythm off.** Some blood pressure medicines raise potassium on their own too: the -pril and -sartan ones, and spironolactone. **So if you have any kidney trouble, or you're on blood pressure pills, ask your doctor or pharmacist before you switch shakers.** The safest way to cut back on salt isn't a different shaker anyway — it's garlic, onion, lemon, vinegar, black pepper and the salt-free herb blends."
+    },
+    "bp-potassium-foods": {
+     "label": "Where to get potassium, magnesium and calcium — and how strong the evidence is",
+     "say": "The reason everyone tells you to eat more produce is the potassium — it helps the body shed extra sodium. The evidence holds up reasonably well: pooling dozens of trials, people who already have high blood pressure and add potassium drop the top number by about 4 to 5 points. Not huge, but consistent — and **the people who gain most are the ones who were eating a lot of salt and very little produce**. Easy sources: bananas, potatoes with the skin, sweet potatoes, spinach, tomatoes, beans, lentils, oranges, cantaloupe, plain yogurt. Magnesium is in dark greens, nuts and whole grains; calcium in milk, yogurt, tofu, canned sardines. You don't need to overhaul anything — start with one extra vegetable at each meal and one piece of fruit a day. One important exception: **if your kidneys aren't working well, or you take a medicine that raises potassium, check before adding any of this.** Too much potassium is dangerous."
+    },
+    "bp-isometric-exercise": {
+     "label": "Isometric exercise — wall sits and hand grip (newer evidence, and not a small effect)",
+     "say": "Here's something that surprised a lot of people. Exercise where you hold force without moving — a wall sit, or squeezing a grip — lowers blood pressure more than walking does. Pooling around 270 trials, that category averaged an 8.2 point drop; walking came in around 4 to 5. The protocol is four sets of 2 minutes of effort with 2 minutes rest between, three days a week, with results showing by 8 to 10 weeks. Aim for \"working, but I could hold this.\" An older-adult version: back against the wall, one step forward with the feet, bend the knees only slightly, hold 2 minutes. If standing is unsteady, do it seated — hold a towel at both ends and pull outward, or just grip the towel hard, 2 minutes. **The one rule that matters: keep breathing normally the whole time. Never hold your breath.** Stop for dizziness or headache."
+    },
+    "bp-weight-alcohol": {
+     "label": "What weight, alcohol and coffee are each worth",
+     "say": "Three things move blood pressure directly. Here are the numbers. **Weight** — roughly 1 point off the top number per kilogram (about 2 pounds) lost. Five kilos is 4 to 5 points, about what one medication does. **Alcohol** — there's a threshold here. If you're already at two drinks a day or fewer, quitting barely moves your blood pressure. But **if you're drinking more than two a day, cutting the amount in half drops the top number by 5 to 6 points on average** — for heavy drinkers this is the best-value move in the whole topic. **Coffee** — regular drinkers see little effect, so there's no need to quit. But someone who doesn't normally drink it can spike about 10 points for a while after a cup, so don't drink coffee in the 30 minutes before you measure."
+    },
+    "bp-food-remedies": {
+     "label": "Food remedies — what has something behind it and what's just comforting",
+     "say": "Let me sort the strong from the weak honestly. Two have something behind them. **Hibiscus tea** — pooled studies show roughly a 5 to 7 point drop in the top number, though the trials vary a lot. Unsweetened, two or three cups a day, it's a fine daily drink. **Garlic** — used in cooking, people with high blood pressure may see a few points. On the other side: celery juice, apple cider vinegar, onion soaked in wine, beet-and-cucumber detox drinks — there isn't decent human research supporting \"this lowers blood pressure.\" Enjoy them as food. But **don't let them replace medication, and never skip a dose because you drank something** — that's the dangerous part. And if your pressure is running low enough to make you lightheaded on your medication, don't adjust it yourself; call the office."
+    },
+    "bp-supplements-honest": {
+     "label": "Are supplements worth it? (Mostly not)",
+     "dailyCap": "EPA + DHA under 2 g a day, total fish oil under 3 g. Aged garlic extract 600 to 1200 mg",
+     "say": "I've run the numbers on this one. For blood pressure specifically, most supplements aren't a good buy. **CoQ10** — the pooled review found no clear effect on blood pressure. That's money you can keep. **Fish oil** — about 2.5 points on the top number, which is very small. It has other cardiovascular arguments, but don't buy it to lower blood pressure. Keep labeled EPA + DHA under 2 grams a day and total under 3. **Beetroot juice** — around 3.5 points short-term; whether it holds across a full day isn't well established. The strongest of the bunch is **aged garlic extract**, averaging about 8 points in people with high blood pressure — comparable to walking. Typical dose 600 to 1200 mg a day. If you're on a blood thinner or have surgery coming, clear concentrated garlic and fish oil with your doctor first."
+    },
+    "bp-herb-drug-clash": {
+     "label": "The things that fight with blood pressure medication",
+     "say": "A few things collide with the medications. **Red yeast rice** — it naturally contains the same compound as prescription cholesterol drugs, so taking both risks muscle breakdown. Don't stop either on your own; take both bottles to the pharmacist. **Licorice** — not the candy flavoring, but real licorice root, licorice tea and licorice-containing herbal formulas. Used regularly it makes the body hold sodium and dump potassium, and blood pressure climbs. It takes about ten days to come back down after stopping. **Decongestants** — pseudoephedrine and phenylephrine in cold and sinus products tighten blood vessels and push both pressure and pulse up. Say \"I have high blood pressure\" before you buy anything over the counter. **NSAIDs** — ibuprofen, naproxen and the like. Taken regularly they raise blood pressure and blunt your medication."
     }
    }
   },
@@ -288,6 +313,43 @@
     "dm-refer": {
      "label": "When to get help fast",
      "say": "**Low blood sugar is the most urgent thing here**: a cold sweat and shakiness, but still awake and able to swallow — take glucose tablets, juice, or regular (not diet) soda right away. **And remember the second half: if they become confused or you can't wake them, call 911 immediately** — these two things always go together, never just the first part. Already confused or unresponsive means 911, now. Also: extreme thirst, confusion, and rapid breathing with fruity-smelling breath means get medical help immediately — and a sore or cut that just won't heal needs a doctor's look."
+    },
+    "dm-carb-exchange": {
+     "label": "You can eat rice and bread — the question is how much",
+     "say": "The most important sentence first: **it isn't that you can't eat carbs, it's how much.** Dietitians count in carb servings, and one serving is 15 grams of carbohydrate. In things you can see: a third of a cup of cooked rice or pasta is one serving, so a full cup is about three. One slice of bread is one serving. Half a cup of cooked potato, sweet potato, corn, peas or beans is one. A small tortilla is one; a large flour tortilla can be three. Here's where most people get caught: **potatoes, sweet potatoes, corn, peas, winter squash and beans are on the starch side of the plate, not the vegetable side.** On a day you eat those, take the rice or bread down accordingly. Cut in this order: sugary drinks first, then the starch portion. Don't cut the vegetables or the protein."
+    },
+    "dm-exercise-rx": {
+     "label": "The exercise prescription — 150 minutes a week, plus strength twice or three times",
+     "say": "Here's a version you can actually follow. **150 minutes a week of moderate aerobic activity**, spread over at least three days. Don't go two days in a row without any — the benefit fades in that gap. Moderate means you're breathing harder and sweating a little but can still talk in full sentences. If you could sing, it's too easy. Brisk walking, cycling, swimming, dancing all count. **Strength work twice or three times a week**, never two days back to back — the muscle rebuilds on the off day. No gym required: stand up from a chair and sit back down, 10 reps a set, two or three sets. Resistance band pulls. Water bottles as weights. Half squats holding the chair back. This is the piece that helps blood sugar most. Even a **10-minute walk 30 to 60 minutes after eating** flattens the after-meal spike noticeably."
+    },
+    "dm-exercise-meds": {
+     "label": "On insulin or certain pills? A few extra steps around exercise",
+     "say": "If you take insulin, or a pill that pushes your body to make insulin (your pharmacist can tell you which), exercise needs a few extra moves. **Don't exercise on an empty stomach**, especially right after a dose. The classic setup for trouble is a pre-dawn walk with breakfast afterward. **Carry sugar.** Glucose tablets or a small juice box in the pocket. Not chocolate, not cookies — the fat slows absorption and it won't rescue you in time. Don't head somewhere remote alone. Tell whoever you walk with: \"I have diabetes. If I start acting strange or slurring, give me sugar first.\" A card in your wallet with your name, condition, doctor and an emergency contact is worth doing."
+    },
+    "dm-hypo-1515": {
+     "label": "Low blood sugar — how to spot it, the 15-15 rule",
+     "say": "Lows come on fast. The classic signs are sudden cold sweat, shaky hands, racing heart, dizziness, ravenous hunger, going pale. Older adults often don't get those — instead they get **suddenly exhausted, slurred or muddled speech, slowed movements, or irritable**. Families usually read it as a bad mood. That's the mistake. If the person is awake and can swallow, use 15-15. Take **15 grams of fast sugar**: 3 to 4 glucose tablets, 4 ounces of juice, 5 ounces of regular soda, a tablespoon of sugar or honey, or a few hard candies. Wait 15 minutes, recheck if there's a meter. Still low or still feeling it — repeat the same amount. **One critical exception**: if they take an alpha-glucosidase inhibitor (acarbose, miglitol), **table sugar won't work fast enough — it has to be glucose tablets or gel.** Anyone on those should carry glucose. If they're not fully alert or can't swallow, **put nothing in their mouth and call 911**."
+    },
+    "dm-fruit": {
+     "label": "Fruit isn't off the table — two servings a day, and don't drink it",
+     "say": "You can eat fruit, and you should — the fiber, potassium and vitamins earn their place. It's about amount and form. **Two servings a day.** One serving is about the size of your fist, or a small bowl of cut fruit: one small apple, one medium orange, half a large banana, about 15 grapes, a cup of berries, a cup of melon. So one large banana is two servings — that's your fruit for the day. Two things matter most. **Don't juice it and don't buy juice** — the fiber is gone, the sugar arrives much faster, and a glass is usually three or four pieces of fruit that you drink in a minute. Eat it whole, and chew. And **split it up** — one serving in the morning, one in the afternoon. All at once will spike you. Many people find it goes down better as a between-meal snack than right on top of a meal."
+    },
+    "dm-folk-food": {
+     "label": "Bitter melon, cinnamon, apple cider vinegar, okra water — one at a time",
+     "say": "Let me go through the ones people ask about most, honestly. **Bitter melon** — pooled international trials found no measurable blood sugar advantage over placebo or over diabetes medication, and the trials were low quality. A 2023 review put it plainly: current evidence can't tell. So — **excellent as a vegetable** (high fiber, low calorie, good as the first thing on your plate) but not as a treatment. **Cinnamon** — results scatter widely; pooled, the effect is small or unclear. Fine in cooking, not worth buying for. **Apple cider vinegar** — small studies suggest a modest effect on after-meal glucose, but nothing that would change your medication. It's also hard on tooth enamel undiluted. **Okra water** — no meaningful human evidence at all. One thing worth knowing about labels: **\"supports healthy blood sugar\" is a structure/function claim, not an FDA-approved treatment claim** — the fine print says so on the bottle."
+    },
+    "dm-supplement-truth": {
+     "label": "How to read supplements — the caps, who shouldn't, what isn't worth buying",
+     "dailyCap": "Chromium: diet supplies the small amount needed (about 25 to 35 mcg). Products often exceed 200 mcg and no long-term safe upper limit is set",
+     "say": "The most useful sentence first: **nothing marketed for blood sugar replaces medication, and most do less than you think.** That money buys better groceries and a decent pair of shoes. **Chromium** — the American Diabetes Association doesn't recommend it, because studies haven't confirmed a benefit in diabetes. The body needs very little, and normal eating supplies it. Bottles routinely hold 200 mcg or more per capsule, and no safe long-term upper limit has been established — meaning nobody really knows. **Alpha-lipoic acid** — some evidence for nerve pain symptoms, but it isn't a glucose-lowering product. **Berberine** — this one does lower glucose in small studies, which is exactly why it isn't harmless: **stacked on diabetes medication it can drop you too low**, and it interacts with a long list of drugs. Common rule for all of them: add only one thing at a time, and tell the doctor who manages your diabetes that you're starting it."
+    },
+    "dm-foot-care": {
+     "label": "Look at the feet daily, get them checked yearly",
+     "say": "After years of high glucose the nerves in the feet go quiet — you can break the skin and not feel it — and circulation is poorer, so it heals slowly. Most amputations start with a small wound nobody noticed. **One thing daily**: after your shower, sit down and look at both feet — soles, heels, both sides, every space between the toes. Put a mirror on the floor if you can't bend; ask family if your eyesight isn't up to it. You're looking for breaks, blisters, red spots, color changes, soggy skin between toes. **Test bath water with your elbow**, not your foot. Dry thoroughly, especially between the toes. Lotion on the top and sole, never between the toes. Don't do these yourself: no razor blades or graters on calluses or corns, no medicated corn pads, no heating pad left on your feet overnight. And **have your feet examined at least once a year**."
+    },
+    "dm-annual-checks": {
+     "label": "The yearly checks — write them on a card and hand it over",
+     "say": "Blood sugar isn't just the fingertip number. There's a short list that should happen on a schedule, and it's the part most often missed. The basics: **A1c at least twice a year**. **A lipid panel yearly.** **Urine albumin yearly** — that's the early warning for the kidneys. **A foot exam at least yearly.** And **a dilated eye exam yearly** — diabetic eye damage has no symptoms early on, and by the time vision changes it's often advanced. What to do today: write those five on a card and hand it to your doctor at the next visit with one question — \"which of these have I had this year?\" Have them write the dates on the card and you can reuse it next year."
     }
    }
   },
@@ -410,7 +472,40 @@
     },
     "consti-refer": {
      "label": "When it needs a doctor",
-     "say": "If there's blood in your stool or it's turned black, if you're losing weight without trying, or if you've gone from regular to nothing at all with bad belly pain — that's a doctor's visit, promptly. Changing your diet won't fix that kind."
+     "say": "If there's blood in your stool or it's turned black, if you're losing weight without trying, or if you've gone from regular to nothing at all with bad belly pain — that's a doctor's visit, promptly. Changing your diet won't fix that kind.  If there's trouble breathing, confusion, or pain you can't bear, don't wait — call 911."
+    },
+    "consti-fiber-slow": {
+     "label": "Add fiber slowly — and it doesn't work for everyone",
+     "say": "Add fiber a little at a time, week by week. Deciding today and eating vegetables all day usually buys you bloating and gas, and then you quit. Give it four to six weeks, and bring the water up alongside it. And something honest: **fiber doesn't work for everyone.** If adding it makes you more bloated or crampy, or you feel the urge but still can't pass anything, the problem may not be \"not enough roughage\" — it may be a slow-moving colon or an outlet that isn't relaxing. That needs a doctor. More fiber will just make you miserable."
+    },
+    "consti-psyllium": {
+     "label": "Psyllium husk — how to take it, how much water, how far from your pills",
+     "dailyCap": "Start at 5 g a day, build to around 10 g. Always with a full glass (8 oz or more) of water",
+     "say": "Psyllium husk is the pharmacy fiber that actually has clinical trials behind it, which is rare in this aisle. How to take it: **start at 5 grams**, after breakfast, mixed into a full 8-ounce glass of water and drunk right away — don't let it sit and thicken. Build to about 10 grams, split morning and evening. Four rules. **One: without enough water it can congeal in the throat or gut, and that is genuinely dangerous.** **Two: keep it two hours away from your other medications** — it blocks absorption. **Three: not for anyone with swallowing difficulty, or a history of bowel obstruction or narrowing.** **Four: not a good fit for someone bedbound who can't take that much fluid.** Expect a few gassy days at the start; it usually settles."
+    },
+    "consti-posture": {
+     "label": "How you sit on the toilet — put a low stool under your feet",
+     "say": "You can change the position. Put a stool about 8 inches high under your feet so the knees sit higher than the hips, lean forward, elbows on thighs. That straightens the bend in the rectum and takes some of the work out of it. Two things matter more than the stool. **Don't hold your breath and bear down** — straining spikes blood pressure, which matters for older adults. And **don't sit longer than 10 minutes**. Leave the phone outside. Long sits are how hemorrhoids happen. If nothing comes, get up and wait for the next urge. Honestly: the stool has measurable benefit in healthy volunteers, but randomized trials in people who are actually constipated haven't shown a clear difference. It's free to try — and if it does nothing, that's not your fault."
+    },
+    "consti-massage": {
+     "label": "Abdominal massage — direction, timing, how long",
+     "say": "You can do this yourself or for someone you care for, and **the direction matters — clockwise**: up from the lower right, across under the ribs, down the left side. That traces the path of the colon. Timing is 30 to 60 minutes after a meal, with a warm flat hand, firm enough to feel it but never painful, 5 to 10 minutes at a time, once or twice a day. The evidence is moderate — randomized trials show more bowel movements and less bloating, but the studies are small. What it has going for it: it's safe, free, and the person doing it can talk with the person receiving it. Skip it after abdominal surgery, over a wound, or if pressing hurts."
+    },
+    "consti-drug-cause": {
+     "label": "A lot of constipation is caused by medication",
+     "say": "Here's what almost nobody is told: **a lot of constipation is the medication, not the bowel.** The usual suspects — opioid pain medicines above all, plus ordinary anti-inflammatories; iron tablets; calcium supplements; aluminum-containing antacids; some blood pressure medicines, especially calcium channel blockers; antidepressants; sedatives and sleep aids; cough medicines; antihistamines. If this started recently, think back to what was added recently. The timing usually lines up. **But don't stop anything on your own** — every one of those was prescribed for a reason. What to do: put every medication and supplement in one bag, take it to the doctor or pharmacist, and ask directly: \"Is anything in here likely to be causing this, and is there an alternative?\""
+    },
+    "consti-elder-causes": {
+     "label": "In older adults it's usually several causes stacked together",
+     "say": "Constipation in an older adult is rarely one thing. Go through them one at a time. **Teeth or dentures don't work, so vegetables are out** and it's soft rice and something salty. That gets fixed at the dentist, or by chopping, cooking soft, or blending into soup. Telling them to eat more vegetables won't do it. **Afraid of nighttime trips or needing help, so they drink nothing all day.** Move the fluids to daytime, prompt at set times, and check whether the bathroom is simply too far or unsafe at night. **Sitting or lying down all day** — the bowel slows with the body. Underactive thyroid, diabetes and Parkinson's all slow things down too. If it's gotten gradually worse over a year or two, with feeling cold and unusually tired, mention it — a blood test answers that."
+    },
+    "consti-coffee": {
+     "label": "A morning cup of coffee (it genuinely works for some people)",
+     "say": "A hot coffee in the morning really does work for some people — studies measure a clear increase in colon contractions, roughly on par with eating a meal. Decaf works too, so it isn't purely the caffeine. Use it simply: a cup with breakfast, paired with the earlier advice about sitting on the toilet 30 minutes after eating. Two cautions. If you also have heartburn or reflux, coffee may make you feel worse — skip this one. And **coffee doesn't count as water**. Drink the water anyway."
+    },
+    "consti-fruit-honest": {
+     "label": "Kiwi, prunes, bananas, honey — what actually holds up",
+     "say": "Ranked by how good the evidence is. The strongest are **kiwifruit and prunes** — those have real trials behind them. Two kiwis a day, or five or six prunes. **Pears, apples and berries** are sensible choices on fluid and fiber, but there isn't much research done directly in constipated people — call them reasonable, not proven. **Yogurt** depends entirely on the strain; that's a separate conversation. **Bananas and honey water** deserve lowered expectations — underripe bananas can actually make things harder, and honey water is mostly comfort. One thing people don't know: **prunes, apples and pears carry sorbitol, and too much means gas and loose stools. One serving a day** — don't dose them like medicine."
     }
    }
   },
@@ -678,6 +773,44 @@
     "reflux-refer": {
      "label": "When to see a doctor — and when it's the heart",
      "say": "If food is getting hard to swallow, you're losing weight without trying, or your stools turn black — see a doctor and get the stomach checked. **And the big one: heartburn can mask a heart attack. If it comes with a cold sweat, shortness of breath, pain spreading to the left arm or jaw, or it gets worse when you move around — treat it as your heart and call 911.**"
+    },
+    "reflux-left-side": {
+     "label": "Sleep on your left side",
+     "say": "Sleep **on your left side**. This isn't folklore — it's been measured with probes overnight. Lying on the left, acid spends the least time in the esophagus; on the right, the most; on your back, in between. Left side also clears acid back down fastest. The practical trick is a body pillow behind your back — people roll flat once they're asleep, so you need something to hold the position. Honestly, it isn't like a medication that works within the hour; it's the \"fewer bad nights\" level of help. But it's free, and you can try it tonight."
+    },
+    "reflux-after-meal-walk": {
+     "label": "Walk 10 to 15 minutes after eating, or chew sugar-free gum",
+     "say": "Don't sit down with your phone after a meal — get up and walk slowly for 10 to 15 minutes. Researchers compared \"walk after eating\" with \"chew sugar-free gum\" while measuring esophageal acid, and both genuinely brought it down. **In the group chewing gum for 30 minutes after a meal, acid exposure time dropped by over 30%** — chewing keeps saliva flowing, saliva neutralizes acid, and it makes you swallow. Walking has a bonus for anyone who bloats: the gas moves along. Just walk — no brisk pace to breathlessness, and nothing that compresses the belly like sit-ups right after eating."
+    },
+    "reflux-small-meals": {
+     "label": "Stop at about three-quarters full, eat smaller and more often, slow down",
+     "say": "Stop at about three-quarters full and eat four or five smaller meals instead of three big ones. Overfilling raises pressure in the stomach and the valve at the bottom of the esophagus can't hold. Then **slow down**: chew more per bite, don't talk through a mouthful, skip straws, cut back on carbonated drinks. All of that is about swallowing less air. About half of what people call bloating is swallowed air. One commonly missed piece: **if dentures don't fit or chewing is hard, food gets gulped down whole** — fix the teeth first, because changing how you eat won't get around that."
+    },
+    "reflux-belt-bend": {
+     "label": "Loosen the belt, don't bend or lift right after eating",
+     "say": "Let the belt out a notch and stop cinching the waistband — you feel this one immediately. A tight waist is constant upward pressure on the stomach. For an hour or two after eating, don't bend forward: no scrubbing the floor on your knees, no lifting anything heavy, no leaning into the dryer. To pick something up, bend the knees and keep the back straight. And smoking loosens that valve at the bottom of the esophagus — there's no compromise version of that one. If quitting isn't happening yet, cutting five cigarettes a day is still better than doing nothing."
+    },
+    "reflux-gas-foods": {
+     "label": "Bloating — find the one or two things making the gas",
+     "say": "If you're passing a lot of gas and the belly feels tight, check whether these are in your daily rotation: cabbage, cauliflower, broccoli, brussels sprouts, onions, garlic, asparagus; beans, lentils, soy; sweet potato, corn, and sugar-free products with sorbitol or xylitol; and anything carbonated. None of these are bad foods and you don't need to drop them all. **Remove one at a time for a week or two** and find the actual one or two culprits. Then go back to eating the rest. Cooking matters too — soak beans before cooking, cook vegetables softer. Easier going through than raw and crunchy."
+    },
+    "reflux-milk-lactose": {
+     "label": "Bloated after milk? Test for lactose intolerance first",
+     "say": "If the bloating or the run to the bathroom follows milk or a powdered nutrition drink, lactose intolerance is a strong bet. It's very common in adults worldwide, and **it's a trait, not a damaged gut.** Testing is simple: drop all dairy for two weeks. If things clearly improve, have a glass again — if the bloating comes back, you have your answer. You don't have to give up dairy forever: switch to lactose-free milk, try yogurt or hard cheese, drink it with food, or have half a cup at a time. Most people find a level that works. Just replace the calcium elsewhere — canned sardines, tofu, dark leafy greens, fortified alternatives."
+    },
+    "reflux-breathing": {
+     "label": "Diaphragmatic breathing (worth doing, but not the main event)",
+     "say": "You can practice this. Lying down or sitting, one hand on the chest and one on the belly, breathe in slowly through the nose so the belly rises and the chest stays still, then breathe out longer than you breathed in. Five to ten minutes, twice a day, at least an hour after eating. The idea is to strengthen the diaphragm, which wraps right around the valve at the bottom of the esophagus. Honestly: pooling the small trials, symptom scores do improve, but the methods vary a lot and the conclusion isn't settled. It's free and harmless, so treat it as a side dish — but don't let it replace the items above."
+    },
+    "reflux-ginger": {
+     "label": "Ginger (there's research behind it, but three groups should ask first)",
+     "dailyCap": "Up to 4 g a day total — roughly three or four thin slices",
+     "say": "Ginger is one of the few foods in this topic with research behind it. Pooled trials show it beats placebo for upper-belly fullness and early satiety, and it genuinely speeds stomach emptying. Steep it as tea or cook with it — **up to 4 grams a day total**, about three or four thin slices. Three groups should check with a doctor or pharmacist first: anyone on a blood thinner, anyone with gallstones, and anyone with surgery within two weeks. And if heartburn is your main symptom rather than fullness, ginger makes some people burn more. Don't push it."
+    },
+    "reflux-supplement-skip": {
+     "label": "Are the \"stomach support\" supplements worth buying?",
+     "dailyCap": "Not recommended for this. Avoid long-term use of anything containing licorice",
+     "say": "People ask about the stomach-support supplements — licorice extract (DGL), aloe vera juice, melatonin and similar. Honestly: **in people with reflux these have only small or preliminary studies behind them, nothing large or solid. The effect isn't dependable.** Keep your money for now. The items we covered — losing weight, nothing to eat in the two or three hours before bed, raising the head of the bed 6 to 8 inches, sleeping on the left — have far stronger evidence, cost nothing, and work every night. One caution: **licorice in quantity raises blood pressure and drops potassium.** That matters especially if you have high blood pressure, poor kidney function, or take a diuretic."
     }
    }
   },
@@ -1794,7 +1927,166 @@
     },
     "lex-refer": {
      "label": "When to stop and get help",
-     "say": "After starting any supplement, if your skin or the whites of your eyes turn yellow, you break out in a rash or swell up, your heart races, or your muscles ache and feel weak — **stop taking it and see a doctor promptly**, and bring the bottle with you. And the most important rule of all: **never stop a prescription medicine in favor of a supplement** — that trade is never worth the risk."
+     "say": "After starting any supplement, if your skin or the whites of your eyes turn yellow, you break out in a rash or swell up, your heart races, or your muscles ache and feel weak — **stop taking it and see a doctor promptly**, and bring the bottle with you. And the most important rule of all: **never stop a prescription medicine in favor of a supplement** — that trade is never worth the risk.  And if your lips or eyelids swell, you break out in hives, or you have trouble breathing — that can be anaphylaxis. Don't wait; call 911."
+    },
+    "lex-drug-clash": {
+     "label": "The combinations that genuinely cause harm",
+     "askedFor": [
+      "interaction",
+      "interactions",
+      "take together",
+      "with my medication",
+      "safe with"
+     ],
+     "say": "These are the pairs worth memorizing. **Blood thinners × fish oil, ginkgo, concentrated garlic, turmeric, nattokinase** — bleeding risk stacks. **Cholesterol medication × red yeast rice** — the same mechanism twice, with a risk of muscle breakdown. **Diabetes medication × anything marketed for blood sugar** (berberine, bitter melon) — you can go too low. **Thyroid medication × calcium or iron** — absorption is blocked; keep them four hours apart. **Diuretics × licorice-containing products** — potassium drops. **St. John's wort × a long list** — including blood thinners, antidepressants and some heart medications. The response to all of it is the same one thing: **before starting anything new, show every bottle to a pharmacist.** It's free and it's the most reliable check there is."
+    },
+    "lex-stop-med": {
+     "label": "Can I stop my medication and take a supplement instead?",
+     "askedFor": [
+      "stop my medication",
+      "get off",
+      "instead of",
+      "replace my",
+      "natural instead"
+     ],
+     "say": "That isn't mine to decide, and it shouldn't be. But one thing is clear. **Don't stop a prescribed medicine on your own in order to take a supplement.** Blood pressure, blood sugar and cholesterol all progress silently — \"I felt fine so I stopped\" shows up months later, and sometimes it can't be undone. That said, three things are yours. **One: wanting fewer medications is a legitimate thing to say out loud to your doctor.** Don't hide it. **Two: bring numbers.** Home blood pressure readings, weight changes — whether anything can come down is decided on that evidence. **Three: if something can be reduced, it comes down in steps, with checks.** Some medications rebound badly if stopped abruptly."
+    },
+    "lex-lutein": {
+     "label": "Lutein",
+     "dailyCap": "Typically 10 mg a day. Smokers should avoid eye formulas containing high-dose beta-carotene",
+     "askedFor": [
+      "lutein",
+      "eye supplement",
+      "eye vitamins",
+      "AREDS",
+      "blue light",
+      "macular"
+     ],
+     "say": "Lutein has real evidence in **people who already have intermediate or advanced macular degeneration** — as part of a specific formula, it slows progression. That part is genuine. But **there's weak evidence that a person with healthy eyes benefits from taking it \"to prevent\" anything, or for screen fatigue.** I'd rather say that plainly. Most tired eyes come from not blinking enough and holding the screen too close. Look 20 feet away for 20 seconds every 20 minutes, brighten the room, put the screen slightly below eye level — free, and more reliable. One safety point: **if you smoke, avoid eye formulas with high-dose beta-carotene** — that combination raises lung cancer risk."
+    },
+    "lex-calcium": {
+     "label": "Calcium",
+     "dailyCap": "No more than 500 mg at a time from supplements; total from food and pills 1000 to 1200 mg a day",
+     "askedFor": [
+      "calcium",
+      "calcium pills",
+      "bones",
+      "osteoporosis",
+      "instead of milk"
+     ],
+     "say": "Calcium is a **food-first** nutrient — dairy, canned sardines, tofu set with calcium, kale, fortified alternatives. Supplements fill the gap, they don't replace the plate. From pills, **take no more than 500 mg at once** — the body can only absorb so much at a time, and excess drives constipation and kidney stones. Keep the total from food and supplements to 1000 to 1200 mg a day. **You need adequate vitamin D for calcium to be absorbed**, so get sun or take D alongside. Keep it **four hours** from thyroid medication, iron, and some antibiotics. If you've had kidney stones or been told your blood calcium is high, ask before starting."
+    },
+    "lex-iron-zinc": {
+     "label": "Iron and zinc — only if you're low, and too much does damage",
+     "dailyCap": "Both only after a blood test confirms a deficiency. Zinc: don't exceed 40 mg a day long-term",
+     "askedFor": [
+      "iron",
+      "iron pills",
+      "zinc",
+      "anemia",
+      "anemic",
+      "no taste",
+      "smell"
+     ],
+     "say": "These two are strictly \"only if you're low.\" **If you're not deficient there's no benefit, and there is harm.** **Iron** — don't take it long-term without being told you're anemic. Excess iron accumulates and damages the liver and other organs. When you do take it: an hour away from tea and coffee, and with vitamin C for better absorption. Black stools are expected, but **they can't be told apart from gastrointestinal bleeding**, so always say \"I'm on iron\" at any visit. **Zinc** — it comes up for loss of taste or slow wound healing, but sustained doses above 40 mg a day cause copper deficiency and a different problem. For both, the first step is a blood test, not a bottle."
+    },
+    "supp-konjac-fiber": {
+     "label": "Konjac / glucomannan fiber",
+     "dailyCap": "Around 3 g a day. Always with a full glass of water, and never right before lying down",
+     "askedFor": [
+      "konjac",
+      "glucomannan",
+      "fiber supplement",
+      "appetite",
+      "feel full",
+      "weight loss"
+     ],
+     "say": "Glucomannan from konjac swells with water, so there's modest evidence for fullness and cholesterol. For weight, any effect is small. **The important part is how you take it safely.** Powders and capsules go down **with a full glass of water**, and **never right before lying down or going to bed**. Without enough fluid it can swell in the throat or esophagus and obstruct — that has genuinely happened to people. Don't use it if swallowing is difficult or you've been told the esophagus is narrowed. **Keep it two hours from other medications.** And konjac jelly candies are a choking hazard — cut them small for older adults and children."
+    },
+    "lex-glucosamine": {
+     "label": "Glucosamine (the knee bottle)",
+     "dailyCap": "Usually 1500 mg a day. Try three months; if nothing changes, stop",
+     "askedFor": [
+      "glucosamine",
+      "chondroitin",
+      "knee",
+      "joints",
+      "cartilage",
+      "arthritis supplement"
+     ],
+     "say": "One of the best-selling supplements with some of the shakiest evidence. Pooling the large trials, **overall it's close to no different from placebo.** A few reports suggest a small edge in people with more severe pain, but nothing dependable. So treat it this way: trying it is your call, but **give it three months, and if you can't tell a difference yourself, stop and spend the money elsewhere.** This isn't something to take for five years on faith. What the money reliably buys instead: strengthening the front of the thigh, and losing a kilogram — the knee carries several times your body weight with every step. Many products are shellfish-derived, so check the label for a shellfish allergy. If you have diabetes, keep an eye on your numbers."
+    },
+    "lex-red-yeast-rice": {
+     "label": "Red yeast rice",
+     "dailyCap": "Do not combine with a prescription cholesterol medication",
+     "askedFor": [
+      "red yeast rice",
+      "cholesterol",
+      "natural statin",
+      "monacolin"
+     ],
+     "say": "Red yeast rice naturally contains essentially the same compound as prescription cholesterol drugs. \"Natural\" does not mean mild here. **Taken alongside a prescription cholesterol medication, it risks muscle breakdown that can damage the kidneys.** The amount varies enormously between products, and the label won't tell you how strong yours actually is — some contain almost none, some contain a full drug dose. Avoid it if you're pregnant, breastfeeding, or have liver problems. If you're taking it, **bring the bottle to your next appointment**. Saying nothing is the dangerous choice."
+    },
+    "lex-nattokinase": {
+     "label": "Nattokinase",
+     "dailyCap": "Follow the label. Not with blood thinners without medical advice; stop 14 days before surgery",
+     "askedFor": [
+      "nattokinase",
+      "natto",
+      "blood clots",
+      "thin the blood",
+      "circulation"
+     ],
+     "say": "Nattokinase is sold to \"thin the blood,\" and there is some laboratory basis for that — which is exactly why it deserves caution rather than enthusiasm. **On top of a blood thinner or anti-platelet medicine it raises bleeding risk**, and there's no good evidence that it prevents strokes or heart attacks the way prescribed medicine does. Here's the twist worth knowing: **natto the food does the opposite** in one respect — it's very high in vitamin K, which works against warfarin. So the supplement and the food pull in different directions, and neither should be added casually if you're on a blood thinner. Stop it at least 14 days before any surgery or dental extraction, and tell the surgeon."
+    },
+    "lex-ginkgo": {
+     "label": "Ginkgo biloba",
+     "dailyCap": "Usually 120 to 240 mg a day. Stop 14 days before surgery or dental work",
+     "askedFor": [
+      "ginkgo",
+      "ginkgo biloba",
+      "memory",
+      "circulation",
+      "brain"
+     ],
+     "say": "Ginkgo is sold for memory, tinnitus and circulation. Honestly, **the evidence is weak for all three.** A large prevention trial found no effect on dementia. For tinnitus, pooled results are close to no difference. And the cautions are clear: **it adds to bleeding risk with blood thinners**, **it may lower the seizure threshold in people with epilepsy**, and it should be **stopped 14 days before surgery or dental extraction**. If memory is the worry, that money is better spent on your hearing, your blood pressure, your sleep, and time spent with other people — all of which have stronger evidence than any bottle."
+    },
+    "lex-maca": {
+     "label": "Maca and royal jelly",
+     "dailyCap": "Follow the label. Ask first if you've had a hormone-related cancer",
+     "askedFor": [
+      "maca",
+      "royal jelly",
+      "energy",
+      "libido",
+      "stamina",
+      "tired"
+     ],
+     "say": "Maca is sold for energy and for \"that department.\" The studies are small and the support is thin — fine as a food, disappointing as a miracle. **Royal jelly carries one safety point I have to make.** There are a number of reported cases of severe allergic reactions, asthma attacks and anaphylaxis after taking it, and almost all occurred in people who already had asthma, hay fever or eczema. I don't recommend it for anyone with that background. If you're going to try it anyway, take a tiny amount the first time, with someone nearby — and if your throat tightens, your lips swell, hives appear, or breathing gets hard, **call 911 immediately**. For both: **if you've had a hormone-related cancer such as breast or prostate, ask your doctor first** — how they act on hormones isn't well understood. If you actually want energy back, check three things first: hours of sleep, whether you get outside and move during the day, and whether anemia or a thyroid problem has been missed. Those beat any bottle."
+    },
+    "lex-bitter-melon": {
+     "label": "Bitter melon, berberine and the blood-sugar supplements",
+     "dailyCap": "Not a substitute for diabetes medication. Berberine interacts with many drugs — ask first",
+     "askedFor": [
+      "bitter melon",
+      "berberine",
+      "blood sugar supplement",
+      "lower my sugar",
+      "natural for diabetes"
+     ],
+     "say": "**None of these replaces diabetes medication**, and that's the sentence that matters most. **Bitter melon** — pooled trials found no measurable advantage over placebo, and the studies were low quality. Great as a vegetable, not as a treatment. **Berberine** does lower glucose in small studies — which is precisely why it isn't harmless. **Stacked on diabetes medication it can drop you too low**, and it interacts with a long list of drugs, including some blood thinners and blood pressure medicines. It's also not for pregnancy or breastfeeding. If you want to try something, tell the doctor who manages your diabetes before you start, add only one thing at a time, and check your numbers more often for the first two weeks."
+    },
+    "lex-essence-chicken": {
+     "label": "Chicken essence, bone broth and \"liver support\" drinks",
+     "dailyCap": "Watch the sodium; skip if you have gout, high uric acid, or are on dialysis",
+     "askedFor": [
+      "chicken essence",
+      "bone broth",
+      "collagen broth",
+      "liver support",
+      "detox drink"
+     ],
+     "say": "These get sold as a pick-me-up for someone who's run down, and as gifts to the sick. Here's the honest accounting. **A serving contains less usable protein than a single egg**, and costs many times more. If someone genuinely needs protein, an egg, a cup of milk or a piece of fish does more for less. As for \"liver support\" and \"detox\" claims — **the liver and kidneys already do that job**, and no drink improves on them. What actually protects the liver is less alcohol, a healthy weight, and not layering on unlabeled herbal products. Two groups should skip these: **gout or high uric acid** (purine load), and **anyone on dialysis or with reduced kidney function** (protein and potassium). Many are also high in sodium, which matters with high blood pressure. If it's a comfort ritual with family, that has its own value — just don't let it stand in for real food or real treatment."
     }
    }
   },
@@ -2449,6 +2741,424 @@
     "stroke-refer": {
      "label": "Call 911, and note the time",
      "say": "**Face drooping, an arm that won't stay up, speech slurred or not making sense — call 911 immediately, and write down the time it started.** These belong on the same list: **sudden loss of vision in one eye or seeing double, sudden violent dizziness where you can't stand up, or the worst headache of your life.** Don't wait to see if it passes, and don't drive yourself. **And a stroke that clears up on its own in a few minutes still needs the emergency room that same day** — a warning stroke is often followed by the real one within days, and that's the one chance to head it off. Far better to go and be told it was nothing."
+    }
+   }
+  },
+  "TW-EDU-49": {
+   "keywords": [
+    "diarrhea",
+    "loose stools",
+    "runny stools",
+    "the runs",
+    "upset stomach",
+    "stomach bug",
+    "stomach flu",
+    "gastroenteritis",
+    "throwing up and",
+    "can't stop going",
+    "watery",
+    "food poisoning"
+   ],
+   "solutions": {
+    "diar-rehydrate": {
+     "label": "Fluids first — and not by chugging plain water",
+     "askedFor": [
+      "diarrhea",
+      "fluids",
+      "what to drink",
+      "electrolyte",
+      "sports drink",
+      "gatorade",
+      "dehydrated"
+     ],
+     "say": "What actually gets people into trouble with diarrhea isn't the diarrhea — it's losing salt along with the water. So start there. Pick up an **oral rehydration solution** at the pharmacy (the pharmacist will know exactly what you mean). Sip it — about 1 to 2 ounces every 5 to 10 minutes. Gulping a whole glass sends you right back to the bathroom. The common mistake is reaching for a sports drink: **too much sugar, too little salt, and the extra sugar pulls more water into the gut** — you end up worse. If a sports drink is truly all you have, cut it half-and-half with water."
+    },
+    "diar-eat": {
+     "label": "You don't have to starve — how to eat today",
+     "askedFor": [
+      "diarrhea",
+      "what to eat",
+      "can I eat",
+      "fasting",
+      "BRAT",
+      "bananas",
+      "rice"
+     ],
+     "say": "The old advice was to stop eating. That's changed — if you can eat, eat. Getting food back in helps the gut lining repair. Go gentle: rice, plain toast, noodles, boiled potatoes, bananas, crackers. Small amounts, five or six times a day rather than three big meals. For a few days, skip milk and dairy, greasy food, sweets and sugary drinks, coffee, and alcohol. And an honest note: the old **BRAT diet — bananas, rice, applesauce, toast — hasn't been shown to beat ordinary bland eating**, and it's short on nutrition. Don't feel you have to stick to it."
+    },
+    "diar-milk-pause": {
+     "label": "Why milk needs a few days off (nothing has changed about you)",
+     "askedFor": [
+      "milk",
+      "dairy",
+      "yogurt",
+      "lactose",
+      "cheese",
+      "nutrition shake"
+     ],
+     "say": "If milk sets you off again after a bout of diarrhea, you haven't suddenly become allergic. The lining of the gut that digests lactose gets stripped, and it takes one to two weeks to grow back. Take a few days to two weeks off, then try half a cup with food. Yogurt and hard cheese are usually tolerated sooner. If someone relies on a nutrition shake for calories, don't just stop it — switch to a lactose-free formula. The pharmacy can point you to one."
+    },
+    "diar-dehydration-signs": {
+     "label": "How to tell if they're dehydrated — thirst isn't reliable in older adults",
+     "askedFor": [
+      "dehydrated",
+      "dehydration",
+      "how to tell",
+      "not peeing",
+      "dry mouth",
+      "dizzy"
+     ],
+     "say": "Older adults lose the thirst signal, so \"I'm not thirsty\" tells you nothing. Check four concrete things. **Urine** — half a day with none, or dark like strong tea. **Mouth** — look at the tongue, not the lips. **Standing up** — any lightheadedness or graying out. **Skin** — pinch the back of the hand and let go; it should snap back, not settle slowly. Two or more of those and you push fluids harder. If nothing stays down all day, stop managing it at home."
+    },
+    "diar-handwash": {
+     "label": "Don't pass it around — hand sanitizer doesn't do much against this one",
+     "askedFor": [
+      "contagious",
+      "spread",
+      "handwashing",
+      "sanitizer",
+      "norovirus",
+      "bleach",
+      "clean"
+     ],
+     "say": "The winter stomach bug is the one **alcohol hand sanitizer does not reliably kill**. It has to be soap and running water, 20 seconds, between the fingers and under the nails. Before cooking, before helping someone eat, after every bathroom trip. If vomit or stool gets on a floor or toilet, clean it with a diluted bleach solution — about a third of a cup of household bleach in a gallon of water — then wipe with plain water. Gloves and a mask; the fine spray from vomit spreads it too. Separate towels and dishes for a few days. And here's what most people miss: **the virus keeps shedding in stool for a week or two after you feel fine**, so keep washing."
+    },
+    "diar-after-antibiotic": {
+     "label": "Diarrhea that started after antibiotics — say this out loud at the visit",
+     "askedFor": [
+      "antibiotic",
+      "antibiotics",
+      "hospital",
+      "after the medicine",
+      "smells"
+     ],
+     "say": "If this started after a course of antibiotics, or after a hospital stay, treat it as its own thing. Antibiotics wipe out the good bacteria and let a stubborn one take over — frequent, foul-smelling stools, sometimes with fever and cramping. **Don't reach for an anti-diarrheal to shut it down**; holding it in makes that one worse. At the visit, volunteer two facts: which antibiotic, and when. That one sentence changes the whole workup."
+    },
+    "diar-probiotics": {
+     "label": "Do probiotics help? (Starting with where the money is wasted)",
+     "dailyCap": "Follow the label, usually one dose a day — but not worth buying to stop a routine stomach bug",
+     "askedFor": [
+      "probiotic",
+      "probiotics",
+      "acidophilus",
+      "culturelle",
+      "does it work"
+     ],
+     "say": "I'll give you the straight answer, which may not match what's on the shelf. For ordinary acute gastroenteritis, **two large trials — each with close to a thousand people — found no difference at all between probiotics and placebo**: not in how long the diarrhea lasted, not in vomiting, not in severity. Buying a bottle to stop this episode is money down the drain; spend it on oral rehydration solution instead. One exception: diarrhea **caused by antibiotics** is a different situation, and the evidence there holds up better — worth asking your doctor or pharmacist about. Space it two hours from the antibiotic. And skip it entirely without medical advice if you're immunocompromised, on chemotherapy, or post-transplant — these are live organisms."
+    },
+    "diar-antidiarrheal": {
+     "label": "Should you take something to stop it? I won't decide that — but four things are yours today",
+     "askedFor": [
+      "imodium",
+      "loperamide",
+      "anti-diarrheal",
+      "medicine",
+      "over the counter",
+      "pepto"
+     ],
+     "say": "Whether to take an anti-diarrheal, and which one, isn't mine to decide — get it wrong and you trap something that needs to come out. But there's one line even a pharmacist will draw flatly: **if there's blood in the stool, if stools are black, or if there's a high fever, don't take one.** For the rest, the pharmacy counter is the fastest answer — tell them three things: how many days, any fever, any blood. Meanwhile, these four need no one's permission: sip oral rehydration solution, eat bland food if you can, park the dairy for a few days, and wash hands with soap for 20 seconds. Most cases settle in two or three days on exactly that."
+    },
+    "diar-long-term": {
+     "label": "Still going after two or three weeks? That's a different conversation",
+     "askedFor": [
+      "still going",
+      "weeks",
+      "months",
+      "keeps coming back",
+      "chronic",
+      "on and off"
+     ],
+     "say": "Acute diarrhea usually settles in two or three days, a week at the outside. Two or three weeks — or a pattern that's come and gone for months — isn't a stomach bug anymore, so stop treating it like one. Before the GI visit, do one genuinely useful thing: keep two weeks of notes — which days, how many times, what you ate, any cramping, what the stool looked like. That one page saves several rounds of back-and-forth. If weight is dropping too, or there's blood, don't wait on the notes — make the appointment."
+    },
+    "diar-refer": {
+     "label": "These don't wait it out at home",
+     "askedFor": [
+      "blood",
+      "fever",
+      "dehydrated",
+      "severe pain",
+      "ER",
+      "should I go in"
+     ],
+     "say": "Go in now for any of these. Blood in the stool, or stools turned black and tarry. Nothing staying down all day, or no urine for half a day or more. High fever, severe abdominal pain, or pain that has settled into the right lower belly. Confusion, hard to rouse, or nearly passing out on standing. If they can walk, urgent care or the ER; if they're barely responsive, **call 911**. Tell the team four things: how many days, roughly how many times a day, the color of the stool and whether there's blood, and any recent antibiotics or hospital stay. Older adults, people with diabetes or on dialysis, and anyone just out of surgery should go in sooner — the same symptoms turn serious faster."
+    }
+   }
+  },
+  "TW-EDU-50": {
+   "keywords": [
+    "numb",
+    "numbness",
+    "tingling",
+    "pins and needles",
+    "hands fall asleep",
+    "no feeling",
+    "burning feet",
+    "carpal tunnel",
+    "neuropathy",
+    "hands go numb"
+   ],
+   "solutions": {
+    "numb-sudden-red-flag": {
+     "label": "First split: did it come on suddenly, or creep up on you?",
+     "askedFor": [
+      "numb",
+      "numbness",
+      "sudden",
+      "one side",
+      "all at once"
+     ],
+     "say": "The first thing to sort out isn't where it's numb — it's **how fast it got that way**. **Sudden**, and on one whole side of the body (an arm and the leg on the same side), or with a drooping face, slurred speech, or vision lost in one eye — that isn't a pinched nerve, that's a stroke. **Call 911**, don't wait to see if it passes. The other pattern — creeping on over months, both hands, or always the same fingers — is usually nerve compression or a metabolic cause, and there's time to work it out properly. Those two get handled completely differently, so start there."
+    },
+    "numb-carpal-night": {
+     "label": "Wakes you at night, shaking the hand helps — two things you can do tonight",
+     "askedFor": [
+      "wakes me up",
+      "at night",
+      "shake my hand",
+      "carpal tunnel",
+      "thumb",
+      "index finger",
+      "wrist"
+     ],
+     "say": "Numbness in the thumb, index and middle finger that wakes you at night and eases when you shake the hand out is the classic pattern for a pinched nerve at the wrist. Two things tonight. First, a **night wrist splint** from the pharmacy — the thing that matters is that it holds the wrist **straight**, not bent. Pressure inside that tunnel is lowest with a neutral wrist, and people curl the wrist under themselves in their sleep without knowing. Worn nightly for four to six weeks, most mild-to-moderate cases improve noticeably. Second, daytime habits: don't work or scroll with the wrist hanging down, press a cloth out instead of wringing it, and every half hour shake the hands out and stretch the wrist each way for 10 seconds. If six weeks of splinting changes nothing, or the muscle pad at the base of the thumb is shrinking, or you're dropping things — stop self-managing and get nerve testing."
+    },
+    "numb-neck": {
+     "label": "When it's coming from the neck — pillow and posture",
+     "askedFor": [
+      "neck",
+      "cervical",
+      "shoulder",
+      "arm",
+      "looking down",
+      "pillow"
+     ],
+     "say": "If the numbness runs from neck or shoulder down the arm into the fingers, and turning or tipping the head makes it worse, the nerve root at the neck is likely the culprit. Take the load off it. **Pillow height first**: lying on your back, the neck shouldn't be arched into a gap or propped so the chin is on the chest; on your side, the pillow should fill the gap from shoulder to ear. Hold the phone up at eye level instead of looking down. Screen top edge roughly at eye height. Every half hour, tuck the chin straight back (make a double chin), hold 5 seconds, 10 times — that resets the head over the neck. **Sleeping on your stomach is the worst of it** — the neck stays twisted all night. Start there. Two or three weeks with no change, see physical therapy."
+    },
+    "numb-diabetes": {
+     "label": "With diabetes: one thing slows it down, and one thing to do every day",
+     "askedFor": [
+      "diabetes",
+      "diabetic",
+      "blood sugar",
+      "feet",
+      "burning feet",
+      "like socks"
+     ],
+     "say": "If the numbness starts in both feet — soles or toes, like wearing a thin sock, worse at night — high blood sugar may have damaged the small nerves. Straight talk: **there's no drug that repairs nerve already damaged. The only thing proven to slow it down is steady glucose control** — so the thing that looks unrelated is actually the treatment. And one thing every single day: **look at the feet**. Soles, between the toes, the heels. Use a mirror on the floor if you can't bend, or ask family. Once sensation dulls, a blister or a rubbing shoe doesn't hurt, and by the time it's noticed it's deep. The rest of the routine: run a hand inside the shoe before putting it on, never barefoot — not even at home, test bath water with your elbow, cut nails straight across."
+    },
+    "numb-b12": {
+     "label": "Some people run low on B12 — and that's a blood test away",
+     "askedFor": [
+      "B12",
+      "vitamin B12",
+      "metformin",
+      "vegan",
+      "vegetarian",
+      "gastric bypass"
+     ],
+     "say": "One cause of numbness is low vitamin B12 — worth asking about, because it's testable and correctable. Who runs low: people on **metformin** long-term (roughly one to three in ten have low or low-normal B12), long-time vegans, anyone who's had stomach or weight-loss surgery, and people on long-term acid-reducing medicines. If that's you and you're numb, say one sentence at the next visit: \"Could we check my B12 while we're at it?\" Most doctors will. One caution — **don't just start high-dose B12 on your own**. If you're not deficient it won't help, and supplementing can mask the clues of another blood problem. Test first, then treat."
+    },
+    "numb-posture": {
+     "label": "The pressure kind — gone in a few minutes, nothing to worry about",
+     "askedFor": [
+      "slept on it",
+      "crossed legs",
+      "squatting",
+      "goes away",
+      "few minutes"
+     ],
+     "say": "Some numbness genuinely doesn't matter: sleeping on an arm, sitting cross-legged too long, squatting, resting an elbow on a hard table edge during a long phone call. That kind fades within a few minutes, and the pins-and-needles on the way back is the nerve waking up. The test is simple — change position, and if it's clearly better in 5 to 10 minutes it was pressure. If it happens often: don't sleep with an arm under your head or body, don't sit with legs crossed for long stretches, keep elbows off hard edges, and don't take the phone into the bathroom and sit there. What isn't pressure: numbness lasting hours, not helped by moving, or showing up at the same time every day."
+    },
+    "numb-alcohol": {
+     "label": "Long-term drinking causes this too — and stopping can turn it around",
+     "askedFor": [
+      "alcohol",
+      "drinking",
+      "drinks",
+      "quit drinking",
+      "beer",
+      "wine"
+     ],
+     "say": "Long-term drinking is one of the more common causes of numb hands and feet, and one of the least often said out loud. Alcohol damages the small nerves directly, and it also blocks absorption of several vitamins — the two work together. It usually starts in both feet and works upward. Here's the good news: **this is one of the causes with a real chance of improving** once the drinking stops and nutrition is restored. If the daily amount isn't something willpower can stop, don't try to white-knuckle it — that can be dangerous. Primary care or a behavioral health clinic has both medication and programs. When you raise it with someone, frame it as \"this is a cause we can actually do something about,\" not as an accusation."
+    },
+    "numb-nerve-glide": {
+     "label": "Two one-minute moves you can do at home",
+     "askedFor": [
+      "exercise",
+      "exercises",
+      "stretch",
+      "physical therapy",
+      "what can I do"
+     ],
+     "say": "If it's the compression type, there are two home moves. The evidence is moderate, but the cost is nothing. **Wrist**: arm straight out, palm up; with the other hand gently pull the fingers back until you feel a mild stretch in the forearm; hold 5 seconds, 10 times, two or three rounds a day. **Neck**: chin tucked straight back into a double chin, hold 5 seconds, 10 times. One rule for both: **the numbness must not get worse while you're doing it.** If it does, make the movement smaller. Skip these after surgery, if you've fractured that wrist or your neck, or if a joint is hot and swollen — check with physical therapy first."
+    },
+    "numb-blocked": {
+     "label": "\"Which kind is it? Do I need surgery?\" — I won't judge that, but here's how to ask",
+     "askedFor": [
+      "which kind",
+      "what is it",
+      "surgery",
+      "operation",
+      "nerve test",
+      "EMG",
+      "what doctor",
+      "medication"
+     ],
+     "say": "Which nerve is pinched, whether you need surgery, whether to be on a nerve medication — I don't judge those. Same numb hand, several possible causes, and it takes an exam and nerve testing to sort out. Guessing over the phone would do you harm. What I can do is get the question asked properly. **Who to see**: neurology or physical medicine for hand numbness alone; orthopedics works too. If you have diabetes, start with the doctor who manages it. **Write these five down and take them in**: which fingers, or the whole hand; when it's worst (night? at work? looking down?); how long, and whether it's getting worse; any weakness or dropping things; your diabetes status and every medication you take. Those five make the visit far faster — and much harder to wave off as \"just getting older.\""
+    },
+    "numb-refer": {
+     "label": "These need attention now",
+     "askedFor": [
+      "stroke",
+      "sudden",
+      "weak",
+      "bladder",
+      "bowel",
+      "ER",
+      "911"
+     ],
+     "say": "Don't wait for a clinic appointment for any of these. **Sudden numbness on one whole side**, or with a drooping face, slurred speech, vision lost in one eye, or veering when you walk — **call 911**. **Numbness with progressive weakness** — dropping things, foot dragging, legs giving way. **Both legs numb along with losing bladder or bowel control, or numbness across the groin and inner thighs** — that's spinal cord compression, and a few hours changes the outcome. ER, now. **Numbness that started after an injury** — a fall, a crash, a blow to the neck or back — call 911. At the ER, give them three things: exactly what time it started, where the numbness reaches, and whether there's weakness. The time matters most — some treatments are chosen by the clock."
+    }
+   }
+  },
+  "TW-EDU-51": {
+   "keywords": [
+    "tinnitus",
+    "ringing in my ears",
+    "ringing ears",
+    "buzzing",
+    "hissing",
+    "ears ring",
+    "ear noise",
+    "ear feels full",
+    "hard of hearing",
+    "hearing loss"
+   ],
+   "solutions": {
+    "tin-sudden-red-flag": {
+     "label": "One question first: has hearing dropped in that ear?",
+     "askedFor": [
+      "tinnitus",
+      "ringing",
+      "sudden",
+      "one ear",
+      "can't hear",
+      "hearing",
+      "ear feels full"
+     ],
+     "say": "Most tinnitus builds slowly and isn't urgent — but one kind is, so let me ask this first: is it **one ear**, and has the hearing in that ear dropped over the last few days, or does it feel plugged like being on a plane? If so, that's sudden sensorineural hearing loss, and it's treated as an emergency — ENT today, or the ER if you can't get in. I'm not saying that to scare you; the timing genuinely matters. **People treated within 72 hours recover far more often than people who wait past two weeks.** Please don't give it until next week. If instead it's both ears, has been there for months or years, and hearing hasn't suddenly dropped — no rush. Let's talk about living with it."
+    },
+    "tin-not-silence": {
+     "label": "The quieter it gets, the louder it sounds — change this tonight",
+     "askedFor": [
+      "night",
+      "bedtime",
+      "quiet",
+      "louder",
+      "can't sleep",
+      "sound"
+     ],
+     "say": "A lot of people find it unbearable once they lie down and the room goes quiet. That's not the ear getting worse — there's just nothing else to hear, so it stands out. Tonight's fix is simple: put a little sound in the room. A fan on low, a humidifier, or rain or ocean sound from your phone, or quiet music. The rule is **keep the volume just under the ringing** — noticeable, but not covering it. The point isn't to mask it; it's to stop the ear having only one thing to listen to. Set a 60-minute timer so it isn't running all night. Do it every night for the first week; most people find the third or fourth night much easier. Honestly: this hasn't been shown to beat other approaches in trials. But it costs essentially nothing and you'll notice something the same night."
+    },
+    "tin-hearing-aid": {
+     "label": "If hearing has slipped too, a hearing aid is often the biggest single step",
+     "askedFor": [
+      "hearing aid",
+      "hearing aids",
+      "hearing",
+      "hard of hearing",
+      "OTC",
+      "cost",
+      "coverage"
+     ],
+     "say": "A large share of people with tinnitus also have some hearing loss and don't know it. In that case a hearing aid is often what helps most — once the outside world comes back in, the ringing stops being the only thing you can hear. Honest caveat: the strictest evidence reviews say the trials aren't good enough to draw a firm conclusion. But most national guidelines still put it first, and plenty of people get real relief. So the order is: **get a hearing test first** — painless, about 20 minutes. Confirm there's a loss before you buy anything. One useful piece of news: **over-the-counter hearing aids are now sold in the US for mild-to-moderate loss**, without a prescription, and they're a fraction of the old price. Coverage varies a lot by plan — check with yours rather than assuming. I won't guess at benefit rules; a wrong guess costs you a wasted trip."
+    },
+    "tin-ginkgo": {
+     "label": "Is ginkgo worth buying? (Plainly: no)",
+     "dailyCap": "Products are usually 120 to 240 mg a day — but not worth buying for tinnitus",
+     "askedFor": [
+      "ginkgo",
+      "ginkgo biloba",
+      "circulation",
+      "supplement",
+      "anything I can take",
+      "is there a pill"
+     ],
+     "say": "Ginkgo is the thing people are pushed toward most for tinnitus, so here's the straight answer. Pooling the trials in people whose main complaint is tinnitus, **ginkgo is close to no different from placebo at three to six months**, and the studies themselves aren't high quality. The money is very likely wasted, and I'd rather you knew. Two groups need extra care: anyone on a blood thinner or anti-platelet medicine — ginkgo stacks onto the bleeding risk — and anyone with a surgery or dental extraction coming up, who should stop at least **14 days ahead**. If you're already taking it and feel it helps, I won't tell you to throw it out. But keep those two things in mind, and don't trade up to a pricier bottle. The same money spent on a hearing test is far better placed."
+    },
+    "tin-caffeine-honest": {
+     "label": "You don't have to give up coffee — but some things really do matter",
+     "askedFor": [
+      "coffee",
+      "caffeine",
+      "tea",
+      "give up",
+      "diet",
+      "what should I avoid"
+     ],
+     "say": "People are told to quit coffee and tea for tinnitus. Let me save you that. **There's no evidence that cutting caffeine improves tinnitus**, and quitting abruptly can make you feel worse through headache and irritability. If coffee is a pleasure in your day, keep it. (If it's clearly keeping you awake, that's a sleep problem — handled separately.) What actually matters is **loud sound**. Earbuds past halfway, a night of karaoke, fireworks, a leaf blower or power tools — those spike it in the moment and damage hearing over time. Wear plugs; a dollar's worth of foam does the job. And one more: don't keep turning the TV up to hear it better. That's working against yourself."
+    },
+    "tin-sleep-stress": {
+     "label": "Stress and poor sleep really do turn up the volume",
+     "askedFor": [
+      "stress",
+      "can't sleep",
+      "anxious",
+      "anxiety",
+      "driving me crazy",
+      "can't stand it"
+     ],
+     "say": "The ringing itself hasn't changed much — so why are some days so much worse? Attention. When you're tired, wound up, or short on sleep, the brain keeps returning to the sound; the more you notice it, the louder it seems, and the louder it seems the more it grates. So half the work here goes into sleep and mood, not into the ear. Three concrete things: **walk 20 minutes outside every day**, ideally in the morning, sunlight better still — daytime activity and conversation keep attention off the ear; **keep the same bed and wake times**, weekends included, within about an hour; and **no keyed-up TV or phone arguments in the 60 minutes before bed**. One thing worth hearing plainly: **this is not a brain tumor, and it will not make you deaf.** Most tinnitus never turns up a frightening cause. For a lot of people, the thing keeping them awake is the worry, not the sound."
+    },
+    "tin-habituation": {
+     "label": "The approach with the best track record is learning not to listen to it",
+     "askedFor": [
+      "cure",
+      "will it go away",
+      "can it be cured",
+      "what do I do",
+      "therapy",
+      "forever"
+     ],
+     "say": "Something plain first, even if it's not what you want to hear: **for most chronic tinnitus, there's no way to make the sound stop.** And yet — most people end up doing well, because it shifts to \"I can hear it, and I don't attend to it.\" That's not a consolation prize; it's the approach with the most consistent evidence behind it. By working on your reaction to it, it moves from a threat sitting next to your ear to background, like the hum of a refrigerator. Clinically it's called cognitive behavioral therapy; ENT or a behavioral health clinician can refer you, and there are self-guided programs built for tinnitus. What the studies show it lowers is **distress**, not volume — I'm not going to blur that. Two mindset shifts that genuinely help: stop checking every day whether it's still there (checking feeds it), and don't spend long stretches alone in a silent room. Most people habituate over a few months to a year or two. It didn't get smaller; it got unimportant."
+    },
+    "tin-earwax": {
+     "label": "Sometimes it's just wax — but please don't dig it out yourself",
+     "askedFor": [
+      "wax",
+      "earwax",
+      "q-tip",
+      "cotton swab",
+      "clogged",
+      "blocked"
+     ],
+     "say": "Sometimes the workup finds nothing but impacted wax — especially when the ear also feels full and sounds are muffled, like hearing through a wall. That's the easiest version of this to fix. But don't dig. Cotton swabs push wax deeper, picks scrape the canal or reach the eardrum, and **ear candles don't work and have burned people**. Have it removed at the clinic — suction or an instrument, a few minutes. If it builds up often, ask about softening drops — typically twice a day for three to five days before the appointment, which makes removal much easier. Hearing aid users accumulate wax faster, so a regular check makes a real difference."
+    },
+    "tin-meds-blocked": {
+     "label": "\"Is it one of my medications?\" — I won't judge that, but here's the way to ask",
+     "askedFor": [
+      "medication",
+      "medicine",
+      "side effect",
+      "is it my meds",
+      "stop taking",
+      "aspirin",
+      "antibiotic"
+     ],
+     "say": "Some medications can cause or worsen tinnitus. Whether **yours** did, I won't judge — the same drug does it to one person and not another, and many are treating conditions you can't go without. **Whatever anyone tells you, do not stop a prescribed medicine on your own.** What you can do is ask well. Photograph or bag up everything you take — prescriptions, over-the-counter, supplements — and say: \"The ringing started around [month]. Could any of these be involved?\" Then add the most useful clue there is: whether it started after a particular medication changed, and how long after. With that, a pharmacist can narrow it down fast. If one is involved, there's usually an alternative. This isn't a \"just live with it\" situation."
+    },
+    "tin-refer": {
+     "label": "Don't sit on these",
+     "askedFor": [
+      "one ear",
+      "sudden",
+      "dizzy",
+      "vertigo",
+      "pulsing",
+      "heartbeat",
+      "should I see someone"
+     ],
+     "say": "Stop \"waiting to see\" for any of these. **One ear only, started in the last few days**, or hearing in that ear has dropped — ENT today; if you can't be seen, go to the ER. **Ringing that pulses in time with your heartbeat**, especially on one side. **Ringing with room-spinning vertigo, unsteadiness, or vomiting.** **Started after a head injury**, or comes with facial numbness, slurred speech, or double vision — that's the ER, and **911 if speech is affected**. On the first one especially: **sudden one-sided hearing loss is a clock problem — starting treatment within 72 hours changes the odds of recovery.** That's the one thing I'd most like you to remember today. At the visit, say three things: when it started, one ear or both, and whether hearing feels worse."
     }
    }
   }

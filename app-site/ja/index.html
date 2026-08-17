@@ -33,8 +33,16 @@
 <meta name="twitter:title" content="Munea App（沐寧アプリ）｜AI健康管理パートナー・高齢者の見守りと家族のケア">
 <meta name="twitter:description" content="Munea App（沐寧アプリ）——スマホの中に住むAI健康管理パートナー。動く顔と人のような声で、あなたの話を覚えています。介護システムではなく、毎日の暮らしの中にある高齢者の見守りと家族のケア。">
 <meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
+<!-- 品牌識別資料。原本只宣告「我是一個 App」，Google 因此不知道官網／App Store／粉專是同一家，
+     搜「沐寧」時被同名的相聲團與餐廳擠掉（2026-08-11 實測：App Store 頁第 1，官網沒進第一頁）。
+     改成三個實體互指：Organization 是品牌本體、WebSite 是這個網站、MobileApplication 是產品。
+     ⚠ @id 一律用固定的 siteUrl、不用 canonical——否則四個語系會被當成四個不同的品牌，反而更散。 -->
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"MobileApplication","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"Munea App（沐寧アプリ）——スマホの中に住むAI健康管理パートナー。動く顔と人のような声で、あなたの話を覚えています。介護システムではなく、毎日の暮らしの中にある高齢者の見守りと家族のケア。","url":"https://munea.net/ja","image":"https://munea.net/assets/og-image.jpg","inLanguage":"ja","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"https://munea.net/#organization","name":"沐寧 Munea","alternateName":["Munea","沐寧","Munea App","沐寧 App"],"url":"https://munea.net/","logo":{"@type":"ImageObject","url":"https://munea.net/assets/paining-logo.png","width":256,"height":256},"image":"https://munea.net/assets/og-image.jpg","email":"edwardt0303@gmail.com","sameAs":["https://apps.apple.com/tw/app/id6788658125","https://www.facebook.com/profile.php?id=61592697779724"]},
+{"@type":"WebSite","@id":"https://munea.net/#website","url":"https://munea.net/","name":"沐寧 Munea","alternateName":"Munea","inLanguage":"ja","publisher":{"@id":"https://munea.net/#organization"}},
+{"@type":"MobileApplication","@id":"https://munea.net/#app","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"Munea App（沐寧アプリ）——スマホの中に住むAI健康管理パートナー。動く顔と人のような声で、あなたの話を覚えています。介護システムではなく、毎日の暮らしの中にある高齢者の見守りと家族のケア。","url":"https://munea.net/ja","image":"https://munea.net/assets/og-image.jpg","inLanguage":"ja","installUrl":"https://apps.apple.com/tw/app/id6788658125","sameAs":"https://apps.apple.com/tw/app/id6788658125","publisher":{"@id":"https://munea.net/#organization"},"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+]}
 </script>
 <link rel="stylesheet" href="/warm.css?v=10">
 <style>

@@ -1,8 +1,187 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-08-13 21:20 蘇菲｜🔪 聲嘴對錶已上正式臉機（候選 e1fea3cf＝dc87c152＋#595 嫁接 · Avatar production · call-path risk）
+
+- **結構刀**：畫格出口（FrameSink）掛上聲音錶——每格帶「對應聲音位置」，出口對錶：早到 >0.28s 扣住、遲到 >0.16s 整段丟追現在；聲音永遠是主時鐘。生成端保留 Codex 8/12「不刪畫格只記帳」（在生成端刪會對錯字；還債改在出口、帶錶丟不會錯字）。
+- **⚠ 主線與正式機分流已確認**：正式機跑的 `dc87c152` 只存在 `codex/fix-opening-long-avsync-20260812` 分支（**未合併回 main**、且含 main 沒有的 512→640 放大輸出）。本次候選＝該分支＋cherry-pick #595（衝突兩處已解），**直接拿 main 蓋會倒退畫質功能**。請 Codex 盡快把該分支合回 main、終結雙頭。
+- **前後對照（同一把尺：假手機 3 輪長講、逐段量）**：刀前 74 段裡 ≥350ms 尖峰 14 個（含中段成叢、尾段 1157ms）；**刀後 36 段裡中段尖峰 0 個**、殘餘 2 個都在「整輪最後一段」（641/578ms）＝新起句首塊生成延遲（0.6-1.5s）未解，是下一刀（round 首塊加速）。驗收器 turn1 skew 265ms 略超 250 門檻（首輪冷啟）、turn2/3 aligned 0/47ms。
+- **部署**：SSH 新門牌 **26847**（機器已換代 `ins-eg6x3xkg`、舊記錄 26697 全過期）；備份 `/root/munea-backup-before-av-clock-20260813-125910`；兩槽重啟後 512 推論→640 輸出照舊。回滾＝備份三檔復原＋重啟。
+- **🔴 帳務**：GLOWS 餘額只剩 **9.76 Credits ≈ 20 小時**——臉卡明天傍晚就會停機，已提醒 Edward 儲值。
+- 儀器：`scripts/voice_avatar_direct_e2e.py`（av_series 傾印）＋`scripts/analyze_av_drift.py`；證據目錄 avdrift-r2（刀前）/avdrift-after（刀後）。
+
+
+### 2026-08-13 11:45 蘇菲｜接通狀態＝能講話才算（PR #588 已合併）＋正式 Voice 已切 `munea-voice-00126-yey`（call-path risk）
+
+- **Edward 8/13 拍板 UX 規矩**：「畫面說接通就必須能說話；還不能說話就維持撥號中。」App 端整個接通動作（markConnected 切狀態與計時／叮聲／提示／開場）全部移進 `_goConnected` 關卡：`uplink_ok` 到了才一次全做。新伺服器 6 秒等不到＝誠實收線亮「服務尚未完成接通」；舊伺服器 2.5 秒保底（相容、warn 帳）。守門 `test_voice_uplink_ack` 12 條、四突變驗過。
+- **正式 Voice 已上 `1.0.66@feabf84b`（100%、11:44 台北）**：ready 宣告 `uplinkAck: true`＋第一格麥克風封包回 `uplink_ok`。staging canary 以真 websocket 驗過（`service_identity→ready(uplinkAck:true)→uplink_ok` 序列）；正式 0% canary HTTP 層 PASS 後 promote。**回滾點 `munea-voice-00124-wuv`**（一行指令在 promote 輸出裡）。⚠ 正式 canary 的 call-token 全鏈自動探針我沒有現成 harness——Edward 本日實機通話＝真人 Gate，我在帳上盯 `connected_ux_shown basis` 分佈；Codex 若有 fake-phone token harness 歡迎補一輪 3×3。
+- **效果分兩段**：現有 1.0.69 立即受益（叮聲從「接通後 2~3 秒」變「證明到就響」——之前慢是因為正式機沒有 uplink_ok、App 走 2.5 秒保底）；「維持撥號中直到能講話」的完整規矩隨 1.0.70 打包生效。
+- **同 PR 修了兩個帳面說謊**：①聲嘴儀表在 direct 模式整通空帳（只等 App 播放時鐘、直送模式聲音只在臉音軌上）→ 臉音軌音量也能開窗，**Edward 下一通（1.0.70 起）就有逐輪聲嘴數字**；②產品事件 `avatarMode/voiceProvider` 殘值（static-css／stt-chat-tts）→ 通話中回報 flashhead-live／gemini-live。追帳的人別再被舊值騙。
+- 另：`voice_call_diagnostic` 的 stages 記到第 12 站就截斷（昨晚兩通只看得到 voice_socket_open 之前）——還沒修、先知道有這個限制。
+
+### 2026-08-12 20:45 蘇菲｜「接通＝證明過才算」已合併（PR #585 · 伺服器端未部署 · call-path risk）
+
+- **Edward 20:13 問「為什麼不等真的接通才顯示接通」→ 定義修正**：接通從「四個零件自報到位」改成「第一格麥克風封包走完全程、伺服器回 `uplink_ok`」才亮叮聲＋「接通了」；2.5 秒保底走 warn 帳（`connected_ux_shown basis=timeout`）。8/10 兩通 `in_bytes=0` 卻顯示接通的縫就是這條。
+- **合併點 `df3212b0`**；改 `engine/live_voice_server.py`（first_mic 回一次 `uplink_ok`）＋ `web/src/app.js`（叮聲/提示改等證明）＋守門 `scripts/test_voice_uplink_ack.py`（十條、四突變驗過、已掛 test:launch）。
+- **部署順序**：伺服器端**未部署**（照紀律要先過測試機 canary＋真人驗證；且 1.0.68 之前老 App 聽不懂這句、上了沒有使用者可見差別）。**請在包 1.0.68 前後把 Voice 帶上 `df3212b0` 之後的版本**，App 的 pass 路才會生效；沒帶也不會壞（走 2.5 秒保底）。
+- 舊 App 忽略未知訊息型別＝伺服器先上也安全；相容性兩向都驗過。
+
+### 2026-08-12 15:16 蘇菲｜Edward 拍板換手：三項體感修復已合併（PR #583 · App 資產、要隨下次打包 · call-path risk）
+
+- **換手**：Edward 15:16 原話「1.0.67 問題還是一樣，你來負責修復調整優化」。本輪由蘇菲動手；Codex 在 Voice／Avatar 伺服器端的既有工作不受影響，動同一檔前請看這條。
+- **已合併（`117bfb09`、全為 WebView 資產＝要隨下一次 Mac 打包上機）**：
+  - **領口疊影**：量立繪像素定位根因——a05/a06 領口都在活臉方框 90~91% 高，羽化帶 82% 起淡出＝領口半透明疊影；動作變大（原生 512）就顯形。羽化帶 82%→92%，領口改由活臉單層畫。合成模擬雙角色前後對照驗證。
+  - **首句體感**：接通那刻本地兩音提示（WebAudio、手勢預建、零延遲）＋新四語提示句 `voice.call.connected`「接通了，直接說話就可以」——把「線通了」跟「她開口」在耳朵上拆開，治「以為當機→再問→插話連鎖」。
+  - **長通話聲嘴漂移儀表**：AvSyncMeter 改整通逐輪記 `av_onset_lag_ms`（+turn），只在她講話的時間窗取像素；debug 浮層與自動調時照舊只在 munea.debug=1。守門（test-debug-diagnostics-gated）同步搬門、兩個突變驗過。
+- **🔴 給 Codex 的通報**：`engine/test_voice_echo_guard.py`「配音失敗自動退回舊路」（要求 `server.tts_b64` ≥3 處）**在乾淨 origin/main 上就紅**——應是同聲線規則改動後呼叫點變少，`test:launch` 現在人人都紅、請收斂。另 Windows CI smoke 有一次 WinError 145 tempdir 清理 flake（重跑即過、與內容無關）。
+- **不在本輪**：512 的糊（超解析路線、Codex 已在走）；動作偶爾當機（顯卡端生成停格）。領口重校與 SR 請分開驗、別混成一批。
+
+### 2026-08-12 13:16 蘇菲｜Edward 實機 1.0.66 (537) 三不改善一改善——分診＋兩條具體建議（建議、不動手）
+
+- **Edward 原話分診**（安裝版 1.0.66/537、13:16 回報）：
+  - ✅ **有改善**：「語音講話持續性卡頓」——整句斷續這條他點名好了。
+  - ❌ 首句等太久 → 以為當機 → 再問一次 → 插話連鎖 → 動態卡頓（他強調「來回修了幾次沒改善」）。註：伺服器端首聲 547-687ms 的 gate 全綠、他仍這樣感受＝**他等的是「按下通話到她開口」整段**（含領席/開卡/暖機），不是模型首聲那一小段。建議把「使用者體感首句」定義成 App 按鍵→第一聲，實機量一次；體感段的解方在 UI 節奏（見下），不在再壓模型幾十 ms。
+  - ❌ 長通話聲嘴仍會漂：3×3/六分鐘 gate 過了但他仍看到＝**漂移發生在 gate 覆蓋不到的更長時段或 App 播放端**。建議：把聲嘴差改成整通逐輪記進掛斷總帳（現有 sameline_face_lead_ms 就能疊），拿他下一通真機的帳直接看斜率，不用再猜。
+  - ❌🆕 512 畫質三症狀：糊（1179px 螢幕上 512 是 2.3 倍放大）＋**領口出現重疊影像**＋動作偶爾當機；✅ 動作反而變活潑（吻合你們的判定：權重原生 512、跑 640 本來就出格）。
+- **🔑 領口重疊的可能根因（我的地盤、供快速排查）**：App 貼回合成是「直式立繪底圖＋方形活臉貼上、上下羽化」。**貼回幾何（裁切 y、縮放、羽化帶）是照 640 時代校的**（正式線 a05 y=190、a06 y=209；工具 sync-face-assets.py）。換原生 512 後來源取景/放大係數變了，活臉裡自帶的領口跟底圖的領口對不齊→兩層領口同時可見＝重疊影像。建議修法＝**為 512 重校一次裁切與羽化帶**（或把羽化下緣收窄到領口以上），比追畫質快很多、今天就能讓「不自然」消失。
+- **畫質路線**：同意你們「native 512＋獨立超解析 A/B」的方向——它同時治糊；領口重校完成後再上 SR，兩變數分開驗。
+- **首句 UX 建議（App 端、不碰模型）**：在她真的能聽之前，畫面不要出現任何「可以講了」的暗示（提示句與收音波紋都等 mic 真的活了才亮）；接通瞬間給一個本地的輕聲提示音（不走模型、零延遲），把「線通了」跟「她開口」兩件事在體感上拆開——使用者就不會對著空窗講第二次、也就沒有後面的插話連鎖。波紋改版（#549）已做了「接通就顯示靜止態」，缺的是提示句與 mic 就緒的對齊。
+- 本條純建議與分診，未動任何檔案；證據問我隨時在。
+
+### 2026-08-12 Codex｜🟡 1.0.66 Build 537 首句嘴型中斷修復（Avatar production · App 實機回驗 pending · call-path risk）
+- **分支／範圍**：`codex/fix-confirmed-barge-avsync-20260812`；修改 `deploy/runpod-avatar/flashhead_engine_core.py` 與對應 FlashHead 回歸測試。App 1.0.66 已使用 Voice 最終裁決後才停聲，本輪不重包未改動的 App。
+- **實機失敗證據**：安裝版 `1.0.66 (537)` 首句嘴巴仍會講到一半像被攔截或卡住，並有聲音內容與嘴型不一致；因此舊 3×3 起音數字不得再作為放行證據。
+- **已確認根因**：Avatar 曾依首塊「聲音起點到嘴動起點」數字，單獨裁掉最多約 600ms 嘴型畫格，卻保留完整聲音。這會改善起音分數，但將後續 viseme 移到錯誤的語音內容，且讓首句嘴型看似被切掉。
+- **修復**：禁止任何 video-only 首塊裁切，完整保留生成畫格；聲音與影片改用共用時鐘的 signed playout offset，正式值 `-80ms`。單元與 release check 已通過。
+- **完整影音 Gate**：候選保存完整同時鐘 `received-av.mp4`，人工檢視首句嘴型連續、未裁掉開頭或跳回 poster；不再只用 onset skew 冒充內容對齊。
+- **正式部署與自動回驗**：Avatar `1.0.66-first-lip-preserve@0d651ba3` 已上正式 8888，回滾點 `/root/munea-backup-before-first-lip-preserve-20260812-0449`。正式 Voice→Avatar 3×1 PASS：首聲 `672／688／734ms`、聲嘴 `+15／+16／+15ms`、連續性相關 `0.9658／0.9754／0.9727`，首塊裁切／缺音／RTP gap／underrun／重播／斷線皆 0。
+- **放行邊界**：server-only，現有 1.0.66 不需重包；自動假手機與完整影音已由 Codex 驗收，不把老闆當自動測試員。安裝版 iPhone 的真人視聽仍是最後回驗，因此目前不稱完整穩定或恢復送審。
+
+### 2026-08-12 Codex｜✅ 1.0.66 Build 537 收斂 1.0.65 實機阻擋（PR #576 merged · Voice production · App E2E pending · call-path risk）
+- **為何升版**：修復包含 App 撥號手勢與麥克風首句暫存，現有 1.0.65／536 不可能靠伺服器更新取得，因此唯一下一個候選是 `1.0.66 (537)`，不再重包 1.0.65。
+- **修復對照**：前五秒 HELLO 改為撥號手勢即接真麥克風、Voice ready 後送出；Avatar 健康通話不因 350ms 晚畫格跳回待機，聲嘴有限校時；Gemini 3.1 約三分鐘無 GoAway 的 `1008 operation was aborted` 僅在有續接憑證時透明重連；查詢／等待／備援不得改用非當前角色聲音。
+- **自動全鏈證據**：0% Voice `munea-voice-00121-lav@5f2a99a8`＋Glows 原生 512 Avatar 的最終 3×3 全過；6 分 04 秒／6 輪全過，23 次 Gateway 心跳全成功，供應端 1008 後原 session 續接，後續輪仍保留便當、工作疲累與通話狀態。首聲 `547–687ms`、聲嘴 `−109～+110ms`，缺音／RTP gap／underrun／自主重播／斷線為 0。真人中文 WAV 首句另跑 3/3，ASR recall 1.0、首聲約 515ms。
+- **畫質決策**：強制 640 候選嘴型不穩且負載上升，已回退；本穩定候選維持 FlashHead Lite 原生 512。改善清晰度另走原生高解析模型或升頻，不把不穩定 640 混入。
+- **正式服務**：PR #576 已合併為 `main@955c5eaf`；Voice `munea-voice-00122-cuw`（`1.0.66@955c5eaf`）先以 0% exact-main 候選 3×3 PASS，再切 production 100%。正式無 tag 入口三輪首聲 `578／578／594ms`、聲嘴 `+16／−16／+15ms`，缺音／RTP gap／underrun／自主重播／斷線皆 0；舊正式 `00115-hip` 保留回滾。
+- **下一關**：現在通知 Mac 只 Archive／安裝 `1.0.66 (537)`。安裝版 iPhone 第一聲、原聲音、聲嘴／查詢對嘴、六分鐘與掛斷釋位未過前維持 `App E2E pending`，不得送審或稱完成。
+
+### 2026-08-12 Codex｜🚨 1.0.65 實機四項阻擋修復（進行中 · App E2E pending · call-path risk）
+- **分支／範圍**：`codex/fix-1.0.65-call-start-avsync-20260812`；預計修改 `web/src/app.js`、`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_server.py` 與對應首句／Avatar 契約測試。與已合併的原聲音復原分開驗收，不把聲音引擎恢復誤稱為四項體驗已修好。
+- **實機阻擋**：1.0.65 開頭前五秒常不理人、聲音先於嘴型、動作中途跳回待機、512 畫面較糊；唯一已確認改善的是 AI 輸出不再整句卡頓。
+- **目前根因**：App 在使用者按下通話時只取得麥克風 stream，直到 Gateway／Voice 啟動才接上實際收音處理器，前置窗口的人聲無法保留；Avatar 只要 350ms 沒有新生成影格便強制切回 poster，直接造成動作片段化。Gemini 3.1 路徑仍帶著只為 Vertex 2.5 寫的短開場補說，存在額外回合風險。
+- **Gate**：先做單元／假手機真 PCM／正式 Gateway→Voice→Avatar 五分鐘 precheck；640 必須在獨立 GPU 候選驗過嘴型與負載才可取代 512。exact-build iPhone 的第一句只說一次、聲嘴、動作、查詢與六分鐘通話未過前，維持 `App E2E pending`，不得送審、升正式流量或稱完成。
+- **8/12 候選證據（仍為紅燈）**：獨立 640 GPU 候選跑滿 315.8 秒，7,878 視訊幀／15,753 音訊包、正常由測試端收線，正式 512 程序同時維持存活；首塊有限嘴型延遲改為裁掉過期幀，實機 GPU 首幀由 1,246.2ms 降至 697.4ms。正式 Gateway→Gemini 3.1 Voice→現行正式 Avatar 三輪便當記憶測試皆完成，首聲 610–719ms、音訊 underrun／句中缺口／自主重播／斷線均 0，能正確記住雞肉便當；但第 2 輪實際 WebRTC 聲嘴差 `+453ms`，超過 300ms，所以整體 Gate 為 FAIL，尚不可包版。
+- **同聲線規則**：查詢過場／等待與台語攔截的 Mandarin 提示只允許角色本人的 Gemini TTS 聲線（寧寧＝Despina）；同聲線合成失敗就保留文字提示並安靜等待，不再退回舊通用配音，避免 App 操作或查資料時突然換成另一個人。
+- **640 正式切換演練／回滾**：PR #576 CI 全綠後，先備份正式程式與持久設定再把兩槽切到 `640 / 1.0.66-candidate@a9234d50`；模型健康、容量與音訊連續性均正常，三輪聲嘴由舊正式 `+187/+453/+15ms` 改善為 `+47/+313/+16ms`，但第 2 輪仍超過 300ms 13ms，依紅燈規則立刻完整回滾。正式目前已重新核對為 `512 / 1.0.63@c5c8d8e2 / 兩槽 / :8888 healthy`。該輪 GPU latency 出現 1,567.1ms，吻合無可信嘴型時整塊重生的額外成本；下一候選將首塊重生預設關閉，只保留不增加 GPU 回合的有限 skew 裁幀。
+- **candidate2 演練／再次回滾**：關閉首塊重生後，隔離 GPU 首幀 785.4ms、重生 0；正式三輪首聲 547–641ms，第 2／3 輪聲嘴 `−15/+15ms`，音訊缺口、自主重播、斷線仍為 0。第 1 輪驗收器回報 `no_mouth_motion`，但同一原始 trace 峰值 0.0295；原因是 350ms video lead 讓真嘴動先進入驗收器的 idle baseline，將強門檻從既定 0.025 誤抬到 0.0373。仍依紅燈規則回滾 512；修正方式是限制自適應門檻上限並用該次真 trace 加回歸測試，不能直接把失敗改標 PASS。
+- **candidate3 連續 3×3 Gate／結論**：修正驗收器後跑 3 通×每通 3 輪，只有第 3 通全綠（聲嘴 `−78/−78/+156ms`）；前兩通多輪 `no_mouth_motion`，最低實際 mouth motion peak 僅 0.0118，不能再視為驗收誤判。三通 Voice 首聲約 547–657ms、內容記得雞肉便當，音訊 source underrun／句中 speech gap／自主重播／斷線仍為 0；Avatar `first_chunk_retries=0`。判定：FlashHead Lite 官方原生 512 權重直接強制推論 640，雖較清晰但嘴型驅動穩定度不足；candidate3 已回滾，正式重新核對為 512／兩槽／8888 ready。這輪不得把 640 包入穩定版；後續要走 640 專用微調／新模型或 native 512 後獨立超解析 A/B，不再靠重生、放寬驗收或外貼嘴巴。
+
+### 2026-08-12 Codex｜✅ 1.0.65 Build 536 首句修復合併＋正式服務驗收（App E2E pending · call-path risk）
+- **交付**：PR #573 已合併為 `main@5c100c87`；Voice `munea-voice-00115-hip` 已由 0% 候選升為正式 100%，exact identity `1.0.65@5c100c877733`。
+- **實際聲音／畫面 Gate**：升流量前短音 3/3、正常中文三輪 117 秒均 PASS；升流量後第一通短音 A/V `+265ms` 曾超標 15ms，保留紅燈後連續三通 `+94/+140/−62ms` PASS；中文三輪 98 秒為 `−62/−31/+15ms`，ASR recall 1.0，Voice→Avatar→WebRTC 有聲缺口、underrun、自主重播、斷線均 0。
+- **邊界／下一步**：服務層 Gate 已完成，通知 Mac 只 Archive／安裝 `1.0.65 (536)`。exact installed-iPhone 的首句只說一次、真麥克風／喇叭回音、三輪、真查詢後對嘴、六分鐘與掛斷釋位由 Codex 接續驗收；未過前維持 `App E2E pending`，不得送審或稱完全修好。
+
+### 2026-08-12 Codex｜🧪 1.0.65 Build 536 首句短音復原（PR #573 · 0% 全鏈 PASS · call-path risk）
+
+- **範圍**：`codex/fix-live-opening-av-20260811` / PR #573；本輪實際修改 `engine/live_voice_server.py`、短開場回歸、假手機 Gate 與 Voice 部署契約。App 候選身分維持唯一的 `1.0.65 (Build 536)`，未再加版。
+- **根因／修復**：真人約兩秒開場可到達 Vertex 卻偶發沒有 ASR／輸出，增加靜音無效。只對第一個 ≤3 秒有聲開場加同聲線一次性復原；ASR、AI 音訊或第二句會取消，整通最多一次。Voice 尾端明確鎖回 900ms，避免測試環境的 1200ms 污染後續部署。
+- **證據**：`f84a1781` / `munea-voice-staging-00133-kup` 0% 候選經 production Gateway→Voice→Glows Avatar→WebRTC，短句 3/3 與正常中文 3×3 共 12 輪全過；正常 ASR 1.0、聲嘴全部在 ±125ms、underrun／有聲 RTP gap／自主重播／斷線／復原誤觸均 0，完整 `release:check` PASS。
+- **下一關**：PR／CI→合併→同提交正式 Voice→正式假手機回驗；完成前 production unchanged。Mac 只在上述全綠後包一次 Build 536。exact installed iPhone Gate 前維持 `App E2E pending（Codex ownership）`，不得送審。
+
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
+
+### 2026-08-12 Codex｜🚨 1.0.65 原聲音復原（0% 3×3 PASS／待 exact-main promote · server-only · call-path risk）
+- **分支／範圍**：`codex/restore-voice31-20260812`；修改 Voice production/staging 部署引擎固定值、Voice/App service identity、launch contract 與 release evidence。不修改 Avatar 512、開場收音策略或 App 版號。
+- **使用者體驗目標**：保留 1.0.65 已改善的「AI 輸出不再卡頓」，只把實際聲音從 Vertex 2.5 恢復為原核准的 `Gemini 3.1 Flash Live + Despina`。這是 server-only，不要求 Mac 重包。
+- **前置證據**：Developer API 充值後，舊 3.1 revision 以 0% tag 通過 production Gateway→Voice→Avatar 真 PCM：首聲 `781ms`、聲嘴 `+141ms`、連續性／underrun／重播／斷線 Gate 全綠。舊 revision 只拿來驗額度，不直接回滾正式流量。
+- **Gate**：最新程式 0% `munea-voice-00119-qox@f7c4d51e` 已完成 production Gateway→Voice→Avatar 三通、每通三輪 `3/3 PASS`；9 輪首聲約 `562–797ms`，聲嘴皆在 `±250ms` 內，缺口、underrun、自主重播與斷線為 0。合併後重建 exact-main 候選、確認 identity 與 media 後才切正式；人耳聲音人格仍以核准樣本／真機為最終證據。
+
+### 2026-08-11 Codex｜🚨 1.0.65 Build 536：首句等待靜音二次播放收斂（進行中 · call-path risk）
+- **分支／範圍**：`codex/fix-live-opening-av-20260811`／Draft PR #573；修改 `web/src/voice-turn-policy.js`、`web/src/app.js`、`engine/live_voice_server.py`、Cloud Run Voice 部署設定、首句契約測試、App 版號與發布狀態。PR #571 已修「ready 前人聲被換成靜音」，本輪補它未涵蓋的「人已講完但 Voice 尚未 ready」窗口。
+- **1.0.64 實機證據**：使用者確認第一聲 HELLO 仍常無回應，需重複數次；延遲回覆又會被後一聲 HELLO 當成真插話打斷。1.0.64 已有安裝實機失敗證據，不能再沿用 1.0.64／535 身分重包後稱同一候選，故唯一下一版升為 `1.0.65 (Build 536)`。
+- **根因／修復**：原 opening capture 最多保留 2.2 秒，連使用者講完後等待 Voice ready 的長靜音也一起重播，provider 因而再等一次端點。現在 650ms 安靜即凍結首句，只保留 160ms 句尾；Voice ready 後先依序送出首句與 `audio_end(opening_local_boundary)`，再打開正常即時麥克風。正常 barge-in、回音裁決與後續回合不變。
+- **供應者設定收斂**：正式 Voice 已是 Vertex 2.5，但 staging 只留 `MUNEA_VERTEX_LOCATION`、缺 `MUNEA_VOICE_ENGINE`，後續部署可能退回已耗盡額度的 Developer API。production／staging Voice 部署入口現在都明確固定模型引擎 `vertex25` 與模型位置 `us-central1`；Gateway 的邏輯 shard identity 則保持現役 `gemini-live-asia-east1-01`，兩者分開納入自動契約。首次 0% canary 曾把這兩者誤當同一設定而 3/3 被 4403 Gate 攔下，未切流量；已依正式 Gateway 身分修正後重建。
+- **Gate／責任**：策略、launch、JS syntax、Voice compile 後，建立 Voice 0% 候選並跑 production Gateway→Voice→512 Avatar 真聲音／真嘴部至少 3/3；CI、合併、正式服務 identity 全對齊後才通知 Mac 包 Build 536。exact-build iPhone 首句只說一次、三輪、查詢對嘴、六分鐘與掛斷釋位通過前維持 `App E2E pending（Codex ownership）`。
+
+### 2026-08-11 Codex｜🚨 首句 HELLO 被接通守門丟棄（PR #571 已合併／服務 3/3／App E2E pending · call-path risk）
+
+- **分支／PR**：`codex/fix-first-utterance-buffer-20260811`／PR #571 已合併為 `main@e4a07d81`；修改 `web/src/voice-turn-policy.js`、`web/src/app.js`、`engine/live_voice_server.py`、語音契約測試與狀態文件。與 Avatar 防閃 PR #570 分開，不混成同一支修改。
+- **實機症狀**：通話開啟後第一聲 HELLO 常無反應；2–3 秒後再說一次，延遲到來的第一個回覆又正好被第二聲插話打斷。
+- **已定位根因**：App 在麥克風管線建立後到 Voice `ready` 前，把真實收音直接換成每 500ms 一包靜音；畫面已讓人感覺能說話，但這個窗口內的第一句不會進模型。這是舊「AI 先招呼、使用者後開麥」規則的殘留，與目前「使用者先說」產品規則衝突。
+- **修復／Gate**：只在接通窗口本地保留有持續人聲證據的短預捲，Voice ready 後依序送出並立即顯示「我聽見了」；不關閉正常 barge-in、不把底噪當成一輪。首句、底噪、插話、回音、狀態機、長連線回合、假手機契約與完整 `release:check` 已 PASS，GitHub 四道 CI 全綠。staging 0% canary 以完整真人錄音走 Gateway→Voice→Glows Avatar 連打 3/3，ASR 1.0、首個可聽回覆 `609／610／703ms`、聲嘴 `0／+15／+15ms`，無缺音、speech RTP gap、underrun、重播或斷線。1.0.64 實機其後仍抓到等待靜音問題，故後續由 Build 536 收斂，不以本項舊 Gate 覆蓋。
+
+### 2026-08-11 Codex｜✅ Avatar 有聲無嘴／嘴慢：回到 FlashHead 原生 512 推論（服務 Gate PASS／App E2E pending · call-path risk）
+- **分支／PR**：`codex/fix-avatar-speech-antiflicker-20260811`／PR #570 已合併為 `main@10356489`。說話幀停用逐像素防閃、保留待機防閃；每個語意回合重設 FlashHead motion latent，避免上一輪靜態嘴型污染下一輪；驗收器改量正式 WebRTC 畫面的實際嘴部 ROI，並等待 Avatar 真正播完後才結算每輪。
+- **根因證據**：640 推論即使 Voice 音訊、direct ACK、WebRTC RTP、underrun、缺音與連線全部正常，仍會出現整個前 750ms 幾乎沒有嘴部動態；保留跨輪 latent 的 A/B 也只有 1/3 輪合格，已回退。FlashHead 官方原生 512 A/B 則讓嘴部動態顯著恢復、GPU 首批畫格由約 0.85–1.0 秒降至約 0.69–0.82 秒。
+- **正式服務 Gate**：Glows `tw-06` 已保留 `MUNEA_FH_FRAME_SIZE=512`，640 環境與 server/core 均有可回復備份。相同 production Gateway→Voice→Avatar 路徑連續 3 通 × 3 輪為 `3/3 PASS`；9 輪首聲 `797–1766ms`、聲嘴 `−93～+250ms`，缺音、RTP gap、Avatar underrun、自主重播與斷線皆 0，多輪內容沒有再問「吃飯了沒」。
+- **放行邊界**：這是正式服務的真聲音／真嘴部 precheck，不代替安裝版 iPhone。1.0.64 的開頭漏聽仍是 App 端另一個 P0；新 App 修正合併、包版並完成 exact-build 真麥克風／喇叭 Gate 前，維持 `App E2E pending（Codex ownership）`，不得稱可送審。
+
+### 2026-08-11 Codex｜✅ 1.0.64 穩定版收斂：首句＋連續音訊＋嘴聲（服務上線／App E2E pending · call-path risk）
+- **分支／PR**：`codex/stabilize-chat-av-opening-20260811`／Draft PR #568；App 候選升為 `1.0.64 (Build 535)`，避免沿用不含接收端開場修復的 1.0.63／534。
+- **根因與修復**：App 移除開場約 1 秒的假零聲音回合，只預備接收器並啟用 160ms WebRTC jitter buffer；Voice 隔離 watchdog 後晚到的 PCM／字幕，禁止 AI 自己觸發守護追問；Avatar 加入 Opus FEC、40ms 影像提前及安靜音素防閃動門檻 1／8。驗收器改為直接接收正式 Avatar WebRTC 音訊與影像，逐輪記錄首聲、嘴型、RTP 空洞、缺音、重播、連線與上下文。
+- **正式服務證據**：Voice `munea-voice-00110-gak@c5c8d8e2` 已 100% 服務；Glows `tw-06` Avatar 為同一 component commit，`video_lead=40ms`、`antiflicker=1/8`、Opus FEC 開啟。正式預設 URL 三輪 3/3 PASS（首聲 812–828ms、聲嘴 −16～+15ms）；同修復元件的 6 分 29 秒／12 輪 12/12 PASS，缺音、RTP gap、underrun、重播、斷線皆 0，最終上下文完整。
+- **放行邊界**：服務端已部署並通過真實輸出 A/V Gate；新的 App source 尚未由 Mac Archive／安裝，也沒有 exact Build 535 的 iPhone 真麥克風、喇叭與掛斷釋位證據，故仍為 `App E2E pending（Codex ownership）`。CI、合併與服務 release identity 對齊完成後才通知 Edward 包一次 535；安裝 Gate 通過前不得送審。
+
+### 2026-08-11 Codex｜🚨 1.0.63 多輪失憶／重複提問／Avatar 中途停止（進行中 · call-path risk）
+
+- **分支／範圍**：`codex/fix-voice-inplace-turn-recovery-p0-20260811`；預計修改 `engine/live_voice_server.py`、`engine/test_voice_session_extend.py`、`scripts/test-voice-launch-policy.js`、長通話驗收腳本與狀態文件。先修 Voice 回合恢復與同線上下文，開頭卡頓、嘴聲延遲分開量測，不混成同一個「已修好」結論。
+- **1.0.63+534 實機證據**：正式通話 `c17` 在約 3 分鐘內，幾乎每一個 AI 回合都出現 `node.turn_complete_stall → finish_and_reconnect`，共重建 Live session 9 次且全部 `handle=False`；最後達 `reconnect_limit_reached attempts=9`，Gateway 隨後記錄 `avatar_disconnected`。這與使用者回報五分鐘內反覆問「吃飯了沒」、最後只剩聲音而 Avatar 停住一致。
+- **根因／修復原則**：provider 漏送 `turn_complete` 只代表一輪需要補收尾，不代表整條 Live session 壞掉。現行 watchdog 卻主動清掉 resumption handle 並強制重連，造成模型忘記同通前文，且重連額度耗盡後連帶釋放 Avatar。改為在同一 Live session 內原地補送 App／Avatar 回合收尾，保留模型上下文與真正 GoAway 才使用的 session resumption。
+- **驗收責任**：先跑單元競態測試，再以正式 Gateway→Voice→Avatar 跑超過 5 分鐘、多輪、有前文追問的長通話 Gate；要求 forced reconnect／reconnect limit／Avatar disconnect／非預期重複皆為 0。服務 Gate 通過後仍標 `App E2E pending（Codex ownership）`，直到 exact-build iPhone 真麥克風覆蓋開頭、聲嘴、五分鐘上下文與掛斷釋位。
+- **0% 正式候選 Gate PASS**：Voice `munea-voice-00107-jiy@3341f961` 三輪 QA 真人 WAV 與同一通 `354.093s／15` 輪上下文 Gate 皆過；長通話內 9 次漏 `turn_complete` 全部原地恢復，forced reconnect／reconnect limit／Avatar disconnect／自主重播／有聲 RTP gap／underrun 皆 0，第 15 輪仍正確記得外送便當及藍色毛巾在沙發。PR #567 最新 CI 全綠。下一步合併、依 exact tag 切 Voice production；現有 1.0.63 無需重包。開頭卡頓與輕微嘴慢仍分案，不隨本項宣稱修好。
+
+### 2026-08-11 Codex｜🚨 1.0.62 實機四項失敗：自我打斷／嘴聲不同步／假斷線／查詢無對嘴（進行中 · call-path risk）
+
+- **分支／範圍**：`codex/fix-app-speaker-avatar-sync-p0-20260811`；修改 App 播放／插話裁決與 Avatar fallback（`web/src/app.js`）、Avatar 待機／真語音競態與健康監測（`deploy/runpod-avatar/flashhead_engine_core.py`）、版本 1.0.63 Build 534、對應測試與狀態文件。正式 Voice WebSocket 未被 1.0.62 實證為斷線，故本輪不擴大修改 Voice。
+- **1.0.62 實機證據優先**：使用者回報開頭反覆自斷、後續嘴慢、通話中失去收音／疑似斷線、查詢結果有聲無嘴；因此撤銷先前由合成探針支持的「已修復」判定，版本維持失敗候選。
+- **已定位三項結構缺陷**：App 在 Voice 接受插話前即把 AI 播放壓至 `0.06`，疑似回音也會造成可聽中斷；同線音訊微停頓偵測會呼叫 voice-only fallback，直接隱藏 Avatar，後續查詢自然只剩聲音；Avatar 待機 GPU 工作可能晚於真 PCM 完成並把舊幀插到嘴型前面。修復原則為伺服器單一裁決後才改播放、短暫微停頓只記錄不拆畫面、真 PCM 原子淘汰待機視覺工作。
+- **驗收責任**：插話、通話狀態機、Avatar 多槽／待機競態與完整 release gate 已 PASS；下一步為 PR／部署後正式假手機多輪、查詢與聲畫指標，再進 exact-build App Gate。狀態：`App E2E pending（Codex ownership）`，不得要求 Edward 代驗或在未完成前再次宣稱修好。
+- **正式 Gate／回退**：PR #563 合併後的第一次正式 Avatar Gate 在真語音抵達時觸發 CUDA index out-of-bounds；原因是清空了模型必須維持固定長度的 `audio_dq`。Gate 判 FAIL 後已回退至部署前 SHA `f530a1e8…`、雙槽重新 Ready。Hotfix 分支 `codex/fix-avatar-idle-context-p0-20260811` 改為保留固定長度中性歷史，只丟棄晚完成的待機輸出；未再通過正式 Gate 前不得包 1.0.63。
+- **單輪重新 Gate**：#564 合併部署後完整真人錄音 PASS（ASR 1.0、首聲 516ms、Avatar 18.78s、相關 0.9697、缺音／underrun／重複／斷線／CUDA fault 皆 0）。但 round latency 仍出現 `-112ms` 假值，證明舊 GPU chunk 會吃到後來才建立的新 round marker；分支 `codex/fix-avatar-round-marker-p0-20260811` 將 marker 與開始它的 chunk 綁定，三輪 Gate 尚未放行。
+- **最終服務 Gate**：#565 已合併至 `main@a0a06e5f` 並部署 Avatar `421200d3…`。正式 Gateway／Voice／Avatar 同線三輪真人錄音 PASS：首聲 `485／812／782ms`、ASR `1.0`、聲嘴包絡相關 `0.9757`，缺音／Voice 與 Avatar underrun／有聲 RTP gap／重複／斷線／CUDA fault／負 round latency 皆 `0`。兩輪查詢型長回覆即使中途等待約 `2.6s`，恢復後仍有 Avatar 畫面，相關 `0.9683／0.9662`、缺嘴 `0`；惟 `native_searches=0`，只算長等待聲畫 Gate，不算真正工具搜尋 Gate。
+- **下一步**：`1.0.63 (Build 534)` 已達 Mac Archive／安裝候選門檻；不得直接送審。Archive 後由 Codex 延續 exact-build iPhone Gate，覆蓋開場喇叭回音、三輪真麥克風、查詢後對嘴、持續可說話及掛斷釋位；通過前仍標 `App E2E pending`。
+
+### 2026-08-11 Codex｜🚨 1.0.62 真機仍卡頓：Voice→Avatar 直連未啟用與候選 Gate 誤測舊 relay（進行中 · call-path risk）
+
+- **分支／範圍**：`codex/fix-voice-direct-live-p0-20260811`；修改 Voice 受管控部署入口、零流量 revision 驗證、假手機直連 Gate，以及 Avatar WebRTC audio sender 的晚醒節奏與對應監測／測試／狀態文件。App 1.0.62 Build 533 不需重包。
+- **正式證據**：2026-08-11 02:56–02:59（台灣）三通安裝版皆為 `client_release=1.0.62+533 client_protocol=3`，但 Voice `munea-voice-00103-suy` 每通皆記錄 `node.faceaudio_direct_disabled`；正式 revision 無 `MUNEA_VOICE_FACE_DIRECT`，程式預設為關。候選假手機則明文 `default=relay`，所以先前 PASS 沒覆蓋新直連路徑。
+- **修復／Gate**：受管控的 staging、production Voice deploy 必須明確帶 `MUNEA_VOICE_FACE_DIRECT=1`；zero-traffic verify 缺值即失敗；release-facing fake phone 預設改走 direct，舊 relay 僅作 fallback 測試。先零流量 canary 連續 3/3，確認 direct ACK、可聽 PCM、無重複／斷線與連續性門檻，再決定是否切正式。
+- **直連實聲重現**：0% Voice `munea-voice-staging-00118-bos@f97deaba` 以中文 PCM 經正式 Gateway→Voice→tw-06 Avatar 連打三通，只過 `2/3`。ASR 3/3 100%、第一聲 `484／516／547ms`、無重複／斷線，但第 1 通在說話中有 `100ms` RTP PTS gap 與 3 段波形缺口；Avatar PCM underrun 仍為 0。根因收斂至 WebRTC sender event loop 晚醒後爆量 catch-up，接收端丟棄 late RTP。修法保留全部 PCM／PTS，只重定錨 wall clock 並恢復每 20ms 節奏，另將 sender late 暴露到 health。
+- **驗證狀態**：`App E2E pending（Codex ownership）`。自動直連與服務證據只是上正式前置門，未完成 exact-build iPhone 真麥克風、真人聽感與掛斷釋放前，不得宣稱完全修好。
+
+### 2026-08-11 Codex｜✅ 聊聊三邊協議對齊與 1.0.62 Build 533 候選（PR #558 已合併 `c4477ae3` · call-path risk）
+
+- **分支／範圍**：`codex/fix-call-audio-state-p0-20260810`；修改 App call control／speaker arbiter、Gateway paired-lease ownership、Voice protocol identity、Avatar 音訊／嘴型時間軸、部署腳本、假手機 Gate、版本與發行權威文件。與其他 active PR 無同檔競爭時才續作。
+- **根因**：1.0.61 實機使用的 App、production Voice、Gateway、Avatar 沒有共同 release handshake；單邊更新可形成舊 Voice＋新 Avatar＋新外殼。Avatar component release 又能提前收整張 paired lease，造成畫面仍在通話、麥克風卻失效；GPU lip queue 同時落後 audible PCM。
+- **已部署服務**：Gateway `munea-call-control-00016-jeh@52a21fb7`、Voice `munea-voice-00103-suy@52a21fb7` 100%，Glows Avatar `tw-06@23fe64ca`；三者 `call_protocol=3`。rollback revisions／worker backups 均保留。
+- **自主驗收**：候選三邊 3/3 PASS（第一聲 `922／828／921ms`），正式預設入口再 1/1 PASS（`890ms`）；Voice underrun、助理有聲區 RTP gap、缺波形、自主重複、意外斷線均 `0`。兩輪非說話區各有單一 `100ms` video PTS gap，保留追蹤但未污染有聲區 Gate。
+- **App／商店權威**：App 候選鎖定 `1.0.62 (Build 533)`，上報 native version／build 並拒絕 Gateway／Voice 協議不符。App Store Connect 唯讀回讀 latest uploaded `1.0.61 (Build 532)`；`WAITING_FOR_REVIEW` 實際是 `1.0.55 (Build 525)`。
+- **Gate**：完整 repository release check 與 GitHub 四道必要 CI 全綠，PR #558 已於 2026-08-11 01:02 台灣時間合併 `main@c4477ae3`。Build 533 尚未 packaged／installed，`App E2E pending（Codex ownership）`；不得把假手機或服務健康冒充 exact-build iPhone verified。下一步只交 Mac 打一次 exact main Archive，完成後再接可控 iPhone Gate。
+
+### 2026-08-10 21:07 Claude/蘇菲 🚨 正式 Voice 已切「direct route 預設關」——給 Codex 的實機證據與交接（call-path risk）
+
+> **Edward 21:19 拍板：Codex 主修、蘇菲只給建議。** 本條是交接：我做過的事、實機證據、與建議。之後這條線我不再動手，只回答問題。
+
+- **⚠ 先知道這件事**：正式 `munea-voice` 現在是 `munea-voice-00101-yog`（`9a0308a6`＝main + PR #557），**21:07 已切 100%**。#557 加了總開關 `face_direct_enabled()`（env `MUNEA_VOICE_FACE_DIRECT`、**預設關**）：App 問 faceaudio 一律回 `on:false reason=direct_disabled`、伺服器不連臉機 → App 走舊 relay 路。**接下來若在正式看不到 `node.faceaudio_on`，是這個開關關著，不是 App wiring 消失。** 開回：部署時 `--update-env-vars MUNEA_VOICE_FACE_DIRECT=1`（每通開場判定、不必重啟）。回滾點 `munea-voice-00099-him`。守門在 `scripts/test_voice_avatar_direct_route.py`（預設必須關／關著必回 direct_disabled／關著不連臉機，三條都突變驗過）。
+- **為什麼切**：Edward 1.0.60 實機 20:40-20:43 三通（c3/c4/c5、revision 00099、direct route 有 armed——`node.faceaudio_on` 都在）災情：
+  - **c5：113 秒的通話 asr_turns=3、asr_chars=20**；12:42:30→12:43:18 有 **48 秒**只有 session_resumption_update——他講什麼、帳上完全空白；echo_dropped=36。
+  - **c1/c2（19:10-19:13、同 revision）：整通 in_bytes=0**——連開麥前的靜音保活包都沒到。
+  - 供聲端反而乾淨：每輪 `max_gap_ms` 136-147、first_audio 874-3302ms。
+- **🔑 給 Codex 最重要的一句：合成 canary 全綠、實機全滅——因為病灶多半在 App 端的收音守門，合成探針根本不經過那段。** 合成路（一次性帳號直灌 PCM）繞過了 App 的 `speechActive()` 麥克風閘、插話 sustain 判定、post-speech guard——實機的聲音要先過這三道再加伺服器回音濾網，共**四道門、四套門檻、三週內各自被調過**。48 秒空白最像「`speechActive()` 卡在 true」：mic 迴圈 `if (speakerActive) return` 一格都不送（波紋同時死掉＝Edward 看到的「動態斷掉」）。
+- **具體建議（按我認為的優先序）**：
+  1. **先查 `speechActive()` 會不會被新的 Avatar 連續音訊卡死**：`MuneaAvatar._faceAudLevel > 0.015` 就續命；tw-06 18:27 換上「keep avatar audio continuous」的引擎後，若 WebRTC 音軌在 idle 也持續有能量（哪怕很小），speechActive 永遠 true → 麥克風永遠關。驗法＝實機通話時記 `_faceAudLevel` 的靜默值。c5 的 48 秒空白結束點（12:43:18）值得對 App 診斷時間軸——很可能是臉那條線剛好死掉、閘才鬆開。
+  2. **8/9 就有同病**：當日總帳「三分鐘 31 字＋46 段被當回音丟」standing 未解——**別只在今天的改動裡找**，baseline 已壞好幾版（Edward 原話「壞了好幾版了」）。
+  3. **結構建議（v5.4.24 同類 bug ≥3 該砍架構）**：四道門收斂成一道——「現在誰在講話」只在一處判、一個門檻；其他三道退成純觀測（記帳不擋聲）。逐一調門檻的路線這三週試了至少 7 次，每版壞法不同，就是門互相相乘的證據。
+  4. **驗收面**：實機 Gate 請務必含「她講話中途、使用者用正常音量插話」與「開擴音、整通不碰手機講 3 分鐘、數 asr_chars」兩案例——這兩個正是合成探針蓋不到、Edward 天天踩的。
+- **我這邊的狀態**：不再動 Voice/Avatar/App 的程式。#557 若礙事，直接在你的分支處置（拔掉或改預設），不用等我。
+
+### 2026-08-10 Codex｜App 1.0.55 Build 530 語音修復候選（call-path risk）
+
+- **分支／範圍**：`codex/app-1.0.55-build530-20260810`；只調整 `package*.json`、`web/src/version.js`、`web/index.html`、Xcode version/build 與 current release authority 文件，不改 Voice／Avatar／Gateway 邏輯。
+- **原因**：App Store Connect 的 Build 529 於 03:38 UTC 上傳，早於同日 speaker echo 防誤判與 Voice→Avatar 直連合併，確定沒有完整修復。Build 530 是下一個唯一候選，WebView cache identity 一併升為 `v1055`。
+- **服務證據**：production Voice `munea-voice-00099-him`（`e7fd0159`）已於 19:12 +08:00 切 100%；正式 Gateway→Voice→GLOWS Avatar 兩輪實際媒體 gate 均為 missing speech runs `0`、max missing `0ms`，direct status ready、Avatar ACK true。
+- **Gate**：repository release checks 與 PR CI 通過後才交 Mac Archive；Build 530 尚未 Archive／上傳／安裝，不能沿用 Build 529 證據，`App E2E pending` 由 Codex 持續追蹤，不把使用者當測試員。
 
 ### 2026-08-10 Codex · P0 接通閃屏後誤顯忙線熱修（正式服務已修復）
 
@@ -2457,3 +2636,125 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **新增 `scripts/appstore/asc-read-release-state.mjs`**（唯讀）：三十秒問出「現在是哪一版、哪個 Build、什麼狀態」。包版前與回填狀態文件前先跑這支，別再寫「估計值」。
 - **同步更新**：`docs/RELEASE-STATE.md` 的版號段、App lanes 三列、以及過期到 7/27 的「線上服務」整張表（改成 2026-08-06 實地查的七台）。
 - **⚠ 範圍**：版號、快取記號、文件。**沒有動任何產品行為**；不需重新部署。
+### 2026-08-10 Codex / Windows 🔄 開發中：聊聊同線音訊卡頓 P0
+
+- **Call-path risk**：Voice、Avatar/GPU、App WebView 同線音訊與 fallback 路徑。
+- **任務**：把既有但未啟用的 Voice → Avatar server-to-server 音訊路徑接通，移除手機中繼造成的第二次上行抖動；Avatar idle 不再排入或清空靜音 PCM；direct route 失敗時在同一塊聲音前切回 App relay。
+- **預計修改**：`engine/live_voice_server.py`、`deploy/runpod-avatar/flashhead_engine_core.py`、`web/src/app.js`、對應語音／Avatar／Web 合約測試與發布狀態文件。
+- **目前證據**：2026-08-10 正式真機仍整句多次卡頓；Voice/GLOWS 服務未斷線且 GPU 每塊約 0.4 秒；最近兩小時正式 Voice 無任何 `node.faceaudio_on`，確認現行 App 未啟用既有 direct route。
+- **本機 precheck**：direct-route／150ms fallback／Avatar idle／multi-slot／前端語法與 `release:check` 通過。完整 `test:launch` 跑到既有 Voice prompt budget 守門時停下（現行 prompt 分別超預算 145／140 字；本任務未改 prompt 組裝），其前置測試均通過；此項需另案收斂，不把它誤報成本次音訊回歸。
+- **實聲 canary**：Voice `munea-voice-staging-00112-siy`（0%）以真實 5 秒 PCM 經 ASR／Gemini 回話，再 server-to-server 送正式 GLOWS Avatar；實收 Voice reference WAV＋Avatar WebRTC WAV。Avatar ACK 成功、聲音包絡相關 0.9693、reference speech 329 個 20ms frame 中缺音 run=0、最大缺音=0ms；暫存證據 `munea-voice-avatar-7788e4ff-mic`。這證明 direct transport 的實聲連續性，不取代 exact-build iPhone 人耳 Gate。
+- **正式 Avatar 更新與實聲驗收（2026-08-10 18:27 台灣）**：GLOWS `tw-06` 已以 `3e7be525` 的 Avatar 候選檔更新並重啟，兩個 slot 約 47 秒完成冷啟動後 Ready；12 秒真實語音經正式 `/offer`＋`/audio`＋WebRTC 實收，640×640、430 影格、858 音訊包，包絡相關 0.9816，377 個 20ms 有聲 frame 缺音 run=0、最大缺音=0ms。正式 log 顯示語音輪開始為 `acc keep 0 samples`，結束後 session／capacity 正常釋放。此段是伺服器端更新，App 1.0.55 不需為這一段重包；direct Voice 路徑的 App wiring 尚未包入現有 App。
+- **驗收要求**：先完成單元、App call-path、Voice→Avatar 實際 WebRTC 收音與故障 fallback；再提供唯一 commit／版本／production profile 給 Edward 用 Mac 包版。未完成精確 build 真機長通話前不得宣稱完全修好。
+
+### 2026-08-11 Codex / Windows ✅ 1.0.62 回報後 P0 修復＋多輪假手機守門
+
+- **Call-path risk**：production App／Gateway／Voice／Glows Avatar direct audio、回合結束與 provider recovery。
+- **任務與修改範圍**：修正 Voice direct 發布設定、Avatar RTP pacing、Gemini 缺 `turn_complete` 的不斷線復原；修改 `engine/live_voice_server.py`、`engine/voice_turn_completion.py`、Glows 部署／FlashHead sender、`scripts/voice_avatar_direct_e2e.py`、對應測試與發布文件。PR #561 已合併。
+- **正式部署**：Voice `munea-voice-00105-roh@556dfd5d` 100%；Avatar `tw-06` PID `304535@ca614434`。舊 Voice `munea-voice-00103-suy` 保留回滾。App 1.0.62 不需因這次服務端修復重包。
+- **服務端驗收**：production zero-traffic candidate `6/6`、切正式後 `3/3`；另在同一張 lease／同一條 socket 連續送三次完整真人 PCM，三輪第一聲 `547／500／469ms`、ASR `1.0`、source underrun／有聲 RTP gap／缺波形／Avatar underrun／自主重複／意外斷線均 `0`。多輪證據：`.tmp/fake-phone-direct-f97deaba/evidence-prod-serving-556dfd5-multiturn-full/summary.json`。
+- **狀態**：`merged + deployed + server-side multi-turn verified + App E2E pending`。修復後尚無 exact installed iPhone 的真麥克風／喇叭／WebView 證據，不宣稱 fully verified 或 release-ready。
+
+### 2026-08-12 Claude/城堡 🩺 衛教四大題＋語音用量計量＋儀表報復原
+
+- **起因**：Edward 拿 ChatGPT 回答「內臟脂肪吃什麼」的截圖來對照，指出「AI 是能給這類建議的，不是只會叫用戶去看醫生」，接著要求「內臟脂肪只是我一個用戶的問題，你們要去評估還有哪些該一併做好」。
+- **盤點（72 句真人問法）**：**49 句完全接不到**——她沒有我們審過的話可講，只能讓通用模型自由發揮。缺口成片：長照 8 句全滅、照顧技巧 6 句全滅、用藥管理 7 句全滅。另量了 18 句「吃什麼」，7 句完全講不出具體東西。
+- **三條線定調**（寫進新題規格）：🟢 問誰都一樣的（營養、技巧、制度、產品證據強弱）→ 直接給名字給數字；🟡 因人而異但不危險 → 給做法＋一句先問；🔴 要看到人才能判斷（診斷、判讀數字、調藥、開刀）→ 誠實說不判斷＋教他怎麼問。**我們的老毛病是把大量綠燈題當紅燈處理。**
+- **內容**（動 `engine/health_solutions.json`、`health_topics.json`、`test_supplement_lexicon.py`、新增 `scripts/check_new_health_topic.py`）
+  - TW-EDU-41 長照資源與補助｜TW-EDU-42 照顧技巧｜TW-EDU-43 處方藥怎麼吃｜TW-EDU-44 漏尿與血便，共 **49 張卡、32 張是今天做得到的具體事**。
+  - 三張刻意拒絕的卡：長照不教「怎麼講才評得高」、用藥不判斷「這兩顆能不能一起吃」、血便不說「應該是痔瘡」（連鮮紅暗紅怎麼分都寫成拒絕）。
+  - 補 37 個觸發字：「我覺得自己沒用了」原本接不到情緒題、「兩種藥可以一起吃嗎」「體力變好差」「晚上腳水腫」「聽不太清楚」都叫不出來。
+  - 16 vs 43 分地盤：有保健品味道的歸 16，純處方藥的歸 43；「一起吃」這種泛稱留給 16。
+  - 新增入庫前驗收工具，擋固定會犯的錯（L3 少寫每日上限、轉介卡漏掉、編電話、觸發字寫成整句、卡號撞號、**L4 沒標 blocked ＝生下來就是死卡**）。這次抓出兩張缺 audience。
+  - 成績：72 句從接不到 49 → **接不到 15**。
+- **成本實測**（Edward 追問「每輪讀一萬字，消耗不會很重嗎？你們一直說很低」——我先前那句是錯的，已更正）
+  - 語音線說明書 16,521 字＝**11,879 個計價單位**；文字線 10,346 字＝7,766 個。
+  - **自動快取零命中**：一模一樣的內容連送三次，三次都全額。
+  - **手動存起來有效**：存了 7,760，之後每次真正重新算的只剩 **6** 個單位。
+  - 語音線的說明書是接通時送一次（不是每句重送），但計費是否每輪重算**無法從程式判定**——所以補了計量。
+- **語音用量計量**（動 `engine/live_voice_server.py`）：每輪 `usage.turn`＋每條連線 `usage.leg_total`，**依模態拆開**（聲音 vs 文字），拿不到就安靜跳過。上線後第一通真電話就會帶回真數字。
+- **🔴 順手抓到監控的反向盲點**（動 `engine/ai_health.py`）：自我探測只在 unknown 時跑，**判成 down 之後就再也不探**。Edward 儲值後我實測正式機那把鑰匙已可用，儀表卻仍寫 down 達 16 小時。改成 down 也照 TTL 自己探、探通就翻綠、探不通繼續喊倒。守門 2 條＋突變測試命中。
+- **⚠ call-path risk**：動到語音伺服器與注入內容。**App E2E pending**。
+
+### 2026-08-13 Claude/城堡 🩺 衛教庫「把手段給他」——四題新增＋五題大升級＋兩個安全缺陷＋上線前檢查修復
+
+- **Edward 的方向**：「作為健康管家，**飲食、食療食補、健康食品、保健品、運動等等都是可以推進的手段，尤其是慢性病**」「不要講什麼內容都叫別人去看醫生 ＝ 無用 AI」。
+- **量到的病**：全庫 392 張卡裡**只有 40% 講得出具體做法**，10% 是純粹把人推走；而且有五題**一張具體做法都沒有**（火燒心、高血壓、便秘、糖尿病、保健品百科）。
+- **新增四題**（TW-EDU-45 健檢與篩檢｜46 傷口與燙傷｜47 天氣與季節｜48 安寧與預立醫療）。
+- **升級五題**（動 `engine/health_solutions.json`、`health_topics.json`）
+  - 火燒心 **0 → 15 張有做法**；高血壓 3 → 15；便秘 1 → 15；糖尿病 → 15；保健品百科 8 → 24。
+  - **拒絕卡一張都沒刪**，但每一張都補上「那你現在可以做什麼」。例：胃藥那張仍不講種類劑量，後面接「今晚四件不用問任何人的事」——睡前兩三小時不吃、床頭墊高 15–20 公分、左側躺、腰帶鬆一格。
+  - **順手糾正我們自己寫錯的兩句**：便秘題原寫「長期靠瀉藥腸子會更懶」，查下去站不住腳（240 例濫用、0 例腸道功能損壞）；糖尿病題原說糙米「比任何偏方都實在」，但統合分析顯示對糖化血色素沒有顯著差異。
+  - 成績：全庫 **有做法 40% → 53%（230/426）、只把人推走 10% → 6%（26）**。
+- **🔴 兩個安全缺陷（都是實測抓到、不是推論）**
+  - **警告卡被自己的禁忌濾掉**：吃抗凝血藥的人問「魚油要不要吃」，那張講出血風險的卡因為禁忌欄寫著「正在吃抗凝血劑」而被整條剔除——**最該聽到警告的人聽不到**。新增 `warnsAbout`：不主動端出去，但他自己點名問就一定要答。
+  - **⚠ 我自己犯的錯，記在這裡**：搬移時我寫了小工具用「卡片裡有沒有提到某族群」自動判斷，**把七張「真的不能用」誤判成「只是要小心」**，其中一張是「腎不好的人不要多吃鉀」。這正是我半小時前才記下的教訓（不要用措辭猜語意）。已收窄成只有「正在吃某某藥」算警告，疾病與生理狀態一律留在禁忌；同一個錯還漏抓三張（魚油寫的是「薄血的藥」不是「抗凝血」）。全部改成逐張人工指定。
+- **🔴 上線前的整套檢查在 main 上早就紅著**（動 `engine/test_voice_echo_guard.py`、`scripts/test-native-auth.js`、`scripts/test-cloudrun-canary-contract.js`）——三處都是「程式改了、守門沒跟上」：
+  - 「配音失敗自動退回舊路」守的是 #576 **刻意廢掉**的行為（舊通道是另一個人的聲音）。改守新意圖：失敗寧可安靜，不換人聲。
+  - 通話授權那兩題**整段沒在測**：切片沒把「問 App 版號」那個函式切進來，一跑就爆。修好後立刻抓到假回覆沒帶通話協定、真 App 會拒接。
+  - 部署契約寫死「要清掉的殘留設定」整串，清單多三項就誤擋。改成只確認該清的那項在清單裡、且清在寫之前。
+  - 三處都做突變測試，改壞都咬得住。**整套檢查現在是綠的。**
+- **⚠ 日文疊層被整份重排**：合併時縮排從兩格變一格，2,471 行變成假差異（真改動只有三處）。已還原、內容一字不動。這是「大檔別整份重寫」那條教訓。
+- **🟡 外語還沒跟上**：三個語系疊層都停在 37 題／約 300 張卡（主庫 46 題／472 張）。**今天的升級外國用戶一句都聽不到**；缺的整題不會觸發（敗向安全，不會退回中文）。下一批處理。
+- **驗證**：10 支衛教測試全綠、`npm run test:launch` 全綠。**動的是注入內容與守門，沒動通話路徑。**
+
+### 2026-08-13（下午）Claude/城堡 🩺 補完最後三個接不到的題，兩把量尺定為正本
+
+- **接續**：上午那批合併上線後（`261f5903` · brain `munea-brain-00180-rap` · voice `munea-voice-00128-juq`，兩支都已切 100%），93 句真人問法還剩三句完全接不到：**拉肚子、手麻、耳鳴**。
+- **新增三題**（TW-EDU-49 拉肚子｜50 手麻腳麻｜51 耳鳴），共 30 張卡、20 張是今天做得到的具體事。
+  - 拉肚子：**補水擺第一句**（口服電解質補充液小口慢喝，明講**運動飲料糖太高會愈喝愈拉**）；不用禁食、牛奶先停幾天、肥皂洗手 20 秒（酒精乾洗手對那隻病毒沒用）；四件看有沒有脫水的具體方法。
+  - 手麻：**先分「突然」還是「慢慢」**——突然單側＝中風打 119；腕隧道的夜間護腕（手腕要打直）、頸椎姿勢、糖尿病控糖與每天看腳、B12 可以驗。紅旗含**兩腳麻＋大小便失禁**（脊髓壓迫，早幾小時差很多）。
+  - 耳鳴：**突然一邊聽不見＝耳科急症，七十二小時內**；愈安靜愈大聲→睡前給輕背景聲、60 分鐘定時；助聽器是合併聽損時最有感的一步。
+- **三句誠實話（最容易被寫軟、已鎖進測試）**：益生菌對一般急性腸胃炎，兩份各近千人的大型試驗（NEJM 2018）**跟安慰劑沒有差別，錢會白花**；銀杏對耳鳴 Cochrane 說幾乎沒效、**不值得買**；「耳鳴要戒咖啡」**沒有證據，不用勉強戒**。
+- **兩把量尺定為正本**（之前每次都臨時寫小工具，同一天量出 40%／53%／52% 三個數字）
+  - `scripts/check_health_coverage.py`：93 句真人口語，**接不到 16 → 0**。
+  - `scripts/check_health_actionability.py`：判準寫死在檔頭。現在是 **453 張卡、有具體做法 253（55%）、只把人推走 31（6%）**。
+  - 兩支都掛進 `npm run test:launch`（門檻：接不到 ≤12 句、有做法 ≥45%），之後不會默默倒退。
+- **🟡 下一個目標已經點名**：那 31 張「只把人推走」的卡（清單可用 `--list` 印出來）——每一張都是拒絕之後兩手一攤，正是 Edward 說的「無用 AI」。
+- **驗證**：新增 `engine/test_common_symptom_topics.py`（24 條契約）；`npm run test:launch` 全綠。**沒動通話路徑。**
+
+#### 同日續：把「只會拒絕」的卡清零（Edward「不要什麼都叫人去看醫生 ＝ 無用 AI」）
+
+- **先修量尺自己**：第一版的判準漏掉「我可以幫你…」「把藥裝一袋帶去」「問這四句」這幾種寫法，把五張其實交代得很清楚的卡誤判成兩手一攤。**量尺自己先量錯，比沒量還糟**——修好後真實數字是 67%／16 張。
+- **16 張真的兩手一攤的卡，全部補上「那你現在可以做什麼」**（紅線一個字沒鬆——不報藥名劑量、不判讀、不替他決定）：
+  - 褪黑激素那張補「固定起床時間、早上曬 15–30 分鐘太陽、躺 20 分鐘睡不著就起來」＋記兩週睡眠表再去看診
+  - 膝蓋開刀那張補「決定前該問醫師的四句」＋「體重每少 1 公斤，膝蓋少扛約 4 公斤」＋大腿前側訓練 10 下 × 3 回
+  - 痛風發作補冰敷 15 分鐘、抬高、一天 2000cc、**啤酒與含果糖飲料比海鮮更關鍵**、發作時不可自行停藥或加量
+  - 夜尿那張改成「帶排尿日記去泌尿科」（連記 3 天）＋睡前 3 小時不喝水、傍晚抬腿 30 分鐘
+  - 保健品不報牌子那張改成**教他自己看罐子的四件事**＋一次只加一種
+  - 過敏原檢測那張改成**教他寫兩週飲食日記**（這正是醫師要的證據）＋「吃完 2 小時內反應且每次都會」的判準
+  - 其餘：白內障、皮膚癢、疫苗、抽筋、感冒成藥、缺鐵、孕期用藥、減肥藥、排毒餐、血便分科
+- **結果：只把人推走 16 → 0 張；有具體做法 67% → 70%（321/453）。**
+- **量尺加上零容忍門檻**：`--max-deflect 0`，新卡如果又只會說「我不能建議」，上線前檢查直接擋。突變測試命中。
+
+### 2026-08-13（傍晚）Claude/城堡 🌏 日英西補上今天升級的八題（Edward 選 A）
+
+- **為什麼**：主庫已 49 題／502 張卡，三國疊層卻停在 37 題／約 300 張——**當天做的所有升級，日本、美國、西語用戶一句都聽不到**。缺的整題不會觸發（敗向安全，不會退回中文），所以壞掉的時候完全沒有聲音。Edward 拍板 **A**：已上架的市場不該拿到半套，先補今天動過的八題。
+- **補了 222 張卡**（ja 72／en 75／es 75），八題：高血壓、糖尿病、便秘、火燒心、保健品百科、拉肚子、手麻、耳鳴。
+- **一國一庫，不是翻譯**——制度、食材、急難號碼、在地事件都換過：
+  - 🇯🇵 血糖低下時 α-葡萄糖苷酶抑制劑要用**葡萄糖**不是砂糖；紅麴寫進**2024 年日本紅麴保健品回收事件**；長照指到**地域包括支援センター**；「機能性表示食品是廠商申報、不是國家審查」；急難號碼 119。
+  - 🇺🇸 醣量換算改成 15 克一份、一杯飯約三份；**美國 2022 年起有免處方的 OTC 助聽器**（這對耳鳴題很實用）；食藥署宣稱寫成 structure/function claim；急難號碼 911。
+  - 🇪🇸 抗凝血藥講 **Sintrom**；洛神花寫成 flor de Jamaica／té de hibisco；補助指向各自治區與社會服務；急難號碼 112。
+- **三國現在真的講得出來：40 題／約 375 張**（原本 37 題／約 300 張）。這八題三國**一張不缺**。
+- **新守門**（`engine/test_health_kb_i18n.py` 加 2 條）：這八題每一張卡在三國都要有疊層，而且三個新題用那一國真人講法叫得出來。突變測試——拿掉一張西文卡，守門立刻紅。
+- ⚠ 順手修好的坑：合併工具原本一律用兩格縮排寫回去，但 **en 和 es 的檔案是一格**——第一次合併產生 3,162 行假差異。改成偵測原本的縮排再寫回去（「大檔別整份重寫」，今天第二次踩）。
+- **驗證**：8 支衛教測試全綠、`npm run test:launch` 全綠、三國端到端各抽一題確認真的端出當地語言的卡。**沒動通話路徑。**
+
+### 2026-08-13（傍晚二）Claude/城堡 💰 真電話的用量帳終於算得出來——說明書佔了八成
+
+- **背景**：8/12 Edward 追問「每輪讀一萬字，tokens 消耗不會很重嗎？你們一直說很低」。當時只能量出「說明書 16,514 字＝11,871 個計價單位」，但**計費是不是每輪重算，程式判斷不出來**，所以補了計量。今天正式機的真數字回來了。
+- **真數字**（`munea-voice` 正式機日誌，3 天內）
+  - 每一輪 `prompt≈16,000`，其中 `TEXT≈15,000`——**就是說明書，每一輪重算一次**。
+  - `cached=0`，**每一筆都是 0**。連同一通電話的第二輪也沒有快取命中。
+  - 連線總帳呈等差：1 輪 16k、2 輪 32k、3 輪 48k、5 輪 83k——**context 沒有一直長大，貴的是那份固定的說明書**。
+- **查證（Google 官方文件）**：Live API **不支援手動快取**（`cachedContent` 只有一般 generateContent 用得到，那正是 8/12 量到「存起來只剩 6 個單位」的那條線）；Live 只有自動快取，而且**按輪計費、每輪把整個 session context 重算一次**。所以 8/12 那個「手動存起來很有效」的結論**只適用文字線，語音線用不上**。
+- **算成錢**（`gemini-3.1-flash-live-preview` 牌價：文字進 $0.75／百萬）
+  | 一通電話 | 估算成本 | 其中說明書 |
+  |---|---|---|
+  | 20 輪 | 約 NT$8.9 | NT$7.3（**82%**）|
+  | 50 輪（約 15 分鐘）| 約 NT$22.3 | NT$18.2 |
+  | 100 輪 | 約 NT$44.5 | NT$36.5 |
+  - 對照：常駐顯示卡多跑一分鐘 NT$0.70。**一通 15 分鐘的電話，重讀說明書比租顯示卡還貴。**
+- **🔴 順手抓到計量自己半殘**（動 `engine/live_voice_server.py`）：總帳每通都印 `turns=0`——`turn_count` 這個欄位**從來沒有人寫過**，只有人讀。於是「一通幾輪、每輪多少」根本算不出來，而那正是補這套計量要回答的問題。改成數實際收到幾次用量，並補上 `per_turn` 與 `est_usd`（牌價可用環境變數蓋過去，對不上以帳單為準）。守門 4 條＋突變測試命中。
+- **🟡 待 Edward 拍板**：要不要為了省這筆去瘦說明書。**先建議拿一張真帳單對過**——`cached=0` 也可能只是 Live 沒回報那個欄位，自動快取的九折可能已經在算了，那樣估算會高估十倍。動安全說明書之前，先確認錢是真的在燒。
+- **驗證**：`npm run test:launch` 全綠。**沒動通話行為**——只動總帳那一行的數字來源。

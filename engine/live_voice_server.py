@@ -33,10 +33,10 @@ from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env_loader import load_engine_env
-from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame, hot_threshold,
+from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
                               note_playout, in_playout_window, guard_enabled, guard_rms_threshold,
-                              normalized_rms_to_pcm16, sustained_voice_evidence,
-                              barge_evidence_threshold)
+                              sustained_voice_evidence, speaker_threshold,
+                              decide_speaker_evidence)
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
@@ -45,6 +45,7 @@ import health_selector
 import localization
 import live_lookup
 import voice_turn_semantics
+import voice_turn_completion
 import voice_tool_continuity
 from voice_locale_session import VoiceLocaleSession
 from call_control_client import post_internal, verify_call_token, CallControlError
@@ -67,6 +68,29 @@ else:
     MODEL = "gemini-3.1-flash-live-preview"
 TURN_END_SILENCE_MS = 180
 TURN_END_SILENCE_PCM = b"\x00\x00" * int(24000 * TURN_END_SILENCE_MS / 1000)
+# Vertex Live currently needs actual PCM silence to close an explicit audio
+# turn reliably; audio_stream_end alone does not substitute for AAD silence.
+# This padding is sent immediately (no wall-clock sleep), and the App reports
+# how much real tail it already retained so the provider receives 900ms total.
+try:
+    _provider_explicit_turn_tail_ms = int(
+        os.environ.get("MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS", "900")
+    )
+except (TypeError, ValueError):
+    _provider_explicit_turn_tail_ms = 900
+PROVIDER_EXPLICIT_TURN_TAIL_MS = max(650, min(1200, _provider_explicit_turn_tail_ms))
+# Vertex Native Audio occasionally accepts a very short first utterance and its
+# explicit end marker without producing either input transcription or output.
+# More synthetic silence does not repair that state. Keep the recovery bounded
+# to the first, short, audible opening so ordinary turns remain provider-driven.
+SHORT_OPENING_MAX_PCM_BYTES = 16000 * 2 * 3
+try:
+    _short_opening_recovery_ms = int(
+        os.environ.get("MUNEA_VOICE_SHORT_OPENING_RECOVERY_MS", "1350")
+    )
+except (TypeError, ValueError):
+    _short_opening_recovery_ms = 1350
+SHORT_OPENING_RECOVERY_MS = max(50, min(2500, _short_opening_recovery_ms))
 # 通話延長（2026-07-25 · 治「講超過 10 分鐘被硬切斷」）：Gemini Live 對每個底層連線有
 # 時間上限，快到的時候會先送 GoAway 預警（time_left）才真的斷線。GOAWAY_RECONNECT_MARGIN_S
 # 是提早多少秒動手換線（留給重連握手的緩衝，別真的卡到 0 秒才動）；MAX_SESSION_RECONNECTS
@@ -75,6 +99,17 @@ GOAWAY_RECONNECT_MARGIN_S = float(os.environ.get("MUNEA_VOICE_GOAWAY_MARGIN_S", 
 MAX_SESSION_RECONNECTS = int(os.environ.get("MUNEA_VOICE_MAX_RECONNECTS", "8"))
 LOOKUP_CUE_TAIL_MS = 80
 LOOKUP_CUE_TAIL_PCM = b"\x00\x00" * int(24000 * LOOKUP_CUE_TAIL_MS / 1000)
+
+
+def _recoverable_provider_session_abort(error, resumption_handle=None):
+    """Recognize Gemini's resumable session-limit close without hiding errors."""
+    code = getattr(error, "code", None)
+    text = str(error or "").lower()
+    return bool(
+        resumption_handle
+        and str(code) == "1008"
+        and "operation was aborted" in text
+    )
 
 
 # ── 兩支儀表的算法（2026-08-01 · Edward 7/31 深夜「變慢＋斷斷續續」查不到證據後重做）──
@@ -108,6 +143,24 @@ def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
     gap = (now - turn_last_out) * 1000
     return (gap if gap > current_max_ms else current_max_ms), gap
 
+
+def should_recover_short_opening(*, input_bytes, non_silent, asr_turns,
+                                 assistant_output_bytes, recoveries):
+    """Vertex-only fallback for an audible, uncommitted opening of at most 3s.
+
+    Gemini 3.1 handles the explicit App boundary natively. Replaying a hidden
+    recovery prompt there can create a second assistant turn after a slow but
+    valid response, which is worse than waiting for the provider result.
+    """
+    return (
+        VOICE_ENGINE == "vertex25"
+        and bool(non_silent)
+        and 0 < int(input_bytes or 0) <= SHORT_OPENING_MAX_PCM_BYTES
+        and int(asr_turns or 0) == 0
+        and int(assistant_output_bytes or 0) == 0
+        and int(recoveries or 0) == 0
+    )
+
 # 送一塊聲音去雲端臉，最多等多久（2026-07-29）。
 #
 # 為什麼要有這個：同一份聲音要送兩個地方——手機（使用者在聽，必須）和雲端臉
@@ -120,6 +173,17 @@ def note_turn_gap(now, turn_last_out, current_max_ms=0.0):
 # 聲音永遠優先。150 毫秒的取法：正常送出遠小於此（寫進緩衝就回來），
 # 又遠小於手機端 600 毫秒的播放水庫，就算真的等滿一次也不會被聽出來。
 FACE_SEND_TIMEOUT_S = float(os.environ.get("MUNEA_VOICE_FACE_SEND_TIMEOUT_S", "0.15"))
+
+
+def face_direct_enabled():
+    """臉的聲音「伺服器直送」總開關（2026-08-10 晚 · 1.0.60 實測災情後裝）。
+
+    直送路（#551）要三邊同時到位：這台伺服器＋手機 App＋顯卡上的臉引擎。
+    8/10 一天四次上線後 Edward 實測整組崩（她開口卡住、通話中段 48 秒聽不到使用者、
+    臉凍住、自己斷線），三邊版本沒對齊是主嫌。**預設關**＝App 問「可以直送嗎」一律回
+    不行，App 自動退回舊走法（聲音繞手機轉送臉機、跟 8/9 一樣）。等三邊在測試機上
+    驗齊了，設 MUNEA_VOICE_FACE_DIRECT=1 再開。每通電話開場問一次、不必重啟。"""
+    return os.environ.get("MUNEA_VOICE_FACE_DIRECT", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def verify_family_relay_proof(relay):
@@ -517,6 +581,20 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
                 reason="hidden_followup_no_recursive_turn",
                 turn=turn_id,
                 sources=",".join(st.get("guardian_internal_followup_sources") or ()) or "-",
+            )
+            return
+        if who == "ai":
+            # AI 字幕監看只做稽核／告警，不得在使用者沉默時自己再開一輪。
+            # 關鍵字分類器會把「沒有胸痛」「如果喘要就醫」這類安全覆述也判成
+            # medical emergency；舊行為因此在每輪結束後自動塞 hidden prompt，
+            # 造成使用者聽到寧寧無故多講一次。已播出的句子也無法靠第二輪收回，
+            # 所以保留記錄與人工告警，取消自主語音更正。
+            _diag(
+                cid,
+                "guardian.ai_cue_suppressed",
+                reason="no_autonomous_ai_correction",
+                turn=turn_id,
+                categories=",".join(categories) or "-",
             )
             return
         cue = (
@@ -1613,7 +1691,7 @@ _LOOKUP_CUE_LOCK = threading.Lock()
 
 
 def _hokkien_fallback_pcm(char):
-    """Generate and cache exact Mandarin-only fallback audio for each companion."""
+    """Generate and cache Mandarin fallback in the companion's own voice."""
     cache_key = str(char or "")
     cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
     if cached is not None:
@@ -1622,14 +1700,12 @@ def _hokkien_fallback_pcm(char):
         cached = _HOKKIEN_FALLBACK_PCM.get(cache_key)
         if cached is not None:
             return cached
-        encoded = server.tts_b64(localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW")
-        if not encoded:
-            _HOKKIEN_FALLBACK_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected Hokkien fallback audio format")
-            pcm = wav.readframes(wav.getnframes())
+        # Never substitute the legacy generic TTS voice. If the matching
+        # companion voice is unavailable, silence is less confusing than a
+        # different person suddenly taking over the same call.
+        pcm = _gemini_tts_pcm(
+            localization.TAIWANESE_HOKKIEN_FALLBACK, char, "zh-TW"
+        )
         _HOKKIEN_FALLBACK_PCM[cache_key] = pcm
         return pcm
 
@@ -1651,19 +1727,10 @@ def _lookup_wait_pcm(char, text=LOOKUP_WAIT_TEXT, locale="zh-TW"):
         if cached is not None:
             return cached
         same_voice = _gemini_tts_pcm(text, char, normalized_locale)
-        if same_voice:
-            _LOOKUP_WAIT_PCM[cache_key] = same_voice
-            return same_voice
-        encoded = server.tts_b64(text, char, normalized_locale)
-        if not encoded:
-            _LOOKUP_WAIT_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected lookup wait audio format")
-            pcm = wav.readframes(wav.getnframes())
-        _LOOKUP_WAIT_PCM[cache_key] = pcm
-        return pcm
+        # Same-person invariant: a lookup may wait silently, but it must never
+        # fall back to a generic voice that sounds like a second speaker.
+        _LOOKUP_WAIT_PCM[cache_key] = same_voice or b""
+        return _LOOKUP_WAIT_PCM[cache_key]
 
 
 def _char_voice_name(char):
@@ -1676,7 +1743,7 @@ def _char_voice_name(char):
 
 def _gemini_tts_pcm(text, char, locale="zh-TW"):
     """用她本人的聲線唸一句話（同 voice_name 的官方配音通道 · 7/16 實測 24kHz 原生同規格）。
-    失敗回空 bytes、呼叫端自動退回舊配音——聲線一致是體驗、不是可用性前提。
+    失敗回空 bytes；呼叫端不得退回另一個人的舊配音。
     2026-07-25：補上 language_code，避免繁中退回通用華語腔。
     2026-07-30：language_code 跟當輪 responseLocale 走，讓英文、日文、西文過場音
     不會拿 cmn-TW 合成。"""
@@ -1720,19 +1787,10 @@ def _lookup_cue_pcm(char, text=live_lookup.CUE_TEXT, locale="zh-TW"):
         if cached is not None:
             return cached
         same_voice = _gemini_tts_pcm(text, char, normalized_locale)
-        if same_voice:
-            _LOOKUP_CUE_PCM[cache_key] = same_voice
-            return same_voice
-        encoded = server.tts_b64(text, char, normalized_locale)
-        if not encoded:
-            _LOOKUP_CUE_PCM[cache_key] = b""
-            return b""
-        with wave.open(io.BytesIO(base64.b64decode(encoded)), "rb") as wav:
-            if wav.getnchannels() != 1 or wav.getsampwidth() != 2 or wav.getframerate() != 24000:
-                raise ValueError("unexpected lookup cue audio format")
-            pcm = wav.readframes(wav.getnframes())
-        _LOOKUP_CUE_PCM[cache_key] = pcm
-        return pcm
+        # Same-person invariant: keep the caption and continue the lookup, but
+        # never inject a generic fallback voice into a Despina/Charon session.
+        _LOOKUP_CUE_PCM[cache_key] = same_voice or b""
+        return _LOOKUP_CUE_PCM[cache_key]
 
 
 def _warm_lookup_cue_pool(char, locale="zh-TW"):
@@ -1751,7 +1809,7 @@ def _new_call_state():
     """一通電話的可變狀態（st）。2026-07-25 抽成獨立函式：①讓 handle() 讀起來清楚
     ②讓測試能直接造一份跟正式路一模一樣的 st，不用在測試裡手刻一份、容易漏欄位或跟正式
     定義兜不起來。"""
-    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False,
+    return {"in": 0, "out": 0, "last_in": None, "last_out": None, "echo_dropped": 0, "playout_head": 0.0, "last_hot_voice_at": 0.0, "await_first": True, "first_mic": False, "first_non_silent_mic": False,
           # last_voice_at＝最後一次「真的聽到人在講話」的時刻（音量過門檻的那一格）。
           # 2026-08-01 新增：first_audio 原本從 last_in（每一格麥克風封包都會刷新，
           # 包含全靜音）起算，量到的永遠是 7-38 毫秒＝等於沒在量。反應快慢要從
@@ -1761,7 +1819,25 @@ def _new_call_state():
           "voice_turn_seq": 0, "voice_turn_id": 0,
           "voice_turn_vad_pending": False, "voice_turn_vad_stop_at": 0.0,
           "voice_turn_target_ms": voice_turn_semantics.NORMAL_TURN_MS,
-          "face_ws": None, "face_audio_url": None,   # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
+          "face_ws": None, "face_audio_url": None, "face_audio_session": None,
+          "face_audio_reader": None, "face_audio_enabled": False,
+          "face_audio_ready": None, "face_audio_turn_started": False,
+          "face_audio_turn_seq": 0, "face_audio_transport_turn": 0,
+          "provider_turn_active": False, "provider_turn_last_audio_at": 0.0,
+          "provider_turn_out_bytes": 0, "provider_turn_max_gap_ms": 0.0,
+          # provider 偶爾會漏送 turn_complete。這只是一輪的收尾訊號遺失，不能拿來
+          # 重建整條 Live session；否則模型會忘記同通前文，幾輪後也會耗盡重連額度。
+          "provider_turn_recovery_seq": 0, "provider_turn_recoveries": 0,
+          "provider_turn_recovered_pending": False,
+          "provider_turn_recovered_late_audio_bytes": 0,
+          "provider_turn_recovered_late_caption_chars": 0,
+          "provider_turn_recovery_in_progress": False, "provider_audio_forwarding": False,
+          # One-shot recovery for Vertex accepting a short first utterance but
+          # producing no ASR and no response. activity_seq prevents duplicates.
+          "short_opening_input_bytes": 0, "short_opening_non_silent": False,
+          "short_opening_activity_seq": 0, "short_opening_recovery_task": None,
+          "short_opening_recoveries": 0, "short_opening_recovery_active": False,
+          # 方案 B：聲音直接轉送去雲端臉的 server-to-server 連線狀態
           "user_buf": "", "ai_buf": "", "user_flagged": set(), "ai_flagged": set(),
           "guardian_real_turn_id": 0, "guardian_internal_followup_active": False,
           "guardian_internal_followup_sources": (),
@@ -1773,6 +1849,12 @@ def _new_call_state():
           # 唸不準只記次數、不攔話（2026-08-10）。留著數字是為了看她到底多常講到那幾個詞，
           # 若真的很頻繁，正解是回頭調說明書的用詞提醒，不是再把整段話攔下來。
           "mandarin_pronunciation_seen": 0,
+          # Output-language detection is advisory only. A false positive used
+          # to interrupt a valid Mandarin answer, ask the model to repeat it,
+          # then play a canned fallback when the retry was flagged again—the
+          # exact unsolicited-repeat failure caught by the 3x3 phone gate.
+          # Unsupported *user input* still uses language_block below.
+          "hokkien_output_seen": 0,
           "blocked_output_text": "", "language_retry_count": 0,
           "client_barge_in": False, "pending_barge_in": None,
           "barge_in_rejected": 0, "barge_post_duck_accepted": 0,
@@ -1846,7 +1928,22 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             if not ready_result.get("ok"):
                 raise CallControlError("voice reservation was rejected: " + str(ready_result))
         try:
-            await ws.send(json.dumps({"type": "ready"}))
+            await ws.send(json.dumps({
+                "type": "service_identity",
+                "service": "voice",
+                "version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
+                "commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
+                "callProtocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
+                "voiceProtocol": "speaker-arbiter-v2",
+                "voiceEngine": VOICE_ENGINE,
+                "voiceModel": MODEL,
+                "voiceName": (eng.CHARS.get(char) or eng.CHARS["寧寧"]).get("voice") or "Leda",
+            }))
+            # uplinkAck=true（2026-08-13）：告訴 App「這一版伺服器會在收到你第一格
+            # 麥克風封包時回 uplink_ok」。App 據此決定「接通」狀態要等真的證明
+            # （新伺服器），還是走舊的保底時間（老伺服器）——Edward 8/13：畫面說
+            # 接通就必須能講話，不能講話就維持撥號中。
+            await ws.send(json.dumps({"type": "ready", "uplinkAck": True}))
         except Exception:
             pass
         _diag(cid, "node.ready", ms=round((time.monotonic() - t0) * 1000))
@@ -2071,10 +2168,36 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         except Exception:
             pass
 
+    async def _face_audio_read(w):
+        """Forward Avatar's first-PCM ACK to the App diagnostics channel."""
+        try:
+            async for message in w:
+                if not isinstance(message, str):
+                    continue
+                try:
+                    payload = json.loads(message)
+                except Exception:
+                    continue
+                if payload.get("type") == "avatar_pcm_received":
+                    await ws.send(message)
+        except Exception:
+            pass
+
     async def _face_audio_off():
         fw = st.get("face_ws")
+        reader = st.get("face_audio_reader")
+        ready = st.get("face_audio_ready")
         st["face_ws"] = None
         st["face_audio_url"] = None
+        st["face_audio_session"] = None
+        st["face_audio_reader"] = None
+        st["face_audio_enabled"] = False
+        st["face_audio_ready"] = None
+        st["face_audio_turn_started"] = False
+        if ready:
+            ready.set()
+        if reader:
+            reader.cancel()
         if fw:
             asyncio.create_task(_face_audio_close(fw))
             _diag(cid, "node.faceaudio_off")
@@ -2085,9 +2208,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         # 連不上/斷了都不能拖累語音對話：任何失敗都吞掉，對話照常，只是臉那次不會動（等下一次 on 訊息重試）。
         url = (url or "").strip().rstrip("/")
         if not url:
-            return
-        if st.get("face_ws") is not None and st.get("face_audio_url") == url:
-            return   # 同一顆網址已經開著，不重連（避免重複 on 事件疊連線）
+            return False
+        if (st.get("face_ws") is not None
+                and st.get("face_audio_url") == url
+                and st.get("face_audio_session") == session_id):
+            return True   # 同一顆網址已經開著，不重連（避免重複 on 事件疊連線）
         await _face_audio_off()   # 先收掉舊的（網址換了，或上一輪殘留）
         try:
             ws_url = url.replace("https://", "wss://", 1).replace("http://", "ws://", 1)
@@ -2100,11 +2225,76 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             fw = await websockets.connect(ws_url, max_size=None, open_timeout=5)
             st["face_ws"] = fw
             st["face_audio_url"] = url
+            st["face_audio_session"] = session_id
+            st["face_audio_enabled"] = False
+            st["face_audio_ready"] = asyncio.Event()
+            st["face_audio_turn_started"] = False
+            st["face_audio_reader"] = asyncio.create_task(_face_audio_read(fw))
             _diag(cid, "node.faceaudio_on", url=url)
+            return True
         except Exception as e:
             st["face_ws"] = None
             st["face_audio_url"] = None
+            st["face_audio_session"] = None
+            st["face_audio_reader"] = None
+            st["face_audio_enabled"] = False
+            st["face_audio_ready"] = None
+            st["face_audio_turn_started"] = False
             _diag(cid, "node.faceaudio_err", err=f"{type(e).__name__}:{str(e)[:60]}")
+            return False
+
+    async def _face_audio_failed(fw, reason):
+        reader = st.get("face_audio_reader")
+        ready = st.get("face_audio_ready")
+        st["face_ws"] = None
+        st["face_audio_url"] = None
+        st["face_audio_session"] = None
+        st["face_audio_reader"] = None
+        st["face_audio_enabled"] = False
+        st["face_audio_ready"] = None
+        st["face_audio_turn_started"] = False
+        if ready:
+            ready.set()
+        if reader:
+            reader.cancel()
+        asyncio.create_task(_face_audio_close(fw))
+        try:
+            await ws.send(json.dumps({
+                "type": "faceaudio_status", "on": False, "reason": reason,
+                "turn": int(st.get("voice_turn_id") or 0),
+            }))
+        except Exception:
+            pass
+
+    async def _finish_face_audio_turn():
+        fw = st.get("face_ws")
+        if (fw is None or not st.get("face_audio_enabled")
+                or not st.get("face_audio_turn_started")):
+            return
+        try:
+            await asyncio.wait_for(fw.send("finish"), timeout=FACE_SEND_TIMEOUT_S)
+            st["face_audio_turn_started"] = False
+        except asyncio.TimeoutError:
+            _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S,
+                  path="finish")
+            await _face_audio_failed(fw, "finish_timeout")
+        except Exception:
+            await _face_audio_failed(fw, "finish_error")
+
+    async def _reset_face_audio_turn(reason):
+        fw = st.get("face_ws")
+        if fw is None or not st.get("face_audio_enabled"):
+            st["face_audio_turn_started"] = False
+            return
+        try:
+            await asyncio.wait_for(fw.send("reset"), timeout=FACE_SEND_TIMEOUT_S)
+            st["face_audio_turn_started"] = False
+        except asyncio.TimeoutError:
+            _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S,
+                  path="reset", reason=reason)
+            await _face_audio_failed(fw, "reset_timeout")
+        except Exception:
+            await _face_audio_failed(fw, "reset_error")
 
     async def _forward_audio(chunk):
         if not chunk:
@@ -2113,18 +2303,46 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         _fa_now = time.monotonic()
         st["last_out"] = _fa_now
         st["playout_head"] = note_playout(st.get("playout_head"), _fa_now, len(chunk))
-        await ws.send(chunk)
         fw = st.get("face_ws")
-        if fw is not None:
-            # 同主聲道（2026-07-29）：臉那條線慢就放掉，不能回頭卡住聲音。
+        ready = st.get("face_audio_ready")
+        if fw is not None and ready is not None and not ready.is_set():
             try:
+                await asyncio.wait_for(ready.wait(), timeout=FACE_SEND_TIMEOUT_S)
+            except asyncio.TimeoutError:
+                await _face_audio_failed(fw, "arm_timeout")
+            fw = st.get("face_ws")
+        if fw is not None and st.get("face_audio_enabled"):
+            # Direct route sends to Avatar before publishing the same chunk to
+            # the App. Normal websocket writes return immediately; if the face
+            # route blocks for 150 ms, disable it and notify the App *before*
+            # the binary chunk so that exact chunk is relayed by the phone.
+            try:
+                if not st.get("face_audio_turn_started"):
+                    # Provider input-transcription.finished can arrive after
+                    # first output (and occasionally not at all). Transport
+                    # evidence still needs a non-zero, unique turn id, so it
+                    # cannot depend solely on the semantic/VAD counter.
+                    direct_turn = max(
+                        int(st.get("face_audio_turn_seq") or 0) + 1,
+                        int(st.get("voice_turn_id") or 0),
+                    )
+                    st["face_audio_turn_seq"] = direct_turn
+                    st["face_audio_transport_turn"] = direct_turn
+                    await ws.send(json.dumps({
+                        "type": "faceaudio_turn", "turn": direct_turn,
+                    }))
+                    await asyncio.wait_for(fw.send("reset"), timeout=FACE_SEND_TIMEOUT_S)
+                    await asyncio.wait_for(
+                        fw.send("turn:" + str(direct_turn)), timeout=FACE_SEND_TIMEOUT_S,
+                    )
+                    st["face_audio_turn_started"] = True
                 await asyncio.wait_for(fw.send(chunk), timeout=FACE_SEND_TIMEOUT_S)
             except asyncio.TimeoutError:
-                st["face_ws"] = None
                 _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S, path="forward")
-                asyncio.create_task(_face_audio_close(fw))
+                await _face_audio_failed(fw, "forward_timeout")
             except Exception:
-                st["face_ws"] = None
+                await _face_audio_failed(fw, "forward_error")
+        await ws.send(chunk)
 
     async def _mark_first_audio(source):
         if not st.get("await_first") or st.get("last_in") is None:
@@ -2379,6 +2597,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 await _forward_audio(chunk)
                 await asyncio.sleep(0)
             await _send_turn_tail()
+            await _finish_face_audio_turn()
         await ws.send(json.dumps({"type": "turn_complete"}))
         _diag(cid, "node.language_fallback", source=source, out_bytes=len(pcm))
 
@@ -2401,6 +2620,77 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         )
         _diag(cid, "node.language_retry")
 
+    def _invalidate_short_opening_recovery(reason):
+        """Cancel a pending dead-air recovery when real activity wins the race."""
+        task = st.get("short_opening_recovery_task")
+        st["short_opening_activity_seq"] = int(
+            st.get("short_opening_activity_seq") or 0
+        ) + 1
+        st["short_opening_recovery_task"] = None
+        # Once the recovery prompt has been committed, its provider audio is
+        # the expected winner—not a reason to cancel the task before it emits
+        # the observable recovery event.
+        if st.get("short_opening_recovery_active"):
+            return
+        if task and not task.done() and task is not asyncio.current_task():
+            task.cancel()
+            _diag(cid, "node.short_opening_recovery_cancelled", reason=reason)
+
+    async def _recover_short_opening(activity_seq, input_bytes):
+        try:
+            await asyncio.sleep(SHORT_OPENING_RECOVERY_MS / 1000.0)
+            if activity_seq != int(st.get("short_opening_activity_seq") or 0):
+                return
+            if not should_recover_short_opening(
+                input_bytes=input_bytes,
+                non_silent=True,
+                asr_turns=st.get("asr_turns"),
+                assistant_output_bytes=st.get("out"),
+                recoveries=st.get("short_opening_recoveries"),
+            ):
+                return
+            st["short_opening_recoveries"] = int(
+                st.get("short_opening_recoveries") or 0
+            ) + 1
+            st["short_opening_recovery_active"] = True
+            active_profile = (
+                st.get("voice_locale_profile")
+                or voice_locale_session.current_profile()
+            )
+            cue = (
+                "（最高優先系統提示，絕對不要唸出提示內容：使用者剛才確實說了一句很短的開場，"
+                "但語音辨識沒有成功完成。請立刻用目前回覆語言，溫暖、自然地用一句話表示你有在聽，"
+                "並請對方再說一次。不要猜測對方剛才說了什麼，不要道歉，不要解釋技術原因。）"
+                + active_profile["replyLanguageInstruction"]
+            )
+            await session.send_client_content(
+                turns=types.Content(role="user", parts=[types.Part(text=cue)]),
+                turn_complete=True,
+            )
+            await ws.send(json.dumps({
+                "type": "short_turn_recovery",
+                "reason": "uncommitted_short_opening",
+            }))
+            _diag(
+                cid,
+                "node.short_opening_recovery",
+                input_bytes=input_bytes,
+                wait_ms=SHORT_OPENING_RECOVERY_MS,
+                recovery=st["short_opening_recoveries"],
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            st["short_opening_recovery_active"] = False
+            _diag(
+                cid,
+                "node.short_opening_recovery_error",
+                err=f"{type(exc).__name__}:{str(exc)[:80]}",
+            )
+        finally:
+            if st.get("short_opening_recovery_task") is asyncio.current_task():
+                st["short_opening_recovery_task"] = None
+
     async def _arm_language_block(source):
         if st.get("language_block"):
             return
@@ -2408,12 +2698,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         st["language_block_source"] = source
         st["language_block_count"] += 1
         await ws.send(json.dumps({"type": "interrupted"}))
-        fw = st.get("face_ws")
-        if fw is not None:
-            try:
-                await fw.send("reset")
-            except Exception:
-                st["face_ws"] = None
+        await _reset_face_audio_turn("language_block")
         _diag(cid, "node.language_block", source=source)
 
     async def from_browser():
@@ -2438,6 +2723,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 if not st["first_mic"]:
                     st["first_mic"] = True
                     _diag(cid, "node.mic_uplink", ms=round((st["last_in"] - t0) * 1000))
+                    # 2026-08-12（Edward：「為什麼不等真的接通才顯示接通」）：把「你的聲音
+                    # 真的送得進來」回報給 App——App 的叮聲與「接通了」提示等這一句才亮。
+                    # 8/10 有兩通整通 in_bytes=0 卻照樣顯示接通，就是缺這一格證明。
+                    try:
+                        await ws.send(json.dumps({"type": "uplink_ok"}))
+                    except Exception:
+                        pass
                 # 回音濾網（病歷 a 快藥）：她出聲期間＋殘響窗內，低能量上行＝喇叭漏回來的
                 # 自己聲音 → 丟棄；正常音量直說天生高於門檻、插話照常穿透。voice_echo_guard.py。
                 _eg_now = time.monotonic()
@@ -2447,9 +2739,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 # 2026-07-30 熱門檻：她講話中（水位在前方）要求更大聲才算真插話——
                 # 治「喇叭開大→她自己的聲音被當插話→講到一半自己閉嘴」（telemetry 實錘）
                 _eg_rms = frame_rms(message)
-                _eg_hot = hot_threshold(_eg_now, st.get("playout_head"))
+                _eg_hot = speaker_threshold(playout_active=bool(
+                    st.get("playout_head") and _eg_now < st.get("playout_head")
+                ))
                 _voice_frame_ms = len(message) / float(16000 * 2) * 1000.0
                 _above_voice_threshold = _eg_rms >= _eg_hot
+                if not st.get("first_non_silent_mic") and _eg_rms >= 700:
+                    st["first_non_silent_mic"] = True
+                    _diag(
+                        cid, "node.first_non_silent_mic",
+                        ms=round((_eg_now - t0) * 1000), rms=round(_eg_rms),
+                    )
 
                 # A semantic hold is only converted into a real continuation
                 # after sustained microphone evidence. One loud frame is not
@@ -2517,11 +2817,18 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     # （她講話中時 _eg_hot 是熱門檻、殘響不會誤算成人聲；她沒講話時就是原門檻。）
                     st["last_voice_at"] = _eg_now
                     st["await_first"] = True
+                    if st.get("short_opening_recovery_task"):
+                        _invalidate_short_opening_recovery("new_user_audio")
                 if _eg_window and guard_enabled() and _eg_rms < _eg_hot:
                     st["echo_dropped"] += 1
                     if st["echo_dropped"] == 1 or st["echo_dropped"] % 200 == 0:
                         _diag(cid, "node.echo_guard_dropped", count=st["echo_dropped"])
                     continue
+                st["short_opening_input_bytes"] = int(
+                    st.get("short_opening_input_bytes") or 0
+                ) + len(message)
+                if _eg_rms >= 700:
+                    st["short_opening_non_silent"] = True
                 await session.send_realtime_input(
                     audio=types.Blob(data=bytes(message), mime_type="audio/pcm;rate=16000")
                 )
@@ -2573,7 +2880,61 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             turn_complete=True,
                         )
                 elif t == "audio_end":
+                    short_input_bytes = int(st.get("short_opening_input_bytes") or 0)
+                    short_non_silent = bool(st.get("short_opening_non_silent"))
+                    st["short_opening_input_bytes"] = 0
+                    st["short_opening_non_silent"] = False
+                    if st.get("short_opening_recovery_task"):
+                        _invalidate_short_opening_recovery("new_audio_end")
+                    try:
+                        raw_reported_tail_ms = int(obj.get("trailing_silence_ms") or 0)
+                    except (TypeError, ValueError):
+                        raw_reported_tail_ms = 0
+                    reported_tail_ms = max(
+                        0, min(
+                            PROVIDER_EXPLICIT_TURN_TAIL_MS,
+                            raw_reported_tail_ms,
+                        )
+                    )
+                    provider_pad_ms = (
+                        max(0, PROVIDER_EXPLICIT_TURN_TAIL_MS - reported_tail_ms)
+                        if VOICE_ENGINE == "vertex25" else 0
+                    )
+                    _diag(
+                        cid,
+                        "node.audio_stream_end",
+                        reason=str(obj.get("reason") or "client")[:48],
+                        first_non_silent=bool(st.get("first_non_silent_mic")),
+                        reported_tail_ms=reported_tail_ms,
+                        provider_pad_ms=provider_pad_ms,
+                    )
+                    if provider_pad_ms:
+                        await session.send_realtime_input(
+                            audio=types.Blob(
+                                data=b"\x00\x00" * int(16000 * provider_pad_ms / 1000),
+                                mime_type="audio/pcm;rate=16000",
+                            )
+                        )
                     await session.send_realtime_input(audio_stream_end=True)
+                    if should_recover_short_opening(
+                        input_bytes=short_input_bytes,
+                        non_silent=short_non_silent,
+                        asr_turns=st.get("asr_turns"),
+                        assistant_output_bytes=st.get("out"),
+                        recoveries=st.get("short_opening_recoveries"),
+                    ):
+                        activity_seq = int(st.get("short_opening_activity_seq") or 0)
+                        recovery_task = asyncio.create_task(
+                            _recover_short_opening(activity_seq, short_input_bytes)
+                        )
+                        st["short_opening_recovery_task"] = recovery_task
+                        st["bg_tasks"].append(recovery_task)
+                        _diag(
+                            cid,
+                            "node.short_opening_recovery_armed",
+                            input_bytes=short_input_bytes,
+                            wait_ms=SHORT_OPENING_RECOVERY_MS,
+                        )
                 elif t == "barge_in_start":
                     # Buffer the ordered evidence frames that follow. Existing
                     # clients send pre-duck pre-roll only; fixed clients append a
@@ -2590,7 +2951,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         _post_duck_sustain_ms = 80
                     st["pending_barge_in"] = {
                         "started_at": _bi_started_at,
-                        "threshold_pcm": normalized_rms_to_pcm16(obj.get("threshold")),
                         "sustain_ms": obj.get("sustain_ms", 150),
                         "playout_active": in_playout_window(_bi_started_at, st.get("playout_head")),
                         "post_duck_frames": _post_duck_frames,
@@ -2616,7 +2976,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     _evidence_threshold = 0.0
                     if _pending_barge:
                         _levels = [(rms, frame_ms) for _, rms, frame_ms in _pending_barge["frames"]]
-                        _client_threshold = _pending_barge["threshold_pcm"]
                         _post_duck_frames = min(
                             len(_levels),
                             max(0, int(_pending_barge.get("post_duck_frames") or 0)),
@@ -2627,11 +2986,14 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             # real nearby speech continues, speaker echo collapses.
                             _decision_levels = _levels[-_post_duck_frames:]
                             _decision_sustain_ms = _pending_barge.get("post_duck_sustain_ms", 80)
-                            _evidence_threshold = barge_evidence_threshold(
-                                _client_threshold, playout_active=False,
-                            )
-                            _evidence_basis = "post_duck"
                             _minimum_evidence_ms = 60.0
+                            _verdict = decide_speaker_evidence(
+                                _decision_levels,
+                                playout_active=False,
+                                after_duck=True,
+                                sustain_ms=_decision_sustain_ms,
+                                minimum_ms=_minimum_evidence_ms,
+                            )
                         else:
                             # Existing installed clients only send pre-duck
                             # pre-roll.  Their adaptive threshold is not safe for
@@ -2640,30 +3002,36 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             _decision_levels = _levels
                             _decision_sustain_ms = _pending_barge["sustain_ms"]
                             _playout_active = bool(_pending_barge.get("playout_active"))
-                            _evidence_threshold = barge_evidence_threshold(
-                                _client_threshold, playout_active=_playout_active,
-                            )
-                            _evidence_basis = "pre_duck_hot" if _playout_active else "pre_duck_idle"
                             _minimum_evidence_ms = 120.0
-                        _accepted, _evidence_ms, _onset_index = sustained_voice_evidence(
-                            _decision_levels,
-                            _evidence_threshold,
-                            _decision_sustain_ms,
-                            minimum_ms=_minimum_evidence_ms,
-                        )
+                            _verdict = decide_speaker_evidence(
+                                _decision_levels,
+                                playout_active=_playout_active,
+                                after_duck=False,
+                                sustain_ms=_decision_sustain_ms,
+                                minimum_ms=_minimum_evidence_ms,
+                            )
+                        _accepted = _verdict["accepted"]
+                        _evidence_ms = _verdict["evidence_ms"]
+                        _onset_index = _verdict["onset_index"]
+                        _evidence_threshold = _verdict["threshold"]
+                        _evidence_basis = _verdict["basis"]
                         # Acceptance uses the safe decision slice above, but
                         # replay still starts at the original speech onset so a
                         # genuine interruption does not lose its first syllable.
                         _, _, _onset_index = sustained_voice_evidence(
                             _levels,
-                            _client_threshold,
+                            speaker_threshold(
+                                playout_active=bool(_pending_barge.get("playout_active")),
+                                after_duck=False,
+                            ),
                             _pending_barge["sustain_ms"],
                         )
                     else:
-                        _accepted = not (
-                            in_playout_window(_bi_now, st.get("playout_head"))
-                            and _bi_now - st.get("last_hot_voice_at", 0.0) > 0.6
-                        )
+                        # Evidence-free legacy clients cannot obtain a second,
+                        # hidden speaker verdict. Reject the destructive action;
+                        # current clients always use start -> PCM -> commit.
+                        _accepted = False
+                        _evidence_basis = "legacy_missing_evidence"
                     if not _accepted:
                         st["barge_in_rejected"] = st.get("barge_in_rejected", 0) + 1
                         _diag(cid, "node.barge_in_rejected_echo",
@@ -2697,39 +3065,107 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     await ws.send(json.dumps({"type": "barge_in_ack", "accepted": True,
                                               "evidence_ms": round(_evidence_ms),
                                               "evidence_basis": _evidence_basis}))
-                    fw = st.get("face_ws")
-                    if fw is not None:
-                        try:
-                            await fw.send("reset")
-                        except Exception:
-                            st["face_ws"] = None
+                    await _reset_face_audio_turn("client_barge_in")
                     _diag(cid, "node.client_barge_in", evidence_ms=round(_evidence_ms),
                           evidence_basis=_evidence_basis,
                           threshold_pcm=round(_evidence_threshold))
                 elif t == "faceaudio":
                     # {"type":"faceaudio","on":true,"url":"..."} 開＝伺服器對伺服器直送雲端臉；on:false 或掛斷＝收線
-                    if obj.get("on"):
-                        await _face_audio_on(
+                    if obj.get("on") and not face_direct_enabled():
+                        # 直送路總開關（2026-08-10 晚 · Edward 1.0.60 實測災情後裝）：
+                        # 直送要三邊同時到位（伺服器＋App＋顯卡上的臉引擎），任何一邊沒跟上就會
+                        # 「她要講話卡住／聲音斷／臉凍住／使用者講話沒人聽」。關掉時明白回
+                        # on:false，App 會自動退回舊走法（聲音繞手機轉送臉機）——
+                        # 不用重包 App、不用動顯卡。等三邊都驗齊再開回來。
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": False,
+                            "reason": "direct_disabled",
+                        }))
+                        _diag(cid, "node.faceaudio_direct_disabled")
+                    elif obj.get("on"):
+                        direct_on = await _face_audio_on(
                             obj.get("url") or "",
                             obj.get("session") or "",
                             obj.get("token") or call_token,
                         )
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": bool(direct_on),
+                            "reason": "ready" if direct_on else "connect_failed",
+                        }))
+                        st["face_audio_enabled"] = bool(direct_on)
+                        ready = st.get("face_audio_ready")
+                        if ready:
+                            ready.set()
                     else:
                         await _face_audio_off()
+                        await ws.send(json.dumps({
+                            "type": "faceaudio_status", "on": False,
+                            "reason": "client_disabled",
+                        }))
+
+    # watchdog 原地補回合時，下一塊 provider 音訊要等 App／Avatar 舊回合收乾淨再進來，
+    # 避免舊 tail 與新一句 PCM 互相穿插。
+    turn_recovery_done = asyncio.Event()
+    turn_recovery_done.set()
 
     async def from_live():
         # session.receive() 每輪結束就收（SDK 行為）；外層 while 讓「一輪接完再等下一輪」＝多輪對話不斷。
         # 2026-07-25 通話延長：整段包一層 try/except——GoAway 預警後底層連線遲早會被
         # Gemini 收掉，這是「預期中的收線」，跟真的斷線／出錯要分開處理；回傳值
         # "reconnect" 交給外層換一條底層連線接著講，"ended" 才是這通真的結束了。
+        observed_recovery_seq = int(st.get("provider_turn_recovery_seq") or 0)
+
+        def _sync_recovered_turn_counters():
+            nonlocal observed_recovery_seq, turn_out, turn_max_gap_ms, turn_last_out
+            current = int(st.get("provider_turn_recovery_seq") or 0)
+            if current == observed_recovery_seq:
+                return
+            observed_recovery_seq = current
+            turn_out = 0
+            turn_max_gap_ms = 0.0
+            turn_last_out = None
+
         try:
             while True:
+                st["face_audio_turn_started"] = False
                 turn_out = 0
                 turn_max_gap_ms = 0.0   # 這一輪送聲音時，相鄰兩塊之間最久的一次空檔（抖動指標）
                 turn_last_out = None    # 這一輪送出的上一塊聲音是幾點（2026-08-01：抖動只跟同一輪比）
                 got = False
                 async for msg in session.receive():
                     got = True
+                    await turn_recovery_done.wait()
+                    _sync_recovered_turn_counters()
+                    # 每輪的真實用量（2026-08-12 Edward「去實際計算一下」）：
+                    # 在這之前，「說明書貴不貴、聲音貴不貴」全靠推估——因為我們**根本沒在量**。
+                    # 這裡把伺服器回報的用量原樣記下來，一天就有真數字可以算錢、可以決定
+                    # 要不要把說明書存起來。拿不到就安靜跳過，絕不影響通話。
+                    _um = getattr(msg, "usage_metadata", None)
+                    if _um is not None:
+                        try:
+                            _by_kind = {}
+                            for _d in (getattr(_um, "response_tokens_details", None) or []) + \
+                                      (getattr(_um, "prompt_tokens_details", None) or []):
+                                _mod = getattr(getattr(_d, "modality", None), "name", None) \
+                                    or str(getattr(_d, "modality", "") or "?")
+                                _by_kind[_mod] = _by_kind.get(_mod, 0) + (getattr(_d, "token_count", 0) or 0)
+                            st["usage_prompt"] = st.get("usage_prompt", 0) + (getattr(_um, "prompt_token_count", 0) or 0)
+                            st["usage_output"] = st.get("usage_output", 0) + (getattr(_um, "response_token_count", 0) or 0)
+                            st["usage_cached"] = st.get("usage_cached", 0) + (getattr(_um, "cached_content_token_count", 0) or 0)
+                            _agg = st.setdefault("usage_by_modality", {})
+                            for _k, _v in _by_kind.items():
+                                _agg[_k] = _agg.get(_k, 0) + _v
+                            # 2026-08-13：總帳原本印 turn_count，但那個欄位從來沒有人寫，
+                            # 每通都印 turns=0——於是「一通幾輪、每輪多少」算不出來，
+                            # 而那正是我們補這套計量要回答的問題。改成數這裡自己收到幾次用量。
+                            st["usage_turns"] = st.get("usage_turns", 0) + 1
+                            _diag(cid, "usage.turn",
+                                  prompt=getattr(_um, "prompt_token_count", 0) or 0,
+                                  output=getattr(_um, "response_token_count", 0) or 0,
+                                  cached=getattr(_um, "cached_content_token_count", 0) or 0,
+                                  by_modality=_by_kind)
+                        except Exception:
+                            pass
                     # 通話延長（2026-07-25）：GoAway＝伺服器預告「這條底層連線快到期了」
                     # （time_left 通常留了緩衝，不是馬上斷）；session_resumption_update
                     # 帶新的 handle，之後重連要帶著這個 handle 才能接上同一通邏輯電話。
@@ -2745,9 +3181,18 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         st["resumption_handle"] = sru.new_handle
                         _diag(cid, "node.session_resumption_update")
                     sc = getattr(msg, "server_content", None)
+                    # watchdog 已經替 App／Avatar 宣告上一輪結束後，provider 偶爾仍會
+                    # 補送同一輪的尾音或字幕。這些資料若重新開啟 provider_turn_active，
+                    # 就會變成使用者什麼都沒說、寧寧卻把上一段再講一次。保留 pending
+                    # 直到真正的 turn_complete 抵達；期間只隔離舊 tail，不重建 session。
+                    recovered_tail = bool(
+                        st.get("provider_turn_recovered_pending")
+                        and not st.get("provider_turn_active")
+                    )
                     if sc:
                         it_pre = getattr(sc, "input_transcription", None)
                         if it_pre and getattr(it_pre, "text", None):
+                            _invalidate_short_opening_recovery("input_transcription")
                             if st.get("user_turn_started_at") is None:
                                 st["user_turn_started_at"] = time.monotonic()
                                 _guardian_begin_real_user_turn(st)
@@ -2903,7 +3348,17 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 )
 
                         ot_pre = getattr(sc, "output_transcription", None)
-                        if ot_pre and getattr(ot_pre, "text", None):
+                        if recovered_tail and ot_pre and getattr(ot_pre, "text", None):
+                            late_chars = len(str(ot_pre.text))
+                            st["provider_turn_recovered_late_caption_chars"] = int(
+                                st.get("provider_turn_recovered_late_caption_chars") or 0
+                            ) + late_chars
+                            _diag(
+                                cid,
+                                "node.recovered_tail_caption_suppressed",
+                                chars=late_chars,
+                            )
+                        if (not recovered_tail) and ot_pre and getattr(ot_pre, "text", None):
                             current_profile = (
                                 st.get("voice_locale_profile")
                                 or voice_locale_session.current_profile()
@@ -2920,7 +3375,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     st["blocked_output_text"]
                                 )
                             ):
-                                await _arm_language_block("model_output")
+                                st["hokkien_output_seen"] = (
+                                    st.get("hokkien_output_seen", 0) + 1
+                                )
+                                _diag(
+                                    cid, "node.hokkien_output_seen",
+                                    chars=len(st["blocked_output_text"]),
+                                )
                             elif (
                                 output_locale == "zh-TW"
                                 and localization.contains_unstable_mandarin_speech(output_text)
@@ -2943,7 +3404,12 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     count=st["mandarin_pronunciation_seen"],
                                 )
                     data = getattr(msg, "data", None)
-                    if data and not st.get("language_block") and not st.get("client_barge_in"):
+                    if (
+                        data
+                        and not recovered_tail
+                        and not st.get("language_block")
+                        and not st.get("client_barge_in")
+                    ):
                         _semantic_reason = st.get("semantic_hold_reason")
                         if _semantic_reason and not st.get("semantic_hold_outcome_recorded"):
                             _remaining = max(
@@ -2974,7 +3440,27 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 )
                             st["semantic_hold_outcome_recorded"] = True
                             _clear_semantic_hold()
-                    if data and not st.get("language_block") and not st.get("client_barge_in"):
+                    if recovered_tail and data:
+                        st["provider_turn_recovered_late_audio_bytes"] = int(
+                            st.get("provider_turn_recovered_late_audio_bytes") or 0
+                        ) + len(data)
+                        _diag(
+                            cid,
+                            "node.recovered_tail_audio_suppressed",
+                            out_bytes=len(data),
+                            total_bytes=st["provider_turn_recovered_late_audio_bytes"],
+                        )
+                    elif data and not st.get("language_block") and not st.get("client_barge_in"):
+                        # 先把 provider 活性更新，再做任何可能 yield 的工作；否則 watchdog
+                        # 可能在新 PCM 已抵達、但 _mark_first_audio 尚未返回時誤收上一輪。
+                        await turn_recovery_done.wait()
+                        _sync_recovered_turn_counters()
+                        _provider_audio_at = time.monotonic()
+                        _invalidate_short_opening_recovery("provider_audio")
+                        turn_out += len(data)
+                        st["provider_turn_active"] = True
+                        st["provider_turn_last_audio_at"] = _provider_audio_at
+                        st["provider_turn_out_bytes"] = turn_out
                         await _mark_first_audio("model")
                         if st.get("lookup_waiting_answer"):
                             now = time.monotonic()
@@ -2986,8 +3472,6 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 after_result_ms=round((now - result_at) * 1000),
                             )
                             st["lookup_waiting_answer"] = False
-                        st["out"] += len(data)
-                        turn_out += len(data)
                         # 2026-07-29：量「送聲音的手抖不抖」。Edward 7/28 回報「句尾的最後一句
                         # 會卡其中某個字」，但體感沒有數字就查不動——這裡記下相鄰兩塊聲音之間
                         # 最久的一次空檔，收在 turn_done 一起報。手順的時候這個值很小；
@@ -2997,32 +3481,20 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                         _now_out = time.monotonic()
                         turn_max_gap_ms, _ = note_turn_gap(_now_out, turn_last_out, turn_max_gap_ms)
                         turn_last_out = _now_out
-                        st["last_out"] = _now_out
-                        # 回音窗 v2（2026-07-29）：鏡射 App 播放節奏、推進「手機大概播到哪」。
-                        # Gemini 送資料比講話快，只看送出時間會讓句子後半的回音落在窗外＝自問自答。
-                        st["playout_head"] = note_playout(st.get("playout_head"), _now_out, len(data))
-                        await ws.send(data)
-                        fw = st.get("face_ws")
-                        if fw is not None:
-                            # 同一份聲音 bytes，server-to-server 直送雲端臉（方案 B）。
-                            # 加了逾時（2026-07-29）：臉那條線慢的時候，原本會回頭卡住下一塊
-                            # 聲音＝使用者聽到「卡一下」。臉是加分、聲音是必須，所以慢就放掉臉，
-                            # 這通剩下的時間臉不動、但聲音全程順（App 下次送 on 訊息會重連）。
-                            try:
-                                await asyncio.wait_for(fw.send(data), timeout=FACE_SEND_TIMEOUT_S)
-                            except asyncio.TimeoutError:
-                                st["face_ws"] = None
-                                _diag(cid, "node.faceaudio_slow_dropped", timeout_s=FACE_SEND_TIMEOUT_S)
-                                asyncio.create_task(_face_audio_close(fw))
-                            except Exception as e:
-                                st["face_ws"] = None
-                                _diag(cid, "node.faceaudio_send_err", err=str(e)[:60])
+                        st["provider_turn_max_gap_ms"] = turn_max_gap_ms
+                        # 唯一音訊出口：先嘗試 Voice→Avatar 直送，再把同一塊送給 App 播放。
+                        # 直送若逾時，_forward_audio 會先通知 App 切回 relay，確保這一塊不遺失。
+                        st["provider_audio_forwarding"] = True
+                        try:
+                            await _forward_audio(data)
+                        finally:
+                            st["provider_audio_forwarding"] = False
                     elif data:
                         reason = "language" if st.get("language_block") else "barge_in"
                         _diag(cid, "node.audio_suppressed", reason=reason, out_bytes=len(data))
                     if sc:
                         ot = getattr(sc, "output_transcription", None)
-                        if ot and getattr(ot, "text", None):
+                        if (not recovered_tail) and ot and getattr(ot, "text", None):
                             # 2026-07-25（卡西法・三修③）：語音線字幕出口也要過同一道防禦性
                             # 清洗，剝掉可能漏出的 <thinking> 內部推理標記，跟文字線同一把關卡。
                             current_profile = (
@@ -3066,13 +3538,25 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
                             _diag(cid, "node.interrupted")
                             await ws.send(json.dumps({"type": "interrupted"}))
-                            fw = st.get("face_ws")
-                            if fw is not None:
-                                try:
-                                    await fw.send("reset")   # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）
-                                except Exception:
-                                    st["face_ws"] = None
+                            # 插話：雲端臉也停下舊句、回待機（伺服器直接送，不等瀏覽器繞一圈）。
+                            await _reset_face_audio_turn("model_interrupted")
+                        if (
+                            getattr(sc, "turn_complete", False)
+                            and st.get("provider_turn_recovered_pending")
+                            and not st.get("provider_turn_active")
+                            and turn_out == 0
+                        ):
+                            # watchdog 已替這一輪補過收尾；provider 晚到的原始訊號只吃掉，
+                            # 不可以再向 App／Avatar 補第二次 turn_complete。
+                            st["provider_turn_recovered_pending"] = False
+                            _diag(cid, "node.turn_complete_late_after_recovery")
+                            continue
                         if getattr(sc, "turn_complete", False):
+                            st["provider_turn_active"] = False
+                            st["provider_turn_last_audio_at"] = 0.0
+                            st["provider_turn_out_bytes"] = 0
+                            st["provider_turn_max_gap_ms"] = 0.0
+                            st["provider_turn_recovered_pending"] = False
                             ms = round(turn_out / (24000 * 2) * 1000)
                             # max_gap_ms＝這一輪送聲音最久的一次空檔。Avatar 播放端現在只有
                             # 200-350 毫秒動態緩衝；持續衝到接近或超過緩衝，
@@ -3108,6 +3592,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 st["lookup_waiting_answer"] = False
                             if turn_out and not st.get("language_block") and not st.get("client_barge_in"):
                                 await _send_turn_tail()
+                            await _finish_face_audio_turn()
                             turn_out = 0
                             # 2026-08-01：這兩個原本只在 while 外層歸零，同一條連線第二輪
                             # 以後會沿用上一輪的最大值＝越報越大、且永遠是舊帳。
@@ -3147,6 +3632,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["user_turn_started_at"] = None
                             st["locale_user_transcript"] = ""
                             st["locale_resolved_text"] = ""
+                            if st.get("short_opening_recovery_active"):
+                                # This is transport recovery, not a real user
+                                # exchange; keep it out of durable call memory.
+                                st["ai_buf"] = ""
+                                st["short_opening_recovery_active"] = False
                             # 通話記憶：這一輪講完，先把雙方字幕收進整通紀錄再清緩衝（收線時交聊後管線）
                             _capture_call_turns(st)
                             # 守護腦：這一輪自然講完了、天然的輪替空檔，排隊中的安全導引在這裡送出（不是插話攔截剛剛那句）
@@ -3213,21 +3703,112 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
             if _voice_session_extend_enabled() and st.get("goaway_pending"):
                 _diag(cid, "node.goaway_closed", err=f"{type(exc).__name__}:{str(exc)[:60]}")
                 return "reconnect"
+            # Gemini 3.1 can end a resumable underlying session with API 1008
+            # without sending GoAway first (observed at about 3m15s).  This is
+            # a transport rotation, not the user's call ending.  Require both
+            # the exact provider signal and a resumption handle; every other
+            # 1008/error still propagates as a real failure.
+            if (
+                _voice_session_extend_enabled()
+                and _recoverable_provider_session_abort(
+                    exc, st.get("resumption_handle") or resumption_handle
+                )
+            ):
+                _diag(cid, "node.provider_session_abort_reconnect", code=1008)
+                return "reconnect"
             raise
 
-    async def _goaway_watchdog():
-        # GoAway 保底：萬一遲遲沒有 turn_complete 這種天然空檔（例如對方講很長一段話、
-        # 或整通都沒人開口），不要傻等硬斷線——時間一到就主動出手，逼外層換線。
+    async def _session_watchdog():
+        # 兩種不同責任：provider 漏 turn_complete 時只在原 session 補回合收尾；
+        # 真正 GoAway 到期才換底層連線。兩者不可再共用「重連」處置。
         while True:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.25)
+            now = time.monotonic()
+            stalled = voice_turn_completion.provider_turn_stalled(
+                now,
+                active=st.get("provider_turn_active"),
+                last_audio_at=st.get("provider_turn_last_audio_at") or 0.0,
+                out_bytes=st.get("provider_turn_out_bytes") or 0,
+                blocked=bool(
+                    st.get("language_block")
+                    or st.get("client_barge_in")
+                    or st.get("tool_wait_active")
+                    or st.get("lookup_waiting_answer")
+                    or st.get("action_results")
+                    or st.get("provider_audio_forwarding")
+                ),
+                idle_ms=float(os.environ.get("MUNEA_VOICE_TURN_STALL_IDLE_MS", "2500")),
+            )
+            if stalled:
+                quiet_ms = round(
+                    (now - float(st.get("provider_turn_last_audio_at") or now)) * 1000
+                )
+                out_bytes = int(st.get("provider_turn_out_bytes") or 0)
+                _diag(
+                    cid,
+                    "node.turn_complete_stall",
+                    quiet_ms=quiet_ms,
+                    out_bytes=out_bytes,
+                    action="finish_in_place",
+                )
+                # 先同步宣告這輪已被接管，再做任何 await；新 PCM 會在
+                # turn_recovery_done 等舊回合的 tail／Avatar 收尾完成，不會交錯。
+                turn_recovery_done.clear()
+                st["provider_turn_recovery_in_progress"] = True
+                st["provider_turn_active"] = False
+                st["provider_turn_last_audio_at"] = 0.0
+                st["provider_turn_out_bytes"] = 0
+                max_gap_ms = round(float(st.get("provider_turn_max_gap_ms") or 0.0))
+                st["provider_turn_max_gap_ms"] = 0.0
+                st["provider_turn_recovery_seq"] = int(
+                    st.get("provider_turn_recovery_seq") or 0
+                ) + 1
+                st["provider_turn_recoveries"] = int(
+                    st.get("provider_turn_recoveries") or 0
+                ) + 1
+                st["provider_turn_recovered_pending"] = True
+                try:
+                    await _send_turn_tail()
+                    await _finish_face_audio_turn()
+                    await ws.send(json.dumps({"type": "turn_complete", "recovered": True}))
+                    st["await_first"] = True
+                    st["client_barge_in"] = False
+                    st["user_turn_started_at"] = None
+                    st["locale_user_transcript"] = ""
+                    st["locale_resolved_text"] = ""
+                    _capture_call_turns(st)
+                    st["user_buf"] = ""
+                    st["ai_buf"] = ""
+                    st["guardian_internal_followup_active"] = False
+                    st["guardian_internal_followup_sources"] = ()
+                    if (
+                        st.get("pending_cues")
+                        or st.get("pending_health_cue")
+                        or st.get("pending_promise_cue")
+                    ):
+                        st["bg_tasks"].append(asyncio.create_task(
+                            guardian_flush_pending_cue(cid, session, st)
+                        ))
+                    _diag(
+                        cid,
+                        "node.turn_complete_recovered_in_place",
+                        recovery=st["provider_turn_recoveries"],
+                        audio_ms=round(out_bytes / (24000 * 2) * 1000),
+                        max_gap_ms=max_gap_ms,
+                        session_preserved=True,
+                    )
+                finally:
+                    st["provider_turn_recovery_in_progress"] = False
+                    turn_recovery_done.set()
+                continue
             deadline = st.get("goaway_deadline")
-            if deadline and time.monotonic() >= deadline:
+            if deadline and now >= deadline:
                 return "reconnect_timeout"
 
     # 任一邊結束（使用者掛斷／這條底層連線該換了／session 收）就取消另一邊，乾淨收線或換線
     from_browser_task = asyncio.create_task(from_browser())
     from_live_task = asyncio.create_task(from_live())
-    watchdog_task = asyncio.create_task(_goaway_watchdog())
+    watchdog_task = asyncio.create_task(_session_watchdog())
     try:
         done, _pending = await asyncio.wait(
             [from_browser_task, from_live_task, watchdog_task],
@@ -3236,14 +3817,19 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
         if from_browser_task in done:
             call_ended = True   # 瀏覽器連線斷了／使用者掛斷，這才是真的收線
         elif watchdog_task in done and from_live_task not in done:
-            # 一直沒等到天然空檔、GoAway 保底時間到了——強制換線（from_live_task 在
-            # 下面的 finally 會被取消，session.receive() 中途取消是安全的）。
+            # watchdog 只會因真正的 GoAway 到期而結束；漏 turn_complete 已在同一條
+            # Live session 內原地收尾，不再取消 session 或消耗重連額度。
+            watchdog_task.result()
             _diag(cid, "node.goaway_forced_reconnect")
         elif from_live_task in done:
             status = from_live_task.result()
             if status != "reconnect":
                 call_ended = True
     finally:
+        recovery_task = st.get("short_opening_recovery_task")
+        if recovery_task and not recovery_task.done():
+            recovery_task.cancel()
+        st["short_opening_recovery_task"] = None
         for t in (from_browser_task, from_live_task, watchdog_task):
             if not t.done():
                 t.cancel()
@@ -3252,7 +3838,42 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 await t
             except (asyncio.CancelledError, Exception):
                 pass
+    # 這條底層連線的用量總帳（2026-08-12）：一行就看得出這通花在哪——
+    # 說明書（文字）貴還是聲音貴、存起來的部分有沒有真的被算成快取。
+    if st.get("usage_prompt") or st.get("usage_output"):
+        _turns = st.get("usage_turns", 0)
+        _mod = st.get("usage_by_modality") or {}
+        _text_in = _mod.get("TEXT", 0)
+        _audio_in = _mod.get("AUDIO", 0)
+        _diag(cid, "usage.leg_total",
+              prompt=st.get("usage_prompt", 0),
+              output=st.get("usage_output", 0),
+              cached=st.get("usage_cached", 0),
+              by_modality=_mod,
+              turns=_turns,
+              per_turn=(st.get("usage_prompt", 0) // _turns) if _turns else 0,
+              est_usd=round(_estimate_leg_usd(_text_in, _audio_in,
+                                              st.get("usage_output", 0)), 4))
     return call_ended, st.get("resumption_handle") or resumption_handle
+
+
+# 每百萬 token 的牌價（美金）· gemini-3.1-flash-live-preview · 查於 2026-08-13。
+# **這是估算，不是帳單**：牌價會變、也可能有我們看不到的折扣或快取折抵。
+# 用途是讓「一通電話大概多少錢」變成看得到的數字，再拿去跟真實帳單對。
+# 對不上就以帳單為準，把這裡的數字改掉（或用環境變數蓋過去）。
+_PRICE_TEXT_IN = float(os.environ.get("MUNEA_PRICE_TEXT_IN_PER_M", "0.75"))
+_PRICE_AUDIO_IN = float(os.environ.get("MUNEA_PRICE_AUDIO_IN_PER_M", "1.00"))
+_PRICE_OUT = float(os.environ.get("MUNEA_PRICE_OUT_PER_M", "12.00"))
+
+
+def _estimate_leg_usd(text_in, audio_in, out):
+    """這條連線大概花了多少錢（美金）。算不出來就回 0，絕不讓它影響通話。"""
+    try:
+        return (text_in * _PRICE_TEXT_IN
+                + audio_in * _PRICE_AUDIO_IN
+                + out * _PRICE_OUT) / 1_000_000.0
+    except Exception:
+        return 0.0
 
 
 def _defer_control_release_for_reconnect(reason, state):
@@ -3289,6 +3910,8 @@ async def handle(ws):
     gate_key = ""   # Legacy 1.0.1 transition only.
     call_token = ""
     call_payload = {}
+    client_release = "-"
+    client_protocol = "-"
     voice_locale_session = None
     demo_mode = False
     # 收線時要告訴總機「這一席讓出來了」的原因。2026-07-28 修：這裡原本是空字串，而下面
@@ -3307,6 +3930,12 @@ async def handle(ws):
 
     demo_mode = _q.get("demo") == ["1"]
 
+    client_release = "+".join(filter(None, [
+        str((_q.get("app_version") or [""])[0]).strip()[:24],
+        str((_q.get("app_build") or [""])[0]).strip()[:24],
+    ])) or "-"
+    client_protocol = str((_q.get("client_protocol") or [""])[0]).strip()[:48] or "-"
+
     call_token = (_q.get("token") or [""])[0].strip()
     control_required = os.environ.get("MUNEA_CALL_CONTROL_REQUIRED", "0") == "1"
     if call_token or control_required:
@@ -3320,6 +3949,9 @@ async def handle(ws):
             token_secret = os.environ.get("MUNEA_CALL_TOKEN_SECRET", "").strip()
             voice_shard_id = os.environ.get("MUNEA_VOICE_SHARD_ID", "").strip()
             call_payload = verify_call_token(call_token, token_secret, voice_shard_id=voice_shard_id)
+            required_protocol = int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0)
+            if required_protocol and int(call_payload.get("call_protocol") or 0) < required_protocol:
+                raise CallControlError("incompatible call protocol")
             voice_locale_session = VoiceLocaleSession.from_verified_call_payload(
                 call_payload,
                 allow_legacy=(
@@ -3418,6 +4050,8 @@ async def handle(ws):
         char=char,
         demo=demo_mode,
         locale=st["voice_locale_profile"]["sessionLocale"],
+        client_release=client_release,
+        client_protocol=client_protocol,
     )
     _key_idx = None   # 多鑰匙分流：這通用哪把鑰匙（收線時據此把空位還回去）
     # 通話記憶的人別隔離鍵：Gateway 正式路徑的 call token 帶已驗證的 user_id；
@@ -3518,6 +4152,7 @@ async def handle(ws):
                             "lease_version": int(call_payload["lease_version"]),
                             "event_id": "voice-release-" + uuid.uuid4().hex,
                             "reason": call_release_reason,
+                            "component": "voice",
                         },
                     )
                 except Exception as exc:
@@ -3613,6 +4248,7 @@ async def handle(ws):
             native_search_queries=st["native_search_queries"],
             native_search_sources=st["native_search_sources"],
             mandarin_pronunciation_seen=st["mandarin_pronunciation_seen"],
+            provider_turn_recoveries=st["provider_turn_recoveries"],
         )
 
 

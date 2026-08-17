@@ -818,10 +818,17 @@ assert(/CAPPluginMethod\(name: "requestReview"/.test(storePlugin), 'requestRevie
 assert(/AppStore\.requestReview\(in: scene\)/.test(storePlugin) && /SKStoreReviewController\.requestReview\(in: scene\)/.test(storePlugin), 'The review sheet must cover both iOS 16+ and the iOS 15 floor');
 assert(/requestReview: requestReview/.test(store) && /p\.requestReview/.test(store), 'MuneaStore must expose requestReview so app.js can bridge to the native sheet');
 assert(/window\.__muneaRequestReview = function \(\) \{ return window\.MuneaStore\.requestReview\(\); \}/.test(app), 'app.js must bridge __muneaRequestReview to the native plugin');
-// 最要命的一條：原生沒接上時絕不能先蓋「這版問過了」的章，否則補好原生也叫不動已裝機的人（2026-07-29 修）
+// 最要命的一條：原生沒接上時絕不能先蓋「問過了」的章，否則補好原生也叫不動已裝機的人（2026-07-29 修）
 const askReviewBody = app.match(/window\.__muneaMaybeAskReview = function \(moment\) \{[\s\S]*?\n  \};/)?.[0] || '';
 assert(askReviewBody, 'The review timing gate must remain a readable single function');
-assert(askReviewBody.indexOf("typeof window.__muneaRequestReview !== 'function'") < askReviewBody.indexOf("localStorage.setItem('munea.reviewAsked."), 'The native-availability check must run BEFORE the once-per-version flag is written');
+assert(askReviewBody.indexOf("typeof window.__muneaRequestReview !== 'function'") < askReviewBody.indexOf('localStorage.setItem(REVIEW_ASKED_KEY'), 'The native-availability check must run BEFORE the asked-once flag is written');
+// 問過就不再問（Edward 2026-08-10：「評分那個彈窗不要一直跳」）。
+// 舊規矩蓋的章帶版號，每出一版就重新問一次；蘋果那個視窗又不會回報使用者按了什麼，
+// 所以無從分辨「給了星星」跟「滑掉不想理」——一律當成不想再被打擾。
+assert(/const REVIEW_ASKED_KEY = 'munea\.reviewAsked\.forever'/.test(app), 'The review flag must be a permanent key, not one per app version');
+assert(!/reviewAsked\.' \+ ver/.test(app), 'The review flag must not be keyed by app version again — that is what made it re-ask every release');
+assert(/function reviewAlreadyAsked\(\)/.test(app) && /k\.indexOf\('munea\.reviewAsked\.'\) === 0/.test(app), 'Users already asked under the old per-version rule must not be asked again after the change');
+assert(askReviewBody.indexOf('reviewAlreadyAsked()') !== -1, 'The timing gate must check the permanent asked flag');
 
 // 剛下載的使用者不能看到任何示範資料（Edward 2026-08-02 送審前抓到）。
 // 以前「一個活動都沒有」時，首頁會硬塞一張「家人發起的走路活動，還差 5000 步就達標」——

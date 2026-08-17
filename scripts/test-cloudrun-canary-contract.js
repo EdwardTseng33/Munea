@@ -22,9 +22,14 @@ assert.match(
   /canary-verify\.sh[\s\S]*"\$WHAT" "\$TAG" production "\$RELEASE_VERSION" "\$RELEASE_COMMIT"[\s\S]*"\$VERIFY_LOCALE_MODE"/
 );
 assert.match(prodDeploy, /--no-traffic/);
+// 這條守的是「部署語音時，會害人的殘留設定要先清掉，再寫新的」。
+// 2026-08-13：原本寫死整串等於 "MUNEA_VOICE_SILENCE_MS"，但清單後來多了三個
+// （f7c4d51e 補上 TURN_TAIL／VERTEX_LOCATION／MODEL_OVERRIDE），守門沒跟上，
+// main 的上線前檢查就一直紅。改成只確認「那一項在清單裡，而且清在寫之前」，
+// 清單再長也不會誤擋。
 assert.match(
   prodDeploy,
-  /--remove-env-vars "MUNEA_VOICE_SILENCE_MS"[\s\S]*--update-env-vars "MUNEA_SERVICE=voice,/
+  /--remove-env-vars "[^"]*\bMUNEA_VOICE_SILENCE_MS\b[^"]*"[\s\S]*--update-env-vars "MUNEA_SERVICE=voice,/
 );
 
 assert.match(verify, /\[ "\$PERCENT" = "0" \]/);
@@ -36,6 +41,8 @@ assert.match(verify, /release_metadata_mismatch/);
 assert.match(verify, /revision=\$REVISION/);
 assert.match(verify, /MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT/);
 assert.match(verify, /MUNEA_CALL_CONTROL_REQUIRED/);
+assert.match(verify, /MUNEA_CALL_PROTOCOL_REQUIRED/);
+assert.match(verify, /MUNEA_VOICE_FACE_DIRECT/);
 assert.match(verify, /locale_mode=\$LOCALE_MODE/);
 assert.match(verify, /production:brain.*munea-brain/s);
 assert.match(verify, /production:voice.*munea-voice/s);

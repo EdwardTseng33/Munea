@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const policy = require('../web/src/voice-turn-policy.js');
 const app = fs.readFileSync(path.join(__dirname, '..', 'web', 'src', 'app.js'), 'utf8');
+const voiceServer = fs.readFileSync(path.join(__dirname, '..', 'engine', 'live_voice_server.py'), 'utf8');
 
 function observeSeries(levels, speakerActive = true) {
   let state = policy.createState();
@@ -38,6 +39,47 @@ assert(policy.DEFAULTS.openingPreRollFrames * FRAME_MS >= policy.DEFAULTS.openin
   'opening pre-roll must cover the stricter opening sustain window plus onset margin');
 assert(policy.DEFAULTS.openingPreRollFrames > policy.DEFAULTS.preRollFrames,
   'opening turns must retain more pre-roll than normal turns');
+
+function captureOpening(levels, options) {
+  let state = policy.createOpeningCapture();
+  let last = null;
+  levels.forEach((level, index) => {
+    last = policy.captureOpeningFrame(state, `frame-${index}`, level, FRAME_MS, options);
+    state = last.state;
+  });
+  return { state, last, drained: policy.drainOpeningCapture(state, options) };
+}
+
+const openingSilence = captureOpening(Array(12).fill(0.004));
+assert.strictEqual(openingSilence.drained.frames.length, 0,
+  'opening local buffer must not turn room noise into a model turn');
+const openingHello = captureOpening([0.004, 0.004, 0.045, 0.052]);
+assert.strictEqual(openingHello.state.detected, true,
+  'two sustained near-field frames must preserve a short first hello');
+assert(openingHello.drained.frames.length >= 4 && openingHello.drained.bufferedMs >= FRAME_MS * 4 - 1,
+  'opening flush must include the onset pre-roll instead of clipping the first word');
+const openingAtReady = captureOpening([0.004, 0.04]);
+assert.strictEqual(openingAtReady.drained.candidate, true,
+  'a voice onset racing with ready must be flushed instead of losing its first frame');
+const boundedOpening = captureOpening(Array(100).fill(0.05));
+assert(boundedOpening.drained.bufferedMs <= policy.DEFAULTS.openingCaptureMaxMs + FRAME_MS,
+  'opening capture must stay local and bounded');
+const openingWithWait = captureOpening([
+  0.004, 0.045, 0.052,
+  ...Array(30).fill(0.003),
+]);
+assert.strictEqual(openingWithWait.drained.complete, true,
+  'a real opening utterance followed by the Voice quiet window must form a local boundary');
+assert(openingWithWait.drained.observedQuietMs >= policy.DEFAULTS.openingCaptureCompleteQuietMs,
+  'the opening boundary must be backed by enough observed quiet time');
+assert(openingWithWait.drained.bufferedMs
+  <= (3 * FRAME_MS) + policy.DEFAULTS.openingCaptureTailMs + FRAME_MS,
+  'opening flush must trim the long wait silence instead of replaying it after ready');
+assert(openingWithWait.drained.retainedTailMs >= policy.DEFAULTS.openingCaptureTailMs,
+  'opening flush must report how much real tail was retained for provider padding');
+assert(openingWithWait.drained.frames.includes('frame-1')
+  && openingWithWait.drained.frames.includes('frame-2'),
+  'trimming opening wait silence must preserve the actual first hello');
 
 const quiet = policy.observe(policy.createState(0.01), 0.006, 42.7, false);
 assert(quiet.state.noiseFloor < 0.01, 'listening silence should adapt the local noise floor');
@@ -84,45 +126,70 @@ assert(openingDetection.state.speechMs <= 300,
 assert.strictEqual(policy.localStopLatencyMs(openingDetection.state.speechMs, 3.4), 260,
   'local stop metric must combine detected speech evidence and synchronous stop work');
 
-assert.strictEqual(
-  observeSeriesWith([0.055, 0.055], { sustainMs: policy.DEFAULTS.duckEvidenceMs }).shouldInterrupt,
-  true,
-  'two fresh post-duck voice callbacks must confirm a real interruption',
-);
-assert.strictEqual(
-  observeSeriesWith([0.055, 0.006, 0.006], { sustainMs: policy.DEFAULTS.duckEvidenceMs }).shouldInterrupt,
-  false,
-  'speaker residue that collapses after ducking must not confirm an interruption',
-);
-
-// 跨層順序契約：本地先停聲；伺服器進入證據緩衝；預捲送完；最後才提交裁決。
-// 這守的是 WebSocket 實際送出順序，不只是 client/server 各自單測通過。
+// 跨層順序契約：App 只送候選證據，Voice 裁決通過後才准停聲。
 const beginStart = app.indexOf('_beginBargeIn(rms, threshold, sustainMs, preRoll, detectedSpeechMs, postDuckFrames = 0)');
 const beginEnd = app.indexOf('\n  greet()', beginStart);
 const beginBarge = app.slice(beginStart, beginEnd);
-const stopAt = beginBarge.indexOf('this._stopAssistantPlayback()');
 const evidenceStartAt = beginBarge.indexOf("type: 'barge_in_start'");
 const preRollAt = beginBarge.indexOf('evidence.forEach(frame => this._sendMicBuffer(frame))');
 const commitAt = beginBarge.indexOf("type: 'barge_in', ...payload");
-assert(stopAt >= 0 && stopAt < evidenceStartAt && evidenceStartAt < preRollAt && preRollAt < commitAt,
-  'barge-in must stop playback, buffer evidence, send pre-roll, then commit in that order');
-assert(beginBarge.includes('sustain_ms:') && beginBarge.includes('threshold:'),
-  'barge-in evidence must carry the browser threshold and sustain contract to the server');
+assert(!beginBarge.includes('this._stopAssistantPlayback()')
+  && evidenceStartAt >= 0 && evidenceStartAt < preRollAt && preRollAt < commitAt,
+  'App must send evidence without making a destructive local speaker verdict');
+assert(beginBarge.includes('sustain_ms:') && beginBarge.includes('candidate_threshold:'),
+  'candidate sensitivity may be logged but must be labelled non-authoritative');
 assert(beginBarge.includes('post_duck_frames:') && beginBarge.includes('post_duck_sustain_ms:'),
   'barge-in evidence must identify the fresh post-duck decision slice');
-assert(beginBarge.includes('local_stop_ms:') && beginBarge.includes("voiceCallMark('barge_in_local_stop'"),
-  'barge-in must record onset-to-local-stop latency in the privacy-safe call trace');
-assert(beginBarge.includes("timing_basis: 'audio_callback_estimate'")
+assert(beginBarge.includes("voiceCallMark('barge_in_candidate_sent'")
+  && beginBarge.includes("timing_basis: 'audio_callback_estimate'")
   && app.includes('this._bargeSpeechOnsetAt = observedAt - frameMs'),
-  'local stop timing must use a monotonic audio-callback onset estimate and label its basis');
+  'candidate timing must use a monotonic audio-callback onset estimate and label its basis');
 assert(app.includes('this._duckPostRoll.push(buf)')
   && app.includes('self._duckPreRoll.concat(self._duckPostRoll)')
-  && app.includes('self._duckConfirmPassed')
-  && app.includes('self._duckPostRoll.length > 0')
-  && app.includes('self._duckConfirmState.speechMs > 0'),
-  'duck confirmation must judge fresh post-duck frames instead of the old echo pre-roll');
+  && !app.includes('policy.confirmsPostDuck')
+  && !app.includes('this._duckConfirmPassed'),
+  'App must collect fresh post-duck evidence without a second amplitude verdict');
+const ackStart = app.indexOf("if (o.type === 'barge_in_ack')");
+const ackEnd = app.indexOf("if (o.type === 'voice_turn_timing'", ackStart);
+const ackHandler = app.slice(ackStart, ackEnd);
+assert(ackHandler.includes('const accepted = o.accepted !== false')
+  && ackHandler.indexOf('if (accepted)') < ackHandler.indexOf('this._stopAssistantPlayback()'),
+  'playback may stop only after the Voice arbiter accepts the evidence');
+assert(voiceServer.includes('decide_speaker_evidence(')
+  && !voiceServer.includes('normalized_rms_to_pcm16(obj.get("threshold"))'),
+  'Voice must own the only final speaker verdict and ignore browser thresholds');
 assert(app.includes('_ensureLocalPlaybackGain()')
   && app.includes('s.connect(this._ensureLocalPlaybackGain()'),
   'voice-only fallback must pass through the same duckable playback gain');
+const readyStart = app.indexOf("if (o.type === 'ready')");
+const readyEnd = app.indexOf("if (o.type === 'caption' && o.who === 'user'", readyStart);
+const readyHandler = app.slice(readyStart, readyEnd);
+const primeStart = app.indexOf('prime() {');
+const primeEnd = app.indexOf('\n  _resumeAudio()', primeStart);
+const primeHandler = app.slice(primeStart, primeEnd);
+const liveStart = app.indexOf('async start(onListen, onSpeak, onDrop)');
+const liveStartBody = app.slice(liveStart, app.indexOf('return await new Promise', liveStart));
+assert(primeHandler.includes('this._beginOpeningCapture()')
+  && primeHandler.includes('this._primePipelinePromise = this._setupMicPipeline(this._primeMicPromise, true)')
+  && liveStartBody.includes('this._beginOpeningCapture()')
+  && !liveStartBody.includes('this._openingCapture = openingPolicy'),
+  'the call-button gesture must attach local opening capture before Gateway/Voice waits and start must preserve it');
+assert(app.includes("voiceCallMark('opening_user_voice_detected'")
+  && readyHandler.includes("voiceCallMark('opening_user_voice_flushed'")
+  && app.includes("voiceCallMark('opening_user_voice_acknowledged'")
+  && readyHandler.includes("voiceCallMark('opening_user_turn_closed'")
+  && readyHandler.indexOf('this._setMicOpen(true); this._openMicAfterGreet = false;')
+    > readyHandler.indexOf('openingCapture.frames.forEach(frame => this._sendMicBuffer(frame))')
+  && readyHandler.includes("reason: 'opening_local_boundary'")
+  && readyHandler.includes('trailing_silence_ms: openingCapture.retainedTailMs'),
+  'Voice ready must flush and close a completed opening turn before opening the live mic');
+assert(voiceServer.includes('"node.first_non_silent_mic"'),
+  'Voice logs cannot distinguish standby silence from the first real microphone audio');
+assert(voiceServer.includes('"node.audio_stream_end"')
+  && voiceServer.includes('PROVIDER_EXPLICIT_TURN_TAIL_MS')
+  && voiceServer.includes('data=b"\\x00\\x00" * int(16000 * provider_pad_ms / 1000)')
+  && voiceServer.includes('reported_tail_ms=reported_tail_ms')
+  && voiceServer.includes('provider_pad_ms=provider_pad_ms'),
+  'Voice must identify the local boundary and add bounded Vertex AAD silence');
 
-console.log('Voice turn policy PASS: echo rejection, sustained barge-in, <=300ms local stop target, two-phase evidence ordering, pre-roll, post-speech guard, opening sustain');
+console.log('Voice turn policy PASS: one Voice speaker verdict, opening capture/ack, non-destructive App candidate, pre-roll, post-speech guard');

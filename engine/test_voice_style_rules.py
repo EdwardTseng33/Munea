@@ -6,6 +6,7 @@ import os
 import importlib
 import re
 import sys
+import tempfile
 import unittest
 
 SRC = os.path.join(os.path.dirname(__file__), "live_voice_server.py")
@@ -45,7 +46,7 @@ class VoiceStyleRulesTest(unittest.TestCase):
         # 2026-08-13 分節搬遷：剩下寫死在程式碼裡的中文段落也搬進 voice-sections.<語系>.txt
         #（原因：英文／西文說明書裡本來夾著兩千多個中文字，因為這些段落沒有分語系）。
         # 這支守的東西沒變（規則被刪就要亮紅燈），只是現在要連書一起看——
-        # 三邊合起來當作「說明書的全文」。
+        # 兩邊合起來當作「說明書的全文」。
         with open(SRC, encoding="utf-8") as f:
             self.src = f.read() + _voice_style_book("zh-TW") + _voice_sections_book("zh-TW")
 
@@ -274,62 +275,75 @@ class VoicePromptBudgetTest(unittest.TestCase):
     這不是把字數當品質；它防止已刪掉的重複規則、例句與互斥搜尋說明悄悄長回來。
     醫療、安全、權限與工具規則仍由上面的行為測試各自守住。
 
-    2026-08-13 傍晚改了量法，數字跟著重新校準（17300／17600／19000），
-    跟改量法之前的數字不能直接比大小——尺換了。原因見上面 rule_length()：
-    舊寫法把當天的天氣簡報也算進字數，同一份規則書早上量跟晚上量差好幾百字。
+    2026-08-10（Edward 拍板「先分節」）改成**只算內容、不算排版**：
+    說明書從一整段長文改成分節條列後，換行讓字數多了約 80——那些是排版、不是新規則。
+    照舊寫法，「把長文切成小節」這種只有好處的改動會被守門擋下來，而真正該擋的
+    重複規則反而可以靠刪掉幾個空白偷渡進來。改成把空白全部去掉再量，排版怎麼改都
+    不影響額度，長回來的規則一個字都躲不掉——比舊寫法更緊，不是更鬆。
 
-    當天稍早那次上調（16500→16800／16800→17100／18400→18550）調之前先驗過
-    「有沒有贅肉可以先砍」：把說明書四個來源（核心人設／紅線／口語風格／情境段落）
-    切成 285 個句子兩兩比對，只有 7 對高度重疊，合計約 150 字，而且多數是各開關
-    段落各自要有的工具規則（例如「工具回 status=ok 才能說設好了」提醒、行程、
-    要問醫生三段都要有），砍掉會讓單獨開某個開關時失去規則。也就是說沒有回流的
-    重複可以回收——這個閘門原本要防的東西，現在確實不在裡面。
-
-    多出來的字是 8/13 聊天品質複測抓到的五條真實失分：不主動挖傷心事、轉介求助
-    不要打斷、保住他的面子、保密不能亂答應（紅線⑦）、以及不要用「我看在眼裡」
-    這種眼睛的說法（她只有聲音）。餘裕刻意留得很窄，下次要加東西一樣得先評估。
+    2026-08-13～17 上調 260 字（16200→16460／16500→16760／17900→18160）。
+    多出來的是聊天品質複測抓到的六條真實失分，每一條都對應一次她講錯話：
+    不主動挖傷心事、轉介求助不要打斷、保住他的面子、保密不能亂答應（紅線⑦）、
+    不要用「我看在眼裡」這種眼睛的說法（她只有聲音）、日期不要自己算
+    （她編過一個錯的國曆日期，長輩會照著去拜拜）、手上沒有傳話工具就不能說
+    「我幫你聯絡家人」。調之前先驗過沒有贅肉可以先砍：把說明書切成 285 個
+    句子兩兩比對，只有 7 對高度重疊、合計約 150 字，而且多數是各開關段落
+    各自該有的工具規則，砍掉會讓單獨開某個開關時失去規則。
     """
 
     @staticmethod
+    def _content_len(prompt):
+        """只算真正的內容：空白、換行、縮排一律不計。"""
+        return len(re.sub(r"\s+", "", prompt))
+
+    @staticmethod
     def _render(search_enabled, **kwargs):
-        old = os.environ.get("MUNEA_VOICE_LIVE_LOOKUP")
+        # 2026-08-10：量之前先把「今日簡報」隔開。那是**當天的資料**、不是規則，
+        # 而且它存在 engine/perception_snapshots.json——同一輪測試裡前面幾支會寫進去，
+        # 於是這支量到的長度會跟著前面跑過什麼而變（實測差 202 字），紅燈紅得莫名其妙。
+        # 這支守的是「刪掉的重複規則有沒有偷偷長回來」，所以只量規則、不量當天資料。
+        #
+        # 2026-08-17 補：不只今日簡報。使用者記憶、關係側寫、個人檔案也一樣會被吃進
+        # 說明書——本機跑過幾輪聊天品質考卷之後，「長輩今天去復健」「我孫子下個月結婚」
+        # 這些留下來的資料就進了說明書，實測讓字數多出 431。跟簡報同一個道理：
+        # 那是使用者資料、不是規則。全部指到不存在的暫存檔，閘門就只量規則本身，
+        # 誰在這台機器上跑過什麼都不影響。
+        _ISOLATED = (
+            "MUNEA_PERCEPTION_SNAPSHOTS_PATH",   # 今日簡報（天氣、明天預告）
+            "MUNEA_MEMORY_ITEMS_PATH",           # 長期記憶
+            "MUNEA_RELATIONSHIP_STATES_PATH",    # 熟識度與關係狀態
+            "MUNEA_COMPANION_PROFILE_PATH",      # 陪伴側寫
+            "MUNEA_PERSON_PROFILE_PATH",         # 個人資料
+            "MUNEA_APP_PROFILE_STORE_PATH",      # App 端側寫
+        )
+        env_backup = {
+            key: os.environ.get(key)
+            for key in ("MUNEA_VOICE_LIVE_LOOKUP",) + _ISOLATED
+        }
         os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1" if search_enabled else "0"
+        for key in _ISOLATED:
+            os.environ[key] = os.path.join(
+                tempfile.gettempdir(), f"munea-prompt-budget-{key.lower()}.json")
         try:
+            # server.py 的資料檔路徑是**模組載入時**就決定的（PERSON_PROFILE_PATH = 環境變數 or 預設）。
+            # 只重載 live_voice_server 不夠——只要同一輪測試裡有別支先載過 server，
+            # 那些常數早就指向本機真實資料檔，上面設的環境變數根本來不及生效，
+            # 於是這支單獨跑是綠的、跟別支一起跑就紅（2026-08-13 查了半天的那個怪象）。
+            import server
+            importlib.reload(server)
             import live_voice_server
             module = importlib.reload(live_voice_server)
             return module.system_instruction(**kwargs)
         finally:
-            if old is None:
-                os.environ.pop("MUNEA_VOICE_LIVE_LOOKUP", None)
-            else:
-                os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = old
-
-    @staticmethod
-    def rule_length(prompt):
-        """只量「規則」有多長，把每天不一樣的內容剔掉再算。
-
-        2026-08-13 發現：說明書裡塞著當天的天氣簡報（「臺北市今天27到34度、
-        降雨機率97%……明天預告……關心提示……」）跟現在幾點。天氣預報的長短
-        每天不同，於是這個閘門早上量是一個數、晚上量又是另一個數，差好幾百字
-        ——同一份規則書，什麼都沒改也會紅。難怪它老是在誤報。
-
-        這個閘門真正要防的是「已經刪掉的重複規則、例句悄悄長回來」，
-        那是規則本身的事，跟今天下不下雨無關。所以先把會浮動的剔掉再量。
-        剔不掉就整份算（寧可誤報，也不要因為抹不到就靜靜放行）。
-        """
-        text = re.sub(r"（現在時間：[^）]*）|（現在是台灣時間[^）]*）", "", prompt)
-        # 天氣簡報：從這句固定的提示之後開始，到該段落收尾為止
-        anchor = "就像朋友本來就知道今天天氣那樣講）："
-        start = text.find(anchor)
-        if start >= 0:
-            end = text.find("）", start + len(anchor))
-            if end > start:
-                text = text[:start + len(anchor)] + text[end:]
-        return len(text)
+            for key, old in env_backup.items():
+                if old is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = old
 
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(self.rule_length(prompt), 17300)
+        self.assertLessEqual(self._content_len(prompt), 16460)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -344,7 +358,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(self.rule_length(prompt), 19000)
+        self.assertLessEqual(self._content_len(prompt), 18160)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -354,7 +368,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(self.rule_length(prompt), 17600)
+        self.assertLessEqual(self._content_len(prompt), 16760)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)

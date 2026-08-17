@@ -71,9 +71,11 @@ _fhp_mod.PROFILE_SYNC = os.environ.get("MUNEA_FH_PROFILE_SYNC", "1") == "1"
 from flash_head.inference import (get_audio_embedding, get_base_data,
                                   get_infer_params, get_pipeline, run_pipeline)
 
-from flashhead_engine_core import (AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
+from flashhead_engine_core import (ANTIFLICKER_HI, ANTIFLICKER_LO,
+                                    AudioOutBuffer, Feeder, FrameSink, Slot, SlotPool,
                                     env_flag_enabled, health_snapshot,
                                     make_slot_stream_run_pipeline, parse_frame_size,
+                                    pace_audio_sender_clock,
                                     slot_summary, switch_slot_char)
 
 # ===== 正式線 / 展示間分家（2026-07-21）=====
@@ -121,14 +123,15 @@ WAV2VEC_DIR = os.environ.get(
 )
 
 SR_IN, SR_ENG = 24000, 16000
-# 每輪從 0.2s 起播；只有真的發生 mid-turn underrun 才逐級加到 0.35s。
-# GPU p95 繼續量測，但不再把偶發慢塊轉成每一句固定等待。
+# 每輪從 0.22s 起播；其中只有 0.02s 是相對原本 0.2s 的額外等待，
+# 但可讓已經生成好的嘴型先播完整 0.22s。只有真的發生 mid-turn
+# underrun 才逐級加到 0.35s，GPU p95 不轉成每一句固定等待。
 AUDIO_PREBUFFER_S = min(
-    0.35, max(0.2, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.2")))
+    0.35, max(0.22, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_S", "0.35")))
 )
-# 兩端仍共用同一個 start gate，嘴聲同步不變；連續三輪穩定就逐步退回 0.2s。
+# 兩端仍共用同一個 start gate；連續三輪穩定就逐步退回 0.22s。
 AUDIO_PREBUFFER_MIN_S = max(
-    0.2, min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.2")))
+    0.22, min(0.35, float(os.environ.get("MUNEA_FH_AUDIO_PREBUFFER_MIN_S", "0.35")))
 )
 AUDIO_PREBUFFER_MAX_S = max(
     AUDIO_PREBUFFER_MIN_S,
@@ -140,6 +143,20 @@ AUDIO_PREBUFFER_MAX_S = max(
 OPENING_PREBUFFER_S = max(
     AUDIO_PREBUFFER_S,
     min(0.35, float(os.environ.get("MUNEA_FH_OPENING_PREBUFFER_S", "0.35"))),
+)
+# Signed receiver clock correction. Positive values open video before audio;
+# negative values hold it after audio.  Earlier onset-only tuning used +350ms
+# together with video-only frame deletion. That pair hid a content mismatch,
+# so the content-preserving default is a common clock (0ms) and candidates may
+# apply only a measured bounded signed transport correction.
+VIDEO_LEAD_S = min(
+    0.35, max(-0.35, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "0")) / 1000.0)
+)
+# Opus in-band FEC trades a small amount of codec efficiency for recovery from
+# isolated WebRTC packet loss. Long-call evidence saw intact Voice PCM and zero
+# Avatar underrun but a 100ms receiver hole, so the loss is after generation.
+OPUS_PACKET_LOSS_PCT = min(
+    30, max(0, int(os.environ.get("MUNEA_FH_OPUS_PACKET_LOSS_PCT", "10")))
 )
 MAX_AHEAD_S = 1.5          # 生成往前衝的存貨上限（超過就等播放消化、不無限囤積致延遲膨脹）
 # 2026-07-11 臉銳化：unsharp mask（Edward 看過覺得「不太行」、要真 1024 而非銳化假利）→ 預設關。
@@ -345,6 +362,8 @@ class FlashHead:
             adaptive_max_s=AUDIO_PREBUFFER_MAX_S,
         )
         slot.sink = FrameSink(slot.tgt_fps)
+        # 聲嘴對錶（2026-08-13）：畫格出口綁聲音錶——聲音永遠是主時鐘
+        slot.sink.audio_pos_fn = slot.audio_out.played_pos_s
         slot.SYNC_BUFFER_MS = 350
         run_pipeline_for_slot = self._run_pipeline
         if SLOT_STREAM:
@@ -386,6 +405,33 @@ class FlashHead:
         from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
         from fastapi.responses import JSONResponse
         from fastapi.middleware.cors import CORSMiddleware
+
+        # aiortc creates the Opus encoder lazily after SDP negotiation. Patch the
+        # constructor once, before any PeerConnection exists, so every slot asks
+        # libopus to emit in-band FEC for the expected loss rate. Unknown/older
+        # runtimes fail open to the stock encoder rather than blocking Avatar.
+        if OPUS_PACKET_LOSS_PCT:
+            try:
+                from aiortc.codecs import opus as _opus_codec
+                if not getattr(_opus_codec.OpusEncoder, "_munea_fec_enabled", False):
+                    _stock_opus_init = _opus_codec.OpusEncoder.__init__
+
+                    def _munea_opus_init(encoder):
+                        _stock_opus_init(encoder)
+                        options = dict(getattr(encoder.codec, "options", None) or {})
+                        options.update({
+                            "application": "voip",
+                            "fec": "1",
+                            "packet_loss": str(OPUS_PACKET_LOSS_PCT),
+                        })
+                        encoder.codec.options = options
+
+                    _opus_codec.OpusEncoder.__init__ = _munea_opus_init
+                    _opus_codec.OpusEncoder._munea_fec_enabled = True
+                    print("[audio-codec] opus fec=1 packet_loss="
+                          + str(OPUS_PACKET_LOSS_PCT) + "%", flush=True)
+            except Exception as exc:
+                print("[audio-codec] opus fec unavailable: " + str(exc)[:120], flush=True)
 
         api = FastAPI()
         worker_origins = [x.strip() for x in os.environ.get(
@@ -435,6 +481,10 @@ class FlashHead:
             if _token_secret:
                 payload = _decode_call_token(token, _token_secret, _worker_id)
                 if payload is not None:
+                    required_protocol = int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0)
+                    if (required_protocol and not payload.get("demo")
+                            and int(payload.get("call_protocol") or 0) < required_protocol):
+                        return False
                     return payload
                 if not (_allow_legacy and _pass(request_key)):
                     return False
@@ -468,6 +518,7 @@ class FlashHead:
                 "lease_version": version,
                 "event_id": "avatar-release:" + call_id + ":" + str(version),
                 "reason": reason,
+                "component": "avatar",
             }
             try:
                 await asyncio.to_thread(
@@ -540,7 +591,11 @@ class FlashHead:
                 # AudioOutBuffer owns the shared start gate. Keep the poster on
                 # screen without consuming generated frames until audio has a
                 # real prebuffer, then release both tracks on the same clock.
-                if self.slot.audio_out.playout_held():
+                # Idle motion is video-only. It may play while the next real
+                # speech turn is still waiting for its first PCM/prebuffer;
+                # real speech keeps the shared audio/video start gate.
+                if (self.slot.audio_out.video_playout_held(VIDEO_LEAD_S)
+                        and not getattr(self.slot.feeder, "_idle_on", False)):
                     fr = None
                     self.last = self.slot.poster
                     self._active_ts = 0.0
@@ -550,7 +605,12 @@ class FlashHead:
                 if fr is not None:
                     self.last = fr
                     self._active_ts = now
-                elif self._active_ts and (now - self._active_ts) > 0.35:
+                elif (self._active_ts and (now - self._active_ts) > 0.35
+                      and (not self.slot.active_session or not self.slot.healthy)):
+                    # Never snap a live call back to the static poster merely
+                    # because one GPU chunk arrived late. Hold the last real
+                    # frame until the next speech/idle frame; explicit call
+                    # release or an unhealthy slot may still restore poster.
                     self.last = self.slot.poster
                     self._active_ts = 0.0
                 vf = VideoFrame.from_ndarray(self.last, format="rgb24")
@@ -568,9 +628,20 @@ class FlashHead:
             async def recv(self):
                 sr = self.slot.audio_out.sample_rate
                 if self._started is None:
-                    self._started = time.time()
+                    self._started = time.monotonic()
+                now = time.monotonic()
+                self._started, late_ms, rebased = pace_audio_sender_clock(
+                    self._started, self._next_pts, sr, now
+                )
+                if rebased:
+                    self.slot.audio_sender_rebase_count += 1
+                    self.slot.audio_sender_max_late_ms = max(
+                        self.slot.audio_sender_max_late_ms, late_ms
+                    )
+                    self.slot.audio_sender_recent_late_ms.append(late_ms)
+                    print("[audio-sender] slot" + str(self.slot.index)
+                          + " late=" + str(late_ms) + "ms rebase clock", flush=True)
                 target_t = self._started + self._next_pts / sr
-                now = time.time()
                 if target_t > now:
                     await asyncio.sleep(target_t - now)
                 chunk = self.slot.audio_out.pop_frame()
@@ -618,6 +689,15 @@ class FlashHead:
             primary = outer.slots[0]
             body = health_snapshot(primary, outer.wake_ts)
             body.update({"ok": True, "engine": "flashhead-lite-standalone", "char": primary.char,
+                         "av_video_lead_ms": round(VIDEO_LEAD_S * 1000),
+                         "antiflicker_lo": ANTIFLICKER_LO,
+                         "antiflicker_hi": ANTIFLICKER_HI,
+                         "antiflicker_speech": False,
+                         "opus_fec": bool(OPUS_PACKET_LOSS_PCT),
+                         "opus_expected_packet_loss_pct": OPUS_PACKET_LOSS_PCT,
+                         "call_protocol": int(os.environ.get("MUNEA_CALL_PROTOCOL_REQUIRED", "0") or 0),
+                         "release_version": os.environ.get("MUNEA_RELEASE_VERSION", ""),
+                         "release_commit": os.environ.get("MUNEA_RELEASE_COMMIT", ""),
                          "avatar_render_contract": avatar_render_contract(primary.char),
                          "capacity": snap,
                          # 2026-07-23 STATUS 125 防線 2：機器自報時鐘（機房控制、容器內無權校時）。
@@ -807,7 +887,7 @@ class FlashHead:
                                 "type": "avatar_pcm_received",
                                 "turn": audio_turn,
                                 "bytes": len(msg["bytes"]),
-                                "prebufferMs": round(slot.audio_out.last_prebuffer_s * 1000),
+                                "prebufferMs": round(slot.audio_out.next_prebuffer_s * 1000),
                             })
                     elif msg.get("text") == "reset":
                         slot.feeder.reset()

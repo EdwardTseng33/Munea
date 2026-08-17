@@ -8,14 +8,15 @@
 跑法：python engine/test_voice_echo_guard.py
 """
 import os
+import re
 import struct
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_frame,
-                              normalized_rms_to_pcm16, sustained_voice_evidence,
-                              barge_evidence_threshold)
+                              sustained_voice_evidence, speaker_threshold,
+                              decide_speaker_evidence)
 
 FAILS = []
 
@@ -50,32 +51,32 @@ def main():
     check("她沒講話+低能量→放行", should_drop_uplink_frame(10.0, 5.0, 300, enabled=True, tail_ms=1500, threshold=700) is False)
     check("濾網關閉→一律放行", should_drop_uplink_frame(10.0, 9.9, 0, enabled=False, tail_ms=1500, threshold=700) is False)
 
-    # 兩階段插話證據：瀏覽器的 normalized RMS 必須用同一把尺在伺服器重判，
-    # 不能因 client 0.055 通過、server 熱門檻 0.088 才通過而互相打架。
-    client_threshold = normalized_rms_to_pcm16(0.04)
-    accepted, evidence_ms, onset = sustained_voice_evidence(
+    # App 只送候選；Voice 的單一裁決器用自己的門檻判斷，完全不信 client threshold。
+    verdict = decide_speaker_evidence(
         [(300, 42.7), (1802, 42.7), (1802, 42.7), (1802, 42.7), (1802, 42.7)],
-        client_threshold, 150,
+        playout_active=False, after_duck=True, sustain_ms=150,
     )
-    check("瀏覽器持續人聲證據可在伺服器同尺度通過", accepted is True)
-    check("插話證據保留真正起音位置", onset == 1 and evidence_ms >= 150)
-    rejected, _, _ = sustained_voice_evidence(
+    check("Voice 單一裁決器接受持續真人聲", verdict["accepted"] is True)
+    check("插話證據保留真正起音位置",
+          verdict["onset_index"] == 1 and verdict["evidence_ms"] >= 150)
+    rejected = decide_speaker_evidence(
         [(1802, 42.7), (200, 42.7), (1802, 42.7), (200, 42.7)],
-        client_threshold, 150,
-    )
+        playout_active=False, after_duck=True, sustain_ms=150,
+    )["accepted"]
     check("零星回音尖峰不會被誤判成持續插話", rejected is False)
-    check("瀏覽器門檻不可把伺服器降成永遠放行", normalized_rms_to_pcm16(0) >= 0.028 * 32768)
+    check("瀏覽器門檻函式已從 Voice 裁決移除",
+          "normalized_rms_to_pcm16" not in open(
+              os.path.join(os.path.dirname(__file__), "voice_echo_guard.py"), encoding="utf-8"
+          ).read())
 
     # 預設值鎖（7/16 首晚實戰調參：700/1500 攔不住大聲外放）
     # A destructive two-phase interruption must not reuse the browser's low
     # adaptive threshold while the assistant is still playing. Production's
-    # regular uplink multiplier may be tuned lower; buffered barge evidence
-    # keeps the independent 2.5x safety floor.
+    # regular uplink and interruption evidence now share one threshold policy.
     os.environ["MUNEA_VOICE_ECHO_GUARD_HOT_MULT"] = "1.7"
-    os.environ.pop("MUNEA_VOICE_BARGE_EVIDENCE_HOT_MULT", None)
-    pre_duck_threshold = barge_evidence_threshold(client_threshold, playout_active=True)
-    check("pre-duck barge evidence keeps the 2.5x safety floor",
-          pre_duck_threshold >= client_threshold * 2.5)
+    pre_duck_threshold = speaker_threshold(playout_active=True)
+    check("播放中只讀單一裁決器的熱門檻",
+          pre_duck_threshold == 1150 * 1.7)
     false_echo, _, _ = sustained_voice_evidence(
         [(1802, 42.7)] * 4, pre_duck_threshold, 150,
     )
@@ -88,7 +89,7 @@ def main():
     # New clients submit a dedicated post-duck tail. Two fresh callbacks are
     # enough for the 80ms confirmation while the original pre-roll remains
     # available only for first-syllable replay.
-    post_duck_threshold = barge_evidence_threshold(client_threshold, playout_active=False)
+    post_duck_threshold = speaker_threshold(playout_active=False, after_duck=True)
     post_duck_voice, post_duck_ms, _ = sustained_voice_evidence(
         [(1802, 42.7)] * 2,
         post_duck_threshold,
@@ -112,13 +113,21 @@ def main():
     # 2026-07-29：原本寫死比對 `st["last_out"] = time.monotonic()` 出現幾次，但主聲道那處
     # 為了順便量抖動改成先取一次 now 再指派（功能完全一樣）。改成檢查「有幾個地方在更新
     # 出聲時間」這個行為本身，不綁特定寫法——回音濾網要靠它判斷她此刻在不在講話。
-    check("模型主聲道記出聲時間", srv.count('st["last_out"] = ') >= 2)
+    forward_match = re.search(
+        r"async def _forward_audio\(chunk\):(?P<body>.*?)(?=\n    async def )",
+        srv,
+        re.DOTALL,
+    )
+    forward_body = forward_match.group("body") if forward_match else ""
+    check("唯一音訊出口記出聲時間",
+          'st["last_out"] = ' in forward_body and srv.count("await _forward_audio(") >= 4)
 
     # 回音窗 v2（2026-07-29 · Edward 點名「自問自答」後抓到的結構性漏洞）：
     # Gemini 送資料比講話快——一句 10 秒的話伺服器 2 秒送完，舊窗（送出時間+2.5秒）
     # 在她才播到第 5 秒時就關了，句子後半的回音全放行＝她回答自己。
     # v2 鏡射 App 播放節奏推「手機大概播到哪」的水位，窗蓋到播完+殘響。
-    check("每送一塊聲音就推進播放水位（兩條送聲路都要）", srv.count("note_playout(") >= 2)
+    check("唯一音訊出口每塊都推進播放水位",
+          'st["playout_head"] = note_playout(' in forward_body)
     check("回音判定以播放水位為主", "in_playout_window(_eg_now" in srv)
     check("送出時間窗留著當後備", "or in_output_window(_eg_now" in srv)
     check("用戶插話→水位歸零（App 已清掉未播聲音，窗立刻收、不吃真人聲）",
@@ -130,10 +139,10 @@ def main():
 
     check("server stores playout state at evidence start",
           '"playout_active": in_playout_window' in srv)
-    check("server judges a declared post-duck tail separately",
-          'evidence_basis = "post_duck"' in srv and '_decision_levels = _levels[-_post_duck_frames:]' in srv)
-    check("legacy clients use the hot buffered-evidence threshold",
-          'barge_evidence_threshold(' in srv and 'evidence_basis = "pre_duck_hot"' in srv)
+    check("server judges a declared post-duck tail through the sole arbiter",
+          'decide_speaker_evidence(' in srv and '_decision_levels = _levels[-_post_duck_frames:]' in srv)
+    check("server ignores browser amplitude thresholds",
+          'normalized_rms_to_pcm16(obj.get("threshold"))' not in srv)
 
     import voice_echo_guard as g
     head = 0.0
@@ -145,7 +154,8 @@ def main():
     check("播完+殘響後窗會關（不永遠蓋）", not g.in_playout_window(114.0, head))
     check("歸零後窗立即關", not g.in_playout_window(105.0, 0.0))
     check("收線總帳含回音丟棄數", "echo_dropped=st" in srv)
-    check("片語級台語輸出只讓她自己重講一次", 'source == "model_output" and st.get("language_retry_count", 0) < 1' in srv)
+    check("模型輸出語言誤判只記錄不再自動重講",
+          'node.hokkien_output_seen' in srv and '_arm_language_block("model_output")' not in srv)
     check("單一國語發音不穩不再重播整段", "_send_safe_mandarin_tts(blocked_text, source)" not in srv)
 
     # 契約：查詢備胎鏈＋安撫句＋配速（7/16 晚 gemini-2.5-flash 整批客滿事故後立）
@@ -166,13 +176,31 @@ def main():
 
     # 契約：過場句同聲線（Phase 3 · 7/17 凌晨）
     check("有她本人聲線的配音通道", "_gemini_tts_pcm" in srv and "gemini-2.5-flash-preview-tts" in srv)
-    check("配音失敗自動退回舊路", srv.count("server.tts_b64") >= 3)
+    # 2026-08-13：這條原本守的是「配音失敗自動退回舊路」（server.tts_b64 至少三處）。
+    # 但 8/12 的 #576 是**刻意**把那條退路拆掉的——舊通道唸出來是另一個人的聲音，
+    # 通話講到一半換人比安靜更嚇人。守門沒跟著改，於是 main 上這條一直紅、
+    # 整份上線前檢查等於報廢（「守門清單跟不上程式」又一次）。
+    # 改成守新的意圖：**配音失敗寧可安靜，也絕不換成別人的聲音。**
+    check("配音失敗寧可安靜、不換成另一個人的聲音",
+          "server.tts_b64" not in srv
+          and srv.count("_gemini_tts_pcm(") >= 4
+          and srv.count("or b\"\"") >= 2)
     check("工具說明教她先講一句再查", "說完立刻呼叫本工具" in srv)
     check("聲線跟角色走", "_char_voice_name" in srv)
     check("過場音語言跟當輪回覆語系走",
           "localization.speech_language_code(locale)" in srv)
     check("過場音快取有語系隔離",
           "cache_key = (str(char or \"\"), normalized_locale, text)" in srv)
+
+    # 用量總帳（2026-08-12 立、8/13 補齊）：這套是為了回答「一通電話多少錢」。
+    # 8/13 抓到總帳每通都印 turns=0——turn_count 這個欄位從來沒有人寫過，
+    # 於是「一通幾輪、每輪多少」根本算不出來，計量等於半殘。
+    check("每輪用量有真的在數", 'st["usage_turns"] = st.get("usage_turns", 0) + 1' in srv)
+    check("總帳用真的數到的輪數，不是那個沒人寫的欄位",
+          'turns=_turns' in srv and 'turns=st.get("turn_count", 0)' not in srv)
+    check("總帳算得出一通大概多少錢", "est_usd=" in srv and "_estimate_leg_usd(" in srv)
+    check("算錢失敗不准影響通話", "def _estimate_leg_usd" in srv and
+          srv.split("def _estimate_leg_usd")[1].split("def ")[0].count("except Exception") >= 1)
 
     print()
     if FAILS:

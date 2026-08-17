@@ -156,6 +156,9 @@ for (const l of LOCALES) {
     'meta.b2bUrl': config.b2bUrl,
     'meta.siteUrl': SITE,
     'meta.ogImage': `${SITE}/assets/og-image.jpg`,
+    // 品牌識別資料用：把官網／App Store／粉專串成同一個品牌實體（見 index.html 的 ld+json）
+    'meta.appStoreUrl': config.appStoreUrl,
+    'meta.facebookUrl': config.facebookUrl,
   };
 
   const html = render(template, vars, l.code);
