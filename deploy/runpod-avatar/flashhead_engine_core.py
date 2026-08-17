@@ -43,6 +43,28 @@ SUPPORTED_FRAME_SIZES = (512, 640, 768)
 # 實測 16 round 只有 6 次 finish。0.45s < 0.8s round 邊界、又大於正常
 # 串流抖動；TTS 中途真的停超過 0.45s 時只是多一格帶靜音尾的畫面，順序不亂。
 TAIL_FLUSH_S = float(os.environ.get("MUNEA_FH_TAIL_FLUSH_S", "0.45"))
+# 新起句首塊加速（2026-08-17 第二刀 · Edward「直到90分」）：
+# 一輪的第一塊原本要攢滿 0.96 秒聲音才開工＝每逢停頓後嘴慢 0.6-1.5 秒的主因。
+# 開了這刀：等 FAST_FIRST_WAIT_S 還攢不滿一塊、就先拿手上的真聲音墊零開工，
+# 只推真聲音那幾格畫面（墊零的不推——推了會蓋掉下一塊的真嘴型）。
+FAST_FIRST = os.environ.get("MUNEA_FH_FAST_FIRST", "1") == "1"
+FAST_FIRST_WAIT_S = float(os.environ.get("MUNEA_FH_FAST_FIRST_WAIT_S", "0.25"))
+FAST_FIRST_MIN_S = float(os.environ.get("MUNEA_FH_FAST_FIRST_MIN_S", "0.18"))
+
+
+def should_fast_first(round_pending, acc_len, chunk_samples, waited_s,
+                      enabled=True, wait_s=None, min_s=None, sr_eng=16000):
+    """一輪的第一塊要不要提早開工（純函式、可單元測）。
+
+    條件：這一輪還沒出過畫面（round_pending）、聲音攢了一些但不滿一塊、
+    已經等超過 wait_s（給爆發式到達一個攢滿整塊的機會）、且至少有 min_s
+    的真聲音（太短的嘴型沒意義、白花一次顯卡）。"""
+    wait_s = FAST_FIRST_WAIT_S if wait_s is None else wait_s
+    min_s = FAST_FIRST_MIN_S if min_s is None else min_s
+    return (bool(enabled) and bool(round_pending)
+            and 0 < acc_len < chunk_samples
+            and waited_s >= wait_s
+            and acc_len >= int(min_s * sr_eng))
 
 # 畫面時間穩定器（2026-07-24 Edward 反映「待機時整個背景微閃爍」）。
 # 根因：生成模型每 chunk 重畫整張圖（含背景），背景像素每次都有 1~3 階的
@@ -659,6 +681,8 @@ class Slot:
         self.healthy = True
         self.fault_count = 0
         self.last_fault = None
+        # 新起句首塊加速的出手次數（health 曝光；長期 0 ＝這刀沒在工作）
+        self.fast_first_count = 0
 
 
 def lip_catchup_frame_count(audio_played_s, queued_video_s, timeline_start_s,
@@ -963,7 +987,8 @@ class Feeder:
         return frames
 
     def _gen_chunk(self, chunk_16k, valid_samples=None, output_pcm=None,
-                   emit_audio=True, timeline_start_s=None, idle_input_seq=None):
+                   emit_audio=True, timeline_start_s=None, idle_input_seq=None,
+                   trim_frames_to_valid=False):
         t_chunk_ready = time.time()
         with self.lock:
             if idle_input_seq is not None and self._real_input_seq != idle_input_seq:
@@ -1079,6 +1104,12 @@ class Feeder:
                       + " queued=" + str(round(queued_video_s, 3)) + "s"
                       + " source=" + str(round(timeline_start_s, 3)) + "s",
                       flush=True)
+        if (trim_frames_to_valid and valid_samples is not None
+                and len(frames) and self.slot.tgt_fps):
+            # 新起句首塊：墊零那段的畫面不推——推了會佔住隊伍、蓋掉下一塊的真嘴型
+            keep = max(1, int(round(valid_samples / max(1, self.sr_eng) * self.slot.tgt_fps)))
+            if keep < len(frames):
+                frames = frames[:keep]
         if ANTIFLICKER:
             frames = self._stabilize(
                 frames, chunk_epoch,
@@ -1156,10 +1187,35 @@ class Feeder:
                         timeline_start_s = (self.timeline_base_s
                                             + self.consumed / max(1, self.sr_eng))
                         todo = (self.acc[:cs].copy(), cs,
-                                self.acc_out[:output_samples].copy(), timeline_start_s)
+                                self.acc_out[:output_samples].copy(), timeline_start_s, False)
                         self.acc = self.acc[cs:]
                         self.acc_out = self.acc_out[output_samples:]
                         self.consumed += cs
+                elif (not self._finish_pending
+                      and should_fast_first(
+                          self._round_pending, len(self.acc), cs,
+                          (time.time() - self.slot.round_start_ts)
+                          if self.slot.round_start_ts else 0.0,
+                          enabled=FAST_FIRST, sr_eng=self.sr_eng)
+                      and can_generate_video_chunk(
+                          self.slot.sink.depth(), self.slot.tgt_fps,
+                          self.slot.slice_len, self.max_ahead_s)):
+                    # 新起句首塊加速：真聲音墊零先開工、只推真聲音那幾格
+                    # （句子已收尾交給 tail-flush——它會立刻出手並清旗標）
+                    valid = len(self.acc)
+                    padded = np.zeros(cs, dtype=np.float32)
+                    padded[:valid] = self.acc
+                    output_samples = min(len(self.acc_out), int(round(valid * self.sr_in / self.sr_eng)))
+                    output_pcm = self.acc_out[:output_samples].copy()
+                    self.acc = np.zeros(0, dtype=np.float32)
+                    self.acc_out = self.acc_out[output_samples:]
+                    timeline_start_s = (self.timeline_base_s
+                                        + self.consumed / max(1, self.sr_eng))
+                    self.consumed += valid
+                    self.slot.fast_first_count += 1
+                    print("[feeder] slot" + str(self.slot.index)
+                          + " fast-first flush valid=" + str(valid), flush=True)
+                    todo = (padded, valid, output_pcm, timeline_start_s, True)
                 elif 0 < len(self.acc) < cs and (
                         self._finish_pending
                         or (self.t0 is not None
@@ -1178,7 +1234,7 @@ class Feeder:
                     timeline_start_s = (self.timeline_base_s
                                         + self.consumed / max(1, self.sr_eng))
                     self.consumed += valid
-                    todo = (padded, valid, output_pcm, timeline_start_s)
+                    todo = (padded, valid, output_pcm, timeline_start_s, False)
                 if todo is None and self._complete_pending and len(self.acc) == 0:
                     self._complete_pending = False
                     complete_now = True
@@ -1195,7 +1251,8 @@ class Feeder:
                     self.slot.sink.clear()
                     print("[feeder] slot" + str(self.slot.index)
                           + " real audio arrived, stop idle feed", flush=True)
-                self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3])
+                self._gen_chunk(todo[0], todo[1], todo[2], timeline_start_s=todo[3],
+                                trim_frames_to_valid=todo[4])
                 continue
             now = time.time()
             with self.lock:
@@ -1429,6 +1486,7 @@ def health_snapshot(slot, wake_ts=None):
             "av_resync_events": sink.av_resync_events if sink else 0,
             "av_resync_frames": sink.av_resync_frames if sink else 0,
             "av_hold_events": sink.av_hold_events if sink else 0,
+            "fast_first_count": slot.fast_first_count,
             "last_av_offset_ms": sink.last_av_offset_ms if sink else None,
         },
         "model_turn_state": {

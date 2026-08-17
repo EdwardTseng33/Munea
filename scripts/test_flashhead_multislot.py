@@ -679,6 +679,7 @@ def test_health_snapshot_math():
         "av_resync_events": 0,
         "av_resync_frames": 0,
         "av_hold_events": 0,
+        "fast_first_count": 0,
         "last_av_offset_ms": None,
     }
     assert body["model_turn_state"] == {

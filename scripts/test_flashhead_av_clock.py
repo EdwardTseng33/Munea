@@ -20,7 +20,11 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "deploy" / "runpod-avatar"))
 
-from flashhead_engine_core import AudioOutBuffer, FrameSink  # noqa: E402
+from flashhead_engine_core import (  # noqa: E402
+    AudioOutBuffer,
+    FrameSink,
+    should_fast_first,
+)
 
 FPS = 12.5
 
@@ -104,6 +108,36 @@ def main():
                          "sink.audio_pos_fn = slot.audio_out.played_pos_s" in server_src))
     results.append(check("真話畫格入隊帶錶（start_audio_pos）",
                          "start_audio_pos=chunk_audio_pos" in core_src))
+
+    # ─── 新起句首塊加速（fast-first · 2026-08-17 第二刀）────────────────
+    # 病：一輪第一塊要攢滿 0.96 秒才開工＝新起句嘴巴遲到 0.6-1.5 秒的主因。
+    # 契約：新起句、真聲音 ≥0.18s、等了 ≥0.25s 還沒滿塊 → 墊零先開工；
+    #       但只推「真聲音那幾格」——墊零尾格會佔住下一塊真嘴型的時間位置。
+    cs = 15360  # 0.96s @16kHz
+    results.append(check("新起句等 0.25s 有 0.25s 真聲音＝提早開工",
+                         should_fast_first(True, 4000, cs, 0.30)))
+    results.append(check("不是新起句（首塊已出）＝不出手",
+                         not should_fast_first(False, 4000, cs, 0.30)))
+    results.append(check("真聲音太少（<0.18s）＝再等等",
+                         not should_fast_first(True, 2000, cs, 0.30)))
+    results.append(check("還沒等滿 0.25s＝再等等",
+                         not should_fast_first(True, 4000, cs, 0.20)))
+    results.append(check("已攢滿一塊＝走正常路、不搶",
+                         not should_fast_first(True, cs, cs, 0.30)))
+    results.append(check("總開關關掉＝完全不出手",
+                         not should_fast_first(True, 4000, cs, 0.30, enabled=False)))
+    # 接線：這條路真的縫進迴圈與生成端了（行為測試綠≠正式機在跑）
+    results.append(check("迴圈有 fast-first 分支且帶總開關",
+                         "enabled=FAST_FIRST" in core_src))
+    results.append(check("句子已收尾不搶（讓 tail-flush 清旗標）",
+                         "not self._finish_pending\n                      and should_fast_first" in core_src))
+    results.append(check("fast-first 也守畫格隊伍深度（不塞爆出口）",
+                         core_src.count("can_generate_video_chunk(") >= 3))
+    results.append(check("生成端只推真聲音那幾格（墊零不推）",
+                         "trim_frames_to_valid=todo[4]" in core_src
+                         and "frames = frames[:keep]" in core_src))
+    results.append(check("出手次數進健康帳（長期 0＝這刀沒在工作）",
+                         '"fast_first_count"' in core_src))
 
     failed = results.count(False)
     if failed:
