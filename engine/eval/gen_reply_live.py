@@ -58,6 +58,11 @@ async def run_call(case, person_id, replies):
     fixture = case.get("fixture") or {}
     if fixture.get("memory_items"):
         server.save_memory_items(fixture["memory_items"])
+    # 2026-08-17：個人資料（住哪一區、稱呼、出生年）漏存了——文字線那支一直有存，
+    # 只有語音線沒有。後果：她拿不到住哪裡，只好說「我還不知道你住在哪裡」，
+    # 而評審手上有背景資料寫著台南，就判她跟已知事實矛盾。她沒錯，是考卷餵得不一樣。
+    if fixture.get("person_profile"):
+        server.save_person_profile(fixture["person_profile"])
     if fixture.get("living_profile"):
         profile = dict(fixture["living_profile"])
         profile["personId"] = person_id
@@ -107,13 +112,21 @@ async def run_call(case, person_id, replies):
                 if msg.tool_call and msg.tool_call.function_calls:
                     # 正式機開著即時查詢／設提醒時，她這輪可能會伸手要工具。考卷不接真工具
                     # （會把外部查詢的快慢混進成績），但一定要回一句，不然她會一直等、整通卡死。
+                    #
+                    # 2026-08-17：以前一律回 error，於是工具題只考得到「失敗要怎麼講」，
+                    # 「成功要怎麼講」永遠考不到——而那才是天天在發生的路徑。
+                    # 現在劇本可以用 toolResponses 指定某個工具這通回成功（"ok"）；
+                    # 沒指定的照舊回失敗，舊劇本行為不變。
+                    _wanted = (case.get("toolResponses") or {})
+                    responses = []
                     for fc in msg.tool_call.function_calls:
-                        tool_calls.append(fc.name)
-                    await session.send_tool_response(function_responses=[
-                        types.FunctionResponse(
-                            id=fc.id, name=fc.name,
-                            response={"error": "eval harness: tool not available"})
-                        for fc in msg.tool_call.function_calls])
+                        ok = str(_wanted.get(fc.name, "error")).lower() == "ok"
+                        payload = {"status": "ok"} if ok else {
+                            "status": "error", "error": "eval harness: tool not available"}
+                        tool_calls.append({"name": fc.name, "result": payload["status"]})
+                        responses.append(types.FunctionResponse(
+                            id=fc.id, name=fc.name, response=payload))
+                    await session.send_tool_response(function_responses=responses)
                     continue
                 content = msg.server_content
                 if not content:
