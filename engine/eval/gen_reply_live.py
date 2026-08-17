@@ -78,7 +78,17 @@ async def run_call(case, person_id, replies):
         _profile = _loc.voice_session_locale_profile(
             _loc.build_locale_context({"conversationLocale": case["locale"],
                                        "uiLocale": case["locale"]}))
-    cfg = lv.live_config(char=char, name=char, locale_profile=_profile)
+    # 2026-08-17：這通要不要給她工具（設提醒／記行程／要問醫生），照劇本說的來。
+    # 在這之前一律不給——於是「設提醒的完整流程」「清單滿了怎麼辦」這類題目
+    # 根本考不到，因為她手上根本沒有那些工具。跟 8/13 那個「漏傳語系」同一類：
+    # 考卷跟正式線的設定沒對齊，題目看起來有跑、其實考的是另一件事。
+    _caps = case.get("capabilities") or {}
+    cfg = lv.live_config(
+        char=char, name=char, locale_profile=_profile,
+        allow_reminders=bool(_caps.get("reminders")),
+        allow_events=bool(_caps.get("events")),
+        allow_care_questions=bool(_caps.get("careQuestions")),
+    )
     thinking = cfg.thinking_config.thinking_level if cfg.thinking_config else None
 
     # 2026-07-30 引擎開關：跟正式線同一套 _make_client——vertex25 走 Google 雲正式版、

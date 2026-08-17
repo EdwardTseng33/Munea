@@ -306,6 +306,9 @@ def pregenerate_live_replies(item, persona, case_dir):
     # 只有這個呼叫點沒接上，等於外語的語音線從來沒被真正考過。
     if item.get("locale"):
         payload["locale"] = item["locale"]
+    # 這條劇本要不要給她工具（設提醒／記行程／要問醫生）。不寫＝都不給，跟以前一樣。
+    if item.get("capabilities"):
+        payload["capabilities"] = item["capabilities"]
     # 一通電話含多輪語音生成，比文字線慢得多——時限放寬到整條劇本的量級。
     result = run_subprocess_json(
         os.path.join(HERE, "gen_reply_live.py"), payload, cwd=ENGINE_DIR, timeout=600)
