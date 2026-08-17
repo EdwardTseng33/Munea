@@ -289,6 +289,8 @@ class VoicePromptBudgetTest(unittest.TestCase):
     「我幫你聯絡家人」。調之前先驗過沒有贅肉可以先砍：把說明書切成 285 個
     句子兩兩比對，只有 7 對高度重疊、合計約 150 字，而且多數是各開關段落
     各自該有的工具規則，砍掉會讓單獨開某個開關時失去規則。
+    8/17 再 +50：她跟長輩說「我剛剛這邊有點卡住了」——那是機器在報告自己的狀況，
+    對方只會以為是自己的手機壞了。補在「聽不清楚怎麼辦」旁邊，四語一起。
     """
 
     @staticmethod
@@ -343,7 +345,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(self._content_len(prompt), 16460)
+        self.assertLessEqual(self._content_len(prompt), 16510)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -358,7 +360,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(self._content_len(prompt), 18160)
+        self.assertLessEqual(self._content_len(prompt), 18210)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -368,7 +370,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(self._content_len(prompt), 16760)
+        self.assertLessEqual(self._content_len(prompt), 16810)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)
