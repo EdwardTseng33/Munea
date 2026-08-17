@@ -641,11 +641,44 @@ def print_table(summary, results):
     print("=" * 76)
 
 
+def print_stability(results, rounds):
+    """跑多次時，列出每一題「過了幾次」。
+
+    2026-08-18 立這張表的原因：整份題庫連跑兩輪，失敗的是不同的題
+    （第一輪 S02/S56/S64、第二輪 S03/S22/S67），而把那些題單獨連跑三次全過。
+    也就是說單次成績有雜訊——拿一次結果說「這條規則修好了」會騙自己，
+    拿一次結果說「她退步了」也會冤枉她。要判斷，就看跑 N 次過幾次。
+    """
+    from collections import defaultdict
+    passes, labels = defaultdict(int), {}
+    for r in results:
+        labels[r["id"]] = r["label"]
+        if r["verdict"] == "PASS":
+            passes[r["id"]] += 1
+    ordered = sorted(labels, key=lambda k: (passes[k], k))
+    print("-" * 76)
+    print(f"穩定度（同一題跑 {rounds} 次過幾次）——只過一部分的，是隨機、不是穩定的缺陷：")
+    shaky = [k for k in ordered if 0 < passes[k] < rounds]
+    never = [k for k in ordered if passes[k] == 0]
+    for k in never:
+        print(f"  {passes[k]}/{rounds}  {k}  {labels[k]}   ← 每次都不過＝真的有問題")
+    for k in shaky:
+        print(f"  {passes[k]}/{rounds}  {k}  {labels[k]}   ← 有時過有時不過")
+    if not never and not shaky:
+        print(f"  全部 {len(ordered)} 題都是 {rounds}/{rounds} 過")
+    print("-" * 76)
+
+
 def main():
     parser = argparse.ArgumentParser(description="munea chat quality eval v1 (19 scenarios, multi-turn)")
     parser.add_argument("--scenarios", help="題庫路徑；預設繁中 30 題。各國安全題組＝engine/eval/chat_quality/scenarios_locale_safety.json")
     parser.add_argument("--ids", help="comma separated scenario ids, e.g. S04,S06")
     parser.add_argument("--limit", type=int, help="only run first N scenarios (quick smoke)")
+    parser.add_argument("--repeat", type=int, default=1,
+                        help="同一題重跑幾次（預設 1）。她的回答本來就有一點隨機——"
+                             "2026-08-18 實測：整份跑兩輪，失敗的是不同的題，"
+                             "而把那些題單獨連跑三次全過。所以單次成績有雜訊，"
+                             "要判斷一條規則到底有沒有效，得看『跑 N 次過幾次』。")
     parser.add_argument("--line", choices=("text", "live"), default="text",
                         help="考哪一條線：text＝正式文字線（預設、原本的考法）；"
                              "live＝正式語音線（跟 App 聊聊同一顆腦，另量第一聲反應毫秒）")
@@ -676,10 +709,16 @@ def main():
     import tempfile
     with tempfile.TemporaryDirectory(prefix="munea-chatq-") as tmp_root:
         results = []
-        for i, item in enumerate(items, 1):
-            print(f"[{i}/{len(items)}] running {item['id']} ({item['label']})"
-                  f" [{args.line}]...", file=sys.stderr)
-            results.append(run_scenario(item, personas, tmp_root, line=args.line))
+        rounds = max(1, args.repeat)
+        for r in range(1, rounds + 1):
+            for i, item in enumerate(items, 1):
+                tag = f"（第 {r}/{rounds} 次）" if rounds > 1 else ""
+                print(f"[{i}/{len(items)}] running {item['id']} ({item['label']})"
+                      f" [{args.line}]{tag}...", file=sys.stderr)
+                one = run_scenario(item, personas, tmp_root, line=args.line)
+                if rounds > 1:
+                    one["round"] = r
+                results.append(one)
 
     summary = aggregate(results)
     summary["line"] = args.line
@@ -688,6 +727,8 @@ def main():
         summary["thinkingLevel"] = os.environ.get("MUNEA_VOICE_THINKING_LEVEL", "").strip() \
             or "default(minimal)"
     print_table(summary, results)
+    if max(1, args.repeat) > 1:
+        print_stability(results, max(1, args.repeat))
 
     timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     # 語音線與文字線各存各的，不互相蓋掉（比較基準要留得住）。
