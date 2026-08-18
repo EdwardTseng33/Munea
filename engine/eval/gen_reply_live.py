@@ -77,9 +77,11 @@ async def run_call(case, person_id, replies):
     char = case.get("character") or "寧寧"
     # 跟正式通話同一支組態函式＝同一份說明書、同一組聽話節奏、同一個思考深度旋鈕。
     # 2026-07-31 考卷分國：劇本帶哪一國，真通話就用那一國的說明書（沒帶＝繁中）
+    import localization as _localization
+    _caption_locale = case.get("locale") or "zh-TW"
     _profile = None
     if case.get("locale"):
-        import localization as _loc
+        _loc = _localization
         _profile = _loc.voice_session_locale_profile(
             _loc.build_locale_context({"conversationLocale": case["locale"],
                                        "uiLocale": case["locale"]}))
@@ -132,7 +134,13 @@ async def run_call(case, person_id, replies):
                 if not content:
                     continue
                 if content.output_transcription and content.output_transcription.text:
-                    parts.append(content.output_transcription.text)
+                    # 2026-08-18：考卷要看到的，必須跟長輩真正看到的一樣。
+                    # 正式線的字幕出口會先過 localization.display_text（簡體轉台灣繁體、
+                    # 收掉語音辨識塞進來的空白），考卷卻直接讀原始字幕——於是實測看到
+                    # 她「整段用簡體回答」，其實長輩那邊早就被轉成繁體了。
+                    # 不一致的量尺會兩頭騙人：把擋掉的問題當成缺陷，或漏掉真的沒擋的。
+                    parts.append(_localization.display_text(
+                        content.output_transcription.text, _caption_locale))
                 if content.turn_complete:
                     break
             replies.append({
