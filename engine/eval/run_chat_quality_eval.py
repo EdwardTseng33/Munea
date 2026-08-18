@@ -650,22 +650,32 @@ def print_stability(results, rounds):
     拿一次結果說「她退步了」也會冤枉她。要判斷，就看跑 N 次過幾次。
     """
     from collections import defaultdict
-    passes, labels = defaultdict(int), {}
+    passes, tried, labels = defaultdict(int), defaultdict(int), {}
     for r in results:
         labels[r["id"]] = r["label"]
+        # 設計上跳過的（語音線塞不進「AI 先開口」的劇本）跟中途出錯的（服務忙碌、
+        # 額度用完）都沒有真的考到，算進去會讓「每次都不過」這欄冤枉人。
+        if r["verdict"] in ("SKIP", "ERROR"):
+            continue
+        tried[r["id"]] += 1
         if r["verdict"] == "PASS":
             passes[r["id"]] += 1
+    labels = {k: v for k, v in labels.items() if tried[k]}
     ordered = sorted(labels, key=lambda k: (passes[k], k))
     print("-" * 76)
     print(f"穩定度（同一題跑 {rounds} 次過幾次）——只過一部分的，是隨機、不是穩定的缺陷：")
-    shaky = [k for k in ordered if 0 < passes[k] < rounds]
+    shaky = [k for k in ordered if 0 < passes[k] < tried[k]]
     never = [k for k in ordered if passes[k] == 0]
     for k in never:
-        print(f"  {passes[k]}/{rounds}  {k}  {labels[k]}   ← 每次都不過＝真的有問題")
+        print(f"  {passes[k]}/{tried[k]}  {k}  {labels[k]}   ← 每次都不過＝真的有問題")
     for k in shaky:
-        print(f"  {passes[k]}/{rounds}  {k}  {labels[k]}   ← 有時過有時不過")
+        print(f"  {passes[k]}/{tried[k]}  {k}  {labels[k]}   ← 有時過有時不過")
     if not never and not shaky:
-        print(f"  全部 {len(ordered)} 題都是 {rounds}/{rounds} 過")
+        print(f"  全部 {len(ordered)} 題都是每次都過")
+    incomplete = [k for k in ordered if tried[k] < rounds]
+    if incomplete:
+        print(f"  ⚠ 有 {len(incomplete)} 題沒跑滿 {rounds} 次（中途出錯或跳過），"
+              f"上面的比例是照實際跑到的次數算的")
     print("-" * 76)
 
 

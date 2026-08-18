@@ -63,7 +63,9 @@ def main():
     for r in rows:
         sid = r["id"]
         labels[sid] = r.get("label", "")
-        if r.get("verdict") == "SKIP":
+        if r.get("verdict") in ("SKIP", "ERROR"):
+            # 跳過的（這條線考不了）跟出錯的（服務忙碌、額度用完）都沒真的考到，
+            # 算進去會冤枉那題。
             skipped.add(sid)
             continue
         runs[sid] += 1
@@ -81,6 +83,9 @@ def main():
     print("=" * 76)
     print(f"合併 {len(paths)} 份成績單：{len(runs)} 題、共跑 {total_runs} 次"
           + (f"（另有 {len(skipped)} 題這條線考不了、不算分）" if skipped else ""))
+    if not total_runs:
+        print("這幾份成績單裡沒有任何題目真的考到（可能全被跳過、或中途出錯）", file=sys.stderr)
+        sys.exit(2)
     print(f"整體通過率：{total_pass}/{total_runs}（{total_pass / total_runs:.1%}）"
           f"　鐵律違反合計 {sum(iron.values())} 項")
     print("-" * 76)
