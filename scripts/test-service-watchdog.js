@@ -18,7 +18,8 @@ function fakeResponse(status, body) {
 
 async function main() {
   const mod = await import("./service-watchdog.mjs");
-  const { TARGETS, checkTarget, runChecks, buildAlertText, buildSnapshot, sendAlert } = mod;
+  const { TARGETS, checkTarget, runChecks, buildAlertText, buildSnapshot, sendAlert,
+          decideAlerts, buildRecoveryText, buildReminderText } = mod;
 
   // 契約 1：巡邏名單涵蓋現役後端服務＋公開網站
   const names = TARGETS.map((t) => t.name).join("|");
@@ -268,6 +269,36 @@ async function main() {
   ]);
   check("混合情況只要有一個使用者受影響就叫醒", bothDown.includes("<!channel>"));
   check("正式大腦與正式聊聊都標成使用者受影響", TARGETS.filter((t) => t.userFacing).length === 2);
+
+  // ─── 講過就不要再講一遍（Edward 2026-08-19）──────────────────────────────
+  // Gemini 儲值用完那次，同一則告警每 5 分鐘重發、連發 60 幾則。訊息洗到後面
+  // 沒有人會看——狼來了喊太多次，真的來的時候就沒人理了。
+  const ok1 = { name: "A", ok: true, url: "u", detail: "200" };
+  const bad1 = { name: "A", ok: false, url: "u", detail: "500" };
+  const T0 = 1_000_000;
+
+  const first = decideAlerts([bad1], {}, T0);
+  check("剛壞掉會發（這是新消息）", first.fresh.length === 1 && first.remind.length === 0);
+
+  const second = decideAlerts([bad1], first.nextState, T0 + 5 * 60 * 1000);
+  check("五分鐘後還在壞 → 不再重發", second.fresh.length === 0 && second.remind.length === 0);
+
+  const hourLater = decideAlerts([bad1], first.nextState, T0 + 61 * 60 * 1000);
+  check("壞超過一小時 → 補一則提醒（不是無限安靜）", hourLater.remind.length === 1);
+  check("提醒有寫已經壞多久", buildReminderText(hourLater.remind).includes("已經壞"));
+  check("提醒要講明不是新事件（免得被當成又壞一次）",
+    buildReminderText(hourLater.remind).includes("不是新事件"));
+
+  const back = decideAlerts([ok1], first.nextState, T0 + 10 * 60 * 1000);
+  check("修好了會報一聲平安", back.recovered.length === 1 && back.fresh.length === 0);
+  check("恢復通知講得清楚", buildRecoveryText(back.recovered).includes("恢復"));
+  check("恢復之後記錄清掉（下次再壞算新事件）",
+    Object.keys(back.nextState).length === 0 &&
+    decideAlerts([bad1], back.nextState, T0 + 20 * 60 * 1000).fresh.length === 1);
+
+  // 狀態檔讀不到時要寧可多發、不可以漏報
+  check("狀態檔壞掉時當成以前都正常（寧可多講一次）",
+    decideAlerts([bad1], {}, T0).fresh.length === 1);
 
 console.log("✅ 服務看門狗契約全過");
 }
