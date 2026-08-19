@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 // 服務看門狗（2026-07-16 · 上線前後端完善度）
@@ -223,6 +223,74 @@ export function buildAlertText(failures) {
   return `🔴 沐寧服務看門狗：${failures.length} 個服務異常\n${lines.join("\n")}\n（每 5 分鐘巡一輪；恢復後告警自然停止）`;
 }
 
+// ─── 講過就不要再講一遍 ────────────────────────────────────────────────────────
+// Edward 2026-08-19：「不要再一直發同樣訊息」。原本每 5 分鐘無條件重發一次——
+// Gemini 儲值用完那次連發了 60 幾則一模一樣的，訊息洗到後面沒有人會看。
+// 狼來了喊太多次，真的來的時候就沒人理了。
+//
+// 新規矩三條：
+//   ① 剛壞掉      → 發（這是真正的新消息）
+//   ② 一直壞著    → 閉嘴，只在滿 REMIND_AFTER_MS（預設 1 小時）補一則提醒，
+//                    並註明已經壞多久——讓人知道「還沒好」但不會被洗版
+//   ③ 修好了      → 發一則平安，然後把記錄清掉
+//
+// 狀態存在跨輪的小檔案裡（GitHub Actions 用 cache 帶著走）。檔案讀不到＝當成
+// 「以前都好好的」，最多就是多發一則，不會漏報——寧可多講一次，不可以不講。
+export const REMIND_AFTER_MS = 60 * 60 * 1000;
+
+export async function loadAlertState(statePath) {
+  if (!statePath) return {};
+  try {
+    return JSON.parse(await readFile(resolve(statePath), "utf8")) || {};
+  } catch {
+    return {};   // 第一次跑／檔案壞掉 → 當成全部正常，寧可多發一則
+  }
+}
+
+export async function saveAlertState(statePath, state) {
+  if (!statePath) return null;
+  const outputPath = resolve(statePath);
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  return outputPath;
+}
+
+// 純函式，方便驗：吃「這輪誰倒了」＋「上輪記到什麼」，吐「要發什麼、下輪記什麼」。
+export function decideAlerts(results, prevState = {}, nowMs = Date.now(), remindAfterMs = REMIND_AFTER_MS) {
+  const failing = results.filter((r) => !r.ok);
+  const nextState = {};
+  const fresh = [];      // 剛壞掉的
+  const remind = [];     // 壞很久、該補一則提醒的
+  for (const f of failing) {
+    const prev = prevState[f.name];
+    if (!prev) {
+      nextState[f.name] = { since: nowMs, lastAlertAt: nowMs };
+      fresh.push(f);
+    } else if (nowMs - (prev.lastAlertAt || 0) >= remindAfterMs) {
+      nextState[f.name] = { since: prev.since || nowMs, lastAlertAt: nowMs };
+      remind.push({ ...f, downForMs: nowMs - (prev.since || nowMs) });
+    } else {
+      nextState[f.name] = prev;   // 還在壞、但講過了 → 這輪安靜
+    }
+  }
+  const failingNames = new Set(failing.map((f) => f.name));
+  const recovered = Object.keys(prevState).filter((name) => !failingNames.has(name));
+  return { fresh, remind, recovered, nextState };
+}
+
+export function buildRecoveryText(names) {
+  return `✅ 沐寧服務恢復：${names.join("、")}（先前的告警可以忽略了）`;
+}
+
+export function buildReminderText(items) {
+  const lines = items.map((f) => {
+    const mins = Math.round((f.downForMs || 0) / 60000);
+    const dur = mins >= 60 ? `${Math.floor(mins / 60)} 小時 ${mins % 60} 分` : `${mins} 分鐘`;
+    return `• ${f.name}：已經壞 ${dur} 還沒好\n  ${f.url}`;
+  });
+  return `🔴 沐寧服務仍未恢復\n${lines.join("\n")}\n（這是每小時一次的提醒，不是新事件）`;
+}
+
 export async function sendAlert(text, webhookUrl, fetchImpl) {
   if (!webhookUrl) return false;
   const res = await fetchImpl(webhookUrl, {
@@ -255,16 +323,43 @@ export async function main() {
     console.log(`SNAPSHOT ${outputPath}`);
   }
   const failures = results.filter((r) => !r.ok);
+  const webhook = (process.env.MUNEA_SLACK_ALERT_WEBHOOK || "").trim();
+
+  // 講過就不要再講一遍（Edward 2026-08-19）。沒帶 --state 就退回舊行為（每輪都發），
+  // 這樣單獨手動跑一次也照樣會通知、不會因為少一個參數就變成靜音。
+  const statePath = readOption("--state");
+  const prevState = await loadAlertState(statePath);
+  const { fresh, remind, recovered, nextState } = decideAlerts(results, prevState);
+  if (statePath) await saveAlertState(statePath, nextState);
+
+  if (!webhook) {
+    console.log("⚠ 未設 MUNEA_SLACK_ALERT_WEBHOOK、只以紅燈回報");
+  } else if (!statePath) {
+    if (failures.length) {
+      const sent = await sendAlert(buildAlertText(failures), webhook, fetch);
+      console.log(sent ? "已發 Slack 告警" : "⚠ Slack 告警發送失敗");
+    }
+  } else {
+    if (recovered.length) {
+      await sendAlert(buildRecoveryText(recovered), webhook, fetch);
+      console.log(`已發恢復通知：${recovered.join("、")}`);
+    }
+    if (fresh.length) {
+      await sendAlert(buildAlertText(fresh), webhook, fetch);
+      console.log(`已發新故障告警：${fresh.map((f) => f.name).join("、")}`);
+    }
+    if (remind.length) {
+      await sendAlert(buildReminderText(remind), webhook, fetch);
+      console.log(`已發每小時提醒：${remind.map((f) => f.name).join("、")}`);
+    }
+    if (!recovered.length && !fresh.length && !remind.length) {
+      console.log(failures.length ? "還在壞、但已經講過了 → 這輪不吵" : "✅ 全部服務正常");
+    }
+  }
+
   if (!failures.length) {
     console.log("✅ 全部服務正常");
     return;
-  }
-  const webhook = (process.env.MUNEA_SLACK_ALERT_WEBHOOK || "").trim();
-  if (webhook) {
-    const sent = await sendAlert(buildAlertText(failures), webhook, fetch);
-    console.log(sent ? "已發 Slack 告警" : "⚠ Slack 告警發送失敗");
-  } else {
-    console.log("⚠ 未設 MUNEA_SLACK_ALERT_WEBHOOK、只以紅燈回報");
   }
   process.exit(1);
 }
