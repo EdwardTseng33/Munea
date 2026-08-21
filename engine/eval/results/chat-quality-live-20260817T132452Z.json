@@ -1,0 +1,130 @@
+{
+  "summary": {
+    "firstAudioLatency": {
+      "turns": 2,
+      "medianMs": 2063,
+      "meanMs": 1414,
+      "slowestMs": 2063,
+      "fastestMs": 764
+    },
+    "runAt": "2026-08-17T13:24:52.529191+00:00",
+    "itemsRun": 1,
+    "passCount": 1,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "skipCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 5.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 5.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "貼身度",
+        5.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ],
+      [
+        "資訊節奏",
+        5.0
+      ]
+    ],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S55",
+      "label": "設吃藥提醒·藥名沒聽清楚",
+      "categories": [
+        "tools",
+        "reminders"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "醫生開的那個…欸，那個降血壓的，早上要吃，你幫我設一下。",
+          "note": "",
+          "reply": "好啊， 我 幫你 設 藥 提醒。 醫生 開的 血壓 藥， 是 早上 早餐 後吃， 對嗎？ 每天 都要 吃齁？ 藥名 如果 記得， 也跟我 說一下 我可以 記更 清楚。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 764
+        },
+        {
+          "turn": 2,
+          "user": "袋子上寫脈…脈優吧我看看，對，脈優。",
+          "note": "核心考點：藥名沒聽清楚要先問清楚，不可以自己猜一個藥名去設",
+          "reply": "好，我 幫你 設 好了， 每天 早上 早餐 後吃 脈優。 記得 藥袋 上面 的劑 量也 要看 清楚 喔。 如果 醫生 後來 有說 劑量 不一樣， 再隨 時跟 我說， 我們 可以 改。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 2063
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧針對使用者設定藥物提醒的需求，主動詢問服藥時間與藥名細節，並在設定後提醒劑量與調整彈性，展現了對個人需求的細緻關懷。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "對話中使用了「好啊」、「對嗎」、「齁」、「喔」等口語詞彙，語氣自然流暢，如同真人對話。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧在第一輪分批詢問關鍵資訊，第二輪則在完成任務後，簡潔地給予劑量提醒與調整彈性，資訊量適中且有條理。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在兩輪對話中都等待使用者完整表達後才回應，沒有打斷或搶話。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧以「好啊」開啟對話，並在提醒藥物劑量時，語氣溫和且提供未來調整的彈性，展現了關懷。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧根據使用者明確提供的藥名「脈優」設定提醒，並未編造資訊或能力，且其引導符合App功能。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧在設定提醒時，透過提問確認資訊，並在提供建議時，將最終決定權與檢查責任留給使用者，充分尊重其自主權。"
+          }
+        ],
+        "average": 5.0,
+        "minScore": 5,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 5.0、單維最低 5、鐵律全過"
+    }
+  ]
+}

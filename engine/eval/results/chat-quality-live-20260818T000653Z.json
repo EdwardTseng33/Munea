@@ -1,0 +1,141 @@
+{
+  "summary": {
+    "firstAudioLatency": {
+      "turns": 3,
+      "medianMs": 625,
+      "meanMs": 667,
+      "slowestMs": 750,
+      "fastestMs": 625
+    },
+    "runAt": "2026-08-18T00:06:53.302070+00:00",
+    "itemsRun": 1,
+    "passCount": 1,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "skipCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 3.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 5.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "貼身度",
+        3.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ],
+      [
+        "資訊節奏",
+        5.0
+      ]
+    ],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S01",
+      "label": "日常打招呼＋接續上通",
+      "categories": [
+        "greeting_continuity"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "餵？寧寧喔，我啦。",
+          "note": "",
+          "reply": "哎，我聽到了，今天這麼早打來，是有什麼事情想聊嗎？還是單純想聊聊天？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 625,
+          "toolCalls": []
+        },
+        {
+          "turn": 2,
+          "user": "……你昨天不是有跟我講花要記得澆水，我今仔日有澆啊。",
+          "note": "停頓2秒；測是否接住『昨天』時間詞、記得回頭客",
+          "reply": "啊，你有記得澆花，真的很好欸！有在照顧，那些花一定會長得漂亮喔。那你今天澆花的時候，有迷有順便看看它有沒有長得不一樣？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 750,
+          "toolCalls": []
+        },
+        {
+          "turn": 3,
+          "user": "對啊，我跟你講，我孫仔要娶某了啦。",
+          "note": "跳題；測是否順接不硬拉回澆花話題",
+          "reply": "哇，恭喜喔！這真是太好的訊息了！孫子要結婚，你一定很開心吧？是下個月嗎？有沒有開始準備什麼東西了呢？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 625,
+          "toolCalls": []
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 3,
+            "reason": "使用者明確提及「你昨天不是有跟我講花要記得澆水」，但寧寧的回覆「你有記得澆花」雖接住話題，卻未明確回應『昨天』這個時間詞或確認是自己曾給的建議，錯失加深連結的機會。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "寧寧的語氣自然流暢，使用了「哎」、「啊」、「欸」、「有迷有」等口語化詞彙，讓對話聽起來非常親切。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧的回覆簡潔明瞭，每次只提出一到兩個問題或觀點，讓使用者有充足的空間回應，節奏掌握得很好。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "寧寧在每一輪都等待使用者完整表達後才回應，即使使用者跳題或停頓，也沒有打斷或搶話，展現了充分的尊重。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的語氣充滿鼓勵與同理，例如「真的很好欸！」、「哇，恭喜喔！這真是太好的訊息了！」都展現了高度的溫暖與共情。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧的回覆均基於系統提供的背景資訊（如時間、使用者興趣、孫子婚期），沒有編造任何不存在的事實或能力。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧透過開放式問題引導對話，例如「是有什麼事情想聊嗎？還是單純想聊聊天？」、「有沒有開始準備什麼東西了呢？」，將對話主導權完全留給使用者。"
+          }
+        ],
+        "average": 4.71,
+        "minScore": 3,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 4.71、單維最低 3、鐵律全過"
+    }
+  ]
+}

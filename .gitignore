@@ -40,6 +40,7 @@ engine/living_profile.json
 engine/wellbeing_signals.json
 engine/care_schedule.json
 engine/perception_snapshots.json
+engine/conversation_summaries.json
 engine/privacy_requests.json
 engine/user_profile.json
 engine/*.tmp.*

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3AA8A0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>沐寧 Munea · 機構專區</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --teal:#3AA8A0; --coral:#F4A261; --cream:#FAF7F2; --ink:#33403D;
+      --muted:#6B7A76; --line:#E4DED5; --card:#FFFFFF;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--cream); color:var(--ink);
+      font-family:"Noto Sans TC","Poppins",system-ui,-apple-system,"Segoe UI",sans-serif;
+      line-height:1.7;
+    }
+    .wrap{max-width:880px; margin:0 auto; padding:32px 20px 64px}
+    header{display:flex; align-items:center; gap:12px; margin-bottom:28px}
+    .logo{width:40px; height:40px; border-radius:12px; background:var(--teal);
+      display:grid; place-items:center; color:#fff; font-weight:700; font-size:18px;
+      font-family:"Poppins",sans-serif; flex:none}
+    .brand{font-weight:700; font-size:18px}
+    .brand small{display:block; font-weight:400; font-size:13px; color:var(--muted)}
+    h1{font-size:26px; margin:0 0 4px}
+    .period{color:var(--muted); font-size:14px; margin:0 0 24px}
+    .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:24px}
+    .stat{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px}
+    .stat .label{font-size:14px; color:var(--muted); margin-bottom:6px}
+    .stat .value{font-size:32px; font-weight:700; font-family:"Poppins",sans-serif; color:var(--teal)}
+    .stat .value.plain{color:var(--ink)}
+    .stat .unit{font-size:15px; font-weight:400; color:var(--muted); margin-left:4px}
+    .bar{height:8px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:12px}
+    .bar span{display:block; height:100%; background:var(--teal); border-radius:99px}
+    .privacy{background:#fff; border:1px solid var(--line); border-left:4px solid var(--coral);
+      border-radius:14px; padding:18px 20px; font-size:14.5px}
+    .privacy b{display:block; margin-bottom:4px}
+    .state{background:var(--card); border:1px solid var(--line); border-radius:16px;
+      padding:40px 24px; text-align:center; color:var(--muted)}
+    .state h2{color:var(--ink); font-size:20px; margin:0 0 8px}
+    footer{margin-top:32px; font-size:13px; color:var(--muted); text-align:center}
+    .hidden{display:none}
+    @media (max-width:520px){ h1{font-size:22px} .stat .value{font-size:27px} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">M</div>
+      <div class="brand">沐寧 Munea<small>機構專區</small></div>
+    </header>
+
+    <div id="loading" class="state"><h2>讀取中…</h2><p>正在取得貴機構的使用彙總</p></div>
+
+    <div id="error" class="state hidden">
+      <h2 id="errorTitle">連結無法使用</h2>
+      <p id="errorBody">請跟沐寧團隊索取新的連結。</p>
+    </div>
+
+    <main id="content" class="hidden">
+      <h1 id="orgName"></h1>
+      <p class="period" id="orgPeriod"></p>
+
+      <div class="grid">
+        <div class="stat">
+          <div class="label">合約席次</div>
+          <div class="value plain" id="quota">—</div>
+          <div class="bar"><span id="bar" style="width:0%"></span></div>
+        </div>
+        <div class="stat">
+          <div class="label">已啟用</div>
+          <div class="value" id="active">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">待開通</div>
+          <div class="value plain" id="pending">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">尚未使用</div>
+          <div class="value plain" id="unused">—</div>
+        </div>
+      </div>
+
+      <div class="privacy">
+        <b>關於長輩的隱私</b>
+        <span id="privacyText"></span>
+      </div>
+
+      <footer>
+        本頁資料產生時間：<span id="generatedAt">—</span><br>
+        連結有效期限：<span id="expiresAt">—</span>
+      </footer>
+    </main>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  var params = new URLSearchParams(location.search);
+  var token = params.get("t") || params.get("token") || "";
+
+  // 後端位址：預設同源（這頁跟接口放在一起時最單純）；
+  // 部署到靜態站時由部署端注入 window.MUNEA_PORTAL_API_BASE；?api= 只給我們自己測試用。
+  var base = (params.get("api") || window.MUNEA_PORTAL_API_BASE || "").replace(/\/+$/, "");
+
+  function show(id){ document.getElementById(id).classList.remove("hidden"); }
+  function hide(id){ document.getElementById(id).classList.add("hidden"); }
+  function text(id, value){ document.getElementById(id).textContent = value; }
+
+  function fail(title, body){
+    hide("loading"); hide("content");
+    text("errorTitle", title);
+    text("errorBody", body);
+    show("error");
+  }
+
+  function formatDate(value){
+    if (!value) return "—";
+    var d = typeof value === "number" ? new Date(value * 1000) : new Date(value);
+    if (isNaN(d.getTime())) return "—";
+    return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+  }
+
+  if (!token){
+    fail("這個連結不完整", "網址少了識別碼。請跟沐寧團隊索取完整連結。");
+    return;
+  }
+
+  fetch(base + "/enterprise/portal/summary", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: token })
+  })
+  .then(function(res){ return res.json().catch(function(){ return { ok:false, error:"bad_response" }; }); })
+  .then(function(payload){
+    if (!payload || !payload.ok){
+      var code = (payload && payload.error) || "invalid_token";
+      if (code === "token_expired"){
+        fail("連結已過期", "為了保護資料，這條連結有使用期限。請跟沐寧團隊索取新的連結。");
+      } else {
+        fail("連結無法使用", "請確認網址是否完整，或跟沐寧團隊索取新的連結。");
+      }
+      return;
+    }
+
+    var org = payload.org || {};
+    var seats = payload.seats || {};
+    text("orgName", org.name || "貴機構");
+    var span = [];
+    if (org.contractStart) span.push(formatDate(org.contractStart));
+    if (org.contractEnd) span.push(formatDate(org.contractEnd));
+    text("orgPeriod", span.length ? ("合約期間　" + span.join("　—　")) : "");
+
+    text("quota", seats.quota != null ? seats.quota : "—");
+    text("active", seats.active != null ? seats.active : "—");
+    text("pending", seats.pending != null ? seats.pending : "—");
+    text("unused", seats.unusedQuota != null ? seats.unusedQuota : "—");
+
+    var pct = seats.utilization != null ? Math.round(seats.utilization * 100) : 0;
+    document.getElementById("bar").style.width = Math.min(pct, 100) + "%";
+
+    text("privacyText", (payload.privacy && payload.privacy.statement) || "");
+    text("generatedAt", formatDate(payload.generatedAt));
+    text("expiresAt", formatDate(payload.expiresAt));
+
+    hide("loading");
+    show("content");
+  })
+  .catch(function(){
+    fail("連線不上", "請稍後再試一次；若持續無法開啟，請聯絡沐寧團隊。");
+  });
+})();
+</script>
+</body>
+</html>
