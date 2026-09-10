@@ -58,6 +58,13 @@ export const TARGETS = [
     url: "https://munea-runpod-controller-fiu65jd4da-de.a.run.app/",
     expect: [200],
     check: "json-ok",
+    // 2026-09-10 Edward：「這個要解除」。備援卡的管家自己掛了 73 小時（實測回 503），
+    // 每小時提醒一則、連三天沒人處理——因為現在通話都走 GLOWS 常駐卡，
+    // 這條備援線本來就沒在用。對一個「刻意沒在跑」的東西一直叫，就是狼來了。
+    //
+    // ⚠ 拿掉的代價要講明：備援線之後若真的需要卻叫不動，**不會有人通知**。
+    //    哪天要恢復 RunPod 併發備援，把這行 enabled 改回 true（或直接刪掉這行）。
+    enabled: false,
   },
   {
     name: "公開網站 munea.net（正門）",
@@ -203,9 +210,14 @@ export async function writeSnapshot(snapshotPath, snapshot) {
   return outputPath;
 }
 
+// 名單上標了 enabled:false 的一律不巡（也就不會告警）。
+// 保留在名單裡而不是刪掉，是為了讓「我們刻意不看這個」這件事看得見、
+// 也留著網址與理由，哪天要恢復把旗標改回來就好。
+export const isWatched = (target) => target.enabled !== false;
+
 export async function runChecks(targets, fetchImpl, retryDelayMs = RETRY_DELAY_MS) {
   const results = [];
-  for (const target of targets) {
+  for (const target of targets.filter(isWatched)) {
     results.push(await checkTarget(target, fetchImpl, retryDelayMs));
   }
   return results;
@@ -313,7 +325,7 @@ export async function main() {
   const snapshotPath = readOption("--snapshot");
   if (process.argv.includes("--dry-run")) {
     console.log("巡邏對象（dry-run、不打網路）：");
-    for (const t of TARGETS) console.log(`  ${t.name} → ${t.url}（預期 ${t.expect.join("/")}${t.check === "json-ok" ? "＋ok=true" : ""}）`);
+    for (const t of TARGETS) console.log(`  ${isWatched(t) ? "" : "（已解除）"}${t.name} → ${t.url}（預期 ${t.expect.join("/")}${t.check === "json-ok" ? "＋ok=true" : ""}）`);
     return;
   }
   const results = await runChecks(TARGETS, fetch);

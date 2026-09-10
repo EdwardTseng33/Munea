@@ -19,7 +19,7 @@ function fakeResponse(status, body) {
 async function main() {
   const mod = await import("./service-watchdog.mjs");
   const { TARGETS, checkTarget, runChecks, buildAlertText, buildSnapshot, sendAlert,
-          decideAlerts, buildRecoveryText, buildReminderText } = mod;
+          decideAlerts, buildRecoveryText, buildReminderText, isWatched } = mod;
 
   // 契約 1：巡邏名單涵蓋現役後端服務＋公開網站
   const names = TARGETS.map((t) => t.name).join("|");
@@ -251,11 +251,6 @@ async function main() {
     }
   }
 
-  console.log();
-  if (FAILS.length) {
-    console.log(`❌ ${FAILS.length} 項未過：` + FAILS.join("、"));
-    process.exit(1);
-  }
     // 2026-07-29 告警分級：正式的大腦／聊聊倒了要叫得醒人（<!channel> 穿透手機免打擾），
   // 其他安靜進頻道。原本兩種長一樣，結果半夜兩種都不會叫醒人。
   const userFacingText = buildAlertText([{ name: "Brain 正式", detail: "500", url: "u", userFacing: true }]);
@@ -296,11 +291,32 @@ async function main() {
     Object.keys(back.nextState).length === 0 &&
     decideAlerts([bad1], back.nextState, T0 + 20 * 60 * 1000).fresh.length === 1);
 
+  // ─── 解除巡邏的對象不准再叫（Edward 2026-09-10「這個要解除」）────────────
+  // RunPod 備援控制器自己掛了 73 小時、每小時提醒一則、連三天沒人處理——
+  // 因為通話都走 GLOWS 常駐卡，這條備援線本來就沒在用。對刻意沒在跑的東西
+  // 一直叫＝狼來了。但**要留在名單上**（不是刪掉），理由與網址要看得見。
+  check("解除的對象仍留在名單上（看得見我們刻意不看它）",
+    TARGETS.some((t) => t.name.includes("RunPod 備援控制器")));
+  check("解除的對象不會被巡到（所以不會告警）",
+    TARGETS.filter(isWatched).every((t) => !t.name.includes("RunPod 備援控制器")));
+  check("沒標解除的一律照巡（不要誤傷其他服務）",
+    TARGETS.filter((t) => t.enabled !== false).length === TARGETS.length - 1);
+  check("正式大腦與正式聊聊仍在巡邏中",
+    TARGETS.filter(isWatched).filter((t) => t.userFacing).length === 2);
+
   // 狀態檔讀不到時要寧可多發、不可以漏報
   check("狀態檔壞掉時當成以前都正常（寧可多講一次）",
     decideAlerts([bad1], {}, T0).fresh.length === 1);
 
-console.log("✅ 服務看門狗契約全過");
+  // 判定一定要放在**所有檢查的最後面**。2026-09-10 突變測試抓到：這道判定原本卡在
+  // 檔案中段，後面補的檢查即使紅了也照樣印「全過」——等於那幾條守門根本沒在守。
+  // （8/8 才踩過一模一樣的坑：測試寫在收尾之後＝從來沒跑到。）
+  console.log();
+  if (FAILS.length) {
+    console.log(`❌ ${FAILS.length} 項未過：` + FAILS.join("、"));
+    process.exit(1);
+  }
+  console.log("✅ 服務看門狗契約全過");
 }
 
 main().catch((err) => {
