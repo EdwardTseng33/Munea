@@ -5663,14 +5663,11 @@ function setCallToggle(connected) {
 }
 
 // ===== 待機動態（Edward 7/9 供片）：進聊聊頁播「打招呼」一次 → 「待機」循環；按通話即停回靜態，交給語音＋雲端臉 =====
+// 2026-09-30：寧寧改成扁平插畫（companion-face.js 在最上層自己動），照片的打招呼／待機影片退役；
+// 男生角色已下線。沒有動態素材的角色 FaceIdle 會自動停在靜態圖。
 const FACE_MOTION = {
-  'nening-real-female': { hello: 'avatars/motion/nening-hello.mp4', idles: ['avatars/motion/nening-idle.mp4'] },
-  // 擬真男重新掛回（2026-07-11 Edward 給新影片、新長相）：撥號前用「打招呼→待機」影片、引擎已做交叉淡入不黑閃
-  'companion-real-male': { hello: 'avatars/motion/ahong-hello.mp4', idles: ['avatars/motion/ahong-idle.mp4'] },
   'munea-2d-xiaoyun': { hello: 'avatars/motion/xiaoyun-hello.mp4', idles: ['avatars/motion/xiaoyun-idle.mp4'] },
-  'munea-2d-ayuan': { hello: 'avatars/motion/ayuan-hello.mp4', idles: ['avatars/motion/ayuan-idle.mp4'] },
   'munea-2d-mimi': { hello: 'avatars/motion/mimi-hello.mp4', idles: ['avatars/motion/mimi-idle.mp4', 'avatars/motion/mimi-idle2.mp4'] },   // 咪咪有兩段待機（含舔鼻子）輪著播
-  'munea-2d-wangcai': { hello: 'avatars/motion/wangcai-hello.mp4', idles: ['avatars/motion/wangcai-idle.mp4'] },
 };
 function currentFaceTemplate() {
   try {
@@ -5874,8 +5871,29 @@ function showView(id) {
   $('#tabBar').classList.toggle('hidden', overlay);
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === id));
   const el = $('#' + id); if (el) el.scrollTop = 0;
-  if (id === 'chat') { Avatar.wake(); enterChat(); }   // 進聊聊頁＝先預醒雲端臉（按通話時多半已就緒）
-  else if (typeof FaceIdle !== 'undefined') FaceIdle.stop();   // 離開聊聊頁＝待機動態停、省電
+  if (id === 'chat') { Avatar.wake(); enterChat(); startFlatFace(); }   // 進聊聊頁＝先預醒雲端臉（按通話時多半已就緒）
+  else {
+    if (typeof FaceIdle !== 'undefined') FaceIdle.stop();   // 離開聊聊頁＝待機動態停、省電
+    if (window.MuneaFlatFace) window.MuneaFlatFace.stop();
+  }
+}
+
+// 扁平插畫寧寧（companion-face.js）：講話判斷與「真的正在播的聲音」由這裡接給它。
+// 通話聲音走雲端臉那條線時，iPhone 讀不到那條線的即時波形，但讀得到連線統計裡的播出音量。
+function startFlatFace() {
+  const face = window.MuneaFlatFace;
+  if (!face) return;
+  face.speaking = () => {
+    try { return !!callConnected && speechActive(); } catch (e) { return false; }
+  };
+  face.sampleLevel = async () => {
+    try {
+      if (!LiveVoice._sameLine) return -1;
+      const snap = await LiveVoice._faceAudioSnapshot();
+      return snap && snap.hasStats ? snap.audioLevel : -1;
+    } catch (e) { return -1; }
+  };
+  face.start();
 }
 
 // 登入把關（7/9 Edward 拍板）：聊聊＋家人連線類要登入·用到才問；solo（今日健康/心情/提醒）免登入
@@ -8028,7 +8046,7 @@ function renderMetricDetail(key) {
     `<div class="md-head"><b>${muneaT('health.metricWeekTitle', '{name} · 這週', { name: m.name() })}</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]()}</span></div>` +
     `<div class="md-chart">${bars}</div>` +
     `<div class="md-days">${days.map(d => '<span>' + d + '</span>').join('')}</div>` +
-    `<div class="md-read"><span class="md-face"><img src="avatars/nening-v2-face.png" alt=""></span><span>${m.read()}</span></div>`;
+    `<div class="md-read"><span class="md-face"><img src="avatars/ningning-flat-face.png" alt=""></span><span>${m.read()}</span></div>`;
   box.hidden = false; box.dataset.open = key;
   try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }

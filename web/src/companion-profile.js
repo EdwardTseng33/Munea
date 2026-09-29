@@ -29,9 +29,9 @@
       defaultNameFallback: t('companion.nening.name', '寧寧'),
       templateLabelKey: 'companion.nening.label',
       templateLabelFallback: t('companion.nening.label', '溫柔型，像家人一樣照看你'),
-      thumbAsset: 'avatars/nening-v2-face.png',   // 2026-07-11 新長相大頭照
-      homeAsset: 'avatars/nening-v2-face.png',
-      fullAsset: 'avatars/nening-v2-full.png',   // 2026-07-11 新長相靜態底圖（配新打招呼/待機影片）
+      thumbAsset: 'avatars/ningning-flat-face.png',   // 2026-09-30 扁平插畫寧寧（取代照片）
+      homeAsset: 'avatars/ningning-flat-face.png',
+      fullAsset: 'avatars/ningning-flat-full.png',
     }),
     'munea-2d-xiaoyun': template({
       backendChar: '小昀',
