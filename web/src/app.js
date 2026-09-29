@@ -386,7 +386,7 @@ function localizePurchasePlanContent() {
     },
     pro: {
       audienceKey: 'subscription.proAudience',
-      audienceFallback: 'For more frequent companionship and advanced video interaction',
+      audienceFallback: 'For chatting more often and using it with the whole family',
       credits: 200,
       members: 12,
     },
@@ -569,6 +569,9 @@ const TWO_D_AVATARS = new Set(['munea-2d-xiaoyun', 'munea-2d-ayuan', 'munea-2d-m
 /* ===== [ENGINE] 角色模板 vs 使用者命名：模板決定外觀/聲音/人格，名字由使用者取 ===== */
 const CompanionProfile = window.MuneaCompanionProfile;
 const CHARACTER_TEMPLATES = CompanionProfile.templates;
+// 男生角色全數下線（Edward 2026-09-30）：存檔裡是男生角色的人一開機就改由寧寧陪伴，
+// 畫面就緒後再同步回雲端並說一句（只說一次）。要在 loadProfile 之前看原始存檔才認得出來。
+const companionRetiredOnBoot = CompanionProfile.storedTemplateRetired();
 let savedCompanionProfile = CompanionProfile.loadProfile();
 let currentAvatarId = savedCompanionProfile.templateId;
 let companionDisplayName = savedCompanionProfile.displayName;
@@ -1003,6 +1006,8 @@ async function companionProfileApi(action, profile) {
   }
 }
 function applyCompanionProfile(profile, options = {}) {
+  // 雲端存的若還是已下線的男生角色，不能被它「救回來」：照樣換成寧寧、回寫雲端
+  const retired = !!(profile && CompanionProfile.isRetiredTemplate(profile.templateId));
   const normalized = CompanionProfile.normalizeProfile(profile);
   currentAvatarId = normalized.templateId;
   companionDisplayName = normalized.displayName;
@@ -1010,6 +1015,16 @@ function applyCompanionProfile(profile, options = {}) {
   currentChar = templateFor(currentAvatarId).backendChar;
   if (options.persist !== false) persistCompanionProfile();
   syncCompanionUI();
+  if (retired) noteRetiredCompanionMigration();
+}
+const RETIRED_COMPANION_NOTICE_KEY = 'munea.companionRetiredNotice.v1';
+function noteRetiredCompanionMigration() {
+  persistCompanionProfile();
+  saveCompanionProfileToBackend();
+  if (storageGet(RETIRED_COMPANION_NOTICE_KEY)) return;
+  storageSet(RETIRED_COMPANION_NOTICE_KEY, new Date().toISOString());
+  const companion = (companionDisplayName || '').trim() || templateFor().defaultName;
+  setTimeout(() => toast(muneaT('companion.retiredNotice', '原本的男生角色先休息了，接下來由{companion}陪你；你們聊過的事都還記得。', { companion }), 6500), 1200);
 }
 async function loadCompanionProfileFromBackend() {
   const r = await companionProfileApi('load');
@@ -9067,6 +9082,7 @@ function init() {
     }
     configureMedicationService();
   });
+  if (companionRetiredOnBoot) noteRetiredCompanionMigration();
   loadCompanionProfileFromBackend().finally(() => {
     if (storageGet(ONBOARDING_COMPLETED_KEY) === 'true' || storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'pending-auth') {
       syncAccountBootstrap('create', { reason: 'app_init' });

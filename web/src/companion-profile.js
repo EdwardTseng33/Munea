@@ -33,16 +33,6 @@
       homeAsset: 'avatars/nening-v2-face.png',
       fullAsset: 'avatars/nening-v2-full.png',   // 2026-07-11 新長相靜態底圖（配新打招呼/待機影片）
     }),
-    'companion-real-male': template({
-      backendChar: '阿宏',
-      defaultNameKey: 'companion.ahong.name',
-      defaultNameFallback: t('companion.ahong.name', '阿宏'),
-      templateLabelKey: 'companion.ahong.label',
-      templateLabelFallback: t('companion.ahong.label', '沉穩型，像大哥一樣可靠'),
-      thumbAsset: 'avatars/ahong-v2-face.png',   // 2026-07-11 新長相大頭照
-      homeAsset: 'avatars/ahong-v2-face.png',
-      fullAsset: 'avatars/ahong-v4-full.png',   // 2026-07-11 新長相靜態底圖（配新打招呼/待機影片）
-    }),
     'munea-2d-xiaoyun': template({
       backendChar: '小昀',
       defaultNameKey: 'companion.xiaoyun.name',
@@ -53,16 +43,6 @@
       homeAsset: 'avatars/xiaoyun-2d.png',
       fullAsset: 'avatars/xiaoyun-2d-tall.jpg',
     }),
-    'munea-2d-ayuan': template({
-      backendChar: '阿原',
-      defaultNameKey: 'companion.ayuan.name',
-      defaultNameFallback: t('companion.ayuan.name', '阿原'),
-      templateLabelKey: 'companion.ayuan.label',
-      templateLabelFallback: t('companion.ayuan.label', '隨和型，像鄰居一樣好聊天'),
-      thumbAsset: 'avatars/ayuan-2d-face.png',
-      homeAsset: 'avatars/ayuan-2d.png',
-      fullAsset: 'avatars/ayuan-2d-tall.jpg',
-    }),
     'munea-2d-mimi': template({
       backendChar: '咪咪',
       defaultNameKey: 'companion.mimi.name',
@@ -72,24 +52,20 @@
       thumbAsset: 'avatars/munea-2d-mimi-face.png',
       fullAsset: 'avatars/mimi-tall.jpg',
     }),
-    'munea-2d-wangcai': template({
-      backendChar: '旺財',
-      defaultNameKey: 'companion.wangcai.name',
-      defaultNameFallback: t('companion.wangcai.name', '旺財'),
-      templateLabelKey: 'companion.wangcai.label',
-      templateLabelFallback: t('companion.wangcai.label', '狗狗型，熱情又愛黏著你'),
-      thumbAsset: 'avatars/munea-2d-wangcai-face.png',
-      fullAsset: 'avatars/wangcai-tall.jpg',
-    }),
   };
   const aliases = {
     'real-f': 'nening-real-female',
-    'real-m': 'companion-real-male',
     'toon-f': 'munea-2d-xiaoyun',
-    'toon-m': 'munea-2d-ayuan',
     cat: 'munea-2d-mimi',
-    dog: 'munea-2d-wangcai',
   };
+  // 男生角色全數下線（Edward 2026-09-30）：阿宏、阿原、旺財。存過這些角色的人一律改由寧寧陪伴。
+  // 預設名要一起換回：輸入框失焦就會把名字標成「自己取的」，所以很多人存的其實是預設名，
+  // 不處理就會變成寧寧的臉掛著「Sam」、她講話還自稱 Sam。四種語言的預設名都要認得。
+  const RETIRED_TEMPLATE_IDS = ['companion-real-male', 'munea-2d-ayuan', 'munea-2d-wangcai', 'real-m', 'toon-m', 'dog'];
+  const RETIRED_DEFAULT_NAMES = ['阿宏', 'Sam', 'ひろし', 'Mateo', '阿原', 'Leo', 'けんた', 'Álvaro', '旺財', 'Buddy', 'ポチ', 'Toby'];
+  function isRetiredTemplate(templateId) {
+    return RETIRED_TEMPLATE_IDS.indexOf(templateId) >= 0;
+  }
   function normalizeTemplateId(templateId) {
     return aliases[templateId] || (templates[templateId] ? templateId : 'nening-real-female');
   }
@@ -99,7 +75,10 @@
   function normalizeProfile(profile) {
     const templateId = normalizeTemplateId(profile && profile.templateId);
     const t = templateFor(templateId);
-    const nameTouched = !!(profile && profile.nameTouched);
+    const retired = !!(profile && isRetiredTemplate(profile.templateId));
+    const storedName = ((profile && profile.displayName) || '').trim();
+    const nameTouched = !!(profile && profile.nameTouched)
+      && !(retired && RETIRED_DEFAULT_NAMES.indexOf(storedName) >= 0);
     let rawName = (
       nameTouched
         ? ((profile && profile.displayName) || t.defaultName)
@@ -127,10 +106,23 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     return normalized;
   }
+  // 開機時看一眼原始存檔：是不是從已下線的男生角色搬過來的（App 要據此說一句、並同步回雲端）
+  function storedTemplateRetired() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      return !!(raw && isRetiredTemplate(raw.templateId));
+    } catch (e) {
+      return false;
+    }
+  }
   window.MuneaCompanionProfile = {
     STORAGE_KEY,
     templates,
     aliases,
+    RETIRED_TEMPLATE_IDS,
+    RETIRED_DEFAULT_NAMES,
+    isRetiredTemplate,
+    storedTemplateRetired,
     loadProfile,
     saveProfile,
     templateFor,

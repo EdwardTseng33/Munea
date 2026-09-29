@@ -563,8 +563,10 @@ assert(openAuthSheet && !/\.focus\s*\(/.test(openAuthSheet), 'Opening auth sheet
 // AI 陪伴角色的說明：設定頁與選角卡片必須在四語系都講同一句，
 // 且卡片一定使用明確 key，不能再依賴中文原句剛好與翻譯表相同。
 const companionCards = [...html.matchAll(/data-ava="([^"]+)"[\s\S]{0,400}?<b data-i18n="([^"]+)">([^<]+)<\/b><small data-i18n="([^"]+)">([^<]+)<\/small>/g)];
-assert(companionCards.length >= 2, 'Companion picker must keep its selectable persona cards');
-const companionLabelKey = { 'nening-real-female': 'companion.nening.label', 'companion-real-male': 'companion.ahong.label' };
+// 男生角色全數下線（Edward 2026-09-30）：只剩寧寧一張卡，而且不准有男生卡片回來
+assert(companionCards.length >= 1, 'Companion picker must keep the Ningning persona card');
+assert(!/data-ava="(companion-real-male|munea-2d-ayuan|munea-2d-wangcai)"/.test(html), 'Retired male companions must not be selectable');
+const companionLabelKey = { 'nening-real-female': 'companion.nening.label' };
 const companionJoiner = { 'zh-TW': '，', en: ', ', ja: '。', es: ', ' };
 companionCards.forEach(([, ava, typeKey, typeFallback, traitKey, traitFallback]) => {
   const labelKey = companionLabelKey[ava];

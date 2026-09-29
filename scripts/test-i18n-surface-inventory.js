@@ -227,7 +227,9 @@ assert.equal(
 const companionProfile = appWebView.files.find(
   (file) => file.path === 'web/src/companion-profile.js',
 );
-assert.equal(companionProfile.boundHanCandidates, 12);
+// 三位男生角色下線（2026-09-30）：名單剩 3 個角色×2 句（名字＋說明）；
+// 阿宏／阿原／旺財三個字改留在「辨認舊存檔用的預設名」清單裡，仍是不給人看的識別字。
+assert.equal(companionProfile.boundHanCandidates, 6);
 assert.equal(companionProfile.reviewedNonUserFacingHanCandidates, 7);
 assert.equal(companionProfile.unboundHanCandidates, 0);
 assert.deepEqual(companionProfile.reviewFailures, []);

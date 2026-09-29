@@ -865,15 +865,14 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close" id="companionCloseBtn" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="companion.modalTitle">陪伴角色</h2>
-      <p class="modal-sub"><span data-i18n="companion.pickIntro">先選角色、再取名字，個性、外觀、聲音由角色決定，名字由你決定。</span><br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換角色不會忘記你們聊過的事</b><span data-i18n="companion.memoryTail">，記憶跟著你，不跟角色走。</span></p>
+      <p class="modal-sub"><span data-i18n="companion.pickIntro">名字由你決定，個性、外觀和聲音不會變。</span><br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換名字不會忘記你們聊過的事</b><span data-i18n="companion.memoryTail">，記憶一直都在。</span></p>
       <label class="companion-name-label" for="companionNameInput" data-i18n="companion.nameLabel">幫角色取名稱</label>
-      <input class="companion-name-input" id="companionNameInput" value="寧寧" data-i18n-value="companion.nening.name" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿福" data-i18n-placeholder="companion.namePlaceholder" />
-      <div class="field-label" data-i18n="legacyUi.companionRole">選擇互動 AI 角色</div>
-      <div class="avatar-pick" id="avatarPick">
+      <input class="companion-name-input" id="companionNameInput" value="寧寧" data-i18n-value="companion.nening.name" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿香" data-i18n-placeholder="companion.namePlaceholder" />
+      <!-- 男生角色全數下線（Edward 2026-09-30），只剩寧寧一位：選角清單收起來，只留取名字。 -->
+      <div class="field-label" data-i18n="legacyUi.companionRole" hidden>選擇互動 AI 角色</div>
+      <div class="avatar-pick" id="avatarPick" hidden>
         <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-v2-face.png" alt=""></span><span class="avl"><b data-i18n="legacyUi.companionWarm">溫柔型</b><small data-i18n="legacyUi.companionWarmBody">像家人一樣照看你</small></span></button>
-        <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/ahong-v2-face.png" alt=""></span><span class="avl"><b data-i18n="legacyUi.companionSteady">沉穩型</b><small data-i18n="legacyUi.companionSteadyBody">像大哥一樣可靠</small></span></button>
-        <!-- V1 專攻兩位擬真真人（溫柔·寧寧／沉穩·阿宏）——Ditto 擬真臉引擎驅動得最好、聲音+臉體驗先做到位（Edward 2026-07-10）。
-             插畫兩位（開朗·小昀／隨和·阿原）＋動物兩位（貓咪·咪咪／狗狗·旺財）暫下架；素材與 backendChar 保留，日後 2D 動嘴/新底圖做好再放回。 -->
+        <!-- 插畫女生（小昀）與貓咪（咪咪）仍暫下架；男生（阿宏、阿原、旺財）已從角色名單移除。 -->
 
       </div>
     </div>
