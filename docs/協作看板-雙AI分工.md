@@ -1,5 +1,15 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-09-30 00:10 蘇菲｜🎭 Edward 定向：Rive 取代寧寧的臉＋男生角色下線（盤點完成・待拍板・**尚未施工**）
+
+- **Edward 9/29 原話**：「用 rive 取代寧寧作為臉的功能…先看一下 app 的設計，確認該怎麼取代、哪裡需要取代，好比聊聊頁還沒有開啟通話時的全頻動態，包含男生角色都要先下線。」盤點報告（實拍截圖＋聊聊頁注入 Rive 實跑）：artifact「寧寧換臉盤點」。
+- **臉在 8 處**：開場三插圖／首頁 `#butlerCard`／狀態 `.obs-ava`／設定 `#companionRow`／選單 `#companionSheet`（寫死兩張）／聊聊頁 `#faceImg`＋`FaceIdle`（hello 8.2MB、idle 5.5MB）＋FlashHead `#fhFrame`／同意卡與吃藥提醒 `.mr-face`（寫死舊版 `nening-face.png`，選阿宏也顯示寧寧）。只有聊聊頁要會動。
+- **嘴型接點**：`_scheduleLocalPlayback`（有 PCM＋確切 playHead）；別用 `playLevel`（網路到達時量）或 `data-state`。去 FlashHead 時 `faceSameLineOn()` 要回 false（現在無臉通話也被當同線）。`tools/rive-lab/lipsync-driver.js` 的 `live()` 自建 AudioContext，要改成吃 `playCtx`。
+- **後台綁臉在總機層**：`010` `munea_call_request` 無 GPU seat 即排隊、`munea_call_ready` 要 avatar ready 才 active/計費；App `8475` 無 `worker.url` 丟 `paired_service_unavailable`。擬：migration 029 加 `media_mode`（voice 租約 worker/slot 可空、voice ready＋`uplink_ok` 後才 active）＋Gateway 依 App 欄位分流（protocol 3 舊 App 維持 paired）＋App 放寬＋假手機加 voice-only 模式＋`test_voice_avatar_direct_route`／`test-voice-launch-policy`／`test-voice-call-state-machine`／`test-ui-contracts` 改寫。
+- ⚠ **收 GPU 三個順序雷**：①先上 029 再收 worker，反了＝全排隊停擺 ②已安裝舊版拿到無臉租約會失敗→GPU 留到舊版淘汰或 `MUNEA_CALL_PROTOCOL_REQUIRED` ③B2B demo 卡由 RunPod controller 回收，關 controller 前先搬。
+- **男生下線清單**：名單散在 `companion-profile.js`／`server.py`／`model_router.py`／`characters.json`／`005`／四語 catalog。除阿宏外，阿原、旺財（男性化狗）仍定義未刪；`REMOVED_AVATARS` 只在開機擋、`applyCompanionProfile` 讀雲端會救回。名字：blur 會把未改的名字標 touched→阿宏用戶多存「阿宏/Sam/ひろし/Mateo」，遷移要把「任一語系男生預設名」改回寧寧（否則寧寧臉叫 Sam、自稱 Sam）。熟悉度 `companion_relationship_states` 以 persona 分存，要搬給寧寧。資料用新 migration（data-cleanup，`005` 不可改）。對外：munea.net 阿宏示意與影片、B2B 男聲 demo＋`a06` 選項、中文條款列四角色名（需法務）、SalesKit「六角色」。App Store 已只有寧寧。
+- **待 Edward 拍板**（報告頁第「要你決定」節）：新長相（建議照開場插圖扁平寧寧）、Rive 檔外包或自做、男生先下線與範圍、改寫 7/13–14「Voice＋Avatar 必須綁定」規矩。**拍板前不動 `010`/Gateway/`app.js` 通話流程**；施工前會再列檔案與包版影響。
+
 ### 2026-09-29 19:10 蘇菲｜🗣 寧寧嘴巴吃真聲音（規格書施工第 6 步 · 試驗室 v8 · 未上正式 App）
 
 - **接手現況**：`tools/rive-lab/` 自 8/12 停 47 天（八月整個被聊聊救火吃掉）；Edward 9/29「推進完善」。第一層 Rive 示範頁與寧寧 v7 的「講一句話／連續聊天」都是**亂數示意、沒聲音**。
