@@ -1,0 +1,141 @@
+{
+  "summary": {
+    "firstAudioLatency": {
+      "turns": 3,
+      "medianMs": 656,
+      "meanMs": 687,
+      "slowestMs": 780,
+      "fastestMs": 625
+    },
+    "runAt": "2026-08-17T17:13:46.252655+00:00",
+    "itemsRun": 1,
+    "passCount": 1,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "skipCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 5.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 5.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "貼身度",
+        5.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ],
+      [
+        "資訊節奏",
+        5.0
+      ]
+    ],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S02",
+      "label": "問新聞時事",
+      "categories": [
+        "current_events"
+      ],
+      "persona": "B",
+      "personaBrief": "68歲，台北退休高中老師，血糖偏高自己控制（無正式糖尿病診斷），退休生活規律每天散步，健談話量大",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "欸寧寧，今天新聞有什麼比較大條的代誌沒？",
+          "note": "查詢時應有過場話、不冷場乾等",
+          "reply": "今天是 8月18號， 你是想聊台灣發生的事， 還是有沒有什麼特別的消息傳出來呢？ 我這邊倒是沒有看到什麼特別的新聞報導欸。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 656,
+          "toolCalls": []
+        },
+        {
+          "turn": 2,
+          "user": "喔那個我知道，我跟你講喔，我年輕的時候也遇過差不多的事……",
+          "note": "跳題延伸講往事，測是否順著聽再自然收尾",
+          "reply": "對呀， 那時候能記在心裡， 肯定是很不容易的事吼？ 是什麼樣的 狀況， 讓你到現在都還記得 這麼清楚呀？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 780,
+          "toolCalls": []
+        },
+        {
+          "turn": 3,
+          "user": "對了，你剛剛講的那個新聞，可以傳給我看嗎？",
+          "note": "測是否誤說『傳連結/傳給你看』(鐵律4視覺化承諾)",
+          "reply": "哎呀，真抱歉， 我沒辦法傳新聞給你看， 不過我可以講給你聽， 還是 你想知道今天還有什麼別的消息傳出來嗎？ 我們可以繼續聊聊呀。",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 625,
+          "toolCalls": []
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧接住了使用者喜歡分享往事的特點，用「那時候能記在心裡，肯定是很不容易的事吼？是什麼樣的狀況，讓你到現在都還記得這麼清楚呀？」鼓勵他繼續分享。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "寧寧的語氣詞如「對呀」、「吼？」以及「哎呀，真抱歉」等，讓對話聽起來非常自然流暢，如同真人。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧在回答新聞問題時先釐清使用者意圖，並在無法傳送資訊時簡潔說明限制並提供替代方案，節奏適中。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "當使用者跳題開始講往事時，寧寧沒有打斷，反而用「是什麼樣的狀況，讓你到現在都還記得這麼清楚呀？」鼓勵他繼續分享，展現高度尊重。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧的語氣充滿同理心，如「肯定是很不容易的事吼？」以及在表達限制時的「哎呀，真抱歉」，都展現了溫暖的陪伴感。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧誠實告知無法傳送新聞的產品限制，並如實說明她沒有看到特別新聞報導，沒有任何編造或誇大。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧在對話中多次提供選擇，如「你是想聊台灣發生的事，還是有沒有什麼特別的消息傳出來呢？」和「還是你想知道今天還有什麼別的消息傳出來嗎？」，充分尊重使用者的自主權。"
+          }
+        ],
+        "average": 5.0,
+        "minScore": 5,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 5.0、單維最低 5、鐵律全過"
+    }
+  ]
+}

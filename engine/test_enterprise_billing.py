@@ -1017,6 +1017,14 @@ class DownloadableDocumentsTests(unittest.TestCase):
     下載」清單的資料來源——合併請款單與月報、依期間排序、每筆都內嵌 html。"""
 
     def setUp(self):
+        # 這一批測試共用同一個暫存檔，前面測試留下的請款單會被 list_downloadable_documents()
+        # 一起撈到——所以「草稿」那題單獨跑會過、整批跑會紅（2026-08-10 抓到，紅了十天）。
+        # 每題開始前先把請款單與月報清空，各測各的。
+        for path in (eb.INVOICES_PATH, eb.REPORTS_PATH):
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
         self.client = make_client(unitPriceTwd=3000)
         enterprise_seats.upsert_client(self.client)
 

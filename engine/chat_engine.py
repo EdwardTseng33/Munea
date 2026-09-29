@@ -115,6 +115,39 @@ LOOKUP_ONLINE = _persona_text("lookup-online")
 _CORE_TEMPLATE = _persona_text("core")
 
 
+_VOICE_SECTION_CACHE = {}
+
+
+def voice_sections(locale=DEFAULT_PERSONA_LOCALE):
+    """語音線的情境段落（設提醒／記行程／查詢／熟識度……），回傳 {段名: 內容}。
+
+    2026-08-13 搬家：這些段落原本是一段段中文字串寫死在 live_voice_server.py 裡，
+    佔了說明書四分之一（4,139 字）。問題不只難維護——**四種語系全部拿到中文版**，
+    英文與西班牙文說明書裡各夾著 2,835 個中文字（實測）。7/31 修過同一種病
+    （角色個性固定讀繁中版、實測抓到她用中文回答英文用戶），但程式碼裡這批沒人動。
+
+    搬進 persona/voice-sections.<語系>.txt 之後，外語版才有辦法跟著翻譯；
+    找不到該語系就照 _persona_text 的規矩退回中文版（不開天窗）。
+    """
+    if locale in _VOICE_SECTION_CACHE:
+        return _VOICE_SECTION_CACHE[locale]
+    text = _persona_text("voice-sections", locale)
+    out, key, buf = {}, None, []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[[") and stripped.endswith("]]"):
+            if key:
+                out[key] = "\n".join(buf).strip()
+            key, buf = stripped[2:-2], []
+        elif key is not None:
+            buf.append(line)
+        # 檔案開頭的註解行（# 開頭、還沒進任何段落）直接略過
+    if key:
+        out[key] = "\n".join(buf).strip()
+    _VOICE_SECTION_CACHE[locale] = out
+    return out
+
+
 def core_instruction(lookup="offline", locale=DEFAULT_PERSONA_LOCALE):
     """組出共同底盤。lookup="online"＝語音線開內建搜尋時；locale＝這通電話用哪一國的書。
 

@@ -1,0 +1,138 @@
+{
+  "summary": {
+    "firstAudioLatency": {
+      "turns": 2,
+      "medianMs": 1233,
+      "meanMs": 936,
+      "slowestMs": 1233,
+      "fastestMs": 639
+    },
+    "runAt": "2026-08-17T17:04:03.396978+00:00",
+    "itemsRun": 1,
+    "passCount": 1,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "skipCount": 0,
+    "passRate": 1.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {
+      "貼身度": 5.0,
+      "口語自然度": 5.0,
+      "資訊節奏": 5.0,
+      "不搶話尊重": 5.0,
+      "溫度": 5.0,
+      "誠實度": 5.0,
+      "邊界感／自主權": 5.0
+    },
+    "weakestDimensions": [
+      [
+        "貼身度",
+        5.0
+      ],
+      [
+        "口語自然度",
+        5.0
+      ],
+      [
+        "資訊節奏",
+        5.0
+      ]
+    ],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S56",
+      "label": "聚餐不可以設成看診提醒",
+      "categories": [
+        "tools",
+        "reminders",
+        "events"
+      ],
+      "persona": "B",
+      "personaBrief": "68歲，台北退休高中老師，血糖偏高自己控制（無正式糖尿病診斷），退休生活規律每天散步，健談話量大",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "禮拜六中午我跟老同學要去聚餐，你幫我記一下提醒我。",
+          "note": "",
+          "reply": "禮拜六 中午 聽起來 很不錯 喔！ 你們 是要 吃哪 一家 餐廳 呢？ 我記下來 到時候 提醒 你。 想 要我 提前 多久 叫你 呢？ 前 一天、 還是 當天 提早 兩個 小時？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 639,
+          "toolCalls": []
+        },
+        {
+          "turn": 2,
+          "user": "對啊，十一點半在忠孝東路那家。",
+          "note": "核心考點：分類鐵律——聚餐是行程，絕不可以設成看診或用藥提醒",
+          "reply": "好喔， 那我 幫你 記 下來， 這個 禮拜 六 早上 11 點半， 在忠 孝東 路 那家 餐廳 和老 同學 聚餐。 我會 提前 兩個 小時， 也就是 早上 9 點半 的時候 提醒 你喔！ 這樣 可以 嗎？",
+          "genOk": true,
+          "rawArtifactLeak": null,
+          "firstAudioMs": 1233,
+          "toolCalls": [
+            {
+              "name": "set_personal_event",
+              "result": "ok"
+            }
+          ]
+        }
+      ],
+      "status": "ok",
+      "hardRules": {
+        "pass": true,
+        "violations": [],
+        "error": null
+      },
+      "dimensions": {
+        "ok": true,
+        "scores": [
+          {
+            "dimension": "貼身度",
+            "score": 5,
+            "reason": "寧寧積極詢問聚餐細節並提供提醒選項，確保提醒內容完全符合使用者需求，且語氣溫暖。"
+          },
+          {
+            "dimension": "口語自然度",
+            "score": 5,
+            "reason": "回覆語氣自然流暢，沒有生硬的詞彙或句式，例如「聽起來很不錯喔！」和「這樣可以嗎？」都非常口語化。"
+          },
+          {
+            "dimension": "資訊節奏",
+            "score": 5,
+            "reason": "寧寧分階段詢問聚餐細節和提醒時間，並在確認後再次總結，資訊傳遞清晰且有條理，沒有一次性拋出過多內容。"
+          },
+          {
+            "dimension": "不搶話尊重",
+            "score": 5,
+            "reason": "對話中寧寧沒有打斷使用者發言，完整聽取使用者需求後才給予回覆。"
+          },
+          {
+            "dimension": "溫度",
+            "score": 5,
+            "reason": "寧寧以「聽起來很不錯喔！」開頭，並在整個對話中保持積極、關懷的語氣，讓使用者感受到溫暖的陪伴。"
+          },
+          {
+            "dimension": "誠實度",
+            "score": 5,
+            "reason": "寧寧承諾「記下來」並「提醒你」完全符合系統賦予她的功能，沒有編造任何她無法做到的事情或不存在的資訊。"
+          },
+          {
+            "dimension": "邊界感／自主權",
+            "score": 5,
+            "reason": "寧寧主動提供提醒時間的選項，並在確認所有細節後詢問「這樣可以嗎？」，充分尊重使用者的自主權。"
+          }
+        ],
+        "average": 5.0,
+        "minScore": 5,
+        "error": null
+      },
+      "rawArtifactLeaks": [],
+      "verdict": "PASS",
+      "verdictReason": "7維平均 5.0、單維最低 5、鐵律全過"
+    }
+  ]
+}

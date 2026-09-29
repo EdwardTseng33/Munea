@@ -22,6 +22,14 @@ def _voice_style_book(locale):
         return handle.read()
 
 
+def _voice_sections_book(locale):
+    path = os.path.join(PERSONA_DIR, f"voice-sections.{locale}.txt")
+    if not os.path.exists(path):
+        return ""
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
 def _shipped_voice_style_locales():
     if not os.path.isdir(PERSONA_DIR):
         return []
@@ -35,10 +43,12 @@ def _shipped_voice_style_locales():
 class VoiceStyleRulesTest(unittest.TestCase):
     def setUp(self):
         # 2026-07-31 口語風格分國：規則從程式碼搬進 engine/persona/voice-style.<語系>.txt。
+        # 2026-08-13 分節搬遷：剩下寫死在程式碼裡的中文段落也搬進 voice-sections.<語系>.txt
+        #（原因：英文／西文說明書裡本來夾著兩千多個中文字，因為這些段落沒有分語系）。
         # 這支守的東西沒變（規則被刪就要亮紅燈），只是現在要連書一起看——
         # 兩邊合起來當作「說明書的全文」。
         with open(SRC, encoding="utf-8") as f:
-            self.src = f.read() + _voice_style_book("zh-TW")
+            self.src = f.read() + _voice_style_book("zh-TW") + _voice_sections_book("zh-TW")
 
     def test_priority_contract_present_and_first(self):
         """優先權契約（五層、小者優先）必須存在，且在說明書組裝的最前面。"""
@@ -270,6 +280,29 @@ class VoicePromptBudgetTest(unittest.TestCase):
     照舊寫法，「把長文切成小節」這種只有好處的改動會被守門擋下來，而真正該擋的
     重複規則反而可以靠刪掉幾個空白偷渡進來。改成把空白全部去掉再量，排版怎麼改都
     不影響額度，長回來的規則一個字都躲不掉——比舊寫法更緊，不是更鬆。
+
+    2026-08-13～17 上調 260 字（16200→16460／16500→16760／17900→18160）。
+    多出來的是聊天品質複測抓到的六條真實失分，每一條都對應一次她講錯話：
+    不主動挖傷心事、轉介求助不要打斷、保住他的面子、保密不能亂答應（紅線⑦）、
+    不要用「我看在眼裡」這種眼睛的說法（她只有聲音）、日期不要自己算
+    （她編過一個錯的國曆日期，長輩會照著去拜拜）、手上沒有傳話工具就不能說
+    「我幫你聯絡家人」。調之前先驗過沒有贅肉可以先砍：把說明書切成 285 個
+    句子兩兩比對，只有 7 對高度重疊、合計約 150 字，而且多數是各開關段落
+    各自該有的工具規則，砍掉會讓單獨開某個開關時失去規則。
+    8/17 再 +50：她跟長輩說「我剛剛這邊有點卡住了」——那是機器在報告自己的狀況，
+    對方只會以為是自己的手機壞了。補在「聽不清楚怎麼辦」旁邊，四語一起。
+    8/17 再 +110：規則自己打架——⑦說不准替第三人斷言，⑤卻明文鼓勵「幫忙把
+    『他其實是關心你』翻譯出來」。她照⑤做了、被⑦判違反。給⑤補上界線：
+    翻譯只能用在他自己講過的家人言行上，沒講過的不可以替家人擔保心意。
+    8/17 再 +90（只影響有給工具的那通）：她把「時間我幫你改了喔」寫進要傳給
+    兒子的話裡——收件人會以為行程真的被改了。傳過去的那句只能有他交代的內容。
+    8/18 再 +180：67 題完整跑完，剩下三題是「規則有、她沒照做」。查下去發現
+    兩題的真因是規則本身——⑥ 的範例寫著「要不要我提醒你家人幫你安排」，她照做了，
+    但沒工具時那一樣做不到（範例在引導她犯規，已改掉）；紅線⑦ 只寫了不准說
+    「我絕對不會跟任何人講」，沒寫該怎麼說，英日西三本都有正確說法、就中文版沒有
+    （只擋不教＝半套，7/31 就記過這個教訓）。這種加字是把規則修對，不是往上疊。
+    再 +70：規則只寫了「你不能自相矛盾」，沒寫「他說你講過、而你其實沒講過
+    要先說清楚」——她順著接，等於承認自己講過一則不存在的新聞。同一條規則的另一半。
     """
 
     @staticmethod
@@ -283,14 +316,35 @@ class VoicePromptBudgetTest(unittest.TestCase):
         # 而且它存在 engine/perception_snapshots.json——同一輪測試裡前面幾支會寫進去，
         # 於是這支量到的長度會跟著前面跑過什麼而變（實測差 202 字），紅燈紅得莫名其妙。
         # 這支守的是「刪掉的重複規則有沒有偷偷長回來」，所以只量規則、不量當天資料。
+        #
+        # 2026-08-17 補：不只今日簡報。使用者記憶、關係側寫、個人檔案也一樣會被吃進
+        # 說明書——本機跑過幾輪聊天品質考卷之後，「長輩今天去復健」「我孫子下個月結婚」
+        # 這些留下來的資料就進了說明書，實測讓字數多出 431。跟簡報同一個道理：
+        # 那是使用者資料、不是規則。全部指到不存在的暫存檔，閘門就只量規則本身，
+        # 誰在這台機器上跑過什麼都不影響。
+        _ISOLATED = (
+            "MUNEA_PERCEPTION_SNAPSHOTS_PATH",   # 今日簡報（天氣、明天預告）
+            "MUNEA_MEMORY_ITEMS_PATH",           # 長期記憶
+            "MUNEA_RELATIONSHIP_STATES_PATH",    # 熟識度與關係狀態
+            "MUNEA_COMPANION_PROFILE_PATH",      # 陪伴側寫
+            "MUNEA_PERSON_PROFILE_PATH",         # 個人資料
+            "MUNEA_APP_PROFILE_STORE_PATH",      # App 端側寫
+        )
         env_backup = {
             key: os.environ.get(key)
-            for key in ("MUNEA_VOICE_LIVE_LOOKUP", "MUNEA_PERCEPTION_SNAPSHOTS_PATH")
+            for key in ("MUNEA_VOICE_LIVE_LOOKUP",) + _ISOLATED
         }
         os.environ["MUNEA_VOICE_LIVE_LOOKUP"] = "1" if search_enabled else "0"
-        os.environ["MUNEA_PERCEPTION_SNAPSHOTS_PATH"] = os.path.join(
-            tempfile.gettempdir(), "munea-prompt-budget-no-briefing.json")
+        for key in _ISOLATED:
+            os.environ[key] = os.path.join(
+                tempfile.gettempdir(), f"munea-prompt-budget-{key.lower()}.json")
         try:
+            # server.py 的資料檔路徑是**模組載入時**就決定的（PERSON_PROFILE_PATH = 環境變數 or 預設）。
+            # 只重載 live_voice_server 不夠——只要同一輪測試裡有別支先載過 server，
+            # 那些常數早就指向本機真實資料檔，上面設的環境變數根本來不及生效，
+            # 於是這支單獨跑是綠的、跟別支一起跑就紅（2026-08-13 查了半天的那個怪象）。
+            import server
+            importlib.reload(server)
             import live_voice_server
             module = importlib.reload(live_voice_server)
             return module.system_instruction(**kwargs)
@@ -303,7 +357,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(self._content_len(prompt), 16200)
+        self.assertLessEqual(self._content_len(prompt), 16900)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -318,7 +372,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(self._content_len(prompt), 17900)
+        self.assertLessEqual(self._content_len(prompt), 18700)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -328,7 +382,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(self._content_len(prompt), 16500)
+        self.assertLessEqual(self._content_len(prompt), 17200)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)
