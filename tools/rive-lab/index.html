@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>沐寧 · Rive 手機端角色試驗室</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --teal:#3AA8A0; --coral:#F4A261; --cream:#FAF7F2; --ink:#33403D; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Noto Sans TC",-apple-system,sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px 16px 40px; }
+  h1 { font-size:20px; font-weight:700; margin:8px 0 2px; }
+  .sub { font-size:13px; color:#6b7a76; margin-bottom:14px; text-align:center; }
+  .stage-wrap { background:#fff; border-radius:20px; padding:14px; box-shadow:0 2px 14px rgba(51,64,61,.08); }
+  canvas { width:min(78vw,400px); height:min(78vw,400px); display:block; border-radius:12px; background:#F6F1E7; }
+  .meters { display:flex; gap:18px; justify-content:center; margin-top:10px; font-size:12.5px; color:#6b7a76; }
+  .meters b { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .btns { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+  button { font:inherit; font-size:15px; padding:10px 18px; border-radius:999px; border:1.5px solid #d8d2c4; background:#fff; color:var(--ink); cursor:pointer; }
+  button.on { background:var(--teal); border-color:var(--teal); color:#fff; }
+  .caption { max-width:430px; min-height:22px; margin-top:12px; font-size:14px; line-height:1.6; color:var(--ink); text-align:center; }
+  .note { max-width:430px; margin-top:14px; font-size:12.5px; line-height:1.7; color:#8a948f; text-align:center; }
+  .note a { color:var(--teal); }
+</style>
+</head>
+<body>
+  <h1>Rive 手機端角色試驗室</h1>
+  <div class="sub">全部在這台裝置上運算——沒有雲端顯卡、沒有影片串流<br>角色檔只有 <b>13 KB</b>，含十種嘴形＋呼吸＋眨眼＋頭部微動；<b>嘴巴跟著寧寧的真聲音動</b></div>
+  <div class="stage-wrap"><canvas id="cv" width="800" height="800"></canvas></div>
+  <div class="meters">
+    <span>畫面流暢度 <b id="fps">–</b> fps</span>
+    <span>狀態 <b id="st">載入中…</b></span>
+  </div>
+  <div class="btns">
+    <button id="b-idle" class="on">安靜待機</button>
+    <button id="b-say">講一句話</button>
+    <button id="b-chat">連續聊天</button>
+  </div>
+  <div class="caption" id="cap"></div>
+  <p class="note">示範角色來自 Rive 官方教學路線的公開展示（rive.expert），僅供內部評估「動起來的等級」；寧寧本尊在 <a href="ning.html">寧寧動起來</a>（我們自己的引擎、自己生圖拆件，不請繪師）。待機時的呼吸、眨眼、頭部微動是角色自己在跑；講話時的嘴形由 <code>lipsync-driver.js</code> 從聲音現算——這裡放的是寧寧真正的聲線（Gemini · Despina）。</p>
+
+<script src="https://unpkg.com/@rive-app/webgl2@2.33.1"></script>
+<script src="lipsync-driver.js"></script>
+<script>
+(function(){
+  var VIS = ['viseme_sil','viseme_aei','viseme_bmp','viseme_fv','viseme_cdgncstxyz','viseme_ou','viseme_chshj','viseme_lth','viseme_o','viseme_qw'];
+  // 驅動器的七種嘴形 → 這個角色的十個 viseme 輸入
+  var MAP = { a:'viseme_aei', e:'viseme_aei', i:'viseme_cdgncstxyz', o:'viseme_o', u:'viseme_ou',
+              sib:'viseme_chshj', closed:'viseme_bmp', sil:'viseme_sil' };
+  var CLIPS = {
+    say:  { url:'voice/ning-say.wav',   text:'有個週末，一家人決定一起包水餃。' },
+    chat: { url:'voice/ning-story.wav', text:'有個週末，一家人決定一起包水餃。爸爸負責調內餡，媽媽負責桿麵皮，小朋友就幫忙把水餃包起來……' }
+  };
+  var inputs = {}, r = null, mode = 'idle', lastOpen = 0;
+  var stEl = document.getElementById('st'), capEl = document.getElementById('cap');
+
+  r = new rive.Rive({
+    src: 'lipsync-character.riv',
+    canvas: document.getElementById('cv'),
+    stateMachines: ['State Machine 1'],
+    autoplay: true,
+    onLoad: function(){
+      r.resizeDrawingSurfaceToCanvas();
+      r.stateMachineInputs('State Machine 1').forEach(function(i){ inputs[i.name] = i; });
+      silence();
+      stEl.textContent = '待機（自主呼吸眨眼中）';
+    }
+  });
+
+  function allOff(){ VIS.forEach(function(n){ if (inputs[n]) inputs[n].value = 0; }); }
+  function silence(){ allOff(); if (inputs['viseme_sil']) inputs['viseme_sil'].value = 100; lastOpen = 0; }
+
+  // 轉接頭：驅動器每格丟一個「張多大＋什麼嘴形」，這裡翻成 viseme 權重
+  var adapter = {
+    lead: 0.03,
+    set: function(open, shape){
+      if (shape === 'sil' || open < 0.03){ silence(); return; }
+      allOff();
+      var name = MAP[shape] || 'viseme_aei';
+      if (inputs[name]) inputs[name].value = Math.round(Math.max(30, open * 100));
+      lastOpen = open;
+    },
+    idle: silence,
+    rendered: function(){ return lastOpen; }
+  };
+  window.__adapter = adapter;
+
+  var loaded = {};
+  function clip(key){
+    if (!loaded[key]) loaded[key] = LipSync.load(CLIPS[key].url);
+    return loaded[key];
+  }
+  window.__clip = clip;
+
+  function setMode(m){
+    mode = m;
+    LipSync.stop();
+    ['b-idle','b-say','b-chat'].forEach(function(id){ document.getElementById(id).className = ''; });
+    if (m === 'idle'){ document.getElementById('b-idle').className = 'on'; silence(); stEl.textContent = '待機（自主呼吸眨眼中）'; capEl.textContent = ''; }
+  }
+  function talk(key, loop){
+    setMode(key === 'say' ? 'say' : 'chat');
+    document.getElementById(key === 'say' ? 'b-say' : 'b-chat').className = 'on';
+    stEl.textContent = '載入聲音…';
+    clip(key).then(function(c){
+      if (mode === 'idle') return;
+      stEl.textContent = (key === 'say' ? '講話中' : '連續聊天中') + '（真聲音）';
+      capEl.textContent = CLIPS[key].text;
+      LipSync.play(c, adapter, { onEnd: function(){
+        if (mode === 'idle') return;
+        if (loop) talk(key, true); else setMode('idle');
+      }});
+    }).catch(function(e){ stEl.textContent = '聲音載入失敗：' + e.message; });
+  }
+
+  document.getElementById('b-idle').onclick = function(){ setMode('idle'); };
+  document.getElementById('b-say').onclick  = function(){ talk('say', false); };
+  document.getElementById('b-chat').onclick = function(){ talk('chat', true); };
+  window.__talk = talk; window.__setMode = setMode;
+
+  var frames = 0, t0 = performance.now();
+  (function tick(){
+    frames++;
+    var now = performance.now();
+    if (now - t0 >= 1000){
+      document.getElementById('fps').textContent = Math.round(frames*1000/(now-t0));
+      frames = 0; t0 = now;
+    }
+    requestAnimationFrame(tick);
+  })();
+})();
+</script>
+</body>
+</html>
