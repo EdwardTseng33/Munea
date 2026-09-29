@@ -6,7 +6,7 @@
 - **做了什麼**：`lipsync-driver.js` 通用嘴型驅動器——聲音→每 10ms 一格：音量→張口（快張慢合）／共振峰→ㄚㄝㄧㄛㄨ／氣音→露齒／閉塞音→閉嘴／重音→挑眉點頭；內建量尺 `LipSync.stats()`；附即時串流路徑 `live()` 供之後接聊聊真音軌。Rive 示範頁與 `ning.html` v8 都接上寧寧真聲線（八月驗收留下的 Despina 水餃故事：一句話 2.74s／整段 22.8s）。`?fake=1` 回舊示意。
 - **數字（無頭 Chrome 量尺）**：Rive 頁 相關 0.85／嘴早 10ms／起口 -10ms／60fps；寧寧 相關 0.87／嘴差 0ms／起口 0ms／最大張口 0.94、八種嘴形定格全對位。寧寧原本嘴慢 130ms、相關 0.53＝嘴巴彈簧太軟；改硬彈簧在 27fps 會數值翻跳（每格 0↔1.23）→ **真聲音模式改一階平滑 28ms**（任何幀率都穩）。
 - ⚠ **量尺教訓**：無頭連拍每張卡畫面約 150ms →「第 N 張截圖＝第幾秒」失真、差點誤判成零件沒疊上；多狀態一律用**定格法**（`LipSync.freezeAt`）拍。
-- **版控／備份**：試驗室 47 天工作從未上傳。已推 `lab/ning-lipsync-20260929`（小檔：頁面／驅動器／聲音樣本／示範角）；拆件素材整包 213MB zip 在 `E:\Claude\image-assets\munea-ningning-styleackupive-lab-20260929.zip`（同一顆碟、OneDrive 沒在同步）；**離機備份待 Edward 拍板**。
+- **版控／備份**：試驗室 47 天工作從未上傳。已推 `lab/ning-lipsync-20260929`（小檔：頁面／驅動器／聲音樣本／示範角）；拆件素材整包 213MB zip 在 `E:/Claude/image-assets/munea-ningning-style/backup/rive-lab-20260929.zip`（同一顆碟、OneDrive 沒在同步）；**離機備份待 Edward 拍板**。
 - **下一步**：Edward 手機同 Wi-Fi 開 `http://<這台電腦IP>:8161/ning.html` 實看；接聊聊真音軌（`live()`）；規格書剩餘：手臂拆件收尾、④撥髮影片拆格、女巫 Gate 2 合體審。
 
 ### 2026-08-18 00:15 蘇菲｜🔪 第二刀 fast-first＋拆 -350 拐杖：輪首聲嘴 skew 282→0ms（正式臉機 ace93b62 在跑 · call-path risk）
