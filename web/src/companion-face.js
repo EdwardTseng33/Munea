@@ -40,6 +40,9 @@
       });
       root.appendChild(body);
       host.appendChild(root);
+      // 淺色背景：頂部名字／計時改深色字（白字實測只有 2.2:1，看不清楚）
+      var screen = host.closest('.face-screen');
+      if (screen) screen.classList.add('flat-mode');
       this.root = root;
       this.body = body;
       return true;
@@ -97,9 +100,11 @@
 
     _frame: function (now) {
       var t = now / 1000;
-      // 呼吸：4.2 秒一次、幅度極小（整個人一起動，零件不會錯開）
+      // 呼吸 4.2 秒一次＋極輕的左右重心晃動（6.7 秒、±0.25 度，以腳底為軸）。整個人一起動，零件不會錯開。
+      // 幅度要看得見但不暈：頭頂位移約 2～4 像素（原本只有 1.5 像素，幾乎等於沒動）。
       var br = Math.sin(t * 2 * Math.PI / 4.2);
-      this.body.style.transform = 'translateY(' + (-br * 0.18).toFixed(3) + '%) scale(' + (1 + br * 0.0028).toFixed(5) + ')';
+      var sway = Math.sin(t * 2 * Math.PI / 6.7) * 0.25;
+      this.body.style.transform = 'translateY(' + (-br * 0.2).toFixed(3) + '%) rotate(' + sway.toFixed(3) + 'deg) scale(' + (1 + br * 0.003).toFixed(5) + ')';
 
       // 眨眼：2.4～5.8 秒一次、閉 170 毫秒；偶爾連眨兩下
       if (now >= this._nextBlink && now > this._blinkUntil) {
