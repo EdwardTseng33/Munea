@@ -113,21 +113,28 @@
       }
       this._show('eyes', now < this._blinkUntil);
 
-      // 嘴：只有她真的在講話才動；有播出音量就照音量，拿不到音量才用講話節奏模擬
+      // 嘴：只有她真的在講話才動。音量決定「張多大」，再乘上音節節奏讓嘴一開一合——
+      // 通話中每 0.09 秒才讀得到一次音量，太粗、抓不到字與字之間的換氣；只照音量的話，
+      // 用寧寧真聲音模擬有 78% 時間嘴張到最大，像一直張著嘴。乘上節奏後閉 30%／微張 48%／
+      // 張開 22%、每秒換 5～6 次，接近真人講話。拿不到音量時就只用節奏。
       var target = 0;
       if (this.speaking()) {
+        if (now >= this._sylUntil) {
+          this._syl = Math.random() < 0.2 ? 0.1 : 0.25 + Math.random() * 0.75;
+          this._sylUntil = now + 120 + Math.random() * 100;
+        }
+        var loud = 1;
         if (this._lvl >= 0 && now - this._lvlAt < LEVEL_FRESH_MS) {
           this._gainMax = Math.max(this._gainMax * 0.997, this._lvl, 0.03);
-          target = Math.min(1, Math.max(0, (this._lvl - 0.004) / (this._gainMax * 0.7)));
-        } else {
-          if (now >= this._sylUntil) {
-            this._syl = Math.random() < 0.2 ? 0.05 : 0.3 + Math.random() * 0.7;
-            this._sylUntil = now + 110 + Math.random() * 120;
-          }
-          target = this._syl;
+          loud = Math.min(1, Math.max(0, (this._lvl - 0.004) / (this._gainMax * 0.85)));
         }
+        target = loud * this._syl;
       }
-      this._open += (target - this._open) * (target > this._open ? 0.55 : 0.28);
+      // 平滑照實際經過的時間算（快張約 21 毫秒、慢合約 51 毫秒），手機慢一點、掉格也一樣的手感
+      var dt = Math.min(100, Math.max(0, now - (this._lastT || now)));
+      this._lastT = now;
+      var tau = target > this._open ? 21 : 51;
+      this._open += (target - this._open) * (1 - Math.exp(-dt / tau));
       var want = this._open < 0.16 ? 'closed' : (this._open < 0.55 ? 'half' : 'open');
       // 嘴形至少停 60 毫秒，避免在兩段之間來回閃
       if (want !== this._mouth && now - this._mouthSince >= 60) this._setMouth(want, now);
