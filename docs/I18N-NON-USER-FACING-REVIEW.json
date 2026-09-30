@@ -1907,6 +1907,24 @@
       "evidence": "scripts/test-live-text-not-i18n-tagged.js"
     },
     {
+      "id": "home-greeting-placeholder-zh",
+      "path": "web/index.html",
+      "text": "晚上好",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
+      "id": "chat-presence-placeholder-zh",
+      "path": "web/index.html",
+      "text": "未在線",
+      "kind": "text",
+      "expectedOccurrences": 1,
+      "reasonCode": "markup-placeholder-overwritten-at-runtime",
+      "evidence": "scripts/test-live-text-not-i18n-tagged.js"
+    },
+    {
       "id": "brand-lockup-boot-splash-zh",
       "path": "web/index.html",
       "text": "沐寧",

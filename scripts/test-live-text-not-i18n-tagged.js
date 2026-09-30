@@ -64,6 +64,9 @@ function programWritesText(id) {
  *
  * 已經確認壞掉並修好的三個（不在清單裡）：
  *   cnHealthHelp／moodLabel 系列／medChip／authStatusText／callToggleLabel
+ *   2026-09-30 再修兩個這支沒抓到的：首頁大標 greetBig（早上八點也寫「晚上好」，
+ *   程式用 `const kick = …, big = $('#greetBig')` 一行宣告兩個、比對不到）、
+ *   聊聊頁「在線／未在線」（沒有 id、只有 class，這支只掃有 id 的）。
  *
  * 這份清單的作用是**擋新增**：以後有人再把 data-i18n 掛到程式會改的元素上，
  * 這支會立刻紅。清單裡的舊項目要逐一人工確認「程式設的值會不會跟翻譯值不同」，
