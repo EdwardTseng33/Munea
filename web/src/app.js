@@ -13361,6 +13361,12 @@ function refreshLocalizedDynamicUi() {
   try { renderCareCarousel(); } catch (e) {}
   try { syncCompanionUI(); } catch (e) {}
   try { renderHomeGreeting(); } catch (e) {}
+  try {
+    const presence = document.querySelector('.face-name .fn-status');
+    if (presence) presence.textContent = callConnected
+      ? muneaT('voice.call.online', '')
+      : muneaT('voice.call.offline', '');
+  } catch (e) {}
   try { refreshMoodTask(); } catch (e) {}
   try { updateMedCount(); } catch (e) {}
   try { renderDailyTasks(); } catch (e) {}
