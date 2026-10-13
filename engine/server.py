@@ -2121,11 +2121,13 @@ def care_week_response(data):
         days = care_week.DEFAULT_DAYS
     days = max(1, min(31, days))
     settings = {}
-    try:
-        if data.get("noContactDays") is not None:
-            settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))
-    except (TypeError, ValueError):
-        pass
+    raw_no_contact = data.get("noContactDays")
+    if raw_no_contact is not None:
+        try:
+            settings["noContactDays"] = max(1, min(30, int(raw_no_contact)))
+        except (TypeError, ValueError) as e:
+            # 壞值退預設（3 天），但要留一筆——悄悄吞掉就查不到是誰傳了什麼（後端 fallback 記錄契約）
+            log_fallback_exception("parse noContactDays for care week", e)
     try:
         import perception_engine
         today = (perception_engine.now_context() or {}).get("date") or ""
