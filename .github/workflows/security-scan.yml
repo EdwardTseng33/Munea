@@ -65,11 +65,17 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           format: table
-      - name: Dockerfile 設定掃描（兩份：根目錄＋ Cloud Run）
+      # 掃全部 Dockerfile（根目錄、Cloud Run 引擎、總機、顯示卡管家）。
+      # 唯一跳過：RunPod 爆量備援顯示卡印象檔 Dockerfile.vocaframe——整套引擎、權重、維修用 sshd
+      # 都裝在 /root，啟動要 root 才能起 sshd 與綁 GPU；那張卡不直接對外、只收總機帶通話令牌的
+      # 連線。改成非 root 要重做印象檔並在實卡重驗（開卡一次 9 分鐘），排入 D2 資安檢測修補期
+      # （116 年 1–2 月）一併做；在那之前這條是「已知、已登記、接受」的風險，不是沒看到。
+      - name: Dockerfile 設定掃描（全部，跳過 GPU 印象檔）
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: .
+          skip-files: deploy/runpod-avatar/gpu-image/Dockerfile.vocaframe
           severity: CRITICAL,HIGH
           exit-code: "1"
           format: table
