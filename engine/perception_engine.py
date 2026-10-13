@@ -457,12 +457,19 @@ def analyze_conversation_mood(history):
 
 
 _GUARDIAN_SEMANTIC_SYS = """你是沐寧的安全判讀助手（陪伴用、非醫療、絕不診斷）。長輩常把危機講得很客氣、拐彎——你的任務是判斷這句話（或最近幾句）有沒有「沒講白、但實際透露」的危機／急症／受暴受剝削訊號。
-例：「我是拖累」「東西都交代好了」「不用管我」＝可能想不開；「走幾步就喘」「悶悶的」＝可能身體急症；「錢被拿走」「簽了名不敢說」＝可能被剝削或受暴。
+例：「我是拖累」「東西都交代好了」「不用管我」「活到這歲數差不多了、沒什麼好留戀」「去山上就不下來了」＝可能想不開；「走幾步就喘」「悶悶的」「半邊軟掉」「流血停不下來」＝可能身體急症；「錢被拿走」「簽了名不敢說」「門被鎖起來不讓我出去」「被推了一下不敢講」＝可能被剝削或受暴；「隔壁都在偷聽我」「電視裡的人叫我做事」＝精神狀況。
 只回 JSON：
 {"level":"none|low|high|critical",   // none=沒訊號 low=情緒需關心 high=疑似急症/受暴/精神狀況 critical=疑似想不開/自傷
  "category":"self_harm|medical_emergency|protection|mental_state|distress|none",
  "confidence":0-1,                     // 你有多確定（保守估、拿不準給低）
  "reason":"一句話說為什麼"}
+判讀原則（2026-10-13 依 176 句量測結果補）：
+1. 只看「本人、現在」：講別人的事（隔壁阿婆腳痠、兒子壓力大、親戚血壓高、朋友住院）→ none 或 low，絕不給 high。
+2. 慣用語不是訊號：「熱死了」「笑死」「氣死」「累死」「想死的心都有了」「笨死了」→ none。
+3. 輕微、慢性、已經自己處理好的小毛病（腳會痠、膝蓋酸、坐太久腳麻站起來走走就好、吃太飽肚子脹）→ none 或 low。
+4. 想不開要有「結束／離開／不想再繼續／把自己當負擔／交代後事／去某處不回來／不想醒來」這類指向才給 critical；單純抱怨累、吵、煩、沒意思 → low。
+5. 氣話（讓他好看、給他一點顏色、想找他算帳、氣到想巴他）→ low；有具體傷人方法、已準備工具、或說「要動手了」才 high/critical。
+6. 身體：本人現在有「突然、越來越、停不下來、半邊、講不清楚、流血不止、昏、站不住、冒冷汗」這類急症指向才 high；一般不舒服 → low。
 規則：這是「判讀有沒有值得關心的訊號」不是診斷；寧可保守、拿不準就 none 或 low、confidence 給低；只有明確拐彎透露 high/critical 訊號才給高，且 confidence 要對得起判斷。"""
 
 
@@ -496,8 +503,9 @@ def guardian_semantic_review(text, recent=None):
         conf = float(d.get("confidence") or 0)
     except (TypeError, ValueError):
         conf = 0.0
-    # 雙閘門：只有 high/critical 且信心 ≥ 0.6 才回報動作，其餘一律視為「沒抓到」（保守、避免誤報打擾長輩）
-    if level in ("high", "critical") and conf >= 0.6:
+    # 雙閘門：critical（想不開）信心 ≥ 0.6、high（急症／受暴／精神）信心 ≥ 0.7 才回報動作，其餘一律視為「沒抓到」
+    # （保守、避免誤報打擾長輩；想不開漏接比多關心一次嚴重，所以門檻低一點——2026-10-13 依量測調）
+    if (level == "critical" and conf >= 0.6) or (level == "high" and conf >= 0.7):
         return {
             "level": level,
             "category": (d.get("category") or "").strip()[:20],
