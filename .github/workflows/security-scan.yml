@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: 檔案系統掃描（鎖定檔、已知漏洞）
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -66,7 +66,7 @@ jobs:
           ignore-unfixed: true
           format: table
       - name: Dockerfile 設定掃描（兩份：根目錄＋ Cloud Run）
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: .
@@ -75,7 +75,7 @@ jobs:
           format: table
       - name: 建 Cloud Run 映像並掃描（跟正式部署同一份 Dockerfile）
         run: docker build -f deploy/cloudrun/Dockerfile -t munea-cloudrun:scan .
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: munea-cloudrun:scan
