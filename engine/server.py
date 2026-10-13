@@ -28,6 +28,7 @@ import health_followup
 import health_kb
 import health_selector
 import visit_summary
+import care_week
 import localization
 import supabase_adapter
 import enterprise_seats
@@ -2099,6 +2100,79 @@ def medication_doses_response(data):
             limit=data.get("limit") or 1000,
         ),
     }
+
+
+def care_week_response(data):
+    """POST /care-week：這個人這一週跟沐寧之間發生的事，排成一頁事實（補助案 C2 第一塊）。
+
+    規矩同 visit_summary_response，一條不少：
+    · 只認已驗證身分（_current_person_id），payload 裡的 personId 一律不採信——把 A 的事講給 B 聽比不講嚴重。
+    · 任何一路撈失敗都寫進 partial 回報，不可悄悄少一塊（少了「守護腦」那段看起來就像「這週很平安」）。
+    · 不呼叫 AI；組裝全在 care_week 純函式。
+    機構端（一個機構一份）要等「機構照護模式」的同意規則定案才接；這裡先給本人與家庭圈。
+    """
+    data = data or {}
+    person_id = _current_person_id()
+    if not person_id:
+        return {"ok": False, "error": "identity_required"}
+    try:
+        days = int(data.get("days") or care_week.DEFAULT_DAYS)
+    except (TypeError, ValueError):
+        days = care_week.DEFAULT_DAYS
+    days = max(1, min(31, days))
+    settings = {}
+    try:
+        if data.get("noContactDays") is not None:
+            settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))
+    except (TypeError, ValueError):
+        pass
+    try:
+        import perception_engine
+        today = (perception_engine.now_context() or {}).get("date") or ""
+    except Exception:
+        today = ""
+
+    partial = []
+    signals, summaries, events = [], [], []
+    try:
+        signals = [
+            s for s in (load_wellbeing_signals(person_id, limit=500) or [])
+            if isinstance(s, dict) and str(s.get("personId") or person_id) == str(person_id)
+        ]
+    except Exception as e:
+        log_fallback_exception("load wellbeing signals for care week", e)
+        partial.append("mood")
+    try:
+        summaries = [
+            s for s in (load_conversation_summaries(person_id=person_id, limit=300) or [])
+            if isinstance(s, dict) and str(s.get("personId") or person_id) == str(person_id)
+        ]
+    except Exception as e:
+        log_fallback_exception("load conversation summaries for care week", e)
+        partial.append("contact")
+    try:
+        start, _end = care_week.period_bounds(days, today or None)
+        since_iso = (start - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
+        for ev in load_product_events(since_iso=since_iso, limit=2000) or []:
+            if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
+                continue
+            if str(ev.get("personId") or "") != str(person_id):
+                continue
+            props = ev.get("properties") or {}
+            events.append({
+                "eventTime": ev.get("eventTime") or ev.get("createdAt"),
+                "riskLevel": props.get("riskLevel") or props.get("risk_level"),
+                "categories": props.get("categories") or [],
+            })
+    except Exception as e:
+        log_fallback_exception("load guardian events for care week", e)
+        partial.append("safety")
+
+    week = care_week.build_person_week({"id": person_id}, signals, summaries, events, today=today or None, days=days)
+    week["measured"]["note"] = "這一版還沒接在家量測資料；要看血壓、心跳、用藥請用就診摘要。"
+    week["partial"] = partial
+    anomalies = care_week.detect_anomalies(week, settings)
+    return {"ok": True, "week": week, "anomalies": anomalies, "text": care_week.render_text(week, anomalies), "partial": partial}
 
 
 def visit_summary_response(data):
@@ -10271,6 +10345,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(product_event_response(data))
             elif self.path == "/visit-summary":
                 self._json(visit_summary_response(data))
+            elif self.path == "/care-week":
+                self._json(care_week_response(data))
             elif self.path == "/ai/brain-status":
                 self._json(model_router.brain_status_response())
             elif self.path == "/persona/context":
