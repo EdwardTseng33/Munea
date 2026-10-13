@@ -58,6 +58,11 @@ async def run_call(case, person_id, replies):
     fixture = case.get("fixture") or {}
     if fixture.get("memory_items"):
         server.save_memory_items(fixture["memory_items"])
+    # 2026-08-17：個人資料（住哪一區、稱呼、出生年）漏存了——文字線那支一直有存，
+    # 只有語音線沒有。後果：她拿不到住哪裡，只好說「我還不知道你住在哪裡」，
+    # 而評審手上有背景資料寫著台南，就判她跟已知事實矛盾。她沒錯，是考卷餵得不一樣。
+    if fixture.get("person_profile"):
+        server.save_person_profile(fixture["person_profile"])
     if fixture.get("living_profile"):
         profile = dict(fixture["living_profile"])
         profile["personId"] = person_id
@@ -72,13 +77,25 @@ async def run_call(case, person_id, replies):
     char = case.get("character") or "寧寧"
     # 跟正式通話同一支組態函式＝同一份說明書、同一組聽話節奏、同一個思考深度旋鈕。
     # 2026-07-31 考卷分國：劇本帶哪一國，真通話就用那一國的說明書（沒帶＝繁中）
+    import localization as _localization
+    _caption_locale = case.get("locale") or "zh-TW"
     _profile = None
     if case.get("locale"):
-        import localization as _loc
+        _loc = _localization
         _profile = _loc.voice_session_locale_profile(
             _loc.build_locale_context({"conversationLocale": case["locale"],
                                        "uiLocale": case["locale"]}))
-    cfg = lv.live_config(char=char, name=char, locale_profile=_profile)
+    # 2026-08-17：這通要不要給她工具（設提醒／記行程／要問醫生），照劇本說的來。
+    # 在這之前一律不給——於是「設提醒的完整流程」「清單滿了怎麼辦」這類題目
+    # 根本考不到，因為她手上根本沒有那些工具。跟 8/13 那個「漏傳語系」同一類：
+    # 考卷跟正式線的設定沒對齊，題目看起來有跑、其實考的是另一件事。
+    _caps = case.get("capabilities") or {}
+    cfg = lv.live_config(
+        char=char, name=char, locale_profile=_profile,
+        allow_reminders=bool(_caps.get("reminders")),
+        allow_events=bool(_caps.get("events")),
+        allow_care_questions=bool(_caps.get("careQuestions")),
+    )
     thinking = cfg.thinking_config.thinking_level if cfg.thinking_config else None
 
     # 2026-07-30 引擎開關：跟正式線同一套 _make_client——vertex25 走 Google 雲正式版、
@@ -97,19 +114,33 @@ async def run_call(case, person_id, replies):
                 if msg.tool_call and msg.tool_call.function_calls:
                     # 正式機開著即時查詢／設提醒時，她這輪可能會伸手要工具。考卷不接真工具
                     # （會把外部查詢的快慢混進成績），但一定要回一句，不然她會一直等、整通卡死。
+                    #
+                    # 2026-08-17：以前一律回 error，於是工具題只考得到「失敗要怎麼講」，
+                    # 「成功要怎麼講」永遠考不到——而那才是天天在發生的路徑。
+                    # 現在劇本可以用 toolResponses 指定某個工具這通回成功（"ok"）；
+                    # 沒指定的照舊回失敗，舊劇本行為不變。
+                    _wanted = (case.get("toolResponses") or {})
+                    responses = []
                     for fc in msg.tool_call.function_calls:
-                        tool_calls.append(fc.name)
-                    await session.send_tool_response(function_responses=[
-                        types.FunctionResponse(
-                            id=fc.id, name=fc.name,
-                            response={"error": "eval harness: tool not available"})
-                        for fc in msg.tool_call.function_calls])
+                        ok = str(_wanted.get(fc.name, "error")).lower() == "ok"
+                        payload = {"status": "ok"} if ok else {
+                            "status": "error", "error": "eval harness: tool not available"}
+                        tool_calls.append({"name": fc.name, "result": payload["status"]})
+                        responses.append(types.FunctionResponse(
+                            id=fc.id, name=fc.name, response=payload))
+                    await session.send_tool_response(function_responses=responses)
                     continue
                 content = msg.server_content
                 if not content:
                     continue
                 if content.output_transcription and content.output_transcription.text:
-                    parts.append(content.output_transcription.text)
+                    # 2026-08-18：考卷要看到的，必須跟長輩真正看到的一樣。
+                    # 正式線的字幕出口會先過 localization.display_text（簡體轉台灣繁體、
+                    # 收掉語音辨識塞進來的空白），考卷卻直接讀原始字幕——於是實測看到
+                    # 她「整段用簡體回答」，其實長輩那邊早就被轉成繁體了。
+                    # 不一致的量尺會兩頭騙人：把擋掉的問題當成缺陷，或漏掉真的沒擋的。
+                    parts.append(_localization.display_text(
+                        content.output_transcription.text, _caption_locale))
                 if content.turn_complete:
                     break
             replies.append({

@@ -1,0 +1,44 @@
+{
+  "summary": {
+    "firstAudioLatency": null,
+    "runAt": "2026-08-18T01:36:54.909420+00:00",
+    "itemsRun": 1,
+    "passCount": 0,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 1,
+    "skipCount": 0,
+    "passRate": 0.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {},
+    "weakestDimensions": [],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S01",
+      "label": "日常打招呼＋接續上通",
+      "categories": [
+        "greeting_continuity"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [
+        {
+          "turn": 1,
+          "user": "餵？寧寧喔，我啦。",
+          "note": "",
+          "reply": null,
+          "genOk": false,
+          "error": "APIError: 1011 None. Your prepayment credits are depleted. Please go to AI Studio at https://ai.studio/projects to manage your project and billi"
+        }
+      ],
+      "status": "error",
+      "error": "turn 1: APIError: 1011 None. Your prepayment credits are depleted. Please go to AI Studio at https://ai.studio/projects to manage your project and billi",
+      "verdict": "ERROR",
+      "verdictReason": "生成失敗，未跑完整條劇本：turn 1: APIError: 1011 None. Your prepayment credits are depleted. Please go to AI Studio at https://ai.studio/projects to manage your project and billi"
+    }
+  ]
+}

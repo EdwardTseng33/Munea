@@ -32,6 +32,7 @@ import localization
 import supabase_adapter
 import enterprise_seats
 import enterprise_billing
+import org_portal
 import model_router
 import notify
 import apple_store
@@ -372,7 +373,12 @@ def verify_auth_context(headers=None):
     return verify_supabase_access_token(token)
 
 
-PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap", "/apple/notifications"}
+# 機構窗口專區（C1 · P0-5）：窗口不是 App 會員、沒有登入證，帶的是管理員發的簽章連結。
+# 所以要免會員門，但處理端一定自己驗憑證（org_portal.verify_portal_token），不是開放門。
+PUBLIC_POST_PATHS = {
+    "/auth-status", "/account-bootstrap", "/apple/notifications",
+    "/enterprise/portal/summary",
+}
 ADMIN_POST_PATHS = {
     "/admin/accounts",
     "/admin/north-star",
@@ -430,6 +436,8 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/seats/sweep",
     "/admin/enterprise/billing-settings",
     "/admin/enterprise/billing-settings/save",
+    # 機構窗口專屬連結（C1 · P0-5）：只有我們的管理員能產生，處理端再驗一次管理鑰匙。
+    "/admin/enterprise/portal/issue-link",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -7225,6 +7233,61 @@ def enterprise_seats_sweep_response(data=None):
     return {"ok": True, **result}
 
 
+def admin_enterprise_portal_issue_link_response(data=None):
+    """/admin/enterprise/portal/issue-link：產生一條給機構窗口的專屬連結（C1 · P0-5）。
+
+    只有我們的管理員能產。連結裡的簽章綁死組織代號與到期日——改一個字就對不上，
+    所以窗口永遠只看得到自己那一家。預設 30 天到期，最長 180 天。
+    """
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": "client_id_required"}
+    client = enterprise_seats.get_client(client_id)
+    if not client:
+        return {"ok": False, "error": "client_not_found"}
+
+    ttl = data.get("ttlDays") if data.get("ttlDays") is not None else data.get("ttl_days")
+    try:
+        token = org_portal.issue_portal_token(client_id, ttl_days=ttl)
+        claims = org_portal.verify_portal_token(token)
+    except org_portal.PortalTokenError as exc:
+        return {"ok": False, "error": exc.code}
+
+    base = str(
+        data.get("baseUrl")
+        or data.get("base_url")
+        or os.environ.get("MUNEA_ORG_PORTAL_BASE_URL")
+        or ""
+    ).strip()
+    return {
+        "ok": True,
+        "clientId": client_id,
+        "clientName": client.get("name") or "",
+        "url": org_portal.build_portal_link(base, token),
+        "expiresAt": claims["expiresAt"],
+    }
+
+
+def org_portal_summary_response(data=None):
+    """/enterprise/portal/summary：機構窗口帶著連結進來看自己的彙總（C1 · P0-5）。
+
+    只讀、只給匿名數字，整條路上沒有任何寫入。驗不過一律回同一種說法，
+    不告訴對方是「簽章錯」還是「這家不存在」——那會變成試探組織代號的工具。
+    """
+    data = data or {}
+    token = str(data.get("token") or data.get("t") or "").strip()
+    try:
+        claims = org_portal.verify_portal_token(token)
+        summary = org_portal.build_portal_summary(claims["clientId"])
+    except org_portal.PortalTokenError as exc:
+        # 只有「過期」值得單獨講，因為窗口看到就知道要回頭跟我們要新連結。
+        code = "token_expired" if exc.code == "token_expired" else "invalid_token"
+        return {"ok": False, "error": code}
+    # PortalPrivacyError 故意不接：彙總裡混進個資是程式的錯，寧可整支炸掉也不能送出去。
+    return {"ok": True, "expiresAt": claims["expiresAt"], **summary}
+
+
 def enterprise_invoices_response(data=None):
     """3.6 /admin/enterprise/invoices：請款單列表，含狀態、逾期天數、累計欠款。"""
     data = data or {}
@@ -10236,6 +10299,15 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(refresh_living_profile(data.get("personId") or data.get("person_id")))
+            elif self.path == "/admin/enterprise/portal/issue-link":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_enterprise_portal_issue_link_response(data))
+            elif self.path == "/enterprise/portal/summary":
+                # 機構窗口專區：不吃管理鑰匙，吃的是管理員發出去的簽章連結。
+                self._json(org_portal_summary_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":

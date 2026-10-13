@@ -1,6 +1,6 @@
 # Munea Current Development Plan
 
-> Updated: 2026-07-28
+> Updated: 2026-10-13（補助案時程段）／2026-07-28（執行計畫本文）
 > Purpose: current execution plan for moving the uploaded App candidate and its services through evidence-based release gates.
 
 > **Current source:** `1.0.66 (Build 537)`; the unique candidate captures the real microphone at the call gesture, preserves the opening utterance until Voice is ready, retains receiver jitter buffering, transparently resumes the strict provider-abort case, and uses the native 512 Avatar path. Source is merged and exact-main Voice is serving production; Build 537 still needs Mac Archive, exact-IPA identity checks, and installed-App acceptance before submission.
@@ -10,6 +10,12 @@
 > **Approved points:** Plus 100 / Pro 200; packs 100 / 300 / 600 / 1,000. Existing App Store Product IDs stay unchanged.
 >
 > **Authority boundary:** exact volatile App／runtime／DB facts live in `docs/RELEASE-STATE.md`; quality score and 90-point gates live in `docs/PRODUCT-QUALITY-CONFIDENCE.md`; billing rules live in `docs/BILLING-CREDITS-ENTITLEMENT-v1.md`. The dated sections below are historical execution records and cannot override this current header or those authorities.
+
+> **2026-10-13 grant schedule update（補助案核定後的時程變更）：** 數位產業署 10/13 核定通過——總經費 4,451 千、補助 1,900 千；
+> 計畫期程改為 **115/06/25–116/03/31**（原 115/11/16）。驗收查核點改三波：期中 **115/12/31**（A1 約束層、B3 UIUX、C1 席次管理、D1 測試＋弱點掃描、E1 研究與場域）、
+> **116/01/31**（B1 Android 功能驗收）、結案 **116/03/31**（A2、B2、C2、D2、E2、S、F）。
+> 10/21 前完成計畫書複閱；完整推進計畫見 `補助案-驗收管理/推進計畫-20261013-到116年3月結案.md`。
+> 本段之下為 2026-07-28 的執行計畫，App／runtime 的即時事實仍以 `docs/RELEASE-STATE.md` 為準。
 
 ## Current Truth
 

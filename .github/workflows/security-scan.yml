@@ -1,0 +1,91 @@
+# 弱點掃描：每次改程式都掃一次、每月再掃一次（補助案 D1 承諾：部署時套件與映像檔弱點掃描＋每月掃描＋修補分級）
+#
+# 為什麼要有這支（2026-10-13）：
+#   D1 第一次人工掃描就抓到 Capacitor 殼一個嚴重級（GHSA-rvm3-566m-v7fv：遠端內容可經
+#   內部代理路徑以 App 來源載入）、三個高風險、蘋果函式庫一個——而且已經在正式版裡待了
+#   一陣子沒人發現。靠人記得掃是不行的，要讓它自己跑。
+#
+# 修補分級（8/12 審查簡報承諾）：critical／high 當輪必修、moderate 兩週內、low 併下次例行。
+# critical／high 直接讓這支紅掉，擋在合併前。
+name: security-scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 2 1 * *"   # 每月 1 日 02:00 UTC（台灣 10:00）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: 套件弱點（npm ＋ Python）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: npm audit（critical／high 擋下）
+        run: npm audit --omit=dev --audit-level=high
+      - name: npm audit 全量報告（含開發套件，留檔）
+        if: always()
+        run: npm audit --json > npm-audit.json || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: pip-audit（engine/requirements.txt）
+        run: |
+          python -m pip install -q pip-audit
+          python -m pip_audit -r engine/requirements.txt --strict -f json -o pip-audit.json
+      - name: 留下掃描報告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-${{ github.run_id }}
+          path: |
+            npm-audit.json
+            pip-audit.json
+          retention-days: 400
+
+  image:
+    name: 映像檔與設定（Trivy）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: 檔案系統掃描（鎖定檔、已知漏洞）
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
+      # 掃全部 Dockerfile（根目錄、Cloud Run 引擎、總機、顯示卡管家）。
+      # 唯一跳過：RunPod 爆量備援顯示卡印象檔 Dockerfile.vocaframe——整套引擎、權重、維修用 sshd
+      # 都裝在 /root，啟動要 root 才能起 sshd 與綁 GPU；那張卡不直接對外、只收總機帶通話令牌的
+      # 連線。改成非 root 要重做印象檔並在實卡重驗（開卡一次 9 分鐘），排入 D2 資安檢測修補期
+      # （116 年 1–2 月）一併做；在那之前這條是「已知、已登記、接受」的風險，不是沒看到。
+      - name: Dockerfile 設定掃描（全部，跳過 GPU 印象檔）
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          skip-files: deploy/runpod-avatar/gpu-image/Dockerfile.vocaframe
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          format: table
+      - name: 建 Cloud Run 映像並掃描（跟正式部署同一份 Dockerfile）
+        run: docker build -f deploy/cloudrun/Dockerfile -t munea-cloudrun:scan .
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: munea-cloudrun:scan
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
