@@ -1,5 +1,39 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-09-30 00:10 蘇菲｜🎭 Edward 定向：Rive 取代寧寧的臉＋男生角色下線（盤點完成・待拍板・**尚未施工**）
+
+- **Edward 9/29 原話**：「用 rive 取代寧寧作為臉的功能…先看一下 app 的設計，確認該怎麼取代、哪裡需要取代，好比聊聊頁還沒有開啟通話時的全頻動態，包含男生角色都要先下線。」盤點報告（實拍截圖＋聊聊頁注入 Rive 實跑）：artifact「寧寧換臉盤點」。
+- **臉在 8 處**：開場三插圖／首頁 `#butlerCard`／狀態 `.obs-ava`／設定 `#companionRow`／選單 `#companionSheet`（寫死兩張）／聊聊頁 `#faceImg`＋`FaceIdle`（hello 8.2MB、idle 5.5MB）＋FlashHead `#fhFrame`／同意卡與吃藥提醒 `.mr-face`（寫死舊版 `nening-face.png`，選阿宏也顯示寧寧）。只有聊聊頁要會動。
+- **嘴型接點**：`_scheduleLocalPlayback`（有 PCM＋確切 playHead）；別用 `playLevel`（網路到達時量）或 `data-state`。去 FlashHead 時 `faceSameLineOn()` 要回 false（現在無臉通話也被當同線）。`tools/rive-lab/lipsync-driver.js` 的 `live()` 自建 AudioContext，要改成吃 `playCtx`。
+- **後台綁臉在總機層**：`010` `munea_call_request` 無 GPU seat 即排隊、`munea_call_ready` 要 avatar ready 才 active/計費；App `8475` 無 `worker.url` 丟 `paired_service_unavailable`。擬：migration 029 加 `media_mode`（voice 租約 worker/slot 可空、voice ready＋`uplink_ok` 後才 active）＋Gateway 依 App 欄位分流（protocol 3 舊 App 維持 paired）＋App 放寬＋假手機加 voice-only 模式＋`test_voice_avatar_direct_route`／`test-voice-launch-policy`／`test-voice-call-state-machine`／`test-ui-contracts` 改寫。
+- ⚠ **收 GPU 三個順序雷**：①先上 029 再收 worker，反了＝全排隊停擺 ②已安裝舊版拿到無臉租約會失敗→GPU 留到舊版淘汰或 `MUNEA_CALL_PROTOCOL_REQUIRED` ③B2B demo 卡由 RunPod controller 回收，關 controller 前先搬。
+- **男生下線清單**：名單散在 `companion-profile.js`／`server.py`／`model_router.py`／`characters.json`／`005`／四語 catalog。除阿宏外，阿原、旺財（男性化狗）仍定義未刪；`REMOVED_AVATARS` 只在開機擋、`applyCompanionProfile` 讀雲端會救回。名字：blur 會把未改的名字標 touched→阿宏用戶多存「阿宏/Sam/ひろし/Mateo」，遷移要把「任一語系男生預設名」改回寧寧（否則寧寧臉叫 Sam、自稱 Sam）。熟悉度 `companion_relationship_states` 以 persona 分存，要搬給寧寧。資料用新 migration（data-cleanup，`005` 不可改）。對外：munea.net 阿宏示意與影片、B2B 男聲 demo＋`a06` 選項、中文條款列四角色名（需法務）、SalesKit「六角色」。App Store 已只有寧寧。
+- **待 Edward 拍板**（報告頁第「要你決定」節）：新長相（建議照開場插圖扁平寧寧）、Rive 檔外包或自做、男生先下線與範圍、改寫 7/13–14「Voice＋Avatar 必須綁定」規矩。**拍板前不動 `010`/Gateway/`app.js` 通話流程**；施工前會再列檔案與包版影響。
+
+### 2026-09-29 19:10 蘇菲｜🗣 寧寧嘴巴吃真聲音（規格書施工第 6 步 · 試驗室 v8 · 未上正式 App）
+
+- **接手現況**：`tools/rive-lab/` 自 8/12 停 47 天（八月整個被聊聊救火吃掉）；Edward 9/29「推進完善」。第一層 Rive 示範頁與寧寧 v7 的「講一句話／連續聊天」都是**亂數示意、沒聲音**。
+- **做了什麼**：`lipsync-driver.js` 通用嘴型驅動器——聲音→每 10ms 一格：音量→張口（快張慢合）／共振峰→ㄚㄝㄧㄛㄨ／氣音→露齒／閉塞音→閉嘴／重音→挑眉點頭；內建量尺 `LipSync.stats()`；附即時串流路徑 `live()` 供之後接聊聊真音軌。Rive 示範頁與 `ning.html` v8 都接上寧寧真聲線（八月驗收留下的 Despina 水餃故事：一句話 2.74s／整段 22.8s）。`?fake=1` 回舊示意。
+- **數字（無頭 Chrome 量尺）**：Rive 頁 相關 0.85／嘴早 10ms／起口 -10ms／60fps；寧寧 相關 0.87／嘴差 0ms／起口 0ms／最大張口 0.94、八種嘴形定格全對位。寧寧原本嘴慢 130ms、相關 0.53＝嘴巴彈簧太軟；改硬彈簧在 27fps 會數值翻跳（每格 0↔1.23）→ **真聲音模式改一階平滑 28ms**（任何幀率都穩）。
+- ⚠ **量尺教訓**：無頭連拍每張卡畫面約 150ms →「第 N 張截圖＝第幾秒」失真、差點誤判成零件沒疊上；多狀態一律用**定格法**（`LipSync.freezeAt`）拍。
+- **版控／備份**：試驗室 47 天工作從未上傳。已推 `lab/ning-lipsync-20260929`（小檔：頁面／驅動器／聲音樣本／示範角）；拆件素材整包 213MB zip 在 `E:/Claude/image-assets/munea-ningning-style/backup/rive-lab-20260929.zip`（同一顆碟、OneDrive 沒在同步）；**離機備份待 Edward 拍板**。
+- **下一步**：Edward 手機同 Wi-Fi 開 `http://<這台電腦IP>:8161/ning.html` 實看；接聊聊真音軌（`live()`）；規格書剩餘：手臂拆件收尾、④撥髮影片拆格、女巫 Gate 2 合體審。
+
+### 2026-08-18 00:15 蘇菲｜🔪 第二刀 fast-first＋拆 -350 拐杖：輪首聲嘴 skew 282→0ms（正式臉機 ace93b62 在跑 · call-path risk）
+
+- **兩個修正一起上**：①新起句首塊加速（fast-first）——一輪第一塊不再攢滿 0.96s 才生成：等 0.12s、有 0.30s 真聲音就先開工，**只推真聲音那幾格**（墊零格會佔住下一塊真嘴型的位置）；出手次數進健康帳 `fast_first_count`。②**拆掉 `MUNEA_FH_VIDEO_LEAD_MS=-350` 拐杖**——8/12 出口沒錶年代「畫面硬扣海報 350ms」的補償，#595 出口逐格對錶後它變成每輪嘴慢 250-280ms 的地板。歸零後由錶當唯一權威。
+- **數字（同尺三輪長講 e2e）**：輪首 skew 282/266/203ms → **0/0/15、0/-16/16、-16/-31/0**（連三通 17 關全綠）；機器尺中段全淨、中位 -62~-125ms。機上健康帳：fast-first 出手 5 次、出口扣早到 4181 格、丟遲到僅 62 格＝生成跑在前、出口按聲音錶放行，設計如願。
+- **env 變更（機上 munea-face.env 已改、rebuild SOP 同步）**：`VIDEO_LEAD_MS=0`｜`FAST_FIRST_WAIT_S=0.12`｜`FAST_FIRST_MIN_S=0.30`｜`TAIL_FLUSH_S=0.25`。⚠ 下次重生卡別把 -350 帶回來。
+- **殘餘病＋鐵律衝突（要 Edward 拍板才動）**：輪中停頓後的「最後一小段」嘴仍慢 500-1100ms——輪首有 0.7s 聲音起播緩衝護著、輪中新起句沒有：聲音立刻播（「聲音不等畫面」鐵律）、畫面生成要 0.5-0.6s。要壓須「輪界聲音微等 0.3-0.4s」＝鐵律例外。驗收尺天花板依真數據校準 900→1200＋病理註記（病的形狀由中段＋成叢判準抓；術前 1351 病灶仍會被抓）。
+- **版控**：`candidate-av-clock` 兩個 commit（2e471907 fast-first、ace93b62 尾巴修剪）已推雲備份；守門 `test_flashhead_av_clock` 22 條＋5 突變驗證。**仍待 Codex 把 codex/fix-opening-long-avsync-20260812 系合回 main 終結雙頭**。部署手順：`.next`→機上腳本備份重啟（⚠ ssh 直下 pkill 會誤殺自己殼、務必走機上腳本——8/18 踩過：正式機空窗 ~5 分鐘）。
+
+### 2026-08-17 22:20 蘇菲｜🔁 臉機重生完成（新卡 ins-7rbd1x4y · 手術版在跑 · 總機已換掛新門牌 · call-path risk）
+
+- **時間線**：舊卡 ins-eg6x3xkg 於 8/14 餘額歸零被平台收走（快照 snp-5341jj3o 留存）。Edward 8/17 儲值 50 點＋從**較舊快照**開新卡（內容還是 7 月的純 640 版）。我把它升到 8/13 手術版：候選 `e1fea3cf`（=Codex dc87c152 512→640 放大 ＋ #595 聲嘴對錶）＋ env 六鍵（512/640/銳化/-350/版本戳）。
+- **新座標**：SSH `-p 26860`、對外 8888 ＝ `https://tw-06.access.glows.ai:25101`；總機 gpu_workers 已 upsert（glows-tw06-resident → 25101、ready、capacity 2、instance ins-7rbd1x4y）。舊 25088 已失效。
+- **兩個環境雷（重生 SOP 補充）**：①快照帶了 570 驅動的相容墊片、新宿主機驅動 565 → CUDA Error 804；**不動系統**的解法＝服務專用書架 `/root/driver565`（libcuda 指回 565.77）＋啟動時 LD_LIBRARY_PATH 前綴——系統層 570 捷徑原樣沒動。②torch _inductor 混版 ImportError——**當時另一雙手（Codex?）同機在修**、重灌 torch 後把引擎檔換成同內容版本重啟（audio_pos_fn ×4 與 OUTPUT_FRAME_SIZE ×6 都在＝手術＋放大都完整）。⚠ 同一台機器兩個操作者同時動手了——請 Codex 動 tw-06 前後在本板留一行。
+- **全鏈驗證（真總機發牌）**：avatar_ack ✓、190 影格、聲嘴 aligned（250ms）、包絡相關 0.9377、缺音僅 80ms；唯一紅＝首輪冷啟整體對位 2.78s（新機第一通暖身、預期內）。Edward 實機回驗中。
+
 ### 2026-08-13 21:20 蘇菲｜🔪 聲嘴對錶已上正式臉機（候選 e1fea3cf＝dc87c152＋#595 嫁接 · Avatar production · call-path risk）
 
 - **結構刀**：畫格出口（FrameSink）掛上聲音錶——每格帶「對應聲音位置」，出口對錶：早到 >0.28s 扣住、遲到 >0.16s 整段丟追現在；聲音永遠是主時鐘。生成端保留 Codex 8/12「不刪畫格只記帳」（在生成端刪會對錯字；還債改在出口、帶錶丟不會錯字）。

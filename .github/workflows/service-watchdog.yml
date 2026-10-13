@@ -3,7 +3,9 @@ name: Service watchdog
 # 服務看門狗：每 5 分鐘巡 Brain／Voice／Gateway／公開網站，倒了發 Slack 告警。
 # 判定規則與對象清單在 scripts/service-watchdog.mjs；契約測試 scripts/test-service-watchdog.js。
 # 注意：排程只在預設分支生效；告警用既有 MUNEA_SLACK_ALERT_WEBHOOK（與 CI 紅燈同一條線）。
-# 已知取捨（P1 再補）：服務持續倒著時每輪都會再發一次告警（無狀態去重）——服務倒了本來就該吵。
+# 講過就不要再講一遍（Edward 2026-08-19）：剛壞掉才發、一直壞著閉嘴、滿一小時補一則提醒、
+# 修好了報一聲平安。跨輪的記憶存在 actions/cache（每輪換 key、restore-keys 撈最新那份）。
+# 快取撈不到＝當成以前都正常，最多多發一則，不會漏報。
 
 on:
   schedule:
@@ -30,7 +32,24 @@ jobs:
         with:
           node-version: "22"
 
+      # 上一輪記到什麼（哪個服務已經告警過了）。快取是不可覆寫的，所以每輪寫一個新
+      # key、用 restore-keys 前綴撈回最近那一份——這是 Actions 上做「跨輪狀態」的標準寫法。
+      - name: Restore alert state
+        uses: actions/cache/restore@v4
+        with:
+          path: .watchdog-state.json
+          key: watchdog-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            watchdog-state-
+
       - name: Patrol services
         env:
           MUNEA_SLACK_ALERT_WEBHOOK: ${{ secrets.MUNEA_SLACK_ALERT_WEBHOOK }}
-        run: node scripts/service-watchdog.mjs
+        run: node scripts/service-watchdog.mjs --state .watchdog-state.json
+
+      - name: Save alert state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .watchdog-state.json
+          key: watchdog-state-${{ github.run_id }}-${{ github.run_attempt }}

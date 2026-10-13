@@ -77,6 +77,25 @@ def test_dead_line_no_longer_needs_her_voice():
     )
 
 
+def test_her_voice_is_not_proof_your_microphone_works():
+    """她出聲**不能**頂替「你的聲音送得出去」。
+
+    2026-08-18 Edward「檢查聊聊是不是壞了」查出來的：8/13 之後每一通的收尾總帳都是
+    in_bytes=0（你的麥克風一格都沒送到伺服器），她照樣自己講了 23 秒 × 3 輪。
+    而這道本來該喊「你的聲音沒送出去」的看門，被寫成
+        (this._micPackets > 0 || this._firstAudioRecorded)
+    ——她每通都會出聲，所以這道保險絲永遠不會響，壞了五天沒人發現。
+
+    她的聲音只證明「她那邊好」，不證明「你講得出去」。兩件事不可以互相頂替。
+    """
+    src = _src()
+    watch = re.search(r"const lineAlive = phase === 'ready_timeout'(.{0,400}?);", src, re.S)
+    body = watch.group(1)
+    assert "_firstAudioRecorded" not in body, (
+        "死線判斷又把「她有出聲」當成線活著——那正是 8/13～8/18 麥克風全死卻沒人發現的原因"
+    )
+
+
 def test_silence_does_not_hang_up():
     """沉默不再自動收線（Edward 8/8：拿掉這個機制）。"""
     src = _src()
