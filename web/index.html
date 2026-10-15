@@ -85,7 +85,7 @@ setTimeout(function () {
   <section class="screen active" id="home">
     <div class="pad">
       <div class="page-head home-head">
-        <h1 class="page-title" id="greetBig" data-i18n="home.greetingEvening">晚上好</h1>
+        <h1 class="page-title" id="greetBig">晚上好</h1>
         <span class="home-meta"><span class="mem-badge free home-badge" id="homeMemberBadge" hidden>FREE</span><span class="home-date" id="metaDate">—</span><span id="homeWxWrap" style="display:none"><span class="home-sep">·</span><b id="homeWx"></b></span></span>
       </div>
 
@@ -93,7 +93,7 @@ setTimeout(function () {
            這是首頁最大的一塊、原本只放一句固定問候，把最有份量的話放在最顯眼的地方才對。 -->
       <div class="butler-card" id="butlerCard">
         <div class="bc-row">
-          <div class="bc-avatar"><img class="ava-img" src="avatars/nening-hero.jpg" alt="寧寧" data-i18n-alt="companion.nening.name"></div>
+          <div class="bc-avatar"><img class="ava-img" src="avatars/ningning-flat-face.png" alt="寧寧" data-i18n-alt="companion.nening.name"></div>
           <div class="bc-info">
             <!-- 刻意不加「家人帶話」標籤（Edward 2026-07-31）：訊息開頭就是「太太要我提醒你」，
                  誰帶的話已經講清楚了，再掛一個標籤只是把同一件事說兩遍。 -->
@@ -173,7 +173,7 @@ setTimeout(function () {
   <!-- 寧寧的觀察 -->
   <div style="background:var(--deep);border-radius:20px;padding:14px 16px;margin-bottom:14px;color:#fff">
     <div class="row" style="align-items:center;gap:10px;margin-bottom:10px">
-      <span class="obs-ava" style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;overflow:hidden;flex-shrink:0;background:var(--mint2)"><img class="ava-img" src="avatars/nening-face.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"></span>
+      <span class="obs-ava" style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;overflow:hidden;flex-shrink:0;background:var(--mint2)"><img class="ava-img" src="avatars/ningning-flat-face.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"></span>
       <div style="flex:1">
         <div class="serif obs-heading" id="obsHeading"></div>
         <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700" data-i18n="status.dataReviewed">剛剛幫你看過數據</span></div>
@@ -496,7 +496,7 @@ setTimeout(function () {
 
       <h2 class="set-section" data-i18n="settings.section.companion">AI 陪伴角色</h2>
       <div class="set-list" id="companionRow" style="cursor:pointer">
-        <div class="set-row"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/nening-face.png" alt=""></span><span class="sr-main"><b id="settingsCompanionName" data-i18n="companion.nening.name">寧寧</b><small id="settingsTemplateLabel" data-i18n="companion.nening.label">溫柔型，像家人一樣照看你</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/ningning-flat-face.png" alt=""></span><span class="sr-main"><b id="settingsCompanionName" data-i18n="companion.nening.name">寧寧</b><small id="settingsTemplateLabel" data-i18n="companion.nening.label">溫柔型，像家人一樣照看你</small></span><span class="sr-arrow">›</span></div>
       </div>
 
 
@@ -550,7 +550,7 @@ setTimeout(function () {
   <section class="screen face-screen" id="chat" data-state="idle">
     <!-- 全屏臉（佔畫面主體、置中偏上、像跟家人視訊）。會動時對嘴；現為靜態圖＋CSS 呼吸眨眼佔位（§6.5 降級層 1-2） -->
     <div class="face-bg">
-      <img id="faceImg" src="avatars/nening-v2-full.png" alt="寧寧" data-i18n-alt="companion.nening.name">
+      <img id="faceImg" src="avatars/ningning-flat-full.png" alt="寧寧" data-i18n-alt="companion.nening.name">
       <!-- FlashHead 全身合成（2026-07-11 先鋒判斷框參數移植）：9:16 定比框＋全身立繪底＋512 活臉羽化貼回 -->
       <div class="fh-frame" id="fhFrame" hidden aria-hidden="true">
         <img class="fh-bg" id="fhBg" src="flashhead/bg-a05.png" alt="">
@@ -575,7 +575,7 @@ setTimeout(function () {
 
     <!-- 關閉聊聊：X 鍵，放在原本 navbar「聊聊」的位置（底部中央），按了收掉通話回首頁 -->
     <button class="face-exit" id="chatExit" aria-label="關閉聊聊，返回首頁" data-i18n-aria-label="accessibility.closeChat"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
-    <div class="face-name off"><span class="dot"></span><span id="chatName" data-i18n="companion.nening.name">寧寧</span><span class="fn-status" data-i18n="voice.call.offline">未在線</span></div>
+    <div class="face-name off"><span class="dot"></span><span id="chatName" data-i18n="companion.nening.name">寧寧</span><span class="fn-status">未在線</span></div>
     <div class="face-hud">
       <span class="hud-pill" id="callTimer">00:00</span>
       <span class="hud-pill pts"></span>
@@ -865,15 +865,14 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close" id="companionCloseBtn" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="companion.modalTitle">陪伴角色</h2>
-      <p class="modal-sub"><span data-i18n="companion.pickIntro">先選角色、再取名字，個性、外觀、聲音由角色決定，名字由你決定。</span><br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換角色不會忘記你們聊過的事</b><span data-i18n="companion.memoryTail">，記憶跟著你，不跟角色走。</span></p>
+      <p class="modal-sub"><span data-i18n="companion.pickIntro">名字由你決定，個性、外觀和聲音不會變。</span><br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換名字不會忘記你們聊過的事</b><span data-i18n="companion.memoryTail">，記憶一直都在。</span></p>
       <label class="companion-name-label" for="companionNameInput" data-i18n="companion.nameLabel">幫角色取名稱</label>
-      <input class="companion-name-input" id="companionNameInput" value="寧寧" data-i18n-value="companion.nening.name" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿福" data-i18n-placeholder="companion.namePlaceholder" />
-      <div class="field-label" data-i18n="legacyUi.companionRole">選擇互動 AI 角色</div>
-      <div class="avatar-pick" id="avatarPick">
-        <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/nening-v2-face.png" alt=""></span><span class="avl"><b data-i18n="legacyUi.companionWarm">溫柔型</b><small data-i18n="legacyUi.companionWarmBody">像家人一樣照看你</small></span></button>
-        <button class="avo" data-ava="companion-real-male"><span class="avi"><img src="avatars/ahong-v2-face.png" alt=""></span><span class="avl"><b data-i18n="legacyUi.companionSteady">沉穩型</b><small data-i18n="legacyUi.companionSteadyBody">像大哥一樣可靠</small></span></button>
-        <!-- V1 專攻兩位擬真真人（溫柔·寧寧／沉穩·阿宏）——Ditto 擬真臉引擎驅動得最好、聲音+臉體驗先做到位（Edward 2026-07-10）。
-             插畫兩位（開朗·小昀／隨和·阿原）＋動物兩位（貓咪·咪咪／狗狗·旺財）暫下架；素材與 backendChar 保留，日後 2D 動嘴/新底圖做好再放回。 -->
+      <input class="companion-name-input" id="companionNameInput" value="寧寧" data-i18n-value="companion.nening.name" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿香" data-i18n-placeholder="companion.namePlaceholder" />
+      <!-- 男生角色全數下線（Edward 2026-09-30），只剩寧寧一位：選角清單收起來，只留取名字。 -->
+      <div class="field-label" data-i18n="legacyUi.companionRole" hidden>選擇互動 AI 角色</div>
+      <div class="avatar-pick" id="avatarPick" hidden>
+        <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/ningning-flat-face.png" alt=""></span><span class="avl"><b data-i18n="legacyUi.companionWarm">溫柔型</b><small data-i18n="legacyUi.companionWarmBody">像家人一樣照看你</small></span></button>
+        <!-- 插畫女生（小昀）與貓咪（咪咪）仍暫下架；男生（阿宏、阿原、旺財）已從角色名單移除。 -->
 
       </div>
     </div>
@@ -1211,7 +1210,7 @@ setTimeout(function () {
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span data-i18n="consent.title">開始聊之前，先跟你說一聲</span></div>
+      <div class="mr-say"><img class="mr-face" src="avatars/ningning-flat-face.png" alt="" /><span data-i18n="consent.title">開始聊之前，先跟你說一聲</span></div>
       <ul class="consent-points">
         <li><i class="cp-dot"></i><div><b data-i18n="consent.point1Title">你說的話會加密後送到國外的雲端處理</b><small data-i18n="consent.point1Body">全程加密傳輸，只用來聽懂你、記得你，你也能隨時查看——不外流、不販售、不做廣告</small></div></li>
         <li><i class="cp-dot"></i><div><b data-i18n="consent.point2Title">只留對話重點，原始錄音不保存</b><small data-i18n="consent.point2Body">你隨時能在「我的資料」查看或刪除</small></div></li>
@@ -1237,7 +1236,7 @@ setTimeout(function () {
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <div class="mr-say"><img class="mr-face" src="avatars/nening-face.png" alt="" /><span id="medDueSay" data-i18n="medicationReminder.dueTitle">吃藥時間到囉</span></div>
+      <div class="mr-say"><img class="mr-face" src="avatars/ningning-flat-face.png" alt="" /><span id="medDueSay" data-i18n="medicationReminder.dueTitle">吃藥時間到囉</span></div>
       <div class="med-pill-card">
         <div class="mpc-row">
           <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
@@ -1399,6 +1398,7 @@ setTimeout(function () {
   <script src="src/voice-turn-policy.js?v=20260812-call-stability-b537-v1066"></script>
   <script src="src/voice-call-diagnostics.js?v=20260812-call-stability-b537-v1066"></script>
   <script src="src/visit-summary-logo.js?v=20260730-brand"></script><!-- 就診摘要 PDF 的品牌標記（base64；離屏 webview 的 baseURL 是 nil，載不到外部檔） -->
+  <script src="src/companion-face.js?v=20260930-flat1"></script><!-- 扁平插畫寧寧（Rive 檔做好前的過渡版） -->
   <script type="module" src="src/app.js?v=20260813-honestconn-v1066"></script>
 
 <!-- MUNEA-MOOD-ENGINE -->
