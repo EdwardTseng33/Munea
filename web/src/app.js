@@ -4843,7 +4843,9 @@ const AvSyncMeter = {
 };
 window.MuneaAvSyncMeter = AvSyncMeter;
 
-// 聲波波頻：收音／講話都跟著「真實音量」跳；沒聲音就低伏收攏，不再是常亮的假 loading
+// 聲波波頻：只跟著「長輩的聲音（麥克風）」跳；沒聲音就低伏收攏，不再是常亮的假 loading
+// 2026-10-20（Edward：「AI 本身講話不應該觸發動態，用戶講話才會」）：寧寧講話時餵 0＝波紋停在靜止態；
+// 接通後一律先看到靜止態，直到真的收到聲音才起波。
 const FaceWave = {
   bars: null, raf: 0, src: null, cur: 0,
   // 靜音門檻（2026-08-01）：安靜房間的底噪經過 micLevel 放大約落在 0.05-0.1，
@@ -7948,7 +7950,7 @@ async function connectCall() {
     LiveVoice.onConnecting = () => { if (chatEl) chatEl.dataset.state = 'connecting'; setLocalizedCallHint('connecting', true); };
     // 開場後才顯示狀態（撥通中維持待機動畫、不搶戲）
     const onListen = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'listening'; setFaceState('listening'); setLocalizedCallHint('ready'); FaceWave.start(() => LiveVoice.micLevel); };
-    const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setLocalizedCallHint('speaking'); FaceWave.start(() => LiveVoice.playLevel); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
+    const onSpeak = () => { if (!_started) return; if (chatEl) chatEl.dataset.state = 'speaking'; setFaceState('speaking'); setLocalizedCallHint('speaking'); FaceWave.start(() => 0); avatarRuntime.startLiveViseme(() => LiveVoice.playLevel); };
     LiveVoice.onCaption = (t) => setCaption(t);   // 字幕開啟時，寧寧說的話逐字上字幕
     // 斷線自動接回：掉了就自動重連；多次失敗則收整通，不退成純語音。
     let _reconnects = 0;

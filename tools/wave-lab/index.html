@@ -1,0 +1,190 @@
+<meta charset="utf-8">
+<title>聊聊收音動態 — 三款提案</title>
+<style>
+  :root{
+    --ground:#F7F3EC; --card:#FFFFFF; --ink:#33403D; --muted:#6E7A76; --line:#E5DFD5;
+    --teal:#3AA8A0; --coral:#F4A261; --warm:#C9AE96;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--ground:#15191A;--card:#1E2423;--ink:#E9E5DD;--muted:#9BA6A2;--line:#2C3533;}
+  }
+  :root[data-theme="dark"]{--ground:#15191A;--card:#1E2423;--ink:#E9E5DD;--muted:#9BA6A2;--line:#2C3533;}
+  :root[data-theme="light"]{--ground:#F7F3EC;--card:#FFFFFF;--ink:#33403D;--muted:#6E7A76;--line:#E5DFD5;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",-apple-system,sans-serif;
+    line-height:1.7;}
+  .wrap{max-width:44rem;margin:0 auto;padding:24px 18px 72px;}
+  h1{font-size:1.5rem;margin:0 0 6px;letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:.95rem;margin:0 0 22px;}
+
+  .panel{position:sticky;top:0;z-index:5;background:var(--ground);
+    padding:10px 0 14px;border-bottom:1px solid var(--line);margin-bottom:22px;}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font:inherit;font-size:.9rem;padding:9px 16px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--line);background:var(--card);color:var(--ink);transition:.15s;}
+  button[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:700;}
+  button:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+  .hint{font-size:.85rem;color:var(--muted);margin-top:8px;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    overflow:hidden;margin-bottom:20px;}
+  .card h2{font-size:1.05rem;margin:0;padding:16px 18px 4px;}
+  .card p{margin:0;padding:0 18px 14px;font-size:.9rem;color:var(--muted);}
+  .stage{position:relative;height:150px;
+    background:linear-gradient(160deg,#D8C2A8 0%,#C9AE96 45%,#B79C84 100%);}
+  canvas{display:block;width:100%;height:100%;position:relative;z-index:1;}
+  .stage::after{content:'';position:absolute;left:0;right:0;top:50%;height:74px;
+    transform:translateY(-50%);z-index:0;pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(30,40,38,.20) 0%, rgba(30,40,38,0) 72%);}
+  .badge{position:absolute;left:14px;top:12px;font-size:.72rem;letter-spacing:.08em;
+    text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:700;
+    text-shadow:0 1px 3px rgba(0,0,0,.35);}
+</style>
+
+<div class="wrap">
+  <h1>聊聊收音動態 — 三款提案</h1>
+  <p class="sub">底色模擬通話畫面。三款都遵守同一條規矩：<strong>只有長輩講話才會動</strong>，寧寧講話時波紋靜止。</p>
+
+  <div class="panel">
+    <div class="btns">
+      <button data-state="rest" aria-pressed="true">靜止（接通後 · 還沒聽到聲音）</button>
+      <button data-state="soft" aria-pressed="false">小聲說話</button>
+      <button data-state="loud" aria-pressed="false">正常說話</button>
+      <button data-state="speak" aria-pressed="false">寧寧在講話</button>
+    </div>
+    <p class="hint">按上面切換狀態，三款同時變。「寧寧在講話」時應該跟「靜止」一樣不動。</p>
+  </div>
+
+  <div class="card">
+    <h2>A · 柔霧</h2>
+    <p>對稱的柔和色帶，中間厚、兩側化開。最溫柔，離長輩熟悉的「聲音」意象最遠。</p>
+    <div class="stage"><span class="badge">A</span><canvas id="a"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>B · 線條</h2>
+    <p>多條平行細線、相位錯開。像水波，安靜時是一條直線——「還在等你說」讀得最清楚。</p>
+    <div class="stage"><span class="badge">B</span><canvas id="b"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>C · 點線</h2>
+    <p>細長條配點狀疊層。顆粒感最強、最像「正在收音」，安靜時是一排小點。</p>
+    <div class="stage"><span class="badge">C</span><canvas id="c"></canvas></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var LEVELS = { rest:0, soft:0.22, loud:0.62, speak:0 };
+  var target = 0, cur = 0, state = 'rest';
+
+  document.querySelectorAll('.panel button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('.panel button').forEach(function(o){ o.setAttribute('aria-pressed','false'); });
+      b.setAttribute('aria-pressed','true');
+      state = b.dataset.state;
+      target = LEVELS[state];
+    });
+  });
+
+  function setup(id){
+    var c = document.getElementById(id), x = c.getContext('2d');
+    function size(){
+      var r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+      c.width = r.width * d; c.height = r.height * d; x.setTransform(d,0,0,d,0,0);
+      c.__w = r.width; c.__h = r.height;
+    }
+    size(); window.addEventListener('resize', size);
+    return { c:c, x:x };
+  }
+  var A = setup('a'), B = setup('b'), C = setup('c');
+
+  function grad(x, w, alpha){
+    var g = x.createLinearGradient(0,0,w,0);
+    // 品牌規範：主色薄荷綠；橘只做強調、不畫在暖膚色底圖上（會糊）
+    g.addColorStop(0,   'rgba(62,212,194,0)');
+    g.addColorStop(0.18,'rgba(62,212,194,'+alpha+')');
+    g.addColorStop(0.5, 'rgba(22,196,174,'+(alpha*1.15)+')');
+    g.addColorStop(0.82,'rgba(62,212,194,'+alpha+')');
+    g.addColorStop(1,   'rgba(62,212,194,0)');
+    return g;
+  }
+  // 中間厚兩側薄：波紋沿著畫面寬度收斂到 0，兩端不會硬切
+  function env(t){ return Math.pow(Math.sin(Math.PI * t), 1.4); }
+
+  function drawA(t){
+    var x=A.x,w=A.c.__w,h=A.c.__h,mid=h/2;
+    x.clearRect(0,0,w,h);
+    for (var layer=0; layer<3; layer++){
+      var amp = (h*0.30) * cur * (1 - layer*0.22) + h*0.030;
+      var sp  = 1.1 + layer*0.5, ph = layer*1.7;
+      x.beginPath(); x.moveTo(0, mid);
+      for (var i=0;i<=w;i+=3){
+        var u=i/w, y = mid - env(u)*amp*Math.sin(u*10*sp + t*sp + ph);
+        x.lineTo(i,y);
+      }
+      for (var j=w;j>=0;j-=3){
+        var u2=j/w, y2 = mid + env(u2)*amp*Math.sin(u2*10*sp + t*sp + ph);
+        x.lineTo(j,y2);
+      }
+      x.closePath();
+      x.fillStyle = grad(x,w, 0.34 + 0.22*cur);
+      x.filter = 'blur(' + (6 - layer) + 'px)';
+      x.fill(); x.filter = 'none';
+    }
+  }
+
+  function drawB(t){
+    var x=B.x,w=B.c.__w,h=B.c.__h,mid=h/2;
+    x.clearRect(0,0,w,h);
+    for (var k=0;k<7;k++){
+      var off = (k-3), amp = (h*0.26)*cur, ph = k*0.42;  // 靜止時 cur=0 → 收成一條線
+      x.beginPath();
+      for (var i=0;i<=w;i+=2){
+        var u=i/w;
+        var y = mid + off*(2.2 + 5*cur) - env(u)*amp*Math.sin(u*8 + t*1.5 + ph);
+        if (i===0) x.moveTo(i,y); else x.lineTo(i,y);
+      }
+      x.strokeStyle = grad(x,w, 0.55 + 0.35*cur);
+      x.lineWidth = 1.8; x.stroke();
+    }
+  }
+
+  function drawC(t){
+    var x=C.x,w=C.c.__w,h=C.c.__h,mid=h/2;
+    x.clearRect(0,0,w,h);
+    var n = Math.floor(w/6);
+    for (var i=0;i<n;i++){
+      var u=(i+0.5)/n, px=u*w;
+      var wob = Math.sin(u*14 + t*2.2) * 0.5 + 0.5;
+      var barH = h*0.045 + env(u)*(h*0.34)*cur*(0.45 + wob*0.55);
+      x.beginPath();
+      x.roundRect(px-1.4, mid-barH/2, 2.8, barH, 2);
+      x.fillStyle = grad(x,w, 0.62 + 0.28*cur);
+      x.fill();
+      // 點狀疊層：安靜時只剩這排小點
+      var dotY = mid + Math.sin(u*9 - t*1.6) * env(u) * (h*0.16) * cur;
+      x.beginPath(); x.arc(px, dotY, 1.5, 0, Math.PI*2);
+      x.fillStyle = grad(x,w, 0.5);
+      x.fill();
+    }
+  }
+
+  var t0 = 0;
+  function loop(ts){
+    if (!t0) t0 = ts;
+    var t = (ts - t0)/1000;
+    cur += (target - cur) * 0.09;
+    drawA(t); drawB(t); drawC(t);
+    requestAnimationFrame(loop);
+  }
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    cur = 0.22; drawA(0); drawB(0); drawC(0);
+  } else {
+    requestAnimationFrame(loop);
+  }
+})();
+</script>

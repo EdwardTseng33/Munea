@@ -971,7 +971,7 @@ html[lang="es"] #connect .cn-row .cn-btn {
   box-shadow: 0 0 11px rgba(62,212,194,.95), 0 2px 6px rgba(0,0,0,.28);
   transform: scaleY(.3); transform-origin: center; transition: transform .12s cubic-bezier(.34,1.4,.5,1); }
 .face-screen[data-state="listening"] .face-wave i { background: #3ED4C2; }   /* 收音（聽你說）＝亮療癒綠 */
-.face-screen[data-state="speaking"]  .face-wave i { background: #16C4AE; box-shadow: 0 0 12px rgba(22,196,174,1), 0 2px 6px rgba(0,0,0,.28); }  /* 講話（她在說）＝深亮綠 */
+.face-screen[data-state="speaking"]  .face-wave i { background: #3ED4C2; }   /* 她在說＝跟收音同色的靜止態（2026-10-20：AI 講話不觸發動態、不換色） */
 
 /* Edward 2026-07-06：圖片不要有動態——移除說話時的臉部微動（改由下方聲波動態表達「在說」） */
 
