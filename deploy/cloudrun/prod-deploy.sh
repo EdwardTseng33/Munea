@@ -109,7 +109,9 @@ if [ "$WHAT" = "brain" ]; then
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest,MUNEA_ADMIN_API_TOKEN=munea-admin-token-staging:latest,MUNEA_ADMIN_PASSWORD=munea-admin-password:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest,MUNEA_APNS_PRIVATE_KEY=munea-apns-private-key:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest" \
     --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_APNS_KEY_ID=59QVAHNMZP|MUNEA_APNS_TEAM_ID=V77L5245MR|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=production|MUNEA_RELEASE_VERSION=$RELEASE_VERSION|MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app|SUPABASE_URL=https://fespbkdwafueyonppzwq.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_fP-PoA531waoIOmxl8tsWg_kCeZQD0e|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
-    --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
+    --memory 1Gi --min-instances 1 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
+  # ↑ 2026-10-26 Edward 拍板：正式大腦常駐一台（約 US$7–10／月）。沒人用就睡著＝後台登入要等 5–15 秒、
+  #   真用戶第一次開 App 也要等；7/29 查出來、只在前端加了「自動再試一次」拐杖。語音橋維持 0（有通話才熱）。
 else
   VERIFY_LOCALE_MODE="compatibility"
   echo "== 部署 ${SVC}（正式語音橋・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="

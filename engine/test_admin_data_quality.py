@@ -157,7 +157,12 @@ def test_admin_read_handlers_are_wrapped_by_the_contract():
         "munea.admin.audit-events.v1",
         "munea.admin.voice-diagnostics.v1",
     ):
-        assert f'admin_contract_response("{metric_version}"' in source
+        # 2026-10-26 起 15 支後台讀接口改走 admin_cached_read（60 秒快取），它內部仍一律經過
+        # admin_contract_response 出貨（見 test_admin_read_cache.py）；兩種寫法都算有包契約。
+        assert (
+            f'admin_contract_response("{metric_version}"' in source
+            or f'admin_cached_read("{metric_version}", data' in source
+        )
 
 
 def main():
