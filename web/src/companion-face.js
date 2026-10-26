@@ -16,6 +16,7 @@
     layers: {
       body: DIR + 'body.webp', head: DIR + 'head.webp', feat: DIR + 'feat.webp',
       half: DIR + 'mouth-half.webp', open: DIR + 'mouth-open.webp', eyes: DIR + 'eyes-closed.webp',
+      front: DIR + 'hair-front.webp',
     },
     faceMask: DIR + 'facemask.png',   // 臉的範圍：五官只准畫在這裡面
   };
@@ -37,6 +38,7 @@
     sampleLevel: null,
     _pollTimer: 0, _lvl: -1, _lvlAt: 0, _gainMax: 0.06, _open: 0, _mouth: 'closed', _mouthSince: 0,
     _blinkUntil: 0, _nextBlink: 0, _secondBlinkAt: 0, _syl: 0, _sylUntil: 0, _nod: 0, _still: false,
+    _look: 0, _lookVel: 0, _lookTarget: 0, _nextLook: 0,
 
     mount: function (host) {
       if (this.root || !host) return !!this.root;
@@ -56,6 +58,8 @@
       this.feat = el('ff-part ff-feat', this.faceClip);
       // 疊放順序固定：五官 → 嘴 → 閉眼放最後（8/12 眨眼鬼影教訓：覆蓋貼圖一律畫在最上面）
       ['feat', 'half', 'open', 'eyes'].forEach(function (k) { F.layer[k] = F._img(k, F.feat); });
+      // 垂在臉上的細髮絲另外一層、疊在五官上面，跟著頭動——橫過眉尾的那縷才不會被眉毛蓋住或斷開
+      this.layer.front = this._img('front', this.head);
       host.appendChild(root);
       // 淺色背景：頂部名字／計時改深色字（白字實測只有 2.2:1，看不清楚）
       var screen = host.closest('.face-screen');
@@ -189,21 +193,32 @@
       this._show('eyes', now < this._blinkUntil);
 
       if (this._still) return;
-      // 身體：4.2 秒一次呼吸（胸口微微起伏）＋7.3 秒一次很輕的重心左右晃，以畫面底邊為軸
+      // 身體：只有呼吸（4.2 秒一次、胸口微微起伏），以畫面底邊為軸；不左右晃
       var br = Math.sin(t * 2 * Math.PI / 4.2);
-      var sway = Math.sin(t * 2 * Math.PI / 7.3) * 0.5;
-      this.body.style.transform = 'translateY(' + (-br * 0.22).toFixed(3) + '%) rotate(' + sway.toFixed(3) + 'deg) scale('
+      this.body.style.transform = 'translateY(' + (-br * 0.2).toFixed(3) + '%) scale('
         + (1 + br * 0.002).toFixed(5) + ',' + (1 + br * 0.004).toFixed(5) + ')';
-      // 頭：兩個週期錯開的慢波疊起來，左右擺不會像鐘擺一樣規律；講話時多一點點頭。
-      // 幅度以「正常手機大小看得出來」為準（±1.6 度時女巫判定幾乎看不出在動）
-      var turn = 0.62 * Math.sin(t * 2 * Math.PI / 5.7) + 0.38 * Math.sin(t * 2 * Math.PI / 9.1 + 1.3);
-      var nodTarget = speaking ? this._open * 0.9 : 0;
+      // 頭：像真人用脖子轉頭看——大部分時間正對你，偶爾往左或往右轉一點、停一兩秒再轉回來。
+      // 不歪頭、不來回擺（Edward 10/26：頭不要這樣晃動，脖子左轉一點、右轉一點）。
+      if (now >= this._nextLook) {
+        var choices = speaking ? [0, 0, 0.7, -0.7] : [0, 0, 0.7, -0.7, 1, -1];
+        var next = this._lookTarget;
+        while (next === this._lookTarget) next = choices[Math.floor(Math.random() * choices.length)];
+        this._lookTarget = next;
+        this._nextLook = now + (next === 0 ? 2600 + Math.random() * 2600 : 1400 + Math.random() * 1600);
+      }
+      // 轉過去的速度用臨界阻尼的彈簧：起步和停下都是緩的，約 0.6 秒到位、不會晃過頭
+      var ds = dt / 1000, w = 7.5;
+      this._lookVel += (w * w * (this._lookTarget - this._look) - 2 * w * this._lookVel) * ds;
+      this._look += this._lookVel * ds;
+      var look = this._look, mag = Math.abs(look);
+      var nodTarget = speaking ? this._open : 0;
       this._nod += (nodTarget - this._nod) * (1 - Math.exp(-dt / 160));
-      var nod = 0.45 * Math.sin(t * 2 * Math.PI / 3.9 + 0.7) + this._nod;
-      this.head.style.transform = 'translate(' + (turn * 1.1).toFixed(3) + '%,' + (nod * 0.55).toFixed(3) + '%) rotate('
-        + (-turn * 3.2).toFixed(3) + 'deg)';
-      // 五官只比頭多走一點點：多太多會像臉在頭髮裡面滑動（Edward 10/26：頭髮要跟著臉一起動）
-      this.feat.style.transform = 'translate(' + (turn * 0.3).toFixed(3) + '%,' + (nod * 0.1).toFixed(3) + '%)';
+      // 轉頭：整顆頭（頭髮、髮絲、五官一體）往轉的方向移，遠的那一側稍微收窄——像臉真的轉過去。
+      // 五官不再相對頭移動：多移一點點就會讓橫過眉尾的髮絲斷開（Edward 10/26 圈出左眉）。
+      var px = this.skin.pivot[0] + (look > 0 ? 1 : -1) * 14;
+      this.head.style.transformOrigin = px.toFixed(2) + '% ' + this.skin.pivot[1] + '%';
+      this.head.style.transform = 'translate(' + (look * 1.2).toFixed(3) + '%,' + (this._nod * 0.2).toFixed(3) + '%) scaleX('
+        + (1 - mag * 0.045).toFixed(4) + ')';
     },
   };
 

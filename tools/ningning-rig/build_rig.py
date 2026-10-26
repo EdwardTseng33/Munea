@@ -29,9 +29,14 @@ if cfg.get('hair_all_pieces'):
         if sizes[i - 1] < 20: continue
         ys_, xs_ = np.where(comp)
         if ys_.mean() > cfg['chin_y'] + 200: continue
-        if (comp & featz).sum() / comp.sum() > 0.5: continue
+        thin = ndi.binary_opening(comp, structure=np.ones((7, 7))).sum() < 0.25 * comp.sum()
+        if (comp & featz).sum() / comp.sum() > 0.5 and not thin: continue   # 細細一條的永遠算髮絲
         hair |= comp
-hair &= ~ell(cfg['brows'])            # 眉毛碰到瀏海也算五官
+# 眉毛只認「粗的那一條」：眉毛範圍裡的深色先做開運算，細髮絲會被濾掉、仍算頭髮
+brow_zone = ell(cfg['brows'])
+brow_mask = ndi.binary_opening(dark & brow_zone, structure=np.ones((9, 9)))
+brow_mask = ndi.binary_dilation(brow_mask, iterations=2) & dark & brow_zone
+hair &= ~brow_mask
 bgc = np.array(cfg['bg'], float); is_bg = np.abs(b - bgc).sum(axis=2) < 30
 # 臉＝從臉中央長出去的皮膚色，限制在下巴以上
 near_skin = (np.abs(b - skin).sum(axis=2) < 70)
@@ -41,12 +46,23 @@ lab2, _ = ndi.label(cand)
 face = lab2 == lab2[cfg['face_center'][1], cfg['face_center'][0]]
 face = ndi.binary_fill_holes(face)
 head = ndi.binary_fill_holes(hair | face)   # 頭髮之間夾的細縫也算頭，要跟著頭一起動
+# 但大塊被髮絲圍住的背景（臉頰旁那種）不算頭：跟著頭移會蓋到脖子
+bgc_e = np.array(cfg['bg'], float)
+encl = head & ~hair & ~face & (np.abs(b - bgc_e).sum(axis=2) < 40)
+lab_e, ne = ndi.label(encl)
+if ne:
+    sz_e = ndi.sum(encl, lab_e, range(1, ne + 1))
+    big = np.isin(lab_e, 1 + np.where(sz_e > 2500)[0])
+    head &= ~big
 head[cut:, :] &= hair[cut:, :]          # 下巴以下只留頭髮，脖子歸身體
 # 頭髮外緣半透明的那一圈也算頭（不是純背景色的就收進來），不然轉頭時會在原位留一條淡線
 bgc0 = np.array(cfg['bg'], float)
 ring = ndi.binary_dilation(head, iterations=3) & ~head
 head |= ring & (np.abs(b - bgc0).sum(axis=2) > 8) & (np.arange(H)[:, None] < cut + 400)
-feat_m = ell(cfg['features']) & ~hair & head
+feat_zone = ell(cfg['features']) & ~hair & head
+# 五官層只放五官本身（跟皮膚色差得多的）、不夾帶周圍皮膚——移動時才不會用皮膚蓋到旁邊的髮絲
+feat_px = (np.abs(b - skin).sum(axis=2) > 22) & feat_zone
+feat_m = ndi.binary_dilation(feat_px, iterations=3) & feat_zone
 
 def save(arr_rgb, alpha, name):
     a = np.clip(alpha, 0, 1)
@@ -97,6 +113,11 @@ save(body, body_a, 'r-body.png')
 blank = b.copy(); blank[feat_m] = skin
 save(blank, head.astype(float), 'r-head.png')
 save(b, feat_m.astype(float), 'r-feat.png')
+front = hair & ndi.binary_dilation(face, iterations=30)
+# 眉毛範圍裡「不是眉毛主體」的深色細線（橫過眉尾的髮絲）也放前景層，永遠疊在眉毛上面
+brow_core = ndi.binary_opening(dark & brow_zone, structure=np.ones((11, 11)))
+front |= dark & ndi.binary_dilation(brow_zone, iterations=12) & ~ndi.binary_dilation(brow_core, iterations=1)
+save(b, front.astype(float), 'r-front.png')
 # 臉的範圍（頭層扣掉頭髮）：五官層只准畫在這裡面，轉頭時跑出臉邊的部分自動藏起來
 facezone = head & ~hair
 save(np.full((H, W, 3), 255.0), facezone.astype(float), 'r-facemask.png')
