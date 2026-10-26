@@ -8,13 +8,12 @@
   'use strict';
   var DIR = 'avatars/ningning-rig/';
   var SKIN = {
-    bg: '#C5E3DB',           // 跟圖的背景同色：手機比圖寬的時候，兩側看不出邊
-    zoom: 1,                 // 整張圖佔滿畫面高度；距離感已畫進圖裡（人坐在桌前、縮在畫面中央）
+    bg: '#BADDD6',           // 跟圖的背景同色：手機比圖寬的時候，兩側看不出邊
+    zoom: 1,                 // 整張圖佔滿畫面高度；大小比例照原本照片寧寧的視訊構圖
     aspect: 1536 / 2752,
-    pivot: [50.8, 53.0],     // 頭轉動的軸心（下巴下緣、脖子上端），以整張圖的百分比計
-    waist: 73.6,             // 身體晃動的軸心高度（手肘靠桌的那條線）
+    pivot: [50.9, 50.5],     // 頭轉動的軸心（下巴下緣、脖子上端），以整張圖的百分比計
+    waist: 100,              // 身體晃動的軸心高度（畫面底邊）
     layers: {
-      table: DIR + 'table.webp',
       body: DIR + 'body.webp', head: DIR + 'head.webp', feat: DIR + 'feat.webp',
       half: DIR + 'mouth-half.webp', open: DIR + 'mouth-open.webp', eyes: DIR + 'eyes-closed.webp',
     },
@@ -190,7 +189,7 @@
       this._show('eyes', now < this._blinkUntil);
 
       if (this._still) return;
-      // 身體：4.2 秒一次呼吸（胸口微微起伏）＋7.3 秒一次很輕的重心左右晃，以手肘靠桌那條線為軸
+      // 身體：4.2 秒一次呼吸（胸口微微起伏）＋7.3 秒一次很輕的重心左右晃，以畫面底邊為軸
       var br = Math.sin(t * 2 * Math.PI / 4.2);
       var sway = Math.sin(t * 2 * Math.PI / 7.3) * 0.5;
       this.body.style.transform = 'translateY(' + (-br * 0.22).toFixed(3) + '%) rotate(' + sway.toFixed(3) + 'deg) scale('
@@ -203,8 +202,8 @@
       var nod = 0.45 * Math.sin(t * 2 * Math.PI / 3.9 + 0.7) + this._nod;
       this.head.style.transform = 'translate(' + (turn * 1.1).toFixed(3) + '%,' + (nod * 0.55).toFixed(3) + '%) rotate('
         + (-turn * 3.2).toFixed(3) + 'deg)';
-      // 五官往轉頭的方向多走一點＝看起來像臉真的轉過去，而不是整顆頭平移
-      this.feat.style.transform = 'translate(' + (turn * 1.4).toFixed(3) + '%,' + (nod * 0.4).toFixed(3) + '%)';
+      // 五官只比頭多走一點點：多太多會像臉在頭髮裡面滑動（Edward 10/26：頭髮要跟著臉一起動）
+      this.feat.style.transform = 'translate(' + (turn * 0.3).toFixed(3) + '%,' + (nod * 0.1).toFixed(3) + '%)';
     },
   };
 

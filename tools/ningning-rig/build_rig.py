@@ -21,6 +21,16 @@ dark = lum < 90
 lab, n = ndi.label(dark)
 sizes = ndi.sum(dark, lab, range(1, n+1))
 hair = lab == (1 + int(np.argmax(sizes)))
+if cfg.get('hair_all_pieces'):
+    # 臉旁垂下的細髮絲常跟主頭髮沒連在一起：凡是不在五官範圍裡的深色塊都算頭髮，轉頭時才會一起動
+    featz = ell(cfg['features'])
+    for i in range(1, n + 1):
+        comp = lab == i
+        if sizes[i - 1] < 20: continue
+        ys_, xs_ = np.where(comp)
+        if ys_.mean() > cfg['chin_y'] + 200: continue
+        if (comp & featz).sum() / comp.sum() > 0.5: continue
+        hair |= comp
 hair &= ~ell(cfg['brows'])            # 眉毛碰到瀏海也算五官
 bgc = np.array(cfg['bg'], float); is_bg = np.abs(b - bgc).sum(axis=2) < 30
 # 臉＝從臉中央長出去的皮膚色，限制在下巴以上
