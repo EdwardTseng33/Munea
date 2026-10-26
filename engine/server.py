@@ -7364,6 +7364,32 @@ def org_portal_summary_response(data=None):
     return {"ok": True, "expiresAt": claims["expiresAt"], **summary}
 
 
+def org_portal_report_response(query_string=""):
+    """GET /enterprise/portal/report?t=<憑證>&id=<月報代號>：機構窗口下載自己那一家的 ESG 月報。
+
+    回 (status, content_type, body)。跟 summary 同一張憑證、同一套規矩：
+    · 沒憑證／簽章不對／過期 → 401，而且不說是哪一關沒過（過期除外，窗口要知道去要新連結）
+    · 憑證是 A 家、月報是 B 家 → 404，跟「這份不存在」長得一模一樣，不透露 B 家有沒有月報
+    · 月報本體是月結當下凍結存檔的 HTML（enterprise_reports.report_html），直接回原樣、
+      不即時重算——跟後台下載同一份，窗口跟我們看到的是同一個版本
+    """
+    params = urllib.parse.parse_qs(query_string or "", keep_blank_values=False)
+    token = (params.get("t") or params.get("token") or [""])[0]
+    report_id = (params.get("id") or params.get("report") or [""])[0]
+    try:
+        claims = org_portal.verify_portal_token(token)
+    except org_portal.PortalTokenError as exc:
+        code = "token_expired" if exc.code == "token_expired" else "invalid_token"
+        body = json.dumps({"ok": False, "error": code}, ensure_ascii=False).encode("utf-8")
+        return 401, "application/json; charset=utf-8", body
+    report = org_portal.lookup_report_for_client(claims["clientId"], report_id)
+    html = (report or {}).get("reportHtml") if report else None
+    if not html:
+        body = json.dumps({"ok": False, "error": "report_not_found"}, ensure_ascii=False).encode("utf-8")
+        return 404, "application/json; charset=utf-8", body
+    return 200, "text/html; charset=utf-8", str(html).encode("utf-8")
+
+
 def enterprise_invoices_response(data=None):
     """3.6 /admin/enterprise/invoices：請款單列表，含狀態、逾期天數、累計欠款。"""
     data = data or {}
@@ -10254,6 +10280,12 @@ class H(BaseHTTPRequestHandler):
                 # 巡邏燈卻全綠——因為誰都沒在問這一句。
                 "ai": ai_health.status(),
             })
+            return
+        if path == "/enterprise/portal/report":
+            # 機構窗口下載月報：不吃管理鑰匙、不吃會員登入證，吃的是網址裡那張簽章憑證。
+            query_string = self.path.split("?", 1)[1] if "?" in self.path else ""
+            status, ctype, body = org_portal_report_response(query_string)
+            self._send(status, ctype, body, extra_headers={"X-Robots-Tag": "noindex, nofollow"})
             return
         if path in ("/", ""):
             path = "/index.html"
