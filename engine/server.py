@@ -10130,6 +10130,7 @@ DEFAULT_CORS_ORIGINS = {
     "http://localhost",
     "https://localhost",
     "https://app.munea.net",
+    "https://admin.munea.net",  # 2026-10-26 營運後台正式網址（Cloud Run 網域綁定）
     "https://munea.net",
     "https://www.munea.net",
 }
