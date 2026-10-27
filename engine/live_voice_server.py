@@ -549,7 +549,7 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
             policy0 = (result or {}).get("responsePolicy") or {}
             if who == "user" and policy0.get("softSignalForReview") and st.get("semantic_calls", 0) < GUARDIAN_SEMANTIC_CALL_CAP:
                 st["semantic_calls"] = st.get("semantic_calls", 0) + 1
-                sem = await asyncio.to_thread(perception_engine.guardian_semantic_review, text, [st.get("user_buf", "")])
+                sem = await asyncio.to_thread(perception_engine.guardian_semantic_review, text, [st.get("user_buf", "")], bool(policy0.get("reviewForced")))
                 if sem and sem.get("level") in ("high", "critical"):
                     _sem_cat_map = {"self_harm": "self_harm_crisis", "medical_emergency": "medical_emergency_signal",
                                     "protection": "protection_event", "mental_state": "mental_state_abnormal"}

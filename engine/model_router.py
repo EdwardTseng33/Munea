@@ -1165,9 +1165,10 @@ def guardian_evaluate_response(data):
 
     # 第一層沒抓到硬危機、但話裡有拐彎苗頭 → 標記給第二層 AI 判語意（見 perception_engine.guardian_semantic_review）
     # 講別人的急症／想不開也走這條：不中斷通話，但讓 AI 看前後文決定要不要關心
-    soft_signal_for_review = level in {"none", "low"} and (
-        _GUARDIAN_REVIEW_ALL or about_someone_else or _guardian_soft_signal(scrubbed, soft_signal_terms) or _guardian_soft_signal(lowered, ())
-    )
+    keyword_gated = about_someone_else or _guardian_soft_signal(scrubbed, soft_signal_terms) or _guardian_soft_signal(lowered, ())
+    soft_signal_for_review = level in {"none", "low"} and (_GUARDIAN_REVIEW_ALL or keyword_gated)
+    # 只因閘全開才送的句子（沒命中任何拐彎關鍵字）：第二層 AI 的 high 門檻拉高到 0.8，少打擾（見 perception_engine）
+    review_forced = bool(soft_signal_for_review and not keyword_gated)
 
     return {
         "ok": True,
@@ -1190,5 +1191,6 @@ def guardian_evaluate_response(data):
             "doNotReinforceDelusion": "mental_state_abnormal" in categories,
             "protectionLine": "113" if protection_event else None,
             "softSignalForReview": soft_signal_for_review,
+            "reviewForced": review_forced,
         },
     }

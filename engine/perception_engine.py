@@ -469,13 +469,14 @@ _GUARDIAN_SEMANTIC_SYS = """你是沐寧的安全判讀助手（陪伴用、非�
 3. 輕微、慢性、已經自己處理好的小毛病（腳會痠、膝蓋酸、坐太久腳麻站起來走走就好、吃太飽肚子脹）→ none 或 low。
 4. 想不開要有「結束／離開／不想再繼續／把自己當負擔／交代後事／去某處不回來／不想醒來」這類指向才給 critical；「活著沒意思／活著沒什麼意思」「這樣下去也不是辦法」「不知道還能做什麼了」「看不見我你別難過」「照片都整理好了以後不用煩惱」「把照片看一遍像在說再見」「留了一封信藏著到時候幫我看」「錢都留給孫子以後他們會過得比較好」「吃藥時想說多吃幾顆就沒事」是被動想不開、道別或交代後事的講法 → 至少 high（confidence 0.7 以上），有工具或過量指向 → critical；單純抱怨累、吵、煩 → low。
 5. 氣話（讓他好看、給他一點顏色、想找他算帳、氣到想巴他）→ low；「把他處理掉」「不知道我會做出什麼」「控制不住自己」這種有傷人方向的話，以及針對特定人的破壞計畫（去他家潑漆、燒他的車、砸他的店）→ high；有具體傷人方法、已準備工具、或說「要動手了」才 critical。
-6. 身體：本人現在有「突然、越來越、停不下來、半邊、講不清楚、流血不止、昏、站不住、冒冷汗」這類急症指向才 high；一般不舒服 → low。
-7. 疏忽／無人照顧：本人現在「沒人照顧、整天沒人說話、沒東西吃、只給剩飯好幾天沒吃飽、沒人幫拿藥」→ high（protection）；只是說自己一個人住、習慣了 → low。
-8. 環境或設備問題（燈泡壞了看不到、水管漏、沒瓦斯、電視壞掉）不是保護事件也不是急症 → none 或 low；protection 只給「人」造成的傷害、剝削、疏忽。
+6. 身體：本人現在有「突然、越來越、停不下來、半邊、講不清楚、流血不止、昏、站不住、冒冷汗」這類急症指向才 high；一般不舒服、慢性老毛病、「最近容易累／爬樓梯會喘／數字有點高」這種要回診追蹤的 → low，不是急症。
+7. 疏忽／無人照顧：本人現在「沒人照顧、沒東西吃、只給剩飯好幾天沒吃飽、沒人幫拿藥、被鎖著」→ high（protection）；只是寂寞（一整天沒人跟我講話、沒人陪）、一個人住、習慣了 → low，那是要關心、不是保護事件。
+8. protection 只給「人」對本人造成的傷害、剝削、疏忽：被打罵推、錢或證件被拿、被鎖、沒飯吃。以下都不是：環境或設備問題（燈泡壞、水管漏）、家人唸他／罵他懶、朋友在傳謠言、有難以啟齒的事要求保密、怕被騙但還沒被騙 → none 或 low。
+9. confidence 要誠實：話講得明、指向清楚才 0.9 以上；拐彎、模糊、要靠猜的最多 0.6——寧可讓規則層或下一句再抓，不要用 0.8 硬給 high。
 規則：這是「判讀有沒有值得關心的訊號」不是診斷；寧可保守、拿不準就 none 或 low、confidence 給低；只有明確拐彎透露 high/critical 訊號才給高，且 confidence 要對得起判斷。"""
 
 
-def guardian_semantic_review(text, recent=None):
+def guardian_semantic_review(text, recent=None, forced=False):
     """守護腦第二層：拐彎危機語意判讀（Gemini Flash）。只在第一層規則沒抓到硬危機、但命中軟訊號時才呼叫
     （見 model_router 的 responsePolicy.softSignalForReview）。
     回 {level, category, confidence, reason, source} 或 None——沒訊號／沒 key／失敗都回 None，絕不影響第一層規則層。"""
@@ -507,7 +508,12 @@ def guardian_semantic_review(text, recent=None):
         conf = 0.0
     # 雙閘門：critical（想不開）信心 ≥ 0.6、high（急症／受暴／精神）信心 ≥ 0.7 才回報動作，其餘一律視為「沒抓到」
     # （保守、避免誤報打擾長輩；想不開漏接比多關心一次嚴重，所以門檻低一點——2026-10-13 依量測調）
-    if (level == "critical" and conf >= 0.6) or (level == "high" and conf >= 0.7):
+    # 類別是「情緒要關心」或「沒訊號」就不可能是 high／critical——AI 偶爾會給 distress＋high（「覺得自己沒路用」），那是要關心、不是要中斷通話
+    if (d.get("category") or "").strip() in ("distress", "none", ""):
+        return None
+    # forced＝沒命中任何拐彎關鍵字、只因閘全開才送來的句子：high 門檻拉到 0.8（2026-10-28 考卷語料 161 句量：0.7 會多 6 個假警報、0.8 剩 1）
+    high_floor = 0.8 if forced else 0.7
+    if (level == "critical" and conf >= 0.6) or (level == "high" and conf >= high_floor):
         return {
             "level": level,
             "category": (d.get("category") or "").strip()[:20],
