@@ -526,6 +526,9 @@ def _guardian_begin_real_user_turn(st):
     return turn_id
 
 
+GUARDIAN_SEMANTIC_CALL_CAP = int(os.environ.get("MUNEA_GUARDIAN_SEMANTIC_CAP", "80") or 80)
+
+
 async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=None):
     """背景任務：非同步跑守護腦判讀 + 記錄/告警 +（high/critical）排隊安全導引。絕不擋音訊管線。"""
     try:
@@ -541,9 +544,10 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
         categories = tuple(risk.get("categories") or [])
         await asyncio.to_thread(guardian_record_and_alert, who, cid, result)
         if level not in ("high", "critical"):
-            # 第二層：第一層沒抓到硬危機、但用戶的話有「拐彎苗頭」→ 升級便宜 AI 判語意（只判用戶說的、每通上限 5 次、背景跑不擋通話）
+            # 第二層：第一層沒抓到硬危機的用戶句子 → 升級便宜 AI 判語意（只判用戶說的、背景跑不擋通話）。
+            # 2026-10-28 閘全開後每句都送：上限從 5 次放到 80 次（長通話也蓋得到；每句約 NT$0.013，80 句 NT$1 封頂）
             policy0 = (result or {}).get("responsePolicy") or {}
-            if who == "user" and policy0.get("softSignalForReview") and st.get("semantic_calls", 0) < 5:
+            if who == "user" and policy0.get("softSignalForReview") and st.get("semantic_calls", 0) < GUARDIAN_SEMANTIC_CALL_CAP:
                 st["semantic_calls"] = st.get("semantic_calls", 0) + 1
                 sem = await asyncio.to_thread(perception_engine.guardian_semantic_review, text, [st.get("user_buf", "")])
                 if sem and sem.get("level") in ("high", "critical"):
