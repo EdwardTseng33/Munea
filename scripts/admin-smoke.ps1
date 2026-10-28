@@ -185,7 +185,10 @@ foreach ($directive in @("default-src 'none'", "frame-ancestors 'none'", "script
     throw "/admin.html Content-Security-Policy missing directive: $directive"
   }
 }
-foreach ($token in @("Munea", 'id="sideNav"', 'id="pageRoot"', 'id="statusPill"', 'id="refreshBtn"', 'aria-live="polite"', "src/admin.js", "src/admin.css")) {
+# 2026-10-28: statusPill was removed in the 2026-07-20 console redesign (#204) and
+# test-admin-console.js now forbids it, yet this list kept requiring it, so the smoke
+# has failed on every real server since then. Require lastUpdated/logoutBtn instead.
+foreach ($token in @("Munea", 'id="sideNav"', 'id="pageRoot"', 'id="lastUpdated"', 'id="refreshBtn"', 'id="logoutBtn"', 'aria-live="polite"', "src/admin.js", "src/admin.css")) {
   if ($adminPage.Content -notmatch [regex]::Escape($token)) {
     throw "/admin.html missing token: $token"
   }
@@ -194,7 +197,7 @@ $adminScript = Invoke-WebRequest -Uri "$BaseUrl/src/admin.js" -Headers $identity
 if ($adminScript.StatusCode -ne 200) {
   throw "/src/admin.js returned HTTP $($adminScript.StatusCode)"
 }
-foreach ($token in @("apiBaseUrl", "adminToken", "renderSubscription", "/admin/subscription-metrics", "pts-cell", "MUNEA_ADMIN_APP_KEY", "REQUEST_TIMEOUT_MS", "normalizeAdminBaseUrl")) {
+foreach ($token in @("apiBaseUrl", "ADMIN_TOKEN_KEY", "renderSubscription", "/admin/subscription-metrics", "pts-cell", "MUNEA_ADMIN_APP_KEY", "REQUEST_TIMEOUT_MS", "normalizeAdminBaseUrl")) {
   if ($adminScript.Content -notmatch [regex]::Escape($token)) {
     throw "/src/admin.js missing token: $token"
   }
@@ -212,6 +215,43 @@ foreach ($entry in $adminReadBodies.GetEnumerator()) {
   Expect-AdminHttpError $entry.Key $entry.Value 403 $identityHeaders
 }
 Pass "all console read endpoints reject requests without admin token"
+
+# 2026-10-28: enterprise console pages load on demand and are not in EP_LIST, so the
+# contract above never covered them; the org portal link is a separate, admin-token-free
+# door. Both were untested by smoke until now:
+#   - enterprise endpoints must reject requests without the admin token (403, same rule as EP_LIST)
+#   - the org portal summary must answer ok:false to a missing/forged link and leak no field at all
+# scripts/test-admin-console.js asserts this block stays in place.
+$enterpriseGateBodies = [ordered]@{
+  "/admin/enterprise/clients" = @{}
+  "/admin/enterprise/invoices" = @{}
+  "/admin/enterprise/billing-settings" = @{}
+  "/admin/enterprise/portal/issue-link" = @{ clientId = "smoke-no-such-client" }
+}
+
+Step "Enterprise gate"
+foreach ($entry in $enterpriseGateBodies.GetEnumerator()) {
+  Expect-AdminHttpError $entry.Key $entry.Value 403 $identityHeaders
+}
+Pass "enterprise endpoints reject requests without admin token"
+
+Step "Org portal link gate"
+$portalSummaryFields = @("org", "seats", "usage", "guardian", "reports", "generatedAt", "expiresAt")
+foreach ($body in @(@{}, @{ token = "smoke-not-a-real-portal-token" })) {
+  $portal = Invoke-AdminJson "/enterprise/portal/summary" $body $identityHeaders
+  if ($portal.ok) {
+    throw "/enterprise/portal/summary accepted a missing or forged link token"
+  }
+  if ([string]$portal.error -ne "invalid_token") {
+    throw "/enterprise/portal/summary returned error '$($portal.error)', expected 'invalid_token'"
+  }
+  foreach ($field in $portalSummaryFields) {
+    if ($portal.PSObject.Properties.Name -contains $field) {
+      throw "/enterprise/portal/summary leaked '$field' without a valid link token"
+    }
+  }
+}
+Pass "org portal summary refuses missing/forged links without leaking any numbers"
 
 if (-not $AdminToken) {
   Skip "Admin token not provided; skipped privileged admin read checks"
@@ -234,6 +274,15 @@ $credits = Invoke-AdminJson "/admin/credits" @{ limit = 5 } $adminHeaders
 if (-not $credits.ok) {
   throw "/admin/credits did not return ok:true"
 }
+
+Step "Enterprise reads"
+foreach ($path in @("/admin/enterprise/clients", "/admin/enterprise/invoices", "/admin/enterprise/billing-settings")) {
+  $result = Invoke-AdminJson $path @{} $adminHeaders
+  if (-not $result.ok) {
+    throw "$path did not return ok:true"
+  }
+}
+Pass "enterprise read endpoints ok with admin token"
 $accounts = $adminResults["/admin/accounts"]
 $usage = $adminResults["/admin/usage"]
 $privacy = $adminResults["/admin/privacy-requests"]
