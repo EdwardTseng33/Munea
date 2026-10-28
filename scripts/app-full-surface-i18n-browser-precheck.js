@@ -348,9 +348,14 @@ async function resetAndPrepareState(page, state) {
       'modal:medication-reminder': 'medRemindModal',
       'modal:medication-manager': 'medMgrModal',
       'modal:auth': 'authSheet',
+      'modal:care-week': 'careWeekModal',
     };
     if (modalIds[requestedState]) {
-      setScreen(requestedState === 'modal:report' ? 'status' : 'settings');
+      setScreen(
+        requestedState === 'modal:report' ? 'status'
+          : requestedState === 'modal:care-week' ? 'family'
+            : 'settings',
+      );
       if (requestedState === 'modal:activity-detail') {
         const body = $('#actDetailBody');
         body.replaceChildren();
