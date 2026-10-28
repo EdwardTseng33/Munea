@@ -76,8 +76,23 @@ def find_target(nodes, queries):
 
 
 def dump_current_screen(dump_path):
-    adb('shell', 'uiautomator', 'dump', DEVICE_DUMP_PATH)
-    adb('pull', DEVICE_DUMP_PATH, str(dump_path))
+    """撈一次畫面；撈不到就回 None（＝「畫面還沒好」，交給外層照 timeout 重試）。
+
+    2026-10-28 第四輪紅的真因：模擬器這次開得特別慢，App 啟動 6 秒後 WebView 還是
+    一片白、15 秒後才看到啟動頁。這種時候 `uiautomator dump` 會印 ERROR（拿不到
+    idle state／root node）卻以 0 結束、檔案根本沒產出，接著 `adb pull` 才炸——
+    等於第一次撈畫面就把整個「等 40 秒」的重試迴圈炸掉，跟固定 sleep 賭運氣沒兩樣。
+    所以這裡不把「撈不到」當失敗，印出原因、回 None，讓外層繼續等。
+    """
+    subprocess.run(['adb', 'shell', 'rm', '-f', DEVICE_DUMP_PATH], capture_output=True, text=True)
+    dumped = subprocess.run(['adb', 'shell', 'uiautomator', 'dump', DEVICE_DUMP_PATH],
+                            capture_output=True, text=True)
+    pulled = subprocess.run(['adb', 'pull', DEVICE_DUMP_PATH, str(dump_path)],
+                            capture_output=True, text=True)
+    if dumped.returncode != 0 or pulled.returncode != 0 or not Path(dump_path).exists():
+        reason = ' | '.join(s.strip() for s in (dumped.stdout, dumped.stderr, pulled.stderr) if s and s.strip())
+        print(f'[WAIT] 這次撈不到畫面（{reason[:200]}）——WebView 可能還在載入，稍後再撈')
+        return None
     return Path(dump_path).read_text(encoding='utf-8', errors='replace')
 
 
@@ -101,7 +116,12 @@ def main():
     while True:
         attempt += 1
         xml_text = dump_current_screen(args.dump_path)
-        nodes = collect_nodes(xml_text)
+        try:
+            nodes = collect_nodes(xml_text) if xml_text else []
+        except ET.ParseError as exc:
+            # dump 到一半被畫面更新打斷也會給出殘缺的 XML——同樣當「還沒好」處理
+            print(f'[WAIT] 這次撈到的畫面不完整（{exc}）——稍後再撈')
+            nodes = []
         target, match_kind = find_target(nodes, queries)
         if target is not None:
             x, y = parse_bounds(target['bounds'])

@@ -60,8 +60,10 @@ sleep 3
 screenshot "01-launch-3s"
 record "啟動 App（等 3 秒）" "有畫面、不是白屏或崩潰對話框" "看截圖 01" "01-launch-3s.png"
 
-echo "== 等底部導覽列出現（最多等 40 秒，不是固定 sleep 賭運氣）=="
-if python3 scripts/android-ui-tap-by-text.py --text "聊聊,Talk" --dump-path "$SHOTS_DIR/02-wait-tabbar.xml" --timeout 40; then
+# 2026-10-28 第四輪：模擬器冷到 App 啟動 15 秒後才看到啟動頁，40 秒差點不夠——放寬到 90 秒
+# （找到就立刻往下走，不會真的等滿；這裡的上限只管「最糟要等多久才宣告失敗」）。
+echo "== 等底部導覽列出現（最多等 90 秒，不是固定 sleep 賭運氣）=="
+if python3 scripts/android-ui-tap-by-text.py --text "聊聊,Talk" --dump-path "$SHOTS_DIR/02-wait-tabbar.xml" --timeout 90; then
   screenshot "02-home-ready"
   record "等首頁渲染完成" "底部導覽列（含「聊聊」分頁）出現" "成功，看截圖 02" "02-home-ready.png"
 else
@@ -76,7 +78,7 @@ screenshot "03-chat-view"
 record "進入聊聊／通話畫面" "畫面切到聊聊分頁" "看截圖 03" "03-chat-view.png"
 
 echo "== 找「開始通話」按鈕並點下去 =="
-if python3 scripts/android-ui-tap-by-text.py --text "開始或結束通話,Start or end call" --dump-path "$SHOTS_DIR/04-tap-call.xml" --timeout 15; then
+if python3 scripts/android-ui-tap-by-text.py --text "開始或結束通話,Start or end call" --dump-path "$SHOTS_DIR/04-tap-call.xml" --timeout 30; then
   sleep 5
   screenshot "05-call-state"
   record "點「開始通話」＋等 5 秒" "畫面會變化；模擬器沒麥克風，預期連不上真語音——只看畫面實際顯示什麼" "看截圖 05，如實記錄" "05-call-state.png"
