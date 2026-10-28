@@ -22,6 +22,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- 2026-10-28：Google／Apple 登入走瀏覽器完成後要能「跳回 App」。
+                 iOS 早就登記了 munea:// 這個回跳網址（Info.plist CFBundleURLSchemes），
+                 Android 這邊一直沒登記，所以安卓真帳號登入會卡在瀏覽器回不來。
+                 回跳網址＝auth-config.js 的 nativeRedirectTo（munea://auth/callback）。 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="munea" android:host="auth" />
+            </intent-filter>
+
         </activity>
 
         <provider
