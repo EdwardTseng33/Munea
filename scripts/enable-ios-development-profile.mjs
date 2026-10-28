@@ -15,6 +15,9 @@ const gatewayMode = args.includes('--gateway');
 const testAccountEmail = process.env.MUNEA_TEST_ACCOUNT_EMAIL || '';
 const testAccountPassword = process.env.MUNEA_TEST_ACCOUNT_PASSWORD || '';
 const positional = args.filter(a => !a.startsWith('--'));
+// 預設路徑是 iOS 的；2026-10-28 B1 查核點起，Android 流程測試也借同一支腳本，
+// 呼叫時帶 android/app/src/main/assets/public/src/auth-config.js 當第一個位置參數即可——
+// 純改這份生成出來的設定檔，不動 web/ 的 App 邏輯一行。
 const target = path.resolve(positional[0] || 'ios/App/App/public/src/auth-config.js');
 const productionConfig = path.resolve('web/src/auth-config.js');
 
@@ -22,7 +25,7 @@ if (target === productionConfig) {
   throw new Error('Refusing to enable the development profile in the production Web source.');
 }
 if (!fs.existsSync(target)) {
-  throw new Error(`Missing generated iOS auth config: ${target}. Run Capacitor sync first.`);
+  throw new Error(`Missing generated native auth config: ${target}. Run Capacitor sync first.`);
 }
 
 const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -67,4 +70,4 @@ ${endMarker}`;
 fs.writeFileSync(target, `${source}\n\n${profile}\n`, 'utf8');
 console.log(gatewayMode
   ? `Development GATEWAY profile enabled (real login + Call Control lease) in: ${target}`
-  : `Development profile enabled only in generated iOS assets: ${target}`);
+  : `Development profile enabled only in generated native assets (iOS/Android build copy): ${target}`);
