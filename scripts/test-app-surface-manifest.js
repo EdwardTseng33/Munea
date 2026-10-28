@@ -29,8 +29,9 @@ assert.deepEqual(manifest.captureProfiles, [
   'iphone-dynamic-type-large',
 ]);
 // 2026-08-10：39（原本 38）＋ screen:onboarding-intro 開場三頁。
+// 2026-10-28：40（原本 39）＋ modal:care-week 本週摘要（補助案 B4 第三項）。
 // 這個數字是刻意寫死的閘門——加畫面就要來這裡改一次，畫面總數才不會無聲漂移。
-assert.equal(manifest.surfaces.length, 39, 'The complete App visual surface count drifted');
+assert.equal(manifest.surfaces.length, 40, 'The complete App visual surface count drifted');
 
 const states = manifest.surfaces.map(({ state }) => state);
 assert.equal(new Set(states).size, states.length, 'App visual states must be unique');
@@ -65,6 +66,7 @@ const requiredStates = [
   'modal:auth',
   'page:notification-settings',
   'modal:notification-inbox',
+  'modal:care-week',
 ];
 for (const state of requiredStates) {
   assert.ok(states.includes(state), `Missing App visual state: ${state}`);

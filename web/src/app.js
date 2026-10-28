@@ -1243,7 +1243,7 @@ function playB64(b64) {
   } catch (e) {}
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
-const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000, '/visit-summary': 15000 };  // 摘要要撈記憶＋量測＋用藥三路，比一般請求慢（M1 PR-4c）
+const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000, '/visit-summary': 15000, '/care-week': 15000 };  // 摘要要撈記憶＋量測＋用藥三路，比一般請求慢（M1 PR-4c）；週摘要撈心情＋通話＋守護腦三路，一樣給長一點（補助案 B4）
 // 管家腦雲端正式住址（台灣機房）——打包後的手機沒有「同一棟樓」可打相對路徑，一定要絕對網址
 // 否則家人同步/邀請/資料權利/回饋全打空氣（7/9 上線體檢 B2 抓到的重傷）
 // 7/16 Edward 拍板 B 案：正式包指真正式 munea-brain（測試機 -staging 留給開發包與 canary）
@@ -9492,6 +9492,129 @@ function init() {
   if ($('#famManageBtn')) $('#famManageBtn').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
+
+  // ── 本週摘要（補助案 B4 第三項：家人圈管理／提醒設定都做過了，這是最後一塊）────────
+  // 入口在「全家狀態」標題旁；看哪位家人開著就打哪位的 personId，「全家」分頁時看自己
+  // （本人的事看自己最安全；要看別人，/care-week 後端自己核對是不是同一個健康圈）。
+  function cwActivePersonName() {
+    const btn = document.querySelector('.fam-switch-item.active');
+    const person = btn ? btn.dataset.person : 'all';
+    return (!person || person === 'all' || person === 'invite') ? '' : person;
+  }
+  function cwPersonContext() {
+    const name = cwActivePersonName();
+    if (!name) return { personId: null, label: circleSelfMember().name };
+    const member = loadCircle().find(m => m.name === name);
+    if (!member || member.self || !member.personId) return { personId: null, label: name };
+    return { personId: member.personId, label: name };
+  }
+  function cwWeekdayShort(dateISO) {
+    const wd = [muneaT('mood.weekdayShortSun', '日'), muneaT('mood.weekdayShortMon', '一'), muneaT('mood.weekdayShortTue', '二'),
+      muneaT('mood.weekdayShortWed', '三'), muneaT('mood.weekdayShortThu', '四'), muneaT('mood.weekdayShortFri', '五'),
+      muneaT('mood.weekdayShortSat', '六')];
+    const d = new Date(String(dateISO || '') + 'T12:00:00');
+    return Number.isNaN(d.getTime()) ? '' : wd[d.getDay()];
+  }
+  function cwMoodDotColor(level) {
+    if (level == null) return 'var(--line)';
+    if (level >= 4) return 'var(--teal)';
+    if (level >= 3) return 'var(--gold)';
+    return 'var(--coral)';
+  }
+  // 四段跟 /care-week 回的事實一一對應，不多加一句解讀；partial 寫到哪一段就在那一段老實說沒讀到
+  // （mood 這個 key 同時蓋「心情」跟「他自己提到的身體狀況」——兩段都是從同一次撈心情訊號來的）。
+  function cwSectionsHTML(data) {
+    const week = data.week, anomalies = data.anomalies || [], partial = data.partial || [];
+    const sec = title => '<h2 class="set-section">' + rptEsc(title) + '</h2>';
+    const partialLine = key => partial.includes(key)
+      ? '<p class="vs-note">⌛ ' + rptEsc(muneaT('careWeek.partial', '這一段這次沒讀到，不是沒事發生。')) + '</p>'
+      : '';
+    const parts = [];
+
+    parts.push(sec(muneaT('careWeek.contactTitle', '聯絡')));
+    parts.push('<div class="reader-card">');
+    const c = week.contact || {};
+    parts.push(c.empty
+      ? '<p class="vs-empty">' + rptEsc(muneaT('careWeek.contactEmpty', '這週沒有通話紀錄。')) + '</p>'
+      : '<p class="vs-note" style="margin:0">' + rptEsc(muneaT('careWeek.contactBody',
+        '這週通了 {calls} 次話；最長 {gap} 天沒聯絡；最後一次是 {last}。',
+        { calls: c.calls, gap: c.longestGapDays, last: rptShortDate(c.lastCallDate) || '—' })) + '</p>');
+    parts.push(partialLine('contact'));
+    parts.push('</div>');
+
+    parts.push(sec(muneaT('careWeek.moodTitle', '心情')));
+    parts.push('<div class="reader-card">');
+    const m = week.mood || {};
+    if (m.empty) {
+      parts.push('<p class="vs-empty">' + rptEsc(muneaT('careWeek.moodEmpty', '這週沒有心情紀錄。')) + '</p>');
+    } else {
+      parts.push('<div class="mood-mini">' + (m.daily || []).map(day =>
+        '<div class="mm-day"><div class="mm-dot" style="background:' + cwMoodDotColor(day.level) + '"></div>'
+        + '<div class="mm-lab">' + rptEsc(cwWeekdayShort(day.date)) + '</div></div>'
+      ).join('') + '</div>');
+      if (m.lowestDay) {
+        parts.push('<p class="vs-note">' + rptEsc(muneaT('careWeek.lowestDay',
+          '最低的一天 {date}，他說：{said}',
+          { date: rptShortDate(m.lowestDay.date) || m.lowestDay.date, said: m.lowestDay.said || muneaT('careWeek.noWordsLeft', '（沒有留下一句話）') })) + '</p>');
+      }
+    }
+    parts.push(partialLine('mood'));
+    parts.push('</div>');
+
+    parts.push(sec(muneaT('careWeek.spokenHealthTitle', '他自己提到的身體狀況')));
+    parts.push('<div class="reader-card">');
+    const h = week.spokenHealth || {};
+    parts.push('<p class="' + (h.empty ? 'vs-empty' : 'vs-note') + '" style="margin:0">'
+      + rptEsc(h.empty ? muneaT('careWeek.spokenHealthEmpty', '這週沒特別提。') : (h.items || []).join(muneaListSeparator())) + '</p>');
+    parts.push(partialLine('mood'));
+    parts.push('</div>');
+
+    parts.push(sec(muneaT('careWeek.anomaliesTitle', '守護提醒')));
+    parts.push('<div class="reader-card">');
+    if (!anomalies.length) {
+      parts.push('<p class="vs-empty">' + rptEsc(muneaT('careWeek.anomaliesEmpty', '這週沒有要特別留意的。')) + '</p>');
+    } else {
+      anomalies.forEach(a => {
+        parts.push('<div class="vs-line"><span class="q">' + rptEsc(a.fact || '')
+          + (a.suggestion ? '<em>' + rptEsc(a.suggestion) + '</em>' : '') + '</span></div>');
+      });
+    }
+    parts.push(partialLine('safety'));
+    parts.push('</div>');
+
+    return parts.join('');
+  }
+  async function openCareWeekModal() {
+    const modal = $('#careWeekModal');
+    if (!modal) return;
+    const ctx = cwPersonContext();
+    modal.classList.add('show');
+    const sub = $('#cwSubtitle'), body = $('#cwBody');
+    if (sub) sub.textContent = muneaT('careWeek.subtitleLoading', '正在整理{name}這週的狀況…', { name: ctx.label });
+    if (body) body.innerHTML = '<div class="vs-pend" style="border-top:0;margin-top:0;padding-top:0">'
+      + '<i class="vs-dot"></i>' + rptEsc(muneaT('careWeek.loading', '整理中…')) + '</div>';
+    try { trackProductEvent('care_week_opened', { hasPersonId: !!ctx.personId }); } catch (e) {}
+    const data = await brainPost('/care-week', ctx.personId ? { days: 7, personId: ctx.personId } : { days: 7 });
+    if (!data || !data.ok || !data.week) {
+      if (sub) sub.textContent = ctx.label;
+      if (body) body.innerHTML = '<p class="vs-empty">' + rptEsc(muneaT('careWeek.loadFailed', '這次沒讀到，待會再開一次看看。')) + '</p>';
+      return;
+    }
+    const week = data.week;
+    const name = week.displayName || ctx.label;
+    if (sub) sub.textContent = muneaT('careWeek.subtitlePeriod', '{name}｜{from} – {to}',
+      { name, from: rptShortDate(week.period.start), to: rptShortDate(week.period.end) });
+    if (body) body.innerHTML = cwSectionsHTML(data);
+  }
+  function closeCareWeekModal() {
+    const modal = $('#careWeekModal');
+    if (modal) modal.classList.remove('show');
+  }
+  if ($('#careWeekBtn')) $('#careWeekBtn').addEventListener('click', () => { openCareWeekModal(); });
+  if ($('#careWeekClose')) $('#careWeekClose').addEventListener('click', closeCareWeekModal);
+  if ($('#careWeekModal')) $('#careWeekModal').addEventListener('click', e => { if (e.target === $('#careWeekModal')) closeCareWeekModal(); });
+  window.__muneaOpenCareWeek = openCareWeekModal;
+
   // 免費也能邀請（Edward 2026-07-31）：不再一律擋，改成只有「圈滿了」才擋——
   // 免費上限 2（本人＋1 位），滿了照樣提示升級，所以升級動機沒有被拿掉，只是往後移了一位。
   if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily(muneaT('familyCircle.loginToInvite', '要邀請家人連上你，先登入一下（這樣家人才連得到你）'))) return; if (e.currentTarget.dataset.full) { toast(muneaT('familyCircle.fullUpgradeToast', '全家健康圈滿了，升級方案可以邀請更多家人。')); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
