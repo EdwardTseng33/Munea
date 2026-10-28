@@ -3,6 +3,8 @@
 > Edward 10/26 拍板「後台網址換 admin.munea.net，設定先備好、DNS 我自己動」。
 > 取代 7/11 那份 `admin網址設定-admin.munea.net-turnkey-2026-07-11.md`（那份寫的是走 Vercel——官網後來已搬到 Firebase，而且它說「asia-east1 不支援 Cloud Run 網域綁定」查證是錯的）。
 
+> ✅ **2026-10-28 20:15 已完成**：`https://admin.munea.net/admin.html` 通了（憑證 Google 簽好）。實際踩到的坑：① GoDaddy 的 admin 子網域有舊「轉址」（指測試機），它會自動產生兩筆 A 記錄、CNAME 加不進去——先刪轉址 ② Google 第一次查 DNS 沒看到 CNAME 時會把重查排到 24 小時後，用 `remove` 再 `apply` 可立刻重查。
+
 ---
 
 ## 0. 走哪條路、為什麼
