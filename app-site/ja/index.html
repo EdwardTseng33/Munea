@@ -181,7 +181,7 @@
   #livedemo{padding:76px 0;background:var(--mint)}
   #livedemo .sec-head{margin-bottom:38px}
   #livedemo h2{font-size:clamp(20px,2.8vw,30px);line-height:1.3}
-  .vgrid{display:grid;grid-template-columns:1fr;gap:26px;max-width:340px;margin:0 auto}
+  .vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;max-width:720px;margin:0 auto}
   .vdemo{margin:0}
   .vframe{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;background:var(--cream-2);border:1px solid var(--line)}
   .vframe .vplay{width:100%;height:100%;object-fit:cover;display:block}
@@ -442,7 +442,7 @@
     <div class="sec-head reveal">
       <div class="eyebrow center">見て、聞いて、確かめてください</div>
       <h2>AI音声パートナーのデモ（Live Avatar Demo）</h2>
-      <p>下の映像は、MuneaのAIビデオデモです。あかりは実在の人物ではありませんが、表情も声も自然です。音を出して、話しかけてくる声を聞いてみてください。「そばに誰かがいる」感じが伝わるはずです。</p>
+      <p>下の2本は、MuneaのAIビデオデモです。あかりもむつも実在の人物ではありませんが、表情も声も自然です。音を出して、話しかけてくる声を聞いてみてください。「そばに誰かがいる」感じが伝わるはずです。</p>
     </div>
     <div class="vgrid reveal">
       <figure class="vdemo">
@@ -451,6 +451,13 @@
           <button class="vsound" type="button" aria-label="音を出す" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="音を出す" data-off="ミュート">音を出す</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">あかり</span></figcaption>
+      </figure>
+      <figure class="vdemo">
+        <div class="vframe">
+          <video class="vplay" poster="/assets/mumu-poster.jpg" muted playsinline loop preload="none" data-src="/assets/mumu-talk-demo-ja.mp4" aria-label="Munea AIビデオデモ・落ち着いた男性の声"></video>
+          <button class="vsound" type="button" aria-label="音を出す" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg></button>
+        </div>
+        <figcaption class="vcap"><span class="vlab">むつ</span></figcaption>
       </figure>
     </div>
     <p class="vdisc reveal">この映像の顔と声はAIによる生成で、実在の人物ではありません。アプリの中でもMuneaは「わたしはAIです」とはっきり伝え、人間のふりはしません。</p>
