@@ -1,6 +1,6 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
-### 2026-10-28 23:30 蘇菲｜🎨 營運後台 UI/UX 對齊 2026 後台設計範例：用色過 WCAG AA＋體驗 5 項（Draft PR · 不上線）
+### 2026-10-28 23:30 蘇菲｜🎨 營運後台 UI/UX 對齊 2026 後台設計範例：用色過 WCAG AA＋體驗 5 項（Draft PR #629 · 不上線）
 
 - **Edward 10/28 指示**：「整個後台的 UI/UX 去調研 2026 年的設計範例與應用趨勢，看受好評的設計範例調整一下用色與 UI/UX 體驗」。品牌色（teal／coral／米底／深墨綠、Poppins＋Noto Sans TC、官方 logo）**不動**。
 - **調研報告**：`docs/後台-UIUX-2026趨勢調研-2026-10-28.md`——8 條趨勢各 2 個真實範例（Linear／Vercel／Stripe／Mercury／Supabase／Notion／Intercom／Attio…）＋配色做法＋WCAG 2.2 數字＋女巫 14 頁逐頁打分（平均 21.4／30）＋反趨勢（Liquid Glass 對比反彈、低對比灰字、過度卡片化）。
