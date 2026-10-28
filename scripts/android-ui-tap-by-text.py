@@ -75,6 +75,29 @@ def find_target(nodes, queries):
     return None, None
 
 
+# 2026-10-28（PR #630 實跑看到）：模擬器的桌面程式 Pixel Launcher 偶爾會「沒有回應」，
+# 系統對話框蓋在最上面——uiautomator 只撈得到那張對話框的三行字，App 本身其實已經畫好了
+# （截圖上首頁就在對話框底下）。那是模擬器桌面的事、不是 App 的錯：看到就按「等待」讓它
+# 退下去、繼續撈；有按一定印出來留紀錄，不悄悄吞掉。只認「沒有回應」這種系統對話框，
+# App 自己的崩潰對話框（keeps stopping）不在此列、照常算失敗。
+ANR_TITLE_HINTS = ("isn't responding", "is not responding", "沒有回應", "無回應")
+ANR_WAIT_LABELS = ("Wait", "等待")
+
+
+def dismiss_anr_dialog(nodes):
+    titles = [n['text'] for n in nodes if any(h in n['text'] for h in ANR_TITLE_HINTS)]
+    if not titles:
+        return False
+    for n in nodes:
+        if n['text'] in ANR_WAIT_LABELS:
+            x, y = parse_bounds(n['bounds'])
+            print(f'[WARN] 畫面上有系統「沒有回應」對話框 {titles}，按「{n["text"]}」({x},{y}) 讓它退下去再繼續撈')
+            adb('shell', 'input', 'tap', str(x), str(y))
+            return True
+    print(f'[WARN] 畫面上有系統「沒有回應」對話框 {titles}，但找不到「等待」鍵可按')
+    return False
+
+
 def dump_current_screen(dump_path):
     """撈一次畫面；撈不到就回 None（＝「畫面還沒好」，交給外層照 timeout 重試）。
 
@@ -122,6 +145,9 @@ def main():
             # dump 到一半被畫面更新打斷也會給出殘缺的 XML——同樣當「還沒好」處理
             print(f'[WAIT] 這次撈到的畫面不完整（{exc}）——稍後再撈')
             nodes = []
+        if dismiss_anr_dialog(nodes):
+            time.sleep(1.0)
+            continue
         target, match_kind = find_target(nodes, queries)
         if target is not None:
             x, y = parse_bounds(target['bounds'])
