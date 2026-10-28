@@ -2748,7 +2748,14 @@ function seedDeveloperFixtures(cfg) {
 function applyDeveloperBypass() {
   const cfg = developerConfig();
   if (!isDeveloperBypassAllowed()) return;
-  if (cfg.skipOnboarding === true) storageSet(ONBOARDING_COMPLETED_KEY, 'true');
+  if (cfg.skipOnboarding === true) {
+    storageSet(ONBOARDING_COMPLETED_KEY, 'true');
+    // 開場三頁故事卡用的是另一個記號（見 ONBOARDING_INTRO_SEEN_KEY 的說明）。
+    // 只蓋舊記號的話，測試包每次第一次開都還是會被三頁卡住——
+    // 2026-10-28 Android 雲端流程測試第三輪就是這樣紅的。「跳過開場」要兩個記號一起蓋。
+    // （init 在 DOMContentLoaded 才跑，整個模組早就載完，這裡拿得到下面宣告的常數。）
+    storageSet(ONBOARDING_INTRO_SEEN_KEY, 'true');
+  }
   seedDeveloperFixtures(cfg);
 }
 function authAnalyticsContext() {
