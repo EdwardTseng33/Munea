@@ -2792,3 +2792,20 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **🔴 順手抓到計量自己半殘**（動 `engine/live_voice_server.py`）：總帳每通都印 `turns=0`——`turn_count` 這個欄位**從來沒有人寫過**，只有人讀。於是「一通幾輪、每輪多少」根本算不出來，而那正是補這套計量要回答的問題。改成數實際收到幾次用量，並補上 `per_turn` 與 `est_usd`（牌價可用環境變數蓋過去，對不上以帳單為準）。守門 4 條＋突變測試命中。
 - **🟡 待 Edward 拍板**：要不要為了省這筆去瘦說明書。**先建議拿一張真帳單對過**——`cached=0` 也可能只是 Live 沒回報那個欄位，自動快取的九折可能已經在算了，那樣估算會高估十倍。動安全說明書之前，先確認錢是真的在燒。
 - **驗證**：`npm run test:launch` 全綠。**沒動通話行為**——只動總帳那一行的數字來源。
+
+### 2026-10-28 蘇菲 → Codex 📸 請重做 App Store 上架截圖（四語 × 5 張）——寧寧換新形象
+
+**Edward 10/28 指示**：「app 的上架介紹圖應該也要換，去請 Codex 生成。」
+
+**要做什麼**：7/28 你做的那四套上架圖（`E:\Claude\image-assets\munea-appstore-localized-20260728\`，規格 1242×2688、文案對照表 `COPY-MANIFEST.md`）裡的寧寧是真人照，現在 App 已換成**插畫寧寧（純色塊向量、正視前方、米白針織外套、薄荷底）**，請用同一套版型、同一套四語文案，把畫面換成新版 App 的畫面重做一次。
+
+**素材與現況**
+- 新版 App 畫面：合併單 #623（`feat/ningning-rig-20261026`）＋ #625；本機跑 `web/` 就是新臉。四語 × 8 畫面的參考截圖在這張 PR 的 Gate 2 紀錄（首頁、吃藥提醒、狀態、設定、角色選單、聊聊待機、同意卡、聊聊通話中）
+- 新寧寧素材：`web/avatars/ningning-face.webp`（特寫）、`web/avatars/ningning-rig/body.webp`（全身 1536×2752）；原稿 `E:\Claude\image-assets\munea-ningning-rivestyle\lily\l2\base.png`（10/28 晚腮紅已淡化版）
+- 截圖計畫：`app-store/localizations/screenshot-plan.json`（5 張順序：voice-companion＝聊聊通話中、daily-reminders＝首頁、family-circle、conversation-memory、wellbeing-records）；第 1 張請抓「嘴張開＋在線」那格
+- 規矩：`capturePolicy`（exact build、四語介面、不用正式資料、用 QA 帳號、不可有未翻譯文字、不爆框）；蘋果不收透明層截圖（7/31 教訓）；`-rgb` 色彩校正版才拿去上傳
+- 畫面裡不得再出現真人照寧寧、阿宏、或任何「真人／擬真」字樣
+
+**產出放哪**：`E:\Claude\image-assets\munea-appstore-localized-20261028\{zh-TW-rgb,en-US,ja-JP,es-MX}\1..5.png` ＋ 更新 `COPY-MANIFEST.md`；完成後在這裡回一張卡，蘇菲派女巫 Gate 2 看完再給 Edward。
+
+**時程**：跟 App 新版（預計 1.0.67）送審同一批；TestFlight 新版出來前可先用本機 `web/` 拍。
