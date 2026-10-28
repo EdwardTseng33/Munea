@@ -1,0 +1,127 @@
+name: Android Build
+
+# 2026-10-28：補助案查核點 B1（115/12 到期）——Munea 第一次有 Android 版。
+# 卡西法這台 Windows 沒裝 Java／Android SDK（Edward 還沒同意裝），所以整條建置鏈
+# 全部搬上雲端：npm 裝 @capacitor/android → cap sync 把 web/ 複製進 android/app/src/
+# main/assets/public（.gitignore 已排除、不進版控）→ ubuntu-latest 跑 Gradle 組 APK。
+# 第一階段只簽 debug（不碰正式簽章／Play 上架）；第二階段在真的 Android 模擬器裝上
+# 去開機，證明「APK 裝得上、首頁畫得出來」，不是只有編譯綠燈。
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "feat/b1-android-ci-*"
+  pull_request:
+    paths:
+      - "android/**"
+      - "web/**"
+      - "capacitor.config.json"
+      - ".github/workflows/android-build.yml"
+
+concurrency:
+  group: android-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 建置 Android debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      # android/ 的 build.gradle 由 @capacitor/android 8.5.3 範本產生：
+      # AGP 8.13.0、Gradle 8.14.3、compileSdk/targetSdk 36。這組合要 JDK 21。
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 只做這一步：把 web/ 的網頁素材複製進 android/app/src/main/assets/public，
+      # 不需要 Java 也不需要 SDK（本機這台 Windows 一樣能跑這行，驗過了）。
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: munea-android-debug-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  emulator-smoke:
+    name: 模擬器開機截圖（證明 APK 裝得上、首頁畫得出來）
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: munea-android-debug-${{ github.run_number }}
+          path: ./apk-download
+
+      # reactivecircus/android-emulator-runner 需要 KVM 硬體加速才跑得動；
+      # GitHub 的 ubuntu-latest runner 有開 nested virtualization，這裡把 kvm
+      # 裝置的權限打開給一般使用者用（官方 action README 的標準作法）。
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Launch emulator, install APK, screenshot
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb install -r ./apk-download/app-debug.apk
+            adb shell monkey -p net.munea.app -c android.intent.category.LAUNCHER 1
+            sleep 8
+            adb exec-out screencap -p > launch.png
+
+      - name: Upload launch screenshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: munea-android-screens-${{ github.run_number }}
+          path: launch.png
+          if-no-files-found: warn
+          retention-days: 14
