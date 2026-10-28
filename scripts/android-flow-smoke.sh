@@ -4,13 +4,17 @@
 # 只在 reactivecircus/android-emulator-runner 的 script 區塊跑，這時模擬器已經
 # 開機、adb 已經連上。流程：
 #   裝 APK → 開 App → 截圖 → 用 uiautomator 找底部導覽「聊聊」分頁點下去 →
-#   截圖 → 找「開始通話」按鈕點下去 → 等 5 秒 → 截圖
+#   截圖 → 找通話鈕點下去 → 等 5 秒 → 截圖
 # 模擬器沒有真麥克風（emulator-options 帶 -noaudio），接不上語音是預期內——
 # 這一步只看畫面實際顯示什麼，不假裝接通了。
 #
-# 找按鈕用的字串故意中英文都給（見下面 --text 參數）：locale 已經在 workflow
-# 裡釘成 zh-TW，但留著英文候選當保險（2026-10-28 第一次實跑就撞到模擬器預設
-# locale 是英文、畫面文字被 i18n.js 全換成英文的真實案例）。
+# 找按鈕用的字串故意中英文都給（見下面 --text 參數）：這個 runner image 的
+# Android 模擬器預設是英文 locale，試過用開機 prop 釘成 zh-TW 但這版
+# emulator 不接受（只收 qemu.* 開頭的 prop），所以中英文候選字串才是真正
+# 生效的那層（2026-10-28 兩輪真跑才調好，詳見 android-build.yml 裡的註解）。
+# 通話鈕那個候選字串是它的 aria-label（「開始或結束通話」），不是按鈕內
+# <span> 的可見字「開始通話」——Chrome 的 accessibility bridge 把 aria-label
+# 暴露成 uiautomator 看到的 text，已用真實 dump 驗證過。
 #
 # 故意不用 `set -e`：要讓「找不到按鈕」這類失敗仍然把已經拍到的截圖留下來、
 # 把這一步標成 FAIL 寫進步驟表，而不是讓整個 job 在某一步悶不吭聲中斷、
@@ -72,7 +76,7 @@ screenshot "03-chat-view"
 record "進入聊聊／通話畫面" "畫面切到聊聊分頁" "看截圖 03" "03-chat-view.png"
 
 echo "== 找「開始通話」按鈕並點下去 =="
-if python3 scripts/android-ui-tap-by-text.py --text "開始通話,Start call" --dump-path "$SHOTS_DIR/04-tap-call.xml" --timeout 15; then
+if python3 scripts/android-ui-tap-by-text.py --text "開始或結束通話,Start or end call" --dump-path "$SHOTS_DIR/04-tap-call.xml" --timeout 15; then
   sleep 5
   screenshot "05-call-state"
   record "點「開始通話」＋等 5 秒" "畫面會變化；模擬器沒麥克風，預期連不上真語音——只看畫面實際顯示什麼" "看截圖 05，如實記錄" "05-call-state.png"
