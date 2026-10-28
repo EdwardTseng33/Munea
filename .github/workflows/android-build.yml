@@ -193,6 +193,13 @@ jobs:
       # 裝 APK → 開 App → 等底部導覽出現（用 uiautomator 找「聊聊」分頁，逾時
       # 40 秒而非固定 sleep 賭運氣）→ 點下去 → 找「開始通話」點下去 → 等 5 秒 →
       # 截圖。模擬器沒麥克風，連不上語音是預期內，腳本只如實記錄畫面顯示什麼。
+      #
+      # 2026-10-28 第一次實跑才發現：這個 runner image 的 Android 模擬器預設是
+      # 英文 locale，App 的 i18n.js 照系統語言把畫面文字全換成英文（「聊聊」變
+      # 「Talk」），腳本原本只找中文字，整個卡住找不到按鈕。這裡用開機 prop 把
+      # locale 釘回 zh-TW（跟 Munea 的台灣長輩用戶族群一致，也是更真實的測試
+      # 環境）；scripts/android-ui-tap-by-text.py 另外也支援同時給中英文候選
+      # 字串當保險，兩層都補、不是只賭其中一個一定生效。
       - name: Run login + chat flow automation
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -201,7 +208,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -prop persist.sys.language=zh -prop persist.sys.country=TW -prop persist.sys.locale=zh-TW
           disable-animations: true
           script: bash scripts/android-flow-smoke.sh
 
