@@ -8,6 +8,10 @@
 # 模擬器沒有真麥克風（emulator-options 帶 -noaudio），接不上語音是預期內——
 # 這一步只看畫面實際顯示什麼，不假裝接通了。
 #
+# 找按鈕用的字串故意中英文都給（見下面 --text 參數）：locale 已經在 workflow
+# 裡釘成 zh-TW，但留著英文候選當保險（2026-10-28 第一次實跑就撞到模擬器預設
+# locale 是英文、畫面文字被 i18n.js 全換成英文的真實案例）。
+#
 # 故意不用 `set -e`：要讓「找不到按鈕」這類失敗仍然把已經拍到的截圖留下來、
 # 把這一步標成 FAIL 寫進步驟表，而不是讓整個 job 在某一步悶不吭聲中斷、
 # 後面步驟的截圖全部缺席。
@@ -53,7 +57,7 @@ screenshot "01-launch-3s"
 record "啟動 App（等 3 秒）" "有畫面、不是白屏或崩潰對話框" "看截圖 01" "01-launch-3s.png"
 
 echo "== 等底部導覽列出現（最多等 40 秒，不是固定 sleep 賭運氣）=="
-if python3 scripts/android-ui-tap-by-text.py --text 聊聊 --dump-path "$SHOTS_DIR/02-wait-tabbar.xml" --timeout 40; then
+if python3 scripts/android-ui-tap-by-text.py --text "聊聊,Talk" --dump-path "$SHOTS_DIR/02-wait-tabbar.xml" --timeout 40; then
   screenshot "02-home-ready"
   record "等首頁渲染完成" "底部導覽列（含「聊聊」分頁）出現" "成功，看截圖 02" "02-home-ready.png"
 else
@@ -68,7 +72,7 @@ screenshot "03-chat-view"
 record "進入聊聊／通話畫面" "畫面切到聊聊分頁" "看截圖 03" "03-chat-view.png"
 
 echo "== 找「開始通話」按鈕並點下去 =="
-if python3 scripts/android-ui-tap-by-text.py --text 開始通話 --dump-path "$SHOTS_DIR/04-tap-call.xml" --timeout 15; then
+if python3 scripts/android-ui-tap-by-text.py --text "開始通話,Start call" --dump-path "$SHOTS_DIR/04-tap-call.xml" --timeout 15; then
   sleep 5
   screenshot "05-call-state"
   record "點「開始通話」＋等 5 秒" "畫面會變化；模擬器沒麥克風，預期連不上真語音——只看畫面實際顯示什麼" "看截圖 05，如實記錄" "05-call-state.png"
