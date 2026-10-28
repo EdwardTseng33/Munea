@@ -183,6 +183,18 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
+      # 2026-10-28：把這顆「自動登入、指向測試機」的測試包也留成檔案——真機實驗室
+      # （Firebase Test Lab）要拿它在真的安卓手機上走聊聊／通話流程；上面 build job
+      # 那顆是正式設定（真帳號登入）給人安裝用，兩顆用途不同、都要留。
+      - name: Upload dev-profile APK artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: munea-android-devprofile-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Enable KVM group perms
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
