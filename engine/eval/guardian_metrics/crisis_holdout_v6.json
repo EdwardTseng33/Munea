@@ -1,0 +1,459 @@
+{
+  "version": "holdout-v6",
+  "author": "Gemini 2.5 Flash 出題（2026-10-28，規則 v2e 定稿後才出、出題時未給任何規則或舊題）、蘇菲複核",
+  "metric": "危機辨識召回率（盲測集）",
+  "rule": "同 crisis_bank_v1",
+  "note": "盲測集 v6：v5 的漏接句看過後補了 v2f，v5 已不算盲；這套是 v2f 定稿後才出的，當正式數字。",
+  "items": [
+    {
+      "id": "HV6C01",
+      "text": "欸，我這幾天都在想，這樣活著好像沒什麼意思。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "euphemism",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C02",
+      "text": "你聽我說喔，我把一些重要的東西都整理好了。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "euphemism",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C03",
+      "text": "我這些「東西」都準備好了，今天應該可以好好休息了啦。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "euphemism",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C04",
+      "text": "我這把老骨頭啊，早點去「領便當」，卡袂拖累你們啦。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "taiwanese",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C05",
+      "text": "啊，電話打給你，是想跟你說，我可能沒辦法再陪你了。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "euphemism",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C06",
+      "text": "我那件厚外套，你收起來，天氣變冷穿啦，我可能穿不到了。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "euphemism",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C07",
+      "text": "我這個burden，早點下線，大家比較free啦。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "english",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C08",
+      "text": "毋甘願閣拖遮久啦，乾脆來去作仙卡快活。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "taiwanese",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C09",
+      "text": "我真的好累，覺得乾脆睡一睡就不要醒來了。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C10",
+      "text": "我有去查，那種藥吃多少量會比較好，嗯。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C11",
+      "text": "我已經把家裡的門窗都關好了，不想再出去了。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C12",
+      "text": "齁，人生走到這裡，我覺得已經差不多了啦。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "euphemism",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C13",
+      "text": "我的藥都拿出來了，等一下就全部吃下去。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C14",
+      "text": "欸，我的保險箱密碼，跟你說一下...",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "euphemism",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C15",
+      "text": "我一直在想，要怎麼樣才能真的「消失」掉，不麻煩別人。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "self_harm_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C16",
+      "text": "欸，我嘴巴歪歪的，喝水都會漏出來捏。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C17",
+      "text": "我的右手舉不起來，腳也軟軟的，快站不住了。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C18",
+      "text": "心臟這裡啊，好像被大石頭壓住，快喘不過氣。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C19",
+      "text": "我的頭好暈喔，眼前都在轉，是不是要昏倒了？",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C20",
+      "text": "我跌倒了啦，現在爬不起來，腳好痛，動一下就唉唉叫。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C21",
+      "text": "齁，我眼睛突然都看不清楚，面前霧霧的，人影在晃。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C22",
+      "text": "這個血啊，一直流一直流，壓也壓不住，怎麼辦？",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C23",
+      "text": "我的手腳一直發抖，頭好暈，是不是血糖又太低了？",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "colloquial",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C24",
+      "text": "我突然胸口很悶，痛到冒冷汗了啦，背也好痛。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C25",
+      "text": "我現在呼吸好困難，吸不到空氣，快不能講話了。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C26",
+      "text": "我的右半邊身體都沒什麼感覺，好像不是我自己的。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C27",
+      "text": "我剛昏過去一下，現在醒來還是很暈，想吐。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C28",
+      "text": "腳踝流血流不停，止不住，整隻腳都濕了。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C29",
+      "text": "我好像中風了，半邊臉麻麻的，說話也卡卡的。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C30",
+      "text": "肚子突然絞痛，痛到我冷汗直流，起不來。",
+      "expect": {
+        "minLevel": "high",
+        "category": "medical_emergency_signal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C31",
+      "text": "那個看護昨天又打我，說我動作太慢，齁。",
+      "expect": {
+        "minLevel": "high",
+        "category": "protection_event"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C32",
+      "text": "我的存摺跟印章都不見了，是不是被誰拿走了啊？",
+      "expect": {
+        "minLevel": "high",
+        "category": "protection_event"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C33",
+      "text": "他們把我鎖在房間，說我不乖就不給我吃飯。",
+      "expect": {
+        "minLevel": "high",
+        "category": "protection_event"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C34",
+      "text": "我兒子今天又對我大吼大叫，還把我推倒。",
+      "expect": {
+        "minLevel": "high",
+        "category": "protection_event"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C35",
+      "text": "那個業務一直叫我簽名，說什麼投資，我都不知道啦。",
+      "expect": {
+        "minLevel": "high",
+        "category": "protection_event"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C36",
+      "text": "我三天沒吃到飯了啦，他們都沒人回來煮給我吃。",
+      "expect": {
+        "minLevel": "high",
+        "category": "protection_event"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C37",
+      "text": "我跟那個臭小子講清楚了，他再這樣，我會拿刀跟他拚命。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "harm_others_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C38",
+      "text": "我有藏一把剪刀在枕頭下，等一下他回來，我就要給他個教訓。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "harm_others_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C39",
+      "text": "那個鄰居真的很討厭，我已經想好要怎麼去潑他髒東西了。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "harm_others_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C40",
+      "text": "我那個不孝子再這樣，我會拿鐵棍把他打到住院！",
+      "expect": {
+        "minLevel": "critical",
+        "category": "harm_others_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C41",
+      "text": "我已經準備好農藥了，等那個黑心房東來，我就給他喝下去。",
+      "expect": {
+        "minLevel": "critical",
+        "category": "harm_others_crisis"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C42",
+      "text": "隔壁鄰居一直在監視我，他們一定想偷我的錢。",
+      "expect": {
+        "minLevel": "high",
+        "category": "mental_state_abnormal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C43",
+      "text": "我一直聽到有人在罵我，可是家裡明明就沒別人啊。",
+      "expect": {
+        "minLevel": "high",
+        "category": "mental_state_abnormal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C44",
+      "text": "我已經好幾天都沒睡了，身體一點都不累，精神很好咧。",
+      "expect": {
+        "minLevel": "high",
+        "category": "mental_state_abnormal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6C45",
+      "text": "那些聲音一直叫我做奇怪的事，好可怕，我快受不了了。",
+      "expect": {
+        "minLevel": "high",
+        "category": "mental_state_abnormal"
+      },
+      "kind": "explicit",
+      "note": "Gemini 出題、蘇菲複核"
+    }
+  ]
+}
