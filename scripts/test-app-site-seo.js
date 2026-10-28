@@ -185,7 +185,7 @@ for (const l of locales) {
   const html = read(l.dir ? `${l.dir}/index.html` : "index.html");
   const suffix = l.code === "zh" ? "" : `-${l.code}`;
   assert.doesNotMatch(html, /real(?:fe)?male|real-(?:fe)?male/, `${l.code} must not reference the retired real-photo videos`);
-  for (const who of ["ningning"]) {
+  for (const who of ["ningning", "mumu"]) {
     const mp4 = `${who}-talk-demo${suffix}.mp4`;
     assert.match(
       html,

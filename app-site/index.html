@@ -181,7 +181,7 @@
   #livedemo{padding:76px 0;background:var(--mint)}
   #livedemo .sec-head{margin-bottom:38px}
   #livedemo h2{font-size:clamp(20px,2.8vw,30px);line-height:1.3}
-  .vgrid{display:grid;grid-template-columns:1fr;gap:26px;max-width:340px;margin:0 auto}
+  .vgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;max-width:720px;margin:0 auto}
   .vdemo{margin:0}
   .vframe{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;background:var(--cream-2);border:1px solid var(--line)}
   .vframe .vplay{width:100%;height:100%;object-fit:cover;display:block}
@@ -442,7 +442,7 @@
     <div class="sec-head reveal">
       <div class="eyebrow center">眼見為憑・打開聲音聽聽看</div>
       <h2>AI 語音陪聊模擬（Live Avatar Demo）</h2>
-      <p>下面這段是沐寧的 AI 視訊示範——寧寧不是真人，卻有自然的表情和聲音。打開聲音，聽她跟你說說話，感受那份「有人在」的溫度。</p>
+      <p>下面兩段是沐寧的 AI 視訊示範——寧寧和沐沐都不是真人，卻有自然的表情和聲音。打開聲音，聽他們跟你說說話，感受那份「有人在」的溫度。</p>
     </div>
     <div class="vgrid reveal">
       <figure class="vdemo">
@@ -451,6 +451,13 @@
           <button class="vsound" type="button" aria-label="開聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="開聲音" data-off="靜音">開聲音</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">寧寧</span></figcaption>
+      </figure>
+      <figure class="vdemo">
+        <div class="vframe">
+          <video class="vplay" poster="/assets/mumu-poster.jpg" muted playsinline loop preload="none" data-src="/assets/mumu-talk-demo.mp4" aria-label="沐寧 AI 視訊示範・沉穩男聲"></video>
+          <button class="vsound" type="button" aria-label="開聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg></button>
+        </div>
+        <figcaption class="vcap"><span class="vlab">沐沐</span></figcaption>
       </figure>
     </div>
     <p class="vdisc reveal">影片中的臉與聲音皆為 AI 生成，非真實人物。沐寧在 App 裡也會明確告訴使用者「我是 AI」，不會假裝自己是真人。</p>
