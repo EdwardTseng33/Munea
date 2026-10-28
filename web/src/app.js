@@ -13555,6 +13555,10 @@ function openOnboardingIntro() {
 }
 
 function runBootSplash() {
+  // 原生啟動畫面交棒（Android）：這一頁已經可以畫了，叫原生那層收掉——
+  // 函式定義在 index.html（跟保險絲放一起），沒外掛的環境是空操作。要放在最前面：
+  // 就算下面因為啟動頁已經被收掉而提早 return，原生那層也不能留著。
+  if (typeof window.muneaHideNativeSplash === 'function') window.muneaHideNativeSplash();
   const splash = $('#bootSplash');
   if (!splash || splash.hidden) return;
   const needIntro = !onboardingIntroSeen();
