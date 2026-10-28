@@ -178,12 +178,14 @@ for (const page of pages) {
   }
 }
 
-// 示範影片：每個語系播自己那支（英日西的夥伴要講當地語言），而且檔案真的在。
+// 示範影片：每個語系播自己那支（英日西的寧寧要講當地語言），而且檔案真的在。
 // 打招呼與待機那兩支是無聲動畫，沒有語言問題，維持一份共用。
+// 2026-10-28 新形象：只剩寧寧一支（男生 9/30 下線）；舊的 realfemale／realmale 檔不得再出現。
 for (const l of locales) {
   const html = read(l.dir ? `${l.dir}/index.html` : "index.html");
   const suffix = l.code === "zh" ? "" : `-${l.code}`;
-  for (const who of ["realfemale", "realmale"]) {
+  assert.doesNotMatch(html, /real(?:fe)?male|real-(?:fe)?male/, `${l.code} must not reference the retired real-photo videos`);
+  for (const who of ["ningning"]) {
     const mp4 = `${who}-talk-demo${suffix}.mp4`;
     assert.match(
       html,
