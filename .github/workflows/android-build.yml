@@ -50,9 +50,12 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # 2026-10-28 試過 android-actions/setup-android@v3，它會嘗試裝已經從
+      # SDK repository 下架的舊版 `tools` 套件、直接噴錯退出（第一次 push 就
+      # 紅在這步）。ubuntu-latest runner 本身已經內建 Android SDK（cmdline-tools、
+      # platform-tools、常見 platforms/build-tools）且 licenses 已預先接受，
+      # 不需要另外裝——缺的 compileSdk 36 元件讓 AGP 在建置時自己用內建
+      # sdkmanager 補（sdkAutoDownload 預設開、runner 有網路）。
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
