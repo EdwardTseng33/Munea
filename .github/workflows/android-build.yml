@@ -6,17 +6,27 @@ name: Android Build
 # main/assets/public（.gitignore 已排除、不進版控）→ ubuntu-latest 跑 Gradle 組 APK。
 # 第一階段只簽 debug（不碰正式簽章／Play 上架）；第二階段在真的 Android 模擬器裝上
 # 去開機，證明「APK 裝得上、首頁畫得出來」，不是只有編譯綠燈。
+#
+# 2026-10-28 補第三階段：B1 真正要的「登入、聊聊通話 2 項流程可操作」。借 iOS 既有的
+# 「直連測試包」做法（scripts/enable-ios-development-profile.mjs，本來就吃任意目標路徑）
+# 幫 Android 也點一份同款設定：App 啟動後本機合成一個假登入 session（不呼叫真
+# Supabase、不需要任何密碼或金鑰），語音／文字 API 指向 staging（不是正式機）。
+# 這支 APK 只用在這條自動化流程裡，跟第一階段那支「乾淨、沒開發包」的 APK 是分開的。
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - "feat/b1-android-ci-*"
+      - "feat/b1-android-*"
   pull_request:
     paths:
       - "android/**"
       - "web/**"
+      - "scripts/android-ui-tap-by-text.py"
+      - "scripts/android-flow-smoke.sh"
+      - "scripts/enable-ios-development-profile.mjs"
       - "capacitor.config.json"
+      - "package.json"
       - ".github/workflows/android-build.yml"
 
 concurrency:
@@ -45,7 +55,7 @@ jobs:
       # android/ 的 build.gradle 由 @capacitor/android 8.5.3 範本產生：
       # AGP 8.13.0、Gradle 8.14.3、compileSdk/targetSdk 36。這組合要 JDK 21。
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
@@ -126,5 +136,91 @@ jobs:
         with:
           name: munea-android-screens-${{ github.run_number }}
           path: launch.png
+          if-no-files-found: warn
+          retention-days: 14
+
+  flows-smoke:
+    name: 登入與聊聊通話流程自動化（B1 查核點）
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      # 借 iOS 既有的開發包腳本，只改生成出來的 android 資產檔，不動 web/ 的 App
+      # 邏輯一行。direct 模式＝本機合成假登入 session，不呼叫真 Supabase、不需要
+      # 任何密碼或金鑰；brain/voice 走 staging（asia-east1 Cloud Run），不是正式機。
+      - name: Apply direct development test profile (no secrets required)
+        run: npm run android:dev-profile:direct
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build dev-profile debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # 腳本本身在 scripts/android-flow-smoke.sh（版控內，可離線讀）：
+      # 裝 APK → 開 App → 等底部導覽出現（用 uiautomator 找「聊聊」分頁，逾時
+      # 40 秒而非固定 sleep 賭運氣）→ 點下去 → 找通話鈕點下去 → 等 5 秒 →
+      # 截圖。模擬器沒麥克風，連不上語音是預期內，腳本只如實記錄畫面顯示什麼。
+      #
+      # 2026-10-28 兩輪真跑才調好：①這個 runner image 的 Android 模擬器預設是
+      # 英文 locale，試過用開機 `-prop persist.sys.locale=zh-TW` 釘 locale，
+      # 但這版 emulator（37.2.12.0）直接噴警告拒收（「only 'qemu.*' properties
+      # are supported」）、prop 沒生效——改成純靠
+      # scripts/android-ui-tap-by-text.py 同時給中英文候選字串（已驗證有效）。
+      # ②通話鈕用 `aria-label` 當無障礙名稱（唸給螢幕報讀器聽的），Chrome 的
+      # accessibility bridge 把這個 aria-label 暴露成 uiautomator 看到的 text，
+      # 不是按鈕內 <span> 的可見字——「開始通話」這個候選永遠不會命中，真正
+      # 該找的是 aria-label 本身「開始或結束通話」（已用真實 CI 跑出來的
+      # accessibility tree dump 驗證過這個比對邏輯）。
+      - name: Run login + chat flow automation
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash scripts/android-flow-smoke.sh
+
+      - name: Upload flow screenshots artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: munea-android-flows-${{ github.run_number }}
+          path: flows-shots/
           if-no-files-found: warn
           retention-days: 14
