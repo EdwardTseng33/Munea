@@ -885,7 +885,6 @@ html[lang="es"] #connect .cn-row .cn-btn {
 .ff-stage { position: absolute; left: 50%; bottom: 0; height: 100%; aspect-ratio: 1536 / 2752; transform: translateX(-50%); }
 .ff-part { position: absolute; inset: 0; will-change: transform; }
 .ff-body { transform-origin: 50% 100%; }
-.ff-pose { will-change: opacity; }
 .ff-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; }
 .ff-half, .ff-open, .ff-eyes { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .ff-part { transform: none !important; } }
