@@ -868,11 +868,12 @@ setTimeout(function () {
       <p class="modal-sub"><span data-i18n="companion.pickIntro">名字由你決定，個性、外觀和聲音不會變。</span><br><b style="color:var(--teal-dd)" data-i18n="legacyUi.companionMemory">換名字不會忘記你們聊過的事</b><span data-i18n="companion.memoryTail">，記憶一直都在。</span></p>
       <label class="companion-name-label" for="companionNameInput" data-i18n="companion.nameLabel">幫角色取名稱</label>
       <input class="companion-name-input" id="companionNameInput" value="寧寧" data-i18n-value="companion.nening.name" maxlength="12" autocomplete="off" placeholder="例：寧寧、小美、阿香" data-i18n-placeholder="companion.namePlaceholder" />
-      <!-- 男生角色全數下線（Edward 2026-09-30），只剩寧寧一位：選角清單收起來，只留取名字。 -->
-      <div class="field-label" data-i18n="legacyUi.companionRole" hidden>選擇互動 AI 角色</div>
-      <div class="avatar-pick" id="avatarPick" hidden>
+      <!-- 2026-10-28：沐沐回歸，選角清單重新打開（寧寧／沐沐）。 -->
+      <div class="field-label" data-i18n="legacyUi.companionRole">選擇互動 AI 角色</div>
+      <div class="avatar-pick" id="avatarPick">
         <button class="avo on" data-ava="nening-real-female"><span class="avi"><img src="avatars/ningning-face.webp" alt=""></span><span class="avl"><b data-i18n="legacyUi.companionWarm">溫柔型</b><small data-i18n="legacyUi.companionWarmBody">像家人一樣照看你</small></span></button>
-        <!-- 插畫女生（小昀）與貓咪（咪咪）仍暫下架；男生（阿宏、阿原、旺財）已從角色名單移除。 -->
+        <button class="avo" data-ava="mumu-flat-male"><span class="avi"><img src="avatars/mumu-face.webp" alt=""></span><span class="avl"><b data-i18n="legacyUi.companionSteady">穩重型</b><small data-i18n="legacyUi.companionSteadyBody">像哥哥一樣靠得住</small></span></button>
+        <!-- 插畫女生（小昀）與貓咪（咪咪）仍暫下架；舊的真人照男生（阿宏、阿原、旺財）已移除，2026-10-28 由插畫版沐沐接手。 -->
 
       </div>
     </div>
