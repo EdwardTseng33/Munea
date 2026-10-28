@@ -59,7 +59,7 @@ image = (
     )
     .pip_install("fastapi")
     .env({"LD_LIBRARY_PATH": "/opt/cudnn8-pkgs/nvidia/cudnn/lib", "MUNEA_APP_KEY": APP_KEY})
-    .add_local_file(r"E:\Claude\Munea\web\avatars\nening-real-female-full.jpg",
+    .add_local_file(r"E:\Claude\Munea\deploy\runpod-avatar\assets\nening-real-female-full.jpg",
                     "/root/nening-real-female-full.jpg")
     # 六角色底圖（7/9 Edward「6 個角色都要會動」）——底圖跟 App 聊聊頁同一張
     .add_local_file(r"E:\Claude\Munea\web\avatars\ahong-tall.jpg", "/root/char-ahong.jpg")
