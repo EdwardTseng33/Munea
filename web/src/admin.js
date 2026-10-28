@@ -86,7 +86,7 @@
     growth: ["/admin/growth-metrics", { days: 30 }],
   };
 
-  const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7B76" };
+  const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#5E6D68" }; // muted 跟 admin.css --muted 同步（2026-10-28 對比 5.09:1）
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
   const ADMIN_FORMAT_LOCALE = (window.MuneaAdminI18n && window.MuneaAdminI18n.current()) || "zh-TW";
   const ADMIN_FORMAT_TIME_ZONE = String(window.MUNEA_ADMIN_TIME_ZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
@@ -231,6 +231,8 @@
   }
   function principle(text){ return `<div class="principle">${text.indexOf("<")>-1?text:esc(text)}</div>`; }
   function emptyBox(text){ return `<div class="empty-note">${esc(text)}</div>`; }
+  // 讀取中骨架（2026-10-28）：三條會呼吸的灰條取代一行「讀取中…」，文字留給螢幕閱讀器（i18n 仍翻得到）
+  function skeletonBox(text){ return `<div class="skeleton-box" role="status" aria-live="polite"><span class="sr-only">${esc(text)}</span><i></i><i></i><i></i></div>`; }
   function chartMount(id){ return `<div class="chart-box" id="${id}"></div>`; }
   const pending = [];
 
@@ -411,7 +413,8 @@
     return html;
   }
 
-  const AV_TINTS=[["var(--coral-soft)","var(--coral-d)"],["var(--mint)","var(--teal-dd)"],["var(--gold-soft)","#9A7B24"],["#E7E9F2","#5A6B8C"],["#F1E4EC","#9C5B84"]];
+  // 頭像字色 2026-10-28 全部改到 WCAG AA（原 coral-d 2.2:1、#9A7B24 3.4:1、#5A6B8C／#9C5B84 約 4:1 都不夠）
+  const AV_TINTS=[["var(--coral-soft)","var(--coral-text)"],["var(--mint)","var(--teal-dd)"],["var(--gold-soft)","var(--gold-text)"],["#E7E9F2","#4A5B7C"],["#F1E4EC","#86476F"]];
   const REL_ZH={ self:"主要使用者", primary_user:"主要使用者", elder:"長輩", senior:"長輩", child:"子女", daughter:"女兒", son:"兒子", family:"家人", caregiver:"照顧者" };
   // 「這一戶是誰」的名字取用順序（2026-07-29 定）：個人資料卡填的本名 → 暱稱 → 登入帶進來的名字。
   // ⚠ 不用 primaryPerson.displayName——那一欄存的是 AI 陪伴角色名（寧寧／阿宏），
@@ -1065,7 +1068,7 @@
   }
   function entActionNote(id,html){ const el=$(id); if(el) el.innerHTML=html||""; }
   function entLoadingOrErrorCard(status,error,title,retryAttr){
-    if(status==="loading") return card(title,"讀取中",emptyBox("讀取中…"));
+    if(status==="loading") return card(title,"讀取中",skeletonBox("讀取中…"));
     if(status==="error") return `<div class="ops-notice error" role="alert"><strong>讀不到資料</strong>${esc(explainErr(error))}</div>${card(title,"",`<button type="button" class="btn-sm" ${retryAttr}>重新整理</button>`)}`;
     return null;
   }
@@ -1234,7 +1237,7 @@
     const back=`<button type="button" class="btn-ghost btn-sm" data-goto="enterpriseClients">← 返回企業客戶列表</button>`;
     if(!clientId) return `${back}${card("企業客戶明細","",emptyBox("請先從列表選擇一家公司。"))}`;
     const ed=state.tabs.entDetail||{};
-    if(ed.clientId!==clientId || ed.status==="loading") return `${back}${card("企業客戶明細","讀取中",emptyBox("讀取這家公司的資料中…"))}`;
+    if(ed.clientId!==clientId || ed.status==="loading") return `${back}${card("企業客戶明細","讀取中",skeletonBox("讀取這家公司的資料中…"))}`;
     if(ed.status==="error") return `${back}${card("企業客戶明細","",`<div class="ops-notice error" role="alert"><strong>讀不到這家公司的資料</strong>${esc(explainErr(ed.error))}</div><button type="button" class="btn-sm" style="margin-top:10px" data-ent-retry-detail="${esc(clientId)}">重新整理</button>`)}`;
     const data=ed.data||{}, c=data.client||{}, seats=data.seats||[], invoices=data.invoices||[], reports=data.reports||data.downloads||[];
     let html=back;
@@ -1397,7 +1400,7 @@
       </div>
       <div id="entImportNote"></div>
     `);
-    if(im.previewing){ html+=card("預檢結果","讀取中",emptyBox("正在比對名單…")); return html; }
+    if(im.previewing){ html+=card("預檢結果","讀取中",skeletonBox("正在比對名單…")); return html; }
     if(im.preview){
       const p=im.preview;
       const groups=[["newSeats","新增"],["alreadyRegistered","已註冊・匯入後直接生效"],["duplicates","重複・會跳過"],["ownedByOtherClient","屬於其他公司・已擋下"],["overQuota","超過席次上限"]];
@@ -2029,6 +2032,7 @@
   // ══════════ 登入門（帳密 → 換後台通行碼） ══════════
   function loginGateHTML(){
     return `<form class="login-card" id="loginForm" aria-labelledby="loginTitle">
+      <img class="login-logo" src="icons/munea-logo.png" alt="" aria-hidden="true">
       <div class="login-brand">Mu<b>nea</b><span class="login-zh">沐寧</span></div>
       <div class="login-title" id="loginTitle">營運後台</div>
       <p class="login-sub">請輸入帳號與密碼登入</p>
