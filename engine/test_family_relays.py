@@ -117,8 +117,16 @@ class RelayConfirmationRuleTests(unittest.TestCase):
     """
 
     def setUp(self):
+        # 2026-08-13 起，傳話這段規則從 live_voice_server.py 搬進
+        # engine/persona/voice-sections.<語系>.txt（一國一本，外語版才翻得到）。
+        # 這支守的是「規則有沒有在」，不是「規則寫在哪個檔」——所以連規則書一起看。
+        import os
         with open(live_voice_server.__file__, encoding="utf-8") as source:
             self.source = source.read()
+        sections = os.path.join(os.path.dirname(live_voice_server.__file__), "persona", "voice-sections.zh-TW.txt")
+        if os.path.exists(sections):
+            with open(sections, encoding="utf-8") as book:
+                self.source += book.read()
 
     def _relay_rule(self):
         start = self.source.index("他要傳話給家庭圈成員時")

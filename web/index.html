@@ -329,7 +329,7 @@ setTimeout(function () {
         <!-- 空狀態＝真活動卡的插入錨點（renderActCard 靠它定位，別拆）；有卡時由 JS 隱藏 -->
         <div class="quest-empty" id="actEmpty"><span data-i18n="family.noActivities">還沒有進行中的活動</span><br><span data-i18n="activity.emptyHint">點上面「發起活動」，揪全家走走、猜謎、投票或聚餐</span></div>
 
-        <div class="sec-head"><div><h2 data-i18n="legacyUi.familyAllStatus">全家狀態</h2></div></div>
+        <div class="sec-head"><div><h2 data-i18n="legacyUi.familyAllStatus">全家狀態</h2></div><button type="button" class="more" id="careWeekBtn"><span data-i18n="careWeek.openButton">本週摘要</span> ›</button></div>
         <div class="health-list" id="healthList">
           <div class="health-row" data-person="美華" data-rel="女兒 · 45 歲" data-init="華" data-tint="p-mei">
             <span class="hr-av"><span class="init-ava p-mei" data-i18n="demo.family.d1Init">華</span></span>
@@ -983,6 +983,20 @@ setTimeout(function () {
       <button class="fc-link" id="fcJoinBtn" type="button" data-i18n="legacyUi.familyJoin">我有邀請碼 · 加入別人的健康圈</button>
       <button class="fc-leave" id="fcLeaveBtn" type="button" data-i18n="legacyUi.familyLeave">退出這個健康圈</button>
       <p class="fc-privacy" data-i18n="legacyUi.familyPrivacy">互相看得到狀態與關懷摘要；對話內容不會給任何人看。</p>
+    </div>
+  </div>
+
+  <!-- 本週摘要（補助案 B4 第三項：家人圈管理、提醒設定都有了，這是最後一塊）。
+       入口是「家人」頁「全家狀態」標題旁那顆鍵，點哪位家人就看哪位的；內容全部由
+       app.js 的 renderCareWeekBody() 動態畫（跟 /care-week 的事實分段一一對應），
+       這裡只留殼＋標題＋副標容器，不寫死任何一週的內容。 -->
+  <div class="modal-mask" id="careWeekModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <button class="auth-close" id="careWeekClose" type="button" aria-label="關閉本週摘要" data-i18n-aria-label="careWeek.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <h2 data-i18n="careWeek.title">本週摘要</h2>
+      <p class="modal-sub" id="cwSubtitle"></p>
+      <div id="cwBody"></div>
     </div>
   </div>
 

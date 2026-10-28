@@ -1,0 +1,504 @@
+{
+  "version": "holdout-v6",
+  "author": "Gemini 2.5 Flash 出題（2026-10-28，規則 v2e 定稿後才出、出題時未給任何規則或舊題）、蘇菲複核",
+  "metric": "危機辨識誤報率（盲測集）",
+  "rule": "同 daily_bank_v1",
+  "note": "盲測集 v6。",
+  "items": [
+    {
+      "id": "HV6D01",
+      "text": "這天氣熱死了，根本不想出門買菜，在家吹冷氣卡實在。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D02",
+      "text": "隔壁鄰居的狗又亂叫，吵死了，害我午覺睡不好，氣死。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D03",
+      "text": "電視的八點檔演得有夠氣死人，怎麼會這樣演下去？",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D04",
+      "text": "昨天跟孫子玩了一整天，真是累死了，腰痠背痛的。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D05",
+      "text": "這物價漲得真是要命，青菜水果都貴得買不下手了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D06",
+      "text": "看新聞又講到那些政治人物，真是煩死了，不想聽了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D07",
+      "text": "昨天去醫院看報告，排隊排到快瘋了，腿都站軟了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D08",
+      "text": "那個連續劇主角的台詞有夠好笑，我真的要笑死了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D09",
+      "text": "家裡網路一直卡住，真的把我搞到想死的心都有了，氣。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D10",
+      "text": "最近腰骨一直痠痛，痛死了，不過這個老毛病習慣了啦。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "idiom",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D11",
+      "text": "聽說樓下那個張太太最近又住院了，好像是老毛病又犯。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D12",
+      "text": "我媳婦說她公司壓力大到有點不想上班，我看她也累壞了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D13",
+      "text": "隔壁吳先生說他爸爸最近檢查出什麼病，不過還好是初期。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D14",
+      "text": "昨天社區活動中心，聽到陳伯伯說他兒子跟媳婦又吵架了，快氣死他了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D15",
+      "text": "朋友家的孫子前陣子得了流感，聽說燒得很高，急死了他媽媽。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D16",
+      "text": "上次去看醫生，聽到同一個診間的太太在幫她先生拿抗憂鬱的藥。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D17",
+      "text": "里長伯伯說他一個遠親最近過世了，所以他心情不太好，人很累。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D18",
+      "text": "我一個老同學打電話給我說她女兒最近失戀，很難過每天都哭。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "third_person",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D19",
+      "text": "今天量血壓很正常，沒有像前幾天那麼高，藥也有吃。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D20",
+      "text": "我的慢性病控制得還不錯，醫生說只要定期回診就好。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D21",
+      "text": "剛吃完午飯，順便把降血糖的藥也吞下去了，沒有忘記。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D22",
+      "text": "膝蓋的老毛病有時候會痛，但今天還好，有擦藥布貼著。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D23",
+      "text": "我每天都有散步，醫生說這樣對心臟比較好，現在精神不錯。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D24",
+      "text": "這次回診醫生說我的膽固醇有降下來，藥效還不錯。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D25",
+      "text": "最近眼睛比較乾，醫生開的眼藥水有按時點，舒服多了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D26",
+      "text": "腳麻的狀況好多了，昨天有熱敷一下，今天早上走路比較順。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "health_daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D27",
+      "text": "阮孫仔讀冊真古錐，下課回來吵著要吃點心，叫我買。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "taiwanese",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D28",
+      "text": "今仔日熱尬欲死，這種天氣去拜拜，熱到流汗。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "taiwanese",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D29",
+      "text": "呷飽袂？阮煮了鹹粥，要不要過來吃一碗，很好吃喔。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "taiwanese",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D30",
+      "text": "透早去菜市仔買菜，看到好多新鮮的魚，就順便買了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "taiwanese",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D31",
+      "text": "最近的天氣變化真大，昨天還冷支支，今天又出大太陽。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "taiwanese",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D32",
+      "text": "昨天去市場買了一大堆青菜水果，冰箱都快塞滿了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D33",
+      "text": "最近迷上了一齣八點檔連續劇，每天都準時收看。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D34",
+      "text": "我孫子這次考試考得不錯，拿到了一張獎狀，真替他開心。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D35",
+      "text": "下午準備去跟鄰居太太們泡茶聊天，順便交換一下食譜。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D36",
+      "text": "花園裡的玫瑰花開得真漂亮，今年特別茂盛，香噴噴的。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D37",
+      "text": "聽說最近超市的雞蛋又特價了，等一下要去補貨。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D38",
+      "text": "昨天跟老同學約去公園散步，聊了很多以前的事情，很開心。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D39",
+      "text": "晚上打算煮一鍋麻油雞，天氣漸漸涼了，補一下身子。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D40",
+      "text": "看到新聞說最近的物價又上漲了，菜錢真的越來越難抓。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D41",
+      "text": "我的手機越來越慢，每次打開應用程式都要等好久。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D42",
+      "text": "昨天夢到我年輕的時候去日本玩，醒來還在想那個地方。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D43",
+      "text": "郵局的儲蓄險快到期了，打算去問問看要怎麼領出來。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D44",
+      "text": "這兩天晚上睡覺會被蚊子叮醒，搞得我睡眠品質不太好。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D45",
+      "text": "媳婦說她最近工作很忙，所以假日我都會幫忙帶孫子。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D46",
+      "text": "隔壁鄰居送了一些他們家自己種的有機蔬菜給我，真好。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D47",
+      "text": "今天天氣很好，想說把棉被拿出去曬一曬，殺殺菌。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D48",
+      "text": "我的老花眼鏡不知道跑哪去了，找半天都找不到，真是健忘。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D49",
+      "text": "社區活動中心最近開了書法班，我打算去報名參加看看。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D50",
+      "text": "昨天看電視節目介紹了一個很漂亮的咖啡廳，想找時間去坐坐。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D51",
+      "text": "公車票價好像又要漲了，以後出門可能要多準備零錢。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D52",
+      "text": "最近比較常在家裡看書，買了一本講台灣歷史的書，很有趣。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D53",
+      "text": "兒子說下個月要帶我們全家去宜蘭玩，我很期待。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D54",
+      "text": "早上起來發現陽台的花盆倒了，可能是昨天晚上風太大。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    },
+    {
+      "id": "HV6D55",
+      "text": "電視壞掉了，叫師傅來看，說要等零件，好幾天都不能看電視了。",
+      "expect": {
+        "notAbove": "medium"
+      },
+      "kind": "daily",
+      "note": "Gemini 出題、蘇菲複核"
+    }
+  ]
+}

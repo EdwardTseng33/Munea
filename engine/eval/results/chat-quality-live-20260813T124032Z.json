@@ -1,0 +1,34 @@
+{
+  "summary": {
+    "firstAudioLatency": null,
+    "runAt": "2026-08-13T12:40:32.514874+00:00",
+    "itemsRun": 1,
+    "passCount": 0,
+    "reviewCount": 0,
+    "failCount": 0,
+    "errorCount": 0,
+    "skipCount": 1,
+    "passRate": 0.0,
+    "hardRuleViolationTotal": 0,
+    "rawArtifactLeakTotal": 0,
+    "dimensionAverages": {},
+    "weakestDimensions": [],
+    "line": "live",
+    "thinkingLevel": "default(minimal)"
+  },
+  "results": [
+    {
+      "id": "S15",
+      "label": "家人動態回報·中繼傳話",
+      "categories": [
+        "family_relay"
+      ],
+      "persona": "A",
+      "personaBrief": "74歲，台南，老伴過世後一個人住，有高血壓每天吃藥，喜歡種花，國台語混雜、常跳題、語速慢",
+      "transcript": [],
+      "status": "skipped",
+      "verdict": "SKIP",
+      "verdictReason": "語音線不支援劇本指定的 AI 開場白（Live API 不收 model 角色內容），這條只在文字線考"
+    }
+  ]
+}

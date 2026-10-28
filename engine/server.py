@@ -28,10 +28,12 @@ import health_followup
 import health_kb
 import health_selector
 import visit_summary
+import care_week
 import localization
 import supabase_adapter
 import enterprise_seats
 import enterprise_billing
+import org_portal
 import model_router
 import notify
 import apple_store
@@ -372,7 +374,12 @@ def verify_auth_context(headers=None):
     return verify_supabase_access_token(token)
 
 
-PUBLIC_POST_PATHS = {"/auth-status", "/account-bootstrap", "/apple/notifications"}
+# 機構窗口專區（C1 · P0-5）：窗口不是 App 會員、沒有登入證，帶的是管理員發的簽章連結。
+# 所以要免會員門，但處理端一定自己驗憑證（org_portal.verify_portal_token），不是開放門。
+PUBLIC_POST_PATHS = {
+    "/auth-status", "/account-bootstrap", "/apple/notifications",
+    "/enterprise/portal/summary",
+}
 ADMIN_POST_PATHS = {
     "/admin/accounts",
     "/admin/north-star",
@@ -430,6 +437,8 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/seats/sweep",
     "/admin/enterprise/billing-settings",
     "/admin/enterprise/billing-settings/save",
+    # 機構窗口專屬連結（C1 · P0-5）：只有我們的管理員能產生，處理端再驗一次管理鑰匙。
+    "/admin/enterprise/portal/issue-link",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -2091,6 +2100,112 @@ def medication_doses_response(data):
             limit=data.get("limit") or 1000,
         ),
     }
+
+
+def _care_week_person_in_caller_circle(requested_person_id, family_group_id):
+    """payload 的 personId 只有在跟請求者同一個家庭圈時才採信——判定方式照既有
+    家人名單 load_family_members 這套（跟「設定 → 全家健康圈」讀的是同一份資料），
+    不另立一套身分比對。查不到名單就當作不是同一圈（寧可退回本人，不猜）。"""
+    try:
+        members = load_family_members(family_group_id=family_group_id, limit=200)
+    except Exception as e:
+        log_fallback_exception("load family members for care week personId check", e)
+        return False
+    return any(
+        str(member.get("id")) == str(requested_person_id)
+        for member in (members or [])
+        if member.get("id")
+    )
+
+
+def care_week_response(data):
+    """POST /care-week：這個人這一週跟沐寧之間發生的事，排成一頁事實（補助案 C2／B4）。
+
+    規矩同 visit_summary_response，一條不少：
+    · 只認已驗證身分（_current_person_id）當起點；payload 的 personId 只有在跟請求者
+      同一個家庭圈時才採信（家人圈互看週摘要），否則一律悄悄退回本人——
+      查不出是不是同一家人，寧可只給自己的，不給錯的人；退回時留一筆
+      log_fallback_exception，不悄悄吞掉（查得到是誰傳了什麼）。
+    · 任何一路撈失敗都寫進 partial 回報，不可悄悄少一塊（少了「守護腦」那段看起來就像「這週很平安」）。
+    · 不呼叫 AI；組裝全在 care_week 純函式。
+    機構端（一個機構一份）要等「機構照護模式」的同意規則定案才接；這裡先給本人與家庭圈。
+    """
+    data = data or {}
+    person_id = _current_person_id()
+    if not person_id:
+        return {"ok": False, "error": "identity_required"}
+    requested_person_id = data.get("personId") or data.get("person_id")
+    if requested_person_id and str(requested_person_id) != str(person_id):
+        family_group_id = _current_family_group_id()
+        if _care_week_person_in_caller_circle(requested_person_id, family_group_id):
+            person_id = str(requested_person_id)
+        else:
+            log_fallback_exception(
+                "care week personId rejected (not in caller's family circle)",
+                ValueError("requested=%r caller=%r familyGroupId=%r" % (
+                    requested_person_id, person_id, family_group_id,
+                )),
+            )
+    try:
+        days = int(data.get("days") or care_week.DEFAULT_DAYS)
+    except (TypeError, ValueError):
+        days = care_week.DEFAULT_DAYS
+    days = max(1, min(31, days))
+    settings = {}
+    raw_no_contact = data.get("noContactDays")
+    if raw_no_contact is not None:
+        try:
+            settings["noContactDays"] = max(1, min(30, int(raw_no_contact)))
+        except (TypeError, ValueError) as e:
+            # 壞值退預設（3 天），但要留一筆——悄悄吞掉就查不到是誰傳了什麼（後端 fallback 記錄契約）
+            log_fallback_exception("parse noContactDays for care week", e)
+    try:
+        import perception_engine
+        today = (perception_engine.now_context() or {}).get("date") or ""
+    except Exception:
+        today = ""
+
+    partial = []
+    signals, summaries, events = [], [], []
+    try:
+        signals = [
+            s for s in (load_wellbeing_signals(person_id, limit=500) or [])
+            if isinstance(s, dict) and str(s.get("personId") or person_id) == str(person_id)
+        ]
+    except Exception as e:
+        log_fallback_exception("load wellbeing signals for care week", e)
+        partial.append("mood")
+    try:
+        summaries = [
+            s for s in (load_conversation_summaries(person_id=person_id, limit=300) or [])
+            if isinstance(s, dict) and str(s.get("personId") or person_id) == str(person_id)
+        ]
+    except Exception as e:
+        log_fallback_exception("load conversation summaries for care week", e)
+        partial.append("contact")
+    try:
+        start, _end = care_week.period_bounds(days, today or None)
+        since_iso = (start - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
+        for ev in load_product_events(since_iso=since_iso, limit=2000) or []:
+            if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
+                continue
+            if str(ev.get("personId") or "") != str(person_id):
+                continue
+            props = ev.get("properties") or {}
+            events.append({
+                "eventTime": ev.get("eventTime") or ev.get("createdAt"),
+                "riskLevel": props.get("riskLevel") or props.get("risk_level"),
+                "categories": props.get("categories") or [],
+            })
+    except Exception as e:
+        log_fallback_exception("load guardian events for care week", e)
+        partial.append("safety")
+
+    week = care_week.build_person_week({"id": person_id}, signals, summaries, events, today=today or None, days=days)
+    week["measured"]["note"] = "這一版還沒接在家量測資料；要看血壓、心跳、用藥請用就診摘要。"
+    week["partial"] = partial
+    anomalies = care_week.detect_anomalies(week, settings)
+    return {"ok": True, "week": week, "anomalies": anomalies, "text": care_week.render_text(week, anomalies), "partial": partial}
 
 
 def visit_summary_response(data):
@@ -7225,6 +7340,61 @@ def enterprise_seats_sweep_response(data=None):
     return {"ok": True, **result}
 
 
+def admin_enterprise_portal_issue_link_response(data=None):
+    """/admin/enterprise/portal/issue-link：產生一條給機構窗口的專屬連結（C1 · P0-5）。
+
+    只有我們的管理員能產。連結裡的簽章綁死組織代號與到期日——改一個字就對不上，
+    所以窗口永遠只看得到自己那一家。預設 30 天到期，最長 180 天。
+    """
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": "client_id_required"}
+    client = enterprise_seats.get_client(client_id)
+    if not client:
+        return {"ok": False, "error": "client_not_found"}
+
+    ttl = data.get("ttlDays") if data.get("ttlDays") is not None else data.get("ttl_days")
+    try:
+        token = org_portal.issue_portal_token(client_id, ttl_days=ttl)
+        claims = org_portal.verify_portal_token(token)
+    except org_portal.PortalTokenError as exc:
+        return {"ok": False, "error": exc.code}
+
+    base = str(
+        data.get("baseUrl")
+        or data.get("base_url")
+        or os.environ.get("MUNEA_ORG_PORTAL_BASE_URL")
+        or ""
+    ).strip()
+    return {
+        "ok": True,
+        "clientId": client_id,
+        "clientName": client.get("name") or "",
+        "url": org_portal.build_portal_link(base, token),
+        "expiresAt": claims["expiresAt"],
+    }
+
+
+def org_portal_summary_response(data=None):
+    """/enterprise/portal/summary：機構窗口帶著連結進來看自己的彙總（C1 · P0-5）。
+
+    只讀、只給匿名數字，整條路上沒有任何寫入。驗不過一律回同一種說法，
+    不告訴對方是「簽章錯」還是「這家不存在」——那會變成試探組織代號的工具。
+    """
+    data = data or {}
+    token = str(data.get("token") or data.get("t") or "").strip()
+    try:
+        claims = org_portal.verify_portal_token(token)
+        summary = org_portal.build_portal_summary(claims["clientId"])
+    except org_portal.PortalTokenError as exc:
+        # 只有「過期」值得單獨講，因為窗口看到就知道要回頭跟我們要新連結。
+        code = "token_expired" if exc.code == "token_expired" else "invalid_token"
+        return {"ok": False, "error": code}
+    # PortalPrivacyError 故意不接：彙總裡混進個資是程式的錯，寧可整支炸掉也不能送出去。
+    return {"ok": True, "expiresAt": claims["expiresAt"], **summary}
+
+
 def enterprise_invoices_response(data=None):
     """3.6 /admin/enterprise/invoices：請款單列表，含狀態、逾期天數、累計欠款。"""
     data = data or {}
@@ -10208,6 +10378,8 @@ class H(BaseHTTPRequestHandler):
                 self._json(product_event_response(data))
             elif self.path == "/visit-summary":
                 self._json(visit_summary_response(data))
+            elif self.path == "/care-week":
+                self._json(care_week_response(data))
             elif self.path == "/ai/brain-status":
                 self._json(model_router.brain_status_response())
             elif self.path == "/persona/context":
@@ -10236,6 +10408,15 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(refresh_living_profile(data.get("personId") or data.get("person_id")))
+            elif self.path == "/admin/enterprise/portal/issue-link":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(admin_enterprise_portal_issue_link_response(data))
+            elif self.path == "/enterprise/portal/summary":
+                # 機構窗口專區：不吃管理鑰匙，吃的是管理員發出去的簽章連結。
+                self._json(org_portal_summary_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":

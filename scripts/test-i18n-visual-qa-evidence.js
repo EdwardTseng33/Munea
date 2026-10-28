@@ -103,11 +103,12 @@ try {
   assert.equal(evidence.result, 'pass');
   assert.equal(evidence.locale, 'en');
   // 2026-08-10：39 個畫面（原 38）＋ screen:onboarding-intro；每畫面 3 種機型＝117 張
-  assert.equal(evidence.screens.length, 39);
-  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 117);
+  // 2026-10-28：40 個畫面（原 39）＋ modal:care-week（補助案 B4）；每畫面 3 種機型＝120 張
+  assert.equal(evidence.screens.length, 40);
+  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 120);
   assert.equal(
     new Set(evidence.screens.flatMap(({ captures }) => captures.map(({ sha256 }) => sha256))).size,
-    117,
+    120,
   );
   assert.equal(evidence.binaryBytes, fs.statSync(candidateIpa(temp)).size);
 
@@ -185,4 +186,4 @@ try {
   fs.rmSync(temp, { recursive: true, force: true });
 }
 
-console.log('PASS: visual QA evidence requires 114 unique exact-build screenshots');
+console.log('PASS: visual QA evidence requires 120 unique exact-build screenshots');
