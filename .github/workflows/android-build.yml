@@ -124,18 +124,30 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
+          # 2026-10-28（PR #630 原生啟動畫面）：多拍 2 秒跟 20 秒各一張——2 秒那張 WebView 一定
+          # 還沒畫好、看到的就是原生啟動畫面本人（奶油底＋沐寧標誌，不是白屏）；20 秒那張是
+          # 網頁殼接手之後的畫面；8 秒那張沿用原檔名。模擬器桌面程式冷開機會自己「沒有回應」、
+          # 對話框蓋在畫面上，拍 8 秒那張之前先把別人的對話框關掉（工具只關別人的、不關 App 自己的）。
           script: |
             adb install -r ./apk-download/app-debug.apk
             adb shell monkey -p net.munea.app -c android.intent.category.LAUNCHER 1
-            sleep 8
+            sleep 2
+            adb exec-out screencap -p > launch-2s.png
+            python3 scripts/android-ui-tap-by-text.py --dismiss-anr-only --dump-path launch-8s-pre-shot.xml || true
+            sleep 5
             adb exec-out screencap -p > launch.png
+            sleep 12
+            adb exec-out screencap -p > launch-20s.png
 
       - name: Upload launch screenshot artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: munea-android-screens-${{ github.run_number }}
-          path: launch.png
+          path: |
+            launch-2s.png
+            launch.png
+            launch-20s.png
           if-no-files-found: warn
           retention-days: 14
 

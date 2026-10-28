@@ -75,12 +75,17 @@ def find_target(nodes, queries):
     return None, None
 
 
-# 2026-10-28（PR #630 實跑看到）：模擬器的桌面程式 Pixel Launcher 偶爾會「沒有回應」，
-# 系統對話框蓋在最上面——uiautomator 只撈得到那張對話框的三行字，App 本身其實已經畫好了
-# （截圖上首頁就在對話框底下）。那是模擬器桌面的事、不是 App 的錯：看到就按「等待」讓它
-# 退下去、繼續撈；有按一定印出來留紀錄，不悄悄吞掉。只認「沒有回應」這種系統對話框，
-# App 自己的崩潰對話框（keeps stopping）不在此列、照常算失敗。
+# 2026-10-28（PR #630 實跑看到）：模擬器的桌面程式 Pixel Launcher 會「沒有回應」——logcat 證實
+# 是它自己冷開機太慢、輸入事件等不到焦點視窗（Input dispatching timed out），在我們 App 啟動
+# 前 40ms 就已經發生；系統對話框蓋在最上面，uiautomator 只撈得到那三行字，App 本身其實已經
+# 畫好了（截圖上首頁就在對話框底下）。那是模擬器桌面的事、不是 App 的錯：
+#   - 按「關閉應用程式」而不是「等待」：按「等待」那個卡住的輸入事件還在，每 5 秒再跳一次
+#     （同一輪跑出來按了 6 次）；關掉桌面程式系統會自己重開，對話框就不再來。
+#   - 只處理「別人」的「沒有回應」：對話框標題是 Munea／沐寧 就不碰，讓失敗如實呈現。
+#   - 有按一定印出來留紀錄，不悄悄吞掉。App 自己的崩潰對話框（keeps stopping）也不在此列。
 ANR_TITLE_HINTS = ("isn't responding", "is not responding", "沒有回應", "無回應")
+ANR_OWN_APP_HINTS = ("Munea", "沐寧", "munea")
+ANR_CLOSE_LABELS = ("Close app", "關閉應用程式", "關閉")
 ANR_WAIT_LABELS = ("Wait", "等待")
 
 
@@ -88,14 +93,29 @@ def dismiss_anr_dialog(nodes):
     titles = [n['text'] for n in nodes if any(h in n['text'] for h in ANR_TITLE_HINTS)]
     if not titles:
         return False
-    for n in nodes:
-        if n['text'] in ANR_WAIT_LABELS:
-            x, y = parse_bounds(n['bounds'])
-            print(f'[WARN] 畫面上有系統「沒有回應」對話框 {titles}，按「{n["text"]}」({x},{y}) 讓它退下去再繼續撈')
-            adb('shell', 'input', 'tap', str(x), str(y))
-            return True
-    print(f'[WARN] 畫面上有系統「沒有回應」對話框 {titles}，但找不到「等待」鍵可按')
+    if any(any(own in t for own in ANR_OWN_APP_HINTS) for t in titles):
+        print(f'[FAIL] 畫面上是 App 自己的「沒有回應」對話框 {titles}——不替它關掉，讓失敗如實呈現')
+        return False
+    for labels, verb in ((ANR_CLOSE_LABELS, '關閉'), (ANR_WAIT_LABELS, '等待')):
+        for n in nodes:
+            if n['text'] in labels:
+                x, y = parse_bounds(n['bounds'])
+                print(f'[WARN] 畫面上有別的程式的「沒有回應」系統對話框 {titles}（模擬器桌面冷開機卡住、不是 App 的錯），按「{n["text"]}」({x},{y}) 讓它退下去再繼續')
+                adb('shell', 'input', 'tap', str(x), str(y))
+                return True
+    print(f'[WARN] 畫面上有系統「沒有回應」對話框 {titles}，但找不到可按的鍵')
     return False
+
+
+def dismiss_anr_once(dump_path):
+    """只撈一次畫面、有別人的「沒有回應」對話框就關掉；永遠以 0 結束（這不是驗收步驟、是清場）。"""
+    xml_text = dump_current_screen(dump_path)
+    try:
+        nodes = collect_nodes(xml_text) if xml_text else []
+    except ET.ParseError:
+        nodes = []
+    if not dismiss_anr_dialog(nodes):
+        print('[OK] 清場：畫面上沒有別人的「沒有回應」對話框')
 
 
 def dump_current_screen(dump_path):
@@ -121,12 +141,18 @@ def dump_current_screen(dump_path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--text', required=True, help='要找並點下去的按鈕文字，逗號分隔可給多個候選（例如不同語系的翻譯）')
+    parser.add_argument('--text', help='要找並點下去的按鈕文字，逗號分隔可給多個候選（例如不同語系的翻譯）')
+    parser.add_argument('--dismiss-anr-only', action='store_true',
+                        help='不找按鈕，只撈一次畫面、把別的程式的「沒有回應」系統對話框關掉就結束（截圖前清場用）')
     parser.add_argument('--dump-path', required=True, help='最後一次 accessibility tree dump 的存檔路徑（留證據、方便回看）')
     parser.add_argument('--timeout', type=float, default=40.0, help='最多願意等幾秒（預設 40 秒；模擬器 software rendering 常常比真機慢）')
     parser.add_argument('--poll-interval', type=float, default=2.0, help='每隔幾秒重撈一次畫面（預設 2 秒）')
     args = parser.parse_args()
-    queries = [q.strip() for q in args.text.split(',') if q.strip()]
+    Path(args.dump_path).parent.mkdir(parents=True, exist_ok=True)
+    if args.dismiss_anr_only:
+        dismiss_anr_once(args.dump_path)
+        return
+    queries = [q.strip() for q in (args.text or '').split(',') if q.strip()]
     if not queries:
         print('[FAIL] --text 沒有給出任何候選字串', file=sys.stderr)
         sys.exit(2)

@@ -78,9 +78,14 @@ echo "== 啟動 App =="
 adb shell am force-stop "$PKG" >/dev/null 2>&1 || true
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 3
+# 截圖前清場：模擬器桌面程式（Pixel Launcher）冷開機太慢會自己「沒有回應」、對話框蓋在我們的
+# 啟動畫面上（logcat 證實在 App 啟動前就發生）。先把別人的對話框關掉再拍，01 才拍得到
+# 原生啟動畫面本人；App 自己的對話框不會被關（工具只關別人的）。
+python3 scripts/android-ui-tap-by-text.py --dismiss-anr-only --dump-path "$SHOTS_DIR/01-pre-shot.xml" || true
+sleep 1
 screenshot "01-launch-3s"
 foreground_state "01-launch-3s"
-record "啟動 App（等 3 秒）" "有畫面、不是白屏或崩潰對話框（原生啟動畫面＝奶油底＋沐寧標誌，PR #630 起）" "看截圖 01" "01-launch-3s.png"
+record "啟動 App（等 3 秒、清掉別人的「沒有回應」對話框後再拍）" "有畫面、不是白屏或崩潰對話框（原生啟動畫面＝奶油底＋沐寧標誌，PR #630 起）" "看截圖 01" "01-launch-3s.png"
 
 # 2026-10-28 第四輪：模擬器冷到 App 啟動 15 秒後才看到啟動頁，40 秒差點不夠——放寬到 90 秒
 # （找到就立刻往下走，不會真的等滿；這裡的上限只管「最糟要等多久才宣告失敗」）。
