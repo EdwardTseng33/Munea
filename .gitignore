@@ -86,3 +86,6 @@ docs/qa/i18n/local-browser-precheck/_targeted/
 # 沒擋住的話每次算差異都要掃過它們——桌機版 Claude 的差異畫面也被它撐大。
 .worktrees/
 .codex-tmp/
+
+# google-github-actions/auth 在工作目錄留下的暫存憑證（iOS 雲端打包要求乾淨工作目錄）
+gha-creds-*.json
