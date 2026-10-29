@@ -1,5 +1,11 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-29 23:30 蘇菲｜🖼 Android 圖示收尾：CI 拍桌面證明是官方圖示＋清掉範本殘檔（分支 `claude/mystifying-swirles-65db79` · 補助案 B1 · 不碰通話路徑）
+
+- **接**：#632 已把 15 張圖示換成官方寧寧圖示（iOS 同一張、背景 #FEF5EB、`scripts/android-make-launcher-icons.py` 一行重產），但 CI 從沒拍過桌面那顆、兩個 Capacitor 範本殘檔還留著。
+- **做了**：① 新 `scripts/android-launcher-icon-check.py`：模擬器按 HOME → 開應用程式列表 → 找「Munea」那格放大 4 倍存檔 → 顏色判定（橘水滴＋青綠漣漪要在、範本藍不能比橘多）；找不到或顏色不對就讓 emulator-smoke 紅、不悄悄放過 ② workflow emulator-smoke 多跑這支、截圖跟判定一起上傳 ③ 刪 `drawable-v24/ic_launcher_foreground.xml`、`drawable/ic_launcher_background.xml`（範本藍 X 的向量圖，#632 後沒任何地方引用；`values/ic_launcher_background.xml` 還在用、保留）。
+- **檔**：`.github/workflows/android-build.yml`、`scripts/android-launcher-icon-check.py`、上述兩個刪檔、本看板；CI 證據回填 `docs/qa/android/icon-2026-10-29/`。**狀態**：🔄 等 CI 三 job 綠＋PR 附桌面截圖；合併 Edward 按。
+
 ### 2026-10-29 15:50 蘇菲｜📞 通話改「臉在手機、聲音在雲端」——正式線自 9/6 起打不通的病根（call-path risk · 改通話配對、照 7/13 規矩先列檔）
 
 - **病根（查帳實錘）**：總機 `munea_call_request` 配對要同時有聲音座位＋臉的座位（`gpu_workers`）。雲端顯示卡 6 張 9/6 起全 `terminated` → 每通電話永遠排隊。最後一通成功 8/13；10/14 唯一一通排隊 7.8 秒被取消。App 端 `getAvatarUrl()` 也仍回雲端臉位址（寧寧→a05 FlashHead），新插圖只換了畫面、撥號沒跟著改。
