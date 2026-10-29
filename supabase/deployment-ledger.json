@@ -218,6 +218,12 @@
           "sha256": "73662272b604c17306f19700cbd1989bf23644090504b2b76616088fdbb032f4",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
+        },
+        {
+          "filename": "029_on_device_face_worker.sql",
+          "sha256": "a0777a53bf94bfd2ac0fc13e4d3c96078e8adf20587d637315ebf50da306f40f",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
         }
       ],
       "rollback": {

@@ -116,7 +116,7 @@ def test_voice_and_avatar_are_a_single_required_service() -> None:
     assert "!lease.worker || !lease.worker.url" in APP
     assert "throw new Error('paired_service_unavailable')" in APP
     assert "if (CallControl.active) return (CallControl.active.voice" in APP
-    assert "if (CallControl.active) return (CallControl.active.worker" in APP
+    assert "const workerUrl = (CallControl.active.worker && CallControl.active.worker.url) || '';" in APP
 
 
 def test_app_rejects_mixed_call_protocols() -> None:
@@ -171,6 +171,15 @@ def test_public_site_uses_firebase_instead_of_vercel() -> None:
     assert not (ROOT / "app-site" / "vercel.json").exists()
 
 
+def test_on_device_face_never_waits_for_a_gpu_face() -> None:
+    """2026-10-29：臉在手機上跑。總機給 phone:// 座位＝不接雲端臉；雲端臉預設關、要 munea.remoteFace=1 才開。"""
+    assert "const ON_DEVICE_FACE_SCHEME = 'phone://';" in APP
+    assert "if (!workerUrl || workerUrl.indexOf(ON_DEVICE_FACE_SCHEME) === 0) return '';" in APP
+    assert "return remoteFaceEnabled() ? workerUrl : '';" in APP
+    assert "if (!remoteFaceEnabled()) return '';" in APP
+    assert "localStorage.getItem('munea.remoteFace') === '1'" in APP
+
+
 def main() -> None:
     tests = [
         test_production_app_uses_gateway_by_default,
@@ -182,6 +191,7 @@ def main() -> None:
         test_developer_gateway_profile_bypasses_zero_credit_block_silently,
         test_development_profile_bypass_does_not_weaken_release,
         test_voice_and_avatar_are_a_single_required_service,
+        test_on_device_face_never_waits_for_a_gpu_face,
         test_app_rejects_mixed_call_protocols,
         test_connected_ui_waits_for_server_active_lease,
         test_gateway_billing_replaces_local_point_mutation,
