@@ -71,7 +71,19 @@ xattr -cr "$ROOT/ios/App/App"
 rm -rf "$ARCHIVE_PATH"
 
 echo "== Create signed App Store archive =="
+# 雲端打包機沒有登入 Xcode 帳號：有 App Store Connect API 鑰匙時，把它交給 xcodebuild
+# 讓它自己向蘋果要簽章與描述檔。本機 Mac（已登入 Xcode 帳號）沒設這三個變數，行為不變。
+AUTH_ARGS=()
+if [ -n "${ASC_PRIVATE_KEY_PATH:-}" ] && [ -n "${ASC_KEY_ID:-}" ] && [ -n "${ASC_ISSUER_ID:-}" ]; then
+  AUTH_ARGS=(
+    -authenticationKeyPath "$ASC_PRIVATE_KEY_PATH"
+    -authenticationKeyID "$ASC_KEY_ID"
+    -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+  )
+  echo "Using App Store Connect API key for signing (key id $ASC_KEY_ID)."
+fi
 if ! xcodebuild \
+  "${AUTH_ARGS[@]+"${AUTH_ARGS[@]}"}" \
   -project ios/App/App.xcodeproj \
   -scheme App \
   -configuration Release \
