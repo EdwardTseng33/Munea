@@ -60,7 +60,8 @@
   const DEFAULT_LOCAL_API = "http://127.0.0.1:8200";
   const REQUEST_TIMEOUT_MS = 15000;
   const ADMIN_DATA_META_SCHEMA = "munea.admin-data-meta.v1";
-  const KNOWN_ADMIN_HOSTS = ["munea-brain-staging-491603544409.asia-east1.run.app"];
+  // 2026-10-26 Edward 拍板後台正式網址 admin.munea.net（Cloud Run 網域綁定、設定單 docs/後台網址-admin.munea.net-設定單-2026-10-26.md）
+  const KNOWN_ADMIN_HOSTS = ["munea-brain-staging-491603544409.asia-east1.run.app", "admin.munea.net"];
   // 相容目前已部署的薄門；它不是管理憑證。部署端可在載入本檔前設定
   // window.MUNEA_ADMIN_APP_KEY，下一步即可把這個相容值從靜態資產移除。
   const LEGACY_APP_KEY = "mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5";
@@ -422,7 +423,7 @@
   // 陪伴角色欄顯示「我們自己的角色編號」，不顯示用戶給的暱稱（2026-07-30 Edward 拍板）。
   // 用戶會把同一個角色叫成寧寧／蹦吧利利，後台要看的是「他選了哪一款」而不是他怎麼叫它。
   const COMPANION_ZH={
-    "nening-real-female":"寧寧（溫柔型）",
+    "nening-real-female":"寧寧（溫柔型）","mumu-flat-male":"沐沐（穩重型）",
     "companion-real-male":"擬真男孩 01",
     "munea-2d-xiaoyun":"動畫女孩 01",
     "munea-2d-ayuan":"動畫男孩 01",
@@ -1940,7 +1941,7 @@
     const s=storageGet(localStorage,ADMIN_BASE_KEY); if(s) return s;
     if(location.protocol.startsWith("http")) return location.origin;
     return DEFAULT_LOCAL_API; }
-  function envLabelFor(u){ if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
+  function envLabelFor(u){ if(/admin\.munea\.net/.test(u))return "正式後台"; if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
   // 開錯台防呆：頁面在測試機時頂部掛一條明顯橫幅。兩台的網址只差一個字（brain 與 brain-staging），
   // 左下角那行小字不夠醒目——Edward 花了三輪才發現自己看的是測試機。
   function envBannerHTML(){

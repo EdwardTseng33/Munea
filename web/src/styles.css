@@ -3033,6 +3033,23 @@ html:lang(ja) {
   overflow: hidden; min-height: 38px; margin-top: 3px; }
 #moodLabel { white-space: nowrap; }
 
+/* 窄 Android（360 寬、加大字體）三處被切（補助案 B6 Android 套用對照 · 2026-10-29）：
+ * ①帳號列「Guest mode／ゲストモード」②提醒五顆「On time／Puntual」③日文心情大字
+ * 「まだ記録していません」把整張卡撐出螢幕、右邊心情臉被切（④六顆臉本身也排不下）。iPhone 375 以上都沒事。
+ * 版型照 8/1 拍板不動（一行、不折行），只在 370 寬以下把字收小一點；
+ * 日文那句改成跟中文「還沒記錄」一樣短的「まだ記録なし」（ja.json），大字不用縮；
+ * 心情那一欄補 min-width:0——不然一行不折的大字會把整列撐寬、連卡片一起推出去。 */
+#moodBody .row > div[style*="flex:1"] { min-width: 0; }
+@media (max-width: 370px) {
+  .auth-title { font-size: 14px; }
+  .med-chips.fit-row.even { gap: 4px; }
+  /* 前面有 html:lang(en/es/ja) 那條把字級定成 13px，這裡要多一個 html 才蓋得過 */
+  html .med-chips.fit-row.even .mchip { font-size: 12px; letter-spacing: -.3px; }
+  /* 六顆心情臉：38px 圓＋8px 間距在 360 寬加大字體時排不下、最後一顆被卡片切掉 */
+  #moodFaces { gap: 6px; }
+  #status .moodface .fring { width: 32px; height: 32px; }
+}
+
 /* 六張心情臉底下的名字拿掉（Edward 2026-08-01：「文字可以優化或簡寫或就不要文字，
  * 因為點了上面會寫」）。點下去之後上面那行大字就是它的名字，底下再寫一次是重複；
  * 而且各語言的名字長短不一，會把圓圈推得歪七扭八——拿掉之後間距永遠齊。

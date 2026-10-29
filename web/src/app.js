@@ -1209,11 +1209,14 @@ function syncCompanionUI() {
   const fimg = $('#faceImg'); if (fimg) { fimg.src = fullSrc; fimg.classList.toggle('sq', !t.fullAsset); }
   $$('.bc-avatar img').forEach(i => { i.src = homeSrc; });
   $$('.obs-ava img').forEach(i => { i.src = thumbSrc; });   // 狀態頁「○○的觀察」頭像＝跟著選的角色臉（Edward 2026-07-09）
+  $$('.mr-face').forEach(i => { i.src = thumbSrc; });   // 同意卡、吃藥提醒卡的小臉也跟著角色（2026-10-28 沐沐回歸後抓到）
   const obsHeading = $('#obsHeading'); if (obsHeading) obsHeading.textContent = muneaT('status.companionObservation', '{companion}的觀察', { companion: display });
   const medSub = $('#medSub'); if (medSub) medSub.textContent = muneaT('medication.emptyHint', '還沒設定用藥，跟{companion}說一聲就好', { companion: display });
   const retentionNotice = $('#retentionNotice'); if (retentionNotice) retentionNotice.textContent = muneaT('history.retentionNotice', '保存一年；滿一年前{companion}會先問你要不要留下來。', { companion: display });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
+  // 聊聊頁會動的那層跟著換人（通話中不動，掛斷後下次進聊聊再換）
+  try { if (window.MuneaFlatFace && window.MuneaFlatFace.root && !callConnected) window.MuneaFlatFace.setSkin(flatSkinFor()); } catch (e) {}
   renderCompanionGreeting();
   // 在聊聊頁換角色：待機動態跟著換人（通話中不動）
   try {
@@ -5887,9 +5890,15 @@ function showView(id) {
 
 // 扁平插畫寧寧（companion-face.js）：講話判斷與「真的正在播的聲音」由這裡接給它。
 // 通話聲音走雲端臉那條線時，iPhone 讀不到那條線的即時波形，但讀得到連線統計裡的播出音量。
+function flatSkinFor(avatarId = currentAvatarId) {
+  const t = templateFor(avatarId);
+  const s = (t && t.flatSkin) || { dir: 'avatars/ningning-rig/', bg: '#BADDD6' };
+  return { dir: s.dir, bg: s.bg, aspect: 1536 / 2752 };
+}
 function startFlatFace() {
   const face = window.MuneaFlatFace;
   if (!face) return;
+  face.setSkin(flatSkinFor());   // 誰在陪就換誰的圖（寧寧／沐沐）
   face.speaking = () => {
     try { return !!callConnected && speechActive(); } catch (e) { return false; }
   };
@@ -8053,7 +8062,7 @@ function renderMetricDetail(key) {
     `<div class="md-head"><b>${muneaT('health.metricWeekTitle', '{name} · 這週', { name: m.name() })}</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]()}</span></div>` +
     `<div class="md-chart">${bars}</div>` +
     `<div class="md-days">${days.map(d => '<span>' + d + '</span>').join('')}</div>` +
-    `<div class="md-read"><span class="md-face"><img src="avatars/ningning-face.webp" alt=""></span><span>${m.read()}</span></div>`;
+    `<div class="md-read"><span class="md-face"><img src="${(templateFor().thumbAsset) || 'avatars/ningning-face.webp'}" alt=""></span><span>${m.read()}</span></div>`;
   box.hidden = false; box.dataset.open = key;
   try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }

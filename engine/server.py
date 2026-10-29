@@ -210,6 +210,7 @@ AVATAR_MODE_ALIASES = {
 }
 COMPANION_TEMPLATES = {
     "nening-real-female": {"defaultName": "寧寧", "backendChar": "寧寧"},
+    "mumu-flat-male": {"defaultName": "沐沐", "backendChar": "沐沐"},
     "companion-real-male": {"defaultName": "阿宏", "backendChar": "阿宏"},
     "munea-2d-xiaoyun": {"defaultName": "小昀", "backendChar": "小昀"},
     "munea-2d-ayuan": {"defaultName": "阿原", "backendChar": "阿原"},
@@ -219,6 +220,7 @@ COMPANION_TEMPLATES = {
 COMPANION_ALIASES = {
     "real-f": "nening-real-female",
     "real-m": "companion-real-male",
+    "flat-m": "mumu-flat-male",
     "toon-f": "munea-2d-xiaoyun",
     "toon-m": "munea-2d-ayuan",
     "cat": "munea-2d-mimi",
@@ -10187,6 +10189,7 @@ DEFAULT_CORS_ORIGINS = {
     "http://localhost",
     "https://localhost",
     "https://app.munea.net",
+    "https://admin.munea.net",  # 2026-10-26 營運後台正式網址（Cloud Run 網域綁定）
     "https://munea.net",
     "https://www.munea.net",
 }
