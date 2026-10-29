@@ -3146,7 +3146,6 @@ import re
 
 files = [
     Path("web/index.html"),
-    Path("web/landing.html"),
     Path("web/onboarding.html"),
     Path("web/src/companion-profile.js"),
     Path("engine/model_router.py"),

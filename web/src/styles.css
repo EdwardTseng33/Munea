@@ -870,6 +870,25 @@ html[lang="es"] #connect .cn-row .cn-btn {
 }
 .face-bg.livevid video { opacity: 1; }
 
+/* ===== 扁平插畫寧寧（2026-09-30 · companion-face.js）=====
+   蓋在聊聊頁人物層最上面（仍在 .face-bg 裡、介面按鈕照樣在它上面）；底下的雲端擬真臉照跑但看不到。
+   頂部加一層淡暗漸層：原本白字靠照片暗處撐對比，換成亮底色就要自己補。 */
+.flat-face { position: absolute; inset: 0; z-index: 3; background: #CFEAE5; overflow: hidden; pointer-events: none; }
+/* 淺色背景上，頂部名字與計時改深色字：白字實測對比只有 2.2:1，深色約 6.7:1（WCAG AA 要 4.5） */
+.face-screen.flat-mode .face-name,
+.face-screen.flat-mode .hud-pill { color: #23302D; text-shadow: none; }
+.face-screen.flat-mode .face-name .fn-status { color: #34423F; }
+.face-screen.flat-mode .hud-pill.pts.low { color: #9C4A1F; }
+.face-screen.flat-mode #webVerStamp { color: rgba(35, 48, 45, .5) !important; text-shadow: none !important; }
+/* 人物層比畫面四邊各大 1.5%：呼吸縮放與左右晃動時畫面邊角不會露出底色細縫 */
+/* 人物舞台：照原圖比例、底邊貼齊畫面底、左右置中；兩側露出的地方就是同色背景，看不出邊 */
+.ff-stage { position: absolute; left: 50%; bottom: 0; height: 100%; aspect-ratio: 1536 / 2752; transform: translateX(-50%); }
+.ff-part { position: absolute; inset: 0; will-change: transform; }
+.ff-body { transform-origin: 50% 100%; }
+.ff-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; }
+.ff-half, .ff-open, .ff-eyes { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .ff-part { transform: none !important; } }
+
 /* 撥號準備中以可互動的沐沐接住等待時間；只有 connecting 狀態收手勢。 */
 
 /* Edward 2026-07-06：圖片不要有動態——關閉眨眼佔位效果 */

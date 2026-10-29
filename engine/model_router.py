@@ -30,7 +30,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["daily care", "family connection", "health routines", "gentle interests"],
         "boundaryStyle": "softly redirects medical or crisis requests to safe help",
         "voiceProfile": "Despina",
-        "avatarAsset": "avatars/nening-real-female-full.jpg",
+        "avatarAsset": "avatars/ningning-rig/body.webp",  # 2026-10-28 新形象（純色塊向量）
     },
     "companion-real-male": {
         "defaultName": "阿宏",
@@ -44,7 +44,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["plans", "routines", "outings", "family logistics"],
         "boundaryStyle": "clear boundaries without sounding cold",
         "voiceProfile": "Charon",
-        "avatarAsset": "avatars/ahong.png",
+        "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
     "munea-2d-xiaoyun": {
         "defaultName": "小昀",
@@ -72,7 +72,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["reading", "reflection", "planning", "finance context", "life stories"],
         "boundaryStyle": "uses calm clarity for sensitive topics",
         "voiceProfile": "Algenib",
-        "avatarAsset": "avatars/ayuan-2d.png",
+        "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
     "munea-2d-mimi": {
         "defaultName": "咪咪",
@@ -100,7 +100,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["safety", "routines", "walks", "family contact", "weather"],
         "boundaryStyle": "protective escalation when risk is high",
         "voiceProfile": "Charon",
-        "avatarAsset": "avatars/munea-2d-wangcai.png",
+        "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
 }
 

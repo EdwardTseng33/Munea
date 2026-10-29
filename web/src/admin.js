@@ -425,7 +425,7 @@
   // 陪伴角色欄顯示「我們自己的角色編號」，不顯示用戶給的暱稱（2026-07-30 Edward 拍板）。
   // 用戶會把同一個角色叫成寧寧／蹦吧利利，後台要看的是「他選了哪一款」而不是他怎麼叫它。
   const COMPANION_ZH={
-    "nening-real-female":"擬真女孩 01",
+    "nening-real-female":"寧寧（溫柔型）",
     "companion-real-male":"擬真男孩 01",
     "munea-2d-xiaoyun":"動畫女孩 01",
     "munea-2d-ayuan":"動畫男孩 01",
