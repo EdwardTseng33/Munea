@@ -88,3 +88,66 @@ node scripts/appstore/asc-read-release-state.mjs
 ```
 
 **包版前、回填狀態文件前先跑這支**。鑰匙取法見上面那段（用完刪掉 `/tmp/asc.p8`）。
+
+## 一鍵更版（2026-10-29 建：不用 Mac，雲端打包＋送審）
+
+GitHub → Actions → **iOS release (manual)** → Run workflow：
+
+| 欄位 | 填什麼 |
+|---|---|
+| version | 新版號，例如 `1.0.70` |
+| build | 新 Build 號，純數字，例如 `541`（問蘋果現況用 `asc-read-release-state.mjs`） |
+| submit | `false`＝只打包上傳＋把這版準備好（不送審，留給人工看一眼）；`true`＝上傳完直接送出 App Review |
+| signing_mode | 留 `auto`（用 ASC API 鑰匙雲端簽章）。`manual` 是備援路，目前還沒配好 secret，先不要選 |
+| xcode_version | 留 `latest-stable` 即可，除非蘋果出新 Xcode 導致專案建置失敗才需要鎖版本 |
+
+跑多久：約 25-45 分鐘（Xcode archive 10-20 分、export+上傳 5-10 分、等 ASC 處理 build 5-15 分）。
+
+跑完會發生什麼：
+1. 版號寫進 `package.json`／`package-lock.json`／`web/src/version.js`／Xcode 專案，`check-release-consistency.js --strict-ios` 卡關
+2. 這筆版號回寫會被 commit 推回你跑這條線的那個分支；如果那個分支不是 `main`，流程會自動幫你開一張 PR 準備合併
+3. `xcodebuild archive` → `-exportArchive` 直接上傳到 App Store Connect（走雲端自動簽章，不用 Mac 本機的憑證／描述檔）
+4. 等 build 處理完成（`processingState=VALID`），把這個 build 綁到 `version` 那個 App Store 版本
+5. 四語 whatsNew 從 `app-store/localizations/*.json` 填進去
+6. 建立 reviewSubmission；`submit=true` 才會真的按下送出審查那一步
+
+失敗了看哪裡：
+- GitHub Actions 這次執行的 log，一步步往下找第一個紅字的 step
+- `xcodebuild` 的 log 若有留下，會在失敗時自動上傳成 workflow 的 artifact（`ios-release-logs-<version>-<build>`）
+- 最常見卡點：ASC API 鑰匙權限不夠建立 distribution 的佈建描述檔（見 `.github/workflows/ios-release.yml` 開頭註解）——這不是程式碼問題，是蘋果那邊的角色權限，要去 App Store Connect 加鑰匙權限
+
+⚠ **現況尚未真跑過一次**：這條線是新建的，還沒在真的 GitHub Actions macOS runner 上跑過（不包含在這次改動的驗證範圍）。第一次跑建議 `submit=false`，人工在 App Store Connect 看一眼版本／build／whatsNew 都對了再手動跑一次 `submit=true`，或直接在 App Store Connect 網頁上按送出。
+
+### 另一條路：`signing_mode=manual`（還沒配好，先別選）
+
+如果 ASC API 鑰匙權限卡住、又不想加鑰匙權限，可以改用傳統 p12＋描述檔手動簽章。
+要先手動建立這幾個 Secret Manager 項目才能用：
+
+```bash
+# 從 Keychain 匯出 Distribution 憑證（.p12，帶密碼）
+gcloud secrets create munea-ios-distribution-p12 --data-file=dist.p12 --project gen-lang-client-0229303523
+gcloud secrets create munea-ios-distribution-p12-password --project gen-lang-client-0229303523
+# 從 Apple Developer 下載對應的 App Store 描述檔（.mobileprovision）
+gcloud secrets create munea-ios-distribution-profile --data-file=munea.mobileprovision --project gen-lang-client-0229303523
+```
+
+填完後還要編輯 `scripts/appstore/ios-export-options-manual.plist` 裡的 `CHANGEME-munea-distribution-profile-name`，
+改成描述檔裡登記的真實名稱（`security cms -D -i munea.mobileprovision` 可以解開看）。這條路目前完全沒跑過，
+是「如果 auto 卡住」的備案，不是推薦路徑。
+
+### 執行這條線前要先確認的一件事：GCP 服務帳號讀不到 ASC 鑰匙
+
+`firebase-hosting-deployer@gen-lang-client-0229303523.iam.gserviceaccount.com`
+（workflow 借用官網部署既有的 Workload Identity）目前對 `munea-asc-appmanager-key`／
+`munea-asc-key-id`／`munea-asc-issuer-id` 這三個 secret **沒有任何存取權**（2026-10-29 查證，
+secret 層級與專案層級 IAM 都查過，空的）。沒有 Edward 手動跑過這段，整條線第一步抓鑰匙就會
+403 失敗：
+
+```bash
+for SECRET in munea-asc-appmanager-key munea-asc-key-id munea-asc-issuer-id; do
+  gcloud secrets add-iam-policy-binding "$SECRET" \
+    --project gen-lang-client-0229303523 \
+    --member="serviceAccount:firebase-hosting-deployer@gen-lang-client-0229303523.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+done
+```

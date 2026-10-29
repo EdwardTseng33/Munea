@@ -1,0 +1,239 @@
+name: iOS release (manual)
+
+# 手動觸發的 iOS 打包／送審線（2026-10-29 卡西法建）：不用 Mac，雲端 macOS runner
+# 跑 Xcode 封裝、用 App Store Connect API 鑰匙做雲端自動簽章，直接上傳到 App Store Connect；
+# submit=true 時最後一步呼叫 asc-submit-version.mjs 真的送出審查。
+#
+# 版號回寫規矩（docs「版號住九個地方」缺口的修法）：
+#   這條線會把 version/build 寫進 package.json／package-lock.json／web/src/version.js／
+#   ios/App/App.xcodeproj/project.pbxproj，跑 check-release-consistency.js --strict-ios 卡關，
+#   再把這筆回寫 commit 推回觸發分支，避免「Mac 打包端升版號但沒回寫程式庫」的漂移
+#   （1.0.46～1.0.50、1.0.54 都發生過，見 scripts/check-release-consistency.js）。
+#
+# 簽章現況（2026-10-29 查證 developer.apple.com/support/roles/ 官方權限表）：
+#   現有 munea-asc-appmanager-key 是 App Manager 角色。官方表格顯示：
+#     - 建立「其他雲端管理憑證類型」（cloud-managed distribution certificate）：
+#       App Manager 有完整權限，不需要額外授權。
+#     - 但「建立／刪除 distribution 佈建描述檔（provisioning profile）」：
+#       App Manager 需要額外被授予「Certificates, Identifiers & Profiles」存取權，
+#       這把鑰匙目前是否有這個額外授權尚待驗證（ASC API 沒有唯讀端點能查這個旗標）。
+#   因此 signing_mode=auto 這條路「大機率可行，但卡在佈建描述檔那一步的風險不是 0」。
+#   若真的卡住，錯誤訊息會直接印在 xcodebuild 的 log 裡（"No profiles found" / 權限不足），
+#   不會被吞掉。解法二選一：① 到 App Store Connect -> Users and Access -> Integrations，
+#   把這把鑰匙的存取權加上 Certificates, Identifiers & Profiles；② 改用 signing_mode=manual
+#   （讀 Secret Manager 裡的 p12＋描述檔手動簽章——這兩個 secret 目前還沒建立，見 README）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "App 版號，例如 1.0.70（會寫進全部版號正本位置）"
+        required: true
+        type: string
+      build:
+        description: "Build 號，純數字，例如 541"
+        required: true
+        type: string
+      submit:
+        description: "true=打包上傳後真的送出 App Review；false=只建版本/綁 build/填 whatsNew，不送審"
+        required: true
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+      signing_mode:
+        description: "auto=用 ASC API 鑰匙雲端自動簽章（預設）；manual=讀 Secret Manager 的 p12+描述檔"
+        required: false
+        type: choice
+        options: ["auto", "manual"]
+        default: "auto"
+      whats_new_dir:
+        description: "四語 whatsNew 來源目錄"
+        required: false
+        type: string
+        default: "app-store/localizations"
+      xcode_version:
+        description: "Xcode 版本（留 latest-stable 讓 runner 用目前最新穩定版；專案要 Xcode 15+/Swift tools 5.9+）"
+        required: false
+        type: string
+        default: "latest-stable"
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+env:
+  MUNEA_XCODE_BUILD_ROOT: /private/tmp/munea-ios-release-ci
+  GCP_PROJECT: gen-lang-client-0229303523
+  ASC_APP_ID: "6788658125"
+
+jobs:
+  release:
+    name: Build and release iOS
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ inputs.xcode_version }}
+
+      - name: Print toolchain versions
+        run: |
+          xcodebuild -version
+          swift --version
+          node --version
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/491603544409/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: firebase-hosting-deployer@gen-lang-client-0229303523.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Fetch App Store Connect API key from Secret Manager
+        run: |
+          set -euo pipefail
+          gcloud secrets versions access latest --secret=munea-asc-appmanager-key \
+            --project "$GCP_PROJECT" > "$RUNNER_TEMP/asc.p8"
+          chmod 600 "$RUNNER_TEMP/asc.p8"
+          {
+            echo "ASC_PRIVATE_KEY_PATH=$RUNNER_TEMP/asc.p8"
+            echo "ASC_KEY_ID=$(gcloud secrets versions access latest --secret=munea-asc-key-id --project "$GCP_PROJECT")"
+            echo "ASC_ISSUER_ID=$(gcloud secrets versions access latest --secret=munea-asc-issuer-id --project "$GCP_PROJECT")"
+          } >> "$GITHUB_ENV"
+
+      - name: Write iOS release version into every source-of-truth file
+        run: |
+          node scripts/appstore/set-ios-release-version.mjs \
+            --version "${{ inputs.version }}" \
+            --build "${{ inputs.build }}" \
+            --whats-new-file "${{ inputs.whats_new_dir }}/zh-Hant.json"
+
+      - name: Verify version consistency (strict, blocks on drift)
+        run: node scripts/check-release-consistency.js --strict-ios
+
+      - name: Commit version bump
+        id: commit
+        run: |
+          set -euo pipefail
+          git config user.name "munea-ci"
+          git config user.email "ci@munea.net"
+          if git diff --quiet; then
+            echo "no version files changed; nothing to commit"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+          else
+            git add package.json package-lock.json web/src/version.js ios/App/App.xcodeproj/project.pbxproj
+            git commit -m "chore(release): iOS v${{ inputs.version }} (Build ${{ inputs.build }})"
+            git push origin HEAD:"${{ github.ref_name }}"
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open PR into main for the version bump
+        if: steps.commit.outputs.committed == 'true' && github.ref_name != 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "${{ github.ref_name }}" \
+            --title "chore(release): iOS v${{ inputs.version }} (Build ${{ inputs.build }})" \
+            --body "由 iOS release 工作流自動開立：把版號/Build 回寫進 package.json/package-lock.json/web/src/version.js/Xcode 專案。合併前請確認 check-release-consistency 綠燈。" \
+            || echo "PR already exists for this branch or nothing to open; continuing."
+
+      - name: Archive (uses existing scripts/ios-archive.sh validation)
+        run: npm run ios:archive
+
+      - name: Manual signing fallback - import certificate and profile (signing_mode=manual only)
+        if: inputs.signing_mode == 'manual'
+        run: |
+          set -euo pipefail
+          echo "signing_mode=manual needs these Secret Manager entries (not created yet, see scripts/appstore/README.md):"
+          echo "  munea-ios-distribution-p12 / munea-ios-distribution-p12-password / munea-ios-distribution-profile"
+          security create-keychain -p "ci-temp-keychain" "$RUNNER_TEMP/ci.keychain"
+          security set-keychain-settings -lut 21600 "$RUNNER_TEMP/ci.keychain"
+          security unlock-keychain -p "ci-temp-keychain" "$RUNNER_TEMP/ci.keychain"
+          security list-keychains -d user -s "$RUNNER_TEMP/ci.keychain" $(security list-keychains -d user | tr -d '"')
+          gcloud secrets versions access latest --secret=munea-ios-distribution-p12 --project "$GCP_PROJECT" --format='get(payload.data)' | base64 --decode > "$RUNNER_TEMP/dist.p12" || {
+            echo "FAIL munea-ios-distribution-p12 secret not found. Ask Edward to create it, or use signing_mode=auto."
+            exit 1
+          }
+          P12_PASSWORD="$(gcloud secrets versions access latest --secret=munea-ios-distribution-p12-password --project "$GCP_PROJECT")"
+          security import "$RUNNER_TEMP/dist.p12" -k "$RUNNER_TEMP/ci.keychain" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "ci-temp-keychain" "$RUNNER_TEMP/ci.keychain"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          gcloud secrets versions access latest --secret=munea-ios-distribution-profile --project "$GCP_PROJECT" --format='get(payload.data)' | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/munea-distribution.mobileprovision"
+
+      - name: Export and upload App Store package (cloud-managed signing via API key)
+        if: inputs.signing_mode == 'auto'
+        run: |
+          set -euo pipefail
+          EXPORT_PATH="$MUNEA_XCODE_BUILD_ROOT/exports/$(date +%Y%m%d-%H%M%S)"
+          mkdir -p "$EXPORT_PATH"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$MUNEA_XCODE_BUILD_ROOT/archives/Munea.xcarchive" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist scripts/appstore/ios-export-options-ci.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_PRIVATE_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Export and upload App Store package (manual certificate/profile)
+        if: inputs.signing_mode == 'manual'
+        run: |
+          set -euo pipefail
+          EXPORT_PATH="$MUNEA_XCODE_BUILD_ROOT/exports/$(date +%Y%m%d-%H%M%S)"
+          mkdir -p "$EXPORT_PATH"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$MUNEA_XCODE_BUILD_ROOT/archives/Munea.xcarchive" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist scripts/appstore/ios-export-options-manual.plist \
+            -authenticationKeyPath "$ASC_PRIVATE_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Wait for build processing and prepare App Store version
+        run: |
+          node scripts/appstore/asc-submit-version.mjs \
+            --version "${{ inputs.version }}" \
+            --build "${{ inputs.build }}" \
+            --whats-new-dir "${{ inputs.whats_new_dir }}" \
+            ${{ inputs.submit == 'true' && '--submit' || '' }}
+
+      - name: Clean up API key material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc.p8" "$RUNNER_TEMP/dist.p12"
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-logs-${{ inputs.version }}-${{ inputs.build }}
+          path: |
+            /private/tmp/munea-ios-archive.log
+            /private/tmp/munea-ios-export.log
+          if-no-files-found: ignore

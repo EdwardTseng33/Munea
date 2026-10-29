@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 備援路（2026-10-29，未實測）：signing_mode=manual 時用這份，對應
+	     ios-release.yml 的「Manual signing fallback」步驟（從 Secret Manager 讀 p12＋
+	     .mobileprovision，匯入 CI 臨時 keychain）。
+	     ⚠ CHANGEME：provisioningProfiles 的值要填「描述檔裡登記的名稱」（不是檔名、
+	     不是 UUID）——用 `security cms -D -i xxx.mobileprovision` 解開看 Name 欄。
+	     signingCertificate 若描述檔只對應一張憑證，填 "Apple Distribution" 通常就夠；
+	     若環境裡有多張同類憑證，要改成那張的完整 Common Name 避免選錯。
+	     這條路目前沒有真的跑過一次，因為 munea-ios-distribution-p12／
+	     munea-ios-distribution-profile 這兩個 Secret Manager 項目還沒建立。 -->
+	<key>teamID</key>
+	<string>V77L5245MR</string>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>upload</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>signingCertificate</key>
+	<string>Apple Distribution</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>net.munea.app</key>
+		<string>CHANGEME-munea-distribution-profile-name</string>
+	</dict>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>
