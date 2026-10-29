@@ -60,7 +60,8 @@
   const DEFAULT_LOCAL_API = "http://127.0.0.1:8200";
   const REQUEST_TIMEOUT_MS = 15000;
   const ADMIN_DATA_META_SCHEMA = "munea.admin-data-meta.v1";
-  const KNOWN_ADMIN_HOSTS = ["munea-brain-staging-491603544409.asia-east1.run.app"];
+  // 2026-10-26 Edward 拍板後台正式網址 admin.munea.net（Cloud Run 網域綁定、設定單 docs/後台網址-admin.munea.net-設定單-2026-10-26.md）
+  const KNOWN_ADMIN_HOSTS = ["munea-brain-staging-491603544409.asia-east1.run.app", "admin.munea.net"];
   // 相容目前已部署的薄門；它不是管理憑證。部署端可在載入本檔前設定
   // window.MUNEA_ADMIN_APP_KEY，下一步即可把這個相容值從靜態資產移除。
   const LEGACY_APP_KEY = "mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5";
@@ -86,7 +87,28 @@
     growth: ["/admin/growth-metrics", { days: 30 }],
   };
 
-  const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#6B7B76" };
+  // ══ 每一頁要吃哪幾份資料（2026-10-26 登入提速）══
+  // 以前登入成功就一口氣打滿 EP_LIST 全部 15 支、全部回來才畫畫面——最慢那支（通常是關係深度／家庭圈）
+  // 決定整頁要等多久；伺服器剛睡醒時 15 支一起逾時，整頁空白還得重打一輪。
+  // 現在：登入只抓「現在這一頁要的」＋側欄紅點要的（通常 3–5 支），其它頁進場才抓（ensurePageData）。
+  // EP_LIST 本身不動（scripts/admin-smoke.ps1 跟它有 1:1 契約測試）。
+  const PAGE_DATA = {
+    overview: ["northStar", "usage", "subscriptionMetrics"],
+    users: ["accounts", "safety"],
+    safety: ["safety"],
+    medication: ["medication", "accounts"],
+    familyHealth: ["familyHealth"],
+    moodTrend: ["moodTrend", "accounts"],
+    bondDepth: ["bondDepth"],
+    growth: ["growth", "subscriptionMetrics"],
+    subscription: ["subscriptionMetrics", "credits", "accounts"],
+    feedback: ["feedback", "privacy"],
+    records: ["summaries", "audit"],
+  };
+  const BADGE_DATA = ["safety", "feedback"]; // 側欄「需人工跟進」「新意見」紅點要的
+  function pageDataKeys(id){ return (PAGE_DATA[id]||[]).concat(BADGE_DATA); }
+
+  const CHART = { teal: "#3AA8A0", coral: "#E08B45", gold: "#E0B354", prev: "#C9C0B0", grid: "#ECE6DA", ink: "#33403D", muted: "#5E6D68" }; // muted 跟 admin.css --muted 同步（2026-10-28 對比 5.09:1）
   const cc = { teal: CHART.teal, coral: CHART.coral, gold: CHART.gold, prev: CHART.prev };
   const ADMIN_FORMAT_LOCALE = (window.MuneaAdminI18n && window.MuneaAdminI18n.current()) || "zh-TW";
   const ADMIN_FORMAT_TIME_ZONE = String(window.MUNEA_ADMIN_TIME_ZONE || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
@@ -231,6 +253,8 @@
   }
   function principle(text){ return `<div class="principle">${text.indexOf("<")>-1?text:esc(text)}</div>`; }
   function emptyBox(text){ return `<div class="empty-note">${esc(text)}</div>`; }
+  // 讀取中骨架（2026-10-28）：三條會呼吸的灰條取代一行「讀取中…」，文字留給螢幕閱讀器（i18n 仍翻得到）
+  function skeletonBox(text){ return `<div class="skeleton-box" role="status" aria-live="polite"><span class="sr-only">${esc(text)}</span><i></i><i></i><i></i></div>`; }
   function chartMount(id){ return `<div class="chart-box" id="${id}"></div>`; }
   const pending = [];
 
@@ -360,6 +384,13 @@
   }
   function renderPage(id){
     pending.length=0;
+    // 這一頁要的資料還沒到（也還沒失敗）→ 先給一句「讀取中」，不要先畫一整頁「–」再閃成數字
+    const waiting=(PAGE_DATA[id]||[]).filter((k)=>!(state.data&&state.data[k])&&!(state.errors&&state.errors[k]));
+    if(waiting.length){
+      $("pageRoot").innerHTML=envBannerHTML()+`<div class="ops-notice" role="status">正在讀取這一頁的資料…</div>`;
+      renderEntImportPanel();
+      return;
+    }
     let html="";
     if (id==="overview") html=renderOverview();
     else if (id==="users") html=renderUsers();
@@ -411,7 +442,8 @@
     return html;
   }
 
-  const AV_TINTS=[["var(--coral-soft)","var(--coral-d)"],["var(--mint)","var(--teal-dd)"],["var(--gold-soft)","#9A7B24"],["#E7E9F2","#5A6B8C"],["#F1E4EC","#9C5B84"]];
+  // 頭像字色 2026-10-28 全部改到 WCAG AA（原 coral-d 2.2:1、#9A7B24 3.4:1、#5A6B8C／#9C5B84 約 4:1 都不夠）
+  const AV_TINTS=[["var(--coral-soft)","var(--coral-text)"],["var(--mint)","var(--teal-dd)"],["var(--gold-soft)","var(--gold-text)"],["#E7E9F2","#4A5B7C"],["#F1E4EC","#86476F"]];
   const REL_ZH={ self:"主要使用者", primary_user:"主要使用者", elder:"長輩", senior:"長輩", child:"子女", daughter:"女兒", son:"兒子", family:"家人", caregiver:"照顧者" };
   // 「這一戶是誰」的名字取用順序（2026-07-29 定）：個人資料卡填的本名 → 暱稱 → 登入帶進來的名字。
   // ⚠ 不用 primaryPerson.displayName——那一欄存的是 AI 陪伴角色名（寧寧／阿宏），
@@ -1065,7 +1097,7 @@
   }
   function entActionNote(id,html){ const el=$(id); if(el) el.innerHTML=html||""; }
   function entLoadingOrErrorCard(status,error,title,retryAttr){
-    if(status==="loading") return card(title,"讀取中",emptyBox("讀取中…"));
+    if(status==="loading") return card(title,"讀取中",skeletonBox("讀取中…"));
     if(status==="error") return `<div class="ops-notice error" role="alert"><strong>讀不到資料</strong>${esc(explainErr(error))}</div>${card(title,"",`<button type="button" class="btn-sm" ${retryAttr}>重新整理</button>`)}`;
     return null;
   }
@@ -1234,7 +1266,7 @@
     const back=`<button type="button" class="btn-ghost btn-sm" data-goto="enterpriseClients">← 返回企業客戶列表</button>`;
     if(!clientId) return `${back}${card("企業客戶明細","",emptyBox("請先從列表選擇一家公司。"))}`;
     const ed=state.tabs.entDetail||{};
-    if(ed.clientId!==clientId || ed.status==="loading") return `${back}${card("企業客戶明細","讀取中",emptyBox("讀取這家公司的資料中…"))}`;
+    if(ed.clientId!==clientId || ed.status==="loading") return `${back}${card("企業客戶明細","讀取中",skeletonBox("讀取這家公司的資料中…"))}`;
     if(ed.status==="error") return `${back}${card("企業客戶明細","",`<div class="ops-notice error" role="alert"><strong>讀不到這家公司的資料</strong>${esc(explainErr(ed.error))}</div><button type="button" class="btn-sm" style="margin-top:10px" data-ent-retry-detail="${esc(clientId)}">重新整理</button>`)}`;
     const data=ed.data||{}, c=data.client||{}, seats=data.seats||[], invoices=data.invoices||[], reports=data.reports||data.downloads||[];
     let html=back;
@@ -1397,7 +1429,7 @@
       </div>
       <div id="entImportNote"></div>
     `);
-    if(im.previewing){ html+=card("預檢結果","讀取中",emptyBox("正在比對名單…")); return html; }
+    if(im.previewing){ html+=card("預檢結果","讀取中",skeletonBox("正在比對名單…")); return html; }
     if(im.preview){
       const p=im.preview;
       const groups=[["newSeats","新增"],["alreadyRegistered","已註冊・匯入後直接生效"],["duplicates","重複・會跳過"],["ownedByOtherClient","屬於其他公司・已擋下"],["overQuota","超過席次上限"]];
@@ -1940,7 +1972,7 @@
     const s=storageGet(localStorage,ADMIN_BASE_KEY); if(s) return s;
     if(location.protocol.startsWith("http")) return location.origin;
     return DEFAULT_LOCAL_API; }
-  function envLabelFor(u){ if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
+  function envLabelFor(u){ if(/admin\.munea\.net/.test(u))return "正式後台"; if(/munea-brain-staging/.test(u))return "雲端試營運"; if(/127\.0\.0\.1|localhost/.test(u))return "這台電腦（本機）"; if(/run\.app/.test(u))return "雲端伺服器"; return u.replace(/^https?:\/\//,"")||"–"; }
   // 開錯台防呆：頁面在測試機時頂部掛一條明顯橫幅。兩台的網址只差一個字（brain 與 brain-staging），
   // 左下角那行小字不夠醒目——Edward 花了三輪才發現自己看的是測試機。
   function envBannerHTML(){
@@ -1976,27 +2008,34 @@
 
   // 抓所有真資料（登入成功、貼通行碼、開頁自動連線 三處共用）
   // 整批重讀時，每支接口該帶什麼參數。名冊要看當下「顯示測試帳號」開著沒有。
-  function endpointParams(key){
+  function endpointParams(key,fresh){
     const base=EP_LIST[key][1]||{};
-    if(key!=="accounts") return base;
-    return Object.assign({},base,{includeTest:!!(state.tabs||{}).showTestAccounts});
+    const params=key==="accounts"?Object.assign({},base,{includeTest:!!(state.tabs||{}).showTestAccounts}):Object.assign({},base);
+    if(fresh) params.fresh=true; // 按「重新整理」＝要伺服器現算，不拿 60 秒內的快取
+    return params;
   }
 
-  async function loadAll(base, token){
-    const safeBase=normalizeAdminBaseUrl(base),keys=Object.keys(EP_LIST);
+  // keys 沒給＝「現在這一頁要的＋側欄紅點要的＋已經載過的」；opts.fresh＝叫伺服器現算
+  async function loadAll(base, token, keys, opts){
+    const safeBase=normalizeAdminBaseUrl(base);
+    const wanted=Array.isArray(keys)&&keys.length?keys:pageDataKeys(state.page).concat(Object.keys(state.data||{}));
+    keys=Array.from(new Set(wanted)).filter((k)=>EP_LIST[k]);
+    const fresh=!!(opts&&opts.fresh);
     state.base=safeBase; state.token=token; setBusy(true);
     try{
       // 「顯示測試帳號」的開關要跟著整批重讀走。少帶這個參數，任何一次 refreshData()
       // 都會把名冊換成隱藏測試帳號的版本——正在看的那戶會從清單裡消失，
       // 於是改完方案／發完點數之後找不到它、彈窗停在舊數字上（2026-07-30 Edward 抓到）。
-      const rs=await Promise.allSettled(keys.map((k)=>postAdmin(safeBase,token,EP_LIST[k][0],endpointParams(k))));
-      const data={},errors={};
+      const rs=await Promise.allSettled(keys.map((k)=>postAdmin(safeBase,token,EP_LIST[k][0],endpointParams(k,fresh))));
+      // 併進既有資料：這次沒抓的頁保留原樣；這次抓的，成功就換新、失敗就拿掉＋記錯
+      const data=Object.assign({},state.data||{}),errors=Object.assign({},state.errors||{});
+      delete errors.connection;
       rs.forEach((r,i)=>{
         if(r.status==="fulfilled"){
           const payload=r.value||{};
           payload.meta=normalizeDataMeta(payload,keys[i]);
-          data[keys[i]]=payload;
-        }else errors[keys[i]]=(r.reason&&r.reason.message)||"fail";
+          data[keys[i]]=payload; delete errors[keys[i]];
+        }else{ errors[keys[i]]=(r.reason&&r.reason.message)||"fail"; delete data[keys[i]]; }
       });
       state.data=data; state.errors=errors; state.connected=Object.keys(data).length>0;
       const errValues=Object.values(errors);
@@ -2011,12 +2050,29 @@
     }finally{ setBusy(false); }
   }
 
+  // 切頁時：這一頁要的資料還沒載過（也不在路上）才去抓；抓完 loadAll 會自己重畫目前這一頁
+  const inflightKeys=new Set();
+  async function ensurePageData(id){
+    const need=pageDataKeys(id).filter((k)=>EP_LIST[k]&&!(state.data&&state.data[k])&&!inflightKeys.has(k));
+    if(!need.length) return;
+    const token=state.token||readAdminToken(),base=state.base||initialBaseUrl();
+    if(!token) return;
+    need.forEach((k)=>inflightKeys.add(k));
+    try{ await loadAll(base,token,need); }
+    catch(e){
+      // 連 fetch 都沒發出去（例如網址不合法）：記成錯誤讓畫面顯示，不要卡在「讀取中」
+      const msg=(e&&e.message)||"fail"; state.errors=state.errors||{}; need.forEach((k)=>{ state.errors[k]=msg; });
+      renderPage(state.page);
+    }
+    finally{ need.forEach((k)=>inflightKeys.delete(k)); }
+  }
+
   async function refreshData(){
     const token=state.token||readAdminToken(),base=state.base||initialBaseUrl();
     if(!token){ state.connected=false; setStatus("需要重新登入","error"); showLoginGate(); return; }
     setStatus("讀取中…","");
     try{
-      const r=await loadAll(base,token);
+      const r=await loadAll(base,token,null,{fresh:true});
       if(r.failed===0) setStatus("已連線","ok");
       else if(r.failed===r.total){
         if(!state.token){ setStatus("需要重新登入","error"); showLoginGate(); } // 鑰匙真的不對（loadAll 已清掉）
@@ -2029,6 +2085,7 @@
   // ══════════ 登入門（帳密 → 換後台通行碼） ══════════
   function loginGateHTML(){
     return `<form class="login-card" id="loginForm" aria-labelledby="loginTitle">
+      <img class="login-logo" src="icons/munea-logo.png" alt="" aria-hidden="true">
       <div class="login-brand">Mu<b>nea</b><span class="login-zh">沐寧</span></div>
       <div class="login-title" id="loginTitle">營運後台</div>
       <p class="login-sub">請輸入帳號與密碼登入</p>
@@ -2065,6 +2122,7 @@
         state.token=p.token; state.base=base;
         removeLoginGate();
         setStatus("讀取中…","");
+        renderSide(); renderPage(state.page); // 先畫殼：側欄立刻能點、頁面先說「讀取中」
         let r=await loadAll(base, p.token);
         // 2026-07-29 修：伺服器沒人用的時候會睡著，登入成功後第一批十幾個查詢常常一起逾時。
         // 舊版只要讀不到資料就 showLoginGate()，把已經登入成功的人趕回登入框重打密碼——
@@ -2145,7 +2203,7 @@
     if($("crumb")) $("crumb").textContent=CRUMB[state.page]||"";
     if($("pageTitle")) $("pageTitle").textContent=TITLE[state.page]||"";
     document.querySelectorAll("#sideNav a[data-page]").forEach((a)=>{ const on=a.dataset.page===state.page; a.classList.toggle("on",on); if(on)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
-    if(state.connected){ renderPage(state.page); }
+    if(state.connected){ renderPage(state.page); ensurePageData(state.page); }
     else if(autoLoginInFlight){ $("pageRoot").innerHTML=`<div class="ops-notice" role="status">正在用上次的登入自動連線…</div>`; }
     else { $("pageRoot").innerHTML=""; showLoginGate(); }
   }

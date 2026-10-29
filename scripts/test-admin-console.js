@@ -67,6 +67,25 @@ assert.strictEqual((js.match(/\bfetch\s*\(/g) || []).length, 1, "all admin netwo
 assert(smoke.includes("foreach ($entry in $adminReadBodies.GetEnumerator())"), "smoke must iterate the endpoint contract");
 assert(smoke.includes("Expect-AdminHttpError $entry.Key"), "smoke must verify every console endpoint rejects missing admin auth");
 
+// 2026-10-28：企業席次頁「進場才查」、不在 EP_LIST；機構專區專屬連結免管理鑰匙。
+// 這兩道門的冒煙契約不能默默消失：企業接口要 403 守門，專屬連結沒憑證不能漏數字。
+const enterpriseBlock = smoke.match(/\$enterpriseGateBodies\s*=\s*\[ordered\]@\{([\s\S]*?)\n\}/);
+assert(enterpriseBlock, "admin smoke must declare enterpriseGateBodies");
+const enterpriseSmokePaths = matches(enterpriseBlock[1], /^\s+"(?<path>\/admin\/enterprise\/[^"?]+)"\s*=/gm);
+assert(enterpriseSmokePaths.length >= 4, "enterprise gate smoke must cover the enterprise console endpoints");
+// 專屬連結的「發連結」接口後台畫面還沒有按鈕（目前用指令發），所以也認 server.py 的路由表。
+const serverPy = fs.readFileSync(path.join(root, "engine", "server.py"), "utf8");
+for (const smokePath of enterpriseSmokePaths) {
+  assert(
+    js.includes(`"${smokePath}"`) || serverPy.includes(`"${smokePath}"`),
+    `enterprise gate smoke covers a path neither the console nor the server knows: ${smokePath}`,
+  );
+}
+assert(smoke.includes("foreach ($entry in $enterpriseGateBodies.GetEnumerator())"), "smoke must iterate the enterprise gate contract");
+assert(smoke.includes('Invoke-AdminJson "/enterprise/portal/summary"'), "smoke must probe the org portal link gate");
+assert(smoke.includes("accepted a missing or forged link token"), "smoke must fail when the org portal accepts a missing/forged link");
+assert(smoke.includes("leaked '$field' without a valid link token"), "smoke must fail when the org portal leaks summary fields without a valid link");
+
 for (const token of [":focus-visible", '.page[aria-busy="true"]', ".ops-notice.error", ".topbar-action"]) {
   assert(css.includes(token), `admin.css missing state/accessibility contract: ${token}`);
 }
