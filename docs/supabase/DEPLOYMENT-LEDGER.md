@@ -39,5 +39,6 @@ Secret-safe 的東京唯讀觀測命令是 `npm run supabase:deployment:probe`�
 - 更早的本機 probe 曾因共享 backend env 指向 Sydney 而在 HTTP 前 fail closed；新證據已改由 Cloud Run 的東京 secret reference 取得，不代表本機 `.env.local` 已被修改。
 - Sydney rollback project 只有歷史保留聲明；正式切回前仍需重新確認可用性與 secrets／Gateway revision／重新登入步驟。
 - 2026-07-24 對 `023_test_account_flag.sql`／`024_inactive_free_account_retention.sql`／`025_person_profile_fields.sql` 執行唯讀觀測，三支欄位／函式已存在於東京，狀態由 `unknown` 改為 `verified`（`captureMethod=read-only-probe`、`sourceCommit=8ddab84c`）；證據見 `STATUS.md`（129 號）。`020`／`021`／`022`／`026` 仍未套用，維持 `unknown`，等 Edward 手動貼 SQL。
+- 2026-10-29 Edward 在東京 SQL editor 執行 `029_on_device_face_worker.sql`（臉在手機上跑：總機登記 `phone://on-device-face`、聲音座位帳面歸零）；唯讀觀測兩列皆符合，狀態由 `unknown` 改為 `verified`，證據見 `docs/supabase/evidence/2026-10-29-tokyo-029-on-device-face.json`。
 
 修改本文件或 JSON 不等於部署，也不授權 migration、資料清理、traffic shift 或刪除任一 Supabase project。
