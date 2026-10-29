@@ -59,25 +59,18 @@ image = (
     )
     .pip_install("fastapi")
     .env({"LD_LIBRARY_PATH": "/opt/cudnn8-pkgs/nvidia/cudnn/lib", "MUNEA_APP_KEY": APP_KEY})
-    .add_local_file(r"E:\Claude\Munea\web\avatars\nening-real-female-full.jpg",
+    .add_local_file(r"E:\Claude\Munea\deploy\runpod-avatar\assets\nening-real-female-full.jpg",
                     "/root/nening-real-female-full.jpg")
-    # 六角色底圖（7/9 Edward「6 個角色都要會動」）——底圖跟 App 聊聊頁同一張
-    .add_local_file(r"E:\Claude\Munea\web\avatars\ahong-tall.jpg", "/root/char-ahong.jpg")
-    .add_local_file(r"E:\Claude\Munea\web\avatars\ahong-v3.png", "/root/char-ahong-v2.png")
+    # 角色底圖（2026-09-30 男生阿宏／阿原／旺財下線、素材已刪；10/28 寧寧改走 App 內插畫，這裡只剩顯示卡用的真人照）
     .add_local_file(r"E:\Claude\Munea\web\avatars\xiaoyun-2d-tall.jpg", "/root/char-xiaoyun.jpg")
-    .add_local_file(r"E:\Claude\Munea\web\avatars\ayuan-2d-tall.jpg", "/root/char-ayuan.jpg")
     .add_local_file(r"E:\Claude\Munea\web\avatars\mimi-tall.jpg", "/root/char-mimi.jpg")
-    .add_local_file(r"E:\Claude\Munea\web\avatars\wangcai-tall.jpg", "/root/char-wangcai.jpg")
 )
 
 # 角色 → 底圖（key 跟語音橋 ?char= 同一套中文名；App 聊聊頁同圖）
 CHAR_SRC = {
     "寧寧": "/root/nening-real-female-full.jpg",
-    "阿宏": "/root/char-ahong-v2.png",   # v3 無眼鏡+嘴唇放鬆微張（Edward 7/10 拍板）——抿緊嘴的底圖嘴帶不動、放鬆微張引擎才拉得開
     "小昀": "/root/char-xiaoyun.jpg",
-    "阿原": "/root/char-ayuan.jpg",
     "咪咪": "/root/char-mimi.jpg",
-    "旺財": "/root/char-wangcai.jpg",
 }
 
 

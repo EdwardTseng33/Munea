@@ -83,12 +83,32 @@ assert.equal(
 
 const templateContract = {
   'nening-real-female': ['寧寧', 'companion.nening'],
-  'companion-real-male': ['阿宏', 'companion.ahong'],
   'munea-2d-xiaoyun': ['小昀', 'companion.xiaoyun'],
-  'munea-2d-ayuan': ['阿原', 'companion.ayuan'],
   'munea-2d-mimi': ['咪咪', 'companion.mimi'],
-  'munea-2d-wangcai': ['旺財', 'companion.wangcai'],
 };
+// 男生角色全數下線（Edward 2026-09-30）：名單裡不能再有他們
+for (const retired of ['companion-real-male', 'munea-2d-ayuan', 'munea-2d-wangcai']) {
+  assert.ok(!profile.templates[retired], `${retired} must be removed from the companion roster`);
+  assert.equal(profile.normalizeTemplateId(retired), 'nening-real-female', `${retired} must fall back to Ningning`);
+}
+for (const alias of ['real-m', 'toon-m', 'dog']) {
+  assert.equal(profile.normalizeTemplateId(alias), 'nening-real-female', `alias ${alias} must not revive a male companion`);
+}
+locale = 'en';
+{
+  // 存的是男生預設名（很多人只是點過輸入框就被標成「自己取的」）→ 改回寧寧，不能變成寧寧的臉叫 Sam
+  const migrated = profile.normalizeProfile({ templateId: 'companion-real-male', displayName: 'Sam', nameTouched: true });
+  assert.equal(migrated.templateId, 'nening-real-female');
+  assert.equal(migrated.nameTouched, false, 'A retired male default name must not count as a custom name');
+  assert.equal(migrated.displayName, translations.en['companion.nening.name']);
+  const zhDefault = profile.normalizeProfile({ templateId: 'companion-real-male', displayName: '阿宏', nameTouched: true });
+  assert.equal(zhDefault.nameTouched, false, 'Retired defaults must be recognised in every language');
+  // 真的自己取的名字要保留
+  const custom = profile.normalizeProfile({ templateId: 'companion-real-male', displayName: 'Grace', nameTouched: true });
+  assert.equal(custom.templateId, 'nening-real-female');
+  assert.equal(custom.displayName, 'Grace', 'A genuinely custom name survives the move to Ningning');
+  assert.equal(custom.nameTouched, true);
+}
 for (const localeKey of ['zh-TW', 'en', 'ja', 'es']) {
   locale = localeKey;
   for (const [templateId, [backendChar, keyPrefix]] of Object.entries(templateContract)) {
