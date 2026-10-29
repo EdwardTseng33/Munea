@@ -1,5 +1,12 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-29 15:50 蘇菲｜📞 通話改「臉在手機、聲音在雲端」——正式線自 9/6 起打不通的病根（call-path risk · 改通話配對、照 7/13 規矩先列檔）
+
+- **病根（查帳實錘）**：總機 `munea_call_request` 配對要同時有聲音座位＋臉的座位（`gpu_workers`）。雲端顯示卡 6 張 9/6 起全 `terminated` → 每通電話永遠排隊。最後一通成功 8/13；10/14 唯一一通排隊 7.8 秒被取消。App 端 `getAvatarUrl()` 也仍回雲端臉位址（寧寧→a05 FlashHead），新插圖只換了畫面、撥號沒跟著改。
+- **新方法（Edward 拍板）**：臉在手機上跑（`companion-face.js` 插圖跟聲音動）、聲音在雲端（Gemini Live）。總機的臉座位登記成 `phone://on-device-face`（名額 500、不計費）；App 看到 `phone://` 就不接雲端臉。擬真人臉停用不刪（`localStorage munea.remoteFace=1` 才接）。
+- **動到的檔**：`web/src/app.js`（`getAvatarUrl`／`remoteFaceEnabled`／`ON_DEVICE_FACE_SCHEME`）、`scripts/test_app_call_control_contract.py`（新守門、突變驗過：舊程式紅）、`supabase/sql/029_on_device_face_worker.sql`（只新增一列＋歸零漏扣帳面，不改函式、不動表結構）。
+- **未做**：029 要在正式資料庫執行一次（自動模式擋我寫共用資料庫）；正式線真打一通驗證；舊版 App（商店 1.0.55、TF 1.0.69）拿到 `phone://` 會試連失敗——它們現在本來就打不通，1.0.70 上架後解。
+
 ### 2026-10-29 13:45 蘇菲｜🚀 後台五張 PR 全進主線＋正式機出貨（Edward「推進」）
 
 - **合併順序與結果**：#613 換網址 → #611 登入提速 → #627 產品框架設計書 → #612 機構專區方案 C → #629 UI/UX 2026（深色側欄照交付版）。程式幾乎沒撞（server.py／admin.js 都自動合）、唯一撞點是本看板頂端：每合一張其餘全撞一次，三個分身各自對齊 2–3 次、兩則都留新的在上。
