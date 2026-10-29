@@ -17,6 +17,14 @@
 - 🔑 順手看到、這張不處理：Android 的 App 圖示還是 Capacitor 範本的藍色 X（`mipmap-*/ic_launcher*`），桌面／Play 都看得到——用 iOS 的寧寧圖示還是沐寧標誌，要 Edward 定。
 - **檔**：`package.json`／`package-lock.json`、`capacitor.config.json`、`android/app/src/main/res/`（styles／colors／drawable／drawable-xxxhdpi）、`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle`、`web/index.html`、`web/src/app.js`、`ios/App/CapApp-SPM/Package.swift`、`.github/workflows/android-build.yml`、`scripts/android-flow-smoke.sh`、`scripts/android-ui-tap-by-text.py`、`docs/qa/android/splash-2026-10-28/`。**跟 #623 共用 `web/index.html`／`web/src/app.js`（不同段落、不衝突）**。
 
+### 2026-10-28 蘇菲｜🏗 後台 B2B2C 產品框架設計書＋冒煙契約補兩道門（Draft PR · 分支 `claude/admin-saas-framework-9169c9` · 不碰 server.py／admin.js）
+
+- **接**：10/26 評估報告（C 先、B 看客戶、A 不做）＋ Edward 10/28「持續推進後台內容優化與產品框架設計完善」。
+- **設計書** `docs/後台-B2B2C-產品框架設計-2026-10-28.md`（六節齊）：① 營運後台（沐寧看全部）vs 機構專區（只看自家、預設不含個資，三層深度 L0 彙總／L1 名單旗標／L2 週關懷摘要，L1 起要「機構照護模式」同意）② 客戶→分點→照護人員（管理者／社工／照服員／企業 HR）→席次→長輩帳號，權限矩陣一張表 ③ 誰看過什麼：讀 L2 必留紀錄、標記只增不改、留 1–2 年；看得到／看不到對照表 ④ 接口：建議另開 `/org/*` 一族（身分自帶機構、不收機構參數）、不沿用 `/admin/*`；第一版 7 讀 2 寫 ⑤ 路線 0→4 段、雙軌估時；**第 2 段起要改 `server.py`／`admin.js`，等 #611、#613 合併才動**；補助案 C2 12/31 前要到第 3 段 ⑥ 8 題要 Edward 拍板（同意規則 A／接口 B／登入走 App 同一套／先服務社工個管／家人看得到誰看過／分點先標籤／稽核 2 年／正式重開 7 月「機構後台不做」）。
+- **小修（不碰那兩檔）**：`scripts/admin-smoke.ps1` 補「企業接口沒鑰匙 403」＋「專屬連結沒憑證／假憑證只回 invalid_token、不漏任何欄位」＋「有鑰匙企業三支讀 ok」；`scripts/test-admin-console.js` 釘住這段不能消失。**順手抓到**：冒煙從 7/20 #204 改版起一直在找已拆掉的 `statusPill`（另一支契約反而規定不准有）＝三個月沒真的跑過；已對齊。本機 8231 假資料整支綠；`test-admin-console.js`／`test_admin_console_paths.py` 綠。
+- **現查發現**：後台畫面沒有「發專屬連結」按鈕（接口在、沒人呼叫），今天要發連結得打指令——排進第 2 段客戶明細頁。
+- **沒做**：沒改 `web/org-portal.html`（#612 正在大改同一份）、沒碰 `admin.js`／`server.py`、沒部署、沒截圖（這次沒動任何畫面）。
+
 ### 2026-10-26 蘇菲 🔗 後台換網址 admin.munea.net（Draft PR · 分支 `feat/admin-domain-munea-net-20261026`）
 
 - **Edward 拍板**：設定先備好、DNS 他自己動。走 **Cloud Run 直接綁網域**（不經 Vercel／Firebase）；7/11 設定單作廢（官網已搬 Firebase、「asia-east1 不支援」查證為誤——Google 地區表列在支援清單）。
