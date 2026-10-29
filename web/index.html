@@ -38,12 +38,42 @@
 </div>
 
 <script>
+/* 原生啟動畫面交棒（Android @capacitor/splash-screen · 2026-10-28）：
+   App 冷啟動時，WebView 畫出第一格之前整個是白的（Galaxy A15 實機 5 秒以上）。
+   所以原生殼先用系統啟動畫面撐著（奶油底＋標誌，底色跟上面 #bootSplash 同一個 --cream），
+   等這一頁已經可以畫了（app.js 的 runBootSplash 在 DOMContentLoaded 時叫這個函式）才叫它收掉。
+   沒裝這個外掛的環境（瀏覽器、還沒重新打包的 iOS）什麼都不會發生。
+   外掛沒有提供 JS 檔給我們載（這個專案不打包），所以直接走 Capacitor 的原生橋：
+   先問 isPluginAvailable 確定原生那邊真的有這個外掛，再 registerPlugin 拿到可以呼叫的代理。 */
+window.muneaHideNativeSplash = function () {
+  try {
+    var cap = window.Capacitor;
+    if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return;
+    var plugin = cap.Plugins && cap.Plugins.SplashScreen;
+    if (!plugin && typeof cap.isPluginAvailable === 'function' && cap.isPluginAvailable('SplashScreen')
+        && typeof cap.registerPlugin === 'function') {
+      plugin = cap.registerPlugin('SplashScreen');
+    }
+    if (!plugin || typeof plugin.hide !== 'function') return;
+    var done = plugin.hide();
+    if (done && typeof done.catch === 'function') {
+      done.catch(function (err) { console.warn('[bootSplash] native splash hide() rejected', err); });
+    }
+  } catch (err) {
+    // 不能讓「收原生畫面」這件事炸掉下面的保險絲；但也不吞掉不講（出錯不出聲＝整區失效、7/31 教訓）。
+    // log 用英文：四語守門會把任何中文字串當成要綁鍵的文案，console 訊息不是給使用者看的。
+    console.warn('[bootSplash] native splash handoff failed', err);
+  }
+};
+
 /* 保險絲：啟動頁預設就是顯示的（不然會先看到首頁閃一下），
    萬一 app.js 沒載入或中途出錯，它會一直蓋著＝App 打不開。
-   這段跟 app.js 無關、也不依賴任何函式，時間到就把它收掉。 */
+   這段跟 app.js 無關、也不依賴任何函式，時間到就把它收掉。
+   原生那層也一起收：app.js 沒跑起來就沒人叫 hide()，標誌會一直蓋著（外掛本身另有 20 秒上限）。 */
 setTimeout(function () {
   var s = document.getElementById('bootSplash');
   if (s && !s.hidden) s.hidden = true;
+  window.muneaHideNativeSplash();
 }, 6000);
 </script>
 

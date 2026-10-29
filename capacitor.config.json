@@ -4,5 +4,16 @@
   "webDir": "web",
   "server": {
     "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 20000,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 300,
+      "backgroundColor": "#F4F0E8",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER",
+      "showSpinner": false
+    }
   }
 }
