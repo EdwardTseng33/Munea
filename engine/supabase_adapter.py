@@ -2483,6 +2483,55 @@ class SupabaseAdapter:
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows or []]
 
+    # ── 機構專區（org_portal）批次查詢：一次撈整組帳號，不是每戶一查 ──
+    # 機構窗口的彙總只算「這家 active 席次綁定的帳號」，所以用 account_id=in.(...) 一刀切，
+    # 跟 enterprise_billing._load_cohort_table_rows 同一個做法。只收 UUID，別的 id 直接略過
+    #（本機假帳號 "local-demo-account" 這種丟給 PostgREST 會整句壞掉）。
+
+    @staticmethod
+    def _cohort_in_filter(account_ids):
+        ids = sorted({str(a) for a in (account_ids or []) if a and UUID_RE.match(str(a))})
+        return f"in.({','.join(ids)})" if ids else None
+
+    def load_org_cohort_product_events(self, account_ids, since_iso=None, limit=20000):
+        """機構專區：這群帳號在 since_iso 之後的 product_events（service-role、整組一次撈）。
+        沒有任何合法 UUID 就回空陣列，不打資料庫。"""
+        if not self.enabled():
+            return None
+        account_filter = self._cohort_in_filter(account_ids)
+        if not account_filter:
+            return []
+        limit = max(1, min(50000, int(limit or 20000)))
+        query = {
+            "select": "*",
+            "account_id": account_filter,
+            "order": "event_time.desc",
+            "limit": str(limit),
+        }
+        if since_iso:
+            query["event_time"] = f"gte.{since_iso}"
+        rows = self._select("product_events", query)
+        return [self.product_event_row_to_event(row) for row in rows or []]
+
+    def load_org_cohort_medication_doses(self, account_ids, since_date=None, limit=5000):
+        """機構專區：這群帳號在 since_date 之後的服藥事件（算提醒完成率用）。"""
+        if not self.enabled():
+            return None
+        account_filter = self._cohort_in_filter(account_ids)
+        if not account_filter:
+            return []
+        limit = max(1, min(10000, int(limit or 5000)))
+        query = {
+            "select": "*",
+            "account_id": account_filter,
+            "order": "scheduled_date.desc",
+            "limit": str(limit),
+        }
+        if since_date:
+            query["scheduled_date"] = f"gte.{str(since_date)[:10]}"
+        rows = self._select("medication_dose_events", query)
+        return [self.medication_dose_row_to_item(row) for row in rows or []]
+
     def load_memory_items(self, query=None, limit=200):
         if not self.enabled():
             return None

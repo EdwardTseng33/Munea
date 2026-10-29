@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --teal:#3AA8A0; --coral:#F4A261; --cream:#FAF7F2; --ink:#33403D;
-      --muted:#6B7A76; --line:#E4DED5; --card:#FFFFFF;
+      --teal:#3AA8A0; --teal-soft:#E6F4F2; --coral:#F4A261; --coral-soft:#FDF1E6;
+      --cream:#FAF7F2; --ink:#33403D; --muted:#6B7A76; --line:#E4DED5; --card:#FFFFFF;
     }
     *{box-sizing:border-box}
     body{
@@ -20,42 +20,68 @@
       font-family:"Noto Sans TC","Poppins",system-ui,-apple-system,"Segoe UI",sans-serif;
       line-height:1.7;
     }
-    .wrap{max-width:880px; margin:0 auto; padding:32px 20px 64px}
-    header{display:flex; align-items:center; gap:12px; margin-bottom:28px}
+    .wrap{max-width:880px; margin:0 auto; padding:28px 16px 64px}
+    header{display:flex; align-items:center; gap:12px; margin-bottom:24px}
     .logo{width:40px; height:40px; border-radius:12px; background:var(--teal);
       display:grid; place-items:center; color:#fff; font-weight:700; font-size:18px;
       font-family:"Poppins",sans-serif; flex:none}
     .brand{font-weight:700; font-size:18px}
     .brand small{display:block; font-weight:400; font-size:13px; color:var(--muted)}
-    h1{font-size:26px; margin:0 0 4px}
-    .period{color:var(--muted); font-size:14px; margin:0 0 24px}
-    .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:24px}
-    .stat{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px}
-    .stat .label{font-size:14px; color:var(--muted); margin-bottom:6px}
-    .stat .value{font-size:32px; font-weight:700; font-family:"Poppins",sans-serif; color:var(--teal)}
+    h1{font-size:26px; margin:0 0 4px; line-height:1.3}
+    .period{color:var(--muted); font-size:14px; margin:0 0 20px}
+    .period b{color:var(--ink); font-weight:500}
+    section{margin-bottom:26px}
+    h2{font-size:17px; margin:0 0 4px; display:flex; align-items:center; gap:8px}
+    h2 .dot{width:10px; height:10px; border-radius:50%; background:var(--teal); flex:none}
+    h2 .dot.coral{background:var(--coral)}
+    .lead{font-size:14px; color:var(--muted); margin:0 0 12px}
+    .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px}
+    .stat{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 18px 16px; min-width:0}
+    .stat .label{font-size:13.5px; color:var(--muted); margin-bottom:4px}
+    .stat .value{font-size:30px; font-weight:700; font-family:"Poppins",sans-serif; color:var(--teal); line-height:1.2; word-break:break-all}
     .stat .value.plain{color:var(--ink)}
-    .stat .unit{font-size:15px; font-weight:400; color:var(--muted); margin-left:4px}
+    .stat .value.na{font-size:18px; font-weight:500; color:var(--muted); font-family:inherit; padding-top:6px}
+    .stat .unit{font-size:14px; font-weight:400; color:var(--muted); margin-left:3px; font-family:"Noto Sans TC",sans-serif}
+    .stat .hint{font-size:12.5px; color:var(--muted); margin-top:6px; line-height:1.5}
     .bar{height:8px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:12px}
     .bar span{display:block; height:100%; background:var(--teal); border-radius:99px}
+    .notice{background:var(--coral-soft); border:1px solid #F3DCC2; border-radius:14px; padding:12px 16px; font-size:14px; margin:0 0 14px}
+    .notice b{font-weight:700}
+    .reports{background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden}
+    .report{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-top:1px solid var(--line)}
+    .report:first-child{border-top:0}
+    .report .month{font-weight:700; font-size:16px}
+    .report .meta{font-size:13px; color:var(--muted)}
+    .btn{display:inline-block; padding:8px 16px; border-radius:99px; background:var(--teal); color:#fff; text-decoration:none;
+      font-weight:500; font-size:14px; white-space:nowrap}
+    .btn:hover{filter:brightness(0.95)}
+    .pill{display:inline-block; padding:5px 12px; border-radius:99px; background:var(--cream); color:var(--muted); font-size:13px; white-space:nowrap}
+    .empty{padding:22px 18px; color:var(--muted); font-size:14.5px}
     .privacy{background:#fff; border:1px solid var(--line); border-left:4px solid var(--coral);
-      border-radius:14px; padding:18px 20px; font-size:14.5px}
+      border-radius:14px; padding:16px 18px; font-size:14.5px}
     .privacy b{display:block; margin-bottom:4px}
+    .privacy ul{margin:8px 0 0; padding-left:20px; color:var(--muted); font-size:14px}
+    .privacy li{margin:2px 0}
     .state{background:var(--card); border:1px solid var(--line); border-radius:16px;
       padding:40px 24px; text-align:center; color:var(--muted)}
-    .state h2{color:var(--ink); font-size:20px; margin:0 0 8px}
-    footer{margin-top:32px; font-size:13px; color:var(--muted); text-align:center}
+    .state h2{color:var(--ink); font-size:20px; margin:0 0 8px; justify-content:center}
+    footer{margin-top:28px; font-size:13px; color:var(--muted); text-align:center; line-height:1.8}
     .hidden{display:none}
-    @media (max-width:520px){ h1{font-size:22px} .stat .value{font-size:27px} }
+    @media (max-width:520px){
+      h1{font-size:22px} .stat .value{font-size:26px}
+      .report{flex-direction:column; align-items:flex-start}
+      .report .btn,.report .pill{align-self:stretch; text-align:center}
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div class="logo">M</div>
-      <div class="brand">沐寧 Munea<small>機構專區</small></div>
+      <div class="brand">沐寧 Munea<small>機構專區 · 月度彙總</small></div>
     </header>
 
-    <div id="loading" class="state"><h2>讀取中…</h2><p>正在取得貴機構的使用彙總</p></div>
+    <div id="loading" class="state"><h2>讀取中…</h2><p>正在整理貴機構的使用彙總</p></div>
 
     <div id="error" class="state hidden">
       <h2 id="errorTitle">連結無法使用</h2>
@@ -66,29 +92,61 @@
       <h1 id="orgName"></h1>
       <p class="period" id="orgPeriod"></p>
 
-      <div class="grid">
-        <div class="stat">
-          <div class="label">合約席次</div>
-          <div class="value plain" id="quota">—</div>
-          <div class="bar"><span id="bar" style="width:0%"></span></div>
+      <section>
+        <h2><span class="dot"></span>席次</h2>
+        <p class="lead">合約買了幾席、開通了幾席。</p>
+        <div class="grid">
+          <div class="stat">
+            <div class="label">合約席次</div>
+            <div class="value plain" id="quota">—</div>
+            <div class="bar"><span id="bar" style="width:0%"></span></div>
+          </div>
+          <div class="stat"><div class="label">已啟用</div><div class="value" id="active">—</div></div>
+          <div class="stat"><div class="label">待開通</div><div class="value plain" id="pending">—</div></div>
+          <div class="stat"><div class="label">尚未使用</div><div class="value plain" id="unused">—</div></div>
         </div>
-        <div class="stat">
-          <div class="label">已啟用</div>
-          <div class="value" id="active">—</div>
-        </div>
-        <div class="stat">
-          <div class="label">待開通</div>
-          <div class="value plain" id="pending">—</div>
-        </div>
-        <div class="stat">
-          <div class="label">尚未使用</div>
-          <div class="value plain" id="unused">—</div>
-        </div>
+      </section>
+
+      <div id="smallSample" class="notice hidden">
+        <b>人數還少，部分數字先不顯示。</b>
+        啟用人數未滿 <span id="minGroup">5</span> 人時，比率與守護件數不單獨呈現——人數太少的話，百分比等於直接點名某一位長輩。人數到了會自動顯示。
       </div>
+
+      <section>
+        <h2><span class="dot"></span>使用狀況</h2>
+        <p class="lead" id="usageLead">近 30 天，開通的長輩有多少人真的在用。</p>
+        <div class="grid">
+          <div class="stat"><div class="label">啟用人數</div><div class="value plain" id="enabledCount">—</div><div class="hint">席次已綁定、可以使用的人</div></div>
+          <div class="stat"><div class="label">近 30 天有互動</div><div class="value" id="activeCount">—</div><div class="hint" id="activeRateHint">&nbsp;</div></div>
+          <div class="stat"><div class="label">留存</div><div class="value" id="retentionRate">—</div><div class="hint">上一個 30 天有用、這 30 天還在用的比例</div></div>
+          <div class="stat"><div class="label">平均每人每週互動</div><div class="value" id="weeklyAvg">—</div><div class="hint">通話、提醒完成、App 操作都算一次</div></div>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="dot coral"></span>守護</h2>
+        <p class="lead">只有件數。每一件的內容、發生在哪一戶，機構端看不到。</p>
+        <div class="grid">
+          <div class="stat"><div class="label">高風險事件</div><div class="value plain" id="highRisk">—</div><div class="hint">近 30 天守護腦判為高風險的次數</div></div>
+          <div class="stat"><div class="label">已有人跟進</div><div class="value plain" id="followedUp">—</div><div class="hint" id="followedUpHint">&nbsp;</div></div>
+          <div class="stat"><div class="label">用藥提醒完成率</div><div class="value" id="medRate">—</div><div class="hint" id="medRateHint">&nbsp;</div></div>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="dot"></span>月報</h2>
+        <p class="lead">每月月結後產生，內容同樣只有整家加總的數字。</p>
+        <div class="reports" id="reports"></div>
+      </section>
 
       <div class="privacy">
         <b>關於長輩的隱私</b>
         <span id="privacyText"></span>
+        <ul>
+          <li>這一頁只有整家加總，沒有任何一位長輩的名字、對話、心情或用藥明細。</li>
+          <li>長輩的個人資料僅家屬本人在 App 裡看得到；沐寧是受託保管的一方。</li>
+          <li>這條連結只看得到貴機構，而且有使用期限；請勿轉傳給機構以外的人。</li>
+        </ul>
       </div>
 
       <footer>
@@ -108,9 +166,10 @@
   // 部署到靜態站時由部署端注入 window.MUNEA_PORTAL_API_BASE；?api= 只給我們自己測試用。
   var base = (params.get("api") || window.MUNEA_PORTAL_API_BASE || "").replace(/\/+$/, "");
 
-  function show(id){ document.getElementById(id).classList.remove("hidden"); }
-  function hide(id){ document.getElementById(id).classList.add("hidden"); }
-  function text(id, value){ document.getElementById(id).textContent = value; }
+  function $(id){ return document.getElementById(id); }
+  function show(id){ $(id).classList.remove("hidden"); }
+  function hide(id){ $(id).classList.add("hidden"); }
+  function text(id, value){ $(id).textContent = value; }
 
   function fail(title, body){
     hide("loading"); hide("content");
@@ -124,6 +183,79 @@
     var d = typeof value === "number" ? new Date(value * 1000) : new Date(value);
     if (isNaN(d.getTime())) return "—";
     return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+  }
+  function formatDay(iso){
+    if (!iso) return "";
+    var p = String(iso).split("-");
+    return p.length === 3 ? (parseInt(p[0],10) + "/" + parseInt(p[1],10) + "/" + parseInt(p[2],10)) : iso;
+  }
+  function pct(value){ return Math.round(value * 100) + "%"; }
+
+  // 比率類欄位：有數字就畫數字；null 就寫明「未滿 5 人不顯示」或「還沒有資料」，不畫 0。
+  function setRate(id, value, suppressed, emptyHint){
+    var el = $(id);
+    if (value == null){
+      el.textContent = suppressed ? "未滿 " + MIN + " 人不顯示" : (emptyHint || "還沒有資料");
+      el.classList.add("na");
+      return;
+    }
+    el.classList.remove("na");
+    el.textContent = pct(value);
+  }
+  function setCount(id, value, suppressed){
+    var el = $(id);
+    if (value == null){
+      el.textContent = suppressed ? "未滿 " + MIN + " 人不顯示" : "—";
+      el.classList.add("na");
+      return;
+    }
+    el.classList.remove("na");
+    el.textContent = value;
+  }
+
+  var MIN = 5;
+
+  function renderReports(reports){
+    var box = $("reports");
+    box.textContent = "";
+    var list = (reports && reports.list) || [];
+    if (!list.length){
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "目前還沒有月報。每個月月結後會出現在這裡。";
+      box.appendChild(empty);
+      return;
+    }
+    list.forEach(function(item){
+      var row = document.createElement("div");
+      row.className = "report";
+      var left = document.createElement("div");
+      var month = document.createElement("div");
+      month.className = "month";
+      month.textContent = item.period || "";
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = item.available
+        ? ("產生於 " + formatDate(item.generatedAt))
+        : "月結完成後會出現在這裡";
+      left.appendChild(month); left.appendChild(meta);
+      row.appendChild(left);
+      if (item.available){
+        var a = document.createElement("a");
+        a.className = "btn";
+        a.textContent = "開啟月報";
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.href = base + "/enterprise/portal/report?t=" + encodeURIComponent(token) + "&id=" + encodeURIComponent(item.id);
+        row.appendChild(a);
+      } else {
+        var pill = document.createElement("span");
+        pill.className = "pill";
+        pill.textContent = "尚未產生";
+        row.appendChild(pill);
+      }
+      box.appendChild(row);
+    });
   }
 
   if (!token){
@@ -150,21 +282,70 @@
 
     var org = payload.org || {};
     var seats = payload.seats || {};
+    var usage = payload.usage || {};
+    var guardian = payload.guardian || {};
+    var period = payload.period || {};
+    var privacy = payload.privacy || {};
+    MIN = privacy.minGroupSize || 5;
+
     text("orgName", org.name || "貴機構");
     var span = [];
     if (org.contractStart) span.push(formatDate(org.contractStart));
     if (org.contractEnd) span.push(formatDate(org.contractEnd));
-    text("orgPeriod", span.length ? ("合約期間　" + span.join("　—　")) : "");
+    var periodText = "";
+    if (period.start && period.end) periodText = "統計期間　" + formatDay(period.start) + " – " + formatDay(period.end) + "（近 " + (period.days || 30) + " 天）";
+    if (span.length) periodText += (periodText ? "　｜　" : "") + "合約期間　" + span.join(" – ");
+    text("orgPeriod", periodText);
 
+    // 席次
     text("quota", seats.quota != null ? seats.quota : "—");
     text("active", seats.active != null ? seats.active : "—");
     text("pending", seats.pending != null ? seats.pending : "—");
     text("unused", seats.unusedQuota != null ? seats.unusedQuota : "—");
+    var seatPct = seats.utilization != null ? Math.round(seats.utilization * 100) : 0;
+    $("bar").style.width = Math.min(seatPct, 100) + "%";
 
-    var pct = seats.utilization != null ? Math.round(seats.utilization * 100) : 0;
-    document.getElementById("bar").style.width = Math.min(pct, 100) + "%";
+    // 小樣本提示
+    var suppressed = !!(usage.smallSampleSuppressed || guardian.smallSampleSuppressed);
+    text("minGroup", MIN);
+    if (suppressed) show("smallSample"); else hide("smallSample");
 
-    text("privacyText", (payload.privacy && payload.privacy.statement) || "");
+    // 使用狀況
+    text("enabledCount", usage.enabledCount != null ? usage.enabledCount : "—");
+    text("activeCount", usage.activeCount != null ? usage.activeCount : "—");
+    text("activeRateHint", usage.activeRate != null ? ("佔啟用人數 " + pct(usage.activeRate)) : (suppressed ? "比例未滿 " + MIN + " 人不顯示" : " "));
+    setRate("retentionRate", usage.retentionRate, suppressed,
+      usage.retentionBaseCount === 0 ? "上一期還沒有人使用" : "還沒有資料");
+    var weekly = $("weeklyAvg");
+    if (usage.avgWeeklyInteractionsPerPerson == null){
+      weekly.textContent = suppressed ? "未滿 " + MIN + " 人不顯示" : "還沒有資料";
+      weekly.classList.add("na");
+    } else {
+      weekly.classList.remove("na");
+      weekly.textContent = "";
+      weekly.appendChild(document.createTextNode(String(usage.avgWeeklyInteractionsPerPerson)));
+      var unit = document.createElement("span"); unit.className = "unit"; unit.textContent = "次";
+      weekly.appendChild(unit);
+    }
+
+    // 守護
+    setCount("highRisk", guardian.highRiskEventCount, suppressed);
+    if (guardian.followUpTrackingAvailable){
+      setCount("followedUp", guardian.followedUpCount, suppressed);
+      text("followedUpHint", " ");
+    } else {
+      var fu = $("followedUp"); fu.textContent = "尚未開始記錄"; fu.classList.add("na");
+      text("followedUpHint", "跟進紀錄功能上線後會在這裡顯示");
+    }
+    setRate("medRate", guardian.medicationCompletionRate, suppressed,
+      guardian.medicationDecidedCount === 0 ? "近 30 天沒有用藥提醒" : "還沒有資料");
+    text("medRateHint", guardian.medicationDecidedCount != null && guardian.medicationDecidedCount > 0
+      ? ("近 30 天共 " + guardian.medicationDecidedCount + " 次提醒有結果") : "到點提醒後，有按「吃了」的比例");
+
+    // 月報
+    renderReports(payload.reports);
+
+    text("privacyText", privacy.statement || "");
     text("generatedAt", formatDate(payload.generatedAt));
     text("expiresAt", formatDate(payload.expiresAt));
 

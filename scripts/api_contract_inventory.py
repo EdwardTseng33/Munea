@@ -114,7 +114,11 @@ def extract_brain_routes(root: Path) -> set[Route]:
     post_paths = _comparison_paths(_function(tree, "do_POST"), {"self.path", "request_path"})
     get_paths = _comparison_paths(_function(tree, "do_GET"), {"path"})
     routes = {Route("brain", "POST", path) for path in post_paths}
-    routes.update(Route("brain", "GET", path) for path in get_paths if path in {"/healthz", "/version"})
+    # GET surfaces the brain really serves as API (everything else under do_GET is static files).
+    # /enterprise/portal/report: the organisation portal's monthly-report download, authenticated
+    # by the signed portal token in the query string (2026-10-26, B2B2C plan C).
+    brain_get_api = {"/healthz", "/version", "/enterprise/portal/report"}
+    routes.update(Route("brain", "GET", path) for path in get_paths if path in brain_get_api)
     return routes
 
 
@@ -217,6 +221,9 @@ def _criticality(route: Route) -> str:
         return "high"
     if route.path.startswith(("/admin/", "/v1/admin/", "/v1/internal/", "/family", "/notifications", "/push/")):
         return "high"
+    if route.surface == "brain" and route.path.startswith("/enterprise/portal/"):
+        # External-facing organisation portal: aggregate-only by contract, token-gated, no login.
+        return "high"
     if route.surface == "brain" and route.path.startswith(("/guardian/", "/memory/", "/voice-")):
         return "high"
     return "standard"
@@ -253,6 +260,9 @@ def _pii(route: Route) -> str:
     path = route.path
     if path in {"/health", "/healthz", "/version", "/metrics"}:
         return "none"
+    if route.surface == "brain" and path.startswith("/enterprise/portal/"):
+        # Organisation portal: org_portal.assert_no_personal_data rejects any person-level field.
+        return "aggregate-only"
     if any(token in path for token in ("credits", "subscription", "apple/transaction", "entitlements")):
         return "billing"
     if any(token in path for token in ("health", "medication", "wellbeing", "care-schedule", "safety")):
@@ -270,6 +280,8 @@ def _envelope(route: Route) -> str:
     if route.path == "/metrics":
         return "prometheus-text"
     if route.path == "/chat-test":
+        return "html"
+    if route.surface == "brain" and route.path == "/enterprise/portal/report":
         return "html"
     if route.path == "/version":
         return "munea.service-release.v1"
@@ -301,6 +313,10 @@ def _tests(route: Route) -> list[str]:
         "/credits/balance": ["scripts/test_call_control.py"],
         "/credits/consume": ["scripts/test_call_control_sql.py"],
         "/credits/grant": ["scripts/test_call_control_sql.py"],
+        "/enterprise/portal/report": ["engine/test_org_portal_monthly.py"],
+        "/enterprise/portal/summary": [
+            "engine/test_org_portal.py", "engine/test_org_portal_endpoints.py", "engine/test_org_portal_monthly.py",
+        ],
         "/entitlements": ["scripts/test-store-verification.js", "engine/test_subscription_expiry.py"],
         "/privacy-export": ["engine/test_privacy_export.py"],
         "/subscription-event": ["engine/test_subscription_expiry.py", "scripts/test-store-verification.js"],

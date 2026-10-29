@@ -40,6 +40,16 @@
 - **未做／注意**：正式機要重新部署一次 `--min-instances 1` 才生效（walk 既有 canary→promote 流程）；`test_admin_subscription_extend.py` 有一條日期時炸彈（fixture 寫死 2026-08-01、10/26 起必紅）與本案無關、未動。
 - **同日評估報告**：`docs/後台-B2B2C-SaaS化評估-2026-10-26.md`（機構端 SaaS 化：客戶期待／現況對照／架構評語／三條路）。
 
+### 2026-10-26 11:30 蘇菲｜🏢 機構專區專屬連結擴成月度彙總（B2B2C 評估拍板方案 C · Draft PR #612 · 未部署）
+
+- **背景**：Edward 10/26 評估後台 B2B2C SaaS 化（`docs/後台-B2B2C-SaaS化評估-2026-10-26.md`）→ 先走方案 C：擴充既有免密碼專屬連結，仍只給整家加總、不碰個人層資料。
+- **做了**：`engine/org_portal.py` 彙總加三區——使用狀況（啟用／近 30 天有互動／留存／每人每週互動）、守護（高風險件數／已有人跟進／用藥提醒完成率）、月報清單；只算該機構 active 席次綁定的帳號；啟用未滿 5 人 → 比率**與守護件數**一律 null＋`smallSampleSuppressed`。`supabase_adapter` 加 `load_org_cohort_product_events／medication_doses`（`account_id=in.(...)` 一次撈整組）、本機 JSON 備援走同一份檔。新路由 **GET `/enterprise/portal/report?t=&id=`**：同一張憑證驗過才給、只給自己家（別家＝404、沒憑證＝401）；月報本體就是月結凍結的那份 HTML。`web/org-portal.html` 三區塊＋小樣本提示＋隱私聲明，手機可讀。
+- **守門**：`engine/test_org_portal_monthly.py` 21 條（個資保險會炸／小樣本抑制／憑證過期與改一字／下載 401·404）＋既有 49＋111 條全綠；突變驗過。`FORBIDDEN_KEYS` 補 personId／categories／riskLevel／eventTime／reportHtml。
+- ⚠ **契約清單不能手改**：`docs/API-CONTRACT-INVENTORY.json` 是 `scripts/api_contract_inventory.py` 從程式推出來的，手改會被 check 打回——新路由要在小工具裡登記規則（brain GET 白名單＋pii/criticality/envelope/tests），再 `write`。
+- **誠實標記**：「已有人跟進」目前**沒有資料來源**（守護腦 high/critical 只進 Slack、窗口無標記功能），頁面寫「尚未開始記錄」、不填 0。頁面只有 zh-TW（獨立靜態頁、沒接四語機制）。
+- **待 Edward**：①小樣本時守護件數要不要也藏（我多藏了一層）②統計視窗「近 30 天滾動」vs「日曆月」③「已有人跟進」標記功能要不要立案。截圖（假資料、桌機＋手機）在交接資料夾。
+
+
 ### 2026-09-30 00:10 蘇菲｜🎭 Edward 定向：Rive 取代寧寧的臉＋男生角色下線（盤點完成・待拍板・**尚未施工**）
 
 - **Edward 9/29 原話**：「用 rive 取代寧寧作為臉的功能…先看一下 app 的設計，確認該怎麼取代、哪裡需要取代，好比聊聊頁還沒有開啟通話時的全頻動態，包含男生角色都要先下線。」盤點報告（實拍截圖＋聊聊頁注入 Rive 實跑）：artifact「寧寧換臉盤點」。
