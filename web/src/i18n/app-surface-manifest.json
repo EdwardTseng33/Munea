@@ -239,6 +239,15 @@
       "localizationStatus": "integrated"
     },
     {
+      "state": "modal:care-week",
+      "kind": "modal",
+      "source": "web/index.html",
+      "anchorId": "careWeekModal",
+      "captureMode": "dom-anchor",
+      "coverageGroup": "family",
+      "localizationStatus": "integrated"
+    },
+    {
       "state": "modal:invite-family",
       "kind": "modal",
       "source": "web/index.html",

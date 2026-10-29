@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 給 @capacitor/splash-screen 的 androidSplashResourceName（預設 "splash"）用：
+     只有在 Android 12 啟動畫面 API 失敗退回舊法、或程式自己呼叫 SplashScreen.show() 時才會畫到。
+     奶油底＋置中標誌（104dp，跟 splash_icon 看起來同一塊），搭 capacitor.config.json 的
+     androidScaleType=CENTER／backgroundColor，畫面才不會被拉變形。
+     取代 Capacitor 範本原本那 11 張藍色 X 標誌的 splash.png。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/munea_cream" />
+    <item>
+        <bitmap
+            android:src="@drawable/splash_logo"
+            android:gravity="center" />
+    </item>
+</layer-list>

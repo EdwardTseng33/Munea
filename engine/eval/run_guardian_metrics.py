@@ -49,16 +49,17 @@ def evaluate(text):
         "level": r["risk"]["level"],
         "categories": r["risk"]["categories"],
         "soft": bool(r["responsePolicy"].get("softSignalForReview")),
+        "forced": bool(r["responsePolicy"].get("reviewForced")),   # 只因閘全開才送（沒命中拐彎關鍵字）→ AI high 門檻 0.8
     }
 
 
-def ai_review(text):
+def ai_review(text, forced=False):
     try:
         import perception_engine
     except Exception as e:  # noqa: BLE001
         return {"error": "import: %s" % e}
     try:
-        return perception_engine.guardian_semantic_review(text)
+        return perception_engine.guardian_semantic_review(text, None, forced)
     except Exception as e:  # noqa: BLE001
         return {"error": str(e)}
 
@@ -72,7 +73,7 @@ def run_crisis(bank, with_ai):
         ai = None
         ai_hit = False
         if with_ai and not rule_hit and g["soft"]:
-            ai = ai_review(it["text"])
+            ai = ai_review(it["text"], g.get("forced", False))
             ai_hit = bool(ai) and not ai.get("error") and LEVELS.get(ai.get("level"), 0) >= 3
         # ambiguous＝單句看不準（「像樹葉一樣靜靜落下」）：至少要被送到第二層 AI 看前後文才算接住
         reached_review = g["soft"] and bool(it.get("ambiguous"))
@@ -103,7 +104,7 @@ def run_daily(bank, with_ai):
         ai = None
         ai_fp = False
         if with_ai and not fp and g["soft"]:
-            ai = ai_review(it["text"])
+            ai = ai_review(it["text"], g.get("forced", False))
             ai_fp = bool(ai) and not ai.get("error") and LEVELS.get(ai.get("level"), 0) >= 3
         rows.append({**it, "got": g, "ruleFalsePositive": fp, "aiReview": ai,
                      "aiFalsePositive": ai_fp, "falsePositive": fp or ai_fp})

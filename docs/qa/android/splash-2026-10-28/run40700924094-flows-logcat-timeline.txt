@@ -1,0 +1,12 @@
+10-28 14:01:08.025 E/ActivityManager(  523): ANR in com.google.android.apps.nexuslauncher (com.google.android.apps.nexuslauncher/.NexusLauncherActivity)
+10-28 14:01:08.025 E/ActivityManager(  523): Reason: Input dispatching timed out (Application does not have a focused window)
+10-28 14:01:08.066 I/ActivityTaskManager(  523): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=net.munea.app/.MainActivity} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=0
+10-28 14:01:08.073 D/SplashScreenView(  840): Icon: view: android.widget.ImageView{a184aec V.ED..... ......I. 0,0-0,0 #10204f0 android:id/splashscreen_icon_view} drawable: com.android.wm.shell.startingsurface.SplashscreenIconDrawableFactory$ImmobileIconDrawable@1b3feb5 size: 504
+10-28 14:01:12.113 D/Capacitor( 3655): Registering plugin instance: SplashScreen
+10-28 14:01:16.982 V/Capacitor/Plugin( 3655): To native (Capacitor plugin): callbackId: 66860657, pluginId: SplashScreen, methodName: hide
+10-28 14:01:16.982 V/Capacitor( 3655): callback: 66860657, pluginId: SplashScreen, methodName: hide, methodData: {}
+10-28 14:01:17.903 I/ActivityTaskManager(  523): Displayed net.munea.app/.MainActivity for user 0: +9s425ms
+10-28 14:01:26.283 V/Capacitor/Plugin( 3655): To native (Capacitor plugin): callbackId: 66860658, pluginId: SplashScreen, methodName: hide
+10-28 14:01:26.284 V/Capacitor( 3655): callback: 66860658, pluginId: SplashScreen, methodName: hide, methodData: {}
+10-28 14:01:26.650 I/OpenGLRenderer( 3655): Davey! duration=8676ms; Flags=0, FrameTimelineVsyncId=7045, IntendedVsync=66560251237, Vsync=66560251237, InputEventId=0, HandleInputStart=66560673642, AnimationStart=66560676597, PerformTraversalsStart=66561052418, DrawStart=66561181138, FrameDeadline=66576917903, FrameInterval=66560650348, FrameStartTime=16666666, SyncQueued=66561465578, SyncStart=66582015904, IssueDrawCommandsStart=66585175486, SwapBuffers=75147719800, FrameCompleted=75256854711, DequeueBufferDuration=3847, QueueBufferDuration=559202, GpuCompleted=75256643287, SwapBuffersCompleted=75256854711, DisplayPresentTime=0, CommandSubmissionCompleted=75147719800, 
+10-28 14:01:26.651 D/SplashScreenView( 3655): remove starting view

@@ -4,7 +4,9 @@
 care_week.py 的純函式由 test_care_week.py 測「組得對不對」。這支測接線之後才會出現的事，
 每一件都是出過事或會出人命的（規矩照抄 test_visit_summary_endpoint）：
 
-一、認錯人：認不出身分 → 什麼都不給；payload 塞別人的 personId → 不採信；別人的心情、別人的守護腦事件不得混進來。
+一、認錯人：認不出身分 → 什麼都不給；payload 塞別人的 personId → 只有跟請求者同一個家庭圈才採信，
+   不是同一圈（或家人名單查不到）就悄悄退回本人——別人的心情、別人的守護腦事件不得混進來，
+   這條在「同圈也能看」上線後一樣適用：同圈能看是對方的事實、不是任何人的事實。
 二、部分資料讀不到要說出來：守護腦那段撈失敗，摘要仍生得出來、但 partial 要寫 safety——
     悄悄少一段看起來就像「這週很平安」。
 三、期間與設定參數不可被亂塞：壞值不炸、退預設。
@@ -27,6 +29,7 @@ import server  # noqa: E402
 FAILS = []
 ME = "person-me"
 SOMEONE_ELSE = "person-other"
+FAMILY_MEMBER = "person-family-member"
 FAM = "fam-care-week-test"
 
 
@@ -65,13 +68,16 @@ def guardian_event(person_id, offset, level, cats):
 
 
 class Store:
-    """三份本子都換成暫存檔，測完刪掉——不碰 engine/ 裡真的 json。"""
+    """四份本子都換成暫存檔，測完刪掉——不碰 engine/ 裡真的 json。
+    APP_PROFILE_STORE_PATH 是這次新加的（家人名單同圈判定要讀它）；
+    連同模組層 5 秒快取 _APP_PROFILE_CACHE 一起清掉，不然上一個測試的名單會滲進下一個。"""
 
     def __enter__(self):
         self.files = []
         self.patches = []
         for attr, initial in (("WELLBEING_PATH", "[]"), ("CONVERSATION_SUMMARIES_PATH", "[]"),
-                              ("PRODUCT_EVENTS_PATH", '{"events": []}')):
+                              ("PRODUCT_EVENTS_PATH", '{"events": []}'),
+                              ("APP_PROFILE_STORE_PATH", "{}")):
             handle = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
             handle.write(initial.encode("utf-8"))
             handle.close()
@@ -79,6 +85,8 @@ class Store:
             p = patch.object(server, attr, handle.name)
             p.start()
             self.patches.append(p)
+        server._APP_PROFILE_CACHE["store"] = None
+        server._APP_PROFILE_CACHE["ts"] = 0.0
         return self
 
     def __exit__(self, *a):
@@ -89,6 +97,8 @@ class Store:
                 os.unlink(f)
             except OSError:
                 pass
+        server._APP_PROFILE_CACHE["store"] = None
+        server._APP_PROFILE_CACHE["ts"] = 0.0
 
     @staticmethod
     def seed(signals=(), summaries=(), events=()):
@@ -96,6 +106,13 @@ class Store:
         server.write_json_file(server.CONVERSATION_SUMMARIES_PATH, list(summaries))
         for ev in events:
             server.append_product_event(ev)
+
+    @staticmethod
+    def add_family_member(member_id, display_name="家人"):
+        """把某人加進（JSON 退路的）家庭圈名單——同圈判定 _care_week_person_in_caller_circle
+        讀的就是這份。JSON 模式不分家（跟 load_family_members 的既有行為一致），
+        所以測試裡不必管 familyGroupId 要不要對上。"""
+        server.save_family_member({"id": member_id, "displayName": display_name})
 
 
 # ---- 一、認人防線 ----
@@ -128,6 +145,59 @@ def test_payload_person_id_is_ignored_and_others_never_mix_in():
                   out["week"]["safety"]["counts"] == {"high": 1})
             check("別人的通話不算我的（我只有 1 通）", out["week"]["contact"]["calls"] == 1)
         finally:
+            server.REQUEST_DATA_IDENTITY.reset(token)
+
+
+# ---- 一之二、家庭圈可以看成員的週摘要（補助案 B4 第三項）----
+def test_family_member_in_same_circle_is_honored():
+    with Store() as s:
+        s.add_family_member(FAMILY_MEMBER, "家人")
+        s.seed(
+            signals=[signal(FAMILY_MEMBER, 1, 3, "今天陪媽媽散步", ["腰痠"])],
+            summaries=[summary(FAMILY_MEMBER, 1), summary(FAMILY_MEMBER, 4)],
+        )
+        token = as_person(ME)
+        try:
+            out = server.care_week_response({"days": 7, "personId": FAMILY_MEMBER})
+            check("同一家庭圈的成員 → 採信 payload 的 personId",
+                  out.get("ok") and out["week"]["personId"] == FAMILY_MEMBER)
+            check("看得到的是那位成員的事，不是我的", "腰痠" in out["text"])
+            check("那位成員的通話次數要在（2 通）", out["week"]["contact"]["calls"] == 2)
+        finally:
+            server.REQUEST_DATA_IDENTITY.reset(token)
+
+
+def test_person_id_outside_circle_falls_back_to_self_and_logs():
+    with Store() as s:
+        s.seed(signals=[signal(ME, 1, 4, "今天心情不錯")])
+        token = as_person(ME)
+        calls = []
+        original_log = server.log_fallback_exception
+        server.log_fallback_exception = lambda context, exc: calls.append((context, exc))
+        try:
+            out = server.care_week_response({"days": 7, "personId": SOMEONE_ELSE})
+            check("不是同一家庭圈 → 悄悄退回本人（不報錯）",
+                  out.get("ok") and out["week"]["personId"] == ME)
+            check("退回本人要留一筆 log_fallback_exception（不悄悄吞掉）", len(calls) == 1)
+            check("留的那一筆要講得出被拒絕的是誰", calls and SOMEONE_ELSE in str(calls[0][1]))
+        finally:
+            server.log_fallback_exception = original_log
+            server.REQUEST_DATA_IDENTITY.reset(token)
+
+
+def test_malformed_person_id_falls_back_to_self_and_logs():
+    with Store() as s:
+        s.seed(signals=[signal(ME, 1, 4, "今天心情不錯")])
+        token = as_person(ME)
+        calls = []
+        original_log = server.log_fallback_exception
+        server.log_fallback_exception = lambda context, exc: calls.append((context, exc))
+        try:
+            out = server.care_week_response({"days": 7, "personId": 123456})
+            check("壞 personId（非同圈型別）→ 退回本人", out.get("ok") and out["week"]["personId"] == ME)
+            check("壞 personId 也要留一筆 fallback 紀錄", len(calls) == 1)
+        finally:
+            server.log_fallback_exception = original_log
             server.REQUEST_DATA_IDENTITY.reset(token)
 
 

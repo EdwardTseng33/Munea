@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ 系統啟動畫面中央的圖示（也給 Android 11 以下的 core-splashscreen 相容層用）。
+     系統會把這張圖當「可調適圖示」處理：套上裝置的圓形／圓角遮罩、只露出中央 2/3，
+     再往內一點（約 61%）才是保證不被切到的安全區。官方標誌的波紋寬到 73%，所以先用 inset
+     往內縮，讓整塊圓角方形標誌只佔畫布 36%（對角線 ≈ 51%）——任何遮罩形狀都切不到。
+     來源：web/icons 官方標誌 1024 版縮成 drawable-xxxhdpi/splash_logo.png，沒重畫、沒改色。 -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_logo"
+    android:insetLeft="32%"
+    android:insetTop="32%"
+    android:insetRight="32%"
+    android:insetBottom="32%" />
