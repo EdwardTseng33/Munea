@@ -43,7 +43,7 @@ PERSONA_TEMPLATES = {
         "wisdomStyle": "practical lived-experience framing",
         "topicBiases": ["plans", "routines", "outings", "family logistics"],
         "boundaryStyle": "clear boundaries without sounding cold",
-        "voiceProfile": "Charon",
+        "voiceProfile": "Enceladus",
         "avatarAsset": "avatars/mumu-rig/body.webp",  # 2026-10-28 插畫版男生回歸
     },
     "companion-real-male": {
@@ -57,7 +57,7 @@ PERSONA_TEMPLATES = {
         "wisdomStyle": "practical lived-experience framing",
         "topicBiases": ["plans", "routines", "outings", "family logistics"],
         "boundaryStyle": "clear boundaries without sounding cold",
-        "voiceProfile": "Charon",
+        "voiceProfile": "Enceladus",
         "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
     "munea-2d-xiaoyun": {
@@ -113,7 +113,7 @@ PERSONA_TEMPLATES = {
         "wisdomStyle": "plain-hearted encouragement",
         "topicBiases": ["safety", "routines", "walks", "family contact", "weather"],
         "boundaryStyle": "protective escalation when risk is high",
-        "voiceProfile": "Charon",
+        "voiceProfile": "Enceladus",
         "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
 }
