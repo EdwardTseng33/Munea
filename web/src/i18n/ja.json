@@ -347,7 +347,7 @@
   "mood.note.low": "落ち込みの日は、無理をせず",
   "mood.note.anxious": "不安なときは、ひと呼吸",
   "mood.note.angry": "怒りは、抑えなくていいのです",
-  "mood.notRecorded": "まだ記録していません",
+  "mood.notRecorded": "まだ記録なし",
   "mood.emptyPrompt": "いまの気分を選ぶと、記録しておきます。",
   "mood.observedFromChat": "会話から感じ取った気分",
   "mood.weekRecorded": "今週は {days} 日分の気分を記録しました。この調子で続けましょう。",
