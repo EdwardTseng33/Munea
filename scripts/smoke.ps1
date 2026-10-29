@@ -1728,7 +1728,7 @@ assert status["brains"]["guardian"]["interface"] == "MuneaBrainRouter"
 assert status["brains"]["butler"]["model"] == "claude-sonnet-5"
 assert status["brains"]["guardian"]["model"] == "claude-sonnet-5"
 assert status["personaLayer"]["isFourthBrain"] is False
-assert status["personaLayer"]["templateCount"] == 6
+assert status["personaLayer"]["templateCount"] == 7   # 2026-10-28 +沐沐
 assert "persona-context" in status["contracts"]
 assert status["effortProfiles"]["deep"]["effort"] == "high"
 assert "books" in status["topicDomains"]
