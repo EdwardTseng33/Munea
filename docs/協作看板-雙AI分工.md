@@ -1,5 +1,15 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-28 22:10 蘇菲｜📱 Android 冷啟動白屏 → 原生啟動畫面（PR #630 · 補助案 B1 · call-path risk · 待合併）
+
+- **為什麼**：Galaxy A15（Android 14）實機影片 App 開了 5 秒以上整片白；CI 模擬器 6–15 秒才看到網頁殼的 `#bootSplash`。WebView 畫出第一格之前，原生殼什麼都沒擋著。
+- **做了什麼**：裝 `@capacitor/splash-screen` 8.0.2（釘版）。Android 12+ 走系統啟動畫面：底色＝App 的奶油色 #F4F0E8（跟 `web/src/styles.css` 的 cream 同值、接手不跳色；**不是官網的 #FAF7F2**）、標誌＝官方 1024 版縮成 416px、用 inset 32% 避開系統圓形／圓角遮罩；外掛把畫面撐到網頁喊 `hide()`（`web/index.html` 的 `muneaHideNativeSplash`、`web/src/app.js` 的 `runBootSplash` 第一行），6 秒保險絲也會一起收、外掛另設 20 秒上限。刪掉 Capacitor 範本那 11 張藍色 X 的 splash.png。iOS：`Package.swift` 隨 `cap update` 多帶外掛、**LaunchScreen 沒動**（外掛直接拿既有 LaunchScreen 當啟動畫面、同樣撐到網頁畫好），下次 Mac 打包才生效。
+- **CI 證據**（`docs/qa/android/splash-2026-10-28/`）：模擬器 8 秒截圖＝奶油底＋沐寧標誌，底色量出 (244,240,232)＝#F4F0E8；logcat 時間線：系統畫啟動畫面 +0.0s → 外掛註冊 +4.0s → 網頁喊 hide +8.9s → 第一格 +9.4s → 首頁完整、底部導覽「Talk」點得到、通話鈕點得到。第五輪 run 40703466430（桌面沒卡住）全乾淨：**3 秒＝標誌、2 秒＝標誌、20 秒＝網頁開場頁**。
+- ⚠ **模擬器雜訊（兩輪被它擋紅）**：Pixel Launcher「沒有回應」是模擬器桌面自己冷開機太慢（logcat：Input dispatching timed out、在 App 啟動前 40ms 就發生），跟啟動畫面無關；對話框蓋住畫面讓 uiautomator 撈不到分頁。已讓 `scripts/android-ui-tap-by-text.py` 關掉**別人**的「沒有回應」對話框（標題是 Munea 的一律不碰、讓失敗如實呈現）、`scripts/android-flow-smoke.sh` 全程錄 logcat＋每步記前景是誰、workflow 的 emulator-smoke 多拍 2 秒／20 秒。
+- ⚠ 第一格在模擬器軟體繪圖要 8.7 秒（Davey 8676ms），所以淡出看起來拖 9 秒；真機有 GPU 不會這樣。**App E2E pending**：A15 實機要再錄一次冷啟動影片才算數。
+- 🔑 順手看到、這張不處理：Android 的 App 圖示還是 Capacitor 範本的藍色 X（`mipmap-*/ic_launcher*`），桌面／Play 都看得到——用 iOS 的寧寧圖示還是沐寧標誌，要 Edward 定。
+- **檔**：`package.json`／`package-lock.json`、`capacitor.config.json`、`android/app/src/main/res/`（styles／colors／drawable／drawable-xxxhdpi）、`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle`、`web/index.html`、`web/src/app.js`、`ios/App/CapApp-SPM/Package.swift`、`.github/workflows/android-build.yml`、`scripts/android-flow-smoke.sh`、`scripts/android-ui-tap-by-text.py`、`docs/qa/android/splash-2026-10-28/`。**跟 #623 共用 `web/index.html`／`web/src/app.js`（不同段落、不衝突）**。
+
 ### 2026-10-26 11:30 蘇菲｜🏢 機構專區專屬連結擴成月度彙總（B2B2C 評估拍板方案 C · Draft PR #612 · 未部署）
 
 - **背景**：Edward 10/26 評估後台 B2B2C SaaS 化（`docs/後台-B2B2C-SaaS化評估-2026-10-26.md`）→ 先走方案 C：擴充既有免密碼專屬連結，仍只給整家加總、不碰個人層資料。
@@ -8,6 +18,7 @@
 - ⚠ **契約清單不能手改**：`docs/API-CONTRACT-INVENTORY.json` 是 `scripts/api_contract_inventory.py` 從程式推出來的，手改會被 check 打回——新路由要在小工具裡登記規則（brain GET 白名單＋pii/criticality/envelope/tests），再 `write`。
 - **誠實標記**：「已有人跟進」目前**沒有資料來源**（守護腦 high/critical 只進 Slack、窗口無標記功能），頁面寫「尚未開始記錄」、不填 0。頁面只有 zh-TW（獨立靜態頁、沒接四語機制）。
 - **待 Edward**：①小樣本時守護件數要不要也藏（我多藏了一層）②統計視窗「近 30 天滾動」vs「日曆月」③「已有人跟進」標記功能要不要立案。截圖（假資料、桌機＋手機）在交接資料夾。
+
 
 ### 2026-09-30 00:10 蘇菲｜🎭 Edward 定向：Rive 取代寧寧的臉＋男生角色下線（盤點完成・待拍板・**尚未施工**）
 

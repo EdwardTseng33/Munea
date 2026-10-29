@@ -30,7 +30,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["daily care", "family connection", "health routines", "gentle interests"],
         "boundaryStyle": "softly redirects medical or crisis requests to safe help",
         "voiceProfile": "Despina",
-        "avatarAsset": "avatars/nening-real-female-full.jpg",
+        "avatarAsset": "avatars/ningning-rig/body.webp",  # 2026-10-28 新形象（純色塊向量）
     },
     "companion-real-male": {
         "defaultName": "阿宏",
@@ -44,7 +44,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["plans", "routines", "outings", "family logistics"],
         "boundaryStyle": "clear boundaries without sounding cold",
         "voiceProfile": "Charon",
-        "avatarAsset": "avatars/ahong.png",
+        "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
     "munea-2d-xiaoyun": {
         "defaultName": "小昀",
@@ -72,7 +72,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["reading", "reflection", "planning", "finance context", "life stories"],
         "boundaryStyle": "uses calm clarity for sensitive topics",
         "voiceProfile": "Algenib",
-        "avatarAsset": "avatars/ayuan-2d.png",
+        "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
     "munea-2d-mimi": {
         "defaultName": "咪咪",
@@ -100,7 +100,7 @@ PERSONA_TEMPLATES = {
         "topicBiases": ["safety", "routines", "walks", "family contact", "weather"],
         "boundaryStyle": "protective escalation when risk is high",
         "voiceProfile": "Charon",
-        "avatarAsset": "avatars/munea-2d-wangcai.png",
+        "avatarAsset": None,  # 2026-09-30 男生角色下線、App 內已無素材
     },
 }
 
@@ -667,6 +667,7 @@ def memory_retrieve_response(data, memory_items=None):
 # 量尺：engine/eval/run_guardian_metrics.py（三個題庫在 engine/eval/guardian_metrics/）。
 # ============================================================================
 import re as _re
+import os as _os
 
 _GUARDIAN_PATTERNS_V2 = True
 
@@ -946,6 +947,97 @@ _SOFT_SIGNAL_RE = _re.compile(
 )
 
 
+# ---- v2e（2026-10-28）：盲測 v2／v3／v4 漏接 25 句歸三類——拐彎想不開（台語、道別式）、有方向的傷人話、疏忽 ----
+_GUARDIAN_PATTERNS_V2E = True
+
+_SELF_HARM_RE += [_re.compile(p) for p in (
+    r"睏.{0,4}(就|著|了)?(袂|不會|不要|毋|無)(閣|擱|再)?(起來|醒|起床)",                      # 去睏就袂閣起來
+    r"(去|到|轉去).{0,3}(佛祖|上帝|主|天公|媽祖|菩薩|天上|阿公|阿媽|老伴|伊).{0,6}(那邊|遐|身邊|那裡|邊仔).{0,4}(報到|作伴|做伴|團圓)|去(作|做)仙",
+    r"(看不見|看不到|見不到|找不到|沒看到)我.{0,10}(別|不要|莫|毋通|免)(太)?(難過|傷心|哭|掛念|想我)",   # 道別式
+)]
+
+_HARM_OTHERS_RE += [_re.compile(p) for p in (
+    r"(把|共|將|給).{0,6}(他|她|伊|囝仔|死囝仔|那個人|這個人).{0,3}[『「\"]?處理[』」\"]?(掉|了|一下)",   # 把他「處理」掉
+)]
+
+_PROTECTION_RE += [_re.compile(p) for p in (
+    # 疏忽要兩個訊號才算硬規則：沒人照顧 ＋ 整天沒人說話／沒人來／沒吃；單一句交 AI 看前後文
+    r"(沒人|沒有人|無人|攏無人).{0,3}(照顧|顧|理|管)我.{0,20}(沒人|無人)(說話|講話|來|理|陪)|(整天|一整天|規工).{0,6}(沒人|無人)(說話|講話|來|理).{0,20}(沒人|沒有人|無人)(照顧|顧|管)我",
+)]
+
+_SOFT_SIGNAL_RE = _re.compile(
+    _SOFT_SIGNAL_RE.pattern
+    # 拐彎想不開：被動式、道別式、整理後事、台語
+    + r"|不是辦法|還能做什麼|還能幹嘛|還能做啥|看不見我|看不到我|見不到我|找不到我|整理好了|都整理|收好了|交代好|不用煩惱|免煩惱|毋免煩惱|遐濟|袂閣|袂起來|報到|佛祖|作仙|做仙|想靜|靜靜|安靜點|靜一點|沒啥意思|沒什麼意思|沒什麼力氣|想休息了"
+    # 有方向的傷人話
+    + r"|打一頓|打伊一頓|處理掉|處理他|處理她|處理伊|做出什麼|做什麼事|控制不住|失控|吞不下這口氣|氣到想|真想|一個教訓|砸爛|巴下去|讓他搬|讓她搬"
+    # 疏忽
+    + r"|沒人照顧|沒有人照顧|無人照顧|沒人說話|沒人講話|無人講話|沒人來|沒人看我|整天沒人|一整天沒|沒人陪我"
+    # 躁期／英文
+    + r"|重新打掃|整晚|通宵|都沒睡|fed up with|so done|can'?t stand|everything, really"
+)
+
+
+# ---- v2f（2026-10-28）：盲測 v5（規則 v2e 定稿後才出）漏接 9 句、誤報 4 句 ----
+_GUARDIAN_PATTERNS_V2F = True
+
+# 轉述別人的話：「有說過不想活」「說快要撐不下去」「聽我妹說她孫子燒到快昏倒」——命中的子句沒有第三人稱字、
+# 但有「說過／聽…說／他說」或「她孫子／他兒子」這種轉述與他人所有格 → 講別人的事（AI 第二層仍會看前後文決定要不要關心）
+_REPORTED_RE = _re.compile(
+    r"(聽|聽到|聽講)(我)?.{0,4}(說|講)|說過|講過|(他|她|伊|in)(說|講)|說(他|她|伊)|叫(他|她|伊)"
+    r"|(他|她|伊|阮|人家)(的)?(兒子|女兒|孫|孫子|孫女|老公|老婆|太太|先生|媳婦|女婿|爸|媽|阿公|阿嬤|朋友|同學)"
+)
+_RELATION_RE = _re.compile(r"兒子|女兒|孫子|孫女|孫仔|媳婦|女婿|老公|老婆|太太|先生|弟弟|妹妹|哥哥|姊姊|姐姐|阿妹|小妹|朋友|同學|親戚|同事|鄰居|隔壁|厝邊|聽說")
+
+
+def _guardian_is_about_someone_else(text, match_start):  # v2f 覆寫：多看前一個子句與轉述句型
+    """命中的那個子句：①沒有『我』且（本句或前一句）有第三人稱／親屬稱謂 → 別人；②本句是轉述句型（說過／聽…說／她孫子）→ 別人。
+    長輩常省略主詞，所以兩者都不成立就當本人。"""
+    bounds = [0] + [m.end() for m in _CLAUSE_SPLIT_RE.finditer(text)]
+    starts = [b for b in bounds if b <= match_start]
+    start = starts[-1] if starts else 0
+    prev_start = starts[-2] if len(starts) >= 2 else None
+    end_m = _CLAUSE_SPLIT_RE.search(text, match_start)
+    clause = text[start:end_m.start() if end_m else len(text)]
+    prev = text[prev_start:start] if prev_start is not None else ""
+    if _REPORTED_RE.search(clause):
+        return True
+    if _FIRST_PERSON_RE.search(clause):
+        return False
+    return bool(_THIRD_PERSON_RE.search(clause) or _RELATION_RE.search(prev) or _THIRD_PERSON_RE.search(prev))
+
+
+_SELF_HARM_RE += [_re.compile(p) for p in (
+    r"(多吃|多吞|吃多|多拿|多倒|全部吃|整罐).{0,3}(幾顆|一點|一些|幾粒|幾包|幾倍|下去)?.{0,10}(沒事|解脫|算了|一了百了|睡著|不用醒|比較快|就好了|搞不好就)",   # 多吃幾顆搞不好就沒事了
+    r"(留|寫|放)(了)?(一)?(封)?信.{0,10}(藏|抽屜|枕頭).{0,12}(到時候|以後|我不在|走了|幫我看)",                                  # 留了一封信藏在抽屜裡，到時候幫我看
+    r"(照片|相片|相簿).{0,12}(說再見|道別|跟他們說)|像(在)?(跟|和).{0,6}說再見",                                                  # 看照片像在說再見
+)]
+
+_EMERGENCY_RE += [_re.compile(p) for p in (
+    r"嗆到.{0,12}(臉.{0,3}(黑|紫|發黑|發紫|變色)|喘不過|吸不到|講不出|咳不出|沒聲音|呼吸)",                                     # 嗆到臉都黑了
+    r"(左邊|右邊|左半|右半|一邊|半邊|左手|右手|左腳|右腳|左半身|右半身).{0,8}(動不了|不能動|沒力|無力|軟掉|軟軟|麻掉|麻了|使不上力|拿不住|抬不起)",  # 左邊身體突然動不了
+)]
+
+_PROTECTION_RE += [_re.compile(p) for p in (
+    r"(只給我|只讓我|只有給我|攏予我)(吃)?(剩|冷|餿|隔夜)|(好幾天|幾天|兩天|三天|一直|常常|每天).{0,10}(沒吃飽|吃不飽|餓肚子|餓著|食無飽)",   # 只給我吃剩菜剩飯、好幾天沒吃飽
+)]
+
+_PSYCHOSIS_RE += [_re.compile(p) for p in (
+    r"(裝|放|藏|有).{0,4}(針孔|竊聽器|監聽器|追蹤器)|(針孔|竊聽器|監聽器).{0,12}(我|說我|看我|拍我|壞話)",                        # 房間裝針孔說我壞話
+)]
+
+_SOFT_SIGNAL_RE = _re.compile(
+    _SOFT_SIGNAL_RE.pattern
+    + r"|說再見|道別|留給|留了|一封信|藏在|到時候|以後他們|過得比較好|多吃幾顆|多吞|潑漆|砸車|燒車|燒他|燒掉他|放火|嗆到|動不了|筷子|拿不住|剩菜|剩飯|沒吃飽|吃不飽|針孔|竊聽|監聽|裝了"
+)
+
+
+# 軟訊號閘全開（2026-10-28 定案）：規則層判 none／low 的每一句都送第二層 AI 看前後文。
+# 為什麼：三套新出的盲測（v5 79.5%、v6 75.6%）漏接的句子全部是「關鍵字閘沒放行」不是「AI 看錯」——
+# 閘全開後 v6（改完才出、真盲）召回 97.8%、誤報 0%；成本每句約 NT$0.013、一通 50 輪 NT$0.67（約一通的 3%）。
+# 關鍵字閘保留當白名單（省不了錢但留著當紀錄）；要退回舊行為設 MUNEA_GUARDIAN_REVIEW_ALL=0。
+_GUARDIAN_REVIEW_ALL = _os.environ.get("MUNEA_GUARDIAN_REVIEW_ALL", "1").strip() != "0"
+
 
 def guardian_evaluate_response(data):
     text = text_from_payload(data)
@@ -1073,9 +1165,10 @@ def guardian_evaluate_response(data):
 
     # 第一層沒抓到硬危機、但話裡有拐彎苗頭 → 標記給第二層 AI 判語意（見 perception_engine.guardian_semantic_review）
     # 講別人的急症／想不開也走這條：不中斷通話，但讓 AI 看前後文決定要不要關心
-    soft_signal_for_review = level in {"none", "low"} and (
-        about_someone_else or _guardian_soft_signal(scrubbed, soft_signal_terms) or _guardian_soft_signal(lowered, ())
-    )
+    keyword_gated = about_someone_else or _guardian_soft_signal(scrubbed, soft_signal_terms) or _guardian_soft_signal(lowered, ())
+    soft_signal_for_review = level in {"none", "low"} and (_GUARDIAN_REVIEW_ALL or keyword_gated)
+    # 只因閘全開才送的句子（沒命中任何拐彎關鍵字）：第二層 AI 的 high 門檻拉高到 0.8，少打擾（見 perception_engine）
+    review_forced = bool(soft_signal_for_review and not keyword_gated)
 
     return {
         "ok": True,
@@ -1098,5 +1191,6 @@ def guardian_evaluate_response(data):
             "doNotReinforceDelusion": "mental_state_abnormal" in categories,
             "protectionLine": "113" if protection_event else None,
             "softSignalForReview": soft_signal_for_review,
+            "reviewForced": review_forced,
         },
     }

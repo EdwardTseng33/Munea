@@ -346,6 +346,13 @@
       ]
     },
     {
+      "state": "modal:care-week",
+      "keyPrefixes": [
+        "careWeek."
+      ],
+      "requiredKeys": []
+    },
+    {
       "state": "modal:invite-family",
       "keyPrefixes": [
         "invite.",

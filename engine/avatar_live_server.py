@@ -2,7 +2,7 @@
 """沐寧 · 擬真 live avatar 服務（產品第 3 層 · 規劃路線 demo 版）
 
 架構＝6/3 已驗證的 voice-poc-stream PoC（GPU 即時對嘴 → WebRTC → 瀏覽器），兩處按產品需求換裝：
-  1. 臉：Voice Path 測試臉 → 寧寧（web/avatars/nening-real-female-full.jpg 靜態照）
+  1. 臉：Voice Path 測試臉 → 寧寧（deploy/runpod-avatar/assets/nening-real-female-full.jpg 靜態照）
   2. 聲音：錄好的 wav 循環 → 「聊聊」即時語音（瀏覽器把寧寧的聲音原樣轉發進來、邊講邊生成）
 
 跑法：E:/voice-poc/.venv/Scripts/python.exe engine/avatar_live_server.py
@@ -19,7 +19,7 @@ import numpy as np, cv2, torch
 from aiohttp import web, WSMsgType
 
 HERE = os.path.dirname(os.path.abspath(__file__))          # 在換工作目錄前先記住自己在哪
-POSTER = os.path.join(HERE, "..", "web", "avatars", "demo-live-poster.jpg")
+POSTER = os.path.join(HERE, "..", "deploy", "runpod-avatar", "assets", "demo-live-poster.jpg")
 WAV2LIP = r"E:/voice-poc/repo/Wav2Lip"
 sys.path.insert(0, WAV2LIP); os.chdir(WAV2LIP)
 import audio as w2l_audio
@@ -34,7 +34,7 @@ _h264.MIN_BITRATE = 3_000_000
 _h264.DEFAULT_BITRATE = 8_000_000
 _h264.MAX_BITRATE = 12_000_000
 
-FACE_IMG = r"E:/Claude/Munea/web/avatars/nening-real-female-full.jpg"
+FACE_IMG = r"E:/Claude/Munea/deploy/runpod-avatar/assets/nening-real-female-full.jpg"
 # 底可以是「一張照片」或「一段待機小影片」（眨眼/呼吸/髮絲微動、嘴自然）——影片底整個人就是活的
 FACE_SRC = os.environ.get("MUNEA_AVATAR_SRC", FACE_IMG)
 CKPT     = r"E:/voice-poc/models/wav2lip_gan.pth"

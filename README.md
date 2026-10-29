@@ -50,7 +50,7 @@ The working north star is an AI health-care companion for everyday life. Older-a
 
 As of 2026-06-29, this repo is no longer just pre-build planning. It contains a runnable local prototype:
 
-- landing page, onboarding, app home, and family dashboard
+- onboarding, app home, and family dashboard (the public site lives in `app-site/`)
 - fullscreen butler-face conversation screen
 - six selectable characters
 - Gemini-backed prototype chat and TTS flow
@@ -250,7 +250,6 @@ Munea/
 │   ├── index.html
 │   ├── family.html
 │   ├── onboarding.html
-│   ├── landing.html
 │   └── src/
 ├── supabase/
 │   └── sql/                   # versioned schema and policy migrations

@@ -15,7 +15,6 @@ function hasUsageDescription(plist, key) {
 const app = read('web/src/app.js');
 const admin = read('web/src/admin.js');
 const index = read('web/index.html');
-const landing = read('web/landing.html');
 const store = read('web/src/store.js');
 const appleStore = read('engine/apple_store.py');
 const billingPolicy = read('supabase/sql/019_pricing_plus100_pro200.sql');
@@ -75,7 +74,7 @@ expect(
 expect(index.includes('data-p="100"') && index.includes('data-p="300"') && index.includes('data-p="600"') && index.includes('data-p="1000"'), 'current point packs are missing from the app');
 expect(admin.includes('每月贈 100 點') && admin.includes('每月贈 200 點'), 'admin still shows retired subscription grants');
 expect(!admin.includes('每月贈 150 點') && !admin.includes('每月贈 300 點') && !admin.includes('每月贈 400 點'), 'admin contains retired subscription grants');
-expect(landing.includes('Legacy internal prototype') && landing.includes('每月贈 150 點聊聊') && landing.includes('每月贈 300 點聊聊'), 'legacy landing artifact is not clearly marked or still shows retired grants');
+expect(!fs.existsSync('web/landing.html') && !fs.existsSync('web/demo.html') && !fs.existsSync('web/demo-live.html'), 'legacy landing/demo prototypes must stay deleted (public site lives in app-site/, old faces must not ship in the App bundle)');
 
 const expectedPointProducts = {
   100: 'net.munea.app.points.200',

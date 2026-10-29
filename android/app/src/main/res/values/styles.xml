@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+    </style>
+
+
+    <!-- 2026-10-28 原生啟動畫面（@capacitor/splash-screen）：
+         冷啟動時 WebView 畫出第一格之前整個是白的（Galaxy A15 實機 5 秒以上、CI 模擬器 6–15 秒）。
+         Android 12 以上由系統畫這個啟動畫面：底色＝App 的奶油色（跟 web/src/styles.css 的 cream 變數同值，
+         接手時不跳色）、中間＝官方標誌（splash_icon → drawable-xxxhdpi/splash_logo.png）。
+         Android 11 以下由 androidx core-splashscreen 用同一組設定模擬。
+         外掛會把這個畫面撐到網頁殼的 #bootSplash 畫好、呼叫 SplashScreen.hide() 才收掉
+         （web/index.html 的 muneaHideNativeSplash；app.js 的 runBootSplash 會叫它）。
+         postSplashScreenTheme：啟動畫面收掉後換回 App 正常主題。 -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/munea_cream</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:background">@drawable/splash</item>
+    </style>
+</resources>

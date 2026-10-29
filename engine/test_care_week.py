@@ -127,6 +127,118 @@ def test_org_report_totals():
     assert report["period"]["end"] == TODAY
 
 
+# ───── 2026-10-26 補：規則邊界、設定開關、資料界線（補助案 C3 要求自動化測試 ≥25 項）─────
+
+def test_streak_resets_when_mood_recovers():
+    # 低、低、好、低、低：中間好過一天，連續就要重算，不能亮
+    sig = [_sig("2026-10-08", 2), _sig("2026-10-09", 1), _sig("2026-10-10", 4), _sig("2026-10-11", 2), _sig("2026-10-12", 2)]
+    assert cw.detect_anomalies(_week(sig, summaries=[_call("2026-10-13")])) == []
+
+
+def test_streak_threshold_is_a_setting():
+    sig = [_sig("2026-10-11", 2), _sig("2026-10-12", 1)]
+    w = _week(sig, summaries=[_call("2026-10-13")])
+    assert cw.detect_anomalies(w) == []  # 預設要 3 天
+    a = cw.detect_anomalies(w, {"lowMoodStreak": 2})
+    assert [x["type"] for x in a] == ["mood_drop"] and "連續 2 天" in a[0]["fact"]
+
+
+def test_no_baseline_means_no_drop_alarm():
+    # 沒有前 14 天的紀錄就沒有「跟自己比」的對象，不能拿量表硬比
+    sig = [_sig("2026-10-11", 3), _sig("2026-10-12", 3), _sig("2026-10-13", 3)]
+    w = _week(sig, summaries=[_call("2026-10-13")])
+    assert w["mood"]["baselineAverage"] is None and cw.detect_anomalies(w) == []
+
+
+def test_drop_levels_is_a_setting():
+    sig = [_sig("2026-09-28", 4), _sig("2026-10-02", 4), _sig("2026-10-11", 3), _sig("2026-10-12", 3), _sig("2026-10-13", 2)]  # 基準 4.0、最近 2.7
+    w = _week(sig, summaries=[_call("2026-10-13")])
+    assert cw.detect_anomalies(w) == []  # 掉 1.3 < 2
+    assert [x["type"] for x in cw.detect_anomalies(w, {"moodDropLevels": 1})] == ["mood_drop"]
+
+
+def test_only_one_mood_drop_alarm_even_if_both_rules_hit():
+    sig = [_sig("2026-09-28", 5), _sig("2026-10-02", 5), _sig("2026-10-11", 1), _sig("2026-10-12", 1), _sig("2026-10-13", 1)]
+    a = cw.detect_anomalies(_week(sig, summaries=[_call("2026-10-13")]))
+    assert [x["type"] for x in a] == ["mood_drop"]  # 連續低＋掉很多只亮一盞，不重複吵人
+
+
+def test_no_contact_looks_at_now_not_old_gaps():
+    # 期間中間空了 4 天但昨天又通上了：只當事實寫，不亮燈
+    c_week = _week(summaries=[_call("2026-10-07"), _call("2026-10-12")])
+    assert c_week["contact"]["longestGapDays"] == 4
+    assert cw.detect_anomalies(c_week) == []
+
+
+def test_no_contact_setting_zero_or_none_falls_back_to_default():
+    w = _week(summaries=[_call("2026-10-09")])  # 4 天沒聯絡
+    for bad in ({"noContactDays": 0}, {"noContactDays": None}, {}):
+        a = cw.detect_anomalies(w, bad)
+        assert [x["type"] for x in a] == ["no_contact"] and "3 天提醒" in a[0]["fact"], bad
+
+
+def test_guardian_alarm_ignores_medium():
+    w = _week(summaries=[_call("2026-10-13")], events=[_ev("2026-10-10", "medium", ["medical_boundary"])] * 3)
+    assert w["safety"]["counts"] == {"medium": 3}
+    assert cw.detect_anomalies(w) == []
+    w2 = _week(summaries=[_call("2026-10-13")], events=[_ev("2026-10-10", "critical", ["self_harm_crisis"])])
+    a = cw.detect_anomalies(w2)
+    assert [x["type"] for x in a] == ["guardian"] and "critical×1" in a[0]["fact"]
+
+
+def test_signals_outside_period_and_baseline_are_ignored():
+    sig = [_sig("2026-09-01", 1), _sig("2026-10-14", 1), _sig("2026-10-10", 4)]  # 太早、未來、期間內
+    m = _week(sig)["mood"]
+    assert m["daysWithChat"] == 1 and m["baselineAverage"] is None and m["weekAverage"] == 4.0
+
+
+def test_period_start_day_counts_in_week_not_baseline():
+    sig = [_sig("2026-10-07", 2), _sig("2026-10-06", 5)]  # 10/07 是期間第一天；10/06 是基準線最後一天
+    m = _week(sig)["mood"]
+    assert m["daysWithChat"] == 1 and m["weekAverage"] == 2.0 and m["baselineAverage"] == 5.0
+
+
+def test_safety_categories_string_is_normalized_and_undated_rows_skipped():
+    s = _week(events=[_ev("2026-10-10", "high", "medical_emergency_signal"), {"riskLevel": "high", "categories": ["x"]}])["safety"]
+    assert s["items"] == [{"time": "2026-10-10T09:00:00Z", "level": "high", "categories": ["medical_emergency_signal"]}]
+
+
+def test_contact_skips_undated_and_deleted_rows():
+    c = _week(summaries=[{"summary": "沒日期"}, {"createdAt": "2026-10-10T00:00:00Z", "deletedAt": "2026-10-11T00:00:00Z"}, _call("2026-10-11")])["contact"]
+    assert c["calls"] == 1 and c["daysWithCall"] == ["2026-10-11"]
+
+
+def test_render_text_every_section_states_its_source():
+    w = _week([_sig("2026-10-10", 3)], summaries=[_call("2026-10-10")])
+    text = cw.render_text(w)
+    for head in ("【聯絡】", "【心情】", "【身體・本人口述】", "【身體・量測】", "【守護腦】"):
+        line = [l for l in text.splitlines() if l.startswith(head)][0]
+        assert "來源：" in line, line
+    assert "【要看一下】" not in text  # 沒異常就不放這段
+
+
+def test_render_text_anomaly_section_only_when_present():
+    w = _week(summaries=[_call("2026-10-09")])
+    a = cw.detect_anomalies(w)
+    assert "【要看一下】" in cw.render_text(w, a) and "沒聯絡" in cw.render_text(w, a)
+    assert "【要看一下】" not in cw.render_text(w, [])
+
+
+def test_org_report_keeps_input_order_and_counts_each_type():
+    w1 = cw.build_person_week({"id": "p1"}, [], [_call("2026-10-09")], [], today=TODAY)   # no_contact
+    w2 = cw.build_person_week({"id": "p2"}, [], [_call("2026-10-13")], [_ev("2026-10-12", "high", ["x"])], today=TODAY)  # guardian
+    w3 = cw.build_person_week({"id": "p3"}, [], [_call("2026-10-13")], [], today=TODAY)   # 沒事
+    r = cw.build_org_report([w3, w1, w2], {k: cw.detect_anomalies(w) for k, w in (("p1", w1), ("p2", w2), ("p3", w3))})
+    assert [p["week"]["personId"] for p in r["people"]] == ["p3", "p1", "p2"]  # 不排名、不重排
+    t = r["totals"]
+    assert (t["people"], t["withAnomaly"], t["noContact"], t["guardian"], t["moodDrop"]) == (3, 2, 1, 1, 0)
+
+
+def test_forbidden_words_list_covers_judgement_and_causality():
+    for word in ("可能因為", "導致", "診斷", "分數", "憂鬱症"):
+        assert word in cw.FORBIDDEN_WORDS
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0

@@ -386,7 +386,7 @@ function localizePurchasePlanContent() {
     },
     pro: {
       audienceKey: 'subscription.proAudience',
-      audienceFallback: 'For more frequent companionship and advanced video interaction',
+      audienceFallback: 'For chatting more often and using it with the whole family',
       credits: 200,
       members: 12,
     },
@@ -569,6 +569,9 @@ const TWO_D_AVATARS = new Set(['munea-2d-xiaoyun', 'munea-2d-ayuan', 'munea-2d-m
 /* ===== [ENGINE] 角色模板 vs 使用者命名：模板決定外觀/聲音/人格，名字由使用者取 ===== */
 const CompanionProfile = window.MuneaCompanionProfile;
 const CHARACTER_TEMPLATES = CompanionProfile.templates;
+// 男生角色全數下線（Edward 2026-09-30）：存檔裡是男生角色的人一開機就改由寧寧陪伴，
+// 畫面就緒後再同步回雲端並說一句（只說一次）。要在 loadProfile 之前看原始存檔才認得出來。
+const companionRetiredOnBoot = CompanionProfile.storedTemplateRetired();
 let savedCompanionProfile = CompanionProfile.loadProfile();
 let currentAvatarId = savedCompanionProfile.templateId;
 let companionDisplayName = savedCompanionProfile.displayName;
@@ -1003,6 +1006,8 @@ async function companionProfileApi(action, profile) {
   }
 }
 function applyCompanionProfile(profile, options = {}) {
+  // 雲端存的若還是已下線的男生角色，不能被它「救回來」：照樣換成寧寧、回寫雲端
+  const retired = !!(profile && CompanionProfile.isRetiredTemplate(profile.templateId));
   const normalized = CompanionProfile.normalizeProfile(profile);
   currentAvatarId = normalized.templateId;
   companionDisplayName = normalized.displayName;
@@ -1010,6 +1015,16 @@ function applyCompanionProfile(profile, options = {}) {
   currentChar = templateFor(currentAvatarId).backendChar;
   if (options.persist !== false) persistCompanionProfile();
   syncCompanionUI();
+  if (retired) noteRetiredCompanionMigration();
+}
+const RETIRED_COMPANION_NOTICE_KEY = 'munea.companionRetiredNotice.v1';
+function noteRetiredCompanionMigration() {
+  persistCompanionProfile();
+  saveCompanionProfileToBackend();
+  if (storageGet(RETIRED_COMPANION_NOTICE_KEY)) return;
+  storageSet(RETIRED_COMPANION_NOTICE_KEY, new Date().toISOString());
+  const companion = (companionDisplayName || '').trim() || templateFor().defaultName;
+  setTimeout(() => toast(muneaT('companion.retiredNotice', '原本的男生角色先休息了，接下來由{companion}陪你；你們聊過的事都還記得。', { companion }), 6500), 1200);
 }
 async function loadCompanionProfileFromBackend() {
   const r = await companionProfileApi('load');
@@ -1243,7 +1258,7 @@ function playB64(b64) {
   } catch (e) {}
 }
 // 跟真腦講話；沒有伺服器（純靜態 demo）就回 null、讓畫面自己退回規則版
-const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000, '/visit-summary': 15000 };  // 摘要要撈記憶＋量測＋用藥三路，比一般請求慢（M1 PR-4c）
+const BRAIN_PATIENCE = { '/chat': 30000, '/butler/post-turn': 45000, '/voice-session': 12000, '/visit-summary': 15000, '/care-week': 15000 };  // 摘要要撈記憶＋量測＋用藥三路，比一般請求慢（M1 PR-4c）；週摘要撈心情＋通話＋守護腦三路，一樣給長一點（補助案 B4）
 // 管家腦雲端正式住址（台灣機房）——打包後的手機沒有「同一棟樓」可打相對路徑，一定要絕對網址
 // 否則家人同步/邀請/資料權利/回饋全打空氣（7/9 上線體檢 B2 抓到的重傷）
 // 7/16 Edward 拍板 B 案：正式包指真正式 munea-brain（測試機 -staging 留給開發包與 canary）
@@ -2748,7 +2763,14 @@ function seedDeveloperFixtures(cfg) {
 function applyDeveloperBypass() {
   const cfg = developerConfig();
   if (!isDeveloperBypassAllowed()) return;
-  if (cfg.skipOnboarding === true) storageSet(ONBOARDING_COMPLETED_KEY, 'true');
+  if (cfg.skipOnboarding === true) {
+    storageSet(ONBOARDING_COMPLETED_KEY, 'true');
+    // 開場三頁故事卡用的是另一個記號（見 ONBOARDING_INTRO_SEEN_KEY 的說明）。
+    // 只蓋舊記號的話，測試包每次第一次開都還是會被三頁卡住——
+    // 2026-10-28 Android 雲端流程測試第三輪就是這樣紅的。「跳過開場」要兩個記號一起蓋。
+    // （init 在 DOMContentLoaded 才跑，整個模組早就載完，這裡拿得到下面宣告的常數。）
+    storageSet(ONBOARDING_INTRO_SEEN_KEY, 'true');
+  }
   seedDeveloperFixtures(cfg);
 }
 function authAnalyticsContext() {
@@ -5648,14 +5670,11 @@ function setCallToggle(connected) {
 }
 
 // ===== 待機動態（Edward 7/9 供片）：進聊聊頁播「打招呼」一次 → 「待機」循環；按通話即停回靜態，交給語音＋雲端臉 =====
+// 2026-09-30：寧寧改成扁平插畫（companion-face.js 在最上層自己動），照片的打招呼／待機影片退役；
+// 男生角色已下線。沒有動態素材的角色 FaceIdle 會自動停在靜態圖。
 const FACE_MOTION = {
-  'nening-real-female': { hello: 'avatars/motion/nening-hello.mp4', idles: ['avatars/motion/nening-idle.mp4'] },
-  // 擬真男重新掛回（2026-07-11 Edward 給新影片、新長相）：撥號前用「打招呼→待機」影片、引擎已做交叉淡入不黑閃
-  'companion-real-male': { hello: 'avatars/motion/ahong-hello.mp4', idles: ['avatars/motion/ahong-idle.mp4'] },
   'munea-2d-xiaoyun': { hello: 'avatars/motion/xiaoyun-hello.mp4', idles: ['avatars/motion/xiaoyun-idle.mp4'] },
-  'munea-2d-ayuan': { hello: 'avatars/motion/ayuan-hello.mp4', idles: ['avatars/motion/ayuan-idle.mp4'] },
   'munea-2d-mimi': { hello: 'avatars/motion/mimi-hello.mp4', idles: ['avatars/motion/mimi-idle.mp4', 'avatars/motion/mimi-idle2.mp4'] },   // 咪咪有兩段待機（含舔鼻子）輪著播
-  'munea-2d-wangcai': { hello: 'avatars/motion/wangcai-hello.mp4', idles: ['avatars/motion/wangcai-idle.mp4'] },
 };
 function currentFaceTemplate() {
   try {
@@ -5859,8 +5878,29 @@ function showView(id) {
   $('#tabBar').classList.toggle('hidden', overlay);
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === id));
   const el = $('#' + id); if (el) el.scrollTop = 0;
-  if (id === 'chat') { Avatar.wake(); enterChat(); }   // 進聊聊頁＝先預醒雲端臉（按通話時多半已就緒）
-  else if (typeof FaceIdle !== 'undefined') FaceIdle.stop();   // 離開聊聊頁＝待機動態停、省電
+  if (id === 'chat') { Avatar.wake(); enterChat(); startFlatFace(); }   // 進聊聊頁＝先預醒雲端臉（按通話時多半已就緒）
+  else {
+    if (typeof FaceIdle !== 'undefined') FaceIdle.stop();   // 離開聊聊頁＝待機動態停、省電
+    if (window.MuneaFlatFace) window.MuneaFlatFace.stop();
+  }
+}
+
+// 扁平插畫寧寧（companion-face.js）：講話判斷與「真的正在播的聲音」由這裡接給它。
+// 通話聲音走雲端臉那條線時，iPhone 讀不到那條線的即時波形，但讀得到連線統計裡的播出音量。
+function startFlatFace() {
+  const face = window.MuneaFlatFace;
+  if (!face) return;
+  face.speaking = () => {
+    try { return !!callConnected && speechActive(); } catch (e) { return false; }
+  };
+  face.sampleLevel = async () => {
+    try {
+      if (!LiveVoice._sameLine) return -1;
+      const snap = await LiveVoice._faceAudioSnapshot();
+      return snap && snap.hasStats ? snap.audioLevel : -1;
+    } catch (e) { return -1; }
+  };
+  face.start();
 }
 
 // 登入把關（7/9 Edward 拍板）：聊聊＋家人連線類要登入·用到才問；solo（今日健康/心情/提醒）免登入
@@ -8013,7 +8053,7 @@ function renderMetricDetail(key) {
     `<div class="md-head"><b>${muneaT('health.metricWeekTitle', '{name} · 這週', { name: m.name() })}</b><span class="md-status ${m.status}">${STATUS_WORD[m.status]()}</span></div>` +
     `<div class="md-chart">${bars}</div>` +
     `<div class="md-days">${days.map(d => '<span>' + d + '</span>').join('')}</div>` +
-    `<div class="md-read"><span class="md-face"><img src="avatars/nening-v2-face.png" alt=""></span><span>${m.read()}</span></div>`;
+    `<div class="md-read"><span class="md-face"><img src="avatars/ningning-face.webp" alt=""></span><span>${m.read()}</span></div>`;
   box.hidden = false; box.dataset.open = key;
   try { box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }
@@ -9067,6 +9107,7 @@ function init() {
     }
     configureMedicationService();
   });
+  if (companionRetiredOnBoot) noteRetiredCompanionMigration();
   loadCompanionProfileFromBackend().finally(() => {
     if (storageGet(ONBOARDING_COMPLETED_KEY) === 'true' || storageGet(ACCOUNT_BOOTSTRAP_KEY) === 'pending-auth') {
       syncAccountBootstrap('create', { reason: 'app_init' });
@@ -9492,6 +9533,129 @@ function init() {
   if ($('#famManageBtn')) $('#famManageBtn').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   if ($('#famCircleClose')) $('#famCircleClose').addEventListener('click', () => $('#famCircleModal').classList.remove('show'));
   if ($('#famCircleModal')) $('#famCircleModal').addEventListener('click', e => { if (e.target === $('#famCircleModal')) $('#famCircleModal').classList.remove('show'); });
+
+  // ── 本週摘要（補助案 B4 第三項：家人圈管理／提醒設定都做過了，這是最後一塊）────────
+  // 入口在「全家狀態」標題旁；看哪位家人開著就打哪位的 personId，「全家」分頁時看自己
+  // （本人的事看自己最安全；要看別人，/care-week 後端自己核對是不是同一個健康圈）。
+  function cwActivePersonName() {
+    const btn = document.querySelector('.fam-switch-item.active');
+    const person = btn ? btn.dataset.person : 'all';
+    return (!person || person === 'all' || person === 'invite') ? '' : person;
+  }
+  function cwPersonContext() {
+    const name = cwActivePersonName();
+    if (!name) return { personId: null, label: circleSelfMember().name };
+    const member = loadCircle().find(m => m.name === name);
+    if (!member || member.self || !member.personId) return { personId: null, label: name };
+    return { personId: member.personId, label: name };
+  }
+  function cwWeekdayShort(dateISO) {
+    const wd = [muneaT('mood.weekdayShortSun', '日'), muneaT('mood.weekdayShortMon', '一'), muneaT('mood.weekdayShortTue', '二'),
+      muneaT('mood.weekdayShortWed', '三'), muneaT('mood.weekdayShortThu', '四'), muneaT('mood.weekdayShortFri', '五'),
+      muneaT('mood.weekdayShortSat', '六')];
+    const d = new Date(String(dateISO || '') + 'T12:00:00');
+    return Number.isNaN(d.getTime()) ? '' : wd[d.getDay()];
+  }
+  function cwMoodDotColor(level) {
+    if (level == null) return 'var(--line)';
+    if (level >= 4) return 'var(--teal)';
+    if (level >= 3) return 'var(--gold)';
+    return 'var(--coral)';
+  }
+  // 四段跟 /care-week 回的事實一一對應，不多加一句解讀；partial 寫到哪一段就在那一段老實說沒讀到
+  // （mood 這個 key 同時蓋「心情」跟「他自己提到的身體狀況」——兩段都是從同一次撈心情訊號來的）。
+  function cwSectionsHTML(data) {
+    const week = data.week, anomalies = data.anomalies || [], partial = data.partial || [];
+    const sec = title => '<h2 class="set-section">' + rptEsc(title) + '</h2>';
+    const partialLine = key => partial.includes(key)
+      ? '<p class="vs-note">⌛ ' + rptEsc(muneaT('careWeek.partial', '這一段這次沒讀到，不是沒事發生。')) + '</p>'
+      : '';
+    const parts = [];
+
+    parts.push(sec(muneaT('careWeek.contactTitle', '聯絡')));
+    parts.push('<div class="reader-card">');
+    const c = week.contact || {};
+    parts.push(c.empty
+      ? '<p class="vs-empty">' + rptEsc(muneaT('careWeek.contactEmpty', '這週沒有通話紀錄。')) + '</p>'
+      : '<p class="vs-note" style="margin:0">' + rptEsc(muneaT('careWeek.contactBody',
+        '這週通了 {calls} 次話；最長 {gap} 天沒聯絡；最後一次是 {last}。',
+        { calls: c.calls, gap: c.longestGapDays, last: rptShortDate(c.lastCallDate) || '—' })) + '</p>');
+    parts.push(partialLine('contact'));
+    parts.push('</div>');
+
+    parts.push(sec(muneaT('careWeek.moodTitle', '心情')));
+    parts.push('<div class="reader-card">');
+    const m = week.mood || {};
+    if (m.empty) {
+      parts.push('<p class="vs-empty">' + rptEsc(muneaT('careWeek.moodEmpty', '這週沒有心情紀錄。')) + '</p>');
+    } else {
+      parts.push('<div class="mood-mini">' + (m.daily || []).map(day =>
+        '<div class="mm-day"><div class="mm-dot" style="background:' + cwMoodDotColor(day.level) + '"></div>'
+        + '<div class="mm-lab">' + rptEsc(cwWeekdayShort(day.date)) + '</div></div>'
+      ).join('') + '</div>');
+      if (m.lowestDay) {
+        parts.push('<p class="vs-note">' + rptEsc(muneaT('careWeek.lowestDay',
+          '最低的一天 {date}，他說：{said}',
+          { date: rptShortDate(m.lowestDay.date) || m.lowestDay.date, said: m.lowestDay.said || muneaT('careWeek.noWordsLeft', '（沒有留下一句話）') })) + '</p>');
+      }
+    }
+    parts.push(partialLine('mood'));
+    parts.push('</div>');
+
+    parts.push(sec(muneaT('careWeek.spokenHealthTitle', '他自己提到的身體狀況')));
+    parts.push('<div class="reader-card">');
+    const h = week.spokenHealth || {};
+    parts.push('<p class="' + (h.empty ? 'vs-empty' : 'vs-note') + '" style="margin:0">'
+      + rptEsc(h.empty ? muneaT('careWeek.spokenHealthEmpty', '這週沒特別提。') : (h.items || []).join(muneaListSeparator())) + '</p>');
+    parts.push(partialLine('mood'));
+    parts.push('</div>');
+
+    parts.push(sec(muneaT('careWeek.anomaliesTitle', '守護提醒')));
+    parts.push('<div class="reader-card">');
+    if (!anomalies.length) {
+      parts.push('<p class="vs-empty">' + rptEsc(muneaT('careWeek.anomaliesEmpty', '這週沒有要特別留意的。')) + '</p>');
+    } else {
+      anomalies.forEach(a => {
+        parts.push('<div class="vs-line"><span class="q">' + rptEsc(a.fact || '')
+          + (a.suggestion ? '<em>' + rptEsc(a.suggestion) + '</em>' : '') + '</span></div>');
+      });
+    }
+    parts.push(partialLine('safety'));
+    parts.push('</div>');
+
+    return parts.join('');
+  }
+  async function openCareWeekModal() {
+    const modal = $('#careWeekModal');
+    if (!modal) return;
+    const ctx = cwPersonContext();
+    modal.classList.add('show');
+    const sub = $('#cwSubtitle'), body = $('#cwBody');
+    if (sub) sub.textContent = muneaT('careWeek.subtitleLoading', '正在整理{name}這週的狀況…', { name: ctx.label });
+    if (body) body.innerHTML = '<div class="vs-pend" style="border-top:0;margin-top:0;padding-top:0">'
+      + '<i class="vs-dot"></i>' + rptEsc(muneaT('careWeek.loading', '整理中…')) + '</div>';
+    try { trackProductEvent('care_week_opened', { hasPersonId: !!ctx.personId }); } catch (e) {}
+    const data = await brainPost('/care-week', ctx.personId ? { days: 7, personId: ctx.personId } : { days: 7 });
+    if (!data || !data.ok || !data.week) {
+      if (sub) sub.textContent = ctx.label;
+      if (body) body.innerHTML = '<p class="vs-empty">' + rptEsc(muneaT('careWeek.loadFailed', '這次沒讀到，待會再開一次看看。')) + '</p>';
+      return;
+    }
+    const week = data.week;
+    const name = week.displayName || ctx.label;
+    if (sub) sub.textContent = muneaT('careWeek.subtitlePeriod', '{name}｜{from} – {to}',
+      { name, from: rptShortDate(week.period.start), to: rptShortDate(week.period.end) });
+    if (body) body.innerHTML = cwSectionsHTML(data);
+  }
+  function closeCareWeekModal() {
+    const modal = $('#careWeekModal');
+    if (modal) modal.classList.remove('show');
+  }
+  if ($('#careWeekBtn')) $('#careWeekBtn').addEventListener('click', () => { openCareWeekModal(); });
+  if ($('#careWeekClose')) $('#careWeekClose').addEventListener('click', closeCareWeekModal);
+  if ($('#careWeekModal')) $('#careWeekModal').addEventListener('click', e => { if (e.target === $('#careWeekModal')) closeCareWeekModal(); });
+  window.__muneaOpenCareWeek = openCareWeekModal;
+
   // 免費也能邀請（Edward 2026-07-31）：不再一律擋，改成只有「圈滿了」才擋——
   // 免費上限 2（本人＋1 位），滿了照樣提示升級，所以升級動機沒有被拿掉，只是往後移了一位。
   if ($('#fcInviteBtn')) $('#fcInviteBtn').addEventListener('click', e => { if (!requireLoginForFamily(muneaT('familyCircle.loginToInvite', '要邀請家人連上你，先登入一下（這樣家人才連得到你）'))) return; if (e.currentTarget.dataset.full) { toast(muneaT('familyCircle.fullUpgradeToast', '全家健康圈滿了，升級方案可以邀請更多家人。')); return; } $('#famCircleModal').classList.remove('show'); if ($('#inviteFamModal')) { fillInvCode(true); $('#inviteFamModal').classList.add('show'); } });
@@ -13327,6 +13491,12 @@ function refreshLocalizedDynamicUi() {
   try { renderCareCarousel(); } catch (e) {}
   try { syncCompanionUI(); } catch (e) {}
   try { renderHomeGreeting(); } catch (e) {}
+  try {
+    const presence = document.querySelector('.face-name .fn-status');
+    if (presence) presence.textContent = callConnected
+      ? muneaT('voice.call.online', '')
+      : muneaT('voice.call.offline', '');
+  } catch (e) {}
   try { refreshMoodTask(); } catch (e) {}
   try { updateMedCount(); } catch (e) {}
   try { renderDailyTasks(); } catch (e) {}
@@ -13425,6 +13595,10 @@ function openOnboardingIntro() {
 }
 
 function runBootSplash() {
+  // 原生啟動畫面交棒（Android）：這一頁已經可以畫了，叫原生那層收掉——
+  // 函式定義在 index.html（跟保險絲放一起），沒外掛的環境是空操作。要放在最前面：
+  // 就算下面因為啟動頁已經被收掉而提早 return，原生那層也不能留著。
+  if (typeof window.muneaHideNativeSplash === 'function') window.muneaHideNativeSplash();
   const splash = $('#bootSplash');
   if (!splash || splash.hidden) return;
   const needIntro = !onboardingIntroSeen();
