@@ -29,6 +29,27 @@ OVERALL_OK=1
 
 mkdir -p "$SHOTS_DIR"
 
+# 2026-10-28（PR #630 原生啟動畫面）：同一支流程連紅兩輪、兩輪長相不同（一輪是桌面程式
+# Pixel Launcher「沒有回應」的系統對話框整路蓋著、一輪是 App 根本沒浮到前景），光看截圖
+# 分不出是 App 自己壞還是模擬器桌面卡住。所以全程錄 logcat 進 flows-shots/（跟截圖一起
+# 上傳），每個關鍵點再記一份「現在前景是誰」（dumpsys），失敗時才有東西可以查。
+adb logcat -c >/dev/null 2>&1 || true
+adb logcat -v time > "$SHOTS_DIR/logcat.txt" 2>&1 &
+LOGCAT_PID=$!
+trap 'kill "$LOGCAT_PID" >/dev/null 2>&1 || true' EXIT
+
+foreground_state() {
+  # $1 = 檔名前綴；只記、不判斷——判斷留給看紀錄的人
+  {
+    echo "== $(date -u +%H:%M:%S) dumpsys window（焦點在哪個視窗）=="
+    adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus|mFocusedApp|mFocusedWindow|imeInputTarget" | head -8
+    echo "== dumpsys activity（哪個畫面在前景）=="
+    adb shell dumpsys activity activities 2>/dev/null | grep -E "ResumedActivity|mLastPausedActivity|topResumedActivity|Hist  *#0|mVisibleRequested=true" | head -12
+    echo "== App 行程 =="
+    adb shell pidof "$PKG" 2>/dev/null || echo "($PKG 沒有在跑)"
+  } > "$SHOTS_DIR/$1-foreground.txt" 2>&1
+}
+
 declare -a SUMMARY_ROWS=()
 
 record() {
@@ -57,17 +78,25 @@ echo "== 啟動 App =="
 adb shell am force-stop "$PKG" >/dev/null 2>&1 || true
 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 sleep 3
+# 截圖前清場：模擬器桌面程式（Pixel Launcher）冷開機太慢會自己「沒有回應」、對話框蓋在我們的
+# 啟動畫面上（logcat 證實在 App 啟動前就發生）。先把別人的對話框關掉再拍，01 才拍得到
+# 原生啟動畫面本人；App 自己的對話框不會被關（工具只關別人的）。
+python3 scripts/android-ui-tap-by-text.py --dismiss-anr-only --dump-path "$SHOTS_DIR/01-pre-shot.xml" || true
+sleep 1
 screenshot "01-launch-3s"
-record "啟動 App（等 3 秒）" "有畫面、不是白屏或崩潰對話框" "看截圖 01" "01-launch-3s.png"
+foreground_state "01-launch-3s"
+record "啟動 App（等 3 秒、清掉別人的「沒有回應」對話框後再拍）" "有畫面、不是白屏或崩潰對話框（原生啟動畫面＝奶油底＋沐寧標誌，PR #630 起）" "看截圖 01" "01-launch-3s.png"
 
 # 2026-10-28 第四輪：模擬器冷到 App 啟動 15 秒後才看到啟動頁，40 秒差點不夠——放寬到 90 秒
 # （找到就立刻往下走，不會真的等滿；這裡的上限只管「最糟要等多久才宣告失敗」）。
 echo "== 等底部導覽列出現（最多等 90 秒，不是固定 sleep 賭運氣）=="
 if python3 scripts/android-ui-tap-by-text.py --text "聊聊,Talk" --dump-path "$SHOTS_DIR/02-wait-tabbar.xml" --timeout 90; then
   screenshot "02-home-ready"
+  foreground_state "02-home-ready"
   record "等首頁渲染完成" "底部導覽列（含「聊聊」分頁）出現" "成功，看截圖 02" "02-home-ready.png"
 else
   screenshot "02-home-NOTFOUND"
+  foreground_state "02-home-NOTFOUND"
   record "等首頁渲染完成" "底部導覽列（含「聊聊」分頁）出現" "逾時沒等到，看截圖 02 跟上面 log 列出的可見文字" "02-home-NOTFOUND.png"
   OVERALL_OK=0
 fi
@@ -84,8 +113,18 @@ if python3 scripts/android-ui-tap-by-text.py --text "開始或結束通話,Start
   record "點「開始通話」＋等 5 秒" "畫面會變化；模擬器沒麥克風，預期連不上真語音——只看畫面實際顯示什麼" "看截圖 05，如實記錄" "05-call-state.png"
 else
   screenshot "05-call-NOTFOUND"
+  foreground_state "05-call-NOTFOUND"
   record "點「開始通話」" "找得到按鈕" "找不到「開始通話」按鈕，看截圖 05 跟上面 log" "05-call-NOTFOUND.png"
   OVERALL_OK=0
+fi
+
+# 讓 logcat 把最後幾行寫完再收；失敗時順手把 ANR／崩潰／啟動畫面相關的行印進 job log，
+# 不用先下載 artifact 才看得到
+sleep 1
+kill "$LOGCAT_PID" >/dev/null 2>&1 || true
+if [ "$OVERALL_OK" -ne 1 ] && [ -s "$SHOTS_DIR/logcat.txt" ]; then
+  echo "== logcat 裡跟 ANR／崩潰／啟動畫面／本 App 有關的行（完整檔在 artifact flows-shots/logcat.txt）=="
+  grep -E "ANR in|FATAL EXCEPTION|AndroidRuntime|SplashScreen|StartingSurface|StartingWindow|net\.munea|Capacitor|chromium" "$SHOTS_DIR/logcat.txt" | head -150
 fi
 
 {
