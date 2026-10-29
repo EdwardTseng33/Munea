@@ -24,6 +24,14 @@
 - **Edward 動手**：① `gcloud auth login`（驗證過 munea.net 的帳號）② `apply` ③ GoDaddy 加 `CNAME admin → ghs.googlehosted.com`（以小工具印的為準）④ `status` 看通。
 - **⚠ 第二道鎖沒有一起上**：沙利曼 7/11 P1 仍成立；建議下一步走「負載平衡器＋Google 登入（IAP）」——同時是機構端「誰看過什麼」稽核的地基（另開工單）。
 
+### 2026-10-26 蘇菲 ⚡ 營運後台登入提速（Draft PR · 分支 `fix/admin-login-speed-20261026`）
+
+- **為什麼**：Edward「登入很卡」。根因三個（7/29 查出、只加了「自動再試一次」拐杖）：① 正式大腦 `min-instances 0`、沒人用就睡著，第一個人等 5–15 秒 ② 登入成功後一口氣打 15 支彙總查詢、**全部回來才畫畫面**，最慢那支決定整頁 ③ 15 支在同一顆 CPU 排隊、還重複撈同一份底料。
+- **改了什麼**：① `deploy/cloudrun/prod-deploy.sh` 正式大腦 `--min-instances 1`（約 US$7–10／月；staging／語音橋維持 0）② `web/src/admin.js`：登入先畫殼、只抓這一頁要的＋側欄紅點（3–5 支），其它頁進場才抓（`PAGE_DATA`／`ensurePageData`）；`EP_LIST` 不動、冒煙契約不變 ③ `engine/server.py`：15 支讀接口 60 秒快取（`admin_cached_read`，只在 production／staging 開；任何 `/admin/` 寫入動作清空；按重新整理帶 `fresh=true` 現算）＋回應 gzip（admin.js 175KB→56KB）＋後台帶版本號的 js/css 可快取一小時（App 本體不碰）。
+- **證據（本機 8231 實走）**：登入後只打 `login + safety-events + feedback` 3 支；切「用藥」補 2 支、切「總覽」補 3 支、切回「用藥」0 支；按重新整理 7 支全現算；快取第二次 `cache.hit=true`、`fresh` 跳過。守門 `engine/test_admin_read_cache.py`（9 條）＋既有 admin 測試 62 條全綠、`test-admin-console.js` 15 支契約 OK、API 契約清單 PASS。
+- **未做／注意**：正式機要重新部署一次 `--min-instances 1` 才生效（walk 既有 canary→promote 流程）；`test_admin_subscription_extend.py` 有一條日期時炸彈（fixture 寫死 2026-08-01、10/26 起必紅）與本案無關、未動。
+- **同日評估報告**：`docs/後台-B2B2C-SaaS化評估-2026-10-26.md`（機構端 SaaS 化：客戶期待／現況對照／架構評語／三條路）。
+
 ### 2026-09-30 00:10 蘇菲｜🎭 Edward 定向：Rive 取代寧寧的臉＋男生角色下線（盤點完成・待拍板・**尚未施工**）
 
 - **Edward 9/29 原話**：「用 rive 取代寧寧作為臉的功能…先看一下 app 的設計，確認該怎麼取代、哪裡需要取代，好比聊聊頁還沒有開啟通話時的全頻動態，包含男生角色都要先下線。」盤點報告（實拍截圖＋聊聊頁注入 Rive 實跑）：artifact「寧寧換臉盤點」。
