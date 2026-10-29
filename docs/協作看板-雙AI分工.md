@@ -1,5 +1,12 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-29 10:40 蘇菲｜📱 Android 三件進主線（#630 開機畫面、#632 官方圖示、#633 窄螢幕版型 · 補助案 B1／B6）
+
+- **#630**：原生開機畫面。實體 Galaxy A15 對照 4 次——新版網頁準備好即收（4.3／5.5 秒）、無白屏；舊版白屏 2–18 秒；1 次測試機慢到 52 秒（新舊版都有慢例）。
+- **#632**：Android 桌面圖示＝iOS 同一張官方原檔（`web/icons/peining-app-icon-source-preserved-1024.png`），自適應前景摳底縮進 66dp 安全圓、背景 #FEF5EB；`scripts/android-make-launcher-icons.py` 一行重產。
+- **#633**：`scripts/app-full-surface-i18n-browser-precheck.js` 新增 `android-compact`（360×800）、`android-standard`（412×915）、`android-compact-large-font` 三組，只在局部模式可選；局部模式另存 `targeted-precheck-report.json` 到 `--out`。修 360 加大字四處：帳號列標題、就診提醒五顆、日文 `mood.notRecorded` 改「まだ記録なし」、心情臉 32px——全包在 `@media (max-width: 370px)`（除心情欄 `min-width:0`）。
+- **檔**：見各 PR。**狀態**：✅ 已合併。
+
 ### 2026-10-28 22:10 蘇菲｜📱 Android 冷啟動白屏 → 原生啟動畫面（PR #630 · 補助案 B1 · call-path risk · 待合併）
 
 - **為什麼**：Galaxy A15（Android 14）實機影片 App 開了 5 秒以上整片白；CI 模擬器 6–15 秒才看到網頁殼的 `#bootSplash`。WebView 畫出第一格之前，原生殼什麼都沒擋著。
