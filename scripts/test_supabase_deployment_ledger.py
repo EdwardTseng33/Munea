@@ -25,8 +25,6 @@ class SupabaseDeploymentLedgerTests(unittest.TestCase):
             "supabase/migration-manifest.json",
             "supabase/deployment-ledger.json",
             "docs/supabase/DEPLOYMENT-LEDGER.md",
-            "docs/supabase/evidence/2026-07-18-local-target-mismatch.json",
-            "docs/supabase/evidence/2026-07-18-tokyo-live-blockers.json",
             "docs/supabase/TOKYO-CANARY-2026-07-15.md",
             "docs/RELEASE-STATE.md",
             "STATUS.md",
@@ -35,6 +33,8 @@ class SupabaseDeploymentLedgerTests(unittest.TestCase):
             target = self.repo_root / relative_path
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
+        # 證據檔會隨每次唯讀驗證增加：整個資料夾一起帶，不再逐檔寫死。
+        shutil.copytree(ROOT / "docs/supabase/evidence", self.repo_root / "docs/supabase/evidence")
 
     def tearDown(self) -> None:
         self.temp_directory.cleanup()
