@@ -39,7 +39,9 @@ class ApiContractInventoryTests(unittest.TestCase):
         # 2026-08-10 再補：機構窗口專區 2 支（管理員發專屬連結 /admin/enterprise/portal/issue-link
         #   ＋窗口只讀彙總 /enterprise/portal/summary）——補助案 C1 查核點 P0-5
         # 2026-10-26 再補：機構窗口月報下載 GET /enterprise/portal/report 1 支（同一張簽章憑證驗證）——B2B2C 評估方案 C
-        self.assertEqual(self.inventory["routeCounts"], {"brain": 101, "gateway": 23, "voice": 4})
+        # 2026-10-29 再補：機構端專區第 2 段 9 支——機構人員 /org/me、/org/summary、/org/elders、/org/elder/care-week、/org/reports
+        #   ＋家庭成員同意開關 /org-consent、/org-consent/set ＋後台 /admin/enterprise/staff/invite、/admin/enterprise/consent/status
+        self.assertEqual(self.inventory["routeCounts"], {"brain": 110, "gateway": 23, "voice": 4})
         self.assertIn(Route("voice", "WS", "/"), self.routes)
 
     def test_new_source_route_must_be_registered(self) -> None:

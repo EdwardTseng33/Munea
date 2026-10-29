@@ -1,5 +1,14 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-29 蘇菲｜🏢 機構端專區第 2 段 PR-a：資料表 029＋`/org/*` 五支讀接口＋同意開關後端＋後台開人員（Draft PR · 分支 `feat/org-stage2a-staff-consent-api-20261029`）
+
+- **接**：Edward 14:24「照建議開工」——設計書第 6 節 8 題全照建議拍板（Q1 A 同意開關／Q2 B 另開 `/org/*`／Q3 B 跟 App 同一套登入＋`org_staff`／Q4 A 先社工個管／Q5 A／Q6 A `site_label`／Q7 B 2 年／Q8 重開限第 1–3 段）＋ #612 三題（藏／滾動 30 天／標記立案）。第 2 段拆 PR-a／PR-b（App 同意開關四語）／PR-c（機構專區三頁＋org-smoke）。
+- **資料表** `supabase/sql/029_org_staff_consent.sql`：`org_staff`（人員：email 邀請鑰匙、`auth_user_id` 第一次登入綁、三角色、`site_label`、invited/active/disabled）、`org_care_consents`（一席一列、granted/revoked、誰按的）、席次加 `site_label`、客戶加 `client_kind`（care／esg）；RLS 開零 policy、同 020 服務端專用。manifest／ledger 已登記（unknown、等 Edward 手動貼 SQL）。
+- **接口** `engine/org_api.py`（三條鐵線一處做對）：`/org/me`、`/org/summary`、`/org/elders`（L1：只列已同意、三旗標）、`/org/elder/care-week`（L2：趨勢＋症狀類別＋亮燈次數，**沒有原句／正文**；每次讀寫一筆 `org_care_week_read`，稽核寫不進去就不給）、`/org/reports`（1 天效期下載憑證沿用 portal report 路由）；App 端 `/org-consent`、`/org-consent/set`（只能動自己帳號的席次、切換即稽核）；後台 `/admin/enterprise/staff/invite`、`/admin/enterprise/consent/status`。
+- **身分**：`/org/*` 在本機／示範模式也必驗登入證（跟家人圈邀請同一條）；機構人員沒 App 帳號＝帳號身分查不到是正常（allow_missing），由 `org_staff` 對照決定是哪家的人。替長輩讀資料走 adapter 新的「帳號＋人都明講」`load_org_*`，不吃呼叫者的 account_id。
+- **驗證**：`engine/test_org_api.py` 27 項綠（同意硬門／撤回立刻消失／沒同意＝不存在同一句／A 看不到 B／社工限分點／照服員無摘要／esg 永遠 L0／摘要無原句／稽核含人／無稽核不給／家人只能動自己席次／後台開人員驗證）；契約清單 137 支（brain 101→110）；admin-smoke 補「Org API gate 401」＋兩支後台接口 403＋ consent/status 讀；本機 8232 JSON 模式端到端：邀請→dev 登入自動綁→名單空→假席次 not_found→稽核 3 筆。
+- **沒做（PR-b／PR-c／第 3 段）**：App 同意開關畫面四語、機構專區三頁、org-smoke、`/org/alerts`／`/org/alert/mark`／`/org/audit`、專用稽核表、後台客戶明細頁「人員／同意」區塊（`admin.js` 本張不碰）。沒部署、沒碰正式機。
+
 ### 2026-10-29 13:45 蘇菲｜🚀 後台五張 PR 全進主線＋正式機出貨（Edward「推進」）
 
 - **合併順序與結果**：#613 換網址 → #611 登入提速 → #627 產品框架設計書 → #612 機構專區方案 C → #629 UI/UX 2026（深色側欄照交付版）。程式幾乎沒撞（server.py／admin.js 都自動合）、唯一撞點是本看板頂端：每合一張其餘全撞一次，三個分身各自對齊 2–3 次、兩則都留新的在上。

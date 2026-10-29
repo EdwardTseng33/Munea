@@ -35,6 +35,7 @@ import supabase_adapter
 import enterprise_seats
 import enterprise_billing
 import org_portal
+import org_api
 import model_router
 import notify
 import apple_store
@@ -442,6 +443,9 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/billing-settings/save",
     # 機構窗口專屬連結（C1 · P0-5）：只有我們的管理員能產生，處理端再驗一次管理鑰匙。
     "/admin/enterprise/portal/issue-link",
+    # 機構端專區第 2 段（2026-10-29）：幫機構開人員帳號、看各席次同意狀態。處理端再驗一次管理鑰匙。
+    "/admin/enterprise/staff/invite",
+    "/admin/enterprise/consent/status",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -7187,6 +7191,11 @@ def append_audit_event(event=None):
     return normalized
 
 
+# 機構端專區的稽核（誰看過誰的週摘要、同意開關、開人員）第 2 段先寫進同一張 audit_events；
+# 第 3 段搬專用表時只要換這一行的目的地。
+org_api.set_audit_sink(append_audit_event)
+
+
 def admin_audit_events_summary(data=None):
     data = data or {}
     limit = max(1, min(200, int(data.get("limit") or 50)))
@@ -10450,7 +10459,9 @@ class H(BaseHTTPRequestHandler):
             # Family-circle invites always require a verified identity, even in
             # local/demo mode where most endpoints may allow a guest preview.
             # A join code is never an authentication credential.
-            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings"):
+            # 機構端專區 /org/*（2026-10-29）同理：機構人員的身分就是登入證本身（org_staff 對照），
+            # 本機／示範模式也不能放行沒登入的人——沒身分＝不知道他是哪家的人。
+            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings") or request_path.startswith("/org/"):
                 family_auth = verify_auth_context(self.headers)
                 if not family_auth.get("ok"):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
@@ -10472,7 +10483,9 @@ class H(BaseHTTPRequestHandler):
                     return
             scope_token = bind_request_data_identity(
                 auth_gate,
-                allow_missing=self.path.split("?", 1)[0] == "/account-bootstrap",
+                # /org/*：機構人員通常沒有 App 帳號（沒有 account_members 列），查不到帳號身分是正常的，
+                # 不是錯——他的身分由 org_api.resolve_staff 用 authUserId／email 對 org_staff 表決定。
+                allow_missing=(self.path.split("?", 1)[0] == "/account-bootstrap" or request_path.startswith("/org/")),
             )
             authorize_request_data_scope(self.path, data, auth_gate)
             char = data.get("char") or DEFAULT_CHAR
@@ -10535,6 +10548,35 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/enterprise/portal/summary":
                 # 機構窗口專區：不吃管理鑰匙，吃的是管理員發出去的簽章連結。
                 self._json(org_portal_summary_response(data))
+            # 機構端專區 /org/*（第 2 段 · 2026-10-29）：身分＝上面已驗過的登入證（auth_gate["auth"]），
+            # 誰能看哪家、哪一位、看多深，全在 engine/org_api.py 一處決定。
+            elif self.path == "/org/me":
+                self._json(org_api.org_me_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/summary":
+                self._json(org_api.org_summary_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/elders":
+                self._json(org_api.org_elders_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/elder/care-week":
+                self._json(org_api.org_elder_care_week_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/reports":
+                self._json(org_api.org_reports_response(auth_gate.get("auth"), data))
+            # App 端（家庭成員）：機構照護模式同意——只認已驗證的帳號身分，席次必須綁在自己帳號上。
+            elif self.path == "/org-consent":
+                self._json(org_api.org_consent_status_response(REQUEST_DATA_IDENTITY.get(), data))
+            elif self.path == "/org-consent/set":
+                self._json(org_api.org_consent_set_response(REQUEST_DATA_IDENTITY.get(), data))
+            elif self.path == "/admin/enterprise/staff/invite":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(org_api.admin_org_staff_invite_response(data, actor=str(data.get("actor") or "admin")))
+            elif self.path == "/admin/enterprise/consent/status":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(org_api.admin_org_consent_status_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":
