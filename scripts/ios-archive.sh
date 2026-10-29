@@ -16,6 +16,7 @@ mkdir -p "$DERIVED_DATA" "$SOURCE_PACKAGES" "$(dirname "$ARCHIVE_PATH")"
 
 if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
   echo "FAIL iOS archive requires a clean committed worktree."
+  git status --porcelain --untracked-files=normal | sed -n "1,20p"
   exit 1
 fi
 RELEASE_COMMIT="$(git rev-parse HEAD)"
