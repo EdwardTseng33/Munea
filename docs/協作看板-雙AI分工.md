@@ -1,10 +1,11 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
-### 2026-10-29 23:30 蘇菲｜🖼 Android 圖示收尾：CI 拍桌面證明是官方圖示＋清掉範本殘檔（分支 `claude/mystifying-swirles-65db79` · 補助案 B1 · 不碰通話路徑）
+### 2026-10-29 23:30 蘇菲｜🖼 Android 圖示收尾：CI 拍桌面證明是官方圖示＋清掉範本殘檔（PR #650 · 補助案 B1 · 不碰通話路徑 · CI 綠）
 
 - **接**：#632 已把 15 張圖示換成官方寧寧圖示（iOS 同一張、背景 #FEF5EB、`scripts/android-make-launcher-icons.py` 一行重產），但 CI 從沒拍過桌面那顆、兩個 Capacitor 範本殘檔還留著。
 - **做了**：① 新 `scripts/android-launcher-icon-check.py`：模擬器按 HOME → 開應用程式列表 → 找「Munea」那格放大 4 倍存檔 → 顏色判定（橘水滴＋青綠漣漪要在、範本藍不能比橘多）；找不到或顏色不對就讓 emulator-smoke 紅、不悄悄放過 ② workflow emulator-smoke 多跑這支、截圖跟判定一起上傳 ③ 刪 `drawable-v24/ic_launcher_foreground.xml`、`drawable/ic_launcher_background.xml`（範本藍 X 的向量圖，#632 後沒任何地方引用；`values/ic_launcher_background.xml` 還在用、保留）。
-- **檔**：`.github/workflows/android-build.yml`、`scripts/android-launcher-icon-check.py`、上述兩個刪檔、本看板；CI 證據回填 `docs/qa/android/icon-2026-10-29/`。**狀態**：🔄 等 CI 三 job 綠＋PR 附桌面截圖；合併 Edward 按。
+- **CI 證據（run 40899410355）**：三 job 全綠。桌面 dock 跟應用程式列表都找到「Munea」、兩格都判定過（橘 2.7%／1.8%、青綠 3.3%／2.2%、範本藍 0%）；桌面／列表截圖＋那格放大 4 倍＋判定數字存 `docs/qa/android/icon-2026-10-29/run40899410355-emulator-smoke-*`。⚠ 桌面那顆外圍一圈黃綠不是圖示的問題：畫面描述寫 `Predicted app: Munea`，是 Pixel Launcher 把剛裝的 App 放進 dock「推薦」位、用圖示主色畫的外環；列表裡同一顆沒有環、素材裡也沒這個顏色。判定結果現在會把這個描述一起留下。
+- **檔**：`.github/workflows/android-build.yml`、`scripts/android-launcher-icon-check.py`、上述兩個刪檔、`docs/qa/android/icon-2026-10-29/run40899410355-*`（5 個證據檔）、本看板。**狀態**：✅ CI 綠、PR 附截圖；合併 Edward 按。
 
 ### 2026-10-29 15:50 蘇菲｜📞 通話改「臉在手機、聲音在雲端」——正式線自 9/6 起打不通的病根（call-path risk · 改通話配對、照 7/13 規矩先列檔）
 

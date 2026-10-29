@@ -1,0 +1,20 @@
+{
+  "pass": true,
+  "home": {
+    "bounds": "[832,1873][1004,2068]",
+    "pixels": 33540,
+    "orange_ratio": 0.0268,
+    "teal_ratio": 0.0328,
+    "cream_ratio": 0.2942,
+    "template_blue_ratio": 0.0
+  },
+  "app_drawer": {
+    "bounds": "[781,1355][1023,1670]",
+    "pixels": 76230,
+    "orange_ratio": 0.0182,
+    "teal_ratio": 0.0224,
+    "cream_ratio": 0.2023,
+    "template_blue_ratio": 0.0
+  },
+  "problems": []
+}

@@ -177,8 +177,12 @@ def main():
     home_nodes = dump_screen(out / 'home.xml') or []
     home_cell = find_app_cell(home_nodes)
     if home_cell is not None:
-        result['home'] = {'bounds': home_cell['bounds'], **capture_cell(home_shot, home_cell, out / 'munea-icon-closeup-home.png')}
-        print(f'[OK] 桌面上有「Munea」捷徑 bounds={home_cell["bounds"]}')
+        # desc 一起留：2026-10-29 第一次跑看到桌面那顆外圍有一圈黃綠，畫面描述寫「Predicted app: Munea」——
+        # 是 Pixel Launcher 把剛裝的 App 放進 dock 的「推薦 App」位置、用圖示主色畫的外環，列表那顆就沒有。
+        # 不是圖示的問題；留下 desc 以後看證據的人才知道那圈從哪來。
+        result['home'] = {'bounds': home_cell['bounds'], 'desc': home_cell['desc'],
+                          **capture_cell(home_shot, home_cell, out / 'munea-icon-closeup-home.png')}
+        print(f'[OK] 桌面上有「Munea」捷徑 bounds={home_cell["bounds"]} desc={home_cell["desc"]!r}')
     else:
         print('[INFO] 桌面上沒有「Munea」捷徑（adb 安裝的 App 桌面程式不一定會自動加捷徑，正常），到應用程式列表找')
 
@@ -194,7 +198,8 @@ def main():
         drawer_cell, drawer_nodes = wait_for_cell(out / 'app-drawer.xml', 10.0, 2.0)
     drawer_shot = screencap(out / 'app-drawer.png')
     if drawer_cell is not None:
-        result['app_drawer'] = {'bounds': drawer_cell['bounds'], **capture_cell(drawer_shot, drawer_cell, out / 'munea-icon-closeup.png')}
+        result['app_drawer'] = {'bounds': drawer_cell['bounds'], 'desc': drawer_cell['desc'],
+                                **capture_cell(drawer_shot, drawer_cell, out / 'munea-icon-closeup.png')}
         print(f'[OK] 應用程式列表裡找到「Munea」bounds={drawer_cell["bounds"]}')
     else:
         visible = sorted({n['text'] for n in drawer_nodes if n['text']})
