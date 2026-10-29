@@ -46,13 +46,15 @@ class ReadCacheTests(unittest.TestCase):
             first = server.admin_cached_read("munea.admin.usage.v1", {"days": 30}, counter.produce)
             second = server.admin_cached_read("munea.admin.usage.v1", {"days": 30}, counter.produce)
             other = server.admin_cached_read("munea.admin.usage.v1", {"days": 7}, counter.produce)
+            # 快取回的是拷貝：呼叫端改了不會污染下一位。
+            # ⚠ 第三次呼叫必須留在同一個環境區塊裡：出了區塊 MUNEA_ENV_NAME 就回到本機值、快取關閉、
+            #   這題會變成只在有 engine/.env.local 的機器上才綠（10/29 在另一個工作副本抓到）。
+            self.assertEqual(first["value"], second["value"])
+            self.assertTrue(second["cache"]["hit"])
+            second["value"] = "污染"
+            third = server.admin_cached_read("munea.admin.usage.v1", {"days": 30}, counter.produce)
         self.assertEqual(counter.calls, 2, "同參數第二次要吃快取、不同參數要現算")
-        self.assertEqual(first["value"], second["value"])
-        self.assertTrue(second["cache"]["hit"])
         self.assertNotIn("cache", other)
-        # 快取回的是拷貝：呼叫端改了不會污染下一位
-        second["value"] = "污染"
-        third = server.admin_cached_read("munea.admin.usage.v1", {"days": 30}, counter.produce)
         self.assertEqual(third["value"], 1)
 
     def test_fresh_flag_bypasses_cache_and_is_not_part_of_key(self):

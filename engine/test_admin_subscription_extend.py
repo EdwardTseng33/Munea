@@ -17,6 +17,19 @@ ACCOUNT_ID = "11111111-1111-4111-8111-111111111111"
 PERSON_ID = "22222222-2222-4222-8222-222222222222"
 
 
+def future_utc_midnight_iso(days_from_now, plus_days=0):
+    """一定在未來的到期日（今天起算 N 天、整點零分）。"""
+    base = (datetime.now(timezone.utc) + timedelta(days=days_from_now)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return (base + timedelta(days=plus_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# 2026-10-26 起這批測試紅了三天才被看到：原本寫死 2026-08-01，日曆一過就變成「已過期→從今天起算」。
+# 這幾題要驗的是「從既有的未來到期日往後加」，所以到期日一律用「今天＋100 天」現算、不再寫死。
+FUTURE_EXPIRY = future_utc_midnight_iso(100)
+FUTURE_EXPIRY_PLUS_30 = future_utc_midnight_iso(100, 30)
+FUTURE_EXPIRY_PLUS_10 = future_utc_midnight_iso(100, 10)
+
+
 def fake_target(account_name="測試家庭"):
     return {"accountName": account_name, "identity": {"accountId": ACCOUNT_ID, "personId": PERSON_ID}}
 
@@ -88,14 +101,14 @@ class DryRunTests(unittest.TestCase):
     def test_dry_run_without_days_reports_current_status_only(self):
         billing = server.normalize_billing_store({
             "accountId": ACCOUNT_ID, "activePlan": "pro",
-            "subscription": {"status": "active", "expiresAt": "2026-08-01T00:00:00Z"},
+            "subscription": {"status": "active", "expiresAt": FUTURE_EXPIRY},
         })
         with patch.object(server, "_resolve_admin_target_identity", return_value=fake_target("陳先生家")), \
              patch.object(server, "load_billing_store", return_value=billing):
             result = server.admin_extend_subscription_response({"accountId": ACCOUNT_ID, "dryRun": True})
         self.assertTrue(result["ok"], result)
         self.assertTrue(result["dryRun"])
-        self.assertEqual(result["previousExpiresAt"], "2026-08-01T00:00:00Z")
+        self.assertEqual(result["previousExpiresAt"], FUTURE_EXPIRY)
         self.assertIsNone(result["newExpiresAt"])
         self.assertFalse(result["appleManagedSubscription"])
         self.assertFalse(result["wasLapsedOrMissing"])
@@ -103,7 +116,7 @@ class DryRunTests(unittest.TestCase):
     def test_dry_run_with_days_previews_new_date_without_saving(self):
         billing = server.normalize_billing_store({
             "accountId": ACCOUNT_ID, "activePlan": "plus",
-            "subscription": {"status": "active", "expiresAt": "2026-08-01T00:00:00Z"},
+            "subscription": {"status": "active", "expiresAt": FUTURE_EXPIRY},
         })
         with patch.object(server, "_resolve_admin_target_identity", return_value=fake_target()), \
              patch.object(server, "load_billing_store", return_value=billing), \
@@ -111,14 +124,14 @@ class DryRunTests(unittest.TestCase):
             result = server.admin_extend_subscription_response({"accountId": ACCOUNT_ID, "days": 30, "dryRun": True})
         save_mock.assert_not_called()
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["newExpiresAt"], "2026-08-31T00:00:00Z")
+        self.assertEqual(result["newExpiresAt"], FUTURE_EXPIRY_PLUS_30)
 
 
 class CommitExtendFromFutureDateTests(unittest.TestCase):
     def test_extends_from_existing_future_expiry_not_from_today(self):
         billing_state = {"store": server.normalize_billing_store({
             "accountId": ACCOUNT_ID, "activePlan": "pro", "provider": "manual-admin-grant",
-            "subscription": {"status": "active", "expiresAt": "2026-08-01T00:00:00Z", "willRenew": False},
+            "subscription": {"status": "active", "expiresAt": FUTURE_EXPIRY, "willRenew": False},
         })}
 
         def load_billing():
@@ -135,17 +148,17 @@ class CommitExtendFromFutureDateTests(unittest.TestCase):
             result = server.admin_extend_subscription_response({"accountId": ACCOUNT_ID, "days": 30, "reason": "客訴補償"})
 
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["previousExpiresAt"], "2026-08-01T00:00:00Z")
-        self.assertEqual(result["newExpiresAt"], "2026-08-31T00:00:00Z")
+        self.assertEqual(result["previousExpiresAt"], FUTURE_EXPIRY)
+        self.assertEqual(result["newExpiresAt"], FUTURE_EXPIRY_PLUS_30)
         self.assertFalse(result["wasLapsedOrMissing"])
-        self.assertEqual(billing_state["store"]["subscription"]["expiresAt"], "2026-08-31T00:00:00Z")
+        self.assertEqual(billing_state["store"]["subscription"]["expiresAt"], FUTURE_EXPIRY_PLUS_30)
         self.assertEqual(billing_state["store"]["subscription"]["status"], "active")
         audit.assert_called_once()
         event = audit.call_args.args[0]
         self.assertEqual(event["eventType"], "admin_subscription_extended")
         self.assertEqual(event["details"]["days"], 30)
-        self.assertEqual(event["details"]["previousExpiresAt"], "2026-08-01T00:00:00Z")
-        self.assertEqual(event["details"]["newExpiresAt"], "2026-08-31T00:00:00Z")
+        self.assertEqual(event["details"]["previousExpiresAt"], FUTURE_EXPIRY)
+        self.assertEqual(event["details"]["newExpiresAt"], FUTURE_EXPIRY_PLUS_30)
 
 
 class CommitExtendFromTodayTests(unittest.TestCase):
@@ -208,7 +221,7 @@ class AppleManagedSubscriptionTests(unittest.TestCase):
         billing_state = {"store": server.normalize_billing_store({
             "accountId": ACCOUNT_ID, "activePlan": "pro", "provider": "apple_storekit2",
             "subscription": {
-                "status": "active", "expiresAt": "2026-08-01T00:00:00Z", "willRenew": True,
+                "status": "active", "expiresAt": FUTURE_EXPIRY, "willRenew": True,
                 "productId": "net.munea.app.pro.monthly", "originalTransactionId": "orig-tx-1",
             },
         })}
@@ -234,7 +247,7 @@ class AppleManagedSubscriptionTests(unittest.TestCase):
         self.assertEqual(billing_state["store"]["subscription"]["originalTransactionId"], "orig-tx-1")
         # 已經是 active 續約中，延長不應該把 willRenew 動成 False
         self.assertTrue(billing_state["store"]["subscription"]["willRenew"])
-        self.assertEqual(billing_state["store"]["subscription"]["expiresAt"], "2026-08-11T00:00:00Z")
+        self.assertEqual(billing_state["store"]["subscription"]["expiresAt"], FUTURE_EXPIRY_PLUS_10)
         event = audit.call_args.args[0]
         self.assertTrue(event["details"]["appleManagedSubscription"])
 
