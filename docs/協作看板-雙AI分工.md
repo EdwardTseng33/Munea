@@ -7,6 +7,17 @@
 - **#633**：`scripts/app-full-surface-i18n-browser-precheck.js` 新增 `android-compact`（360×800）、`android-standard`（412×915）、`android-compact-large-font` 三組，只在局部模式可選；局部模式另存 `targeted-precheck-report.json` 到 `--out`。修 360 加大字四處：帳號列標題、就診提醒五顆、日文 `mood.notRecorded` 改「まだ記録なし」、心情臉 32px——全包在 `@media (max-width: 370px)`（除心情欄 `min-width:0`）。
 - **檔**：見各 PR。**狀態**：✅ 已合併。
 
+### 2026-10-28 23:30 蘇菲｜🎨 營運後台 UI/UX 對齊 2026 後台設計範例：用色過 WCAG AA＋體驗 5 項（Draft PR #629 · 不上線）
+
+- **Edward 10/28 指示**：「整個後台的 UI/UX 去調研 2026 年的設計範例與應用趨勢，看受好評的設計範例調整一下用色與 UI/UX 體驗」。品牌色（teal／coral／米底／深墨綠、Poppins＋Noto Sans TC、官方 logo）**不動**。
+- **調研報告**：`docs/後台-UIUX-2026趨勢調研-2026-10-28.md`——8 條趨勢各 2 個真實範例（Linear／Vercel／Stripe／Mercury／Supabase／Notion／Intercom／Attio…）＋配色做法＋WCAG 2.2 數字＋女巫 14 頁逐頁打分（平均 21.4／30）＋反趨勢（Liquid Glass 對比反彈、低對比灰字、過度卡片化）。
+- **量到沒過 AA 的**：側欄選中白字 2.88:1、實心按鈕白字 3.16、珊瑚徽章白字 2.06、警示橘字 2.2、危險紅字 3.06、次要灰字在米底 4.16——全部修到 ≥4.5。
+- **改了哪些檔**：`web/src/admin.css`（開頭集中一套設計變數：中性灰 10 階／語意色四組／`--primary`／焦點環／圓角 26→18；舊變數名全留成別名）、`web/src/admin.js` **只動畫面層**（頭像字色、圖表灰字、登入頁加官方 logo、三處「讀取中…」改骨架；沒碰資料抓取／登入邏輯／`EP_LIST`）、`web/admin.html`（`?v=ops106-uiux`、theme-color）、新增 `scripts/admin-screenshots.js`（系統 Chrome 無頭截 14 頁×3 寬度）、`docs/evidence/admin-uiux-2026-10-28/` 11 張改前改後對照。
+- **體驗 5 項**：①側欄選中項安靜化＋頂欄鈕分主次 ②數字卡三層字級＋平板兩欄 ③空狀態虛線框＋圖示、讀取中頂端進度條＋卡片骨架 ④表頭線加深＋數字等寬＋藥丸／通知條語意色統一 ⑤焦點環統一。
+- **驗證**：`node scripts/test-admin-console.js` 綠（15 接口契約＋四語 264 句）；本機假資料伺服器靜態畫面驗證，**沒碰正式機、沒有本機大腦**。
+- **撞檔提醒**：`web/admin.html` 與 `web/src/admin.js` 跟 #611（登入提速）、#613（換網址）同檔不同區；合併順序 Edward 決定，衝突預期只在 `?v=` 那四行。
+- **待 Edward 拍板**（報告第 6 節）：圓角 18／26／12；深色模式先不做／做；安全警示頁英文代碼翻不翻人話。
+
 ### 2026-10-28 22:10 蘇菲｜📱 Android 冷啟動白屏 → 原生啟動畫面（PR #630 · 補助案 B1 · call-path risk · 待合併）
 
 - **為什麼**：Galaxy A15（Android 14）實機影片 App 開了 5 秒以上整片白；CI 模擬器 6–15 秒才看到網頁殼的 `#bootSplash`。WebView 畫出第一格之前，原生殼什麼都沒擋著。
@@ -39,6 +50,16 @@
 - **證據（本機 8231 實走）**：登入後只打 `login + safety-events + feedback` 3 支；切「用藥」補 2 支、切「總覽」補 3 支、切回「用藥」0 支；按重新整理 7 支全現算；快取第二次 `cache.hit=true`、`fresh` 跳過。守門 `engine/test_admin_read_cache.py`（9 條）＋既有 admin 測試 62 條全綠、`test-admin-console.js` 15 支契約 OK、API 契約清單 PASS。
 - **未做／注意**：正式機要重新部署一次 `--min-instances 1` 才生效（walk 既有 canary→promote 流程）；`test_admin_subscription_extend.py` 有一條日期時炸彈（fixture 寫死 2026-08-01、10/26 起必紅）與本案無關、未動。
 - **同日評估報告**：`docs/後台-B2B2C-SaaS化評估-2026-10-26.md`（機構端 SaaS 化：客戶期待／現況對照／架構評語／三條路）。
+
+### 2026-10-26 11:30 蘇菲｜🏢 機構專區專屬連結擴成月度彙總（B2B2C 評估拍板方案 C · Draft PR #612 · 未部署）
+
+- **背景**：Edward 10/26 評估後台 B2B2C SaaS 化（`docs/後台-B2B2C-SaaS化評估-2026-10-26.md`）→ 先走方案 C：擴充既有免密碼專屬連結，仍只給整家加總、不碰個人層資料。
+- **做了**：`engine/org_portal.py` 彙總加三區——使用狀況（啟用／近 30 天有互動／留存／每人每週互動）、守護（高風險件數／已有人跟進／用藥提醒完成率）、月報清單；只算該機構 active 席次綁定的帳號；啟用未滿 5 人 → 比率**與守護件數**一律 null＋`smallSampleSuppressed`。`supabase_adapter` 加 `load_org_cohort_product_events／medication_doses`（`account_id=in.(...)` 一次撈整組）、本機 JSON 備援走同一份檔。新路由 **GET `/enterprise/portal/report?t=&id=`**：同一張憑證驗過才給、只給自己家（別家＝404、沒憑證＝401）；月報本體就是月結凍結的那份 HTML。`web/org-portal.html` 三區塊＋小樣本提示＋隱私聲明，手機可讀。
+- **守門**：`engine/test_org_portal_monthly.py` 21 條（個資保險會炸／小樣本抑制／憑證過期與改一字／下載 401·404）＋既有 49＋111 條全綠；突變驗過。`FORBIDDEN_KEYS` 補 personId／categories／riskLevel／eventTime／reportHtml。
+- ⚠ **契約清單不能手改**：`docs/API-CONTRACT-INVENTORY.json` 是 `scripts/api_contract_inventory.py` 從程式推出來的，手改會被 check 打回——新路由要在小工具裡登記規則（brain GET 白名單＋pii/criticality/envelope/tests），再 `write`。
+- **誠實標記**：「已有人跟進」目前**沒有資料來源**（守護腦 high/critical 只進 Slack、窗口無標記功能），頁面寫「尚未開始記錄」、不填 0。頁面只有 zh-TW（獨立靜態頁、沒接四語機制）。
+- **待 Edward**：①小樣本時守護件數要不要也藏（我多藏了一層）②統計視窗「近 30 天滾動」vs「日曆月」③「已有人跟進」標記功能要不要立案。截圖（假資料、桌機＋手機）在交接資料夾。
+
 
 ### 2026-09-30 00:10 蘇菲｜🎭 Edward 定向：Rive 取代寧寧的臉＋男生角色下線（盤點完成・待拍板・**尚未施工**）
 
