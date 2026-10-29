@@ -28,6 +28,21 @@
 - 🔑 順手看到、這張不處理：Android 的 App 圖示還是 Capacitor 範本的藍色 X（`mipmap-*/ic_launcher*`），桌面／Play 都看得到——用 iOS 的寧寧圖示還是沐寧標誌，要 Edward 定。
 - **檔**：`package.json`／`package-lock.json`、`capacitor.config.json`、`android/app/src/main/res/`（styles／colors／drawable／drawable-xxxhdpi）、`android/app/capacitor.build.gradle`、`android/capacitor.settings.gradle`、`web/index.html`、`web/src/app.js`、`ios/App/CapApp-SPM/Package.swift`、`.github/workflows/android-build.yml`、`scripts/android-flow-smoke.sh`、`scripts/android-ui-tap-by-text.py`、`docs/qa/android/splash-2026-10-28/`。**跟 #623 共用 `web/index.html`／`web/src/app.js`（不同段落、不衝突）**。
 
+### 2026-10-26 蘇菲 🔗 後台換網址 admin.munea.net（Draft PR · 分支 `feat/admin-domain-munea-net-20261026`）
+
+- **Edward 拍板**：設定先備好、DNS 他自己動。走 **Cloud Run 直接綁網域**（不經 Vercel／Firebase）；7/11 設定單作廢（官網已搬 Firebase、「asia-east1 不支援」查證為誤——Google 地區表列在支援清單）。
+- **交付**：`deploy/cloudrun/admin-domain-mapping.sh`（plan／apply／status／remove；先查 gcloud 登入與網域驗證、印 GoDaddy 要加的 DNS、打 /version 驗通）＋ `docs/後台網址-admin.munea.net-設定單-2026-10-26.md`（三步＋驗證＋退回）；`admin.js` 允許清單與 `server.py` 跨來源白名單加 `admin.munea.net`。
+- **Edward 動手**：① `gcloud auth login`（驗證過 munea.net 的帳號）② `apply` ③ GoDaddy 加 `CNAME admin → ghs.googlehosted.com`（以小工具印的為準）④ `status` 看通。
+- **⚠ 第二道鎖沒有一起上**：沙利曼 7/11 P1 仍成立；建議下一步走「負載平衡器＋Google 登入（IAP）」——同時是機構端「誰看過什麼」稽核的地基（另開工單）。
+
+### 2026-10-26 蘇菲 ⚡ 營運後台登入提速（Draft PR · 分支 `fix/admin-login-speed-20261026`）
+
+- **為什麼**：Edward「登入很卡」。根因三個（7/29 查出、只加了「自動再試一次」拐杖）：① 正式大腦 `min-instances 0`、沒人用就睡著，第一個人等 5–15 秒 ② 登入成功後一口氣打 15 支彙總查詢、**全部回來才畫畫面**，最慢那支決定整頁 ③ 15 支在同一顆 CPU 排隊、還重複撈同一份底料。
+- **改了什麼**：① `deploy/cloudrun/prod-deploy.sh` 正式大腦 `--min-instances 1`（約 US$7–10／月；staging／語音橋維持 0）② `web/src/admin.js`：登入先畫殼、只抓這一頁要的＋側欄紅點（3–5 支），其它頁進場才抓（`PAGE_DATA`／`ensurePageData`）；`EP_LIST` 不動、冒煙契約不變 ③ `engine/server.py`：15 支讀接口 60 秒快取（`admin_cached_read`，只在 production／staging 開；任何 `/admin/` 寫入動作清空；按重新整理帶 `fresh=true` 現算）＋回應 gzip（admin.js 175KB→56KB）＋後台帶版本號的 js/css 可快取一小時（App 本體不碰）。
+- **證據（本機 8231 實走）**：登入後只打 `login + safety-events + feedback` 3 支；切「用藥」補 2 支、切「總覽」補 3 支、切回「用藥」0 支；按重新整理 7 支全現算；快取第二次 `cache.hit=true`、`fresh` 跳過。守門 `engine/test_admin_read_cache.py`（9 條）＋既有 admin 測試 62 條全綠、`test-admin-console.js` 15 支契約 OK、API 契約清單 PASS。
+- **未做／注意**：正式機要重新部署一次 `--min-instances 1` 才生效（walk 既有 canary→promote 流程）；`test_admin_subscription_extend.py` 有一條日期時炸彈（fixture 寫死 2026-08-01、10/26 起必紅）與本案無關、未動。
+- **同日評估報告**：`docs/後台-B2B2C-SaaS化評估-2026-10-26.md`（機構端 SaaS 化：客戶期待／現況對照／架構評語／三條路）。
+
 ### 2026-09-30 00:10 蘇菲｜🎭 Edward 定向：Rive 取代寧寧的臉＋男生角色下線（盤點完成・待拍板・**尚未施工**）
 
 - **Edward 9/29 原話**：「用 rive 取代寧寧作為臉的功能…先看一下 app 的設計，確認該怎麼取代、哪裡需要取代，好比聊聊頁還沒有開啟通話時的全頻動態，包含男生角色都要先下線。」盤點報告（實拍截圖＋聊聊頁注入 Rive 實跑）：artifact「寧寧換臉盤點」。
@@ -630,7 +645,7 @@
 | Codex（獨立 worktree `notification-platform-p0`） | **通知平台 P0 正式施工**：在 PR #42 上疊分支，已完成可靠事件／裝置 token／outbox、APNs sender、iOS 權限與導頁、本機用藥排程 v2、App 內通知中心。維持單一實作 PR，不碰其他 session 的 main 或 worktree。完整範圍見[通知系統 P0 計畫](通知系統-P0-開發計畫-2026-07-15.md)。 | `supabase/sql/016_*`、通知後端與測試、`ios/App/App/` 通知相關檔、`web/src/notify.js`／`medication.js`；`web/index.html`／`landing.html` 僅收斂通知文案；**不修改 `web/src/app.js`** | 2026-07-15 | 🔄 Batch B–E 已完成程式與 launch gate；待 PR #41 → #42 後整合，東京 migration／Brain secrets／APNs sandbox 真機與 TestFlight 尚未部署驗收，不可標成已上線 |
 | Claude / 城堡（Windows 蘇菲） | **家庭圈「邀請審核制」**：引擎五段（apply / list_pending / approve / reject / application_status）**已完成＋推上 GitHub**（commit a662982、8823202）。輸碼流程改「申請中→owner 審核→通過才進圈」＋按通過時記 `auth↔person↔family` 歸屬（解資安 BOLA 地基）。**下一步要動 `web/src/app.js` 家人頁做審核 UI（「?」申請頭像＋審核卡＋通過/拒絕）＋家庭圈命名（owner 取名顯示在「○○家庭活動/狀態」）＋加入流程改申請制。** 計畫書：`docs/家庭圈邀請審核制-計畫書-2026-07-11.md`。 | `web/src/app.js`（家人頁邀請/圈子區 ~3130-3260）、`web/index.html`（審核卡＋命名彈窗）、`engine/server.py`（✅已推） | 2026-07-11 02:00 | ⏸ **等 Codex 讓出 app.js**（見你在密集改 v1.20.x 語音臉、避免撞車；你告一段落推完後我從乾淨版接手） |
 | ✅ 給 Codex（已解除警告） | 邀請審核制引擎**已改成跟舊版相容並部署**（brain rev 00024）：現行 App 的 `accept`＝維持原本直接進圈（不壞）、新 `apply`＝申請制。**你部署 brain 安全、不會壞邀請**。App 家人頁審核 UI（「?」頭像＋審核卡＋命名）仍是我待接的下一步（等 app.js 讓出）。 | `engine/server.py`（✅已推已部署） | 2026-07-11 14:40 | ✅ 已相容·安全 |
-| 🔧 給 Mac（動 Vercel/DNS） | **後台換網址 `admin.munea.net`**（Edward 拍板）：turnkey 三步在 `docs/admin網址設定-admin.munea.net-turnkey-2026-07-11.md`——① Vercel app-site 加 domain admin.munea.net ② GoDaddy 加 `CNAME admin→cname.vercel-dns.com` ③ app-site/vercel.json 加 host 條件轉址到 Cloud Run brain。⚠ 一起加「第二道鎖」（Vercel edge basic-auth 或 IP 白名單·全體用戶個資不能只靠一組通行碼）。雲端側蘇菲已備好。 | `app-site/vercel.json`、Vercel 後台、GoDaddy DNS | 2026-07-11 14:45 | ⏳ 待 Mac 執行 |
+| 🔧 給 Mac（動 Vercel/DNS） | **後台換網址 `admin.munea.net`**（Edward 拍板）：turnkey 三步在 `docs/admin網址設定-admin.munea.net-turnkey-2026-07-11.md`——① Vercel app-site 加 domain admin.munea.net ② GoDaddy 加 `CNAME admin→cname.vercel-dns.com` ③ app-site/vercel.json 加 host 條件轉址到 Cloud Run brain。⚠ 一起加「第二道鎖」（Vercel edge basic-auth 或 IP 白名單·全體用戶個資不能只靠一組通行碼）。雲端側蘇菲已備好。 | `app-site/vercel.json`、Vercel 後台、GoDaddy DNS | 2026-07-11 14:45 | ⛔ 作廢（2026-10-26 改走 Cloud Run 直接綁網域，見同日設定單） |
 | Claude / 城堡（Windows 蘇菲） | **營運後台改「上線就緒·只吃真資料」**：11 頁縮成 7 頁（只留有真資料源的：總覽/用戶/安全/訂閱/意見/紀錄/設定），移除產品成長·心情健康·AI角色·系統告警（無真源），拿掉所有示範假數據、沒資料顯示空白。**已部署 brain rev 00024**、雲端 `admin.js?v=real1`。 | `web/admin.html`、`web/src/admin.js`、`web/src/admin.css`（✅已推已部署·不動 version.js） | 2026-07-11 14:40 | ✅ 完成上線 |
 | Claude / 城堡 | ✅ 記憶 100%＋感知 ~95%＋**心情圖譜 v2 已入引擎**（六類：開心/愉快/平穩/疲累/低落/煩躁；每聊一筆、日總結 mixed 小點、點日展開明細、moodMap 色回傳 App）→ ✅ 家人帳號連動設計＋UIUX 重設計定案（munea.net 錨）＋遊戲系統設計落檔 → **下一步：App 全面換裝實作（web/ 由城堡認領）＋家人帳號 P0（等 Codex 對齊 007 欄位）** | `engine/perception_engine.py`（MOOD_CATEGORIES/_MOOD_SYS 六類）、`engine/server.py`（wellbeing_trend 六類/mixed/signals）；**將動 `web/`（index/styles 全面換裝、照 UIUX 定案）** | 2026-07-02 | 🔄 進行中 |
 | Codex | Release check 一鍵化：把靜態 smoke、正式權限門、Supabase doctor 包成推版前一鍵檢查 | `scripts/release-check.ps1`、`package.json`、`docs/PRODUCTION-INFRA-READINESS-2026-07-02.md`、`STATUS.md` | 2026-07-02 | ✅ 完成 |
