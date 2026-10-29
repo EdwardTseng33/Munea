@@ -146,18 +146,21 @@ jobs:
           else
             git add package.json package-lock.json web/src/version.js ios/App/App.xcodeproj/project.pbxproj
             git commit -m "chore(release): iOS v${{ inputs.version }} (Build ${{ inputs.build }})"
-            git push origin HEAD:"${{ github.ref_name }}"
+            # main 有分支保護（只收 PR），不能直接推回觸發分支：改推到專用發版分支、下一步開 PR 回 main。
+            RELEASE_BRANCH="release/ios-v${{ inputs.version }}-b${{ inputs.build }}"
+            git push --force origin HEAD:"refs/heads/${RELEASE_BRANCH}"
+            echo "release_branch=${RELEASE_BRANCH}" >> "$GITHUB_OUTPUT"
             echo "committed=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Open PR into main for the version bump
-        if: steps.commit.outputs.committed == 'true' && github.ref_name != 'main'
+        if: steps.commit.outputs.committed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh pr create \
             --base main \
-            --head "${{ github.ref_name }}" \
+            --head "${{ steps.commit.outputs.release_branch }}" \
             --title "chore(release): iOS v${{ inputs.version }} (Build ${{ inputs.build }})" \
             --body "由 iOS release 工作流自動開立：把版號/Build 回寫進 package.json/package-lock.json/web/src/version.js/Xcode 專案。合併前請確認 check-release-consistency 綠燈。" \
             || echo "PR already exists for this branch or nothing to open; continuing."
