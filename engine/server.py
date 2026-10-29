@@ -10,6 +10,7 @@
 用法：GEMINI_API_KEY="..." py server.py  → 瀏覽器開 http://localhost:8200
 """
 import os, sys, json, base64, io, wave, time, posixpath, threading, logging, hmac, hashlib, contextvars, calendar
+import gzip
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -6992,6 +6993,62 @@ def admin_voice_diagnostics_summary(data=None):
     }
 
 
+# ══ 後台讀接口的短暫快取（2026-10-26 登入提速）══
+# 15 支彙總接口每支都要去東京資料庫跑幾十趟、再在這同一顆 CPU 上算；後台開著的人一分鐘內
+# 重整兩次，算出來的數字根本一樣。所以：同一支、同參數、60 秒內直接回上一份。
+# 任何 /admin/ 寫入動作（發點數、改方案、刪帳號、月結…）一律把整個快取清空；
+# 前端按「重新整理」會帶 fresh=true、照樣現算。
+# 只在雲端環境（MUNEA_ENV_NAME=production/staging）才開：本機與測試用 JSON 後端直接改檔、沒有快取失效點。
+ADMIN_READ_CACHE_PATHS = {
+    "/admin/accounts", "/admin/north-star", "/admin/usage", "/admin/credits", "/admin/subscription-metrics",
+    "/admin/conversation-summaries", "/admin/privacy-requests", "/admin/feedback", "/admin/safety-events",
+    "/admin/audit-events", "/admin/medication-adherence", "/admin/family-health", "/admin/mood-trend",
+    "/admin/bond-depth", "/admin/growth-metrics",
+}
+_ADMIN_READ_CACHE = {}
+_ADMIN_READ_CACHE_LOCK = threading.Lock()
+
+
+def admin_read_cache_ttl_seconds():
+    configured = str(os.environ.get("MUNEA_ADMIN_READ_CACHE_SECONDS") or "").strip()
+    if configured:
+        try:
+            return max(0, int(configured))
+        except ValueError:
+            return 0
+    return 60 if str(os.environ.get("MUNEA_ENV_NAME") or "").strip().lower() in {"production", "staging"} else 0
+
+
+def admin_read_cache_clear():
+    with _ADMIN_READ_CACHE_LOCK:
+        _ADMIN_READ_CACHE.clear()
+
+
+def admin_cached_read(metric_version, data, producer):
+    """跟 admin_contract_response 一樣的回應，只是 60 秒內同參數直接回上一份（見上方說明）。"""
+    data = dict(data or {})
+    ttl = admin_read_cache_ttl_seconds()
+    fresh = bool(data.pop("fresh", False)) or ttl <= 0
+    key = (metric_version, json.dumps(data, sort_keys=True, ensure_ascii=False, default=str))
+    now = time.time()
+    if not fresh:
+        with _ADMIN_READ_CACHE_LOCK:
+            hit = _ADMIN_READ_CACHE.get(key)
+        if hit and hit[0] > now:
+            payload = json.loads(hit[1])  # 回一份新的拷貝，呼叫端改了也不會污染快取
+            payload["cache"] = {"hit": True, "ageSeconds": int(now - hit[2]), "ttlSeconds": ttl}
+            return payload
+    payload = admin_contract_response(metric_version, producer)
+    if ttl > 0 and payload.get("ok", True) is not False:
+        try:
+            serialized = json.dumps(payload, ensure_ascii=False, default=str)
+        except (TypeError, ValueError):
+            return payload
+        with _ADMIN_READ_CACHE_LOCK:
+            _ADMIN_READ_CACHE[key] = (now + ttl, serialized, now)
+    return payload
+
+
 def admin_authorized(headers):
     token = os.environ.get("MUNEA_ADMIN_API_TOKEN") or ""
     if not token:
@@ -10218,6 +10275,21 @@ ADMIN_CONTENT_SECURITY_POLICY = "; ".join(
 )
 
 
+# 2026-10-26：後台自己的 js/css（網址帶 ?v=版本號、換版就換網址）可以讓瀏覽器留一小時，
+# 不必每次開後台都重抓 175KB 的 admin.js。其它一律維持 7/11 立的「每次回來源頭驗」——
+# App 本體的 WebView 快取身分另有一套，不碰。
+ADMIN_VERSIONED_ASSETS = {"/src/admin.js", "/src/admin.css", "/src/admin-i18n.js"}
+GZIP_CONTENT_TYPES = ("text/", "application/json", "application/javascript", "image/svg+xml")
+
+
+def static_cache_control(path):
+    clean, _, query = str(path or "").partition("?")
+    versioned = clean in ADMIN_VERSIONED_ASSETS or (clean.startswith("/src/i18n/admin-") and clean.endswith(".json"))
+    if versioned and "v=" in query:
+        return "public, max-age=3600"
+    return "no-cache, must-revalidate"
+
+
 def admin_security_headers(path, content_type=""):
     clean_path = str(path or "").split("?", 1)[0].split("#", 1)[0]
     is_admin_surface = (
@@ -10254,7 +10326,15 @@ class H(BaseHTTPRequestHandler):
             self.send_header("Vary", "Origin")
         # 2026-07-11 主蘇菲：原本沒貼任何保鮮標籤 → iPhone Safari 啟發式快取、Edward 連三版更新都看到舊頁
         # （症狀組合跟三版前完全一致才抓到）。一律要求「每次回來源頭驗一下有沒有新版」，鋪版即刻生效。
-        self.send_header("Cache-Control", "no-cache, must-revalidate")
+        # 2026-10-26 例外：後台帶版本號的 js/css 可留一小時（static_cache_control）。
+        self.send_header("Cache-Control", static_cache_control(getattr(self, "path", "")))
+        # 2026-10-26：後台 admin.js 175KB、彙總 JSON 動輒幾十 KB，以前一律不壓縮。
+        # 瀏覽器說得懂 gzip 就壓；不到 1KB 或圖片／聲音不壓（壓了反而大）。
+        accept_encoding = str((getattr(self, "headers", None) or {}).get("Accept-Encoding") or "").lower()
+        if body and len(body) >= 1024 and "gzip" in accept_encoding and str(ctype).startswith(GZIP_CONTENT_TYPES):
+            body = gzip.compress(body, compresslevel=5)
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -10344,6 +10424,9 @@ class H(BaseHTTPRequestHandler):
                 self._json_error(403, "app_key_required", "App key required")
                 return
             data = self._read_json_body()
+            # 後台寫入動作（發點數、改方案、刪帳號、月結…）→ 讀接口的 60 秒快取整個作廢，下一眼一定是新的
+            if request_path.startswith("/admin/") and request_path not in ADMIN_READ_CACHE_PATHS and request_path != "/admin/login":
+                admin_read_cache_clear()
             # Voice→Brain 內部通道（通話記憶）：Voice 沒有用戶的登入 token，
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
@@ -10509,91 +10592,91 @@ class H(BaseHTTPRequestHandler):
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.accounts.v1", lambda: admin_accounts_summary(data)))
+                    self._json(admin_cached_read("munea.admin.accounts.v1", data, lambda: admin_accounts_summary(data)))
             elif self.path == "/admin/north-star":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.north-star.v1", lambda: north_star_summary(data)))
+                    self._json(admin_cached_read("munea.admin.north-star.v1", data, lambda: north_star_summary(data)))
             elif self.path == "/admin/usage":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.usage.v1", lambda: admin_usage_summary(data)))
+                    self._json(admin_cached_read("munea.admin.usage.v1", data, lambda: admin_usage_summary(data)))
             elif self.path == "/admin/credits":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.credits.v1", lambda: admin_credits_summary(data)))
+                    self._json(admin_cached_read("munea.admin.credits.v1", data, lambda: admin_credits_summary(data)))
             elif self.path == "/admin/subscription-metrics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.subscription-metrics.v1", lambda: admin_subscription_metrics(data)))
+                    self._json(admin_cached_read("munea.admin.subscription-metrics.v1", data, lambda: admin_subscription_metrics(data)))
             elif self.path == "/admin/conversation-summaries":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.conversation-summaries.v1", lambda: admin_conversation_summaries(data)))
+                    self._json(admin_cached_read("munea.admin.conversation-summaries.v1", data, lambda: admin_conversation_summaries(data)))
             elif self.path == "/admin/privacy-requests":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.privacy-requests.v1", lambda: admin_privacy_requests_summary(data)))
+                    self._json(admin_cached_read("munea.admin.privacy-requests.v1", data, lambda: admin_privacy_requests_summary(data)))
             elif self.path == "/admin/feedback":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.feedback.v1", lambda: admin_feedback_summary(data)))
+                    self._json(admin_cached_read("munea.admin.feedback.v1", data, lambda: admin_feedback_summary(data)))
             elif self.path == "/admin/safety-events":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.safety-events.v1", lambda: admin_safety_events_summary(data)))
+                    self._json(admin_cached_read("munea.admin.safety-events.v1", data, lambda: admin_safety_events_summary(data)))
             elif self.path == "/admin/audit-events":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.audit-events.v1", lambda: admin_audit_events_summary(data)))
+                    self._json(admin_cached_read("munea.admin.audit-events.v1", data, lambda: admin_audit_events_summary(data)))
             elif self.path == "/admin/medication-adherence":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.medication-adherence.v1", lambda: admin_medication_adherence(data)))
+                    self._json(admin_cached_read("munea.admin.medication-adherence.v1", data, lambda: admin_medication_adherence(data)))
             elif self.path == "/admin/family-health":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.family-health.v1", lambda: admin_family_health(data)))
+                    self._json(admin_cached_read("munea.admin.family-health.v1", data, lambda: admin_family_health(data)))
             elif self.path == "/admin/mood-trend":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.mood-trend.v1", lambda: admin_mood_trend(data)))
+                    self._json(admin_cached_read("munea.admin.mood-trend.v1", data, lambda: admin_mood_trend(data)))
             elif self.path == "/admin/bond-depth":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.bond-depth.v1", lambda: admin_bond_depth(data)))
+                    self._json(admin_cached_read("munea.admin.bond-depth.v1", data, lambda: admin_bond_depth(data)))
             elif self.path == "/admin/growth-metrics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_contract_response("munea.admin.growth-metrics.v1", lambda: admin_growth_metrics(data)))
+                    self._json(admin_cached_read("munea.admin.growth-metrics.v1", data, lambda: admin_growth_metrics(data)))
             elif self.path == "/admin/voice-diagnostics":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
