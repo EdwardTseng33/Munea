@@ -7,6 +7,17 @@
 - **#633**：`scripts/app-full-surface-i18n-browser-precheck.js` 新增 `android-compact`（360×800）、`android-standard`（412×915）、`android-compact-large-font` 三組，只在局部模式可選；局部模式另存 `targeted-precheck-report.json` 到 `--out`。修 360 加大字四處：帳號列標題、就診提醒五顆、日文 `mood.notRecorded` 改「まだ記録なし」、心情臉 32px——全包在 `@media (max-width: 370px)`（除心情欄 `min-width:0`）。
 - **檔**：見各 PR。**狀態**：✅ 已合併。
 
+### 2026-10-28 23:30 蘇菲｜🎨 營運後台 UI/UX 對齊 2026 後台設計範例：用色過 WCAG AA＋體驗 5 項（Draft PR #629 · 不上線）
+
+- **Edward 10/28 指示**：「整個後台的 UI/UX 去調研 2026 年的設計範例與應用趨勢，看受好評的設計範例調整一下用色與 UI/UX 體驗」。品牌色（teal／coral／米底／深墨綠、Poppins＋Noto Sans TC、官方 logo）**不動**。
+- **調研報告**：`docs/後台-UIUX-2026趨勢調研-2026-10-28.md`——8 條趨勢各 2 個真實範例（Linear／Vercel／Stripe／Mercury／Supabase／Notion／Intercom／Attio…）＋配色做法＋WCAG 2.2 數字＋女巫 14 頁逐頁打分（平均 21.4／30）＋反趨勢（Liquid Glass 對比反彈、低對比灰字、過度卡片化）。
+- **量到沒過 AA 的**：側欄選中白字 2.88:1、實心按鈕白字 3.16、珊瑚徽章白字 2.06、警示橘字 2.2、危險紅字 3.06、次要灰字在米底 4.16——全部修到 ≥4.5。
+- **改了哪些檔**：`web/src/admin.css`（開頭集中一套設計變數：中性灰 10 階／語意色四組／`--primary`／焦點環／圓角 26→18；舊變數名全留成別名）、`web/src/admin.js` **只動畫面層**（頭像字色、圖表灰字、登入頁加官方 logo、三處「讀取中…」改骨架；沒碰資料抓取／登入邏輯／`EP_LIST`）、`web/admin.html`（`?v=ops106-uiux`、theme-color）、新增 `scripts/admin-screenshots.js`（系統 Chrome 無頭截 14 頁×3 寬度）、`docs/evidence/admin-uiux-2026-10-28/` 11 張改前改後對照。
+- **體驗 5 項**：①側欄選中項安靜化＋頂欄鈕分主次 ②數字卡三層字級＋平板兩欄 ③空狀態虛線框＋圖示、讀取中頂端進度條＋卡片骨架 ④表頭線加深＋數字等寬＋藥丸／通知條語意色統一 ⑤焦點環統一。
+- **驗證**：`node scripts/test-admin-console.js` 綠（15 接口契約＋四語 264 句）；本機假資料伺服器靜態畫面驗證，**沒碰正式機、沒有本機大腦**。
+- **撞檔提醒**：`web/admin.html` 與 `web/src/admin.js` 跟 #611（登入提速）、#613（換網址）同檔不同區；合併順序 Edward 決定，衝突預期只在 `?v=` 那四行。
+- **待 Edward 拍板**（報告第 6 節）：圓角 18／26／12；深色模式先不做／做；安全警示頁英文代碼翻不翻人話。
+
 ### 2026-10-28 22:10 蘇菲｜📱 Android 冷啟動白屏 → 原生啟動畫面（PR #630 · 補助案 B1 · call-path risk · 待合併）
 
 - **為什麼**：Galaxy A15（Android 14）實機影片 App 開了 5 秒以上整片白；CI 模擬器 6–15 秒才看到網頁殼的 `#bootSplash`。WebView 畫出第一格之前，原生殼什麼都沒擋著。
