@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-10-29T17:35:00+08:00",
+  "targetProjectRef": "fespbkdwafueyonppzwq",
+  "migration": "029_on_device_face_worker.sql",
+  "appliedBy": "Edward (Supabase SQL editor, 2026-10-29 ~17:30 TST)",
+  "note": "metadata.note 以英文短句執行（內容等義），其餘與 029 檔案相同",
+  "captureMethod": "read-only-probe",
+  "sourceCommit": "eb03176f7dc1f892b2c8bc25513d4ffa8b03d1a7",
+  "observed": {
+    "gpu_workers.on-device-face": {
+      "url": "phone://on-device-face",
+      "status": "ready",
+      "capacity": 500,
+      "active_leases": 0
+    },
+    "voice_shards.gemini-live-asia-east1-01": {
+      "status": "ready",
+      "capacity": 10,
+      "active_leases": 0
+    }
+  }
+}
