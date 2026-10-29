@@ -2103,11 +2103,30 @@ def medication_doses_response(data):
     }
 
 
+def _care_week_person_in_caller_circle(requested_person_id, family_group_id):
+    """payload 的 personId 只有在跟請求者同一個家庭圈時才採信——判定方式照既有
+    家人名單 load_family_members 這套（跟「設定 → 全家健康圈」讀的是同一份資料），
+    不另立一套身分比對。查不到名單就當作不是同一圈（寧可退回本人，不猜）。"""
+    try:
+        members = load_family_members(family_group_id=family_group_id, limit=200)
+    except Exception as e:
+        log_fallback_exception("load family members for care week personId check", e)
+        return False
+    return any(
+        str(member.get("id")) == str(requested_person_id)
+        for member in (members or [])
+        if member.get("id")
+    )
+
+
 def care_week_response(data):
-    """POST /care-week：這個人這一週跟沐寧之間發生的事，排成一頁事實（補助案 C2 第一塊）。
+    """POST /care-week：這個人這一週跟沐寧之間發生的事，排成一頁事實（補助案 C2／B4）。
 
     規矩同 visit_summary_response，一條不少：
-    · 只認已驗證身分（_current_person_id），payload 裡的 personId 一律不採信——把 A 的事講給 B 聽比不講嚴重。
+    · 只認已驗證身分（_current_person_id）當起點；payload 的 personId 只有在跟請求者
+      同一個家庭圈時才採信（家人圈互看週摘要），否則一律悄悄退回本人——
+      查不出是不是同一家人，寧可只給自己的，不給錯的人；退回時留一筆
+      log_fallback_exception，不悄悄吞掉（查得到是誰傳了什麼）。
     · 任何一路撈失敗都寫進 partial 回報，不可悄悄少一塊（少了「守護腦」那段看起來就像「這週很平安」）。
     · 不呼叫 AI；組裝全在 care_week 純函式。
     機構端（一個機構一份）要等「機構照護模式」的同意規則定案才接；這裡先給本人與家庭圈。
@@ -2116,6 +2135,18 @@ def care_week_response(data):
     person_id = _current_person_id()
     if not person_id:
         return {"ok": False, "error": "identity_required"}
+    requested_person_id = data.get("personId") or data.get("person_id")
+    if requested_person_id and str(requested_person_id) != str(person_id):
+        family_group_id = _current_family_group_id()
+        if _care_week_person_in_caller_circle(requested_person_id, family_group_id):
+            person_id = str(requested_person_id)
+        else:
+            log_fallback_exception(
+                "care week personId rejected (not in caller's family circle)",
+                ValueError("requested=%r caller=%r familyGroupId=%r" % (
+                    requested_person_id, person_id, family_group_id,
+                )),
+            )
     try:
         days = int(data.get("days") or care_week.DEFAULT_DAYS)
     except (TypeError, ValueError):

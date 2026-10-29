@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 原生啟動畫面底色：跟 App 網頁殼的 cream 變數（web/src/styles.css）同一個值，
+         原生畫面淡出、網頁 #bootSplash 接手時才不會跳色。
+         ⚠ 不是官網的 #FAF7F2——App 自己的奶油色是 #F4F0E8（docs/產品設計期待-對齊憲章.md 定色表）。 -->
+    <color name="munea_cream">#F4F0E8</color>
+</resources>
