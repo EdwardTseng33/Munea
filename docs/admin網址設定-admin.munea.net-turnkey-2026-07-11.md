@@ -1,5 +1,7 @@
 # 營運後台改網址 admin.munea.net · Turnkey（給 Mac / 動 Vercel 與 DNS 的人）
 
+> ⚠ **2026-10-26 已被取代**：改走 Cloud Run 直接綁網域，見 `docs/後台網址-admin.munea.net-設定單-2026-10-26.md`。本單的前提已不成立（官網已從 Vercel 搬到 Firebase；「asia-east1 不支援網域綁定」查證為誤）。留檔備查、請勿照做。
+
 - 日期：2026-07-11 · Edward 拍板用 `admin.munea.net`
 - 現況：後台在 `https://munea-brain-staging-491603544409.asia-east1.run.app/admin.html`（Cloud Run brain 服務，已上真資料版 rev 00024）
 - 目標：改成 `https://admin.munea.net`

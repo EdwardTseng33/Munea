@@ -70,7 +70,8 @@ for (const l of LOCALES) {
 
   // 示範影片：每個語系播自己那支（英日西的夥伴要講當地語言），而且檔案真的在
   const suffix = l.code === 'zh' ? '' : '-' + l.code;
-  for (const who of ['realfemale', 'realmale']) {
+  assert.doesNotMatch(html, /real(?:fe)?male|real-(?:fe)?male/, at('還在引用舊的真人照影片（2026-10-28 新形象後只剩寧寧一支）'));
+  for (const who of ['ningning', 'mumu']) {
     const mp4 = `${who}-talk-demo${suffix}.mp4`;
     assert.match(html, new RegExp(`/assets/${mp4.replace('.', '\\.')}`), at(`示範影片沒指到 ${mp4}`));
     assert.ok(fs.existsSync(path.join(OUT, 'assets', mp4)), at(`示範影片檔不見了：${mp4}`));

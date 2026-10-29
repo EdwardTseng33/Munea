@@ -524,8 +524,8 @@
     <div class="hero-media">
       <div class="glow"></div>
       <div class="frame">
-        <video id="heroVid" poster="/assets/real-female-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="{{a11y.heroVideo}}">
-          <source src="/assets/realfemale-hello.mp4" type="video/mp4">
+        <video id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="{{a11y.heroVideo}}">
+          <source src="/assets/ningning-hello.mp4" type="video/mp4">
         </video>
       </div>
       <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span>{{hero.chip1}}</span></div>
@@ -765,14 +765,14 @@
     <div class="vgrid">
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/real-female-hero-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="{{a11y.demoFemale}}"><source src="/assets/realfemale-talk-demo{{meta.demoSuffix}}.mp4" type="video/mp4"></video>
+          <video class="vplay" poster="/assets/ningning-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="{{a11y.demoFemale}}"><source src="/assets/ningning-talk-demo{{meta.demoSuffix}}.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="{{a11y.soundOn}}" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">{{tech.soundBtn}}</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">{{tech.vlab1}}</span><span class="vhint">{{tech.vhint1}}</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/real-male-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="{{a11y.demoMale}}"><source src="/assets/realmale-talk-demo{{meta.demoSuffix}}.mp4" type="video/mp4"></video>
+          <video class="vplay" poster="/assets/mumu-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="{{a11y.demoMale}}"><source src="/assets/mumu-talk-demo{{meta.demoSuffix}}.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="{{a11y.soundOn}}" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">{{tech.soundBtn}}</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">{{tech.vlab2}}</span><span class="vhint">{{tech.vhint2}}</span></figcaption>
@@ -1176,7 +1176,7 @@
   if (hv) hv.addEventListener('ended', function(){
     if (hv.dataset.i) return;
     hv.dataset.i = '1';
-    hv.src = '/assets/realfemale-idle.mp4';
+    hv.src = '/assets/ningning-idle.mp4';
     hv.loop = true;
     hv.play();
   });

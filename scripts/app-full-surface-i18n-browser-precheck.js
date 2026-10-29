@@ -41,6 +41,39 @@ const CAPTURE_PROFILES = Object.freeze([
     emulation: 'Chrome viewport at 390x844 CSS pixels with the App extra-large font setting (1.14 zoom)',
   }),
 ]);
+// ── Android 尺寸（補助案 B6「Android 套用對照」· 2026-10-29）──
+// Android 版是同一個網頁殼包進 Android 的 WebView（Chromium），網頁裡沒有任何「是不是 Android」
+// 的分支，所以差別只在螢幕寬度與手機模式。這三組只在局部模式可選（--profiles=android-…），
+// 不進正式 iPhone 證據、不改 app-surface-manifest.json 的三組、不動 480 張的守門。
+// 360×800＝最常見的窄 Android；412×915＝Galaxy A15（1080×2340、密度 2.625）／Pixel 一類。
+const ANDROID_USER_AGENT = 'Mozilla/5.0 (Linux; Android 14; SM-A155M) AppleWebKit/537.36 '
+  + '(KHTML, like Gecko) Version/4.0 Chrome/129.0.0.0 Mobile Safari/537.36';
+const ANDROID_PROFILES = Object.freeze([
+  Object.freeze({
+    id: 'android-compact',
+    viewport: Object.freeze({ width: 360, height: 800 }),
+    appFontScale: 'std',
+    fileSuffix: 'android360x800',
+    mobile: true,
+    emulation: 'Chrome mobile emulation at 360x800 CSS pixels (Android WebView UA) with the App standard font setting',
+  }),
+  Object.freeze({
+    id: 'android-standard',
+    viewport: Object.freeze({ width: 412, height: 915 }),
+    appFontScale: 'std',
+    fileSuffix: 'android412x915',
+    mobile: true,
+    emulation: 'Chrome mobile emulation at 412x915 CSS pixels (Galaxy A15 class, Android WebView UA) with the App standard font setting',
+  }),
+  Object.freeze({
+    id: 'android-compact-large-font',
+    viewport: Object.freeze({ width: 360, height: 800 }),
+    appFontScale: 'xl',
+    fileSuffix: 'android360x800-app-xl',
+    mobile: true,
+    emulation: 'Chrome mobile emulation at 360x800 CSS pixels with the App extra-large font setting (1.14 zoom)',
+  }),
+]);
 const OUTPUT_DIR = path.join(
   ROOT,
   'docs',
@@ -83,7 +116,7 @@ const TARGETED_OUT = argValue('out')
 for (const [name, allowed] of [
   ['states', SURFACE_MANIFEST.surfaces.map(({ state }) => state)],
   ['locales', LOCALES.map(({ locale }) => locale)],
-  ['profiles', CAPTURE_PROFILES.map(({ id }) => id)],
+  ['profiles', [...CAPTURE_PROFILES, ...ANDROID_PROFILES].map(({ id }) => id)],
 ]) {
   for (const wanted of FILTER[name] || []) {
     if (!allowed.includes(wanted)) {
@@ -712,7 +745,10 @@ async function main() {
     LOCALES.map(({ locale }) => [locale, catalog(locale)]),
   );
 
-  const runProfiles = CAPTURE_PROFILES.filter(({ id }) => !FILTER.profiles || FILTER.profiles.includes(id));
+  // 沒指定尺寸＝只跑 iPhone 三組（正式證據口徑不變）；Android 三組要明講才跑
+  const runProfiles = FILTER.profiles
+    ? [...CAPTURE_PROFILES, ...ANDROID_PROFILES].filter(({ id }) => FILTER.profiles.includes(id))
+    : CAPTURE_PROFILES;
   const runLocales = LOCALES.filter(({ locale }) => !FILTER.locales || FILTER.locales.includes(locale));
   const runSurfaces = SURFACE_MANIFEST.surfaces.filter(({ state }) => !FILTER.states || FILTER.states.includes(state));
   try {
@@ -721,6 +757,7 @@ async function main() {
         const context = await browser.newContext({
           locale: expected.htmlLang,
           viewport: profile.viewport,
+          ...(profile.mobile ? { isMobile: true, hasTouch: true, userAgent: ANDROID_USER_AGENT } : {}),
         });
         await context.addInitScript((fontScale) => {
           localStorage.setItem('munea.fontScale', fontScale);
@@ -813,6 +850,20 @@ async function main() {
     report.completedAt = new Date().toISOString();
     // 局部模式不落正式證據報告——它是開發自驗工具，不能冒充全套證據
     if (!TARGETED) fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+    else {
+      // 局部模式的明細另存在 --out 資料夾裡（不是正式證據；Android 對照要拿它當逐張紀錄）
+      report.scope.captureProfiles = runProfiles.map(({ id, viewport, appFontScale, emulation }) => ({
+        id, viewport, appFontScale, emulation,
+      }));
+      report.scope.expectedScreenshots = runProfiles.length * runLocales.length * runSurfaces.length;
+      report.runtime.profiles = runProfiles;
+      report.limitations = ['Targeted run: only the requested states/locales/profiles. Not release evidence.'];
+      fs.writeFileSync(
+        path.join(TARGETED_OUT, 'targeted-precheck-report.json'),
+        `${JSON.stringify(report, null, 2)}\n`,
+        'utf8',
+      );
+    }
   } finally {
     await browser.close();
     await new Promise((resolve) => server.close(resolve));
