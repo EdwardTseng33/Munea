@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- CI 專用（2026-10-29）：雲端自動簽章＋直接上傳 App Store Connect。
+	     跟 ios/App/ExportOptions.plist（Mac 手動流程用）的差異只有一處：
+	     manageAppVersionAndBuildNumber=false——因為 CI 這邊版號已由
+	     scripts/appstore/set-ios-release-version.mjs 寫定，不該讓 Xcode 自己再跳號，
+	     否則會變回「Mac 端又升一次號但沒回寫程式庫」的老問題。 -->
+	<key>teamID</key>
+	<string>V77L5245MR</string>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>upload</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>

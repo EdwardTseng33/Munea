@@ -1,6 +1,6 @@
 {
   "schema": "munea.supabase-deployment-ledger.v1",
-  "updated": "2026-07-28",
+  "updated": "2026-10-29",
   "documentationRef": "docs/supabase/DEPLOYMENT-LEDGER.md",
   "statusVocabulary": [
     "unknown",
@@ -222,8 +222,11 @@
         {
           "filename": "029_on_device_face_worker.sql",
           "sha256": "a0777a53bf94bfd2ac0fc13e4d3c96078e8adf20587d637315ebf50da306f40f",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
+          "status": "verified",
+          "evidenceRef": "docs/supabase/evidence/2026-10-29-tokyo-029-on-device-face.json",
+          "verifiedAt": "2026-10-29T17:35:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "eb03176f7dc1f892b2c8bc25513d4ffa8b03d1a7"
         },
         {
           "filename": "030_org_staff_consent.sql",
