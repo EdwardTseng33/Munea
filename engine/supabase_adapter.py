@@ -1254,7 +1254,7 @@ class SupabaseAdapter:
             "report_recipients": client.get("reportRecipients") or client.get("report_recipients") or [],
             "notes": client.get("notes"),
         }
-        # 029：客戶類型（care／esg）。029 還沒套到資料庫前不送這欄，免得整列存不進去；
+        # 030：客戶類型（care／esg）。030 還沒套到資料庫前不送這欄，免得整列存不進去；
         # 只有明確設了 esg 才送（care 本來就是資料庫預設值）。
         kind = client.get("clientKind") or client.get("client_kind")
         if kind and kind != "care":
@@ -1388,7 +1388,7 @@ class SupabaseAdapter:
             "released_reason": seat.get("releasedReason") or seat.get("released_reason"),
             "notes": seat.get("notes"),
         }
-        # 029：分點標籤。同上，029 未套用前只在真的有值時才送。
+        # 030：分點標籤。同上，030 未套用前只在真的有值時才送。
         site_label = seat.get("siteLabel") or seat.get("site_label")
         if site_label:
             row["site_label"] = str(site_label).strip()[:80]
@@ -1693,7 +1693,7 @@ class SupabaseAdapter:
         }
 
     # ------------------------------------------------------------------
-    # 機構端專區第 2 段（029）：照護人員、機構照護模式同意、機構端替長輩讀資料。
+    # 機構端專區第 2 段（030）：照護人員、機構照護模式同意、機構端替長輩讀資料。
     # 全部 service-role、全部「明講」帳號／人；不吃 self.account_id（機構人員沒有 App 帳號，
     # request-scoped 的 account_id 是空的，拿它當條件會查到空集合、或更糟——查到別人）。
     # ------------------------------------------------------------------

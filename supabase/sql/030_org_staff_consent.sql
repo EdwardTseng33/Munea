@@ -11,7 +11,7 @@
 -- 跟 020 同一個原則：這些表是服務端（service role）專用，anon／authenticated 一律不開——
 -- RLS 開著＋零 policy＝一律拒絕。機構人員登入後拿到的是 Supabase Auth 的身分證，
 -- 不是直接查表的權限；誰能看哪家、哪一位，全在 engine/org_api.py 一處做對。
--- Run after 028_person_country.sql.
+-- Run after 029_on_device_face_worker.sql.（原編 029，與同日 #641 的 029_on_device_face_worker 撞號，改 030）
 
 begin;
 

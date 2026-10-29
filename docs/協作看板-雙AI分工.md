@@ -1,9 +1,16 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
-### 2026-10-29 蘇菲｜🏢 機構端專區第 2 段 PR-a：資料表 029＋`/org/*` 五支讀接口＋同意開關後端＋後台開人員（Draft PR · 分支 `feat/org-stage2a-staff-consent-api-20261029`）
+### 2026-10-29 15:50 蘇菲｜📞 通話改「臉在手機、聲音在雲端」——正式線自 9/6 起打不通的病根（call-path risk · 改通話配對、照 7/13 規矩先列檔）
+
+- **病根（查帳實錘）**：總機 `munea_call_request` 配對要同時有聲音座位＋臉的座位（`gpu_workers`）。雲端顯示卡 6 張 9/6 起全 `terminated` → 每通電話永遠排隊。最後一通成功 8/13；10/14 唯一一通排隊 7.8 秒被取消。App 端 `getAvatarUrl()` 也仍回雲端臉位址（寧寧→a05 FlashHead），新插圖只換了畫面、撥號沒跟著改。
+- **新方法（Edward 拍板）**：臉在手機上跑（`companion-face.js` 插圖跟聲音動）、聲音在雲端（Gemini Live）。總機的臉座位登記成 `phone://on-device-face`（名額 500、不計費）；App 看到 `phone://` 就不接雲端臉。擬真人臉停用不刪（`localStorage munea.remoteFace=1` 才接）。
+- **動到的檔**：`web/src/app.js`（`getAvatarUrl`／`remoteFaceEnabled`／`ON_DEVICE_FACE_SCHEME`）、`scripts/test_app_call_control_contract.py`（新守門、突變驗過：舊程式紅）、`supabase/sql/029_on_device_face_worker.sql`（只新增一列＋歸零漏扣帳面，不改函式、不動表結構）。
+- **未做**：029 要在正式資料庫執行一次（自動模式擋我寫共用資料庫）；正式線真打一通驗證；舊版 App（商店 1.0.55、TF 1.0.69）拿到 `phone://` 會試連失敗——它們現在本來就打不通，1.0.70 上架後解。
+
+### 2026-10-29 蘇菲｜🏢 機構端專區第 2 段 PR-a：資料表 030＋`/org/*` 五支讀接口＋同意開關後端＋後台開人員（Draft PR · 分支 `feat/org-stage2a-staff-consent-api-20261029`）
 
 - **接**：Edward 14:24「照建議開工」——設計書第 6 節 8 題全照建議拍板（Q1 A 同意開關／Q2 B 另開 `/org/*`／Q3 B 跟 App 同一套登入＋`org_staff`／Q4 A 先社工個管／Q5 A／Q6 A `site_label`／Q7 B 2 年／Q8 重開限第 1–3 段）＋ #612 三題（藏／滾動 30 天／標記立案）。第 2 段拆 PR-a／PR-b（App 同意開關四語）／PR-c（機構專區三頁＋org-smoke）。
-- **資料表** `supabase/sql/029_org_staff_consent.sql`：`org_staff`（人員：email 邀請鑰匙、`auth_user_id` 第一次登入綁、三角色、`site_label`、invited/active/disabled）、`org_care_consents`（一席一列、granted/revoked、誰按的）、席次加 `site_label`、客戶加 `client_kind`（care／esg）；RLS 開零 policy、同 020 服務端專用。manifest／ledger 已登記（unknown、等 Edward 手動貼 SQL）。
+- **資料表** `supabase/sql/030_org_staff_consent.sql`（原編 029、與同日 #641 的 029 撞號改 030）：`org_staff`（人員：email 邀請鑰匙、`auth_user_id` 第一次登入綁、三角色、`site_label`、invited/active/disabled）、`org_care_consents`（一席一列、granted/revoked、誰按的）、席次加 `site_label`、客戶加 `client_kind`（care／esg）；RLS 開零 policy、同 020 服務端專用。manifest／ledger 已登記（unknown、等 Edward 手動貼 SQL）。
 - **接口** `engine/org_api.py`（三條鐵線一處做對）：`/org/me`、`/org/summary`、`/org/elders`（L1：只列已同意、三旗標）、`/org/elder/care-week`（L2：趨勢＋症狀類別＋亮燈次數，**沒有原句／正文**；每次讀寫一筆 `org_care_week_read`，稽核寫不進去就不給）、`/org/reports`（1 天效期下載憑證沿用 portal report 路由）；App 端 `/org-consent`、`/org-consent/set`（只能動自己帳號的席次、切換即稽核）；後台 `/admin/enterprise/staff/invite`、`/admin/enterprise/consent/status`。
 - **身分**：`/org/*` 在本機／示範模式也必驗登入證（跟家人圈邀請同一條）；機構人員沒 App 帳號＝帳號身分查不到是正常（allow_missing），由 `org_staff` 對照決定是哪家的人。替長輩讀資料走 adapter 新的「帳號＋人都明講」`load_org_*`，不吃呼叫者的 account_id。
 - **驗證**：`engine/test_org_api.py` 27 項綠（同意硬門／撤回立刻消失／沒同意＝不存在同一句／A 看不到 B／社工限分點／照服員無摘要／esg 永遠 L0／摘要無原句／稽核含人／無稽核不給／家人只能動自己席次／後台開人員驗證）；契約清單 137 支（brain 101→110）；admin-smoke 補「Org API gate 401」＋兩支後台接口 403＋ consent/status 讀；本機 8232 JSON 模式端到端：邀請→dev 登入自動綁→名單空→假席次 not_found→稽核 3 筆。

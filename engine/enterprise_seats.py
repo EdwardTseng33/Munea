@@ -185,7 +185,7 @@ def normalize_client(item=None):
         "seatQuota": int(item.get("seatQuota") or item.get("seat_quota") or 0),
         "status": status if status in CLIENT_STATUSES else "active",
         "reportRecipients": item.get("reportRecipients") or item.get("report_recipients") or [],
-        # 029（2026-10-29）：客戶類型 care（照護機構）／esg（企業福利、機構端永遠只有彙總）。
+        # 030（2026-10-29）：客戶類型 care（照護機構）／esg（企業福利、機構端永遠只有彙總）。
         "clientKind": (item.get("clientKind") or item.get("client_kind") or "care") if (item.get("clientKind") or item.get("client_kind") or "care") in CLIENT_KINDS else "care",
         "notes": item.get("notes"),
         "createdAt": item.get("createdAt") or item.get("created_at"),
@@ -208,7 +208,7 @@ def normalize_seat(item=None):
         "graceUntil": item.get("graceUntil") or item.get("grace_until"),
         "releasedAt": item.get("releasedAt") or item.get("released_at"),
         "releasedReason": item.get("releasedReason") or item.get("released_reason"),
-        # 029（2026-10-29）：分點標籤（Q6 A）。空＝這家沒分分點。
+        # 030（2026-10-29）：分點標籤（Q6 A）。空＝這家沒分分點。
         "siteLabel": (str(item.get("siteLabel") or item.get("site_label") or "").strip()[:80] or None),
         "notes": item.get("notes"),
         "createdAt": item.get("createdAt") or item.get("created_at"),

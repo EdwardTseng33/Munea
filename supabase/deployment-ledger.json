@@ -220,8 +220,14 @@
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
         },
         {
-          "filename": "029_org_staff_consent.sql",
-          "sha256": "50fb56d3df06feb134460dc5e07883fd5a8a62ccc33886236c8d47dca0aa5c52",
+          "filename": "029_on_device_face_worker.sql",
+          "sha256": "a0777a53bf94bfd2ac0fc13e4d3c96078e8adf20587d637315ebf50da306f40f",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
+        },
+        {
+          "filename": "030_org_staff_consent.sql",
+          "sha256": "c578134bb237fe2739386afce0443d403b007dd940200b42fb946a7b0cdab0e7",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
         }

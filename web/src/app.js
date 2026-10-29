@@ -3395,8 +3395,21 @@ function faceEngine() {
 // 其餘（2D 四角色）回空字串＝不接 flashhead 臉、走 2D 動畫。全身立繪底圖也照這個對應換。
 const FLASHHEAD_CHAR_MAP = { '寧寧': 'a05', '阿宏': 'a06' };
 function flashheadCharFor(backendChar) { try { return FLASHHEAD_CHAR_MAP[backendChar] || ''; } catch (e) { return ''; } }
+// 2026-10-29 Edward 拍板「臉在手機上跑、聲音在雲端」：寧寧／沐沐都是手機上的插圖（companion-face.js），
+// 不再向雲端顯示卡要臉。總機把「臉的座位」登記成 phone://on-device-face（手機自己畫、名額不限），
+// 這裡看到就回空字串＝不接雲端臉、聲音走本機播放、插圖跟著聲音動。
+// 擬真人臉（FlashHead）程式碼停用不刪：localStorage munea.remoteFace=1 才會再接雲端臉（只供內部測舊臉）。
+const ON_DEVICE_FACE_SCHEME = 'phone://';
+function remoteFaceEnabled() {
+  try { return localStorage.getItem('munea.remoteFace') === '1'; } catch (e) { return false; }
+}
 function getAvatarUrl() {
-  if (CallControl.active) return (CallControl.active.worker && CallControl.active.worker.url) || '';
+  if (CallControl.active) {
+    const workerUrl = (CallControl.active.worker && CallControl.active.worker.url) || '';
+    if (!workerUrl || workerUrl.indexOf(ON_DEVICE_FACE_SCHEME) === 0) return '';
+    return remoteFaceEnabled() ? workerUrl : '';
+  }
+  if (!remoteFaceEnabled()) return '';
   try {
     const raw = localStorage.getItem('munea.avatarUrl');
     if (raw !== null) {
@@ -5881,7 +5894,7 @@ function showView(id) {
   $('#tabBar').classList.toggle('hidden', overlay);
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.view === id));
   const el = $('#' + id); if (el) el.scrollTop = 0;
-  if (id === 'chat') { Avatar.wake(); enterChat(); startFlatFace(); }   // 進聊聊頁＝先預醒雲端臉（按通話時多半已就緒）
+  if (id === 'chat') { Avatar.wake(); enterChat(); startFlatFace(); }   // 進聊聊頁＝手機插圖開始動；雲端臉已停用（getAvatarUrl 回空＝wake 什麼都不做）
   else {
     if (typeof FaceIdle !== 'undefined') FaceIdle.stop();   // 離開聊聊頁＝待機動態停、省電
     if (window.MuneaFlatFace) window.MuneaFlatFace.stop();
