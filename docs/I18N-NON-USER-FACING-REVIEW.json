@@ -26,6 +26,15 @@
       "evidence": "scripts/test-companion-profile-localization.js"
     },
     {
+      "id": "companion-backend-mumu",
+      "path": "web/src/companion-profile.js",
+      "text": "沐沐",
+      "kind": "string",
+      "expectedOccurrences": 1,
+      "reasonCode": "backend-template-identity",
+      "evidence": "scripts/test-companion-profile-localization.js"
+    },
+    {
       "id": "companion-backend-xiaoyun",
       "path": "web/src/companion-profile.js",
       "text": "小昀",

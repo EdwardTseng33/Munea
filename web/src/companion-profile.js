@@ -32,6 +32,19 @@
       thumbAsset: 'avatars/ningning-face.webp',   // 2026-10-28 新形象（純色塊向量、正視前方）：臉部特寫從原稿裁
       homeAsset: 'avatars/ningning-face.webp',
       fullAsset: 'avatars/ningning-rig/body.webp',     // 全身＝聊聊頁會動那層的同一張底圖
+      flatSkin: { dir: 'avatars/ningning-rig/', bg: '#BADDD6' },   // 聊聊頁會動的那層：圖資料夾＋背景色
+    }),
+    // 沐沐（2026-10-28 Edward 定名）：男生角色回歸，走跟寧寧同一套插畫引擎；韓系、細圓框眼鏡、灰藍圓領毛衣
+    'mumu-flat-male': template({
+      backendChar: '沐沐',
+      defaultNameKey: 'companion.mumu.name',
+      defaultNameFallback: t('companion.mumu.name', '沐沐'),
+      templateLabelKey: 'companion.mumu.label',
+      templateLabelFallback: t('companion.mumu.label', '穩重型，像哥哥一樣靠得住'),
+      thumbAsset: 'avatars/mumu-face.webp',
+      homeAsset: 'avatars/mumu-face.webp',
+      fullAsset: 'avatars/mumu-rig/body.webp',
+      flatSkin: { dir: 'avatars/mumu-rig/', bg: '#F6EBD7' },
     }),
     'munea-2d-xiaoyun': template({
       backendChar: '小昀',
@@ -55,6 +68,7 @@
   };
   const aliases = {
     'real-f': 'nening-real-female',
+    'flat-m': 'mumu-flat-male',
     'toon-f': 'munea-2d-xiaoyun',
     cat: 'munea-2d-mimi',
   };
