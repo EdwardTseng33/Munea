@@ -583,10 +583,11 @@ setTimeout(function () {
       <img id="faceImg" src="avatars/ningning-rig/body.webp" alt="寧寧" data-i18n-alt="companion.nening.name">
       <!-- FlashHead 全身合成（2026-07-11 先鋒判斷框參數移植）：9:16 定比框＋全身立繪底＋512 活臉羽化貼回 -->
       <div class="fh-frame" id="fhFrame" hidden aria-hidden="true">
-        <img class="fh-bg" id="fhBg" src="flashhead/bg-a05.png" alt="">
+        <!-- 2026-10-30：不預填 src——舊真人立繪（flashhead/）已不打包進 App，只有 munea.remoteFace=1 時由 app.js 現裝 -->
+        <img class="fh-bg" id="fhBg" alt="">
         <!-- 呼吸組（2026-07-16 Edward 拍板方案 B 分層呼吸）：人物去背層＋活臉框焊同一組微起伏；底圖釘死當背景板 -->
         <div class="fh-person" id="fhPerson">
-          <img class="fh-person-img" id="fhPersonImg" src="flashhead/person-a05.png" alt="">
+          <img class="fh-person-img" id="fhPersonImg" alt="">
           <div class="fh-overlay" id="fhOverlay"></div>
         </div>
       </div>

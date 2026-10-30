@@ -56,7 +56,7 @@ for relative_path in \
   "admin.html" \
   "flashhead-live-test.html" \
   "src/admin.js" \
-  "src/admin.css"; do
+  "src/admin.css"   "flashhead"; do
   if [ -e "$APP_PATH/public/$relative_path" ]; then
     echo "FAIL exported IPA contains non-App web tooling: $relative_path"
     exit 1

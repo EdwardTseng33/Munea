@@ -3437,7 +3437,9 @@ function _fhFitStage(frame) {
 // 不要等接通那刻才裝圖——第一通冷開機時圖還沒解碼、臉框深色底會先露出來閃一下。
 function _fhWarmArt() {
   try {
-    if (faceEngine() !== 'flashhead') return;
+    // 2026-10-30：舊真人立繪不再打包進 App（ios-archive.sh／Android ignoreAssetsPattern 剔除 flashhead/），
+    // 沒開 munea.remoteFace=1 就不預熱，免得手機去要一張不存在的圖。
+    if (faceEngine() !== 'flashhead' || !remoteFaceEnabled()) return;
     const _fc = flashheadCharFor(currentChar) || 'a05';
     [['fhBg', 'flashhead/bg-'], ['fhPersonImg', 'flashhead/person-']].forEach(([id, prefix]) => {
       const img = document.getElementById(id);

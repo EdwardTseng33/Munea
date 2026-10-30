@@ -81,6 +81,22 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
+      # 2026-10-30：舊真人臉素材（web/flashhead/ 約 10MB）由 android/app/build.gradle 的
+      # ignoreAssetsPattern 剔除；這裡直接打開 APK 看清單，確認真的沒裝進去、且網頁殼本體還在。
+      - name: Check APK excludes legacy real-person face assets
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          LISTING="$(unzip -l "$APK")"
+          if ! grep -q 'assets/public/index.html' <<<"$LISTING"; then
+            echo "FAIL APK is missing assets/public/index.html (asset ignore pattern too broad?)"
+            exit 1
+          fi
+          if grep -E 'assets/public/(flashhead/|flashhead-live-test\.html)' <<<"$LISTING"; then
+            echo "FAIL APK still contains legacy FlashHead real-person assets"
+            exit 1
+          fi
+          echo "PASS APK excludes web/flashhead/ and flashhead-live-test.html"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
