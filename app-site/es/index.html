@@ -17,6 +17,8 @@
 <link rel="alternate" hreflang="es" href="https://munea.net/es">
 <link rel="alternate" hreflang="x-default" href="https://munea.net/">
 <meta name="theme-color" content="#3AA8A0">
+<!-- iPhone Safari 智慧橫幅：頁頂顯示「在 App Store 開啟／取得」，App 編號＝沐寧正式上架那一個 -->
+<meta name="apple-itunes-app" content="app-id=6788658125">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Munea 沐寧">
 <meta property="og:title" content="Munea App | Asistente de salud con IA · acompañamiento de mayores y cuidado familiar">
@@ -39,11 +41,13 @@
      ⚠ @id 一律用固定的 siteUrl、不用 canonical——否則四個語系會被當成四個不同的品牌，反而更散。 -->
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
-{"@type":"Organization","@id":"https://munea.net/#organization","name":"沐寧 Munea","alternateName":["Munea","沐寧","Munea App","沐寧 App"],"url":"https://munea.net/","logo":{"@type":"ImageObject","url":"https://munea.net/assets/paining-logo.png","width":256,"height":256},"image":"https://munea.net/assets/og-image.jpg","email":"edwardt0303@gmail.com","sameAs":["https://apps.apple.com/tw/app/id6788658125","https://www.facebook.com/profile.php?id=61592697779724"]},
+{"@type":"Organization","@id":"https://munea.net/#organization","name":"沐寧 Munea","alternateName":["Munea","沐寧","Munea App","沐寧 App"],"url":"https://munea.net/","logo":{"@type":"ImageObject","url":"https://munea.net/assets/paining-logo.png","width":256,"height":256},"image":"https://munea.net/assets/og-image.jpg","sameAs":["https://apps.apple.com/tw/app/id6788658125","https://www.facebook.com/profile.php?id=61592697779724"]},
 {"@type":"WebSite","@id":"https://munea.net/#website","url":"https://munea.net/","name":"沐寧 Munea","alternateName":"Munea","inLanguage":"es","publisher":{"@id":"https://munea.net/#organization"}},
 {"@type":"MobileApplication","@id":"https://munea.net/#app","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"La Munea App — un asistente de salud con IA en tu móvil. Una cara que se mueve, una voz natural y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar.","url":"https://munea.net/es","image":"https://munea.net/assets/og-image.jpg","inLanguage":"es","installUrl":"https://apps.apple.com/tw/app/id6788658125","sameAs":"https://apps.apple.com/tw/app/id6788658125","publisher":{"@id":"https://munea.net/#organization"},"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
 ]}
 </script>
+<!-- 常見問題結構化資料：由 build.mjs 從文案表的 faq.N.q／faq.N.a 產生，跟頁面上看得到的問答逐字相同 -->
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","inLanguage":"es","mainEntity":[{"@type":"Question","name":"Mis padres viven solos y yo estoy lejos. ¿Cómo puedo estar pendiente de ellos?","acceptedAnswer":{"@type":"Answer","text":"Pide a tus padres que instalen Munea, instálala tú también y uníos al mismo círculo familiar de salud. Cuando les apetezca hablar, una acompañante de IA charla con ellos por voz, recuerda lo que le han contado y les avisa a su hora de la medicación y las revisiones. Tú, al abrir la app, ves el estado de salud y el ánimo que ellos decidan compartir. Lo que se comparte siempre lo decide la propia persona."}},{"@type":"Question","name":"¿Hay alguna app que recuerde a las personas mayores tomar su medicación?","acceptedAnswer":{"@type":"Answer","text":"Munea lo hace. Configura en la app las horas de la medicación y llegará una notificación a su hora, aunque la app esté cerrada. También puedes programar recordatorios de revisiones y citas médicas, y si se olvida una toma, nadie riñe a nadie. Munea solo recuerda: no evalúa ni cambia la medicación. Sigue siempre las indicaciones de tu médico y tu farmacéutico."}},{"@type":"Question","name":"¿Qué es Munea y para quién es?","acceptedAnswer":{"@type":"Answer","text":"Munea es una app de cuidado de la salud con IA para iPhone, pensada para toda la familia. Los mayores charlan por voz con una acompañante de IA y reciben recordatorios de medicación y revisiones. Los hijos que viven lejos se unen al círculo familiar de salud para ver cómo están sus padres en el día a día. No es un sistema de cuidados de larga duración ni un producto sanitario: es una compañera para la salud de la familia en el día a día."}},{"@type":"Question","name":"¿Cuánto cuesta Munea?","acceptedAnswer":{"@type":"Answer","text":"La descarga es gratuita y al registrarte recibes 5 puntos de prueba (1 punto equivale a 1 minuto de conversación, aproximadamente). Hay dos planes de pago: Plus incluye 100 puntos al mes y un círculo familiar de salud de hasta 4 personas; Pro incluye 200 puntos al mes y hasta 12 personas. En Taiwán, Plus cuesta NT$599 al mes y Pro NT$1,199 al mes, y también hay planes anuales. El precio que ves en la app es el que pagas. Puedes comprar puntos extra cuando quieras, y las suscripciones se renuevan a través del App Store y se pueden cancelar en cualquier momento."}},{"@type":"Question","name":"¿Lucía es una persona real?","acceptedAnswer":{"@type":"Answer","text":"No. Lucía y Milo son los acompañantes de IA de Munea: personajes ilustrados con voz generada por IA. Te dicen con claridad que son una IA, nunca fingen ser humanos y nunca se hacen pasar por alguien de tu familia."}},{"@type":"Question","name":"¿Se graban las conversaciones? ¿Cómo se protege mi privacidad?","acceptedAnswer":{"@type":"Answer","text":"Tu voz se cifra y se procesa en la nube solo para entender lo que dices. No se guardan las grabaciones de audio originales; solo se conservan los puntos clave de la conversación para que pueda recordarte la próxima vez, y puedes verlos o borrarlos cuando quieras en Mis datos, dentro de la app. Tus datos nunca se venden ni se usan para publicidad. La familia solo ve el estado y los resúmenes que tú autorices, y no se le muestran las conversaciones completas por defecto."}},{"@type":"Question","name":"¿Cómo se une la familia?","acceptedAnswer":{"@type":"Answer","text":"Quien creó el círculo familiar de salud (el titular del círculo) toca Invitar a la familia en la pestaña Familia, obtiene un código de invitación y se lo envía a su familiar. El familiar descarga Munea, inicia sesión, toca Unirse al círculo familiar de salud en la pestaña Familia e introduce el código. Para invitar a la familia hace falta un plan de pago: hasta 4 personas con Plus y hasta 12 con Pro, incluido el titular."}},{"@type":"Question","name":"¿Puede Munea sustituir al médico?","acceptedAnswer":{"@type":"Answer","text":"No. Munea no diagnostica, no receta ni da consejos de tratamiento, y no es un servicio de emergencias. Lo que hace es acompañar con la conversación, recordar la medicación y las revisiones y ayudarte a ver los cambios de salud del día a día. Ante cualquier problema de salud, consulta con un médico o farmacéutico."}}]}</script>
 <link rel="stylesheet" href="/warm.css?v=10">
 <style>
   /* ── Edward 拍板：扁平化，不要陰影與漸層 ── */
@@ -251,6 +255,28 @@
     #tech .ci-cat{grid-column:1/-1;padding:16px 20px 4px;border-top:1px solid var(--line)}
     #tech .ci-a,#tech .ci-b{padding:8px 16px 18px;font-size:14px}
   }
+
+  /* ══════════ 常見問題（子女會問的事）══════════ */
+  #faq{padding:84px 0;background:var(--cream-2)}
+  #faq .sec-head{margin-bottom:40px}
+  .faq-list{max-width:820px;margin:0 auto;display:grid;gap:12px}
+  .faq-item{background:#fff;border:1px solid var(--line);border-radius:18px;transition:border-color .2s}
+  .faq-item[open]{border-color:var(--teal)}
+  .faq-item summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 24px;font-family:"Poppins","Noto Sans TC",sans-serif;font-weight:600;font-size:17px;line-height:1.5;color:var(--ink)}
+  .faq-item summary::-webkit-details-marker{display:none}
+  .faq-item summary:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:18px}
+  .faq-item summary .fq{display:flex;gap:12px;align-items:baseline}
+  .faq-item summary .fq b{font-family:"Poppins";font-weight:700;font-size:14px;color:var(--coral-d);flex-shrink:0}
+  .faq-item summary .fx{width:28px;height:28px;border-radius:50%;background:var(--mint);color:var(--teal-d);display:grid;place-items:center;flex-shrink:0;transition:transform .25s}
+  .faq-item summary .fx svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
+  .faq-item[open] summary .fx{transform:rotate(45deg);background:var(--teal);color:#fff}
+  .faq-item .fa{padding:0 24px 22px 50px;color:var(--muted);font-size:16px;line-height:1.85}
+  @media(max-width:640px){
+    #faq{padding:64px 0}
+    .faq-item summary{padding:16px 18px;font-size:16px}
+    .faq-item .fa{padding:0 18px 18px 18px;font-size:15px}
+  }
+  @media(prefers-reduced-motion:reduce){.faq-item summary .fx{transition:none}}
 
   /* ══════════ 頁尾補一列（客服／企業）══════════ */
   .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
@@ -550,6 +576,52 @@
   </div>
 </section>
 
+<!-- ═══ 常見問題 ═══ -->
+<!-- 回答「真人會問 AI／搜尋引擎的問題」（擔心爸媽的子女視角）。同一份問答也寫進 <head> 的 FAQPage 結構化資料。 -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">Preguntas frecuentes</div>
+      <h2>Lo que más nos preguntan las familias</h2>
+      <p>Te preocupan tus padres, pero no puedes estar con ellos cada día. Esto es lo que la gente quiere saber antes de descargar la app.</p>
+    </div>
+    <div class="faq-list reveal">
+      <details class="faq-item" open>
+        <summary><span class="fq"><b>Q1</b><span>Mis padres viven solos y yo estoy lejos. ¿Cómo puedo estar pendiente de ellos?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">Pide a tus padres que instalen Munea, instálala tú también y uníos al mismo círculo familiar de salud. Cuando les apetezca hablar, una acompañante de IA charla con ellos por voz, recuerda lo que le han contado y les avisa a su hora de la medicación y las revisiones. Tú, al abrir la app, ves el estado de salud y el ánimo que ellos decidan compartir. Lo que se comparte siempre lo decide la propia persona.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q2</b><span>¿Hay alguna app que recuerde a las personas mayores tomar su medicación?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">Munea lo hace. Configura en la app las horas de la medicación y llegará una notificación a su hora, aunque la app esté cerrada. También puedes programar recordatorios de revisiones y citas médicas, y si se olvida una toma, nadie riñe a nadie. Munea solo recuerda: no evalúa ni cambia la medicación. Sigue siempre las indicaciones de tu médico y tu farmacéutico.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q3</b><span>¿Qué es Munea y para quién es?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">Munea es una app de cuidado de la salud con IA para iPhone, pensada para toda la familia. Los mayores charlan por voz con una acompañante de IA y reciben recordatorios de medicación y revisiones. Los hijos que viven lejos se unen al círculo familiar de salud para ver cómo están sus padres en el día a día. No es un sistema de cuidados de larga duración ni un producto sanitario: es una compañera para la salud de la familia en el día a día.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q4</b><span>¿Cuánto cuesta Munea?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">La descarga es gratuita y al registrarte recibes 5 puntos de prueba (1 punto equivale a 1 minuto de conversación, aproximadamente). Hay dos planes de pago: Plus incluye 100 puntos al mes y un círculo familiar de salud de hasta 4 personas; Pro incluye 200 puntos al mes y hasta 12 personas. En Taiwán, Plus cuesta NT$599 al mes y Pro NT$1,199 al mes, y también hay planes anuales. El precio que ves en la app es el que pagas. Puedes comprar puntos extra cuando quieras, y las suscripciones se renuevan a través del App Store y se pueden cancelar en cualquier momento.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q5</b><span>¿Lucía es una persona real?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">No. Lucía y Milo son los acompañantes de IA de Munea: personajes ilustrados con voz generada por IA. Te dicen con claridad que son una IA, nunca fingen ser humanos y nunca se hacen pasar por alguien de tu familia.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q6</b><span>¿Se graban las conversaciones? ¿Cómo se protege mi privacidad?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">Tu voz se cifra y se procesa en la nube solo para entender lo que dices. No se guardan las grabaciones de audio originales; solo se conservan los puntos clave de la conversación para que pueda recordarte la próxima vez, y puedes verlos o borrarlos cuando quieras en Mis datos, dentro de la app. Tus datos nunca se venden ni se usan para publicidad. La familia solo ve el estado y los resúmenes que tú autorices, y no se le muestran las conversaciones completas por defecto.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q7</b><span>¿Cómo se une la familia?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">Quien creó el círculo familiar de salud (el titular del círculo) toca Invitar a la familia en la pestaña Familia, obtiene un código de invitación y se lo envía a su familiar. El familiar descarga Munea, inicia sesión, toca Unirse al círculo familiar de salud en la pestaña Familia e introduce el código. Para invitar a la familia hace falta un plan de pago: hasta 4 personas con Plus y hasta 12 con Pro, incluido el titular.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q8</b><span>¿Puede Munea sustituir al médico?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">No. Munea no diagnostica, no receta ni da consejos de tratamiento, y no es un servicio de emergencias. Lo que hace es acompañar con la conversación, recordar la medicación y las revisiones y ayudarte a ver los cambios de salud del día a día. Ante cualquier problema de salud, consulta con un médico o farmacéutico.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
 <!-- ═══ 收尾 CTA ═══ -->
 <section class="cta-band" id="download">
   <div class="wrap">
@@ -573,6 +645,7 @@
         <a href="#personas">Para quién es</a>
         <a href="#features">Funciones</a>
         <a href="#tech">La tecnología</a>
+        <a href="#faq">Preguntas frecuentes</a>
       </div>
       <div class="foot-col">
         <h4>Condiciones y contacto</h4>

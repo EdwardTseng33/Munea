@@ -128,6 +128,28 @@ function ctaVars(dict) {
   };
 }
 
+/**
+ * 常見問題 → FAQPage 結構化資料（給 Google 與 AI 搜尋讀）。
+ * 問答只寫一次（文案表的 faq.1.q／faq.1.a…），頁面上看得到的字跟結構化資料逐字相同，
+ * Google 規定兩邊要一致。問答一律純文字：出現 < 或 & 直接報錯，免得頁面和 JSON 兩邊對不上。
+ */
+function faqJsonLd(dict, localeCode, htmlLang) {
+  const entities = [];
+  for (let i = 1; Object.prototype.hasOwnProperty.call(dict, `faq.${i}.q`); i++) {
+    const q = dict[`faq.${i}.q`];
+    const a = dict[`faq.${i}.a`];
+    if (!a) throw new Error(`[${localeCode}] faq.${i}.q 有問題、卻少了 faq.${i}.a`);
+    for (const [k, v] of [[`faq.${i}.q`, q], [`faq.${i}.a`, a]]) {
+      if (/[<>&]/.test(v)) throw new Error(`[${localeCode}] ${k} 要是純文字（不可含 < > &）`);
+    }
+    entities.push({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } });
+  }
+  if (!entities.length) throw new Error(`[${localeCode}] 文案表沒有任何 faq.N.q`);
+  const data = { '@context': 'https://schema.org', '@type': 'FAQPage', inLanguage: htmlLang, mainEntity: entities };
+  // 防止內容裡出現 </script> 提早關掉標籤
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 let built = 0;
 for (const l of LOCALES) {
   const dict = JSON.parse(readFileSync(join(SRC, 'i18n', `${l.code}.json`), 'utf8'));
@@ -159,6 +181,7 @@ for (const l of LOCALES) {
     // 品牌識別資料用：把官網／App Store／粉專串成同一個品牌實體（見 index.html 的 ld+json）
     'meta.appStoreUrl': config.appStoreUrl,
     'meta.facebookUrl': config.facebookUrl,
+    'meta.faqJsonLd': faqJsonLd(dict, l.code, l.htmlLang),
   };
 
   const html = render(template, vars, l.code);

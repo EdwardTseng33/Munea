@@ -1,5 +1,13 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-30 21:50 蘇菲｜🔎 官網搜尋能見度（FAQ＋結構化資料＋llms.txt）＋條款角色改名＋B2B 藏試打按鈕（PR · 不碰通話路徑）
+
+- **為什麼**：子女現在會直接問 AI／搜尋「爸媽一個人住怎麼關心」「有沒有提醒長輩吃藥的 App」——官網沒有一段能被直接引用的問答；品牌結構化資料還公開寫個人 Gmail；條款仍列已下線的阿宏／小昀／阿原；B2B「開始 3 分鐘通話」連到還是舊顯示卡臉、打不通的 `call.html`。
+- **做了什麼**：① 四語首頁 `<head>` 加 iPhone 智慧橫幅 `apple-itunes-app`（app-id 6788658125）② 首頁新增「常見問題」8 題（`#faq`，在技術段與收尾 CTA 之間、頁尾加連結），同一份問答由 `site-src/build.mjs` 產生 FAQPage 結構化資料（問答限純文字、逐字跟畫面一致）③ 新增 `app-site/llms.txt`（英文為主＋繁中一段）④ Organization 拿掉 `email`（`@munea.net` 收不到信前不放任何信箱；sameAs 只有 App Store＋粉專，沒動）⑤ 條款「例如寧寧、阿宏、小昀、阿原」→「寧寧、沐沐」⑥ B2B 解鎖後的試打按鈕加 `hidden`＋`display:none`（四語），`call.html`／`api/call-key.js` 沒動。
+- **價格出處**：Plus NT$599／Pro NT$1,199（月）、每月 100／200 點、圈 4／12 人、註冊送 5 點＝`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`＋#638（10/29 Edward「方案全不動」）；「1 點約 1 分鐘」＝#638 App 說明；其他地區寫「以 App 內顯示為準」。
+- **檔**：`site-src/index.html`、`site-src/build.mjs`、`site-src/i18n/{zh,en,ja,es}.json`、`app-site/{index,en,ja,es}/index.html`（生成）、`app-site/llms.txt`、`web/terms.html`、`app-site/terms.html`、`b2b-src/index.html`、`munea-b2b/{,en/,ja/,es/}index.html`（生成）、`scripts/test-app-site-seo.js`（新守門：橫幅／FAQ JSON-LD 可解析且每題畫面可見／Organization 無 email／llms.txt）、`docs/evidence/site-faq-2026-10-30/`。
+- **驗證**：`test:seo`、`test-marketing-site-localizations`、`test-i18n-surface-inventory`、`test:b2b-i18n`、`test-brand-lockup-not-translated`、`test-i18n-legal-routing`、`test-ui-contracts` 全綠；系統 Chrome 無頭開四語（桌機＋390 手機）0 個 JS 錯誤、兩段 JSON-LD 都 `JSON.parse` 過、FAQ 8 題、無橫向捲動。
+- **未做**：en／ja／es 條款沒有「角色舉例」那句（三語條款本來就沒有智慧財產段），所以只改中文兩份、不自己加法律條文；B2B 試打區塊的標題「現在，直接跟寧寧說話」與說明文字還在（按鈕藏了、文字沒改）；官網頁尾 mailto、條款／隱私／客服頁、B2B 頁尾與預約彈窗仍是個人 Gmail（照指示只回報）。合併 main 會自動發佈官網（firebase-hosting.yml）；B2B 要另外部署。
 ### 2026-10-30 20:30 蘇菲｜🔎 1.0.70 已上架＋App Store 搜尋補洞（宣傳文字上線、1.0.71 名稱關鍵字備好）
 
 - **1.0.70 上架**：10/30 蘋果過審（PENDING_DEVELOPER_RELEASE）→ Edward「去發布吧」→ 19:38 發布，API 回讀 `READY_FOR_SALE`。五份現況文件的「待送審」改成已發布（product alignment／release consistency 綠）。
