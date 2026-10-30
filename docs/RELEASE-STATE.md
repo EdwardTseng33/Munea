@@ -131,7 +131,7 @@ Source reconciliation baseline: `origin/main@c4477ae380df8a8f908b5383577b9f3df55
 - App Store Connect 的 Build 529 上傳於 03:38 UTC，早於同日 `5db648a6` echo 修復與 `32ac2aac` 直連修復，確定未包含完整客戶端半邊。下一個唯一候選為 `1.0.55 (Build 530)`。
 - Build 530 尚未 Mac Archive／上傳／安裝，最高狀態是 `tested source + deployed service`，仍不可稱 exact-build App verified。
 
-> ✅ **版號回填缺口已補（2026-08-06 · Edward「app 與送審都已經是 1.0.54，你們自己要同步更新好」）**：這次不用估——直接用 App 管理鑰匙唯讀問 App Store Connect。權威回答：**`1.0.54` 狀態 `WAITING_FOR_REVIEW`、綁 Build 524**（上傳 2026-08-01 09:41 UTC ＝台灣 8/1 17:41），釋出方式 `AFTER_APPROVAL`；商店上架中的仍是最早的 `1.0`（Build 49）。repo 先前停在 `1.0.53 (Build 523)`——523 於台灣 8/1 06:59 上傳，**同一天就被 524 取代、從未送審、沒有任何使用者跑過**，所以把 1.0.53 的更新說明併進 1.0.54（使用者會看到的就是這一份），並補上 Build 523→524 之間 12 筆裡使用者看得到的三件事。
+> ✅ **版號回填缺口已補（2026-08-06 · Edward「app 與送審都已經是 1.0.54，你們自己要同步更新好」）**：這次不用估——直接用 App 管理鑰匙唯讀問 App Store Connect。權威回答：**`1.0.54` 狀態 `WAITING_FOR_REVIEW`、綁 Build 524**（上傳 2026-08-01 09:41 UTC ＝台灣 8/1 17:41），釋出方式 `AFTER_APPROVAL`；商店上架中的是 `1.0.70`（Build 541，2026-10-30 發布）。repo 先前停在 `1.0.53 (Build 523)`——523 於台灣 8/1 06:59 上傳，**同一天就被 524 取代、從未送審、沒有任何使用者跑過**，所以把 1.0.53 的更新說明併進 1.0.54（使用者會看到的就是這一份），並補上 Build 523→524 之間 12 筆裡使用者看得到的三件事。
 >
 > 🔴 **同時抓到：四個「叫手機重讀檔案」的記號從 1.0.45 之後就沒再動過**。`web/index.html` 裡 styles.css／version.js／auth.js／app.js 的 `?v=` 記號一路停在 `v1045`，而程式版號已經走到 1.0.53——`scripts/test-release-settings.js` 這道守門因此**在 clean main 上一直是紅的**（不是本次改壞的，已在 main 上重現）。後果：從 1.0.45 更新上來的手機，網頁層可能仍拿快取裡的舊檔，看不到新版的東西。本次已對齊 `v1054`；**但送審中的 Build 524 帶的是舊記號，改不了**。
 
@@ -165,7 +165,7 @@ Maintenance role: `Release / Platform` (`unassigned`)
 
 | Lane | Version / Build | State | Evidence | Last verified |
 |---|---|---|---|---|
-| Latest source | `1.0.70 (Build 541)`（2026-10-29 首次雲端打包上傳 App Store Connect、處理完成 VALID、待送審；含寧寧 Rive 新臉、通話改走手機端臉不佔顯示卡）；前一候選 1.0.66／Build 537 內容： | 下一個唯一候選；撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機。WebView cache identity 已更新為 `20260812-call-stability-b537-v1066` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-12 +08:00 |
+| Latest source | `1.0.70 (Build 541)`（2026-10-29 首次雲端打包上傳 App Store Connect、處理完成 VALID；2026-10-30 過審並發布，App Store 公開版＝1.0.70；含寧寧 Rive 新臉、通話改走手機端臉不佔顯示卡）；前一候選 1.0.66／Build 537 內容： | 下一個唯一候選；撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機。WebView cache identity 已更新為 `20260812-call-stability-b537-v1066` | `package.json`; `package-lock.json`; `web/src/version.js`; `web/index.html`; Xcode project | 2026-08-12 +08:00 |
 | Latest uploaded App | `1.0.61 (Build 532)` | App Store Connect 唯讀查得 `VALID`，上傳 2026-08-10 08:35 UTC；不含本輪三邊協議握手，不能代表 current source | App Store Connect API（權威） | 2026-08-11 00:49 +08:00 |
 | App Store selected review lane | `1.0.55 (Build 525)` | `appStoreState=WAITING_FOR_REVIEW`；權威 API 回讀 selected build 為 App 1.0.55 Build 525。1.0.61 Build 532 只有 uploaded／VALID，並未被這個審核版本選用 | App Store Connect API | 2026-08-11 00:49 +08:00 |
 | Edward iPhone install lane | `1.0.44 (Build 492)` | iPhone 15 Pro 安裝與啟動成功，`devicectl` 從手機回讀版本；使用 Development signing＋production config，未注入 direct／gateway QA fixture。安裝成功不等於正式 App Store binary 或真人通話 Gate | `devicectl` install／launch／app inventory | 2026-07-28 17:25 |
