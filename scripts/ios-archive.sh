@@ -50,21 +50,21 @@ for relative_path in \
   "admin.html" \
   "flashhead-live-test.html" \
   "src/admin.js" \
-  "src/admin.css"; do
-  rm -f "$ROOT/ios/App/App/public/$relative_path"
+  "src/admin.css"   "flashhead"; do
+  rm -rf "$ROOT/ios/App/App/public/$relative_path"
 done
 
 for relative_path in \
   "admin.html" \
   "flashhead-live-test.html" \
   "src/admin.js" \
-  "src/admin.css"; do
+  "src/admin.css"   "flashhead"; do
   if [ -e "$ROOT/ios/App/App/public/$relative_path" ]; then
     echo "FAIL non-App web tool remained in the iOS bundle: $relative_path"
     exit 1
   fi
 done
-echo "PASS cloud admin and FlashHead test assets excluded from the iOS bundle."
+echo "PASS cloud admin, FlashHead test page and legacy real-person face assets (flashhead/) excluded from the iOS bundle."
 
 # Finder and cloud-provider metadata can invalidate Apple code signatures.
 xattr -cr "$ROOT/ios/App/App"

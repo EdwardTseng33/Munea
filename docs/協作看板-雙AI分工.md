@@ -1,5 +1,15 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-30 蘇菲｜📦 App 下載包拿掉約 10MB 舊真人臉素材（`web/flashhead/`）（call-path risk：動到 `web/index.html` 通話臉框＋iOS／Android 打包）
+
+- **為什麼**：10/28–29 寧寧換成手機上的插畫臉、總機給 `phone://on-device-face`，雲端真人臉只剩開發用（`munea.remoteFace=1`）。但 `web/flashhead/` 五個檔（bg-a05/a06.png、person-a05/a06.png、greet-a05.mp4，共約 10.2MB）還跟著整個 `web/` 被打進每個 iOS／Android 下載包；`index.html` 隱藏臉框還一開頁就去載兩張。
+- **引用盤點**：App 內只有 `index.html` 隱藏臉框（fhBg／fhPersonImg）＋ `app.js` 的 `_fhWarmArt`／`_fhComposite`（只在雲端臉接上時用）＋ `flashhead-live-test.html`（iOS 早已剔）。`greet-a05.mp4` App 不用。**雲端有人從網頁版拿**：`deploy/runpod-avatar/sync-face-assets.py`、`deploy/runpod-demo/build-demo-assets.py` 從 brain 的 `/flashhead/` 下載、`deploy/modal-avatar/flashhead_test_page.py` 直接讀本機檔 → **git 檔一個都不刪、網頁版／官網／後台照舊**。
+- **做了什麼**：① `scripts/ios-archive.sh` 剔除清單加 `flashhead`（`rm -f`→`rm -rf`），`ios-export-app-store.sh` IPA 驗證清單同步加；② `android/app/build.gradle` 的 `ignoreAssetsPattern` 加 `<dir>flashhead:flashhead-live-test.html`，`android-build.yml` 組完 APK 打開清單確認沒有 flashhead、且 `index.html` 還在；③ `index.html` 兩張圖不預填 `src`、`_fhWarmArt` 沒開 `remoteFace=1` 就不預熱（開了照舊現裝，網頁版開發測舊臉不受影響）。
+- **守門**：`scripts/test-release-settings.js` 加 7 條（iOS 兩份清單含 flashhead、用 rm -rf、Android 剔除樣式、CI 清單檢查、index 不准 eager 載 flashhead、預熱要看 remoteFace）；逐檔換回 main 版本反向驗證 6 檔各自變紅。
+- **驗證**：`smoke:no-api` 無 FAIL、`release:check` 綠、avatar render contract／voice launch policy／call control contract／ui-contracts 綠。⚠ `test-release-settings.js` 在乾淨 main 本來就紅在第 47 行（`app.js?v=…v1066` 沒跟著 1.0.70 改），跟這張無關；跳過那條後整支 PASS。
+- **未做**：Android 剔除只能靠這張 PR 的 CI 證明（本機沒 Java）；**App E2E pending**——下次 iOS 打包後實機打一通確認插畫臉照常；Android 仍打包 `admin.html`／`src/admin.*`（iOS 有剔、Android 沒剔，另案）。
+- **檔**：`scripts/ios-archive.sh`、`scripts/ios-export-app-store.sh`、`android/app/build.gradle`、`.github/workflows/android-build.yml`、`web/index.html`、`web/src/app.js`、`scripts/test-release-settings.js`、本看板。
+
 ### 2026-10-30 21:50 蘇菲｜🔎 官網搜尋能見度（FAQ＋結構化資料＋llms.txt）＋條款角色改名＋B2B 藏試打按鈕（PR · 不碰通話路徑）
 
 - **為什麼**：子女現在會直接問 AI／搜尋「爸媽一個人住怎麼關心」「有沒有提醒長輩吃藥的 App」——官網沒有一段能被直接引用的問答；品牌結構化資料還公開寫個人 Gmail；條款仍列已下線的阿宏／小昀／阿原；B2B「開始 3 分鐘通話」連到還是舊顯示卡臉、打不通的 `call.html`。

@@ -13,7 +13,9 @@ android {
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            // 2026-10-30：再剔除舊真人臉素材（web/flashhead/ 約 10MB）與它的測試頁——寧寧已改手機插畫臉，
+            // 只有開發用 munea.remoteFace=1 才會接雲端真人臉；跟 scripts/ios-archive.sh 的剔除清單同步。
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:<dir>flashhead:flashhead-live-test.html'
         }
     }
     buildTypes {
