@@ -522,12 +522,12 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           預約合作洽談</button>
-        <a class="btn btn-ghost" href="#demo">先跟寧寧說一句話</a>
+        <a class="btn btn-ghost" href="#demo">看寧寧怎麼聊</a>
       </div>
       <div class="hero-note">
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>小規模試辦，看到效果再擴大</span>
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>純軟體，下載就能用、免導入</span>
-        <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>即時體驗 Demo ↓</a>
+        <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>看寧寧示範影片 ↓</a>
       </div>
     </div>
     <div class="hero-media">
@@ -769,7 +769,7 @@
     <p>以即時語音＋會動的臉做互動，並把角色人格、照護界線、台灣繁體中文與家屬回報流程放進同一套體驗；不以無法證明的「首創」或「領先」作為採購理由。</p>
   </div>
 
-  <div class="tech-demo reveal">
+  <div class="tech-demo reveal" id="demo">
     <span class="td-cap">眼見為憑・打開聲音聽聽看</span>
     <div class="vgrid">
       <figure class="vdemo">
@@ -833,7 +833,8 @@
 </div></section>
 
 <!-- ═══════════ Demo 密碼閘 ═══════════ -->
-<section class="demo-sec" id="demo"><div class="wrap">
+<!-- 2026-10-30 整段先藏：試打通話頁還是舊顯示卡臉、打不通；導覽與按鈕改指向上方示範影片（#demo 移到 tech-demo）。新形象通話接好後拿掉 hidden、把 id="demo" 移回來。 -->
+<section class="demo-sec" id="live-call" hidden style="display:none"><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">合作夥伴預覽</div>
     <h2>眼見為憑，直接跟寧寧說話</h2>
@@ -1020,7 +1021,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           預約合作洽談</button>
-        <a class="btn btn-ghost" href="#demo">先跟寧寧說一句話</a>
+        <a class="btn btn-ghost" href="#demo">看寧寧怎麼聊</a>
       </div>
     </div>
   </div>
