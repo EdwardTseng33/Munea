@@ -522,12 +522,12 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Book a partnership call</button>
-        <a class="btn btn-ghost" href="#demo">Say hello to Ningning first</a>
+        <a class="btn btn-ghost" href="#demo">Watch Ningning in action</a>
       </div>
       <div class="hero-note">
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Start with a small pilot, expand once it works</span>
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Pure software, download and go, no implementation project</span>
-        <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>Try the live demo ↓</a>
+        <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>Watch the demo video ↓</a>
       </div>
     </div>
     <div class="hero-media">
@@ -769,7 +769,7 @@
     <p>Real-time voice and face bring the interaction to life, and the character, the boundaries of care, Traditional Chinese for Taiwan and the family reporting flow all live in one experience. We don't ask you to buy on claims of being "first" or "ahead" that we can't prove.</p>
   </div>
 
-  <div class="tech-demo reveal">
+  <div class="tech-demo reveal" id="demo">
     <span class="td-cap">See for yourself・turn the sound on</span>
     <div class="vgrid">
       <figure class="vdemo">
@@ -833,7 +833,8 @@
 </div></section>
 
 <!-- ═══════════ Demo 密碼閘 ═══════════ -->
-<section class="demo-sec" id="demo"><div class="wrap">
+<!-- 2026-10-30 整段先藏：試打通話頁還是舊顯示卡臉、打不通；導覽與按鈕改指向上方示範影片（#demo 移到 tech-demo）。新形象通話接好後拿掉 hidden、把 id="demo" 移回來。 -->
+<section class="demo-sec" id="live-call" hidden style="display:none"><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">Partner preview</div>
     <h2>See for yourself. Talk to Ningning directly.</h2>
@@ -1020,7 +1021,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Book a partnership call</button>
-        <a class="btn btn-ghost" href="#demo">Say hello to Ningning first</a>
+        <a class="btn btn-ghost" href="#demo">Watch Ningning in action</a>
       </div>
     </div>
   </div>

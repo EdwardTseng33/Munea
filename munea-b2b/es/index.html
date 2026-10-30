@@ -522,12 +522,12 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Reservar una reunión</button>
-        <a class="btn btn-ghost" href="#demo">Salude primero a Ningning</a>
+        <a class="btn btn-ghost" href="#demo">Vea a Ningning en acción</a>
       </div>
       <div class="hero-note">
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Empiece con un piloto pequeño y amplíe cuando funcione</span>
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Solo software: se descarga y ya está, sin proyecto de implantación</span>
-        <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>Probar la demo en directo ↓</a>
+        <a href="#demo" class="golive"><svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:var(--teal-d);stroke:none;"><polygon points="6 3 20 12 6 21 6 3"/></svg>Ver el video de demostración ↓</a>
       </div>
     </div>
     <div class="hero-media">
@@ -769,7 +769,7 @@
     <p>Voz y rostro en tiempo real dan vida a la interacción, y el carácter del personaje, los límites del cuidado, el chino tradicional de Taiwán y el flujo de aviso a la familia viven en una misma experiencia. No pedimos que nos compren por ser «los primeros» o «los que van por delante»: no podríamos demostrarlo.</p>
   </div>
 
-  <div class="tech-demo reveal">
+  <div class="tech-demo reveal" id="demo">
     <span class="td-cap">Compruébelo・active el sonido</span>
     <div class="vgrid">
       <figure class="vdemo">
@@ -833,7 +833,8 @@
 </div></section>
 
 <!-- ═══════════ Demo 密碼閘 ═══════════ -->
-<section class="demo-sec" id="demo"><div class="wrap">
+<!-- 2026-10-30 整段先藏：試打通話頁還是舊顯示卡臉、打不通；導覽與按鈕改指向上方示範影片（#demo 移到 tech-demo）。新形象通話接好後拿掉 hidden、把 id="demo" 移回來。 -->
+<section class="demo-sec" id="live-call" hidden style="display:none"><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">Vista previa para socios</div>
     <h2>Compruébelo: hable directamente con Ningning</h2>
@@ -1020,7 +1021,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Reservar una reunión</button>
-        <a class="btn btn-ghost" href="#demo">Salude primero a Ningning</a>
+        <a class="btn btn-ghost" href="#demo">Vea a Ningning en acción</a>
       </div>
     </div>
   </div>
