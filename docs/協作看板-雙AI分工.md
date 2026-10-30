@@ -1,5 +1,14 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-30 20:30 蘇菲｜🔎 1.0.70 已上架＋App Store 搜尋補洞（宣傳文字上線、1.0.71 名稱關鍵字備好）
+
+- **1.0.70 上架**：10/30 蘋果過審（PENDING_DEVELOPER_RELEASE）→ Edward「去發布吧」→ 19:38 發布，API 回讀 `READY_FOR_SALE`。五份現況文件的「待送審」改成已發布（product alignment／release consistency 綠）。
+- **搜尋盤點（API＋公開查詢接口）**：美國、日本商店的名稱與副標被蓋成中文；三國搜「Munea」都找不到（名稱只有沐寧）；宣傳文字三語空白。排名：沐寧 #1、獨居 #57、長輩 #153，吃藥提醒／用藥提醒／長照 200 名外；評分台灣 1、美日 0。
+- **已上線（不需送審）**：三語宣傳文字改成子女視角（`app-store/localizations/*.json` 的 promotionalText，回讀一致）。
+- **備好、跟 1.0.71 一起送**：名稱加 Munea（繁中 `沐寧Munea：全家人的健康陪伴AI照護管家`、英 `Munea: Family Care Companion`、日 `Munea 家族の健康パートナーAI`）、英日副標與關鍵字重寫；繁中關鍵字拿掉「視訊」換「吃藥」（`scripts/aso-keyword-builder.mjs` 候選詞同步改）。⚠ 送審工具目前只送 whatsNew／描述，名稱副標關鍵字要確認有帶上。
+- **檔**：`app-store/localizations/{zh-Hant,en-US,ja}.json`、`scripts/aso-keyword-builder.mjs`、`docs/{RELEASE-STATE,CURRENT-DEVELOPMENT-PLAN,PRODUCT-QUALITY-CONFIDENCE,PRODUCT-ALIGNMENT-REGISTER,00-總綱-從這裡開始}.md`。
+- **未做**：官網 SEO／AI 搜尋包、下載包舊照片各另開 PR；support@munea.net 網域沒有收信設定（寄了會退），等 Edward 選轉寄或公司信箱。
+
 ### 2026-10-29 23:30 蘇菲｜🖼 Android 圖示收尾：CI 拍桌面證明是官方圖示＋清掉範本殘檔（PR #650 · 補助案 B1 · 不碰通話路徑 · CI 綠）
 
 - **接**：#632 已把 15 張圖示換成官方寧寧圖示（iOS 同一張、背景 #FEF5EB、`scripts/android-make-launcher-icons.py` 一行重產），但 CI 從沒拍過桌面那顆、兩個 Capacitor 範本殘檔還留著。
