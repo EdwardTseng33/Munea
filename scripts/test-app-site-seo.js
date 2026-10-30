@@ -219,6 +219,48 @@ for (const l of locales) {
   }
 }
 
+// 2026-10-30 搜尋能見度：iPhone 智慧橫幅＋常見問題結構化資料＋品牌資料不放個人信箱＋/llms.txt
+for (const l of locales) {
+  const file = l.dir ? `${l.dir}/index.html` : "index.html";
+  const html = read(file);
+  assert.match(
+    html,
+    /<meta name="apple-itunes-app" content="app-id=6788658125">/,
+    `${file} needs the iPhone smart app banner`,
+  );
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) =>
+    JSON.parse(m[1]),
+  );
+  const org = blocks.flatMap((b) => b["@graph"] || []).find((n) => n["@type"] === "Organization");
+  assert.ok(org, `${file} must keep the Organization entity`);
+  // 個人信箱不放進品牌識別資料；munea.net 網域信箱收得到信之前，這欄一律留空
+  assert.equal(Object.hasOwn(org, "email"), false, `${file} Organization must not publish an email`);
+  assert.doesNotMatch(JSON.stringify(org.sameAs || []), /mailto:|@gmail\.com/i, `${file} sameAs must not list a mailbox`);
+  const faq = blocks.find((b) => b["@type"] === "FAQPage");
+  assert.ok(faq, `${file} needs FAQPage structured data`);
+  assert.ok(faq.mainEntity.length >= 6, `${file} FAQ should answer at least 6 questions`);
+  // 結構化資料的每一題都要在頁面上看得到（Google 規定兩邊一致）
+  for (const q of faq.mainEntity) {
+    assert.equal(q["@type"], "Question");
+    assert.ok(html.includes(`<span>${q.name}</span>`), `${file} FAQ question not visible on page: ${q.name}`);
+    assert.ok(
+      html.includes(`<p class="fa">${q.acceptedAnswer.text}</p>`),
+      `${file} FAQ answer not visible on page: ${q.name}`,
+    );
+  }
+  // 紅線：不寫急難號碼、不用「追蹤／監測」
+  const faqText = JSON.stringify(faq);
+  assert.doesNotMatch(faqText, /\b(?:112|119|1925|911)\b/, `${file} FAQ must not cite emergency numbers`);
+  assert.doesNotMatch(faqText, /追蹤|監測|監控|\btrack|\bmonitor/i, `${file} FAQ must not describe Munea as tracking`);
+}
+const llms = read("llms.txt");
+assert.match(llms, /^# Munea/m, "llms.txt needs a title line");
+assert.match(llms, /https:\/\/apps\.apple\.com\/app\/id6788658125/, "llms.txt must link the App Store listing");
+for (const l of locales) {
+  assert.ok(llms.includes(localeUrl(l.dir)), `llms.txt must list the ${l.code} site URL`);
+}
+assert.doesNotMatch(llms, /@gmail\.com/i, "llms.txt must not publish a personal mailbox");
+
 console.log(`[ok] munea.net SEO contract passed (${locales.length} locales)`);
 
 require("./test-app-site-legal-localizations.js");
