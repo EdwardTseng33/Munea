@@ -1,0 +1,64 @@
+# Munea (沐寧)
+
+> Munea is an AI health companion app for iPhone, made for the whole family. Older parents talk with an AI companion by voice and get medication and check-up reminders; adult children who live far away join a family health circle to see how their parents are doing. Munea is a companion and reminder tool. It is not a medical device and not a long-term care system.
+
+Brand line (Traditional Chinese original): 家人的健康，終於有人一直記得。 ("Finally, someone remembers your family's health.")
+
+## Who it is for
+
+- Adult children (often 40-60) who worry about parents living alone or far away.
+- Older adults who want someone to talk to and help remembering medicine and doctor visits.
+- The whole family, connected in one family health circle.
+
+## What it does
+
+- Voice conversation with an AI companion (characters named Ningning 寧寧 and Mumu 沐沐 in Chinese; Nina and Milo in English). Munea is voice-only: there is no typed text chat.
+- The companion remembers what you shared before and picks up where you left off.
+- Medication and check-up reminders, delivered as phone notifications even when the app is closed. Munea only reminds; it never evaluates or changes medication.
+- Health trends from Apple Health (steps, heart rate, blood pressure, sleep) shown at a glance.
+- Family health circle: family members see the health and mood updates each person chooses to share, and can play small games together (walking challenge, quiz).
+- The companions are AI: illustrated characters with AI-generated voices. They say plainly that they are AI and never pretend to be human or a family member.
+
+## Pricing
+
+- Free to download. New accounts get 5 trial credits (1 credit is about 1 minute of conversation). The free plan covers the account owner only.
+- Plus: 100 credits per month, family health circle of up to 4 people (including the owner).
+- Pro: 200 credits per month, up to 12 people (including the owner).
+- In Taiwan: Plus NT$599/month, Pro NT$1,199/month; yearly plans are also available. Prices in other regions are shown in the app.
+- Extra credits can be purchased. Subscriptions auto-renew through the App Store and can be canceled anytime.
+
+## Privacy principles
+
+- Voice is encrypted and processed in the cloud only to understand what the user says.
+- Raw audio recordings are not kept; only key points of conversations are saved so the companion can remember. Users can view or delete them in the app ("My data").
+- Data is never sold, never shared with data brokers, and never used for advertising.
+- Family members only see the status and summaries the person authorizes; full transcripts are not shown by default.
+
+## What Munea does not do
+
+- Not a medical device. No diagnosis, prescriptions, or treatment advice.
+- Not an emergency service. In an emergency, contact local emergency services.
+- Not a long-term care system, and not a replacement for doctors, pharmacists, or caregivers.
+- Does not invent answers: when it does not know, it says so.
+
+## Links
+
+- App Store: https://apps.apple.com/app/id6788658125
+- Website (Traditional Chinese): https://munea.net/
+- Website (English): https://munea.net/en
+- Website (Japanese): https://munea.net/ja
+- Website (Spanish): https://munea.net/es
+- Privacy policy: https://app.munea.net/privacy
+- Terms of use: https://app.munea.net/terms
+- Support: https://app.munea.net/support
+- For care organizations and companies: https://munea-b2b.vercel.app
+
+## 繁體中文簡介
+
+沐寧（Munea）是 iPhone 上的 AI 健康照護管家 App，給全家人一起用。長輩可以用語音跟 AI 陪伴角色（寧寧、沐沐）聊天，她會記得你說過的近況，並到點提醒用藥與回診；在外地的子女加入全家健康圈，就看得到爸媽願意分享的健康與心情狀態。沐寧只有語音聊聊，沒有打字聊天。
+
+收費：下載免費，註冊送 5 點體驗（1 點約可聊 1 分鐘）。Plus 每月 100 點、全家健康圈最多 4 人；Pro 每月 200 點、最多 12 人。台灣價格 Plus 每月 NT$599、Pro 每月 NT$1,199，另有年繳；其他地區以 App 內顯示為準。
+
+隱私：語音加密傳到雲端處理，原始錄音不保存，只留對話重點，可在「我的資料」查看或刪除；資料不販售、不用於廣告；家人只看得到本人授權的內容。
+
+不做的事：沐寧不是醫療器材，不做診斷、不開藥、不提供治療建議，也不是緊急服務。

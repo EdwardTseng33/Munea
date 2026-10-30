@@ -852,7 +852,9 @@
         <div class="live-badge">● LIVE</div>
         <h3>{{demo.openH3}}</h3>
         <p class="call-lead">{{demo.lead}}</p>
-        <a class="btn btn-teal btn-xl" href="/call.html">{{demo.startBtn}}</a>
+        <!-- 2026-10-30 先藏起來：call.html 還是舊的顯示卡擬真臉、目前打不通。call.html 本身不動不刪；
+             新形象通話頁接好後，拿掉 hidden 與 style 即可恢復。 -->
+        <a class="btn btn-teal btn-xl" href="/call.html" hidden style="display:none">{{demo.startBtn}}</a>
       </div>
     </div>
   </div>
