@@ -77,7 +77,7 @@ Munea 的健康度是衡量「能否安全、快速、持續地把產品交給�
 
 | 證據 | 2026-07-20 判讀 |
 |---|---|
-| Latest source | `1.0.70 (Build 541)`（2026-10-29 首次雲端打包上傳 App Store Connect、處理完成 VALID、待送審；含寧寧 Rive 新臉、通話改走手機端臉不佔顯示卡）；前一候選 1.0.66／Build 537 內容：；為下一個唯一候選，撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機；維持原生 512。尚未封裝或真機驗證 |
+| Latest source | `1.0.70 (Build 541)`（2026-10-29 首次雲端打包上傳 App Store Connect、處理完成 VALID；2026-10-30 過審並發布，App Store 公開版＝1.0.70；含寧寧 Rive 新臉、通話改走手機端臉不佔顯示卡）；前一候選 1.0.66／Build 537 內容：；為下一個唯一候選，撥號手勢即接真麥克風並暫存首句，Voice 可續接精確 1008 中斷，Avatar 健康通話不跳回待機；維持原生 512。尚未封裝或真機驗證 |
 | Latest uploaded App | `1.0.61 (Build 532)`；App Store Connect 回報 `VALID`，上傳時間 2026-08-10 08:35 UTC；不含本輪三邊協議，不能代表 Build 533 |
 | App Store | 1.0.55 狀態 `WAITING_FOR_REVIEW`，實際選用 App 1.0.55 Build 525；1.0.61 Build 532 未被該審核版本選用；Build 533 尚未上傳、選入、核准或公開 |
 | 待驗修正 | Draft #174：0 點不進入「撥通中」；#175：TEST 購買模擬與 Apple account-token mismatch；#188：gateway profile 真 QA 帳號。三張目前 CLEAN、CI 綠，但未計為 merged／packaged／human verified |
