@@ -11,7 +11,7 @@
     "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
-    "brain": 101,
+    "brain": 110,
     "gateway": 23,
     "voice": 4
   },
@@ -286,6 +286,20 @@
     {
       "surface": "brain",
       "method": "POST",
+      "path": "/admin/enterprise/consent/status",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
       "path": "/admin/enterprise/invoice/mark-paid",
       "auth": "operator",
       "criticality": "high",
@@ -413,6 +427,20 @@
       "surface": "brain",
       "method": "POST",
       "path": "/admin/enterprise/seats/sweep",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/staff/invite",
       "auth": "operator",
       "criticality": "high",
       "idempotency": "operation-defined",
@@ -1092,6 +1120,104 @@
       "pii": "account",
       "envelope": "json-object",
       "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org-consent",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_api.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org-consent/set",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_api.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/elder/care-week",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_api.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/elders",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_api.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/me",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_api.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/reports",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_api.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/summary",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "aggregate-only",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_api.py"
+      ]
     },
     {
       "surface": "brain",

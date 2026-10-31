@@ -226,6 +226,13 @@
       "filename": "029_on_device_face_worker.sql",
       "type": "seed",
       "sha256": "a0777a53bf94bfd2ac0fc13e4d3c96078e8adf20587d637315ebf50da306f40f"
+    },
+    {
+      "order": 31,
+      "identity": "030",
+      "filename": "030_org_staff_consent.sql",
+      "type": "schema",
+      "sha256": "c578134bb237fe2739386afce0443d403b007dd940200b42fb946a7b0cdab0e7"
     }
   ]
 }

@@ -227,6 +227,12 @@
           "verifiedAt": "2026-10-29T17:35:00+08:00",
           "captureMethod": "read-only-probe",
           "sourceCommit": "eb03176f7dc1f892b2c8bc25513d4ffa8b03d1a7"
+        },
+        {
+          "filename": "030_org_staff_consent.sql",
+          "sha256": "c578134bb237fe2739386afce0443d403b007dd940200b42fb946a7b0cdab0e7",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
         }
       ],
       "rollback": {
