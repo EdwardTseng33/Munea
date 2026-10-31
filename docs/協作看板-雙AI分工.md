@@ -1,5 +1,12 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-31 蘇菲｜🗑️ 作廢「Voice＋Avatar 必須綁定」舊規矩（Edward 10/31「作廢」· 只改看板文字、不碰程式）
+
+- **為什麼**：7/9「聊聊＝Voice＋Avatar、雲端臉引擎上線必要」與 7/13–14「Voice＋Avatar 必須綁定、沒顯示卡座位就排隊」是雲端真人臉時代的規矩。10/28–29 起寧寧改成手機上的 Rive 插畫臉（正視前方、嘴型＋眨眼＋呼吸），總機給 `phone://on-device-face`，臉不再佔雲端顯示卡（#623／#631）。舊規矩若照字面執行，會要求通話去等一張早已不用的顯示卡。
+- **做了**：第 228 行永久硬 Gate 下方加作廢公告；7/9 定位憲法標題、7/14 30 人擴容目標那行加「已作廢」標記並指回本條。歷史紀錄原文不刪。
+- **仍然有效（沒作廢）**：① 7/17 永久硬 Gate＝安裝版 iPhone 真機打一通才算驗收（「Voice＋Avatar」改讀成「聲音＋手機上的臉」）② 聲音沒接通不得開始扣點 ③ 聊聊仍有臉，不做「沒有臉、只有聲音」的畫面；臉在手機上、不需要雲端座位。
+- **檔**：只有本看板。
+
 ### 2026-10-30 蘇菲｜📦 App 下載包拿掉約 10MB 舊真人臉素材（`web/flashhead/`）（call-path risk：動到 `web/index.html` 通話臉框＋iOS／Android 打包）
 
 - **為什麼**：10/28–29 寧寧換成手機上的插畫臉、總機給 `phone://on-device-face`，雲端真人臉只剩開發用（`munea.remoteFace=1`）。但 `web/flashhead/` 五個檔（bg-a05/a06.png、person-a05/a06.png、greet-a05.mp4，共約 10.2MB）還跟著整個 `web/` 被打進每個 iOS／Android 下載包；`index.html` 隱藏臉框還一開頁就去載兩張。
@@ -226,6 +233,7 @@
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
+> **🗑️ 2026-10-31 Edward 作廢**：7/9「聊聊＝Voice＋Avatar、雲端臉引擎上線必要」與 7/13–14「Voice＋Avatar 必須綁定／沒顯示卡座位就排隊」兩條舊規矩作廢——臉已改成手機上的 Rive 插畫（10/28–29），不再綁雲端顯示卡座位。上面這條硬 Gate 仍有效，「Voice＋Avatar」讀作「聲音＋手機上的臉」；聲音沒接通不得扣點仍有效。詳見本看板最上方 10/31 條。
 
 ### 2026-08-12 Codex｜🚨 1.0.65 原聲音復原（0% 3×3 PASS／待 exact-main promote · server-only · call-path risk）
 - **分支／範圍**：`codex/restore-voice31-20260812`；修改 Voice production/staging 部署引擎固定值、Voice/App service identity、launch contract 與 release evidence。不修改 Avatar 512、開場收音策略或 App 版號。
@@ -1105,7 +1113,7 @@ Edward 真機測通（她真的講話了）、回三點，已修＋重裝真機�
 - ⚠️ 注意：資料櫃機房是 **Oceania (Sydney)**、不是台灣近點（建櫃前已存在的設定）；試用期可用，正式上線前若要搬近一點再議。
 - **接棒 Windows**：鑰匙在你們那邊——可以開始把真帳號/記憶同步接上正式櫃；004/005/006 的 policy 沒有防重複、若將來重跑注意。
 
-## 2026-07-09 Mac 端（Claude/蘇菲）· 📌📌 產品定位憲法：聊聊＝Voice＋Avatar、無靜態圖聊天服務（Edward 兩度拍板）
+## 2026-07-09 Mac 端（Claude/蘇菲）· 📌📌 產品定位憲法：聊聊＝Voice＋Avatar、無靜態圖聊天服務（Edward 兩度拍板）〔🗑️ 2026-10-31 已作廢：臉改手機上的 Rive 插畫，見看板最上方 10/31 條〕
 - **需求原文 1**：「服務就是有六個角色，之後開啟聊天不管選哪一個都要能有 avatar 的效果功能。」
 - **需求原文 2（升級為定位）**：「我們的聊聊服務只有 voice+avatar，沒有靜態圖片的聊天服務！」
 - **意義（兩台都要照做）**：
@@ -1580,7 +1588,7 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **預計驗證**：新增可重複測試，完成 JavaScript 語法、launch/release gate、Capacitor sync 與限定差異檢查；每項以 PASS／FAIL 回報。
 
 ### 2026-07-14 Edward → Codex：1～30 人同時撥號控制面實作續工
-- **使用者目標**：把目前可用的 GLOWS 3 席擴成「1～30 人同時撥號時都能被系統接住」；Voice＋Avatar 必須綁定，不得退成純語音，未接通不得開始扣點。10 人是中途驗收，不是容量終點。
+- **使用者目標**：把目前可用的 GLOWS 3 席擴成「1～30 人同時撥號時都能被系統接住」；Voice＋Avatar 必須綁定，不得退成純語音，未接通不得開始扣點。〔🗑️ 2026-10-31：「Voice＋Avatar 必須綁定」已作廢（臉改在手機上）；「未接通不得開始扣點」仍有效〕10 人是中途驗收，不是容量終點。
 - **現況稽核**：正式 App 仍未設定 Gateway 門牌；持久租約、App 排隊接線與 RunPod controller 已有工作區成果，但 SQL／Gateway／RunPod 尚未提交部署，RunPod 仍是 `observe` 且最多一張備援卡，因此正式容量仍只有主卡 3 人。
 - **Codex 鎖區**：`deploy/gateway/`、`supabase/sql/010_realtime_call_control.sql`、`deploy/runpod-avatar/runpod_backup.py`、`deploy/runpod-avatar/runpod-backup.env.example`、`scripts/test_call_control.py`、`scripts/test_runpod_backup.py` 與新的容量規劃測試。Claude 暫不修改／部署同區；家庭邀請與 `web/src/app.js` 的既有並行變更本輪不覆蓋、不混入提交。
 - **本輪容量規則**：GLOWS 常駐 3 席；RTX 4090 未完成三路長測前每張只算 2 席。系統依「需求席位－現有可用席位」開 0～14 張 RunPod，總容量最多 31 席；排隊上限調為 30，確保突然 30 人一起撥時先進等待而非直接拒絕。每輪開卡數另設護欄，避免錯誤流量一次燒滿 14 張。
