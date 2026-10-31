@@ -23,6 +23,7 @@ on:
       - "android/**"
       - "web/**"
       - "scripts/android-ui-tap-by-text.py"
+      - "scripts/android-launcher-icon-check.py"
       - "scripts/android-flow-smoke.sh"
       - "scripts/enable-ios-development-profile.mjs"
       - "capacitor.config.json"
@@ -130,6 +131,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # 2026-10-29（PR #632 換官方圖示後補的證據）：桌面圖示驗證小工具用 Pillow 裁圖、算顏色，
+      # runner 的 python3 沒內建 Pillow，先裝。
+      - name: Install Pillow (launcher icon check)
+        run: python3 -m pip install --quiet pillow
+
       - name: Launch emulator, install APK, screenshot
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -154,6 +160,10 @@ jobs:
             adb exec-out screencap -p > launch.png
             sleep 12
             adb exec-out screencap -p > launch-20s.png
+            # 2026-10-29：按 HOME、打開應用程式列表，拍桌面上的 Munea 圖示——#632 把範本藍 X 換成
+            # 官方圖示後，這是第一次有人在模擬器上親眼看那顆。找不到「Munea」那格、或那格的顏色
+            # 不是橘水滴＋青綠漣漪（例如又變回範本藍），這步就紅；截圖與判定都放 launcher-icon/。
+            python3 scripts/android-launcher-icon-check.py --out-dir launcher-icon
 
       - name: Upload launch screenshot artifact
         if: always()
@@ -164,6 +174,7 @@ jobs:
             launch-2s.png
             launch.png
             launch-20s.png
+            launcher-icon/
           if-no-files-found: warn
           retention-days: 14
 

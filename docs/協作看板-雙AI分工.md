@@ -34,6 +34,14 @@
 - **檔**：`app-store/localizations/{zh-Hant,en-US,ja}.json`、`scripts/aso-keyword-builder.mjs`、`docs/{RELEASE-STATE,CURRENT-DEVELOPMENT-PLAN,PRODUCT-QUALITY-CONFIDENCE,PRODUCT-ALIGNMENT-REGISTER,00-總綱-從這裡開始}.md`。
 - **未做**：官網 SEO／AI 搜尋包、下載包舊照片各另開 PR；support@munea.net 網域沒有收信設定（寄了會退），等 Edward 選轉寄或公司信箱。
 
+### 2026-10-29 23:30 蘇菲｜🖼 Android 圖示收尾：CI 拍桌面證明是官方圖示＋清掉範本殘檔（PR #650 · 補助案 B1 · 不碰通話路徑 · CI 綠）
+
+- **接**：#632 已把 15 張圖示換成官方寧寧圖示（iOS 同一張、背景 #FEF5EB、`scripts/android-make-launcher-icons.py` 一行重產），但 CI 從沒拍過桌面那顆、兩個 Capacitor 範本殘檔還留著。
+- **做了**：① 新 `scripts/android-launcher-icon-check.py`：模擬器按 HOME → 開應用程式列表 → 找「Munea」那格放大 4 倍存檔 → 顏色判定（橘水滴＋青綠漣漪要在、範本藍不能比橘多）；找不到或顏色不對就讓 emulator-smoke 紅、不悄悄放過 ② workflow emulator-smoke 多跑這支、截圖跟判定一起上傳 ③ 刪 `drawable-v24/ic_launcher_foreground.xml`、`drawable/ic_launcher_background.xml`（範本藍 X 的向量圖，#632 後沒任何地方引用；`values/ic_launcher_background.xml` 還在用、保留）。
+- **CI 證據（run 40899410355）**：三 job 全綠。桌面 dock 跟應用程式列表都找到「Munea」、兩格都判定過（橘 2.7%／1.8%、青綠 3.3%／2.2%、範本藍 0%）；桌面／列表截圖＋那格放大 4 倍＋判定數字存 `docs/qa/android/icon-2026-10-29/run40899410355-emulator-smoke-*`。⚠ 桌面那顆外圍一圈黃綠不是圖示的問題：畫面描述寫 `Predicted app: Munea`，是 Pixel Launcher 把剛裝的 App 放進 dock「推薦」位、用圖示主色畫的外環；列表裡同一顆沒有環、素材裡也沒這個顏色。判定結果現在會把這個描述一起留下。
+- **檔**：`.github/workflows/android-build.yml`、`scripts/android-launcher-icon-check.py`、上述兩個刪檔、`docs/qa/android/icon-2026-10-29/run40899410355-*`（5 個證據檔）、本看板。**狀態**：✅ CI 9 項全綠、PR 附截圖；合併 Edward 按。
+- ⚠ **順手看到、這張不處理（後續）**：第二輪 CI（run 40901059620，只因小工具多留一欄）「登入與聊聊通話流程」紅一次＝App 開啟後主畫面忙著載入、5 秒內沒接到系統的「取得焦點」事件，Android 跳「Munea 沒有回應」（logcat：Input dispatching timed out · Waited 5004ms for FocusEvent）；重跑即綠。模擬器純軟體畫圖第一格要 9 秒才會撞到 5 秒線、真機有顯示卡不一定會，但這是「冷啟動主執行緒被擋超過 5 秒」的真信號，值得查 WebView 啟動那段在忙什麼、A15 實機再確認一次。紀錄在 run 40901059620 的 flows artifact（logcat.txt 15:26:51）。
+
 ### 2026-10-29 15:50 蘇菲｜📞 通話改「臉在手機、聲音在雲端」——正式線自 9/6 起打不通的病根（call-path risk · 改通話配對、照 7/13 規矩先列檔）
 
 - **病根（查帳實錘）**：總機 `munea_call_request` 配對要同時有聲音座位＋臉的座位（`gpu_workers`）。雲端顯示卡 6 張 9/6 起全 `terminated` → 每通電話永遠排隊。最後一通成功 8/13；10/14 唯一一通排隊 7.8 秒被取消。App 端 `getAvatarUrl()` 也仍回雲端臉位址（寧寧→a05 FlashHead），新插圖只換了畫面、撥號沒跟著改。
