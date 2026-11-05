@@ -226,6 +226,13 @@
       "filename": "029_on_device_face_worker.sql",
       "type": "seed",
       "sha256": "a0777a53bf94bfd2ac0fc13e4d3c96078e8adf20587d637315ebf50da306f40f"
+    },
+    {
+      "order": 31,
+      "identity": "030",
+      "filename": "030_voice_shard_priority.sql",
+      "type": "schema",
+      "sha256": "e93aae5c37e258acc82801e72f9aaee3c947d91cee3c87afbd09e7a57457d080"
     }
   ]
 }
