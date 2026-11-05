@@ -49,8 +49,8 @@ if ($Action -eq 'Deploy') {
     @{ Local = (Join-Path $RepoRoot 'deploy\runpod-avatar\flashhead_engine_core.py'); Remote = "$RemoteRoot/flashhead_engine_core.py" },
     @{ Local = (Join-Path $RepoRoot 'deploy\runpod-avatar\sync-face-assets.py'); Remote = "$RemoteRoot/sync-face-assets.py" },
     @{ Local = (Join-Path $PSScriptRoot 'manage-shared-demo.sh'); Remote = "$RemoteRoot/manage-shared-demo.sh" },
-    @{ Local = (Join-Path $RepoRoot 'munea-b2b\flashhead\bg-a05.png'); Remote = "$RemoteRoot/portraits/bg-a05.png" },
-    @{ Local = (Join-Path $RepoRoot 'munea-b2b\flashhead\bg-a06.png'); Remote = "$RemoteRoot/portraits/bg-a06.png" }
+    @{ Local = (Join-Path $RepoRoot 'web\flashhead\bg-a05.png'); Remote = "$RemoteRoot/portraits/bg-a05.png" },
+    @{ Local = (Join-Path $RepoRoot 'web\flashhead\bg-a06.png'); Remote = "$RemoteRoot/portraits/bg-a06.png" }
   )
   foreach ($Item in $Uploads) {
     & scp -q -o StrictHostKeyChecking=accept-new -i $KeyPath -P $SshPort $Item.Local "${Target}:$($Item.Remote)"

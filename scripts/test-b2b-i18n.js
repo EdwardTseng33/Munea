@@ -66,7 +66,13 @@ for (const l of LOCALES) {
   // 素材一律根路徑，否則 /en /ja /es 底下會去抓 /en/assets/... 破圖
   assert.doesNotMatch(html, /(src|href|poster)="assets\//, at('有相對路徑的素材，子目錄會破圖'));
   assert.doesNotMatch(html, /url\('assets\//, at('CSS 裡有相對路徑的素材'));
-  assert.match(html, /href="\/call\.html"/, at('通話頁連結不是根路徑'));
+  // 2026-11-05 網頁試打已移除：不准再連回 call.html，想試用就走「下載 App」
+  assert.doesNotMatch(html, /call\.html|\/api\/call-key/, at('還連著已移除的網頁試打'));
+  assert.match(
+    html,
+    /id="try-app"[\s\S]*?href="https:\/\/apps\.apple\.com\/(?:tw\/)?app\/id6788658125"/,
+    at('缺「下載 App 直接試用」的 App Store 連結'),
+  );
 
   // 示範影片：每個語系播自己那支（英日西的夥伴要講當地語言），而且檔案真的在
   const suffix = l.code === 'zh' ? '' : '-' + l.code;

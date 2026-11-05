@@ -25,7 +25,6 @@ sys.path.insert(0, os.path.join(REPO, "deploy", "runpod-avatar"))
 
 import runpod_backup  # noqa: E402
 
-CALL_KEY_JS = os.path.join(REPO, "munea-b2b", "api", "call-key.js")
 DEMOCTL_PY = os.path.join(REPO, "deploy", "runpod-demo", "democtl.py")
 
 NOW = datetime.datetime(2026, 8, 10, 10, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
@@ -138,18 +137,9 @@ class DemoPodNameMustNotDrift(unittest.TestCase):
 
     EXPECTED = "munea-flashhead-demo-768"
 
-    def _js(self):
-        return open(CALL_KEY_JS, encoding="utf-8").read()
-
-    def test_site_uses_the_neutral_name(self):
-        src = self._js()
-        m = re.search(r"const DEMO_POD_NAME = '([^']+)'", src)
-        self.assertTrue(m, "官網那支找不到展示機名字的定義")
-        self.assertEqual(m.group(1), self.EXPECTED)
-
     def test_no_gpu_model_in_any_pod_name(self):
         """名字帶型號會騙人——規格本來就允許 6000 Ada 或 4090，實際開到哪張看主控台。"""
-        for path in (CALL_KEY_JS, DEMOCTL_PY,
+        for path in (DEMOCTL_PY,
                      os.path.join(REPO, "deploy", "runpod-avatar", "runpod_backup.py")):
             with self.subTest(path=os.path.basename(path)):
                 src = open(path, encoding="utf-8").read()
@@ -173,13 +163,6 @@ class DemoPodNameMustNotDrift(unittest.TestCase):
 
 
 class TtlMustStaySane(unittest.TestCase):
-    def test_site_and_controller_share_the_same_ttl(self):
-        js = open(CALL_KEY_JS, encoding="utf-8").read()
-        m = re.search(r"const DEFAULT_TTL_SECONDS = (\d+)", js)
-        self.assertTrue(m, "官網那支沒有預設 TTL")
-        self.assertEqual(int(m.group(1)), runpod_backup.Config().demo_ttl_seconds,
-                         "兩邊 TTL 不一樣——會出現一邊覺得該收、一邊覺得還早")
-
     def test_ttl_is_not_hours_long(self):
         """展示通話上限 180 秒。TTL 三小時等於一次展示要付 2.2 美金。"""
         self.assertLessEqual(runpod_backup.Config().demo_ttl_seconds, 3600)

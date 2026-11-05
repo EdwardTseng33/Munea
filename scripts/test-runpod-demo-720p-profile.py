@@ -14,6 +14,8 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_DIR = ROOT / "deploy" / "runpod-demo"
+# 立繪底圖：B2B 那份副本（munea-b2b/flashhead）隨網頁試打一起移除，改讀 App 這份（同一張圖）。
+PORTRAITS = ROOT / "web" / "flashhead"
 
 
 def load_profile():
@@ -55,17 +57,6 @@ def main() -> None:
         assert model == {"width": 768, "height": 768}
         assert contract["fit"] == "fill"
 
-    call_html = (ROOT / "munea-b2b" / "call.html").read_text(encoding="utf-8")
-    for required in (
-        "DEMO 1.0.4",
-        "demo-flashhead-square-768-v2",
-        "source_crop: { x: 0, y: 190, width: 1080, height: 1080 }",
-        "source_crop: { x: 0, y: 209, width: 1080, height: 1080 }",
-        "model_input: { width: 768, height: 768 }",
-        "applyAvatarRenderContract(renderContractFor(curChar))",
-    ):
-        assert required in call_html, f"call.html missing Demo 768 contract: {required}"
-
     with tempfile.TemporaryDirectory(prefix="munea-demo-720p-") as temp:
         target_dir = Path(temp)
         subprocess.run(
@@ -73,7 +64,7 @@ def main() -> None:
                 sys.executable,
                 str(DEMO_DIR / "build-demo-assets.py"),
                 "--source",
-                str(ROOT / "munea-b2b" / "flashhead"),
+                str(PORTRAITS),
                 "--target-dir",
                 str(target_dir),
             ],
@@ -81,7 +72,7 @@ def main() -> None:
         )
         for char, contract in contracts.items():
             source_name = profile.SOURCE_NAMES[char]
-            source_path = ROOT / "munea-b2b" / "flashhead" / f"bg-{source_name}.png"
+            source_path = PORTRAITS / f"bg-{source_name}.png"
             target_path = target_dir / profile.TARGET_NAMES[char]
             crop = contract["source_crop"]
             box = (
