@@ -3290,6 +3290,93 @@ def _summary_tags_from_context(context, text=""):
     return tags[:8]
 
 
+# 2026-11-05 Edward 拍板「記憶修 A」第一步：收線後請 AI 寫一句「他這通講了什麼」的真重點。
+# 之前存的是內部稽核用的英文一行（「Post-turn companion review covered food_cooking; user turns: 4」），
+# 卻被當成「上次聊天重點」餵給她——她永遠講不出「上次你說腰痠，後來好點沒」。
+# 只寫**使用者自己說的**事（不收她說的話、不推論診斷）；寒暄／測試收音這種沒內容的通話回空字串，
+# 下一通就退回只知道「多久前聊過」。AI 失敗也回空字串，不影響收線。
+INTERNAL_AUDIT_SUMMARY_PREFIX = "Post-turn companion review"
+# 11/5 實測：gemini-2.5-flash-lite 對新用戶已下架（404）；3.5-flash-lite 約 1.2 秒、2.5-flash 約 3.8 秒。
+CALL_RECAP_MODELS = ("gemini-3.5-flash-lite", "gemini-2.5-flash")
+# 中文 60 字以內；英文同樣意思要 150 字元上下，上限放 200（太長的就不收）。
+CALL_RECAP_MAX_CHARS = 200
+CALL_RECAP_BUDGET_S = float(os.environ.get("MUNEA_CALL_RECAP_BUDGET_S", "4"))
+_CALL_RECAP_POOL = None
+import re as _recap_re
+_GENDERED_PRONOUN_RE = _recap_re.compile(r"\b(he|she|his|her|him|hers|himself|herself)\b", _recap_re.I)
+
+
+def _call_recap_pool():
+    global _CALL_RECAP_POOL
+    if _CALL_RECAP_POOL is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _CALL_RECAP_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="call-recap")
+    return _CALL_RECAP_POOL
+
+
+def _call_recap_instruction(history):
+    lines = []
+    for item in history[-40:]:
+        if not isinstance(item, dict):
+            continue
+        text = " ".join(str(item.get("text") or item.get("content") or "").split())[:300]
+        if not text:
+            continue
+        who = "他" if (item.get("role") or "user") == "user" else "陪伴者"
+        lines.append(f"{who}：{text}")
+    return (
+        "下面是一位長輩跟語音陪伴者的通話字幕。請寫一句「下次通話時值得記得的重點」，"
+        "只能寫【他】自己講的事：近況、身體感覺、心情、家人、計畫、喜好。\n"
+        "規則：①只用他說過的內容，不要加入陪伴者的建議，也不要推論病名或原因；"
+        "②一句話、60 字以內，用他講話的語言寫（他講中文就用繁體中文）；"
+        "③像備忘錄，中文用「他」，例如「他說膝蓋還有點痠，週末女兒要回來吃飯」；"
+        "英文等其他語言一律用「省略主詞的筆記句」、不要猜性別（禁止 he／she／his／her／him）：例如他說「I saw my doctor, she changed my pill. My son visits next week.」→ 「Saw doctor today; blood pressure pill changed. Son visiting next week.」英文 25 個字以內；"
+        "④如果整通只有打招呼、測試聽不聽得到、或沒有值得記的事，recap 給空字串。\n"
+        '只回 JSON：{"recap": "..."}\n\n通話字幕：\n' + "\n".join(lines)
+    )
+
+
+def ai_call_recap_summary(history):
+    """回一句真重點（字串）；沒內容或失敗回空字串。"""
+    if not any(isinstance(h, dict) and (h.get("role") or "user") == "user"
+               and str(h.get("text") or h.get("content") or "").strip() for h in (history or [])):
+        return ""
+    if os.environ.get("MUNEA_CALL_RECAP_AI", "1").strip() == "0":
+        return ""
+    instruction = _call_recap_instruction(history or [])
+    # 收線時語音線只等這支內部呼叫 8 秒（call_control_client.post_internal），後面還有記憶萃取要跑：
+    # 重點摘要整體只給 4 秒，超過就放棄（這通沒有重點，下一通退回只知道多久前聊過）。
+    # Gemini 不收 10 秒以下的逾時設定（400 INVALID_ARGUMENT），所以由我們這邊等：放進背景執行緒，
+    # 時間到就不等了（那次呼叫自己跑完就丟掉）。
+    deadline = time.monotonic() + CALL_RECAP_BUDGET_S
+    for model in CALL_RECAP_MODELS:
+        remaining = deadline - time.monotonic()
+        if remaining < 0.8:
+            break
+        try:
+            future = _call_recap_pool().submit(
+                eng.client.models.generate_content,
+                model=model,
+                contents=instruction,
+                config=types.GenerateContentConfig(
+                    temperature=0.2,
+                    response_mime_type="application/json",
+                ),
+            )
+            r = future.result(timeout=remaining)
+            recap = " ".join(str((json.loads(r.text or "{}") or {}).get("recap") or "").split())
+        except Exception as e:
+            log_fallback_exception("ai call recap", e)
+            continue
+        if len(recap) > CALL_RECAP_MAX_CHARS or recap.startswith(INTERNAL_AUDIT_SUMMARY_PREFIX):
+            continue
+        if _GENDERED_PRONOUN_RE.search(recap):
+            # 不知道對方性別，英文摘要用了 he/she 就不收（下一通她可能照著說錯）
+            continue
+        return recap
+    return ""
+
+
 def build_post_turn_conversation_summary(data, context):
     data = data or {}
     history = data.get("history") or []
@@ -3302,9 +3389,13 @@ def build_post_turn_conversation_summary(data, context):
     risk_level = risk.get("level") or "none"
     safety_relevant = risk_level in {"medium", "high", "critical"} or bool(risk.get("requiresHumanEscalation"))
     topics = ", ".join(tags[:4]) if tags else "general companionship"
-    summary = f"Post-turn companion review covered {topics}; user turns: {user_turn_count}; Guardian risk: {risk_level}."
+    summary = f"{INTERNAL_AUDIT_SUMMARY_PREFIX} covered {topics}; user turns: {user_turn_count}; Guardian risk: {risk_level}."
     if safety_relevant:
         summary += " Safety-relevant content was detected for audit-aware follow-up."
+    elif data.get("source") == "live_voice":
+        recap = ai_call_recap_summary(history)
+        if recap:
+            summary = recap
     return normalize_conversation_summary({
         "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
         "voiceSessionId": data.get("voiceSessionId") or data.get("voice_session_id"),
@@ -10026,6 +10117,9 @@ def _recent_call_recap_line_core(now=None, person_id=None):
     summary_text = ""
     if os.environ.get("MUNEA_VOICE_RECAP_CONTENT", "1").strip() != "0" and not latest.get("safetyRelevant"):
         summary_text = " ".join(str(latest.get("summary") or "").split())[:160]
+        # 內部稽核用的英文一行不是「他說了什麼」——不准當成記憶餵給她（11/5 修，見 ai_call_recap_summary）
+        if summary_text.startswith(INTERNAL_AUDIT_SUMMARY_PREFIX):
+            summary_text = ""
     if summary_text:
         return (
             f"（上次聊天（大約 {ago} 前）的重點，這是系統紀錄、你真的記得："

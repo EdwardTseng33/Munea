@@ -338,3 +338,60 @@ class VoiceBrainBridgeTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class AiCallRecapTest(unittest.TestCase):
+    """2026-11-05「記憶修 A」第一步：上次重點要是他說的真內容，不是內部英文稽核行。"""
+
+    def test_internal_audit_line_is_never_fed_as_memory(self):
+        _reset_summaries()
+        server.append_conversation_summary({
+            "summary": "Post-turn companion review covered food_cooking; user turns: 4; Guardian risk: none.",
+        })
+        with patch.dict(os.environ, {"MUNEA_VOICE_CALL_MEMORY": "1"}):
+            line = server.recent_call_recap_line()
+        self.assertNotIn("Post-turn", line)
+        self.assertIn("不知道", line)   # 退回只知道多久前聊過（v1）
+
+    def test_live_voice_call_stores_ai_recap(self):
+        _reset_summaries()
+        with patch.object(server, "ai_call_recap_summary", return_value="他說膝蓋還有點痠，週末女兒要回來"):
+            server.persist_voice_call_turns(
+                [{"role": "user", "content": "膝蓋還是痠痠的，週末女兒要回來"},
+                 {"role": "assistant", "content": "那要多休息喔"}],
+                char="寧寧", voice_session_id="call-recap")
+        latest = server.load_conversation_summaries(limit=10)[-1]
+        self.assertEqual(latest["summary"], "他說膝蓋還有點痠，週末女兒要回來")
+        with patch.dict(os.environ, {"MUNEA_VOICE_CALL_MEMORY": "1"}):
+            self.assertIn("膝蓋還有點痠", server.recent_call_recap_line())
+
+    def test_empty_recap_keeps_audit_line_but_not_as_memory(self):
+        _reset_summaries()
+        with patch.object(server, "ai_call_recap_summary", return_value=""):
+            server.persist_voice_call_turns(
+                [{"role": "user", "content": "聽得到嗎"}, {"role": "assistant", "content": "聽得到喔"}],
+                char="寧寧", voice_session_id="call-empty")
+        latest = server.load_conversation_summaries(limit=10)[-1]
+        self.assertTrue(latest["summary"].startswith(server.INTERNAL_AUDIT_SUMMARY_PREFIX))
+        with patch.dict(os.environ, {"MUNEA_VOICE_CALL_MEMORY": "1"}):
+            self.assertNotIn("Post-turn", server.recent_call_recap_line())
+
+    def test_recap_prompt_only_quotes_both_sides_with_labels(self):
+        prompt = server._call_recap_instruction([
+            {"role": "user", "text": "我今天去看牙醫"}, {"role": "assistant", "text": "辛苦了"}])
+        self.assertIn("他：我今天去看牙醫", prompt)
+        self.assertIn("陪伴者：辛苦了", prompt)
+        self.assertIn("只能寫【他】自己講的事", prompt)
+
+    def test_no_user_words_means_no_ai_call(self):
+        with patch.object(server.eng, "client") as client:
+            self.assertEqual(server.ai_call_recap_summary([{"role": "assistant", "text": "哈囉"}]), "")
+            client.models.generate_content.assert_not_called()
+
+    def test_gendered_english_recap_is_rejected(self):
+        """不知道對方性別：英文摘要寫了 he/she 就不收，免得下一通她照著叫錯。"""
+        fake = type("R", (), {"text": '{"recap": "He saw his doctor today."}'})()
+        with patch.dict(os.environ, {"MUNEA_CALL_RECAP_AI": "1"}), \
+                patch.object(server.eng, "client") as client:
+            client.models.generate_content.return_value = fake
+            self.assertEqual(server.ai_call_recap_summary([{"role": "user", "text": "I saw my doctor"}]), "")
