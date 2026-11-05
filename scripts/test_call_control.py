@@ -77,6 +77,44 @@ def test_auth_error_classification():
         assert exc.status_code == 500
 
 
+def _ready_store(worker_id, worker_url=""):
+    store = SupabaseCallStore("https://example.supabase.co", "service-role")
+    calls = []
+
+    def fake_json(method, url, body=None, **_kwargs):
+        if "/rpc/munea_call_ready" in url:
+            calls.append(body["p_component"])
+            state = "active" if {"voice", "avatar"} <= set(calls) else "connecting"
+            return {"ok": True, "state": state}
+        if "/call_leases?" in url:
+            assert "call_id=eq.call-1" in url and "lease_version=eq.1" in url
+            return [{"worker_id": worker_id}]
+        if "/gpu_workers?" in url:
+            return [{"worker_id": worker_id, "url": worker_url}]
+        raise AssertionError("unexpected URL " + url)
+
+    store._json = fake_json
+    return store, calls
+
+
+def test_on_device_face_call_activates_when_voice_is_ready():
+    # 2026-11-05 正式線實錘：臉在手機上畫，沒人回報臉就緒 → 每通卡在 connecting、15 秒後被 App 掛掉。
+    store, calls = _ready_store("on-device-face", "phone://on-device-face")
+    result = store.ready(call_id="call-1", lease_version=1, component="voice", event_id="voice-1")
+    assert result["state"] == "active"
+    assert calls == ["voice", "avatar"]
+
+    store, calls = _ready_store("renamed-device-face", "phone://on-device-face")
+    assert store.ready(call_id="call-1", lease_version=1, component="voice", event_id="v")["state"] == "active"
+
+
+def test_cloud_face_call_still_waits_for_real_avatar_ready():
+    store, calls = _ready_store("glows-rtx6000ada-tw07", "https://tw-07.access.glows.ai:26969")
+    result = store.ready(call_id="call-1", lease_version=1, component="voice", event_id="voice-1")
+    assert result["state"] == "connecting"
+    assert calls == ["voice"]
+
+
 def test_call_locale_records_are_scoped_through_verified_lease():
     store = SupabaseCallStore("https://example.supabase.co", "service-role")
     requested_urls = []
