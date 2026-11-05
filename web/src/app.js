@@ -236,7 +236,7 @@ function localizeCanonicalLegacyPanels() {
     key,
     fallback,
   ));
-  setAttribute('#pfNick', 'placeholder', 'profile.familyNicknamePlaceholder', 'For example: Grandma');
+  setAttribute('#pfNick', 'placeholder', 'profile.familyNicknamePlaceholder', 'e.g. Grandma, John');
   setAttribute('#joinCodeInput', 'placeholder', 'join.codePlaceholder', 'Enter invitation code');
   setAttribute('#visitTitle', 'placeholder', 'appointment.titlePlaceholder', 'For example: Cardiology follow-up');
   setAttribute('#npsSlider', 'aria-label', 'feedback.npsAria', 'Recommendation score from 0 to 10');
