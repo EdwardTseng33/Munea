@@ -5883,6 +5883,9 @@ function showView(id) {
   $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
   // 回到首頁就去看有沒有家人帶話——長輩不會為了看訊息特地去按什麼，話要自己送到他眼前
   if (id === 'home') { try { syncHomeFamilyRelay(); } catch (e) {} }
+  // 2026-11-05 Edward 拍板 C：語音機器沒人用會睡（醒來要 3–6 秒）。進聊聊頁就先輕拍一下，
+  // 等他按撥號時已經醒了；不常駐、不多花錢。preDialConnWarm 自帶 60 秒防抖，開 App／回前景已會拍。
+  if (id === 'chat') { try { preDialConnWarm('chat_view'); } catch (e) {} }
   if (id === 'status') {
     renderStatusCharts();
     if (typeof window.__muneaRefreshMedicationUi === 'function') window.__muneaRefreshMedicationUi();
