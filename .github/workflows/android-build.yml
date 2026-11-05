@@ -23,6 +23,7 @@ on:
       - "android/**"
       - "web/**"
       - "scripts/android-ui-tap-by-text.py"
+      - "scripts/android-launcher-icon-check.py"
       - "scripts/android-flow-smoke.sh"
       - "scripts/enable-ios-development-profile.mjs"
       - "capacitor.config.json"
@@ -81,6 +82,22 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
+      # 2026-10-30：舊真人臉素材（web/flashhead/ 約 10MB）由 android/app/build.gradle 的
+      # ignoreAssetsPattern 剔除；這裡直接打開 APK 看清單，確認真的沒裝進去、且網頁殼本體還在。
+      - name: Check APK excludes legacy real-person face assets
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          LISTING="$(unzip -l "$APK")"
+          if ! grep -q 'assets/public/index.html' <<<"$LISTING"; then
+            echo "FAIL APK is missing assets/public/index.html (asset ignore pattern too broad?)"
+            exit 1
+          fi
+          if grep -E 'assets/public/(flashhead/|flashhead-live-test\.html)' <<<"$LISTING"; then
+            echo "FAIL APK still contains legacy FlashHead real-person assets"
+            exit 1
+          fi
+          echo "PASS APK excludes web/flashhead/ and flashhead-live-test.html"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -114,6 +131,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # 2026-10-29（PR #632 換官方圖示後補的證據）：桌面圖示驗證小工具用 Pillow 裁圖、算顏色，
+      # runner 的 python3 沒內建 Pillow，先裝。
+      - name: Install Pillow (launcher icon check)
+        run: python3 -m pip install --quiet pillow
+
       - name: Launch emulator, install APK, screenshot
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -138,6 +160,10 @@ jobs:
             adb exec-out screencap -p > launch.png
             sleep 12
             adb exec-out screencap -p > launch-20s.png
+            # 2026-10-29：按 HOME、打開應用程式列表，拍桌面上的 Munea 圖示——#632 把範本藍 X 換成
+            # 官方圖示後，這是第一次有人在模擬器上親眼看那顆。找不到「Munea」那格、或那格的顏色
+            # 不是橘水滴＋青綠漣漪（例如又變回範本藍），這步就紅；截圖與判定都放 launcher-icon/。
+            python3 scripts/android-launcher-icon-check.py --out-dir launcher-icon
 
       - name: Upload launch screenshot artifact
         if: always()
@@ -148,6 +174,7 @@ jobs:
             launch-2s.png
             launch.png
             launch-20s.png
+            launcher-icon/
           if-no-files-found: warn
           retention-days: 14
 

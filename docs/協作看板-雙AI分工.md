@@ -1,5 +1,57 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-10-31 蘇菲｜📞 1.0.70 語音線延遲實測（本機同設定）＋🔎 SEO 總體策略正本（只加文件、不碰程式）
+
+- **正式線真相**：`munea-voice`（正式）近 120 天 Cloud Run 紀錄**沒有任何一次 WebSocket 升級（101）**＝沒人真打過一通；只有 App 開頁預熱打 `/health`（回 404、只是喚醒用，無害）。測試機最後通話 10/29。
+- **為什麼沒走正式總機實測**：`voice:chain-probe:production` 拿總機座位要使用者登入通行證（`MUNEA_ACCESS_TOKEN`）；用測試帳號密碼登入正式庫我不能做。另外這支工具的 production 必過關卡仍要求 `avatar_health`／`avatar_call_token_health`（雲端臉 tw-07 已退役、URLError）＝**臉搬到手機後這支探針在正式線永遠紅**，需要 Codex 改成臉不再是必過關卡。
+- **改用本機同設定實測**：`engine/live_voice_server.py` 用正式機同一組設定（ENGINE=31／3.1 flash live、LIVE_LOOKUP=1、ECHO_GUARD 1.7、同一把 Gemini 鑰匙，不接總機、不接 brain），合成國語 5 輪：伺服器 `node.first_audio`（最後聽到人聲→第一聲）**1813／1812／2844／1750／1672 ms**（中位 1.8 秒、最慢 2.8 秒，第 3 輪「晚餐吃什麼」）；連線到可講話 453 ms；5/5 輪都有回、ASR 正確。手機上還要再加網路與播放緩衝約 0.1–0.2 秒。
+- **看到的兩個問題（交 Codex 判斷，語音線 Codex 主修）**：① 每一輪都 `turn_complete_stall quiet_ms≈2600 → finish_in_place`，模型沒送回合結束、靠 2.6 秒安靜補收，`recovery` 一路累加到 5——要確認這 2.6 秒內長輩接話會不會被吃掉；② 每輪 prompt≈13,700、`cached=0`（說明書每輪重算，8/13 已知），也拖慢第一聲。1.8 秒裡有一段是 #528 刻意的「等長輩講完」（`EXPLICIT_TURN_TAIL_MS` 900），不是全部都能砍。
+- **仍待**：7/17 永久硬 Gate＝安裝版 iPhone 真機打一通，`App E2E pending`。
+- **SEO**：新增 `docs/SEO總體策略-2026-10-31.md`（Google 自動完成實證的子女問法、四柱策略、90 天路線、三個待拍板）。
+- **檔**：`docs/SEO總體策略-2026-10-31.md`（新）、本看板。
+
+### 2026-10-31 蘇菲｜🗑️ 作廢「Voice＋Avatar 必須綁定」舊規矩（Edward 10/31「作廢」· 只改看板文字、不碰程式）
+
+- **為什麼**：7/9「聊聊＝Voice＋Avatar、雲端臉引擎上線必要」與 7/13–14「Voice＋Avatar 必須綁定、沒顯示卡座位就排隊」是雲端真人臉時代的規矩。10/28–29 起寧寧改成手機上的 Rive 插畫臉（正視前方、嘴型＋眨眼＋呼吸），總機給 `phone://on-device-face`，臉不再佔雲端顯示卡（#623／#631）。舊規矩若照字面執行，會要求通話去等一張早已不用的顯示卡。
+- **做了**：第 228 行永久硬 Gate 下方加作廢公告；7/9 定位憲法標題、7/14 30 人擴容目標那行加「已作廢」標記並指回本條。歷史紀錄原文不刪。
+- **仍然有效（沒作廢）**：① 7/17 永久硬 Gate＝安裝版 iPhone 真機打一通才算驗收（「Voice＋Avatar」改讀成「聲音＋手機上的臉」）② 聲音沒接通不得開始扣點 ③ 聊聊仍有臉，不做「沒有臉、只有聲音」的畫面；臉在手機上、不需要雲端座位。
+- **檔**：只有本看板。
+
+### 2026-10-30 蘇菲｜📦 App 下載包拿掉約 10MB 舊真人臉素材（`web/flashhead/`）（call-path risk：動到 `web/index.html` 通話臉框＋iOS／Android 打包）
+
+- **為什麼**：10/28–29 寧寧換成手機上的插畫臉、總機給 `phone://on-device-face`，雲端真人臉只剩開發用（`munea.remoteFace=1`）。但 `web/flashhead/` 五個檔（bg-a05/a06.png、person-a05/a06.png、greet-a05.mp4，共約 10.2MB）還跟著整個 `web/` 被打進每個 iOS／Android 下載包；`index.html` 隱藏臉框還一開頁就去載兩張。
+- **引用盤點**：App 內只有 `index.html` 隱藏臉框（fhBg／fhPersonImg）＋ `app.js` 的 `_fhWarmArt`／`_fhComposite`（只在雲端臉接上時用）＋ `flashhead-live-test.html`（iOS 早已剔）。`greet-a05.mp4` App 不用。**雲端有人從網頁版拿**：`deploy/runpod-avatar/sync-face-assets.py`、`deploy/runpod-demo/build-demo-assets.py` 從 brain 的 `/flashhead/` 下載、`deploy/modal-avatar/flashhead_test_page.py` 直接讀本機檔 → **git 檔一個都不刪、網頁版／官網／後台照舊**。
+- **做了什麼**：① `scripts/ios-archive.sh` 剔除清單加 `flashhead`（`rm -f`→`rm -rf`），`ios-export-app-store.sh` IPA 驗證清單同步加；② `android/app/build.gradle` 的 `ignoreAssetsPattern` 加 `<dir>flashhead:flashhead-live-test.html`，`android-build.yml` 組完 APK 打開清單確認沒有 flashhead、且 `index.html` 還在；③ `index.html` 兩張圖不預填 `src`、`_fhWarmArt` 沒開 `remoteFace=1` 就不預熱（開了照舊現裝，網頁版開發測舊臉不受影響）。
+- **守門**：`scripts/test-release-settings.js` 加 7 條（iOS 兩份清單含 flashhead、用 rm -rf、Android 剔除樣式、CI 清單檢查、index 不准 eager 載 flashhead、預熱要看 remoteFace）；逐檔換回 main 版本反向驗證 6 檔各自變紅。
+- **驗證**：`smoke:no-api` 無 FAIL、`release:check` 綠、avatar render contract／voice launch policy／call control contract／ui-contracts 綠。⚠ `test-release-settings.js` 在乾淨 main 本來就紅在第 47 行（`app.js?v=…v1066` 沒跟著 1.0.70 改），跟這張無關；跳過那條後整支 PASS。
+- **未做**：Android 剔除只能靠這張 PR 的 CI 證明（本機沒 Java）；**App E2E pending**——下次 iOS 打包後實機打一通確認插畫臉照常；Android 仍打包 `admin.html`／`src/admin.*`（iOS 有剔、Android 沒剔，另案）。
+- **檔**：`scripts/ios-archive.sh`、`scripts/ios-export-app-store.sh`、`android/app/build.gradle`、`.github/workflows/android-build.yml`、`web/index.html`、`web/src/app.js`、`scripts/test-release-settings.js`、本看板。
+
+### 2026-10-30 21:50 蘇菲｜🔎 官網搜尋能見度（FAQ＋結構化資料＋llms.txt）＋條款角色改名＋B2B 藏試打按鈕（PR · 不碰通話路徑）
+
+- **為什麼**：子女現在會直接問 AI／搜尋「爸媽一個人住怎麼關心」「有沒有提醒長輩吃藥的 App」——官網沒有一段能被直接引用的問答；品牌結構化資料還公開寫個人 Gmail；條款仍列已下線的阿宏／小昀／阿原；B2B「開始 3 分鐘通話」連到還是舊顯示卡臉、打不通的 `call.html`。
+- **做了什麼**：① 四語首頁 `<head>` 加 iPhone 智慧橫幅 `apple-itunes-app`（app-id 6788658125）② 首頁新增「常見問題」8 題（`#faq`，在技術段與收尾 CTA 之間、頁尾加連結），同一份問答由 `site-src/build.mjs` 產生 FAQPage 結構化資料（問答限純文字、逐字跟畫面一致）③ 新增 `app-site/llms.txt`（英文為主＋繁中一段）④ Organization 拿掉 `email`（`@munea.net` 收不到信前不放任何信箱；sameAs 只有 App Store＋粉專，沒動）⑤ 條款「例如寧寧、阿宏、小昀、阿原」→「寧寧、沐沐」⑥ B2B 解鎖後的試打按鈕加 `hidden`＋`display:none`（四語），`call.html`／`api/call-key.js` 沒動。
+- **價格出處**：Plus NT$599／Pro NT$1,199（月）、每月 100／200 點、圈 4／12 人、註冊送 5 點＝`docs/BILLING-CREDITS-ENTITLEMENT-v1.md`＋#638（10/29 Edward「方案全不動」）；「1 點約 1 分鐘」＝#638 App 說明；其他地區寫「以 App 內顯示為準」。
+- **檔**：`site-src/index.html`、`site-src/build.mjs`、`site-src/i18n/{zh,en,ja,es}.json`、`app-site/{index,en,ja,es}/index.html`（生成）、`app-site/llms.txt`、`web/terms.html`、`app-site/terms.html`、`b2b-src/index.html`、`munea-b2b/{,en/,ja/,es/}index.html`（生成）、`scripts/test-app-site-seo.js`（新守門：橫幅／FAQ JSON-LD 可解析且每題畫面可見／Organization 無 email／llms.txt）、`docs/evidence/site-faq-2026-10-30/`。
+- **驗證**：`test:seo`、`test-marketing-site-localizations`、`test-i18n-surface-inventory`、`test:b2b-i18n`、`test-brand-lockup-not-translated`、`test-i18n-legal-routing`、`test-ui-contracts` 全綠；系統 Chrome 無頭開四語（桌機＋390 手機）0 個 JS 錯誤、兩段 JSON-LD 都 `JSON.parse` 過、FAQ 8 題、無橫向捲動。
+- **未做**：en／ja／es 條款沒有「角色舉例」那句（三語條款本來就沒有智慧財產段），所以只改中文兩份、不自己加法律條文；B2B 試打區塊的標題「現在，直接跟寧寧說話」與說明文字還在（按鈕藏了、文字沒改）；官網頁尾 mailto、條款／隱私／客服頁、B2B 頁尾與預約彈窗仍是個人 Gmail（照指示只回報）。合併 main 會自動發佈官網（firebase-hosting.yml）；B2B 要另外部署。
+### 2026-10-30 20:30 蘇菲｜🔎 1.0.70 已上架＋App Store 搜尋補洞（宣傳文字上線、1.0.71 名稱關鍵字備好）
+
+- **1.0.70 上架**：10/30 蘋果過審（PENDING_DEVELOPER_RELEASE）→ Edward「去發布吧」→ 19:38 發布，API 回讀 `READY_FOR_SALE`。五份現況文件的「待送審」改成已發布（product alignment／release consistency 綠）。
+- **搜尋盤點（API＋公開查詢接口）**：美國、日本商店的名稱與副標被蓋成中文；三國搜「Munea」都找不到（名稱只有沐寧）；宣傳文字三語空白。排名：沐寧 #1、獨居 #57、長輩 #153，吃藥提醒／用藥提醒／長照 200 名外；評分台灣 1、美日 0。
+- **已上線（不需送審）**：三語宣傳文字改成子女視角（`app-store/localizations/*.json` 的 promotionalText，回讀一致）。
+- **備好、跟 1.0.71 一起送**：名稱加 Munea（繁中 `沐寧Munea：全家人的健康陪伴AI照護管家`、英 `Munea: Family Care Companion`、日 `Munea 家族の健康パートナーAI`）、英日副標與關鍵字重寫；繁中關鍵字拿掉「視訊」換「吃藥」（`scripts/aso-keyword-builder.mjs` 候選詞同步改）。⚠ 送審工具目前只送 whatsNew／描述，名稱副標關鍵字要確認有帶上。
+- **檔**：`app-store/localizations/{zh-Hant,en-US,ja}.json`、`scripts/aso-keyword-builder.mjs`、`docs/{RELEASE-STATE,CURRENT-DEVELOPMENT-PLAN,PRODUCT-QUALITY-CONFIDENCE,PRODUCT-ALIGNMENT-REGISTER,00-總綱-從這裡開始}.md`。
+- **未做**：官網 SEO／AI 搜尋包、下載包舊照片各另開 PR；support@munea.net 網域沒有收信設定（寄了會退），等 Edward 選轉寄或公司信箱。
+
+### 2026-10-29 23:30 蘇菲｜🖼 Android 圖示收尾：CI 拍桌面證明是官方圖示＋清掉範本殘檔（PR #650 · 補助案 B1 · 不碰通話路徑 · CI 綠）
+
+- **接**：#632 已把 15 張圖示換成官方寧寧圖示（iOS 同一張、背景 #FEF5EB、`scripts/android-make-launcher-icons.py` 一行重產），但 CI 從沒拍過桌面那顆、兩個 Capacitor 範本殘檔還留著。
+- **做了**：① 新 `scripts/android-launcher-icon-check.py`：模擬器按 HOME → 開應用程式列表 → 找「Munea」那格放大 4 倍存檔 → 顏色判定（橘水滴＋青綠漣漪要在、範本藍不能比橘多）；找不到或顏色不對就讓 emulator-smoke 紅、不悄悄放過 ② workflow emulator-smoke 多跑這支、截圖跟判定一起上傳 ③ 刪 `drawable-v24/ic_launcher_foreground.xml`、`drawable/ic_launcher_background.xml`（範本藍 X 的向量圖，#632 後沒任何地方引用；`values/ic_launcher_background.xml` 還在用、保留）。
+- **CI 證據（run 40899410355）**：三 job 全綠。桌面 dock 跟應用程式列表都找到「Munea」、兩格都判定過（橘 2.7%／1.8%、青綠 3.3%／2.2%、範本藍 0%）；桌面／列表截圖＋那格放大 4 倍＋判定數字存 `docs/qa/android/icon-2026-10-29/run40899410355-emulator-smoke-*`。⚠ 桌面那顆外圍一圈黃綠不是圖示的問題：畫面描述寫 `Predicted app: Munea`，是 Pixel Launcher 把剛裝的 App 放進 dock「推薦」位、用圖示主色畫的外環；列表裡同一顆沒有環、素材裡也沒這個顏色。判定結果現在會把這個描述一起留下。
+- **檔**：`.github/workflows/android-build.yml`、`scripts/android-launcher-icon-check.py`、上述兩個刪檔、`docs/qa/android/icon-2026-10-29/run40899410355-*`（5 個證據檔）、本看板。**狀態**：✅ CI 9 項全綠、PR 附截圖；合併 Edward 按。
+- ⚠ **順手看到、這張不處理（後續）**：第二輪 CI（run 40901059620，只因小工具多留一欄）「登入與聊聊通話流程」紅一次＝App 開啟後主畫面忙著載入、5 秒內沒接到系統的「取得焦點」事件，Android 跳「Munea 沒有回應」（logcat：Input dispatching timed out · Waited 5004ms for FocusEvent）；重跑即綠。模擬器純軟體畫圖第一格要 9 秒才會撞到 5 秒線、真機有顯示卡不一定會，但這是「冷啟動主執行緒被擋超過 5 秒」的真信號，值得查 WebView 啟動那段在忙什麼、A15 實機再確認一次。紀錄在 run 40901059620 的 flows artifact（logcat.txt 15:26:51）。
+
 ### 2026-10-29 15:50 蘇菲｜📞 通話改「臉在手機、聲音在雲端」——正式線自 9/6 起打不通的病根（call-path risk · 改通話配對、照 7/13 規矩先列檔）
 
 - **病根（查帳實錘）**：總機 `munea_call_request` 配對要同時有聲音座位＋臉的座位（`gpu_workers`）。雲端顯示卡 6 張 9/6 起全 `terminated` → 每通電話永遠排隊。最後一通成功 8/13；10/14 唯一一通排隊 7.8 秒被取消。App 端 `getAvatarUrl()` 也仍回雲端臉位址（寧寧→a05 FlashHead），新插圖只換了畫面、撥號沒跟著改。
@@ -208,6 +260,7 @@
 > 目的：Claude/城堡與 Codex 可能同時協作同一個 repo。這份看板不是限制誰只能做哪一塊，而是避免兩邊重複開發、覆蓋檔案、或讓產品決策漂移。
 > **2026-07-14 Edward 決策：採輕量協作。** 本看板與 GitHub 開啟中的 PR 共同提供分工資訊；不使用 JSON 鎖、租期、lock-only PR 或路徑鎖 CI。開始前先看誰正在改哪些檔案；同一檔由第一位完成合併後再交接，不同檔可平行。每個 session 用自己的 branch，共享或 dirty checkout 才另外開 worktree。詳見[輕量協作方式](AGENT-COLLABORATION-PROTOCOL.md)。
 > **📞 永久硬 Gate（2026-07-17 Edward 拍板）**：凡可能影響聊聊撥通的 App、Auth、bootstrap、點數、Gateway、Voice、Avatar/GPU、環境設定或部署，最後必須以安裝版 iPhone App 完成「按通話→麥克風→領席→Voice＋Avatar→真實上行→AI 聲音／畫面回來→掛斷釋放」驗收。單元／瀏覽器／健康／合成探針不能代替；developer-direct 不能證明正式 Gateway 路。未通過一律標 `App E2E pending`，不得宣稱 verified、可上線、可送審或完成。
+> **🗑️ 2026-10-31 Edward 作廢**：7/9「聊聊＝Voice＋Avatar、雲端臉引擎上線必要」與 7/13–14「Voice＋Avatar 必須綁定／沒顯示卡座位就排隊」兩條舊規矩作廢——臉已改成手機上的 Rive 插畫（10/28–29），不再綁雲端顯示卡座位。上面這條硬 Gate 仍有效，「Voice＋Avatar」讀作「聲音＋手機上的臉」；聲音沒接通不得扣點仍有效。詳見本看板最上方 10/31 條。
 
 ### 2026-08-12 Codex｜🚨 1.0.65 原聲音復原（0% 3×3 PASS／待 exact-main promote · server-only · call-path risk）
 - **分支／範圍**：`codex/restore-voice31-20260812`；修改 Voice production/staging 部署引擎固定值、Voice/App service identity、launch contract 與 release evidence。不修改 Avatar 512、開場收音策略或 App 版號。
@@ -1087,7 +1140,7 @@ Edward 真機測通（她真的講話了）、回三點，已修＋重裝真機�
 - ⚠️ 注意：資料櫃機房是 **Oceania (Sydney)**、不是台灣近點（建櫃前已存在的設定）；試用期可用，正式上線前若要搬近一點再議。
 - **接棒 Windows**：鑰匙在你們那邊——可以開始把真帳號/記憶同步接上正式櫃；004/005/006 的 policy 沒有防重複、若將來重跑注意。
 
-## 2026-07-09 Mac 端（Claude/蘇菲）· 📌📌 產品定位憲法：聊聊＝Voice＋Avatar、無靜態圖聊天服務（Edward 兩度拍板）
+## 2026-07-09 Mac 端（Claude/蘇菲）· 📌📌 產品定位憲法：聊聊＝Voice＋Avatar、無靜態圖聊天服務（Edward 兩度拍板）〔🗑️ 2026-10-31 已作廢：臉改手機上的 Rive 插畫，見看板最上方 10/31 條〕
 - **需求原文 1**：「服務就是有六個角色，之後開啟聊天不管選哪一個都要能有 avatar 的效果功能。」
 - **需求原文 2（升級為定位）**：「我們的聊聊服務只有 voice+avatar，沒有靜態圖片的聊天服務！」
 - **意義（兩台都要照做）**：
@@ -1562,7 +1615,7 @@ Edward 只在已包版 App 測試（網頁只是 Windows 端實驗室、對他�
 - **預計驗證**：新增可重複測試，完成 JavaScript 語法、launch/release gate、Capacitor sync 與限定差異檢查；每項以 PASS／FAIL 回報。
 
 ### 2026-07-14 Edward → Codex：1～30 人同時撥號控制面實作續工
-- **使用者目標**：把目前可用的 GLOWS 3 席擴成「1～30 人同時撥號時都能被系統接住」；Voice＋Avatar 必須綁定，不得退成純語音，未接通不得開始扣點。10 人是中途驗收，不是容量終點。
+- **使用者目標**：把目前可用的 GLOWS 3 席擴成「1～30 人同時撥號時都能被系統接住」；Voice＋Avatar 必須綁定，不得退成純語音，未接通不得開始扣點。〔🗑️ 2026-10-31：「Voice＋Avatar 必須綁定」已作廢（臉改在手機上）；「未接通不得開始扣點」仍有效〕10 人是中途驗收，不是容量終點。
 - **現況稽核**：正式 App 仍未設定 Gateway 門牌；持久租約、App 排隊接線與 RunPod controller 已有工作區成果，但 SQL／Gateway／RunPod 尚未提交部署，RunPod 仍是 `observe` 且最多一張備援卡，因此正式容量仍只有主卡 3 人。
 - **Codex 鎖區**：`deploy/gateway/`、`supabase/sql/010_realtime_call_control.sql`、`deploy/runpod-avatar/runpod_backup.py`、`deploy/runpod-avatar/runpod-backup.env.example`、`scripts/test_call_control.py`、`scripts/test_runpod_backup.py` 與新的容量規劃測試。Claude 暫不修改／部署同區；家庭邀請與 `web/src/app.js` 的既有並行變更本輪不覆蓋、不混入提交。
 - **本輪容量規則**：GLOWS 常駐 3 席；RTX 4090 未完成三路長測前每張只算 2 席。系統依「需求席位－現有可用席位」開 0～14 張 RunPod，總容量最多 31 席；排隊上限調為 30，確保突然 30 人一起撥時先進等待而非直接拒絕。每輪開卡數另設護欄，避免錯誤流量一次燒滿 14 張。

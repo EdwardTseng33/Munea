@@ -15,6 +15,11 @@ from dataclasses import dataclass
 from typing import Any
 
 
+# 029：臉在手機上畫的「臉座位」（App getAvatarUrl 看到 phone:// 就不接雲端臉）。
+ON_DEVICE_FACE_WORKER_ID = "on-device-face"
+ON_DEVICE_FACE_URL_SCHEME = "phone://"
+
+
 class CallControlError(RuntimeError):
     pass
 
@@ -232,10 +237,36 @@ class SupabaseCallStore:
         })
 
     def ready(self, *, call_id: str, lease_version: int, component: str, event_id: str) -> dict[str, Any]:
-        return self.rpc("munea_call_ready", {
+        result = self.rpc("munea_call_ready", {
             "p_call_id": call_id, "p_lease_version": lease_version,
             "p_component": component, "p_event_id": event_id,
         })
+        # 2026-11-05：臉在手機上畫（029 phone://on-device-face）時，沒有任何雲端臉會回報
+        # avatar ready，munea_call_ready 又要聲音＋臉兩邊都 ready 才轉 active → 每通卡在
+        # connecting、App 等 15 秒放棄（10/29 #641 只修了配對、沒修接通）。手機上的插圖
+        # 隨時能畫，所以聲音就緒時由總機替它補報一筆臉就緒。
+        if (component == "voice" and isinstance(result, dict) and result.get("ok")
+                and result.get("state") == "connecting"
+                and self._lease_uses_on_device_face(call_id, lease_version)):
+            result = self.rpc("munea_call_ready", {
+                "p_call_id": call_id, "p_lease_version": lease_version,
+                "p_component": "avatar", "p_event_id": event_id + ":on-device-face",
+            })
+        return result
+
+    def _lease_uses_on_device_face(self, call_id: str, lease_version: int) -> bool:
+        lease = self._first_rest_row("call_leases", {
+            "select": "worker_id",
+            "call_id": "eq." + call_id,
+            "lease_version": "eq." + str(int(lease_version)),
+        })
+        worker_id = str((lease or {}).get("worker_id") or "")
+        if not worker_id:
+            return False
+        if worker_id == ON_DEVICE_FACE_WORKER_ID:
+            return True
+        worker = self.get_worker(worker_id) or {}
+        return str(worker.get("url") or "").startswith(ON_DEVICE_FACE_URL_SCHEME)
 
     def cancel(self, *, call_id: str, user_id: str) -> dict[str, Any]:
         return self.rpc("munea_call_cancel", {

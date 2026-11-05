@@ -12,11 +12,19 @@
  * 一個新功能面板算「小功能」，走最後一碼；要跳中間碼請先問 Edward。
  */
 window.MuneaVersion = {
-  current: '1.0.66',
+  current: '1.0.70',
   callProtocol: 3,
   voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
+    {
+      version: '1.0.70',
+      date: '2026-10-29',
+      title: "寧寧換上新形象：插畫風格、會眨眼和呼吸，講話時嘴型跟著聲音動。App 也變得更輕巧。",
+      items: [
+        '本筆由 iOS 發布流程自動建立以保持版號一致；完整更新內容請於合併前人工補上。',
+      ],
+    },
     {
       version: '1.0.66',
       date: '2026-08-12',

@@ -203,32 +203,46 @@ async function syncLocalizations(appStoreVersionId) {
         `update whatsNew for ${target.locale}`,
       );
     } else {
-      await write(
-        'POST',
-        '/v1/appStoreVersionLocalizations',
-        {
-          data: {
-            type: 'appStoreVersionLocalizations',
-            attributes: { locale: target.locale, whatsNew },
-            relationships: { appStoreVersion: { data: { type: 'appStoreVersions', id: appStoreVersionId } } },
-          },
-        },
-        `create localization ${target.locale}`,
-      );
+      // 商店上還沒有這個語言：新增語言要整套描述／關鍵字／截圖，是另外的上架決定，
+      // 只塞 whatsNew 會讓整個版本卡在「缺 description」送不了審（2026-10-29 es-ES 實際踩到）。
+      console.warn(`SKIP ${target.locale}: not listed on the App Store yet; whatsNew not added.`);
     }
   }
 }
 
-async function createReviewSubmission(appStoreVersionId) {
-  const created = await write(
-    'POST',
-    '/v1/reviewSubmissions',
-    { data: { type: 'reviewSubmissions', relationships: { app: { data: { type: 'apps', id: APP_ID } } } } },
-    'create reviewSubmission',
+async function findOpenReviewSubmission() {
+  const result = await get(
+    `/v1/apps/${APP_ID}/reviewSubmissions?filter[platform]=IOS&filter[state]=READY_FOR_REVIEW&limit=1`,
   );
-  const submissionId = created ? created.data.id : 'dry-run-unknown-id';
+  return result.data[0] || null;
+}
 
-  await write(
+async function versionAlreadyAttached(submissionId, appStoreVersionId) {
+  const items = await get(`/v1/reviewSubmissions/${submissionId}/items?include=appStoreVersion&limit=50`);
+  return items.data.some((item) => item.relationships?.appStoreVersion?.data?.id === appStoreVersionId);
+}
+
+async function createReviewSubmission(appStoreVersionId) {
+  // 同一個 App 同時只能有一份還沒送出的審查單：上次中途失敗留下的就沿用，不再另開。
+  const open = await findOpenReviewSubmission();
+  let submissionId;
+  if (open) {
+    submissionId = open.id;
+    console.log(`reuse open reviewSubmission ${submissionId}`);
+  } else {
+    const created = await write(
+      'POST',
+      '/v1/reviewSubmissions',
+      { data: { type: 'reviewSubmissions', relationships: { app: { data: { type: 'apps', id: APP_ID } } } } },
+      'create reviewSubmission',
+    );
+    submissionId = created ? created.data.id : 'dry-run-unknown-id';
+  }
+
+  const attached = open ? await versionAlreadyAttached(submissionId, appStoreVersionId) : false;
+  if (attached) {
+    console.log('appStoreVersion already attached to this reviewSubmission.');
+  } else await write(
     'POST',
     '/v1/reviewSubmissionItems',
     {

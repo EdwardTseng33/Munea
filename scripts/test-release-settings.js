@@ -27,6 +27,8 @@ const viewController = read('ios/App/App/MuneaViewController.swift');
 const xcodeProject = read('ios/App/App.xcodeproj/project.pbxproj');
 const iosArchive = read('scripts/ios-archive.sh');
 const iosExport = read('scripts/ios-export-app-store.sh');
+const androidAppGradle = read('android/app/build.gradle');
+const androidBuildWorkflow = read('.github/workflows/android-build.yml');
 const iosDevProfile = read('scripts/enable-ios-development-profile.mjs');
 const auth = read('web/src/auth.js');
 const infoPlist = read('ios/App/App/Info.plist');
@@ -203,11 +205,24 @@ expect(iosExport.includes('$ROOT/web/src/auth.js') && iosExport.includes('$ROOT/
 expect(iosExport.includes('fespbkdwafueyonppzwq') && iosExport.includes('uhmpmystjjdqqxlpsthc'), 'IPA export does not enforce the Tokyo Supabase auth configuration');
 expect(iosExport.includes('BRAIN_URL_DEFAULT') && iosExport.includes('LIVE_VOICE_URL_DEFAULT') && iosExport.includes('CALL_CONTROL_URL_DEFAULT'), 'IPA export does not verify the production Brain/Voice/Call-control default endpoints');
 expect(iosExport.includes('munea-brain-staging') && iosExport.includes('munea-voice-staging'), 'IPA export does not reject staging Brain/Voice endpoints from shipping in the App Store package');
-for (const nonAppAsset of ['admin.html', 'flashhead-live-test.html', 'src/admin.js', 'src/admin.css']) {
+for (const nonAppAsset of ['admin.html', 'flashhead-live-test.html', 'src/admin.js', 'src/admin.css', 'flashhead']) {
   expect(iosArchive.includes(`"${nonAppAsset}"`), `iOS archive does not prune non-App asset: ${nonAppAsset}`);
   expect(iosExport.includes(`"${nonAppAsset}"`), `IPA export does not reject non-App asset: ${nonAppAsset}`);
 }
 expect(iosArchive.includes('Remove non-App web tools from the iOS bundle'), 'iOS archive does not declare the non-App asset pruning step');
+// 2026-10-30：舊真人臉素材 web/flashhead/（約 10MB）不再打包進 App——寧寧已是手機插畫臉，只有開發用 remoteFace=1 才接雲端真人臉。
+// iOS 用 rm -rf 剔整個資料夾；Android 在 aapt 的 ignoreAssetsPattern 剔、CI 再打開 APK 清單確認。
+expect(/rm -rf "\$ROOT\/ios\/App\/App\/public\/\$relative_path"/.test(iosArchive),
+  'iOS archive prunes with rm -f, which cannot remove the flashhead/ directory');
+const androidIgnore = (androidAppGradle.match(/ignoreAssetsPattern\s*=\s*'([^']*)'/) || [])[1] || '';
+expect(androidIgnore.split(':').includes('<dir>flashhead'), 'Android build does not exclude web/flashhead/ legacy real-person assets from the APK');
+expect(androidIgnore.split(':').includes('flashhead-live-test.html'), 'Android build does not exclude the FlashHead test page from the APK');
+expect(androidBuildWorkflow.includes('Check APK excludes legacy real-person face assets')
+  && androidBuildWorkflow.includes('assets/public/(flashhead/|flashhead-live-test\\.html)'),
+  'Android CI does not verify the APK listing excludes flashhead assets');
+expect(!/<img[^>]*\ssrc="flashhead\//.test(index), 'index.html eagerly loads flashhead/ art that is no longer packaged in the App');
+expect(app.includes("if (faceEngine() !== 'flashhead' || !remoteFaceEnabled()) return;"),
+  'full-body art warm-up requests flashhead/ art even when the remote face is off');
 expect(iosExport.includes('exported IPA contains non-App web tooling'), 'IPA export does not fail closed when non-App tooling is packaged');
 expect(iosExport.includes('UIDeviceFamily') && iosExport.includes('IPA supports iPhone only'), 'IPA export does not enforce iPhone-only packaging');
 expect(canaryDeploy.includes('command -v gcloud') && canaryDeploy.includes('GCLOUD=(gcloud)'), 'canary deploy is not compatible with macOS gcloud');
