@@ -12,11 +12,19 @@
  * 一個新功能面板算「小功能」，走最後一碼；要跳中間碼請先問 Edward。
  */
 window.MuneaVersion = {
-  current: '1.0.70',
+  current: '1.0.71',
   callProtocol: 3,
   voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
+    {
+      version: '1.0.71',
+      date: '2026-11-05',
+      title: "通話更穩定：修好聊完一通、切出去再回來後打不通的問題。接通後寧寧會先跟你打招呼；打開 App 不再閃兩個標誌；個人資料可以設定「希望 AI 怎麼叫你」。",
+      items: [
+        '本筆由 iOS 發布流程自動建立以保持版號一致；完整更新內容請於合併前人工補上。',
+      ],
+    },
     {
       version: '1.0.70',
       date: '2026-10-29',
