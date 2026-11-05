@@ -3502,7 +3502,10 @@ function faceSameLineOn() {
   try {
     const v = localStorage.getItem('munea.faceSameLine');
     if (v !== null) return v === '1';                 // 手動設定最優先（=0 可在 FlashHead 模式下關同線）
-    return faceEngine() === 'flashhead';              // FlashHead 模式預設開同線（它天生兩軌同線）
+    // 2026-11-05：臉改在手機上畫之後，faceEngine() 仍回 flashhead（本機沒存過設定的預設值），
+    // 每通照樣走雲端臉的同線收聲、撥號時建一顆永不關的靜音引擎接進臉的播放器。
+    // 真的接雲端臉（munea.remoteFace=1）才開同線；其餘聲音一律本機播放。
+    return faceEngine() === 'flashhead' && remoteFaceEnabled();
   } catch (e) { return false; }
 }
 // 單一真相：「她現在正在出聲嗎」——Voice PCM 算出的播放水位是主時鐘；同線實際
@@ -4136,8 +4139,10 @@ const LiveVoice = {
     } catch (e) { return false; }
   },
   _resumeAudio() {
-    [this.ac, this.playCtx].forEach(ctx => {
-      try { if (ctx && ctx.state === 'suspended') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
+    // iPhone 切到背景再回來，聲音引擎會停在 'interrupted'（只有 iPhone 有這個狀態）；
+    // 原本只救 'suspended'，被打斷的引擎就一直停著。
+    [this.ac, this.playCtx, CallChime._ctx].forEach(ctx => {
+      try { if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
     });
   },
   _setMicOpen(open) {
@@ -4829,12 +4834,12 @@ const LiveVoice = {
     try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
     this.proc = null; this._micSrc = null; this.mic = null;
+    // 2026-11-05 正式線實錘：引擎回報 'running'、麥克風 'live'，收音程式卻一次都沒被叫到
+    //（iPhone 背景回來後的假 running）。重建時不再相信狀態，一律換一顆新的。
     try {
-      if (this.ac && this.ac.state !== 'running') {
-        const wedged = this.ac;
-        this.ac = new AudioContext();
-        try { wedged.close(); } catch (e) {}
-      }
+      const wedged = this.ac;
+      this.ac = new AudioContext();
+      try { if (wedged) wedged.close(); } catch (e) {}
     } catch (e) {}
     this._resumeAudio();
     let stream = null, error = null;
@@ -4864,7 +4869,16 @@ const LiveVoice = {
       if (!this.on || !this.ws || this.ws.readyState !== 1) return;
       if ((this._micPackets || 0) > 0) return;                      // 有包＝管線活著，看門收工
       voiceCallFail('microphone_uplink_slow', 'no_uplink_3000ms', { rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state });
-      try { trackProductEvent('voice_mic_uplink_stalled', { rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state }); } catch (e) {}
+      try {
+        const track = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+        // 引擎時鐘有沒有在走、麥克風是不是被系統靜音：分辨「假 running」跟「收不到聲」
+        trackProductEvent('voice_mic_uplink_stalled', {
+          rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state,
+          acTime: this.ac ? +Number(this.ac.currentTime || 0).toFixed(2) : null,
+          trackMuted: track ? !!track.muted : null,
+          chimeState: CallChime._ctx ? CallChime._ctx.state : null,
+        });
+      } catch (e) {}
       if ((this._micRebuilds || 0) >= 2) return;                    // 重建額度用完 → 不再重試
       await this._rebuildMicPipeline();
       if (this.on) this._armUplinkWatch();                          // 重建後再看 3 秒，確認真的有包流出
@@ -5596,6 +5610,11 @@ const CallChime = {
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
+      // 上一通在背景被掛斷時，這顆會卡在 'interrupted'／'closed'：直接換一顆新的（現在就在撥號手勢裡）。
+      if (this._ctx && this._ctx.state !== 'running' && this._ctx.state !== 'suspended') {
+        try { this._ctx.close(); } catch (e) {}
+        this._ctx = null;
+      }
       if (!this._ctx) this._ctx = new AC();
       if (this._ctx.state === 'suspended') { const p = this._ctx.resume(); if (p && p.catch) p.catch(() => {}); }
     } catch (e) {}
@@ -8594,7 +8613,7 @@ async function connectCall() {
     voiceCallMark('app_session_created', 'pass', { sessionId: activeChatSessionId });
     setFaceState('idle');
     // 新引擎首通冷開機較久（喚醒優化交先鋒車道）——誠實預告、不讓人以為當機（Edward 2026-07-11「等20秒」）
-    setLocalizedCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? 'firstWarmup' : 'connecting', true);
+    setLocalizedCallHint(faceEngine() === 'flashhead' && remoteFaceEnabled() && !Avatar.warm ? 'firstWarmup' : 'connecting', true);
     trackProductEvent('voice_session_started', { locale: muneaLocale(), mode: 'live' });
     const chatEl = document.getElementById('chat');
     if (chatEl) chatEl.dataset.state = 'connecting';
