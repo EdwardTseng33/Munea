@@ -85,6 +85,13 @@ assert(smoke.includes("foreach ($entry in $enterpriseGateBodies.GetEnumerator())
 assert(smoke.includes('Invoke-AdminJson "/enterprise/portal/summary"'), "smoke must probe the org portal link gate");
 assert(smoke.includes("accepted a missing or forged link token"), "smoke must fail when the org portal accepts a missing/forged link");
 assert(smoke.includes("leaked '$field' without a valid link token"), "smoke must fail when the org portal leaks summary fields without a valid link");
+// 2026-10-29：機構端專區 /org/*（第 2 段）——沒登入證一律 401；兩支新的後台接口要在企業門的 403 清單裡。
+assert(smoke.includes('Expect-AdminHttpError $orgPath @{} 401 $identityHeaders'), "smoke must verify /org/* endpoints refuse requests without a sign-in token");
+for (const orgPath of ["/org/me", "/org/summary", "/org/elders", "/org/elder/care-week", "/org/reports"]) {
+  assert(smoke.includes(`"${orgPath}"`), `smoke must probe the org staff endpoint ${orgPath}`);
+}
+assert(enterpriseSmokePaths.includes("/admin/enterprise/staff/invite"), "enterprise gate smoke must cover /admin/enterprise/staff/invite");
+assert(enterpriseSmokePaths.includes("/admin/enterprise/consent/status"), "enterprise gate smoke must cover /admin/enterprise/consent/status");
 
 for (const token of [":focus-visible", '.page[aria-busy="true"]', ".ops-notice.error", ".topbar-action"]) {
   assert(css.includes(token), `admin.css missing state/accessibility contract: ${token}`);

@@ -224,6 +224,10 @@ def _criticality(route: Route) -> str:
     if route.surface == "brain" and route.path.startswith("/enterprise/portal/"):
         # External-facing organisation portal: aggregate-only by contract, token-gated, no login.
         return "high"
+    if route.surface == "brain" and (route.path.startswith("/org/") or route.path.startswith("/org-consent")):
+        # Organisation staff API (2026-10-29, B2B2C stage 2): login-gated, consent-gated per elder; and the
+        # family-side consent switch that opens/closes that gate.
+        return "high"
     if route.surface == "brain" and route.path.startswith(("/guardian/", "/memory/", "/voice-")):
         return "high"
     return "standard"
@@ -263,6 +267,11 @@ def _pii(route: Route) -> str:
     if route.surface == "brain" and path.startswith("/enterprise/portal/"):
         # Organisation portal: org_portal.assert_no_personal_data rejects any person-level field.
         return "aggregate-only"
+    if route.surface == "brain" and path == "/org/summary":
+        return "aggregate-only"
+    if route.surface == "brain" and path in {"/org/elders", "/org/elder/care-week"}:
+        # Consented elders only; org_api.assert_no_forbidden strips sentences, summaries and identifiers.
+        return "health"
     if any(token in path for token in ("credits", "subscription", "apple/transaction", "entitlements")):
         return "billing"
     if any(token in path for token in ("health", "medication", "wellbeing", "care-schedule", "safety")):
@@ -314,6 +323,13 @@ def _tests(route: Route) -> list[str]:
         "/credits/consume": ["scripts/test_call_control_sql.py"],
         "/credits/grant": ["scripts/test_call_control_sql.py"],
         "/enterprise/portal/report": ["engine/test_org_portal_monthly.py"],
+        "/org/me": ["engine/test_org_api.py"],
+        "/org/summary": ["engine/test_org_api.py"],
+        "/org/elders": ["engine/test_org_api.py"],
+        "/org/elder/care-week": ["engine/test_org_api.py"],
+        "/org/reports": ["engine/test_org_api.py"],
+        "/org-consent": ["engine/test_org_api.py"],
+        "/org-consent/set": ["engine/test_org_api.py"],
         "/enterprise/portal/summary": [
             "engine/test_org_portal.py", "engine/test_org_portal_endpoints.py", "engine/test_org_portal_monthly.py",
         ],

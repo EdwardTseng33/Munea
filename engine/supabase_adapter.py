@@ -1237,7 +1237,7 @@ class SupabaseAdapter:
 
     def enterprise_client_to_row(self, client):
         client = client or {}
-        return {
+        row = {
             "name": str(client.get("name") or "").strip()[:200],
             "client_code": client.get("clientCode") or client.get("client_code"),
             "tax_id": client.get("taxId") or client.get("tax_id"),
@@ -1254,6 +1254,12 @@ class SupabaseAdapter:
             "report_recipients": client.get("reportRecipients") or client.get("report_recipients") or [],
             "notes": client.get("notes"),
         }
+        # 030：客戶類型（care／esg）。030 還沒套到資料庫前不送這欄，免得整列存不進去；
+        # 只有明確設了 esg 才送（care 本來就是資料庫預設值）。
+        kind = client.get("clientKind") or client.get("client_kind")
+        if kind and kind != "care":
+            row["client_kind"] = kind
+        return row
 
     @staticmethod
     def enterprise_client_row_to_item(row):
@@ -1274,6 +1280,7 @@ class SupabaseAdapter:
             "seatQuota": row.get("seat_quota") or 0,
             "status": row.get("status") or "active",
             "reportRecipients": row.get("report_recipients") or [],
+            "clientKind": row.get("client_kind") or "care",
             "notes": row.get("notes"),
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
@@ -1368,7 +1375,7 @@ class SupabaseAdapter:
 
     def enterprise_seat_to_row(self, seat):
         seat = seat or {}
-        return {
+        row = {
             "enterprise_client_id": seat.get("enterpriseClientId") or seat.get("enterprise_client_id"),
             "invite_email": str(seat.get("inviteEmail") or seat.get("invite_email") or "").strip().lower(),
             "account_id": seat.get("accountId") or seat.get("account_id"),
@@ -1381,6 +1388,11 @@ class SupabaseAdapter:
             "released_reason": seat.get("releasedReason") or seat.get("released_reason"),
             "notes": seat.get("notes"),
         }
+        # 030：分點標籤。同上，030 未套用前只在真的有值時才送。
+        site_label = seat.get("siteLabel") or seat.get("site_label")
+        if site_label:
+            row["site_label"] = str(site_label).strip()[:80]
+        return row
 
     @staticmethod
     def enterprise_seat_row_to_item(row):
@@ -1397,6 +1409,7 @@ class SupabaseAdapter:
             "graceUntil": row.get("grace_until"),
             "releasedAt": row.get("released_at"),
             "releasedReason": row.get("released_reason"),
+            "siteLabel": row.get("site_label"),
             "notes": row.get("notes"),
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
@@ -1678,6 +1691,216 @@ class SupabaseAdapter:
             "updatedAt": row.get("updated_at"),
             "updatedBy": row.get("updated_by"),
         }
+
+    # ------------------------------------------------------------------
+    # 機構端專區第 2 段（030）：照護人員、機構照護模式同意、機構端替長輩讀資料。
+    # 全部 service-role、全部「明講」帳號／人；不吃 self.account_id（機構人員沒有 App 帳號，
+    # request-scoped 的 account_id 是空的，拿它當條件會查到空集合、或更糟——查到別人）。
+    # ------------------------------------------------------------------
+
+    def load_org_staff(self, client_id=None, auth_user_id=None, email=None, status=None, limit=500):
+        if not self.enabled():
+            return None
+        limit = max(1, min(2000, int(limit or 500)))
+        query = {"select": "*", "order": "created_at.asc", "limit": str(limit)}
+        if client_id:
+            query["enterprise_client_id"] = f"eq.{client_id}"
+        if auth_user_id:
+            if not self._is_uuid(auth_user_id):
+                return []
+            query["auth_user_id"] = f"eq.{auth_user_id}"
+        if email:
+            query["email"] = f"ilike.{str(email).strip().lower()}"
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("org_staff", query)
+        return [self.org_staff_row_to_item(row) for row in rows or []]
+
+    def get_org_staff(self, staff_id):
+        if not self.enabled() or not self._is_uuid(staff_id or ""):
+            return None
+        row = self._first("org_staff", {"id": f"eq.{staff_id}", "select": "*"})
+        return self.org_staff_row_to_item(row) if row else None
+
+    def create_org_staff(self, item):
+        if not self.enabled():
+            return None
+        rows = self._request("POST", "org_staff", query={"select": "*"},
+                             payload=self.org_staff_to_row(item), prefer="return=representation")
+        return self.org_staff_row_to_item(rows[0]) if rows else None
+
+    def update_org_staff(self, staff_id, patch):
+        """patch 已是 snake_case 欄位（auth_user_id／status／activated_at／last_login_at…）。"""
+        if not self.enabled() or not self._is_uuid(staff_id or ""):
+            return None
+        rows = self._request("PATCH", "org_staff", query={"id": f"eq.{staff_id}", "select": "*"},
+                             payload=patch, prefer="return=representation")
+        return self.org_staff_row_to_item(rows[0]) if rows else None
+
+    def org_staff_to_row(self, item):
+        item = item or {}
+        row = {
+            "enterprise_client_id": item.get("enterpriseClientId") or item.get("enterprise_client_id"),
+            "email": str(item.get("email") or "").strip().lower(),
+            "display_name": str(item.get("displayName") or item.get("display_name") or "").strip()[:80],
+            "role": item.get("role") or "case_manager",
+            "site_label": item.get("siteLabel") or item.get("site_label"),
+            "status": item.get("status") or "invited",
+            "invited_by": item.get("invitedBy") or item.get("invited_by") or "admin",
+            "notes": item.get("notes"),
+        }
+        auth_user_id = item.get("authUserId") or item.get("auth_user_id")
+        if self._is_uuid(auth_user_id or ""):
+            row["auth_user_id"] = auth_user_id
+        return row
+
+    @staticmethod
+    def org_staff_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "enterpriseClientId": row.get("enterprise_client_id") or "",
+            "email": row.get("email") or "",
+            "authUserId": row.get("auth_user_id"),
+            "displayName": row.get("display_name") or "",
+            "role": row.get("role") or "case_manager",
+            "siteLabel": row.get("site_label"),
+            "status": row.get("status") or "invited",
+            "invitedBy": row.get("invited_by") or "admin",
+            "invitedAt": row.get("invited_at"),
+            "activatedAt": row.get("activated_at"),
+            "disabledAt": row.get("disabled_at"),
+            "lastLoginAt": row.get("last_login_at"),
+            "notes": row.get("notes"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def load_org_care_consents(self, client_id=None, seat_id=None, account_id=None, status=None, limit=5000):
+        if not self.enabled():
+            return None
+        limit = max(1, min(10000, int(limit or 5000)))
+        query = {"select": "*", "order": "updated_at.desc", "limit": str(limit)}
+        if client_id:
+            query["enterprise_client_id"] = f"eq.{client_id}"
+        if seat_id:
+            query["seat_id"] = f"eq.{seat_id}"
+        if account_id:
+            query["account_id"] = f"eq.{account_id}"
+        if status:
+            query["status"] = f"eq.{status}"
+        rows = self._select("org_care_consents", query)
+        return [self.org_care_consent_row_to_item(row) for row in rows or []]
+
+    def upsert_org_care_consent(self, item):
+        """一個席次一列：靠 seat_id 的唯一索引做 merge（Prefer resolution=merge-duplicates）。"""
+        if not self.enabled():
+            return None
+        rows = self._request(
+            "POST", "org_care_consents",
+            query={"select": "*", "on_conflict": "seat_id"},
+            payload=self.org_care_consent_to_row(item),
+            prefer="resolution=merge-duplicates,return=representation",
+        )
+        return self.org_care_consent_row_to_item(rows[0]) if rows else None
+
+    def org_care_consent_to_row(self, item):
+        item = item or {}
+        row = {
+            "enterprise_client_id": item.get("enterpriseClientId") or item.get("enterprise_client_id"),
+            "seat_id": item.get("seatId") or item.get("seat_id"),
+            "account_id": item.get("accountId") or item.get("account_id"),
+            "status": item.get("status") or "granted",
+            "scope": item.get("scope") or "care_week",
+            "granted_by_role": item.get("grantedByRole") or item.get("granted_by_role") or "family",
+            "granted_at": item.get("grantedAt") or item.get("granted_at"),
+            "revoked_at": item.get("revokedAt") or item.get("revoked_at"),
+            "note": item.get("note"),
+        }
+        for camel, snake in (("grantedByAuthUserId", "granted_by_auth_user_id"),
+                             ("revokedByAuthUserId", "revoked_by_auth_user_id")):
+            value = item.get(camel) or item.get(snake)
+            row[snake] = value if self._is_uuid(value or "") else None
+        # 撤回相關欄位要能被「清回 null」（再打開時），其餘 None 欄位不送、交給資料庫預設值。
+        keep_null = {"revoked_at", "revoked_by_auth_user_id"}
+        return {k: v for k, v in row.items() if v is not None or k in keep_null}
+
+    @staticmethod
+    def org_care_consent_row_to_item(row):
+        row = row or {}
+        return {
+            "id": row.get("id") or "",
+            "enterpriseClientId": row.get("enterprise_client_id") or "",
+            "seatId": row.get("seat_id") or "",
+            "accountId": row.get("account_id") or "",
+            "status": row.get("status") or "granted",
+            "scope": row.get("scope") or "care_week",
+            "grantedByAuthUserId": row.get("granted_by_auth_user_id"),
+            "grantedByRole": row.get("granted_by_role") or "family",
+            "grantedAt": row.get("granted_at"),
+            "revokedAt": row.get("revoked_at"),
+            "revokedByAuthUserId": row.get("revoked_by_auth_user_id"),
+            "note": row.get("note"),
+            "createdAt": row.get("created_at"),
+            "updatedAt": row.get("updated_at"),
+        }
+
+    def load_org_primary_persons(self, account_ids):
+        """機構端名單用：這批帳號各自的主要被照顧者（只拿 id 與稱呼欄位，不拿其他個資）。
+        回 {account_id: {"personId", "nickname", "profileName"}}；稱呼要不要顯示由 org_api 依同意決定。"""
+        if not self.enabled():
+            return None
+        account_filter = self._cohort_in_filter(account_ids)
+        if not account_filter:
+            return {}
+        rows = self._select("persons", {
+            "select": "id,account_id,nickname,profile_name,is_primary_care_recipient,deleted_at",
+            "account_id": account_filter,
+            "deleted_at": "is.null",
+            "order": "is_primary_care_recipient.desc,created_at.asc",
+            "limit": str(max(1, min(5000, len(account_ids or []) * 4))),
+        })
+        out = {}
+        for row in rows or []:
+            acc = row.get("account_id")
+            if not acc or acc in out:
+                continue
+            out[acc] = {
+                "personId": row.get("id"),
+                "nickname": row.get("nickname") or "",
+                "profileName": row.get("profile_name") or "",
+            }
+        return out
+
+    def load_org_person_wellbeing_signals(self, account_id, person_id, limit=200):
+        """機構端替某位已同意的長輩讀心情訊號：帳號與人兩個條件都要明講，缺一不查。"""
+        if not self.enabled():
+            return None
+        if not (self._is_uuid(account_id or "") and self._is_uuid(person_id or "")):
+            return []
+        rows = self._select("wellbeing_signals", {
+            "account_id": f"eq.{account_id}", "person_id": f"eq.{person_id}",
+            "select": "*", "order": "observed_at.desc",
+            "limit": str(max(1, min(1000, int(limit or 200)))),
+        })
+        return [self.wellbeing_row_to_signal(row) for row in reversed(rows or [])]
+
+    def load_org_person_conversation_summaries(self, account_id, person_id, limit=300):
+        """機構端只拿通話「發生過」的事實（時間）；摘要正文連選都不選——資料庫就不會送出來。"""
+        if not self.enabled():
+            return None
+        if not (self._is_uuid(account_id or "") and self._is_uuid(person_id or "")):
+            return []
+        rows = self._select("conversation_summaries", {
+            "account_id": f"eq.{account_id}", "person_id": f"eq.{person_id}", "deleted_at": "is.null",
+            "select": "id,account_id,person_id,created_at,deleted_at,safety_relevant",
+            "order": "created_at.desc", "limit": str(max(1, min(1000, int(limit or 300)))),
+        })
+        return [{
+            "id": row.get("id") or "", "accountId": row.get("account_id") or "", "personId": row.get("person_id"),
+            "summary": "", "memoryTags": [], "safetyRelevant": bool(row.get("safety_relevant")),
+            "createdAt": row.get("created_at"), "deletedAt": row.get("deleted_at"),
+        } for row in rows or []]
 
     def save_app_profile_store(self, store):
         if not self.enabled():
