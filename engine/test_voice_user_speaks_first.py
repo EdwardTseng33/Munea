@@ -17,6 +17,10 @@ Edward 1.0.55 / 1.0.56 真機連報：
 
 Edward 8/8 拍板：**她放棄主動打招呼，改由使用者先說第一句她才回**；
 沉默不再自動掛斷。這支測試釘住修法（誰改回去，這裡就會紅）。
+
+2026-11-05 Edward 拍板 A：**改回她先開口**（臉改在手機上畫，②的顯示卡繞路已不存在；
+長輩接通後一片安靜會以為沒接通）。①③④的修法不變；招呼那條改成「一定請她先說、
+伺服器 1 秒內聽到使用者先講就讓他」。
 """
 import os
 import re
@@ -43,17 +47,22 @@ def test_mic_opens_on_ready_not_after_greeting():
     )
 
 
-def test_she_does_not_greet_unless_family_relay():
-    """沒有家人傳話時，不准請她主動開口。"""
+def test_she_greets_first_even_without_family_relay():
+    """11/5 拍板 A：沒有家人傳話也要請她先開口，不能再有「沒傳話就不說」的出口。"""
     src = _src()
     greet = re.search(r"\n  greet\(\) \{(.*?)\n  \},", src, re.S)
     assert greet, "找不到 greet()"
     body = greet.group(1)
-    assert "if (!relay)" in body and "return" in body, (
-        "greet() 沒有「沒有家人傳話就不開口」的出口——"
-        "Edward 8/8 拍板改由使用者先說第一句"
+    assert "if (!relay)" not in body and "greeting_skipped" not in body, (
+        "greet() 又出現「沒有家人傳話就不開口」——Edward 11/5 拍板改回她先開口"
     )
-    assert "greeting_skipped" in body, "略過招呼時要留下紀錄，不然查不到為什麼她沒說話"
+    assert "type: 'greet'" in body and "greeting_requested" in body, "請她開口要送 greet 並留紀錄"
+
+
+def test_server_lets_user_speak_first_if_they_already_did():
+    """她先開口，但使用者在那 1 秒內已經講話，就要讓他先（不搶話）。"""
+    server = open(os.path.join(HERE, "live_voice_server.py"), encoding="utf-8").read()
+    assert 'reason="user_spoke_during_warmup"' in server, "伺服器少了「使用者先開口就不招呼」的保險"
 
 
 def test_family_relay_still_speaks_first():

@@ -4370,23 +4370,21 @@ const LiveVoice = {
       timingBasis: payload.timing_basis,
     });
   },
-  // 2026-08-08 Edward 拍板：「讓她放棄主動打招呼，改由用戶先說第一句話她才開始回話」。
-  //
-  // 為什麼這樣比較好：她主動開口那一句，得先繞去顯示卡算嘴型再回來，
-  // 使用者只能盯著畫面等——而那正是「接通後感覺當機」的來源。
-  // 改成使用者先說：接通即可出聲，她收到才回，沒有任何人在等一句罐頭招呼。
-  //
-  // 唯一的例外是**家人傳話**：那是有人託她轉達的具體內容，
-  // 讓使用者先開口反而會錯過，所以這種情況仍由她先說。
+  // 開場誰先說（2026-11-05 Edward 拍板 A，推翻 8/8 的「使用者先說」）：
+  // 8/8 那次是因為她的招呼要繞雲端顯示卡算嘴型、接通後像當機；臉改在手機上畫之後這個理由不在了，
+  // 而長輩接通後一片安靜，容易以為沒接通或不知道要說什麼。所以接通就請她先開口：
+  // 有家人託她轉達就先轉達，沒有就一句稱呼＋問候。使用者搶先說話，伺服器那 1 秒會讓他先。
   greet() {
     try {
       if (!(this.ws && this.ws.readyState === 1)) return;
       const relay = this._pendingRelay || null;
-      if (!relay) { voiceCallMark('greeting_skipped', 'pass', { reason: 'user_speaks_first' }); return; }
+      // 2026-11-05 Edward 拍板 A：改回她先開口（一句稱呼＋問候）。8/8 改成「使用者先說」的理由是
+      // 招呼要繞雲端顯示卡算嘴型、接通後像當機；臉改在手機上畫之後這個理由已不存在。
+      // 伺服器收到後先等 1 秒：這 1 秒內使用者已經開口，就不招呼、讓他先說（_warm_then_greet）。
       this.ws.send(JSON.stringify({ type: 'greet', relay }));
-      voiceCallMark('greeting_requested', 'pass', { reason: 'family_relay' });
+      voiceCallMark('greeting_requested', 'pass', { reason: relay ? 'family_relay' : 'opening' });
     } catch (e) { voiceCallFail('greeting_requested', e); }
-  },   // 只有「家人託她轉達」才主動開口；其餘一律等使用者先說
+  },   // 她先開口：有家人傳話先轉達，沒有就一句稱呼＋問候（使用者 1 秒內先說就讓他）
   async prepareRelay() {
     if (this._pendingRelay) return this._pendingRelay;
     this._relaySpokenId = null;
@@ -8689,11 +8687,11 @@ async function connectCall() {
           markConnected();                               // 現在才切「通話中」並開始計時——跟能講話同一刻
           voiceCallMark('call_connected', 'pass', { basis });
           CallChime.play();                              // 「線通了」用耳朵就聽得到
-          setLocalizedCallHint('connected');             // 接通了、可以直接講——她預設等使用者先開口
+          setLocalizedCallHint('connected');             // 接通了、可以直接講——她會先招呼一句
           voiceCallMark('connected_ux_shown', basis === 'uplink_ok' ? 'pass' : 'warn', { basis });
           if (!noFace) Avatar.showLiveFrame();           // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
           try { FaceIdle.stop(); } catch (e) {}
-          // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
+          // greet()：她先開口（家人傳話優先；沒有就招呼一句）。使用者搶先說話，伺服器會讓他先。
           LiveVoice.greet();
         };
         // 新伺服器（ready 有宣告 uplinkAck）：等真的證明、最多 6 秒；等不到＝這通就是
