@@ -66,6 +66,22 @@ for (const l of LOCALES) {
   // 素材一律根路徑，否則 /en /ja /es 底下會去抓 /en/assets/... 破圖
   assert.doesNotMatch(html, /(src|href|poster)="assets\//, at('有相對路徑的素材，子目錄會破圖'));
   assert.doesNotMatch(html, /url\('assets\//, at('CSS 裡有相對路徑的素材'));
+  // 2026-11-05 宣稱對齊現況：守護腦高風險訊號目前只進內部告警、沒有自動通知家人；
+  // 聲音不是自研引擎；App 有四語；角色名跟 App 一致（寧寧＝Nina／あかり／Lucía）。
+  const visibleCopy = html.replace(/<!--[\s\S]*?-->/g, '');
+  assert.doesNotMatch(
+    visibleCopy,
+    /即時通知家人|出事會叫人|notified right away|calls for help|すぐ通知|人を呼ぶ|人を呼びます|Aviso inmediato|avisa al momento|llama a alguien/i,
+    at('又寫回「即時通知家人／出事會叫人」——目前沒有這個功能'),
+  );
+  assert.doesNotMatch(visibleCopy, /自研|Our own real-time|自社開発|Motor propio/i, at('不可宣稱自研語音影像引擎'));
+  assert.doesNotMatch(visibleCopy, /台語互動持續優化|Hokkien is still being improved|台湾語（台湾閩南語）は改善|taiwanés \(hokkien\) sigue/i, at('台語進度沒有事實佐證'));
+  assert.doesNotMatch(visibleCopy, /not supported today|対応していません|no admite otros idiomas/i, at('App 已有四語，不能寫不支援其他語言'));
+  assert.doesNotMatch(visibleCopy, /2026 是照護科技|2026-07 上路|effective July 2026|2026年7月開始|julio de 2026/, at('會過期／未查證的政策日期'));
+  const companionName = { zh: '寧寧', en: 'Nina', ja: 'あかり', es: 'Lucía' }[l.code];
+  assert.ok(visibleCopy.includes(companionName), at(`角色名要跟 App 一致：${companionName}`));
+  if (l.code !== 'zh') assert.doesNotMatch(visibleCopy, /Ningning|ニンニン/, at('英日西不該再叫 Ningning'));
+
   // 2026-11-05 網頁試打已移除：不准再連回 call.html，想試用就走「下載 App」
   assert.doesNotMatch(html, /call\.html|\/api\/call-key/, at('還連著已移除的網頁試打'));
   assert.match(

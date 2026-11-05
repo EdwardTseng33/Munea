@@ -161,7 +161,9 @@
   .punch em{font-style:normal;font-weight:700;color:var(--teal-d)}
 
   /* ── Hero ── */
-  .hero{padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
+  /* position:relative 不能少：少了它，裝飾光暈（.blob，position:absolute）不歸 hero 管，overflow:hidden 剪不到，
+     手機上整頁被撐寬到 ~480px、右上「預約」被切掉（2026-11-05 修） */
+  .hero{position:relative;padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
   .blob{position:absolute;border-radius:50%;filter:blur(10px);z-index:0;pointer-events:none}
   .blob.a{width:460px;height:460px;background:radial-gradient(circle,#cfe9e2,transparent 70%);top:-120px;right:-90px;opacity:.6}
   .blob.b{width:340px;height:340px;background:radial-gradient(circle,#fbe2c9,transparent 70%);bottom:-90px;left:-80px;opacity:.55}
@@ -223,7 +225,7 @@
   .s-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:14.5px;font-weight:700;color:var(--teal-d);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:.2s}
   .s-cta:hover{color:var(--teal-dd);transform:translateX(3px)}
   .sol-wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:28px;flex-wrap:wrap;background:var(--mint);border:1.5px dashed var(--teal)}
-  .sol-wide .sw-txt{flex:1;min-width:300px}
+  .sol-wide .sw-txt{flex:1;min-width:min(300px,100%)}
   .sol-wide h3{margin-top:8px}
   .sol-wide .s-price{margin-top:0;padding-top:0;font-size:18px}
   .sol-wide .math{background:#fff;color:var(--teal-dd)}
@@ -361,6 +363,8 @@
   /* ── 預約彈窗 ── */
   .modal-back{position:fixed;inset:0;z-index:300;background:rgba(51,64,61,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
   .modal-back.open{opacity:1;pointer-events:auto}
+  /* 預約視窗平常藏著（opacity:0）但仍參與排版；格子項目預設不肯縮，內容一寬就把手機整頁撐寬 */
+  .modal-card{min-width:0}
   .modal-card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow-lg);width:min(560px,100%);max-height:calc(100vh - 40px);overflow-y:auto;padding:36px 34px 30px;position:relative;transform:translateY(16px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .modal-back.open .modal-card{transform:none}
   .modal-x{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--mint);border:none;color:var(--teal-d);cursor:pointer;display:grid;place-items:center;transition:.2s;font-family:inherit}
@@ -452,6 +456,13 @@
   .proof-note{display:flex;flex-direction:column;gap:14px;font-size:15.5px}
   .proof-cite{font-size:12.5px;color:var(--muted)}
   @media(max-width:860px){.stat-wall{grid-template-columns:repeat(2,1fr)}.proof-grid{grid-template-columns:1fr}.stat-card .sv{font-size:34px}}
+  /* 2026-11-05 手機 390 寬整頁被撐到 ~507px（右上「預約」被切掉）：中文 keep-all 讓卡片裡的長句沒有斷點，
+     撐破兩欄數據卡與卡片。允許「真的放不下才斷」，平常斷行不變。 */
+  .stat-card,.card,.price-card{min-width:0;overflow-wrap:anywhere}
+  /* 價格那行原本整行不換行（.nb）：西文「依規模報價」、英文劃線原價接在後面，窄機就撐破卡片 */
+  .price-card .amt.nb{white-space:normal}
+  .price-card .was{display:inline-block;white-space:nowrap}
+  @media(max-width:600px){.stat-wall{gap:14px}.stat-card{padding:28px 14px 24px}}
 </style>
 </head>
 <body>
@@ -500,7 +511,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           協業のご相談を予約</button>
-        <a class="btn btn-ghost" href="#demo">ニンニンの会話を見る</a>
+        <a class="btn btn-ghost" href="#demo">あかりの会話を見る</a>
       </div>
       <div class="hero-note">
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>小さく試して、効果を確かめてから広げる</span>
@@ -511,7 +522,7 @@
     <div class="hero-media">
       <div class="glow"></div>
       <div class="frame">
-        <video id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="MuneaのAIパートナー、ニンニン。動きながら寄り添っています">
+        <video id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="MuneaのAIパートナー、あかり。動きながら寄り添っています">
           <source src="/assets/ningning-hello.mp4" type="video/mp4">
         </video>
       </div>
@@ -551,7 +562,7 @@
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg></div>
       <h3>気づける見守り</h3>
-      <p>日々の会話から気分の落ち込みや危険のサインを聞き取ります。声の調子がいつもと違う、体調の不調を口にした、心配なことを言った。そんなとき、その場でご家族と介護者にお知らせし、「何かおかしい」を「早く気づけた」に変えます。</p>
+      <p>日々の会話の中で、気分の落ち込みや心配な言葉（声の調子がいつもと違う、体調の不調を口にした など）に気を配り、まずご本人に声をかけて受け止めます。ご家族はアプリでご本人が共有を選んだ近況や気分を確認でき、施設には毎月の見守りと異常のまとめが届きます。「何かおかしい」を「早めに気づけた」に変えます。</p>
     </div>
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
@@ -755,7 +766,7 @@
           <video class="vplay" poster="/assets/ningning-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="Munea AI ビデオデモ・自然な女性の声"><source src="/assets/ningning-talk-demo-ja.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="音声をオンにする" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">音声オン</span></button>
         </div>
-        <figcaption class="vcap"><span class="vlab">ニンニン・自然な女性の声</span><span class="vhint">音声をオンにして、声と表情がどう重なるか聞いてみてください</span></figcaption>
+        <figcaption class="vcap"><span class="vlab">あかり・自然な女性の声</span><span class="vhint">音声をオンにして、声と表情がどう重なるか聞いてみてください</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
@@ -786,7 +797,7 @@
         <li><b>話したことを覚えています</b>。長期記憶で、話すほど親しくなります</li>
         <li><b>服薬と受診のリマインド</b>。時間になったらスマホに通知します</li>
         <li><b>気分と異変の察知</b>。いつもと違うことに気づきます</li>
-        <li><b>ご家族と介護者にすぐ通知</b>。何かあれば人を呼びます</li>
+        <li><b>毎月の見守り・異常のまとめ</b>。施設全体の様子が見えます</li>
         <li><b>家族の健康サークル</b>。お互いの状態が見えます</li>
       </ul>
     </div>
@@ -794,7 +805,7 @@
       <span class="tag ink">技術のレイヤー</span>
       <h3>すべてを静かに支える土台</h3>
       <ul>
-        <li><b>自社開発のリアルタイム音声・映像エンジン</b>。そこにいるように感じられます</li>
+        <li><b>リアルタイムの音声会話と、スマートフォン上でその場で描かれる顔</b>。そこにいるように感じられます</li>
         <li><b>ケアに特化した知能の中核</b>。ご高齢の方を理解し、節度を守ります</li>
         <li><b>クラウドのサービス構成</b>。パイロットの規模に応じて容量とネットワークを検証します</li>
         <li><b>セキュリティと個人情報の保護</b>。データはケアのためだけに使います</li>
@@ -805,7 +816,7 @@
 
   <div class="tech-close reveal">
     <span class="tc-tag">なぜ「家族みんなの健康に寄り添うAIケアアシスタント」なのか</span>
-    <p>対話のレイヤーがご高齢の方の口を開き、ケアのレイヤーが話された一言ずつを見守りに変え、技術のレイヤーがそのすべてを安定して動かします。3つが重なると、ひとりひとりを覚え、見えて聞こえて、何かあれば人を呼ぶアシスタントになります。</p>
+    <p>対話のレイヤーがご高齢の方の口を開き、ケアのレイヤーが話された一言ずつを気づかいに変え、技術のレイヤーがそのすべてを安定して動かします。3つが重なると、ひとりひとりを覚えて話し相手になり、ご家族と施設にも様子が見えるアシスタントになります。</p>
   </div>
 
 </div></section>
@@ -884,13 +895,13 @@
 <section><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">政策の追い風</div>
-    <h2>2026年は台湾のケアテクノロジー政策にとって大きな年です</h2>
+    <h2>組み合わせられる公的制度</h2>
     <p class="sec-sub">Muneaの導入と組み合わせられる公的資源：</p>
   </div>
   <div class="policy-box reveal">
     <ul>
       <li><b>入居型施設の質の向上インセンティブ計画（2024–2027）</b>：衛生福利部の介護基金による支援で、「スマート支援ケア技術」の指標を含みます。スマートケアの導入は指標計画に組み込むことができ、関連書類の準備をお手伝いします。</li>
-      <li><b>介護3.0 スマート支援機器レンタル給付（2026年7月開始）</b>：介護世帯ごとに3年で6万台湾ドルのレンタル枠。Muneaは現在問い合わせ中で、<b>給付対象には含まれていません</b>。</li>
+      <li><b>介護向けスマート支援機器レンタル給付</b>：介護世帯はスマート支援機器のレンタル枠を申請できます。Muneaは現在問い合わせ中で、<b>給付対象には含まれていません</b>。</li>
     </ul>
     <div class="punch">私たちの原則：<em>補助は加点であって、前提ではありません</em>。プラン自体の価値（現場に戻る時間、ご家族の安心、従業員の実感）がまず成り立つこと。補助は、その判断を少し楽にするだけのものです。</div>
   </div>
@@ -958,8 +969,8 @@
     <div class="card reveal">
       <span class="tag teal">言語</span>
       <div class="icb"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg></div>
-      <h3>台湾の繁体字中国語</h3>
-      <p>サービスは台湾華語を中心に、台湾の話し方に合わせて調整しています。台湾語（台湾閩南語）は改善を続けており、導入前に現場の言語ニーズに応じて評価できます。日本語など他の言語には現時点で対応していません。</p>
+      <h3>台湾華語が中心</h3>
+      <p>サービスは台湾華語を中心に、台湾の話し方に合わせて調整しています。アプリは英語・日本語・スペイン語版もあり、導入前に現場の言語ニーズに応じて評価できます。</p>
     </div>
   </div>
 </div></section>
@@ -975,7 +986,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           協業のご相談を予約</button>
-        <a class="btn btn-ghost" href="#demo">ニンニンの会話を見る</a>
+        <a class="btn btn-ghost" href="#demo">あかりの会話を見る</a>
       </div>
     </div>
   </div>

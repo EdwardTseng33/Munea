@@ -161,7 +161,9 @@
   .punch em{font-style:normal;font-weight:700;color:var(--teal-d)}
 
   /* ── Hero ── */
-  .hero{padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
+  /* position:relative 不能少：少了它，裝飾光暈（.blob，position:absolute）不歸 hero 管，overflow:hidden 剪不到，
+     手機上整頁被撐寬到 ~480px、右上「預約」被切掉（2026-11-05 修） */
+  .hero{position:relative;padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
   .blob{position:absolute;border-radius:50%;filter:blur(10px);z-index:0;pointer-events:none}
   .blob.a{width:460px;height:460px;background:radial-gradient(circle,#cfe9e2,transparent 70%);top:-120px;right:-90px;opacity:.6}
   .blob.b{width:340px;height:340px;background:radial-gradient(circle,#fbe2c9,transparent 70%);bottom:-90px;left:-80px;opacity:.55}
@@ -223,7 +225,7 @@
   .s-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:14.5px;font-weight:700;color:var(--teal-d);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:.2s}
   .s-cta:hover{color:var(--teal-dd);transform:translateX(3px)}
   .sol-wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:28px;flex-wrap:wrap;background:var(--mint);border:1.5px dashed var(--teal)}
-  .sol-wide .sw-txt{flex:1;min-width:300px}
+  .sol-wide .sw-txt{flex:1;min-width:min(300px,100%)}
   .sol-wide h3{margin-top:8px}
   .sol-wide .s-price{margin-top:0;padding-top:0;font-size:18px}
   .sol-wide .math{background:#fff;color:var(--teal-dd)}
@@ -361,6 +363,8 @@
   /* ── 預約彈窗 ── */
   .modal-back{position:fixed;inset:0;z-index:300;background:rgba(51,64,61,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
   .modal-back.open{opacity:1;pointer-events:auto}
+  /* 預約視窗平常藏著（opacity:0）但仍參與排版；格子項目預設不肯縮，內容一寬就把手機整頁撐寬 */
+  .modal-card{min-width:0}
   .modal-card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow-lg);width:min(560px,100%);max-height:calc(100vh - 40px);overflow-y:auto;padding:36px 34px 30px;position:relative;transform:translateY(16px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .modal-back.open .modal-card{transform:none}
   .modal-x{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--mint);border:none;color:var(--teal-d);cursor:pointer;display:grid;place-items:center;transition:.2s;font-family:inherit}
@@ -452,6 +456,13 @@
   .proof-note{display:flex;flex-direction:column;gap:14px;font-size:15.5px}
   .proof-cite{font-size:12.5px;color:var(--muted)}
   @media(max-width:860px){.stat-wall{grid-template-columns:repeat(2,1fr)}.proof-grid{grid-template-columns:1fr}.stat-card .sv{font-size:34px}}
+  /* 2026-11-05 手機 390 寬整頁被撐到 ~507px（右上「預約」被切掉）：中文 keep-all 讓卡片裡的長句沒有斷點，
+     撐破兩欄數據卡與卡片。允許「真的放不下才斷」，平常斷行不變。 */
+  .stat-card,.card,.price-card{min-width:0;overflow-wrap:anywhere}
+  /* 價格那行原本整行不換行（.nb）：西文「依規模報價」、英文劃線原價接在後面，窄機就撐破卡片 */
+  .price-card .amt.nb{white-space:normal}
+  .price-card .was{display:inline-block;white-space:nowrap}
+  @media(max-width:600px){.stat-wall{gap:14px}.stat-card{padding:28px 14px 24px}}
 </style>
 </head>
 <body>
@@ -500,7 +511,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Book a partnership call</button>
-        <a class="btn btn-ghost" href="#demo">Watch Ningning in action</a>
+        <a class="btn btn-ghost" href="#demo">Watch Nina in action</a>
       </div>
       <div class="hero-note">
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Start with a small pilot, expand once it works</span>
@@ -511,7 +522,7 @@
     <div class="hero-media">
       <div class="glow"></div>
       <div class="frame">
-        <video id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="Ningning, Munea's AI companion, moving and keeping you company">
+        <video id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="Nina, Munea's AI companion, moving and keeping you company">
           <source src="/assets/ningning-hello.mp4" type="video/mp4">
         </video>
       </div>
@@ -551,7 +562,7 @@
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg></div>
       <h3>Care that listens closely</h3>
-      <p>In everyday conversation she picks up low mood and warning signs: a voice that sounds off, a mention of pain, something worrying said out loud. Family and caregivers are notified right away, so "something's not right" becomes "we knew early".</p>
+      <p>In everyday conversation she listens for low mood and worrying words, like a voice that sounds off or a mention of pain, and checks in with the elder first. Families see the updates and mood the elder chooses to share in the app, and organizations get a monthly care and alert summary, so "something's not right" becomes "we knew sooner".</p>
     </div>
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
@@ -755,7 +766,7 @@
           <video class="vplay" poster="/assets/ningning-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="Munea AI video demo・natural female voice"><source src="/assets/ningning-talk-demo-en.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="Turn on sound" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">Sound on</span></button>
         </div>
-        <figcaption class="vcap"><span class="vlab">Ningning・natural female voice</span><span class="vhint">Turn the sound on and hear how her voice lines up with her expression</span></figcaption>
+        <figcaption class="vcap"><span class="vlab">Nina・natural female voice</span><span class="vhint">Turn the sound on and hear how her voice lines up with her expression</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
@@ -786,7 +797,7 @@
         <li><b>She remembers what was said</b>, growing more familiar over time</li>
         <li><b>Medication and follow-up reminders</b>, delivered to the phone on time</li>
         <li><b>Mood and anomaly awareness</b>, hearing when something is off</li>
-        <li><b>Family and caregivers notified right away</b>, so help is called when it matters</li>
+        <li><b>A monthly care and alert summary</b>, so your organization sees the overall picture</li>
         <li><b>A family health circle</b>, where everyone's status is visible</li>
       </ul>
     </div>
@@ -794,7 +805,7 @@
       <span class="tag ink">The technology layer</span>
       <h3>The foundation holding it all steady</h3>
       <ul>
-        <li><b>Our own real-time voice and video engine</b>, so she feels present</li>
+        <li><b>Real-time voice conversation with a face drawn live on the phone</b>, so she feels present</li>
         <li><b>A care-focused intelligence core</b> that understands elders and knows where the line is</li>
         <li><b>Cloud service architecture</b>, with capacity and network verified to the pilot's scale</li>
         <li><b>Security and personal data protection</b>: data serves care, nothing else</li>
@@ -805,7 +816,7 @@
 
   <div class="tech-close reveal">
     <span class="tc-tag">Why we call her "the whole family's AI health companion and care assistant"</span>
-    <p>The interaction layer makes elders want to talk, the care layer turns every sentence into protection, and the technology layer keeps it all running steadily. Together they add up to one assistant who remembers every elder, who can see and hear, and who calls for help when something happens.</p>
+    <p>The interaction layer makes elders want to talk, the care layer turns what they say into care, and the technology layer keeps it all running steadily. Together they add up to one assistant who remembers every elder, keeps them company, and lets families and organizations see how they are doing.</p>
   </div>
 
 </div></section>
@@ -884,13 +895,13 @@
 <section><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">Policy tailwind</div>
-    <h2>2026 is a big year for care technology policy in Taiwan</h2>
+    <h2>Public programs that can go alongside Munea</h2>
     <p class="sec-sub">Public funding that can go alongside adopting Munea:</p>
   </div>
   <div class="policy-box reveal">
     <ul>
       <li><b>Residential facility quality incentive program (2024–2027)</b>: backed by the Ministry of Health and Welfare's long-term care fund, with a "smart assistive care technology" indicator. Adopting a smart care solution can be written into your indicator plan, and we help prepare the paperwork.</li>
-      <li><b>Long-term Care 3.0 smart assistive device rental benefit (effective July 2026)</b>: NT$60,000 of rental allowance per care household every three years. Munea is still making inquiries and is <b>not currently a listed benefit item</b>.</li>
+      <li><b>Smart assistive device rental benefit for long-term care</b>: care households can apply for a rental allowance for smart assistive devices. Munea is still making inquiries and is <b>not currently a listed benefit item</b>.</li>
     </ul>
     <div class="punch">Our principle: <em>subsidies are a bonus, not a precondition</em>. The value has to stand on its own first — hours given back to staff, reassurance for families, something employees actually feel. Subsidies just make the decision easier.</div>
   </div>
@@ -958,8 +969,8 @@
     <div class="card reveal">
       <span class="tag teal">Language</span>
       <div class="icb"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg></div>
-      <h3>Traditional Chinese for Taiwan</h3>
-      <p>The service runs primarily in Mandarin, tuned to how people in Taiwan speak. Taiwanese Hokkien is still being improved, and we can assess your setting's language needs before rollout. Other languages are not supported today.</p>
+      <h3>Mandarin first</h3>
+      <p>The service runs primarily in Mandarin, tuned to how people in Taiwan speak. The app is also available in English, Japanese and Spanish, and we can assess your setting's language needs before rollout.</p>
     </div>
   </div>
 </div></section>
@@ -975,7 +986,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Book a partnership call</button>
-        <a class="btn btn-ghost" href="#demo">Watch Ningning in action</a>
+        <a class="btn btn-ghost" href="#demo">Watch Nina in action</a>
       </div>
     </div>
   </div>
