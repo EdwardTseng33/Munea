@@ -1897,6 +1897,42 @@ def _new_call_state():
           "call_turns": []}   # 守護腦接回語音線：字幕滾動視窗／這輪已處置類別／排隊中的安全導引／背景任務集／第二層 AI 判讀次數（每通上限）；call_turns＝整通逐輪字幕，收線時交聊後管線寫記憶
 
 
+VOICE_READY_UPLINK_WAIT_S = float(os.environ.get("MUNEA_VOICE_READY_UPLINK_WAIT_S", "20"))
+
+
+async def _report_voice_ready_after_uplink(ws, cid, t0, st, call_payload,
+                                           wait_s=None, poll_s=0.05):
+    """手機上行證明活著才回報聲音就緒；等不到就不回報＝這通不會轉接通、不扣點。"""
+    deadline = time.monotonic() + (VOICE_READY_UPLINK_WAIT_S if wait_s is None else wait_s)
+    while not st.get("first_mic"):
+        if time.monotonic() >= deadline:
+            _diag(cid, "node.voice_ready_withheld", reason="no_uplink",
+                  ms=round((time.monotonic() - t0) * 1000))
+            return False
+        await asyncio.sleep(poll_s)
+    result = await asyncio.to_thread(
+        post_internal,
+        os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
+        os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
+        "/v1/internal/calls/ready",
+        {
+            "call_id": str(call_payload["call_id"]),
+            "lease_version": int(call_payload["lease_version"]),
+            "event_id": "voice-ready-" + uuid.uuid4().hex,
+            "component": "voice",
+        },
+    )
+    if not result.get("ok"):
+        _diag(cid, "node.voice_ready_rejected", result=str(result)[:120])
+        try:
+            await ws.close(code=1011, reason="voice reservation rejected")
+        except Exception:
+            pass
+        return False
+    _diag(cid, "node.voice_ready_reported", ms=round((time.monotonic() - t0) * 1000))
+    return True
+
+
 async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topics, fam, day_call,
                               call_payload, gate_key, call_token, asr_context_terms,
                               first_connect, resumption_handle, voice_locale_session,
@@ -1917,20 +1953,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
     """
     if first_connect:
         if call_payload:
-            ready_result = await asyncio.to_thread(
-                post_internal,
-                os.environ.get("MUNEA_CALL_CONTROL_URL", ""),
-                os.environ.get("MUNEA_GATEWAY_ADMIN_KEY", ""),
-                "/v1/internal/calls/ready",
-                {
-                    "call_id": str(call_payload["call_id"]),
-                    "lease_version": int(call_payload["lease_version"]),
-                    "event_id": "voice-ready-" + uuid.uuid4().hex,
-                    "component": "voice",
-                },
-            )
-            if not ready_result.get("ok"):
-                raise CallControlError("voice reservation was rejected: " + str(ready_result))
+            # 2026-11-05：先等手機真的傳上第一包聲音（連靜音保活包也算）才向總機回報就緒。
+            # 臉在手機上畫之後，總機收到聲音就緒＝這通轉「接通」並扣第 1 點；11/5 正式線
+            # 第二通起手機收音管整通 0 位元組、卻照樣被扣點（看板「沒接通不扣點」）。
+            st["bg_tasks"].append(asyncio.create_task(
+                _report_voice_ready_after_uplink(ws, cid, t0, st, call_payload)))
         try:
             await ws.send(json.dumps({
                 "type": "service_identity",
