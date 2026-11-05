@@ -1,0 +1,6 @@
+{
+  "redirects": [
+    { "source": "/call.html", "destination": "/", "permanent": false },
+    { "source": "/call", "destination": "/", "permanent": false }
+  ]
+}
