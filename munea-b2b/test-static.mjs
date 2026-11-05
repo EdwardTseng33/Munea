@@ -26,6 +26,10 @@ for (const gone of ['./call.html', './api/call-key.js', './test-call-browser.mjs
 assert.doesNotMatch(index, /\/call\.html|\/api\/call-key|munea_pass|demoPass/);
 assert.match(index, /id="try-app"/);
 assert.match(index, /href="https:\/\/apps\.apple\.com\/tw\/app\/id6788658125"/);
+// 2026-11-05 手機 390 寬整頁被撐寬、右上「預約」被切掉：三個撐破點要守住
+assert.match(index, /\.hero\{position:relative;[^}]*overflow:hidden/, 'hero 要 position:relative，裝飾光暈才會被剪掉');
+assert.doesNotMatch(index, /\.sw-txt\{[^}]*min-width:300px/, '合作卡文字欄不可寫死 300px 最小寬');
+assert.match(index, /\.price-card \.amt\.nb\{white-space:normal\}/, '價格那行在窄機要能換行');
 assert.doesNotMatch(index, /\/api\/chat|speechSynthesis|chatTxt|文字聊聊/);
 assert.doesNotMatch(index, /台灣首創|這個領域的.{0,4}領先者|150 小時/);
 
