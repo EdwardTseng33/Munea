@@ -98,7 +98,14 @@ const locales = [
 const localeUrl = (dir) => (dir ? `https://munea.net/${dir}` : "https://munea.net/");
 
 const sitemap = read("sitemap.xml");
-const sitemapUrls = [...locales.map((l) => localeUrl(l.dir)), "https://munea.net/solutions.html"];
+// 2026-11-05「給照護機構」短頁：四語各一個真網址（/for-organizations、/en/for-organizations…）
+const ORG_SLUG = "for-organizations";
+const orgUrl = (dir) => (dir ? `https://munea.net/${dir}/${ORG_SLUG}` : `https://munea.net/${ORG_SLUG}`);
+const sitemapUrls = [
+  ...locales.map((l) => localeUrl(l.dir)),
+  ...locales.map((l) => orgUrl(l.dir)),
+  "https://munea.net/solutions.html",
+];
 for (const url of sitemapUrls) {
   assert.match(sitemap, new RegExp(`<loc>${url.replaceAll(".", "\\.")}</loc>`));
 }
@@ -253,6 +260,47 @@ for (const l of locales) {
   assert.doesNotMatch(faqText, /\b(?:112|119|1925|911)\b/, `${file} FAQ must not cite emergency numbers`);
   assert.doesNotMatch(faqText, /追蹤|監測|監控|\btrack|\bmonitor/i, `${file} FAQ must not describe Munea as tracking`);
 }
+// 2026-11-05「給照護機構」短頁：可被收錄、四語互指、首頁頁尾有入口、按鈕連到同語系的 B2B 網站。
+// 機構方案的完整內容留在 B2B 網站；官網這頁不准拿「智慧照護」當主打（SEO 正本：那個品類詞由 B2B 站爭），
+// 也不准寫「追蹤／監測」。
+const b2bLocaleUrl = (dir) => (dir ? `https://munea-b2b.vercel.app/${dir}` : "https://munea-b2b.vercel.app/");
+for (const l of locales) {
+  const file = l.dir ? `${l.dir}/${ORG_SLUG}/index.html` : `${ORG_SLUG}/index.html`;
+  const html = read(file);
+  assert.match(html, new RegExp(`<html\\s+lang=["'][^"']*${l.code}[^"']*["']`, "i"), `${file} must declare lang`);
+  assert.match(html, /<title\b[^>]*>[^<]+<\/title>/i, `${file} needs a title`);
+  assert.match(html, /<meta\s+name=["']description["']\s+content=["'][^"']+["']/i, `${file} needs a meta description`);
+  assert.match(
+    html,
+    new RegExp(`<link rel="canonical" href="${orgUrl(l.dir).replaceAll(".", "\\.")}">`),
+    `${file} has the wrong canonical URL`,
+  );
+  assert.equal(countMatches(html, /<h1(?:\s|>)/gi), 1, `${file} needs exactly one h1`);
+  assert.doesNotMatch(html, /noindex/i, `${file} must remain indexable`);
+  assert.doesNotMatch(html, /\{\{[^}]+\}\}/, `${file} has an unresolved template key`);
+  for (const other of locales) {
+    assert.match(
+      html,
+      new RegExp(`rel="alternate"\\s+hreflang="${other.hreflang}"\\s+href="${orgUrl(other.dir).replaceAll(".", "\\.")}"`),
+      `${file} missing hreflang alternate for ${other.code}`,
+    );
+    assert.match(
+      html,
+      new RegExp(`class="lang-opt[^"]*"[^>]*href="${orgUrl(other.dir).replaceAll(".", "\\.")}"`),
+      `${file} language menu should keep visitors on the org page (${other.code})`,
+    );
+  }
+  assert.match(html, new RegExp(`hreflang="x-default" href="${orgUrl("").replaceAll(".", "\\.")}"`));
+  assert.ok(html.includes(`href="${b2bLocaleUrl(l.dir)}"`), `${file} must link to the ${l.code} B2B site`);
+  const visible = html.replace(/<!--[\s\S]*?-->/g, ""); // 版型註解不算對外文案
+  assert.doesNotMatch(visible, /智慧照護|追蹤|監測|監控|\btrack|\bmonitor/i, `${file} wording crossed a brand or SEO line`);
+  // 機構後台（/org、社工登入）還在開發：不准寫成已經有
+  assert.doesNotMatch(visible, /後台|登入|dashboard|portal|log ?in|ダッシュボード|ログイン|panel de control/i, `${file} must not promise the unreleased org portal`);
+
+  const home = read(l.dir ? `${l.dir}/index.html` : "index.html");
+  assert.ok(home.includes(`href="${orgUrl(l.dir)}"`), `${l.code} home footer must link to the org page`);
+}
+
 const llms = read("llms.txt");
 assert.match(llms, /^# Munea/m, "llms.txt needs a title line");
 assert.match(llms, /https:\/\/apps\.apple\.com\/app\/id6788658125/, "llms.txt must link the App Store listing");

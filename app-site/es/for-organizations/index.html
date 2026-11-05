@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!-- ⚠ 這是「給照護機構」頁的版型，不是網站本體。改這裡或 i18n/*.json 的 org.* 之後要跑 `npm run site:build`。
+     2026-11-05 Edward 拍板：官網與 B2B 網站分開；官網只放一頁短介紹，完整方案、費用、預約都導去 B2B 網站。
+     內文只用 b2b-src 已經寫過的事實；機構後台（/org、社工登入）還在開發，不寫成已上線。 -->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Para centros de cuidado | Munea para organizaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/assets/paining-logo.png" type="image/png">
+<meta name="description" content="Residencias, centros de día y viviendas para mayores pueden incorporar Munea en bloque: los residentes hablan con una acompañante de IA que los recuerda, reciben recordatorios de medicación y citas, y la familia ve cómo están desde su propio móvil. La organización recibe un informe mensual de operación. Empiece con un piloto pequeño y amplíe cuando funcione.">
+<link rel="canonical" href="https://munea.net/es/for-organizations">
+<link rel="alternate" hreflang="zh-Hant" href="https://munea.net/for-organizations">
+<link rel="alternate" hreflang="en" href="https://munea.net/en/for-organizations">
+<link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations">
+<link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations">
+<link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations">
+<meta name="theme-color" content="#3AA8A0">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Munea 沐寧">
+<meta property="og:title" content="Munea para centros de cuidado: compañía por voz que la familia puede ver">
+<meta property="og:description" content="Los residentes solo tienen que hablar, reciben recordatorios de medicación y citas a tiempo, la familia ve novedades y su organización recibe un informe mensual. Empiece en pequeño y amplíe cuando funcione.">
+<meta property="og:url" content="https://munea.net/es/for-organizations">
+<meta property="og:image" content="https://munea.net/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta property="og:locale:alternate" content="zh_TW">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Munea para centros de cuidado: compañía por voz que la familia puede ver">
+<meta name="twitter:description" content="Los residentes solo tienen que hablar, reciben recordatorios de medicación y citas a tiempo, la familia ve novedades y su organización recibe un informe mensual. Empiece en pequeño y amplíe cuando funcione.">
+<meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
+<link rel="stylesheet" href="/warm.css?v=10">
+<style>
+  /* ── Edward 拍板：扁平化，不要陰影與漸層（跟首頁同一套覆寫）── */
+  :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
+  *{box-shadow:none!important}
+  .blob{display:none!important}
+  .cta-box .glow,.cta-box .glow2{display:none!important}
+  .cta-box{background:var(--teal-d)!important}
+  .progress{background:var(--teal)!important}
+  .hero h1 .hl::after{background:#F6D8BC!important}
+  h2,h3{text-wrap:balance}
+  p,li{text-wrap:pretty}
+
+  .navlinks a.nav-cta{height:42px;padding:0 22px;display:inline-flex;align-items:center;font-size:15px}
+  .lang-trigger{height:42px;padding:0 15px}
+  .lang-opt{text-decoration:none}
+  .lang-menu{min-width:172px}
+
+  /* ── 主視覺 ── */
+  .org-hero{padding:72px 0 64px}
+  .org-hero .hero-grid{grid-template-columns:1.15fr .85fr}
+  .org-hero h1{font-size:clamp(30px,4.4vw,50px)}
+  .org-hero .btn-teal{background:var(--teal-dd);color:#fff}
+  .org-hero .btn-teal:hover{background:#1D5A55;transform:translateY(-3px)}
+  .org-hero .btn svg{width:18px;height:18px}
+  .org-shot{display:grid;place-items:center;background:#e9f2ed;border-radius:30px;padding:30px}
+  .org-shot .dev{width:min(240px,70%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27!important}
+  .org-shot .dev img{width:100%;height:100%;object-fit:cover;display:block}
+  @media(max-width:900px){
+    .org-hero{padding:44px 0 48px}
+    .org-hero .hero-grid{grid-template-columns:1fr;gap:34px}
+    .org-shot{padding:22px}
+    .org-shot .dev{width:min(200px,60%)}
+  }
+
+  /* ── 機構能用沐寧做什麼 ── */
+  .org-uses{background:var(--cream-2);padding:80px 0}
+  .org-uses .sec-head{margin-bottom:40px}
+  .org-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;max-width:960px;margin:0 auto}
+  .org-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px 26px 24px}
+  .org-card .ic{width:46px;height:46px;border-radius:14px;background:var(--mint);color:var(--teal-d);display:grid;place-items:center;margin-bottom:14px}
+  .org-card .ic svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .org-card h3{font-size:19px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  .org-card p{font-size:15.5px;color:var(--muted);line-height:1.8}
+  @media(max-width:700px){.org-uses{padding:60px 0}.org-cards{grid-template-columns:1fr}.org-card{padding:22px 20px}}
+
+  /* ── 怎麼開始 ── */
+  .org-how{padding:72px 0 20px}
+  .org-how .sec-head{margin-bottom:28px}
+  .org-steps{list-style:none;max-width:760px;margin:0 auto;display:grid;gap:12px;counter-reset:s}
+  .org-steps li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;font-size:16px;color:var(--ink);line-height:1.75}
+  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--coral-soft);color:var(--coral-d);font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
+
+  /* ── 收尾：去 B2B 網站 ── */
+  .org-final .btn-b2b{background:#fff;color:var(--teal-dd);position:relative}
+  .org-final .btn-b2b:hover{background:#f4f0e8;transform:translateY(-3px)}
+  .org-note{max-width:720px;margin:6px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8;padding:0 8px}
+
+  /* 頁尾 */
+  .foot-disc{max-width:720px;margin:26px auto 0;font-size:12.5px;color:#8a9893;line-height:1.85}
+  .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
+</style>
+</head>
+<body>
+<div class="progress"></div>
+
+<header>
+  <nav class="wrap">
+    <a class="logo" href="https://munea.net/es" aria-label="Munea">
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </a>
+    <div class="nav-cluster">
+      <div class="navlinks">
+        <a class="nav-cta" href="https://munea-b2b.vercel.app/es" target="_blank" rel="noopener">Web para organizaciones</a>
+      </div>
+      <div class="lang-switch" data-open="false">
+        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Cambiar idioma / Switch language">
+          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+          <span class="lang-current">ES</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" aria-label="Cambiar idioma / Switch language">
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="zh-Hant" href="https://munea.net/for-organizations"><span class="tick"></span>中文<span class="sub">繁中</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="en" href="https://munea.net/en/for-organizations"><span class="tick"></span>English<span class="sub">EN</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="ja" href="https://munea.net/ja/for-organizations"><span class="tick"></span>日本語<span class="sub">日本語</span></a>
+          <a class="lang-opt is-active" role="option" aria-selected="true" hreflang="es" href="https://munea.net/es/for-organizations"><span class="tick"></span>Español<span class="sub">ES</span></a>
+        </div>
+      </div>
+      <button class="menu-btn" type="button" aria-label="Menú" aria-expanded="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33403D" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══ 主視覺 ═══ -->
+<section class="hero org-hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Para residencias, centros de día y viviendas para mayores</div>
+      <h1>Cada persona que usted cuida, <br><span class="hl">recordada cada día</span></h1>
+      <p class="sub">Munea puede ofrecerse en bloque a organizaciones de cuidado: los residentes hablan con una acompañante de IA con solo hablar, la familia ve novedades en su propio móvil y su organización recibe un informe mensual de uso y cuidado. Es solo software y funciona en tabletas del centro o en el móvil de cada residente.</p>
+      <div class="hero-actions">
+        <a class="btn btn-teal" href="https://munea-b2b.vercel.app/es" target="_blank" rel="noopener">Ver las opciones para organizaciones<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener">Probar la app primero</a>
+      </div>
+    </div>
+    <div class="org-shot">
+      <div class="dev"><img src="/assets/app-family.jpg" alt="Pantalla del círculo familiar de salud de la app Munea" width="780" height="1688"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 機構能用沐寧做什麼 ═══ -->
+<section class="org-uses">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow center">Lo que su organización obtiene</div>
+      <h2>Cubrir los momentos a los que el personal no llega</h2>
+      <p>El personal termina su turno; el cuidado no tiene por qué. Esto es lo que reciben los residentes, la familia y su organización.</p>
+    </div>
+    <div class="org-cards">
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span>
+        <h3>Compañía por voz que recuerda</h3>
+        <p>Los residentes solo tienen que hablar, sin escribir. La memoria a largo plazo retoma cada conversación donde quedó la anterior, y de noche o en horas con poco personal hay alguien con quien hablar.</p>
+      </div>
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>
+        <h3>Recordatorios de medicación y citas</h3>
+        <p>Un aviso en el móvil a la hora indicada, sin reproches si se olvida una toma. Munea solo recuerda; no evalúa ni cambia la medicación.</p>
+      </div>
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span>
+        <h3>La familia ve las novedades</h3>
+        <p>La familia se conecta desde su propio móvil y ve las novedades, el ánimo y los recordatorios cumplidos que el residente decide compartir. Qué se ve lo decide el propio residente.</p>
+      </div>
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+        <h3>Informe mensual de operación</h3>
+        <p>Las plazas para organizaciones incluyen un informe mensual con uso, cuidado y resumen de alertas, para que la dirección vea qué pasa realmente tras la puesta en marcha.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 怎麼開始 ═══ -->
+<section class="org-how">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Cómo empezar</h2>
+    </div>
+    <ol class="org-steps">
+      <li>Elija de 10 a 20 residentes para un piloto de 2 a 4 semanas y revisen cada semana cómo funciona, qué dice la familia y cuándo tuvo que intervenir el personal.</li>
+      <li>Por plazas, paga por lo que usa: cada plaza incluye una cantidad fija de créditos de llamada al mes (Plus 100, Pro 200; 1 crédito equivale a 1 minuto aproximadamente), con recargas disponibles.</li>
+      <li>Decidan ampliar, ajustar o parar según objetivos acordados de antemano; el precio final y las responsabilidades se fijan en el contrato.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ═══ 收尾：完整方案在 B2B 網站 ═══ -->
+<section class="cta-band org-final">
+  <div class="wrap">
+    <div class="cta-box">
+      <h2>Opciones, precios de referencia y proceso del piloto</h2>
+      <p>Todo está en la web de Munea para organizaciones, donde también puede reservar una consulta de 30 minutos. Los planes de cuidado familiar para empresas están en la misma web.</p>
+      <a class="btn btn-b2b" href="https://munea-b2b.vercel.app/es" target="_blank" rel="noopener">Ir a la web para organizaciones<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <p class="org-note">Munea es una herramienta de apoyo para el cuidado y los recordatorios. No sustituye la atención de personas, el diagnóstico médico ni los servicios de emergencia. El presupuesto formal se rige por el contrato acordado entre las partes.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30" loading="lazy"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
+        <p class="desc">La Munea App — el asistente de salud con IA que te recuerda. Una cara que se mueve y una voz que no te olvida, para mantenerte cerca de los tuyos. No es un sistema de cuidados de larga duración, es acompañamiento de mayores y cuidado familiar en el día a día.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Conoce Munea</h4>
+        <a href="https://munea.net/es#personas">Para quién es</a>
+        <a href="https://munea.net/es#features">Funciones</a>
+        <a href="https://munea.net/es#tech">La tecnología</a>
+        <a href="https://munea.net/es#faq">Preguntas frecuentes</a>
+      </div>
+      <div class="foot-col">
+        <h4>Condiciones y contacto</h4>
+        <a href="/legal/es/support.html">Soporte</a>
+        <a href="/legal/es/terms.html">Términos del servicio</a>
+        <a href="/legal/es/privacy.html">Política de privacidad</a>
+        <a href="https://munea.net/es/for-organizations">Empresas y centros de cuidado</a>
+        <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a>
+      </div>
+    </div>
+    <p class="disc">Munea es un acompañante para hacer compañía y recordar cosas del día a día. No es un producto sanitario y no ofrece diagnóstico, tratamiento ni servicios médicos de urgencia. Ante cualquier duda de salud, consulta con tu médico. En una emergencia, ponte en contacto con los servicios de emergencia de tu zona.</p>
+    <div class="foot-bottom"><span>© 2026 Munea 沐寧 · Saber que alguien se preocupa por ti, tranquiliza.</span></div>
+  </div>
+</footer>
+
+<script src="/warm.js?v=10"></script>
+</body>
+</html>

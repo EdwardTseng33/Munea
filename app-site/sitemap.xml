@@ -36,5 +36,41 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://munea.net/for-organizations</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://munea.net/en/for-organizations</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://munea.net/ja/for-organizations</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://munea.net/es/for-organizations</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
   <url><loc>https://munea.net/solutions.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>

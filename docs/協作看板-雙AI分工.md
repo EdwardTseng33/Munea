@@ -1,5 +1,13 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-05 蘇菲｜🏢 官網開「給照護機構」短頁＋B2B 刪網頁試打＋B2B 文案整理（PR · 不碰 App 通話路徑）
+
+- **為什麼**：Edward 11/5 拍板官網與 B2B 網站分開維持；官網開一頁介紹機構方案、導去 B2B；B2B 的網頁試打通話刪掉（App 已上架，直接下載試）。
+- **官網**：新版型 `site-src/org.html` → 四語 `/for-organizations`、`/en|ja|es/for-organizations`（`build.mjs` 改成多頁產生、sitemap 加四筆互指）；首頁頁尾「企業與機構合作」改連這頁。內文只用 b2b-src 已寫過的事實（語音陪伴／用藥回診提醒／家屬看近況／每月營運數據報告、試辦 10–20 位 2–4 週、Plus 100／Pro 200 點），不提機構後台、不用「智慧照護」「追蹤監測」。
+- **B2B**：刪 `call.html`、`api/call-key.js`、`flashhead/`、`test-call-browser.mjs`、`design-qa.md`、只給 call.html 用的 8 個素材；模板拿掉藏起來的密碼閘＋試打段＋預熱 JS，換成「下載 App 直接試用」區（`#try-app`）。頁尾拿掉「2026 年 7 月」；長照 3.0 租賃給付「規劃申請中」改「洽詢中、尚未列入給付項目」；產品畫面標籤「開發版」改「App 實際畫面」。舊網址導回首頁靠 #663 的 `vercel.json`。
+- **連動測試**：`munea-b2b/test-static.mjs`、`scripts/test-b2b-i18n.js`、`test-avatar-render-contract.py`、`test-runpod-demo-720p-profile.py`（立繪改讀 `web/flashhead`）、`test_demo_pod_reaper.py`（拿掉比對 call-key.js 的兩條）、`test-app-site-seo.js`、`test-firebase-hosting-live.js`；`deploy/glows/shared-card-demo.ps1` 立繪路徑改 `weblashhead`。
+- **未做**：沒部署（合併 main 會自動發官網；B2B 要另外部署 Vercel）。
+
 ### 2026-10-31 蘇菲｜📞 1.0.70 語音線延遲實測（本機同設定）＋🔎 SEO 總體策略正本（只加文件、不碰程式）
 
 - **正式線真相**：`munea-voice`（正式）近 120 天 Cloud Run 紀錄**沒有任何一次 WebSocket 升級（101）**＝沒人真打過一通；只有 App 開頁預熱打 `/health`（回 404、只是喚醒用，無害）。測試機最後通話 10/29。

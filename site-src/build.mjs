@@ -23,7 +23,13 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 const OUT = join(SRC, '..', 'app-site');
 
 const config = JSON.parse(readFileSync(join(SRC, 'config.json'), 'utf8'));
-const template = readFileSync(join(SRC, 'index.html'), 'utf8');
+
+/** 要產生的頁面：首頁＋「給照護機構」短頁（2026-11-05 Edward：官網與 B2B 分開，官網只開一頁介紹機構方案）。
+ *  slug＝語系資料夾底下的子路徑；網址一律不帶尾斜線（/for-organizations、/en/for-organizations）。 */
+const PAGES = [
+  { id: 'home', template: 'index.html', slug: '' },
+  { id: 'org', template: 'org.html', slug: 'for-organizations' },
+];
 
 /* 字型是這個頁面最重的一塊（中文字型一套就近 2MB）。
  * 中文頁才需要 Noto Sans/Serif TC；英日西頁只要 Poppins，
@@ -52,29 +58,38 @@ const SITE = config.siteUrl.replace(/\/$/, '');
 // 主機設定是 trailingSlash:false —— /en/ 會被 301 轉到 /en。
 // 對外網址（canonical / hreflang / sitemap / 語言選單）一律用不帶尾斜線的那個，
 // 否則 Google 收到的每個語系網址都會先吃一次轉址。
-const urlFor = (dir) => (dir ? `${SITE}/${dir}` : `${SITE}/`);
+const urlFor = (dir, slug = '') => {
+  const path = [dir, slug].filter(Boolean).join('/');
+  return path ? `${SITE}/${path}` : `${SITE}/`;
+};
 
 /** 產生 hreflang 互指區塊（含 x-default 指向中文版） */
-function hreflangBlock() {
+function hreflangBlock(slug = '') {
   const rows = LOCALES.map(
-    (l) => `<link rel="alternate" hreflang="${l.hreflang}" href="${urlFor(l.dir)}">`
+    (l) => `<link rel="alternate" hreflang="${l.hreflang}" href="${urlFor(l.dir, slug)}">`
   );
-  rows.push(`<link rel="alternate" hreflang="x-default" href="${urlFor('')}">`);
+  rows.push(`<link rel="alternate" hreflang="x-default" href="${urlFor('', slug)}">`);
   return rows.join('\n');
 }
 
-/** 語言選單：目前語系標勾、其他語系連到對應網址 */
-function langMenu(active) {
+/** 語言選單：目前語系標勾、其他語系連到同一頁的對應語言網址 */
+function langMenu(active, slug = '') {
   return LOCALES.map((l) => {
     const label = config.langLabels[l.code];
     const cls = l.code === active ? 'lang-opt is-active' : 'lang-opt';
     const sel = l.code === active ? 'true' : 'false';
     return (
       `<a class="${cls}" role="option" aria-selected="${sel}" hreflang="${l.hreflang}" ` +
-      `href="${urlFor(l.dir)}"><span class="tick"></span>${label.native}<span class="sub">${label.short}</span></a>`
+      `href="${urlFor(l.dir, slug)}"><span class="tick"></span>${label.native}<span class="sub">${label.short}</span></a>`
     );
   }).join('\n          ');
 }
+
+/** B2B 網站的同語系網址（B2B 也是中文在根目錄、其他語系 /en /ja /es，不帶尾斜線） */
+const b2bUrlFor = (dir) => {
+  const base = config.b2bUrl.replace(/\/$/, '');
+  return dir ? `${base}/${dir}` : `${base}/`;
+};
 
 /** og:locale:alternate —— 告訴社群平台這頁還有哪些語言 */
 function ogAlternates(active) {
@@ -167,11 +182,8 @@ for (const l of LOCALES) {
     'meta.legalSupport': l.code === 'zh' ? '/support' : `/legal/${l.code}/support.html`,
     'meta.htmlLang': l.htmlLang,
     'meta.fonts': fontLink(l.fonts),
-    'meta.canonical': urlFor(l.dir),
     'meta.ogLocale': l.ogLocale,
     'meta.ogAlternates': ogAlternates(l.code),
-    'meta.hreflang': hreflangBlock(),
-    'meta.langMenu': langMenu(l.code),
     'meta.langCurrent': config.langLabels[l.code].short,
     'meta.year': String(config.year),
     'meta.contactEmail': config.contactEmail,
@@ -182,13 +194,26 @@ for (const l of LOCALES) {
     'meta.appStoreUrl': config.appStoreUrl,
     'meta.facebookUrl': config.facebookUrl,
     'meta.faqJsonLd': faqJsonLd(dict, l.code, l.htmlLang),
+    // 首頁／「給照護機構」頁互連用的網址（同語系）
+    'meta.home': urlFor(l.dir),
+    'meta.orgUrl': urlFor(l.dir, 'for-organizations'),
+    'meta.b2bLocaleUrl': b2bUrlFor(l.dir),
   };
 
-  const html = render(template, vars, l.code);
-  const dir = l.dir ? join(OUT, l.dir) : OUT;
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'index.html'), html, 'utf8');
-  console.log(`  ✓ ${l.dir ? `/${l.dir}/` : '/'}  ${(html.length / 1024).toFixed(0)}KB  (${l.htmlLang})`);
+  for (const page of PAGES) {
+    const template = readFileSync(join(SRC, page.template), 'utf8');
+    const html = render(template, {
+      ...vars,
+      'meta.canonical': urlFor(l.dir, page.slug),
+      'meta.hreflang': hreflangBlock(page.slug),
+      'meta.langMenu': langMenu(l.code, page.slug),
+    }, `${l.code}/${page.id}`);
+    const dir = join(l.dir ? join(OUT, l.dir) : OUT, page.slug);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'index.html'), html, 'utf8');
+    const shown = '/' + [l.dir, page.slug].filter(Boolean).join('/');
+    console.log(`  ✓ ${shown}  ${(html.length / 1024).toFixed(0)}KB  (${l.htmlLang})`);
+  }
   built++;
 }
 
@@ -199,13 +224,15 @@ const legalPages = [];
 const extraPages = ['solutions.html'];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${LOCALES.map(
-  (l) => `  <url>
-    <loc>${urlFor(l.dir)}</loc>
-${LOCALES.map((a) => `    <xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${urlFor(a.dir)}"/>`).join('\n')}
-    <xhtml:link rel="alternate" hreflang="x-default" href="${urlFor('')}"/>
-    <changefreq>weekly</changefreq><priority>1.0</priority>
+${PAGES.flatMap((page) =>
+  LOCALES.map(
+    (l) => `  <url>
+    <loc>${urlFor(l.dir, page.slug)}</loc>
+${LOCALES.map((a) => `    <xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${urlFor(a.dir, page.slug)}"/>`).join('\n')}
+    <xhtml:link rel="alternate" hreflang="x-default" href="${urlFor('', page.slug)}"/>
+    <changefreq>${page.slug ? 'monthly' : 'weekly'}</changefreq><priority>${page.slug ? '0.7' : '1.0'}</priority>
   </url>`
+  )
 ).join('\n')}
 ${[...extraPages, ...legalPages]
   .map((p) => `  <url><loc>${SITE}/${p}</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`)
@@ -220,8 +247,8 @@ console.log(
 );
 
 /* ── 保險絲：產出的頁面不該還留著沒換掉的 {{ }} ── */
-for (const l of LOCALES) {
-  const p = join(l.dir ? join(OUT, l.dir) : OUT, 'index.html');
+for (const l of LOCALES) for (const page of PAGES) {
+  const p = join(l.dir ? join(OUT, l.dir) : OUT, page.slug, 'index.html');
   const leftover = readFileSync(p, 'utf8').match(/\{\{[^}]+\}\}/g);
   if (leftover) {
     console.error(`✗ ${p} 還有沒換掉的標記：${leftover.slice(0, 5).join(', ')}`);

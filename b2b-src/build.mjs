@@ -136,6 +136,8 @@ for (const l of LOCALES) {
     'meta.langMenu': langMenu(l.code),
     'meta.langCurrent': config.langLabels[l.code].short,
     'meta.siteUrl': SITE,
+    // 「下載 App 直接試用」：中文走台灣商店，其他語系交給 App Store 依地區導向
+    'meta.appStoreUrl': l.code === 'zh' ? config.appStoreUrl : config.appStoreUrlIntl,
   };
 
   const html = render(template, vars, l.code);

@@ -275,33 +275,12 @@
   .map-item .ms{color:var(--muted)}
   .map-item .ms b{color:var(--teal-d)}
 
-  /* ── Demo 密碼閘 ── */
-  .demo-sec{background:var(--mint);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-bottom:84px}
-  .demo-box{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
-  .demo-lock{position:relative;min-height:420px;display:grid;place-items:center;padding:50px 24px}
-  .demo-lock .blurbg{position:absolute;inset:-24px;background:url('/assets/app-chat.png') center 18%/cover no-repeat;filter:blur(22px) saturate(.82);opacity:.5}
-  .demo-lock .veil{position:absolute;inset:0;background:rgba(250,247,242,.62)}
-  .lock-card{position:relative;z-index:2;text-align:center;max-width:420px;width:100%;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:var(--r);padding:38px 32px 34px;box-shadow:var(--shadow-lg)}
-  .lock-card .lk{font-size:34px;line-height:1;margin-bottom:14px}
-  .lock-card h3{font-size:20px;font-weight:700;margin-bottom:8px}
-  .lock-card p{font-size:13.5px;color:var(--muted);margin-bottom:22px}
-  .lock-form{display:flex;gap:10px}
-  .lock-form input{flex:1;min-width:0;font-family:inherit;font-size:15px;padding:12px 18px;border:1.5px solid var(--mint-2);border-radius:100px;background:var(--cream);color:var(--ink);outline:none;transition:border-color .2s}
-  .lock-form input:focus{border-color:var(--teal)}
-  .lock-form .btn{flex-shrink:0;padding:12px 24px;font-size:15px}
-  .lock-err{margin-top:12px;font-size:13px;color:#C25A3A;min-height:20px}
-  .shake{animation:shake .4s}
-  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
-  .demo-open{display:none;padding:36px 36px 40px}
-  .demo-open.show{display:block;animation:fadein .6s ease}
-  @keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  .live-badge{display:inline-block;font-size:13px;font-weight:700;color:#C0392B;letter-spacing:.08em;margin-bottom:10px;animation:livepulse 1.6s ease-in-out infinite;font-family:var(--f-head)}
-  @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.45}}
-  /* ── 真臉真聲訪客體驗（解鎖後） ── */
-  .chat-shell{display:flex;flex-direction:column;align-items:center;text-align:center}
-  .chat-shell>h3{font-size:24px;font-weight:700;margin-bottom:12px}
-  .call-lead{max-width:540px;margin:0 auto 24px;color:var(--muted);line-height:1.9;font-size:15.5px;text-wrap:pretty}
-  @media(max-width:900px){.chat-frame{width:100%;height:70vh;max-height:none}}
+  /* ── 下載 App 直接試用（2026-11-05 取代網頁試打通話） ── */
+  .tryapp{background:var(--mint);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-bottom:84px}
+  .tryapp .sec-sub{margin-bottom:28px}
+  .tryapp .hero-actions{justify-content:center}
+  .tryapp .btn svg{width:20px;height:20px}
+  .try-note{margin:18px auto 0;max-width:620px;font-size:13.5px;color:var(--muted);text-wrap:pretty}
 
   /* ── 費用 ── */
   .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:22px}
@@ -435,7 +414,6 @@
     .map-item .ma{display:none}
     .map-item .mp::before{content:"痛點｜";color:var(--coral-d);font-size:12.5px}
     .map-item .ms::before{content:"沐寧解法｜";color:var(--teal-d);font-size:12.5px;font-weight:700}
-    .demo-open{padding:22px 18px 30px}
     .steps{grid-template-columns:1fr;gap:26px}
     .steps::before{top:26px;bottom:26px;left:25px;right:auto;width:2px;height:auto}
     .step{display:flex;text-align:left;gap:18px;align-items:flex-start;padding:0}
@@ -823,41 +801,17 @@
 
 </div></section>
 
-<!-- ═══════════ Demo 密碼閘 ═══════════ -->
-<!-- 2026-10-30 整段先藏：試打通話頁還是舊顯示卡臉、打不通；導覽與按鈕改指向上方示範影片（#demo 移到 tech-demo）。新形象通話接好後拿掉 hidden、把 id="demo" 移回來。 -->
-<section class="demo-sec" id="live-call" hidden style="display:none"><div class="wrap">
+<!-- ═══════════ 下載 App 直接試用 ═══════════ -->
+<!-- 2026-11-05 Edward 拍板：網頁版試打通話整套移除——App 已上架，想試就直接下載。舊的試打網址由 munea-b2b/vercel.json 導回首頁。 -->
+<section class="tryapp" id="try-app"><div class="wrap">
   <div class="center-head reveal">
-    <div class="eyebrow center">{{demo.eyebrow}}</div>
-    <h2>{{demo.h2}}</h2>
-    <p class="sec-sub">{{demo.sub}}</p>
-  </div>
-  <div class="demo-box reveal">
-    <!-- 鎖定畫面 -->
-    <div class="demo-lock" id="demoLock">
-      <div class="blurbg" aria-hidden="true"></div>
-      <div class="veil" aria-hidden="true"></div>
-      <div class="lock-card" id="lockCard">
-        <div class="lk">🔒</div>
-        <h3>{{demo.lockH3}}</h3>
-        <p>{{demo.lockP}}</p>
-        <form class="lock-form" id="demoForm" autocomplete="off">
-          <input type="password" id="demoPass" placeholder="{{demo.lockH3}}" aria-label="{{a11y.passphrase}}">
-          <button class="btn btn-teal" type="submit">{{demo.unlockBtn}}</button>
-        </form>
-        <div class="lock-err" id="lockErr" role="alert" aria-live="polite"></div>
-      </div>
+    <div class="eyebrow center">{{try.eyebrow}}</div>
+    <h2>{{try.h2}}</h2>
+    <p class="sec-sub">{{try.sub}}</p>
+    <div class="hero-actions">
+      <a class="btn btn-teal btn-xl" href="{{meta.appStoreUrl}}" target="_blank" rel="noopener"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>{{try.btn}}</a>
     </div>
-    <!-- 解鎖內容：單一真臉真聲通話入口，不提供文字體驗 -->
-    <div class="demo-open" id="demoOpen">
-      <div class="chat-shell">
-        <div class="live-badge">● LIVE</div>
-        <h3>{{demo.openH3}}</h3>
-        <p class="call-lead">{{demo.lead}}</p>
-        <!-- 2026-10-30 先藏起來：call.html 還是舊的顯示卡擬真臉、目前打不通。call.html 本身不動不刪；
-             新形象通話頁接好後，拿掉 hidden 與 style 即可恢復。 -->
-        <a class="btn btn-teal btn-xl" href="/call.html" hidden style="display:none">{{demo.startBtn}}</a>
-      </div>
-    </div>
+    <p class="try-note">{{try.note}}</p>
   </div>
 </div></section>
 
@@ -1122,57 +1076,6 @@
   } else {
     reveals.forEach(function(el){ el.classList.add('in'); });
   }
-
-  /* ── Demo 密碼閘 ── */
-  var KEY = 'munea_demo_unlocked';
-  var lockEl = document.getElementById('demoLock');
-  var openEl = document.getElementById('demoOpen');
-  var form = document.getElementById('demoForm');
-  var pass = document.getElementById('demoPass');
-  var err = document.getElementById('lockErr');
-  var card = document.getElementById('lockCard');
-
-  function prewarmVoiceAvatar(passValue){
-    if (!passValue) return;
-    fetch('/api/call-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: passValue })
-    }).then(function(r){
-      if (!r.ok) throw new Error('prewarm key ' + r.status);
-      return r.json();
-    }).then(function(cfg){
-      if (!cfg || !cfg.avatarHttp || !cfg.avatarKey) return;
-      return fetch(cfg.avatarHttp.replace(/\/$/, '') + '/health?key=' + encodeURIComponent(cfg.avatarKey));
-    }).catch(function(){
-      /* 預熱失敗不擋頁面；call.html 仍會做一次正式喚醒與重試。 */
-    });
-  }
-
-  function unlock(){
-    lockEl.style.display = 'none';
-    openEl.classList.add('show');
-    try { prewarmVoiceAvatar(sessionStorage.getItem('munea_pass') || ''); } catch(e){}
-  }
-
-  form.addEventListener('submit', function(ev){
-    ev.preventDefault();
-    var v = (pass.value || '').replace(/\s+/g,'').toLowerCase();
-    if (v === 'munea666') {
-      try {
-        sessionStorage.setItem(KEY, '1');
-        sessionStorage.setItem('munea_pass', pass.value); /* call.html 讀這把免再輸入 */
-      } catch(e){}
-      err.textContent = '';
-      unlock();
-    } else {
-      err.textContent = T.errPass;
-      card.classList.remove('shake');
-      void card.offsetWidth;
-      card.classList.add('shake');
-      pass.select();
-    }
-  });
 
   /* ── Hero 影片：打招呼播完換待機循環（官網同款） ── */
   var hv = document.getElementById('heroVid');

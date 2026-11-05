@@ -10,7 +10,9 @@ async function request(pathname, options = {}) {
 }
 
 async function main() {
-  for (const pathname of ["/", "/en", "/ja", "/es", "/privacy", "/terms", "/support"]) {
+  // 2026-11-05：「給照護機構」短頁四語也要真的回 200（目錄頁在 trailingSlash:false 下不帶尾斜線）
+  for (const pathname of ["/", "/en", "/ja", "/es", "/privacy", "/terms", "/support",
+    "/for-organizations", "/en/for-organizations", "/ja/for-organizations", "/es/for-organizations"]) {
     const response = await request(pathname);
     assert.equal(response.status, 200, `${pathname} must return 200`);
     assert.match(response.headers.get("content-type") || "", /text\/html/i);
@@ -32,6 +34,10 @@ async function main() {
     ["/en", "en"],
     ["/ja", "ja"],
     ["/es", "es"],
+    ["/for-organizations", "zh-Hant-TW"],
+    ["/en/for-organizations", "en"],
+    ["/ja/for-organizations", "ja"],
+    ["/es/for-organizations", "es"],
   ]) {
     const html = await (await request(pathname)).text();
     assert.match(html, new RegExp(`<html\\s+lang="${lang}"`), `${pathname} must serve lang=${lang}`);

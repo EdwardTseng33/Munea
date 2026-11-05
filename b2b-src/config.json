@@ -4,6 +4,10 @@
   "siteUrl": "https://munea-b2b.vercel.app",
   "contactEmail": "edwardt0303@gmail.com",
 
+  "_appStoreUrl說明": "「下載 App 直接試用」按鈕。中文頁用官網同一條台灣商店網址（site-src/config.json）；英日西用不帶國家的網址，讓 App Store 自己帶到訪客所在地區的商店。",
+  "appStoreUrl": "https://apps.apple.com/tw/app/id6788658125",
+  "appStoreUrlIntl": "https://apps.apple.com/app/id6788658125",
+
   "langLabels": {
     "zh": { "native": "中文", "short": "繁中" },
     "en": { "native": "English", "short": "EN" },
