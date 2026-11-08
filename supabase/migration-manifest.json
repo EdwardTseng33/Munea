@@ -226,6 +226,13 @@
       "filename": "029_on_device_face_worker.sql",
       "type": "seed",
       "sha256": "a0777a53bf94bfd2ac0fc13e4d3c96078e8adf20587d637315ebf50da306f40f"
+    },
+    {
+      "order": 31,
+      "identity": "031",
+      "filename": "031_fix_free_account_retention_delete.sql",
+      "type": "schema",
+      "sha256": "74140bb87e88908cd082313356d669dc53623cdc8bd01dcf6ca62378869772aa"
     }
   ]
 }

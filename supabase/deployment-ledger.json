@@ -227,6 +227,12 @@
           "verifiedAt": "2026-10-29T17:35:00+08:00",
           "captureMethod": "read-only-probe",
           "sourceCommit": "eb03176f7dc1f892b2c8bc25513d4ffa8b03d1a7"
+        },
+        {
+          "filename": "031_fix_free_account_retention_delete.sql",
+          "sha256": "74140bb87e88908cd082313356d669dc53623cdc8bd01dcf6ca62378869772aa",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {
