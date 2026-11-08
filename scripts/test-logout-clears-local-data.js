@@ -126,6 +126,7 @@ function seedPersonalData(localStorageMock, sessionStorageMock) {
 (function partA() {
   const r = runScenario();
   const seeded = seedPersonalData(r.localStorageMock, r.sessionStorageMock);
+  r.localStorageMock.setItem('munea.lastAuthUser', 'user-a');
 
   r.sandbox.syncAccountScopedCaches({ authUserId: 'user-b' });
 
@@ -166,16 +167,37 @@ function seedPersonalData(localStorageMock, sessionStorageMock) {
   seedPersonalData(r.localStorageMock, r.sessionStorageMock);
   r.localStorageMock.setItem('munea.lastAuthUser', 'user-a');
 
-  r.sandbox.syncAccountScopedCaches({});
+  r.sandbox.syncAccountScopedCaches({ status: 'guest', event: 'SIGNED_OUT' });
   expect(r.localStorageMock.getItem('munea.personProfile') === null, 'C 登出要清掉個人資料');
   expect(r.localStorageMock.getItem('munea.consent.crossborder') === null, 'C 登出要清掉 AI 使用同意紀錄，下一個人要重新同意');
   expect(r.localStorageMock.getItem('munea.fontScale') !== null, 'C 登出不該動到字體大小這類裝置偏好');
-  expect(r.localStorageMock.getItem('munea.lastAuthUser') === '', 'C 登出後身分記號要變回空字串');
+  expect(r.localStorageMock.getItem('munea.lastAuthUser') === '__signed_out__', 'C 登出後身分記號要記成「已登出」');
 
   r.localStorageMock.setItem('munea.personProfile', '{"nick":"路人"}');
   r.sandbox.syncAccountScopedCaches({ authUserId: 'user-b' });
   expect(r.localStorageMock.getItem('munea.personProfile') === null, 'C 換第二個人登入一樣要清乾淨');
   console.log('PASS C：登出會清、換第二人登入也會再清一次');
+})();
+
+(function partD() {
+  // 不是真的登出／換人，一律不准清（11/8 蘇菲審查補）：本人只存在手機上的紀錄會整批弄丟
+  const cases = [
+    ['D1 第一次記到身分（升級後／新裝）', null, { authUserId: 'user-a' }],
+    ['D2 App 剛打開、登入狀態還沒讀出來', 'user-a', { status: 'guest' }],
+    ['D3 網路不穩讀不到登入', 'user-a', { status: 'guest', event: 'SESSION_UNAVAILABLE' }],
+    ['D4 登入過期被擋', 'user-a', { status: 'guest', event: 'SESSION_REJECTED' }],
+  ];
+  cases.forEach(([label, last, state]) => {
+    const r = runScenario();
+    const seeded = seedPersonalData(r.localStorageMock, r.sessionStorageMock);
+    if (last) r.localStorageMock.setItem('munea.lastAuthUser', last);
+    r.sandbox.syncAccountScopedCaches(state);
+    for (let i = 0; i < seeded.personalKeys.length; i++) {
+      expect(r.localStorageMock.getItem(seeded.personalKeys[i]) !== null, label + ' 不該清：' + seeded.personalKeys[i]);
+    }
+    expect(r.notifySyncCalls.length === 0, label + ' 不該重排提醒');
+  });
+  console.log('PASS D：剛開 App／網路不穩／登入過期／第一次記身分，都不清本人資料');
 })();
 
 console.log('ALL PASS：登出/換帳號本機資料清理（munea. 個人資料清空、裝置偏好保留、同人不誤清）');

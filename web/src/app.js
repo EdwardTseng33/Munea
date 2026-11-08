@@ -6257,6 +6257,7 @@ const ACCOUNT_SCOPE_KEEP_KEYS = new Set([
 // 留著純屬防呆；'munea.reviewAsked.*' 是評分提示的節流記號，不是個人資料。
 const ACCOUNT_SCOPE_KEEP_PREFIXES = ['munea.reviewAsked.', 'munea.admin.'];
 const ACCOUNT_SCOPE_LAST_USER_KEY = 'munea.lastAuthUser';
+const ACCOUNT_SCOPE_SIGNED_OUT_MARK = '__signed_out__';
 function isAccountScopeKeepKey(key) {
   if (key === ACCOUNT_SCOPE_LAST_USER_KEY) return true; // 機制本身的記號，由呼叫端改寫新值
   if (ACCOUNT_SCOPE_KEEP_KEYS.has(key)) return true;
@@ -6280,8 +6281,19 @@ function syncAccountScopedCaches(state) {
     const uid = String((state && (state.authUserId || state.userId)) || '');
     const last = localStorage.getItem(ACCOUNT_SCOPE_LAST_USER_KEY) || '';
     if (uid === last) return;
+    // 只在兩種情況清：①真的按了登出（event＝SIGNED_OUT）②換成另一個人登入（前後兩個都有身分、而且不同）。
+    // App 剛打開、登入狀態還沒讀出來時也會短暫回報「沒登入」；網路不穩、登入過期也一樣——
+    // 那些都不是「換人」，清下去會把本人只存在手機上的紀錄（例如吃藥打勾）整批弄丟。
+    // 第一次記到身分（last 是空的）也不清：手機上的東西本來就是這個人的。
+    const explicitSignOut = !uid && String((state && state.event) || '') === 'SIGNED_OUT';
+    const switchedUser = !!uid && !!last && uid !== last;
+    if (!explicitSignOut && !switchedUser) {
+      if (uid) localStorage.setItem(ACCOUNT_SCOPE_LAST_USER_KEY, uid);
+      return;
+    }
     clearAccountScopedLocalData();
-    localStorage.setItem(ACCOUNT_SCOPE_LAST_USER_KEY, uid);
+    // 真的登出後記一個「已登出」記號：下一個不管誰登入都算換人、再清一次（中間訪客留下的也清掉）
+    localStorage.setItem(ACCOUNT_SCOPE_LAST_USER_KEY, uid || ACCOUNT_SCOPE_SIGNED_OUT_MARK);
     if (uid && typeof refreshServerPlanEntitlement === 'function') refreshServerPlanEntitlement();
     // 本機清乾淨後，首頁幾張卡與提醒排程要跟著刷新，不然舊資料的畫面會留到下次切頁才消失。
     try { if (typeof renderDailyTasks === 'function') renderDailyTasks(); } catch (e2) {}
