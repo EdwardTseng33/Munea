@@ -10,5 +10,6 @@ class MuneaViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(AppleSignInPlugin())
         bridge?.registerPluginInstance(GoogleSignInPlugin())
         bridge?.registerPluginInstance(ExportPlugin())
+        bridge?.registerPluginInstance(KeepAwakePlugin())
     }
 }

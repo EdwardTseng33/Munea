@@ -7,6 +7,12 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 
+# 系統套件補安全更新（2026-11-08 弱點掃描：zlib1g CVE-2026-76844／CVE-2026-85091，修正版 1.3.1-1+deb13u1）。
+# 基底映像更新前，每次打包順手把系統套件升到最新安全版；只升不裝新東西。
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY engine/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

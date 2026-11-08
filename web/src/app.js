@@ -5640,6 +5640,7 @@ let callDialing = false;
 let callPreflightPending = false;
 function setCallPreflightPending(on, pendingLabel = muneaT('voice.connecting', '')) {
   callPreflightPending = on;
+  try { CallKeepAwake.sync(); } catch (e) { console.warn('[keepAwake]', e); }
   if (!on) hideBusyCard();   // 排隊卡跟著撥號前置狀態走：接通／取消／失敗任何一條路離開排隊就收卡
   // 2026-08-01：撥號前置一結束、又沒真的撥起來（失敗／取消／被擋），把提早切過去的
   // 「撥通中」畫面收回待機——配合 connectCall 開頭「先切畫面再跑網路」那一刀。
@@ -5661,6 +5662,7 @@ function setCallPreflightPending(on, pendingLabel = muneaT('voice.connecting', '
 function setCallDialing(on) {
   if (on) setCallPreflightPending(false);
   callDialing = on;
+  try { CallKeepAwake.sync(); } catch (e) { console.warn('[keepAwake]', e); }
   const b = $('#callToggle'); if (!b) return;
   b.classList.toggle('dialing', on);
   const lbl = $('#callToggleLabel');
@@ -5678,10 +5680,49 @@ function setCallDialing(on) {
     }
   }
 }
+// 通話中螢幕不睡（2026-11-08 Edward：「開啟聊聊時應該都要判定是通話中，螢幕不應該跳保護程式」）。
+// 撥號前置／撥通中／通話中任一成立就叫手機別自動鎖屏；三個都結束才放回去。
+// iPhone／Android 走 App 自帶的原生小外掛 KeepAwake（iOS isIdleTimerDisabled、Android FLAG_KEEP_SCREEN_ON）；
+// 瀏覽器（官網試用、開發）退而用標準的螢幕喚醒鎖，拿不到就算了——不能讓這件事影響通話。
+const CallKeepAwake = {
+  on: false,
+  _web: null,
+  _plugin() { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KeepAwake) || null; },
+  sync() {
+    const want = !!(callPreflightPending || callDialing || callConnected);
+    if (want === this.on) return;
+    this.on = want;
+    const p = this._plugin();
+    if (p) {
+      try {
+        const done = want ? p.keepAwake() : p.allowSleep();
+        if (done && typeof done.catch === 'function') done.catch(err => console.warn('[keepAwake] native', err));
+      } catch (err) { console.warn('[keepAwake] native', err); }
+      return;
+    }
+    this._webLock(want);
+  },
+  async _webLock(want) {
+    try {
+      if (!want) { if (this._web) { const l = this._web; this._web = null; await l.release(); } return; }
+      if (navigator.wakeLock && typeof navigator.wakeLock.request === 'function' && document.visibilityState === 'visible') {
+        this._web = await navigator.wakeLock.request('screen');
+        this._web.addEventListener('release', () => { this._web = null; });
+      }
+    } catch (err) { console.warn('[keepAwake] web', err); }
+  },
+};
+// 網頁版的喚醒鎖切到背景會被系統收走；回到前景、還在通話就再要一次
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && CallKeepAwake.on && !CallKeepAwake._plugin() && !CallKeepAwake._web) {
+    CallKeepAwake._webLock(true);
+  }
+});
 function setCallToggle(connected) {
   callConnected = connected;
   callDialing = false;
   setCallPreflightPending(false);
+  try { CallKeepAwake.sync(); } catch (e) { console.warn('[keepAwake]', e); }
   const _b0 = $('#callToggle'); if (_b0) _b0.classList.remove('dialing');
   // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
   const fn = document.querySelector('.face-name');
