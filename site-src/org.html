@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<!-- ⚠ 這是「給照護機構」頁的版型，不是網站本體。改這裡或 i18n/*.json 的 org.* 之後要跑 `npm run site:build`。
+     2026-11-05 Edward 拍板：官網與 B2B 網站分開；官網只放一頁短介紹，完整方案、費用、預約都導去 B2B 網站。
+     內文只用 b2b-src 已經寫過的事實；機構後台（/org、社工登入）還在開發，不寫成已上線。 -->
+<html lang="{{meta.htmlLang}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{org.title}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+{{meta.fonts}}
+<link rel="icon" href="/assets/paining-logo.png" type="image/png">
+<meta name="description" content="{{org.description}}">
+<link rel="canonical" href="{{meta.canonical}}">
+{{meta.hreflang}}
+<meta name="theme-color" content="#3AA8A0">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Munea 沐寧">
+<meta property="og:title" content="{{org.ogTitle}}">
+<meta property="og:description" content="{{org.ogDescription}}">
+<meta property="og:url" content="{{meta.canonical}}">
+<meta property="og:image" content="{{meta.ogImage}}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="{{meta.ogLocale}}">
+{{meta.ogAlternates}}
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{org.ogTitle}}">
+<meta name="twitter:description" content="{{org.ogDescription}}">
+<meta name="twitter:image" content="{{meta.ogImage}}">
+<link rel="stylesheet" href="/warm.css?v=10">
+<style>
+  /* ── Edward 拍板：扁平化，不要陰影與漸層（跟首頁同一套覆寫）── */
+  :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
+  *{box-shadow:none!important}
+  .blob{display:none!important}
+  .cta-box .glow,.cta-box .glow2{display:none!important}
+  .cta-box{background:var(--teal-d)!important}
+  .progress{background:var(--teal)!important}
+  .hero h1 .hl::after{background:#F6D8BC!important}
+  h2,h3{text-wrap:balance}
+  p,li{text-wrap:pretty}
+
+  .navlinks a.nav-cta{height:42px;padding:0 22px;display:inline-flex;align-items:center;font-size:15px}
+  .lang-trigger{height:42px;padding:0 15px}
+  .lang-opt{text-decoration:none}
+  .lang-menu{min-width:172px}
+
+  /* ── 主視覺 ── */
+  .org-hero{padding:72px 0 64px}
+  .org-hero .hero-grid{grid-template-columns:1.15fr .85fr}
+  .org-hero h1{font-size:clamp(30px,4.4vw,50px)}
+  .org-hero .btn-teal{background:var(--teal-dd);color:#fff}
+  .org-hero .btn-teal:hover{background:#1D5A55;transform:translateY(-3px)}
+  .org-hero .btn svg{width:18px;height:18px}
+  .org-shot{display:grid;place-items:center;background:#e9f2ed;border-radius:30px;padding:30px}
+  .org-shot .dev{width:min(240px,70%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27!important}
+  .org-shot .dev img{width:100%;height:100%;object-fit:cover;display:block}
+  @media(max-width:900px){
+    .org-hero{padding:44px 0 48px}
+    .org-hero .hero-grid{grid-template-columns:1fr;gap:34px}
+    .org-shot{padding:22px}
+    .org-shot .dev{width:min(200px,60%)}
+  }
+
+  /* ── 機構能用沐寧做什麼 ── */
+  .org-uses{background:var(--cream-2);padding:80px 0}
+  .org-uses .sec-head{margin-bottom:40px}
+  .org-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;max-width:960px;margin:0 auto}
+  .org-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px 26px 24px}
+  .org-card .ic{width:46px;height:46px;border-radius:14px;background:var(--mint);color:var(--teal-d);display:grid;place-items:center;margin-bottom:14px}
+  .org-card .ic svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .org-card h3{font-size:19px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  .org-card p{font-size:15.5px;color:var(--muted);line-height:1.8}
+  @media(max-width:700px){.org-uses{padding:60px 0}.org-cards{grid-template-columns:1fr}.org-card{padding:22px 20px}}
+
+  /* ── 怎麼開始 ── */
+  .org-how{padding:72px 0 20px}
+  .org-how .sec-head{margin-bottom:28px}
+  .org-steps{list-style:none;max-width:760px;margin:0 auto;display:grid;gap:12px;counter-reset:s}
+  .org-steps li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;font-size:16px;color:var(--ink);line-height:1.75}
+  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--coral-soft);color:var(--coral-d);font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
+
+  /* ── 收尾：去 B2B 網站 ── */
+  .org-final .btn-b2b{background:#fff;color:var(--teal-dd);position:relative}
+  .org-final .btn-b2b:hover{background:#f4f0e8;transform:translateY(-3px)}
+  .org-note{max-width:720px;margin:6px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8;padding:0 8px}
+
+  /* 頁尾 */
+  .foot-disc{max-width:720px;margin:26px auto 0;font-size:12.5px;color:#8a9893;line-height:1.85}
+  .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
+</style>
+</head>
+<body>
+<div class="progress"></div>
+
+<header>
+  <nav class="wrap">
+    <a class="logo" href="{{meta.home}}" aria-label="Munea">
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </a>
+    <div class="nav-cluster">
+      <div class="navlinks">
+        <a class="nav-cta" href="{{meta.b2bLocaleUrl}}" target="_blank" rel="noopener">{{org.navCta}}</a>
+      </div>
+      <div class="lang-switch" data-open="false">
+        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="{{a11y.langSwitch}}">
+          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+          <span class="lang-current">{{meta.langCurrent}}</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" aria-label="{{a11y.langSwitch}}">
+          {{meta.langMenu}}
+        </div>
+      </div>
+      <button class="menu-btn" type="button" aria-label="{{a11y.menu}}" aria-expanded="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33403D" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══ 主視覺 ═══ -->
+<section class="hero org-hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">{{org.eyebrow}}</div>
+      <h1>{{org.h1}}</h1>
+      <p class="sub">{{org.sub}}</p>
+      <div class="hero-actions">
+        <a class="btn btn-teal" href="{{meta.b2bLocaleUrl}}" target="_blank" rel="noopener">{{org.ctaB2B}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost" href="{{meta.appStoreUrl}}" target="_blank" rel="noopener">{{org.ctaApp}}</a>
+      </div>
+    </div>
+    <div class="org-shot">
+      <div class="dev"><img src="/assets/app-family.jpg" alt="{{org.imgAlt}}" width="780" height="1688"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 機構能用沐寧做什麼 ═══ -->
+<section class="org-uses">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow center">{{org.usesEyebrow}}</div>
+      <h2>{{org.usesH2}}</h2>
+      <p>{{org.usesSub}}</p>
+    </div>
+    <div class="org-cards">
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span>
+        <h3>{{org.c1.h3}}</h3>
+        <p>{{org.c1.p}}</p>
+      </div>
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>
+        <h3>{{org.c2.h3}}</h3>
+        <p>{{org.c2.p}}</p>
+      </div>
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span>
+        <h3>{{org.c3.h3}}</h3>
+        <p>{{org.c3.p}}</p>
+      </div>
+      <div class="org-card">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+        <h3>{{org.c4.h3}}</h3>
+        <p>{{org.c4.p}}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 怎麼開始 ═══ -->
+<section class="org-how">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>{{org.howH2}}</h2>
+    </div>
+    <ol class="org-steps">
+      <li>{{org.how1}}</li>
+      <li>{{org.how2}}</li>
+      <li>{{org.how3}}</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ═══ 收尾：完整方案在 B2B 網站 ═══ -->
+<section class="cta-band org-final">
+  <div class="wrap">
+    <div class="cta-box">
+      <h2>{{org.finalH2}}</h2>
+      <p>{{org.finalP}}</p>
+      <a class="btn btn-b2b" href="{{meta.b2bLocaleUrl}}" target="_blank" rel="noopener">{{org.finalBtn}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <p class="org-note">{{org.note}}</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30" loading="lazy"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
+        <p class="desc">{{foot.desc}}</p>
+      </div>
+      <div class="foot-col">
+        <h4>{{foot.meetTitle}}</h4>
+        <a href="{{meta.home}}#personas">{{foot.linkPersonas}}</a>
+        <a href="{{meta.home}}#features">{{foot.linkFeatures}}</a>
+        <a href="{{meta.home}}#tech">{{foot.linkTech}}</a>
+        <a href="{{meta.home}}#faq">{{foot.linkFaq}}</a>
+      </div>
+      <div class="foot-col">
+        <h4>{{foot.contactTitle}}</h4>
+        <a href="{{meta.legalSupport}}">{{foot.linkSupport}}</a>
+        <a href="{{meta.legalTerms}}">{{foot.linkTerms}}</a>
+        <a href="{{meta.legalPrivacy}}">{{foot.linkPrivacy}}</a>
+        <a href="{{meta.orgUrl}}">{{foot.linkB2B}}</a>
+        <a href="mailto:{{meta.contactEmail}}">{{meta.contactEmail}}</a>
+      </div>
+    </div>
+    <p class="disc">{{foot.disclaimer}}</p>
+    <div class="foot-bottom"><span>© {{meta.year}} Munea 沐寧 · {{foot.tagline}}</span></div>
+  </div>
+</footer>
+
+<script src="/warm.js?v=10"></script>
+</body>
+</html>

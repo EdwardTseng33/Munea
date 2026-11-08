@@ -233,6 +233,12 @@
           "sha256": "c578134bb237fe2739386afce0443d403b007dd940200b42fb946a7b0cdab0e7",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
+        },
+        {
+          "filename": "031_fix_free_account_retention_delete.sql",
+          "sha256": "74140bb87e88908cd082313356d669dc53623cdc8bd01dcf6ca62378869772aa",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {

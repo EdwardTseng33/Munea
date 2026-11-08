@@ -161,7 +161,9 @@
   .punch em{font-style:normal;font-weight:700;color:var(--teal-d)}
 
   /* ── Hero ── */
-  .hero{padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
+  /* position:relative 不能少：少了它，裝飾光暈（.blob，position:absolute）不歸 hero 管，overflow:hidden 剪不到，
+     手機上整頁被撐寬到 ~480px、右上「預約」被切掉（2026-11-05 修） */
+  .hero{position:relative;padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
   .blob{position:absolute;border-radius:50%;filter:blur(10px);z-index:0;pointer-events:none}
   .blob.a{width:460px;height:460px;background:radial-gradient(circle,#cfe9e2,transparent 70%);top:-120px;right:-90px;opacity:.6}
   .blob.b{width:340px;height:340px;background:radial-gradient(circle,#fbe2c9,transparent 70%);bottom:-90px;left:-80px;opacity:.55}
@@ -223,7 +225,7 @@
   .s-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:14.5px;font-weight:700;color:var(--teal-d);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:.2s}
   .s-cta:hover{color:var(--teal-dd);transform:translateX(3px)}
   .sol-wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:28px;flex-wrap:wrap;background:var(--mint);border:1.5px dashed var(--teal)}
-  .sol-wide .sw-txt{flex:1;min-width:300px}
+  .sol-wide .sw-txt{flex:1;min-width:min(300px,100%)}
   .sol-wide h3{margin-top:8px}
   .sol-wide .s-price{margin-top:0;padding-top:0;font-size:18px}
   .sol-wide .math{background:#fff;color:var(--teal-dd)}
@@ -281,33 +283,12 @@
   .map-item .ms{color:var(--muted)}
   .map-item .ms b{color:var(--teal-d)}
 
-  /* ── Demo 密碼閘 ── */
-  .demo-sec{background:var(--mint);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-bottom:84px}
-  .demo-box{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
-  .demo-lock{position:relative;min-height:420px;display:grid;place-items:center;padding:50px 24px}
-  .demo-lock .blurbg{position:absolute;inset:-24px;background:url('/assets/app-chat.png') center 18%/cover no-repeat;filter:blur(22px) saturate(.82);opacity:.5}
-  .demo-lock .veil{position:absolute;inset:0;background:rgba(250,247,242,.62)}
-  .lock-card{position:relative;z-index:2;text-align:center;max-width:420px;width:100%;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:var(--r);padding:38px 32px 34px;box-shadow:var(--shadow-lg)}
-  .lock-card .lk{font-size:34px;line-height:1;margin-bottom:14px}
-  .lock-card h3{font-size:20px;font-weight:700;margin-bottom:8px}
-  .lock-card p{font-size:13.5px;color:var(--muted);margin-bottom:22px}
-  .lock-form{display:flex;gap:10px}
-  .lock-form input{flex:1;min-width:0;font-family:inherit;font-size:15px;padding:12px 18px;border:1.5px solid var(--mint-2);border-radius:100px;background:var(--cream);color:var(--ink);outline:none;transition:border-color .2s}
-  .lock-form input:focus{border-color:var(--teal)}
-  .lock-form .btn{flex-shrink:0;padding:12px 24px;font-size:15px}
-  .lock-err{margin-top:12px;font-size:13px;color:#C25A3A;min-height:20px}
-  .shake{animation:shake .4s}
-  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
-  .demo-open{display:none;padding:36px 36px 40px}
-  .demo-open.show{display:block;animation:fadein .6s ease}
-  @keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  .live-badge{display:inline-block;font-size:13px;font-weight:700;color:#C0392B;letter-spacing:.08em;margin-bottom:10px;animation:livepulse 1.6s ease-in-out infinite;font-family:var(--f-head)}
-  @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.45}}
-  /* ── 真臉真聲訪客體驗（解鎖後） ── */
-  .chat-shell{display:flex;flex-direction:column;align-items:center;text-align:center}
-  .chat-shell>h3{font-size:24px;font-weight:700;margin-bottom:12px}
-  .call-lead{max-width:540px;margin:0 auto 24px;color:var(--muted);line-height:1.9;font-size:15.5px;text-wrap:pretty}
-  @media(max-width:900px){.chat-frame{width:100%;height:70vh;max-height:none}}
+  /* ── 下載 App 直接試用（2026-11-05 取代網頁試打通話） ── */
+  .tryapp{background:var(--mint);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-bottom:84px}
+  .tryapp .sec-sub{margin-bottom:28px}
+  .tryapp .hero-actions{justify-content:center}
+  .tryapp .btn svg{width:20px;height:20px}
+  .try-note{margin:18px auto 0;max-width:620px;font-size:13.5px;color:var(--muted);text-wrap:pretty}
 
   /* ── 費用 ── */
   .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:22px}
@@ -382,6 +363,8 @@
   /* ── 預約彈窗 ── */
   .modal-back{position:fixed;inset:0;z-index:300;background:rgba(51,64,61,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
   .modal-back.open{opacity:1;pointer-events:auto}
+  /* 預約視窗平常藏著（opacity:0）但仍參與排版；格子項目預設不肯縮，內容一寬就把手機整頁撐寬 */
+  .modal-card{min-width:0}
   .modal-card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow-lg);width:min(560px,100%);max-height:calc(100vh - 40px);overflow-y:auto;padding:36px 34px 30px;position:relative;transform:translateY(16px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .modal-back.open .modal-card{transform:none}
   .modal-x{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--mint);border:none;color:var(--teal-d);cursor:pointer;display:grid;place-items:center;transition:.2s;font-family:inherit}
@@ -441,7 +424,6 @@
     .map-item .ma{display:none}
     .map-item .mp::before{content:"痛點｜";color:var(--coral-d);font-size:12.5px}
     .map-item .ms::before{content:"沐寧解法｜";color:var(--teal-d);font-size:12.5px;font-weight:700}
-    .demo-open{padding:22px 18px 30px}
     .steps{grid-template-columns:1fr;gap:26px}
     .steps::before{top:26px;bottom:26px;left:25px;right:auto;width:2px;height:auto}
     .step{display:flex;text-align:left;gap:18px;align-items:flex-start;padding:0}
@@ -474,6 +456,13 @@
   .proof-note{display:flex;flex-direction:column;gap:14px;font-size:15.5px}
   .proof-cite{font-size:12.5px;color:var(--muted)}
   @media(max-width:860px){.stat-wall{grid-template-columns:repeat(2,1fr)}.proof-grid{grid-template-columns:1fr}.stat-card .sv{font-size:34px}}
+  /* 2026-11-05 手機 390 寬整頁被撐到 ~507px（右上「預約」被切掉）：中文 keep-all 讓卡片裡的長句沒有斷點，
+     撐破兩欄數據卡與卡片。允許「真的放不下才斷」，平常斷行不變。 */
+  .stat-card,.card,.price-card{min-width:0;overflow-wrap:anywhere}
+  /* 價格那行原本整行不換行（.nb）：西文「依規模報價」、英文劃線原價接在後面，窄機就撐破卡片 */
+  .price-card .amt.nb{white-space:normal}
+  .price-card .was{display:inline-block;white-space:nowrap}
+  @media(max-width:600px){.stat-wall{gap:14px}.stat-card{padding:28px 14px 24px}}
 </style>
 </head>
 <body>
@@ -568,12 +557,12 @@
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></div>
       <h3>會記得的陪伴</h3>
-      <p>長期記憶讓每次對話從上次聊到的地方接著聊：長輩的膝蓋、孫子的婚事、愛去的老街，她都記著。越聊越熟，陪伴才會被打開第二次、第三次。</p>
+      <p>她會記得上次聊到的重點：長輩說膝蓋痠、孫子要結婚、愛去的老街，下次通話能接著關心。越聊越熟，陪伴才會被打開第二次、第三次。</p>
     </div>
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg></div>
       <h3>聽得出的守護</h3>
-      <p>在日常對話裡聽出情緒低落與危機訊號：語氣不對勁、提到不舒服、講了讓人擔心的話，即時通知家人與照護者，把「不對勁」變成「早知道」。</p>
+      <p>在日常對話裡留意情緒低落與讓人擔心的話：語氣不對勁、提到不舒服，她會先關心本人、好好接住；家屬打開 App 看得到長輩願意分享的近況與心情，機構每月拿到關懷與異常摘要，把「不對勁」變成「早一點知道」。</p>
     </div>
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
@@ -732,23 +721,23 @@
   <div class="gal-wrap">
   <div class="gallery reveal">
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-home.png" alt="沐寧 App 首頁" loading="lazy"></div><span class="dev-badge">開發版實際畫面</span></div>
+      <div class="phone"><div class="scr"><img src="/assets/app-home.png" alt="沐寧 App 首頁" loading="lazy"></div><span class="dev-badge">App 實際畫面</span></div>
       <figcaption class="phone-cap">首頁：今天的陪伴，從一聲問候開始</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-chat.png" alt="沐寧 App 即時對話" loading="lazy"></div><span class="dev-badge">開發版實際畫面</span></div>
-      <figcaption class="phone-cap">即時對話：會動的臉、自然的聲音，像視訊一樣自然</figcaption>
+      <div class="phone"><div class="scr"><img src="/assets/app-chat.png" alt="沐寧 App 即時對話" loading="lazy"></div><span class="dev-badge">App 實際畫面</span></div>
+      <figcaption class="phone-cap">即時對話：會動的臉、自然的聲音，開口就能聊</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-status.png" alt="沐寧 App 健康狀態" loading="lazy"></div><span class="dev-badge">開發版實際畫面</span></div>
+      <div class="phone"><div class="scr"><img src="/assets/app-status.png" alt="沐寧 App 健康狀態" loading="lazy"></div><span class="dev-badge">App 實際畫面</span></div>
       <figcaption class="phone-cap">健康狀態：用藥、心情、活動一眼掌握</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-family.png" alt="沐寧 App 家庭圈" loading="lazy"></div><span class="dev-badge">開發版實際畫面</span></div>
-      <figcaption class="phone-cap">家庭圈：家人即時看到長輩近況</figcaption>
+      <div class="phone"><div class="scr"><img src="/assets/app-family.png" alt="沐寧 App 家庭圈" loading="lazy"></div><span class="dev-badge">App 實際畫面</span></div>
+      <figcaption class="phone-cap">家庭圈：家人在 App 隨時看到長輩近況</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-settings.png" alt="沐寧 App 設定" loading="lazy"></div><span class="dev-badge">開發版實際畫面</span></div>
+      <div class="phone"><div class="scr"><img src="/assets/app-settings.png" alt="沐寧 App 設定" loading="lazy"></div><span class="dev-badge">App 實際畫面</span></div>
       <figcaption class="phone-cap">設定：提醒與偏好，替長輩調到剛剛好</figcaption>
     </figure>
   </div>
@@ -774,14 +763,14 @@
     <div class="vgrid">
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/ningning-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="沐寧 AI 視訊示範・自然女聲"><source src="/assets/ningning-talk-demo.mp4" type="video/mp4"></video>
+          <video class="vplay" poster="/assets/ningning-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="沐寧 AI 示範影片・自然女聲"><source src="/assets/ningning-talk-demo.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="開啟聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">開聲音</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">寧寧・自然女聲</span><span class="vhint">打開聲音，聽她的聲音怎麼和表情對在一起</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
-          <video class="vplay" poster="/assets/mumu-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="沐寧 AI 視訊示範・沉穩男聲"><source src="/assets/mumu-talk-demo.mp4" type="video/mp4"></video>
+          <video class="vplay" poster="/assets/mumu-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="沐寧 AI 示範影片・沉穩男聲"><source src="/assets/mumu-talk-demo.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="開啟聲音" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">開聲音</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">沐沐・沉穩男聲</span><span class="vhint">同一套引擎，換一位陪伴的人</span></figcaption>
@@ -805,10 +794,10 @@
       <span class="tag coral">照護層有什麼</span>
       <h3>把聊天變成守護</h3>
       <ul>
-        <li><b>記得說過的話</b>，長期記憶越聊越熟</li>
+        <li><b>記得上次聊的重點</b>，越聊越熟</li>
         <li><b>用藥與回診提醒</b>，到點手機通知</li>
         <li><b>情緒與異常察覺</b>，聽出不對勁</li>
-        <li><b>即時通知家人與照護者</b>，出事會叫人</li>
+        <li><b>每月關懷與異常摘要</b>，機構看得到整體狀況</li>
         <li><b>全家健康圈</b>，彼此的狀態看得見</li>
       </ul>
     </div>
@@ -816,7 +805,7 @@
       <span class="tag ink">技術層有什麼</span>
       <h3>穩穩撐住這一切的裡子</h3>
       <ul>
-        <li><b>自研即時語音影像引擎</b>，讓她像真的在</li>
+        <li><b>即時語音對話＋手機上即時畫出的臉</b>，聊起來像真的有人在</li>
         <li><b>照護智慧核心</b>，懂長輩、懂分寸</li>
         <li><b>雲端服務架構</b>，依試辦規模做容量與網路驗證</li>
         <li><b>資安與個資防護</b>，資料只為照護</li>
@@ -827,46 +816,22 @@
 
   <div class="tech-close reveal">
     <span class="tc-tag">為什麼是「全家人的健康陪伴 AI 照護管家」</span>
-    <p>互動層讓長輩願意開口，照護層把聊出來的每句話變成守護，技術層讓這一切安穩地跑。三層合在一起，就是一位記得每位長輩、看得到也聽得到、出事會叫人的管家。</p>
+    <p>互動層讓長輩願意開口，照護層把聊出來的每句話變成關心，技術層讓這一切安穩地跑。三層合在一起，就是一位記得每位長輩、陪著說話，也讓家人和機構看得見近況的管家。</p>
   </div>
 
 </div></section>
 
-<!-- ═══════════ Demo 密碼閘 ═══════════ -->
-<!-- 2026-10-30 整段先藏：試打通話頁還是舊顯示卡臉、打不通；導覽與按鈕改指向上方示範影片（#demo 移到 tech-demo）。新形象通話接好後拿掉 hidden、把 id="demo" 移回來。 -->
-<section class="demo-sec" id="live-call" hidden style="display:none"><div class="wrap">
+<!-- ═══════════ 下載 App 直接試用 ═══════════ -->
+<!-- 2026-11-05 Edward 拍板：網頁版試打通話整套移除——App 已上架，想試就直接下載。舊的試打網址由 munea-b2b/vercel.json 導回首頁。 -->
+<section class="tryapp" id="try-app"><div class="wrap">
   <div class="center-head reveal">
-    <div class="eyebrow center">合作夥伴預覽</div>
-    <h2>眼見為憑，直接跟寧寧說話</h2>
-    <p class="sec-sub">不是影片、不是文字聊天。解鎖後直接進入 3 分鐘有臉有聲的體驗，全程只用麥克風與聲音互動。</p>
-  </div>
-  <div class="demo-box reveal">
-    <!-- 鎖定畫面 -->
-    <div class="demo-lock" id="demoLock">
-      <div class="blurbg" aria-hidden="true"></div>
-      <div class="veil" aria-hidden="true"></div>
-      <div class="lock-card" id="lockCard">
-        <div class="lk">🔒</div>
-        <h3>輸入通關密語</h3>
-        <p>密語在我們的邀請訊息裡。還沒有嗎？點右上角「預約 30 分鐘場域診斷」，我們親自帶您看完整流程。</p>
-        <form class="lock-form" id="demoForm" autocomplete="off">
-          <input type="password" id="demoPass" placeholder="輸入通關密語" aria-label="通關密語">
-          <button class="btn btn-teal" type="submit">解鎖</button>
-        </form>
-        <div class="lock-err" id="lockErr" role="alert" aria-live="polite"></div>
-      </div>
+    <div class="eyebrow center">自己試試看</div>
+    <h2>下載 App，直接跟寧寧聊聊</h2>
+    <p class="sec-sub">沐寧 iPhone 版已在 App Store 上架。下載、註冊後就能開口跟寧寧說話，不必等我們安排；想看機構怎麼導入，再預約 30 分鐘場域診斷。</p>
+    <div class="hero-actions">
+      <a class="btn btn-teal btn-xl" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>到 App Store 下載</a>
     </div>
-    <!-- 解鎖內容：單一真臉真聲通話入口，不提供文字體驗 -->
-    <div class="demo-open" id="demoOpen">
-      <div class="chat-shell">
-        <div class="live-badge">● LIVE</div>
-        <h3>現在，直接跟寧寧說話</h3>
-        <p class="call-lead">這是隔離的訪客情境：不登入、不帶入正式使用者記憶或健康資料，也不建立提醒。請使用 Chrome 或 Safari 並允許麥克風；首次喚醒影像服務可能需要一些時間。體驗以台灣繁體中文（國語）進行。</p>
-        <!-- 2026-10-30 先藏起來：call.html 還是舊的顯示卡擬真臉、目前打不通。call.html 本身不動不刪；
-             新形象通話頁接好後，拿掉 hidden 與 style 即可恢復。 -->
-        <a class="btn btn-teal btn-xl" href="/call.html" hidden style="display:none">開始 3 分鐘通話體驗</a>
-      </div>
-    </div>
+    <p class="try-note">註冊送 5 點體驗（1 點約可聊 1 分鐘）。目前只有 iPhone 版。</p>
   </div>
 </div></section>
 
@@ -930,13 +895,13 @@
 <section><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">政策順風</div>
-    <h2>2026 是照護科技政策的大年</h2>
+    <h2>可以搭配的政策資源</h2>
     <p class="sec-sub">導入沐寧，可搭配的政府資源：</p>
   </div>
   <div class="policy-box reveal">
     <ul>
       <li><b>住宿式機構品質獎勵計畫（2024–2027）</b>：衛福部長照基金支持，含「智慧輔助照顧科技」指標；導入智慧照顧方案可納入指標規劃，我們協助準備相關文件。</li>
-      <li><b>長照 3.0 智慧科技輔具租賃給付（2026-07 上路）</b>：長照家庭每 3 年 6 萬元租賃額度。沐寧<b>規劃申請中</b>（審議中之規劃，非既定給付項目）；納入後家庭端負擔可望大幅降低。</li>
+      <li><b>長照智慧科技輔具租賃給付</b>：長照家庭可申請智慧科技輔具的租賃額度。沐寧目前仍在洽詢中，<b>尚未列入給付項目</b>。</li>
     </ul>
     <div class="punch">我們的原則：<em>補助是加分，不是前提</em>。方案本身的價值（省下的人力工時、家屬的安心、員工的有感）先站得住，補助讓決定更容易。</div>
   </div>
@@ -954,7 +919,7 @@
       <div class="no num">1</div>
       <div>
         <h4>30 分鐘展示</h4>
-        <p>線上或到場，實際跟沐寧對話，看她怎麼記得人、怎麼接住情緒。</p>
+        <p>線上或到場，實際跟沐寧對話，看她怎麼記得人、怎麼接住情緒；也可以先下載 App 自己試試。</p>
       </div>
     </div>
     <div class="step">
@@ -1004,8 +969,8 @@
     <div class="card reveal">
       <span class="tag teal">語言</span>
       <div class="icb"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg></div>
-      <h3>台灣繁體中文</h3>
-      <p>服務以國語為主，為台灣的表達習慣調校；台語互動持續優化中，導入前可依場域語言需求評估。</p>
+      <h3>以國語為主</h3>
+      <p>服務以國語為主，為台灣的表達習慣調校；App 另有英文、日文、西班牙文版本，導入前可依場域語言需求評估。</p>
     </div>
   </div>
 </div></section>
@@ -1030,8 +995,8 @@
 <footer><div class="wrap">
   <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
   <p class="foot-legal">
-    嘉瑪科技股份有限公司 ｜ 沐寧 Munea · AI 健康陪伴照護管家 ｜ 2026 年 7 月 ｜ <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a><br>
-    本頁所述之定價為參考框架，正式報價以雙方議定之合約為準；「長照智慧科技輔具租賃給付」為規劃申請中事項，非既定給付項目。<br>
+    嘉瑪科技股份有限公司 ｜ 沐寧 Munea · AI 健康陪伴照護管家 ｜ <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a><br>
+    本頁所述之定價為參考框架，正式報價以雙方議定之合約為準；沐寧目前不是「長照智慧科技輔具租賃給付」的給付項目（洽詢中）。<br>
     沐寧為輔助關懷提醒工具，不取代人工照護、醫療診斷與緊急救援服務。
   </p>
   <p class="foot-site"><a href="https://munea.net/">沐寧 Munea App 官網 — 看看家庭端長什麼樣 →</a></p>
@@ -1090,7 +1055,7 @@
 
   /* ── 這一頁的語系與文案（由 b2b-src/i18n/*.json 產生）── */
   var LANG = "zh";
-  var T = {"errPass":"密語不對，再試一次，或直接約我們展示。","soundOn":"開聲音","soundOff":"靜音","trialTitle":"申請試辦評估","trialSub":"留下場域與對象資訊，我們一個工作天內回覆，協助規劃 2–4 週、10–20 位參與者的小規模試辦。","demoTitle":"預約 30 分鐘場域診斷","demoSub":"留下資料，我們一個工作天內回覆；會談包含現況盤點、即時體驗與下一步試辦建議。","formErr":"請填妥「姓名、單位名稱、Email」再送出。","sending":"送出中…","copied":"已複製 {mail}！"};
+  var T = {"soundOn":"開聲音","soundOff":"靜音","trialTitle":"申請試辦評估","trialSub":"留下場域與對象資訊，我們一個工作天內回覆，協助規劃 2–4 週、10–20 位參與者的小規模試辦。","demoTitle":"預約 30 分鐘場域診斷","demoSub":"留下資料，我們一個工作天內回覆；會談包含現況盤點、即時體驗與下一步試辦建議。","formErr":"請填妥「姓名、單位名稱、Email」再送出。","sending":"送出中…","copied":"已複製 {mail}！"};
 
   /* ── 語言選單：只管開合，選項本身是連到別的網址的真連結 ── */
   var sw = document.querySelector('.lang-switch');
@@ -1131,57 +1096,6 @@
   } else {
     reveals.forEach(function(el){ el.classList.add('in'); });
   }
-
-  /* ── Demo 密碼閘 ── */
-  var KEY = 'munea_demo_unlocked';
-  var lockEl = document.getElementById('demoLock');
-  var openEl = document.getElementById('demoOpen');
-  var form = document.getElementById('demoForm');
-  var pass = document.getElementById('demoPass');
-  var err = document.getElementById('lockErr');
-  var card = document.getElementById('lockCard');
-
-  function prewarmVoiceAvatar(passValue){
-    if (!passValue) return;
-    fetch('/api/call-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: passValue })
-    }).then(function(r){
-      if (!r.ok) throw new Error('prewarm key ' + r.status);
-      return r.json();
-    }).then(function(cfg){
-      if (!cfg || !cfg.avatarHttp || !cfg.avatarKey) return;
-      return fetch(cfg.avatarHttp.replace(/\/$/, '') + '/health?key=' + encodeURIComponent(cfg.avatarKey));
-    }).catch(function(){
-      /* 預熱失敗不擋頁面；call.html 仍會做一次正式喚醒與重試。 */
-    });
-  }
-
-  function unlock(){
-    lockEl.style.display = 'none';
-    openEl.classList.add('show');
-    try { prewarmVoiceAvatar(sessionStorage.getItem('munea_pass') || ''); } catch(e){}
-  }
-
-  form.addEventListener('submit', function(ev){
-    ev.preventDefault();
-    var v = (pass.value || '').replace(/\s+/g,'').toLowerCase();
-    if (v === 'munea666') {
-      try {
-        sessionStorage.setItem(KEY, '1');
-        sessionStorage.setItem('munea_pass', pass.value); /* call.html 讀這把免再輸入 */
-      } catch(e){}
-      err.textContent = '';
-      unlock();
-    } else {
-      err.textContent = T.errPass;
-      card.classList.remove('shake');
-      void card.offsetWidth;
-      card.classList.add('shake');
-      pass.select();
-    }
-  });
 
   /* ── Hero 影片：打招呼播完換待機循環（官網同款） ── */
   var hv = document.getElementById('heroVid');

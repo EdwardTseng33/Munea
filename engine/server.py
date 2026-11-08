@@ -81,6 +81,23 @@ PRIMARY_CARE_RECIPIENT_ID = os.environ.get("MUNEA_SUPABASE_PERSON_ID") or "local
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
 
+def client_ip_from_headers(headers, fallback_addr=None):
+    """從請求頭算出『這個人真正的來源 IP』，給登入/邀請碼防猜計數用。
+
+    Cloud Run 前面是 Google Front End（GFE）：GFE 收到請求後一定會把自己
+    量到的真實來源 IP 補在 X-Forwarded-For 的『最後一個』欄位；呼叫端自己
+    想塞什麼值只擠得進前面幾格。原本取第一個值＝完全讓對方說了算，
+    防猜計數等於沒上鎖（每次換一個假 IP 就重新歸零）。
+    本機沒有 GFE 轉發時 X-Forwarded-For 是空的，退回連線本身的位址。"""
+    headers = headers or {}
+    xff = headers.get("X-Forwarded-For") or headers.get("x-forwarded-for") or ""
+    if xff:
+        parts = [p.strip() for p in str(xff).split(",") if p.strip()]
+        if parts:
+            return parts[-1]
+    return fallback_addr or ""
+
+
 # 邀請碼防爆破（P0-3）：同來源猜錯太多次就暫時擋。記憶體、只計失敗、成功不算。
 _INVITE_ATTEMPTS = {}
 _INVITE_ATTEMPTS_LOCK = threading.Lock()
@@ -3294,6 +3311,93 @@ def _summary_tags_from_context(context, text=""):
     return tags[:8]
 
 
+# 2026-11-05 Edward 拍板「記憶修 A」第一步：收線後請 AI 寫一句「他這通講了什麼」的真重點。
+# 之前存的是內部稽核用的英文一行（「Post-turn companion review covered food_cooking; user turns: 4」），
+# 卻被當成「上次聊天重點」餵給她——她永遠講不出「上次你說腰痠，後來好點沒」。
+# 只寫**使用者自己說的**事（不收她說的話、不推論診斷）；寒暄／測試收音這種沒內容的通話回空字串，
+# 下一通就退回只知道「多久前聊過」。AI 失敗也回空字串，不影響收線。
+INTERNAL_AUDIT_SUMMARY_PREFIX = "Post-turn companion review"
+# 11/5 實測：gemini-2.5-flash-lite 對新用戶已下架（404）；3.5-flash-lite 約 1.2 秒、2.5-flash 約 3.8 秒。
+CALL_RECAP_MODELS = ("gemini-3.5-flash-lite", "gemini-2.5-flash")
+# 中文 60 字以內；英文同樣意思要 150 字元上下，上限放 200（太長的就不收）。
+CALL_RECAP_MAX_CHARS = 200
+CALL_RECAP_BUDGET_S = float(os.environ.get("MUNEA_CALL_RECAP_BUDGET_S", "4"))
+_CALL_RECAP_POOL = None
+import re as _recap_re
+_GENDERED_PRONOUN_RE = _recap_re.compile(r"\b(he|she|his|her|him|hers|himself|herself)\b", _recap_re.I)
+
+
+def _call_recap_pool():
+    global _CALL_RECAP_POOL
+    if _CALL_RECAP_POOL is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _CALL_RECAP_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="call-recap")
+    return _CALL_RECAP_POOL
+
+
+def _call_recap_instruction(history):
+    lines = []
+    for item in history[-40:]:
+        if not isinstance(item, dict):
+            continue
+        text = " ".join(str(item.get("text") or item.get("content") or "").split())[:300]
+        if not text:
+            continue
+        who = "他" if (item.get("role") or "user") == "user" else "陪伴者"
+        lines.append(f"{who}：{text}")
+    return (
+        "下面是一位長輩跟語音陪伴者的通話字幕。請寫一句「下次通話時值得記得的重點」，"
+        "只能寫【他】自己講的事：近況、身體感覺、心情、家人、計畫、喜好。\n"
+        "規則：①只用他說過的內容，不要加入陪伴者的建議，也不要推論病名或原因；"
+        "②一句話、60 字以內，用他講話的語言寫（他講中文就用繁體中文）；"
+        "③像備忘錄，中文用「他」，例如「他說膝蓋還有點痠，週末女兒要回來吃飯」；"
+        "英文等其他語言一律用「省略主詞的筆記句」、不要猜性別（禁止 he／she／his／her／him）：例如他說「I saw my doctor, she changed my pill. My son visits next week.」→ 「Saw doctor today; blood pressure pill changed. Son visiting next week.」英文 25 個字以內；"
+        "④如果整通只有打招呼、測試聽不聽得到、或沒有值得記的事，recap 給空字串。\n"
+        '只回 JSON：{"recap": "..."}\n\n通話字幕：\n' + "\n".join(lines)
+    )
+
+
+def ai_call_recap_summary(history):
+    """回一句真重點（字串）；沒內容或失敗回空字串。"""
+    if not any(isinstance(h, dict) and (h.get("role") or "user") == "user"
+               and str(h.get("text") or h.get("content") or "").strip() for h in (history or [])):
+        return ""
+    if os.environ.get("MUNEA_CALL_RECAP_AI", "1").strip() == "0":
+        return ""
+    instruction = _call_recap_instruction(history or [])
+    # 收線時語音線只等這支內部呼叫 8 秒（call_control_client.post_internal），後面還有記憶萃取要跑：
+    # 重點摘要整體只給 4 秒，超過就放棄（這通沒有重點，下一通退回只知道多久前聊過）。
+    # Gemini 不收 10 秒以下的逾時設定（400 INVALID_ARGUMENT），所以由我們這邊等：放進背景執行緒，
+    # 時間到就不等了（那次呼叫自己跑完就丟掉）。
+    deadline = time.monotonic() + CALL_RECAP_BUDGET_S
+    for model in CALL_RECAP_MODELS:
+        remaining = deadline - time.monotonic()
+        if remaining < 0.8:
+            break
+        try:
+            future = _call_recap_pool().submit(
+                eng.client.models.generate_content,
+                model=model,
+                contents=instruction,
+                config=types.GenerateContentConfig(
+                    temperature=0.2,
+                    response_mime_type="application/json",
+                ),
+            )
+            r = future.result(timeout=remaining)
+            recap = " ".join(str((json.loads(r.text or "{}") or {}).get("recap") or "").split())
+        except Exception as e:
+            log_fallback_exception("ai call recap", e)
+            continue
+        if len(recap) > CALL_RECAP_MAX_CHARS or recap.startswith(INTERNAL_AUDIT_SUMMARY_PREFIX):
+            continue
+        if _GENDERED_PRONOUN_RE.search(recap):
+            # 不知道對方性別，英文摘要用了 he/she 就不收（下一通她可能照著說錯）
+            continue
+        return recap
+    return ""
+
+
 def build_post_turn_conversation_summary(data, context):
     data = data or {}
     history = data.get("history") or []
@@ -3306,9 +3410,13 @@ def build_post_turn_conversation_summary(data, context):
     risk_level = risk.get("level") or "none"
     safety_relevant = risk_level in {"medium", "high", "critical"} or bool(risk.get("requiresHumanEscalation"))
     topics = ", ".join(tags[:4]) if tags else "general companionship"
-    summary = f"Post-turn companion review covered {topics}; user turns: {user_turn_count}; Guardian risk: {risk_level}."
+    summary = f"{INTERNAL_AUDIT_SUMMARY_PREFIX} covered {topics}; user turns: {user_turn_count}; Guardian risk: {risk_level}."
     if safety_relevant:
         summary += " Safety-relevant content was detected for audit-aware follow-up."
+    elif data.get("source") == "live_voice":
+        recap = ai_call_recap_summary(history)
+        if recap:
+            summary = recap
     return normalize_conversation_summary({
         "personId": data.get("personId") or data.get("person_id") or PRIMARY_CARE_RECIPIENT_ID,
         "voiceSessionId": data.get("voiceSessionId") or data.get("voice_session_id"),
@@ -7053,20 +7161,82 @@ def admin_cached_read(metric_version, data, producer):
     return payload
 
 
+# 後台短期通行碼（2026-11-08 沙利曼盤點後加固）：原本 /admin/login 成功後
+# 直接把「定時任務也在用、永不過期」的那把萬能通行碼（MUNEA_ADMIN_API_TOKEN）
+# 發給瀏覽器——瀏覽器那把一旦外流（分享螢幕、裝置遺失、XSS），要廢掉它就得
+# 連 6 個 Cloud Scheduler 定時任務一起換。改成登入發「簽過章、8 小時就過期」
+# 的短期憑證；定時任務繼續吃原本那把萬能通行碼，兩條路 admin_authorized 都認。
+ADMIN_SESSION_TOKEN_VERSION = "v1"
+ADMIN_SESSION_TOKEN_TTL_SECONDS = 8 * 60 * 60  # 8 小時
+
+
+def admin_session_secret():
+    """簽章密語：優先吃專屬環境變數，沒設就用萬能通行碼衍生一把（HMAC，不是明碼複用）。
+    萬能通行碼本來就是登入能成功的必要條件（見 admin_login_response），
+    所以這裡『衍生不出密語』只會發生在萬能通行碼本身也沒設的時候——
+    那種情況下登入本來就會先被 login_not_configured 擋下，不會走到這裡。
+    沒有密語就一律簽不出、也驗不過短期憑證＝安全失敗（fail closed）。"""
+    override = os.environ.get("MUNEA_ADMIN_SESSION_SECRET") or ""
+    if override:
+        return override
+    base_token = os.environ.get("MUNEA_ADMIN_API_TOKEN") or ""
+    if not base_token:
+        return ""
+    return hmac.new(base_token.encode("utf-8"), b"munea-admin-session-v1", hashlib.sha256).hexdigest()
+
+
+def issue_admin_session_token(now=None):
+    """帳密核對通過後發一張短期後台憑證：exp 內嵌在憑證本身，Cloud Run 多台
+    伺服器互不共享記憶體也驗得了（不需要伺服器端 session store）。"""
+    secret = admin_session_secret()
+    if not secret:
+        return None
+    exp = int((now if now is not None else time.time())) + ADMIN_SESSION_TOKEN_TTL_SECONDS
+    payload = f"{ADMIN_SESSION_TOKEN_VERSION}.{exp}"
+    signature = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{payload}.{signature}"
+
+
+def verify_admin_session_token(token, now=None):
+    """驗簽章＋驗過期；任何一步不對都算無效（不區分原因，避免洩漏細節給嘗試破解的人）。"""
+    secret = admin_session_secret()
+    if not secret or not token:
+        return False
+    parts = str(token).split(".")
+    if len(parts) != 3 or parts[0] != ADMIN_SESSION_TOKEN_VERSION:
+        return False
+    payload = f"{parts[0]}.{parts[1]}"
+    try:
+        exp = int(parts[1])
+    except (TypeError, ValueError):
+        return False
+    now = now if now is not None else time.time()
+    if now >= exp:
+        return False
+    expected_signature = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(str(parts[2]), expected_signature)
+
+
 def admin_authorized(headers):
     token = os.environ.get("MUNEA_ADMIN_API_TOKEN") or ""
     if not token:
         return False, "admin_token_not_configured"
-    supplied = headers.get("X-Munea-Admin-Token") or headers.get("x-munea-admin-token") or ""
-    if not hmac.compare_digest(str(supplied), str(token)):
-        return False, "invalid_admin_token"
-    return True, None
+    supplied = str(headers.get("X-Munea-Admin-Token") or headers.get("x-munea-admin-token") or "")
+    # 兩條路都認：定時任務（Cloud Scheduler）繼續帶萬能通行碼，不能壞；
+    # 後台瀏覽器登入後帶的是短期憑證，兩者互不干擾、互不取代。
+    if hmac.compare_digest(supplied, str(token)):
+        return True, None
+    if verify_admin_session_token(supplied):
+        return True, None
+    return False, "invalid_admin_token"
 
 
 def admin_login_response(data=None, client_ip=None):
     """後台帳密登入門：帳號(email)+密碼對了，才發後台通行碼。
     密碼存在 Secret Manager（MUNEA_ADMIN_PASSWORD）、不寫在程式裡。
-    比對用 compare_digest 防側錄；同來源錯太多次先擋（防猜）。"""
+    比對用 compare_digest 防側錄；同來源錯太多次先擋（防猜）。
+    2026-11-08 起：發的不再是萬能通行碼本身，是 8 小時就過期的短期憑證
+    （admin_authorized 兩條路都認，定時任務用的萬能通行碼不受影響）。"""
     data = data or {}
     if login_rate_limited(client_ip):
         return {"ok": False, "error": "too_many_attempts"}
@@ -7082,7 +7252,10 @@ def admin_login_response(data=None, client_ip=None):
     if not (email_ok and password_ok):
         record_login_failure(client_ip)
         return {"ok": False, "error": "invalid_credentials"}
-    return {"ok": True, "token": admin_token}
+    session_token = issue_admin_session_token()
+    if not session_token:
+        return {"ok": False, "error": "login_not_configured"}
+    return {"ok": True, "token": session_token, "expiresIn": ADMIN_SESSION_TOKEN_TTL_SECONDS}
 
 
 def provider_webhook_authorized(headers):
@@ -10035,6 +10208,9 @@ def _recent_call_recap_line_core(now=None, person_id=None):
     summary_text = ""
     if os.environ.get("MUNEA_VOICE_RECAP_CONTENT", "1").strip() != "0" and not latest.get("safetyRelevant"):
         summary_text = " ".join(str(latest.get("summary") or "").split())[:160]
+        # 內部稽核用的英文一行不是「他說了什麼」——不准當成記憶餵給她（11/5 修，見 ai_call_recap_summary）
+        if summary_text.startswith(INTERNAL_AUDIT_SUMMARY_PREFIX):
+            summary_text = ""
     if summary_text:
         return (
             f"（上次聊天（大約 {ago} 前）的重點，這是系統紀錄、你真的記得："
@@ -10370,6 +10546,16 @@ class H(BaseHTTPRequestHandler):
     def _json(self, obj):
         self._send(200, "application/json; charset=utf-8", json.dumps(obj, ensure_ascii=False).encode())
 
+    def _json_scheduler(self, obj):
+        """給 Cloud Scheduler 直接打的定時任務端點用（/admin/retention/run 等）：
+        跟 _json 一樣回同一包 JSON，但 obj.ok 是 false 時要回非 2xx。
+        _json 一律回 200——Scheduler 只認 HTTP 狀態碼，不解析 body，於是失敗的
+        排程被記成『成功』、沒人收到告警也沒有自動重試（2026-11-08 沙利曼盤點）。
+        只用在這幾支排程端點，刻意不改全域 _json（其餘幾十支 /admin/* 讀取接口
+        前端靠 body.ok 自己判斷，不能跟著改 HTTP 狀態碼）。"""
+        status = 500 if isinstance(obj, dict) and obj.get("ok") is False else 200
+        self._send(status, "application/json; charset=utf-8", json.dumps(obj, ensure_ascii=False).encode())
+
     def _json_error(self, code, err_code, message="Request could not be processed", detail=None, extra_headers=None):
         rid = request_id()
         body = {"ok": False, "error": {"code": err_code, "message": message, "requestId": rid}}
@@ -10474,8 +10660,7 @@ class H(BaseHTTPRequestHandler):
             if request_path in AI_RATE_LIMITED_PATHS:
                 _actor = (auth_gate.get("auth") or {}).get("authUserId")
                 if not _actor:
-                    _xff = self.headers.get("X-Forwarded-For") or ""
-                    _actor = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                    _actor = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 _limited, _retry_after = ai_rate_limited(_actor, request_path)
                 if _limited:
                     self._json_error(429, "rate_limited", "Too many requests, please slow down",
@@ -10524,8 +10709,7 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/butler/post-turn":
                 self._json(butler_post_turn_response(data))
             elif self.path == "/admin/login":
-                _xff = self.headers.get("X-Forwarded-For") or ""
-                _cip = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 self._json(admin_login_response(data, client_ip=_cip))
             elif self.path == "/admin/memory-consolidate":
                 ok, code = admin_authorized(self.headers)
@@ -10580,8 +10764,7 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":
-                _xff = self.headers.get("X-Forwarded-For") or ""
-                _cip = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 self._json(family_invitations_response(data, client_ip=_cip, actor=auth_gate.get("auth")))
             elif self.path == "/family-members":
                 self._json(family_members_response(data))
@@ -10616,13 +10799,13 @@ class H(BaseHTTPRequestHandler):
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(refresh_daily_briefing(data.get("region"), data.get("personId") or data.get("person_id")))
+                    self._json_scheduler(refresh_daily_briefing(data.get("region"), data.get("personId") or data.get("person_id")))
             elif self.path == "/admin/worker-clock-patrol":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(worker_clock_patrol_response(data))
+                    self._json_scheduler(worker_clock_patrol_response(data))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":
@@ -10730,13 +10913,13 @@ class H(BaseHTTPRequestHandler):
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(drain_notification_outbox_response(data))
+                    self._json_scheduler(drain_notification_outbox_response(data))
             elif self.path == "/admin/retention/run":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_retention_run(data))
+                    self._json_scheduler(admin_retention_run(data))
             elif self.path == "/admin/enterprise/clients":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
@@ -10870,7 +11053,9 @@ class H(BaseHTTPRequestHandler):
                             "targetTable": "enterprise_seats",
                             "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
                         })
-                    self._json(response)
+                    # Cloud Scheduler 直接打的定時任務（非乾跑的 enterprise seat sweep）之一，
+                    # 失敗要回非 2xx 才會被排程器記成失敗。
+                    self._json_scheduler(response)
             elif self.path == "/admin/enterprise/billing-settings":
                 ok, code = admin_authorized(self.headers)
                 if not ok:

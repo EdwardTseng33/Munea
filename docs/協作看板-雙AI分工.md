@@ -1,5 +1,20 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-05 蘇菲｜🧹 B2B 宣稱對齊現況＋手機頂部「預約」被切修好（PR · 不碰 App 通話路徑）
+
+- **宣稱**（四語 `b2b-src/i18n`）：拿掉「即時通知家人與照護者／出事會叫人」——查證 `engine/live_voice_server.py` `guardian_record_and_alert`：高風險只記安全事件＋送內部 Slack，註解明寫「現在還沒有主動推播家人的功能」；改成「先關心本人＋家屬 App 看近況＋機構每月關懷與異常摘要」。「自研即時語音影像引擎」改「即時語音對話＋手機上即時畫出的臉」。「其他語言不支援」改「App 另有英日西版本」、拿掉台語進度。「2026 是政策大年」「長照 3.0（2026-07 上路）、每 3 年 6 萬」改成不會過期、不需查證的寫法。英日西角色名照 App：Nina／あかり／Lucía。
+- **版面**：390 寬整頁被撐到約 480px（右上按鈕被切）三個真因：hero 沒 `position:relative` 光暈剪不到、合作卡文字欄寫死 300px 最小寬、價格行不換行；修完四語 360／390 寬都等於視窗寬。
+- **守門**：`scripts/test-b2b-i18n.js` 加禁語與角色名檢查（舊文案放回會紅）、`munea-b2b/test-static.mjs` 加三個撐破點檢查。
+- **未做**：沒部署（B2B 要另外部署 Vercel）。官網首頁也有「先關心本人，再讓家人知道」一句，本張沒動。
+
+### 2026-11-05 蘇菲｜🏢 官網開「給照護機構」短頁＋B2B 刪網頁試打＋B2B 文案整理（PR · 不碰 App 通話路徑）
+
+- **為什麼**：Edward 11/5 拍板官網與 B2B 網站分開維持；官網開一頁介紹機構方案、導去 B2B；B2B 的網頁試打通話刪掉（App 已上架，直接下載試）。
+- **官網**：新版型 `site-src/org.html` → 四語 `/for-organizations`、`/en|ja|es/for-organizations`（`build.mjs` 改成多頁產生、sitemap 加四筆互指）；首頁頁尾「企業與機構合作」改連這頁。內文只用 b2b-src 已寫過的事實（語音陪伴／用藥回診提醒／家屬看近況／每月營運數據報告、試辦 10–20 位 2–4 週、Plus 100／Pro 200 點），不提機構後台、不用「智慧照護」「追蹤監測」。
+- **B2B**：刪 `call.html`、`api/call-key.js`、`flashhead/`、`test-call-browser.mjs`、`design-qa.md`、只給 call.html 用的 8 個素材；模板拿掉藏起來的密碼閘＋試打段＋預熱 JS，換成「下載 App 直接試用」區（`#try-app`）。頁尾拿掉「2026 年 7 月」；長照 3.0 租賃給付「規劃申請中」改「洽詢中、尚未列入給付項目」；產品畫面標籤「開發版」改「App 實際畫面」。舊網址導回首頁靠 #663 的 `vercel.json`。
+- **連動測試**：`munea-b2b/test-static.mjs`、`scripts/test-b2b-i18n.js`、`test-avatar-render-contract.py`、`test-runpod-demo-720p-profile.py`（立繪改讀 `web/flashhead`）、`test_demo_pod_reaper.py`（拿掉比對 call-key.js 的兩條）、`test-app-site-seo.js`、`test-firebase-hosting-live.js`；`deploy/glows/shared-card-demo.ps1` 立繪路徑改 `weblashhead`。
+- **未做**：沒部署（合併 main 會自動發官網；B2B 要另外部署 Vercel）。
+
 ### 2026-10-31 蘇菲｜📞 1.0.70 語音線延遲實測（本機同設定）＋🔎 SEO 總體策略正本（只加文件、不碰程式）
 
 - **正式線真相**：`munea-voice`（正式）近 120 天 Cloud Run 紀錄**沒有任何一次 WebSocket 升級（101）**＝沒人真打過一通；只有 App 開頁預熱打 `/health`（回 404、只是喚醒用，無害）。測試機最後通話 10/29。

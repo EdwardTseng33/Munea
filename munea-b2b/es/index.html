@@ -161,7 +161,9 @@
   .punch em{font-style:normal;font-weight:700;color:var(--teal-d)}
 
   /* ── Hero ── */
-  .hero{padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
+  /* position:relative 不能少：少了它，裝飾光暈（.blob，position:absolute）不歸 hero 管，overflow:hidden 剪不到，
+     手機上整頁被撐寬到 ~480px、右上「預約」被切掉（2026-11-05 修） */
+  .hero{position:relative;padding:64px 0 70px;border-bottom:1px solid var(--line);overflow:hidden}
   .blob{position:absolute;border-radius:50%;filter:blur(10px);z-index:0;pointer-events:none}
   .blob.a{width:460px;height:460px;background:radial-gradient(circle,#cfe9e2,transparent 70%);top:-120px;right:-90px;opacity:.6}
   .blob.b{width:340px;height:340px;background:radial-gradient(circle,#fbe2c9,transparent 70%);bottom:-90px;left:-80px;opacity:.55}
@@ -223,7 +225,7 @@
   .s-cta{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:14.5px;font-weight:700;color:var(--teal-d);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:.2s}
   .s-cta:hover{color:var(--teal-dd);transform:translateX(3px)}
   .sol-wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:28px;flex-wrap:wrap;background:var(--mint);border:1.5px dashed var(--teal)}
-  .sol-wide .sw-txt{flex:1;min-width:300px}
+  .sol-wide .sw-txt{flex:1;min-width:min(300px,100%)}
   .sol-wide h3{margin-top:8px}
   .sol-wide .s-price{margin-top:0;padding-top:0;font-size:18px}
   .sol-wide .math{background:#fff;color:var(--teal-dd)}
@@ -281,33 +283,12 @@
   .map-item .ms{color:var(--muted)}
   .map-item .ms b{color:var(--teal-d)}
 
-  /* ── Demo 密碼閘 ── */
-  .demo-sec{background:var(--mint);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-bottom:84px}
-  .demo-box{position:relative;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow)}
-  .demo-lock{position:relative;min-height:420px;display:grid;place-items:center;padding:50px 24px}
-  .demo-lock .blurbg{position:absolute;inset:-24px;background:url('/assets/app-chat.png') center 18%/cover no-repeat;filter:blur(22px) saturate(.82);opacity:.5}
-  .demo-lock .veil{position:absolute;inset:0;background:rgba(250,247,242,.62)}
-  .lock-card{position:relative;z-index:2;text-align:center;max-width:420px;width:100%;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:var(--r);padding:38px 32px 34px;box-shadow:var(--shadow-lg)}
-  .lock-card .lk{font-size:34px;line-height:1;margin-bottom:14px}
-  .lock-card h3{font-size:20px;font-weight:700;margin-bottom:8px}
-  .lock-card p{font-size:13.5px;color:var(--muted);margin-bottom:22px}
-  .lock-form{display:flex;gap:10px}
-  .lock-form input{flex:1;min-width:0;font-family:inherit;font-size:15px;padding:12px 18px;border:1.5px solid var(--mint-2);border-radius:100px;background:var(--cream);color:var(--ink);outline:none;transition:border-color .2s}
-  .lock-form input:focus{border-color:var(--teal)}
-  .lock-form .btn{flex-shrink:0;padding:12px 24px;font-size:15px}
-  .lock-err{margin-top:12px;font-size:13px;color:#C25A3A;min-height:20px}
-  .shake{animation:shake .4s}
-  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
-  .demo-open{display:none;padding:36px 36px 40px}
-  .demo-open.show{display:block;animation:fadein .6s ease}
-  @keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  .live-badge{display:inline-block;font-size:13px;font-weight:700;color:#C0392B;letter-spacing:.08em;margin-bottom:10px;animation:livepulse 1.6s ease-in-out infinite;font-family:var(--f-head)}
-  @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.45}}
-  /* ── 真臉真聲訪客體驗（解鎖後） ── */
-  .chat-shell{display:flex;flex-direction:column;align-items:center;text-align:center}
-  .chat-shell>h3{font-size:24px;font-weight:700;margin-bottom:12px}
-  .call-lead{max-width:540px;margin:0 auto 24px;color:var(--muted);line-height:1.9;font-size:15.5px;text-wrap:pretty}
-  @media(max-width:900px){.chat-frame{width:100%;height:70vh;max-height:none}}
+  /* ── 下載 App 直接試用（2026-11-05 取代網頁試打通話） ── */
+  .tryapp{background:var(--mint);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-bottom:84px}
+  .tryapp .sec-sub{margin-bottom:28px}
+  .tryapp .hero-actions{justify-content:center}
+  .tryapp .btn svg{width:20px;height:20px}
+  .try-note{margin:18px auto 0;max-width:620px;font-size:13.5px;color:var(--muted);text-wrap:pretty}
 
   /* ── 費用 ── */
   .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:22px}
@@ -382,6 +363,8 @@
   /* ── 預約彈窗 ── */
   .modal-back{position:fixed;inset:0;z-index:300;background:rgba(51,64,61,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
   .modal-back.open{opacity:1;pointer-events:auto}
+  /* 預約視窗平常藏著（opacity:0）但仍參與排版；格子項目預設不肯縮，內容一寬就把手機整頁撐寬 */
+  .modal-card{min-width:0}
   .modal-card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow-lg);width:min(560px,100%);max-height:calc(100vh - 40px);overflow-y:auto;padding:36px 34px 30px;position:relative;transform:translateY(16px) scale(.98);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
   .modal-back.open .modal-card{transform:none}
   .modal-x{position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;background:var(--mint);border:none;color:var(--teal-d);cursor:pointer;display:grid;place-items:center;transition:.2s;font-family:inherit}
@@ -441,7 +424,6 @@
     .map-item .ma{display:none}
     .map-item .mp::before{content:"痛點｜";color:var(--coral-d);font-size:12.5px}
     .map-item .ms::before{content:"沐寧解法｜";color:var(--teal-d);font-size:12.5px;font-weight:700}
-    .demo-open{padding:22px 18px 30px}
     .steps{grid-template-columns:1fr;gap:26px}
     .steps::before{top:26px;bottom:26px;left:25px;right:auto;width:2px;height:auto}
     .step{display:flex;text-align:left;gap:18px;align-items:flex-start;padding:0}
@@ -474,6 +456,13 @@
   .proof-note{display:flex;flex-direction:column;gap:14px;font-size:15.5px}
   .proof-cite{font-size:12.5px;color:var(--muted)}
   @media(max-width:860px){.stat-wall{grid-template-columns:repeat(2,1fr)}.proof-grid{grid-template-columns:1fr}.stat-card .sv{font-size:34px}}
+  /* 2026-11-05 手機 390 寬整頁被撐到 ~507px（右上「預約」被切掉）：中文 keep-all 讓卡片裡的長句沒有斷點，
+     撐破兩欄數據卡與卡片。允許「真的放不下才斷」，平常斷行不變。 */
+  .stat-card,.card,.price-card{min-width:0;overflow-wrap:anywhere}
+  /* 價格那行原本整行不換行（.nb）：西文「依規模報價」、英文劃線原價接在後面，窄機就撐破卡片 */
+  .price-card .amt.nb{white-space:normal}
+  .price-card .was{display:inline-block;white-space:nowrap}
+  @media(max-width:600px){.stat-wall{gap:14px}.stat-card{padding:28px 14px 24px}}
 </style>
 </head>
 <body>
@@ -522,7 +511,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Reservar una reunión</button>
-        <a class="btn btn-ghost" href="#demo">Vea a Ningning en acción</a>
+        <a class="btn btn-ghost" href="#demo">Vea a Lucía en acción</a>
       </div>
       <div class="hero-note">
         <span><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Empiece con un piloto pequeño y amplíe cuando funcione</span>
@@ -533,7 +522,7 @@
     <div class="hero-media">
       <div class="glow"></div>
       <div class="frame">
-        <video id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="Ningning, la compañera de IA de Munea, en movimiento y acompañándole">
+        <video id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="metadata" aria-label="Lucía, la compañera de IA de Munea, en movimiento y acompañándole">
           <source src="/assets/ningning-hello.mp4" type="video/mp4">
         </video>
       </div>
@@ -568,12 +557,12 @@
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></div>
       <h3>Un acompañamiento que recuerda</h3>
-      <p>La memoria a largo plazo hace que cada conversación siga donde quedó la anterior: la rodilla que duele, la boda del nieto, la calle antigua a la que le gusta ir. Ella lo guarda todo. Esa cercanía es lo que hace que abra la aplicación una segunda y una tercera vez.</p>
+      <p>Recuerda lo más importante de la última conversación —la rodilla que duele, la boda del nieto, la calle antigua favorita— y puede retomarlo en la siguiente llamada. Cuanto más hablan, más cercana se vuelve, y por eso vuelven a llamarla.</p>
     </div>
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg></div>
       <h3>Un cuidado que escucha</h3>
-      <p>En la conversación diaria detecta el ánimo bajo y las señales de riesgo: un tono que no suena bien, una molestia mencionada, algo preocupante dicho en voz alta. Avisa al momento a la familia y a los cuidadores, y convierte el «algo no va bien» en «lo supimos a tiempo».</p>
+      <p>En la conversación diaria presta atención al ánimo bajo y a las palabras que preocupan, como un tono que no suena bien o una molestia mencionada, y primero se interesa por la persona. La familia ve en la app las novedades y el ánimo que la persona decide compartir, y la organización recibe cada mes un resumen de cuidado y alertas, para que el «algo no va bien» se convierta en «lo supimos antes».</p>
     </div>
     <div class="card reveal">
       <div class="icb"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
@@ -732,23 +721,23 @@
   <div class="gal-wrap">
   <div class="gallery reveal">
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-home.png" alt="Pantalla de inicio de la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la versión de desarrollo</span></div>
+      <div class="phone"><div class="scr"><img src="/assets/app-home.png" alt="Pantalla de inicio de la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la app</span></div>
       <figcaption class="phone-cap">Inicio: el acompañamiento de hoy empieza con un saludo</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-chat.png" alt="Conversación en directo en la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la versión de desarrollo</span></div>
-      <figcaption class="phone-cap">Conversación en directo: una cara que se mueve y una voz natural, tan natural como una videollamada</figcaption>
+      <div class="phone"><div class="scr"><img src="/assets/app-chat.png" alt="Conversación en directo en la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la app</span></div>
+      <figcaption class="phone-cap">Conversación en directo: una cara que se mueve y una voz natural; basta con hablar</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-status.png" alt="Estado de salud en la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la versión de desarrollo</span></div>
+      <div class="phone"><div class="scr"><img src="/assets/app-status.png" alt="Estado de salud en la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la app</span></div>
       <figcaption class="phone-cap">Salud: medicación, ánimo y actividad de un vistazo</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-family.png" alt="Círculo familiar en la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la versión de desarrollo</span></div>
-      <figcaption class="phone-cap">Círculo familiar: la familia ve al momento cómo está su mayor</figcaption>
+      <div class="phone"><div class="scr"><img src="/assets/app-family.png" alt="Círculo familiar en la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la app</span></div>
+      <figcaption class="phone-cap">Círculo familiar: la familia puede ver en la app cómo está su mayor cuando quiera</figcaption>
     </figure>
     <figure class="gal-item">
-      <div class="phone"><div class="scr"><img src="/assets/app-settings.png" alt="Ajustes de la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la versión de desarrollo</span></div>
+      <div class="phone"><div class="scr"><img src="/assets/app-settings.png" alt="Ajustes de la app Munea" loading="lazy"></div><span class="dev-badge">Pantalla real de la app</span></div>
       <figcaption class="phone-cap">Ajustes: recordatorios y preferencias, ajustados a cada persona</figcaption>
     </figure>
   </div>
@@ -777,7 +766,7 @@
           <video class="vplay" poster="/assets/ningning-poster.jpg" muted playsinline autoplay loop preload="metadata" aria-label="Demostración en vídeo de Munea・voz femenina natural"><source src="/assets/ningning-talk-demo-es.mp4" type="video/mp4"></video>
           <button class="vsound" type="button" aria-label="Activar el sonido" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx">Sonido</span></button>
         </div>
-        <figcaption class="vcap"><span class="vlab">Ningning・voz femenina natural</span><span class="vhint">Active el sonido y escuche cómo encajan su voz y su expresión</span></figcaption>
+        <figcaption class="vcap"><span class="vlab">Lucía・voz femenina natural</span><span class="vhint">Active el sonido y escuche cómo encajan su voz y su expresión</span></figcaption>
       </figure>
       <figure class="vdemo">
         <div class="vframe">
@@ -805,10 +794,10 @@
       <span class="tag coral">La capa de cuidado</span>
       <h3>Convertir la conversación en protección</h3>
       <ul>
-        <li><b>Recuerda lo que se le contó</b>: con memoria a largo plazo, la cercanía crece</li>
+        <li><b>Recuerda lo importante de la última charla</b>: la cercanía crece</li>
         <li><b>Recordatorios de medicación y revisiones</b>, en el móvil a su hora</li>
         <li><b>Atención al ánimo y a lo inusual</b>: nota cuando algo no va bien</li>
-        <li><b>Aviso inmediato a familia y cuidadores</b>: si pasa algo, llama a alguien</li>
+        <li><b>Resumen mensual de cuidado y alertas</b>, para que la organización vea la situación general</li>
         <li><b>Un círculo de salud familiar</b>, donde el estado de cada uno se ve</li>
       </ul>
     </div>
@@ -816,7 +805,7 @@
       <span class="tag ink">La capa técnica</span>
       <h3>La base que lo sostiene todo</h3>
       <ul>
-        <li><b>Motor propio de voz y vídeo en tiempo real</b>, para que se sienta presente</li>
+        <li><b>Conversación de voz en tiempo real con una cara dibujada al momento en el móvil</b>, para que se sienta presente</li>
         <li><b>Un núcleo inteligente centrado en el cuidado</b>, que entiende a las personas mayores y sabe dónde está el límite</li>
         <li><b>Arquitectura de servicio en la nube</b>, con capacidad y red verificadas a la escala del piloto</li>
         <li><b>Seguridad y protección de datos personales</b>: los datos sirven al cuidado y a nada más</li>
@@ -827,46 +816,22 @@
 
   <div class="tech-close reveal">
     <span class="tc-tag">Por qué la llamamos «la IA de salud y cuidado para toda la familia»</span>
-    <p>La capa de interacción hace que quieran hablar, la capa de cuidado convierte cada frase en protección y la capa técnica mantiene todo funcionando con estabilidad. Juntas dan una asistente que recuerda a cada persona mayor, que ve y oye, y que llama a alguien cuando pasa algo.</p>
+    <p>La capa de interacción hace que quieran hablar, la capa de cuidado convierte lo que dicen en atención y la capa técnica mantiene todo funcionando con estabilidad. Juntas dan una asistente que recuerda a cada persona mayor, le hace compañía y permite que la familia y la organización vean cómo está.</p>
   </div>
 
 </div></section>
 
-<!-- ═══════════ Demo 密碼閘 ═══════════ -->
-<!-- 2026-10-30 整段先藏：試打通話頁還是舊顯示卡臉、打不通；導覽與按鈕改指向上方示範影片（#demo 移到 tech-demo）。新形象通話接好後拿掉 hidden、把 id="demo" 移回來。 -->
-<section class="demo-sec" id="live-call" hidden style="display:none"><div class="wrap">
+<!-- ═══════════ 下載 App 直接試用 ═══════════ -->
+<!-- 2026-11-05 Edward 拍板：網頁版試打通話整套移除——App 已上架，想試就直接下載。舊的試打網址由 munea-b2b/vercel.json 導回首頁。 -->
+<section class="tryapp" id="try-app"><div class="wrap">
   <div class="center-head reveal">
-    <div class="eyebrow center">Vista previa para socios</div>
-    <h2>Compruébelo: hable directamente con Ningning</h2>
-    <p class="sec-sub">No es un vídeo ni un chat de texto. Al desbloquear entra directamente en una sesión de 3 minutos con cara y voz, usando solo el micrófono y su voz.</p>
-  </div>
-  <div class="demo-box reveal">
-    <!-- 鎖定畫面 -->
-    <div class="demo-lock" id="demoLock">
-      <div class="blurbg" aria-hidden="true"></div>
-      <div class="veil" aria-hidden="true"></div>
-      <div class="lock-card" id="lockCard">
-        <div class="lk">🔒</div>
-        <h3>Introduzca la contraseña</h3>
-        <p>La contraseña está en nuestro mensaje de invitación. ¿Aún no la tiene? Pulse «Reservar una consulta de 30 minutos» arriba a la derecha y se lo enseñamos todo personalmente.</p>
-        <form class="lock-form" id="demoForm" autocomplete="off">
-          <input type="password" id="demoPass" placeholder="Introduzca la contraseña" aria-label="Contraseña">
-          <button class="btn btn-teal" type="submit">Desbloquear</button>
-        </form>
-        <div class="lock-err" id="lockErr" role="alert" aria-live="polite"></div>
-      </div>
+    <div class="eyebrow center">Pruébelo usted mismo</div>
+    <h2>Descargue la app y empiece a hablar</h2>
+    <p class="sec-sub">Munea para iPhone está en el App Store. Descárguela, regístrese y empiece a hablar con su acompañante de Munea sin esperar a que organicemos una demostración. Cuando quiera ver cómo encaja en su organización, reserve una consulta de 30 minutos.</p>
+    <div class="hero-actions">
+      <a class="btn btn-teal btn-xl" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>Descargar en el App Store</a>
     </div>
-    <!-- 解鎖內容：單一真臉真聲通話入口，不提供文字體驗 -->
-    <div class="demo-open" id="demoOpen">
-      <div class="chat-shell">
-        <div class="live-badge">● LIVE</div>
-        <h3>Ahora, hable directamente con Ningning</h3>
-        <p class="call-lead">Es una sesión de invitado aislada: sin inicio de sesión, sin memoria ni datos de salud de usuarios reales y sin crear recordatorios. Use Chrome o Safari y permita el micrófono; despertar el servicio de vídeo por primera vez puede tardar un momento. La demo se realiza en chino tradicional (mandarín de Taiwán).</p>
-        <!-- 2026-10-30 先藏起來：call.html 還是舊的顯示卡擬真臉、目前打不通。call.html 本身不動不刪；
-             新形象通話頁接好後，拿掉 hidden 與 style 即可恢復。 -->
-        <a class="btn btn-teal btn-xl" href="/call.html" hidden style="display:none">Empezar la demo de 3 minutos</a>
-      </div>
-    </div>
+    <p class="try-note">Las cuentas nuevas reciben 5 créditos de prueba (1 crédito equivale a 1 minuto de conversación, aproximadamente). Por ahora solo para iPhone; la disponibilidad varía según el país o la región.</p>
   </div>
 </div></section>
 
@@ -930,13 +895,13 @@
 <section><div class="wrap">
   <div class="center-head reveal">
     <div class="eyebrow center">Viento de cola normativo</div>
-    <h2>2026 es un gran año para la política de tecnología del cuidado en Taiwán</h2>
+    <h2>Programas públicos que pueden acompañar a Munea</h2>
     <p class="sec-sub">Recursos públicos que pueden acompañar la adopción de Munea:</p>
   </div>
   <div class="policy-box reveal">
     <ul>
       <li><b>Programa de incentivos a la calidad de los centros residenciales (2024–2027)</b>: financiado por el fondo de cuidados de larga duración del Ministerio de Salud y Bienestar, incluye el indicador de «tecnología inteligente de apoyo al cuidado». Adoptar una solución de cuidado inteligente puede incorporarse a ese plan de indicadores, y ayudamos a preparar la documentación.</li>
-      <li><b>Ayuda al alquiler de dispositivos inteligentes de apoyo (Cuidados 3.0, en vigor desde julio de 2026)</b>: 60.000 dólares taiwaneses de alquiler cada tres años por hogar con cuidados. La solicitud de Munea está <b>en planificación</b> (un plan en estudio, no una prestación establecida); si se incluye, el coste para la familia debería bajar mucho.</li>
+      <li><b>Ayuda al alquiler de dispositivos inteligentes de apoyo para cuidados de larga duración</b>: los hogares con cuidados pueden solicitar una ayuda para alquilar dispositivos inteligentes de apoyo. Munea sigue haciendo consultas y hoy <b>no figura como prestación</b>.</li>
     </ul>
     <div class="punch">Nuestro principio: <em>las ayudas suman, pero no son un requisito previo</em>. El valor tiene que sostenerse solo (horas devueltas al personal, tranquilidad para la familia, algo que el empleado note de verdad). La ayuda solo hace la decisión más fácil.</div>
   </div>
@@ -954,7 +919,7 @@
       <div class="no num">1</div>
       <div>
         <h4>Demostración de 30 minutos</h4>
-        <p>En línea o presencial, hable usted mismo con Munea y vea cómo recuerda a las personas y cómo sostiene una emoción.</p>
+        <p>En línea o presencial, hable usted mismo con Munea y vea cómo recuerda a las personas y cómo sostiene una emoción. También puede descargar la app y probarla por su cuenta antes.</p>
       </div>
     </div>
     <div class="step">
@@ -1004,8 +969,8 @@
     <div class="card reveal">
       <span class="tag teal">Idioma</span>
       <div class="icb"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg></div>
-      <h3>Chino tradicional de Taiwán</h3>
-      <p>El servicio funciona principalmente en mandarín, ajustado a la forma de hablar de Taiwán. El taiwanés (hokkien) sigue mejorando y podemos evaluar las necesidades lingüísticas del entorno antes de la puesta en marcha. Hoy no admite otros idiomas.</p>
+      <h3>Mandarín como base</h3>
+      <p>El servicio funciona principalmente en mandarín, ajustado a la forma de hablar de Taiwán. La app también está disponible en inglés, japonés y español, y podemos evaluar las necesidades lingüísticas del entorno antes de la puesta en marcha.</p>
     </div>
   </div>
 </div></section>
@@ -1021,7 +986,7 @@
         <button class="btn btn-teal" type="button" data-modal="demo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
           Reservar una reunión</button>
-        <a class="btn btn-ghost" href="#demo">Vea a Ningning en acción</a>
+        <a class="btn btn-ghost" href="#demo">Vea a Lucía en acción</a>
       </div>
     </div>
   </div>
@@ -1030,8 +995,8 @@
 <footer><div class="wrap">
   <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
   <p class="foot-legal">
-    嘉瑪科技股份有限公司 ｜ Munea · IA de salud y cuidado para acompañar ｜ julio de 2026 ｜ <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a><br>
-    Los precios descritos en esta página son un marco de referencia; el presupuesto formal se rige por el contrato acordado entre las partes. La ayuda al alquiler de dispositivos inteligentes de apoyo al cuidado es una solicitud en planificación, no una prestación establecida.<br>
+    嘉瑪科技股份有限公司 ｜ Munea · IA de salud y cuidado para acompañar ｜ <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a><br>
+    Los precios descritos en esta página son un marco de referencia; el presupuesto formal se rige por el contrato acordado entre las partes. Munea no figura hoy en la ayuda al alquiler de dispositivos inteligentes de apoyo al cuidado (consultas en curso).<br>
     Munea es una herramienta de apoyo al cuidado y de recordatorios: no sustituye el cuidado humano, el diagnóstico médico ni los servicios de emergencia.
   </p>
   <p class="foot-site"><a href="https://munea.net/">Sitio oficial de Munea App — mira qué reciben las familias →</a></p>
@@ -1090,7 +1055,7 @@
 
   /* ── 這一頁的語系與文案（由 b2b-src/i18n/*.json 產生）── */
   var LANG = "es";
-  var T = {"errPass":"Esa contraseña no es correcta. Pruebe otra vez o reserve directamente una demostración con nosotros.","soundOn":"Sonido","soundOff":"Silenciar","trialTitle":"Solicitar una evaluación de piloto","trialSub":"Cuéntenos cómo es su entorno y quiénes participarían. Le respondemos en un día laborable y le ayudamos a planificar un piloto de 2 a 4 semanas con 10–20 participantes.","demoTitle":"Reservar una consulta de 30 minutos","demoSub":"Déjenos sus datos y le respondemos en un día laborable. La reunión incluye la situación actual, una demostración en directo y la propuesta de piloto siguiente.","formErr":"Complete nombre, organización y email antes de enviar.","sending":"Enviando…","copied":"¡{mail} copiado!"};
+  var T = {"soundOn":"Sonido","soundOff":"Silenciar","trialTitle":"Solicitar una evaluación de piloto","trialSub":"Cuéntenos cómo es su entorno y quiénes participarían. Le respondemos en un día laborable y le ayudamos a planificar un piloto de 2 a 4 semanas con 10–20 participantes.","demoTitle":"Reservar una consulta de 30 minutos","demoSub":"Déjenos sus datos y le respondemos en un día laborable. La reunión incluye la situación actual, una demostración en directo y la propuesta de piloto siguiente.","formErr":"Complete nombre, organización y email antes de enviar.","sending":"Enviando…","copied":"¡{mail} copiado!"};
 
   /* ── 語言選單：只管開合，選項本身是連到別的網址的真連結 ── */
   var sw = document.querySelector('.lang-switch');
@@ -1131,57 +1096,6 @@
   } else {
     reveals.forEach(function(el){ el.classList.add('in'); });
   }
-
-  /* ── Demo 密碼閘 ── */
-  var KEY = 'munea_demo_unlocked';
-  var lockEl = document.getElementById('demoLock');
-  var openEl = document.getElementById('demoOpen');
-  var form = document.getElementById('demoForm');
-  var pass = document.getElementById('demoPass');
-  var err = document.getElementById('lockErr');
-  var card = document.getElementById('lockCard');
-
-  function prewarmVoiceAvatar(passValue){
-    if (!passValue) return;
-    fetch('/api/call-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: passValue })
-    }).then(function(r){
-      if (!r.ok) throw new Error('prewarm key ' + r.status);
-      return r.json();
-    }).then(function(cfg){
-      if (!cfg || !cfg.avatarHttp || !cfg.avatarKey) return;
-      return fetch(cfg.avatarHttp.replace(/\/$/, '') + '/health?key=' + encodeURIComponent(cfg.avatarKey));
-    }).catch(function(){
-      /* 預熱失敗不擋頁面；call.html 仍會做一次正式喚醒與重試。 */
-    });
-  }
-
-  function unlock(){
-    lockEl.style.display = 'none';
-    openEl.classList.add('show');
-    try { prewarmVoiceAvatar(sessionStorage.getItem('munea_pass') || ''); } catch(e){}
-  }
-
-  form.addEventListener('submit', function(ev){
-    ev.preventDefault();
-    var v = (pass.value || '').replace(/\s+/g,'').toLowerCase();
-    if (v === 'munea666') {
-      try {
-        sessionStorage.setItem(KEY, '1');
-        sessionStorage.setItem('munea_pass', pass.value); /* call.html 讀這把免再輸入 */
-      } catch(e){}
-      err.textContent = '';
-      unlock();
-    } else {
-      err.textContent = T.errPass;
-      card.classList.remove('shake');
-      void card.offsetWidth;
-      card.classList.add('shake');
-      pass.select();
-    }
-  });
 
   /* ── Hero 影片：打招呼播完換待機循環（官網同款） ── */
   var hv = document.getElementById('heroVid');

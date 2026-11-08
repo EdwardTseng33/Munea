@@ -103,9 +103,6 @@ def check_condition_images(contracts: dict) -> None:
         model = contract["model_input"]
         bg_name = BACKGROUND_OF[char]
         app_bg = ROOT / "web" / "flashhead" / f"bg-{bg_name}.png"
-        b2b_bg = ROOT / "munea-b2b" / "flashhead" / f"bg-{bg_name}.png"
-        if sha256(app_bg) != sha256(b2b_bg):
-            raise AssertionError(f"{bg_name}: App 跟 B2B 的立繪底圖不同步了")
 
         box = (crop["x"], crop["y"], crop["x"] + crop["width"], crop["y"] + crop["height"])
         with Image.open(app_bg).convert("RGB") as source:
@@ -187,16 +184,12 @@ def _percent(block: str, pattern: str) -> float:
 
 
 def check_demo_lane(contracts: dict) -> None:
-    call_html = (ROOT / "munea-b2b" / "call.html").read_text(encoding="utf-8")
+    # 2026-11-05 B2B 網頁試打（munea-b2b/call.html）已移除；展示間代號仍必須跟正式線分開。
     for char in ("a05d", "a06d"):
         if contracts.get(char, {}).get("lane") != "demo":
             raise AssertionError(f"{char} 應該是展示間的實驗格")
-        if f"'{char}'" not in call_html:
-            raise AssertionError(f"munea-b2b/call.html 沒帶展示間代號 {char}")
-    if re.search(r"Face\.start\(\s*curChar\s*\)", call_html):
-        raise AssertionError(
-            "munea-b2b/call.html 直接把正式線代號送進臉引擎了——展示間的實驗會打到正式 App"
-        )
+    if (ROOT / "munea-b2b" / "call.html").exists():
+        raise AssertionError("munea-b2b/call.html 已退役，不該再出現")
     print("demo lane: isolated from prod chars")
 
 

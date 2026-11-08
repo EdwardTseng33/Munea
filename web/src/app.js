@@ -236,7 +236,7 @@ function localizeCanonicalLegacyPanels() {
     key,
     fallback,
   ));
-  setAttribute('#pfNick', 'placeholder', 'profile.familyNicknamePlaceholder', 'For example: Grandma');
+  setAttribute('#pfNick', 'placeholder', 'profile.familyNicknamePlaceholder', 'e.g. Grandma, John');
   setAttribute('#joinCodeInput', 'placeholder', 'join.codePlaceholder', 'Enter invitation code');
   setAttribute('#visitTitle', 'placeholder', 'appointment.titlePlaceholder', 'For example: Cardiology follow-up');
   setAttribute('#npsSlider', 'aria-label', 'feedback.npsAria', 'Recommendation score from 0 to 10');
@@ -3502,7 +3502,10 @@ function faceSameLineOn() {
   try {
     const v = localStorage.getItem('munea.faceSameLine');
     if (v !== null) return v === '1';                 // 手動設定最優先（=0 可在 FlashHead 模式下關同線）
-    return faceEngine() === 'flashhead';              // FlashHead 模式預設開同線（它天生兩軌同線）
+    // 2026-11-05：臉改在手機上畫之後，faceEngine() 仍回 flashhead（本機沒存過設定的預設值），
+    // 每通照樣走雲端臉的同線收聲、撥號時建一顆永不關的靜音引擎接進臉的播放器。
+    // 真的接雲端臉（munea.remoteFace=1）才開同線；其餘聲音一律本機播放。
+    return faceEngine() === 'flashhead' && remoteFaceEnabled();
   } catch (e) { return false; }
 }
 // 單一真相：「她現在正在出聲嗎」——Voice PCM 算出的播放水位是主時鐘；同線實際
@@ -4136,8 +4139,10 @@ const LiveVoice = {
     } catch (e) { return false; }
   },
   _resumeAudio() {
-    [this.ac, this.playCtx].forEach(ctx => {
-      try { if (ctx && ctx.state === 'suspended') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
+    // iPhone 切到背景再回來，聲音引擎會停在 'interrupted'（只有 iPhone 有這個狀態）；
+    // 原本只救 'suspended'，被打斷的引擎就一直停著。
+    [this.ac, this.playCtx, CallChime._ctx].forEach(ctx => {
+      try { if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
     });
   },
   _setMicOpen(open) {
@@ -4365,23 +4370,21 @@ const LiveVoice = {
       timingBasis: payload.timing_basis,
     });
   },
-  // 2026-08-08 Edward 拍板：「讓她放棄主動打招呼，改由用戶先說第一句話她才開始回話」。
-  //
-  // 為什麼這樣比較好：她主動開口那一句，得先繞去顯示卡算嘴型再回來，
-  // 使用者只能盯著畫面等——而那正是「接通後感覺當機」的來源。
-  // 改成使用者先說：接通即可出聲，她收到才回，沒有任何人在等一句罐頭招呼。
-  //
-  // 唯一的例外是**家人傳話**：那是有人託她轉達的具體內容，
-  // 讓使用者先開口反而會錯過，所以這種情況仍由她先說。
+  // 開場誰先說（2026-11-05 Edward 拍板 A，推翻 8/8 的「使用者先說」）：
+  // 8/8 那次是因為她的招呼要繞雲端顯示卡算嘴型、接通後像當機；臉改在手機上畫之後這個理由不在了，
+  // 而長輩接通後一片安靜，容易以為沒接通或不知道要說什麼。所以接通就請她先開口：
+  // 有家人託她轉達就先轉達，沒有就一句稱呼＋問候。使用者搶先說話，伺服器那 1 秒會讓他先。
   greet() {
     try {
       if (!(this.ws && this.ws.readyState === 1)) return;
       const relay = this._pendingRelay || null;
-      if (!relay) { voiceCallMark('greeting_skipped', 'pass', { reason: 'user_speaks_first' }); return; }
+      // 2026-11-05 Edward 拍板 A：改回她先開口（一句稱呼＋問候）。8/8 改成「使用者先說」的理由是
+      // 招呼要繞雲端顯示卡算嘴型、接通後像當機；臉改在手機上畫之後這個理由已不存在。
+      // 伺服器收到後先等 1 秒：這 1 秒內使用者已經開口，就不招呼、讓他先說（_warm_then_greet）。
       this.ws.send(JSON.stringify({ type: 'greet', relay }));
-      voiceCallMark('greeting_requested', 'pass', { reason: 'family_relay' });
+      voiceCallMark('greeting_requested', 'pass', { reason: relay ? 'family_relay' : 'opening' });
     } catch (e) { voiceCallFail('greeting_requested', e); }
-  },   // 只有「家人託她轉達」才主動開口；其餘一律等使用者先說
+  },   // 她先開口：有家人傳話先轉達，沒有就一句稱呼＋問候（使用者 1 秒內先說就讓他）
   async prepareRelay() {
     if (this._pendingRelay) return this._pendingRelay;
     this._relaySpokenId = null;
@@ -4829,12 +4832,12 @@ const LiveVoice = {
     try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
     try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
     this.proc = null; this._micSrc = null; this.mic = null;
+    // 2026-11-05 正式線實錘：引擎回報 'running'、麥克風 'live'，收音程式卻一次都沒被叫到
+    //（iPhone 背景回來後的假 running）。重建時不再相信狀態，一律換一顆新的。
     try {
-      if (this.ac && this.ac.state !== 'running') {
-        const wedged = this.ac;
-        this.ac = new AudioContext();
-        try { wedged.close(); } catch (e) {}
-      }
+      const wedged = this.ac;
+      this.ac = new AudioContext();
+      try { if (wedged) wedged.close(); } catch (e) {}
     } catch (e) {}
     this._resumeAudio();
     let stream = null, error = null;
@@ -4864,7 +4867,16 @@ const LiveVoice = {
       if (!this.on || !this.ws || this.ws.readyState !== 1) return;
       if ((this._micPackets || 0) > 0) return;                      // 有包＝管線活著，看門收工
       voiceCallFail('microphone_uplink_slow', 'no_uplink_3000ms', { rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state });
-      try { trackProductEvent('voice_mic_uplink_stalled', { rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state }); } catch (e) {}
+      try {
+        const track = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+        // 引擎時鐘有沒有在走、麥克風是不是被系統靜音：分辨「假 running」跟「收不到聲」
+        trackProductEvent('voice_mic_uplink_stalled', {
+          rebuilds: this._micRebuilds || 0, audioState: this.ac && this.ac.state,
+          acTime: this.ac ? +Number(this.ac.currentTime || 0).toFixed(2) : null,
+          trackMuted: track ? !!track.muted : null,
+          chimeState: CallChime._ctx ? CallChime._ctx.state : null,
+        });
+      } catch (e) {}
       if ((this._micRebuilds || 0) >= 2) return;                    // 重建額度用完 → 不再重試
       await this._rebuildMicPipeline();
       if (this.on) this._armUplinkWatch();                          // 重建後再看 3 秒，確認真的有包流出
@@ -5596,6 +5608,11 @@ const CallChime = {
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
+      // 上一通在背景被掛斷時，這顆會卡在 'interrupted'／'closed'：直接換一顆新的（現在就在撥號手勢裡）。
+      if (this._ctx && this._ctx.state !== 'running' && this._ctx.state !== 'suspended') {
+        try { this._ctx.close(); } catch (e) {}
+        this._ctx = null;
+      }
       if (!this._ctx) this._ctx = new AC();
       if (this._ctx.state === 'suspended') { const p = this._ctx.resume(); if (p && p.catch) p.catch(() => {}); }
     } catch (e) {}
@@ -5623,6 +5640,7 @@ let callDialing = false;
 let callPreflightPending = false;
 function setCallPreflightPending(on, pendingLabel = muneaT('voice.connecting', '')) {
   callPreflightPending = on;
+  try { CallKeepAwake.sync(); } catch (e) { console.warn('[keepAwake]', e); }
   if (!on) hideBusyCard();   // 排隊卡跟著撥號前置狀態走：接通／取消／失敗任何一條路離開排隊就收卡
   // 2026-08-01：撥號前置一結束、又沒真的撥起來（失敗／取消／被擋），把提早切過去的
   // 「撥通中」畫面收回待機——配合 connectCall 開頭「先切畫面再跑網路」那一刀。
@@ -5644,6 +5662,7 @@ function setCallPreflightPending(on, pendingLabel = muneaT('voice.connecting', '
 function setCallDialing(on) {
   if (on) setCallPreflightPending(false);
   callDialing = on;
+  try { CallKeepAwake.sync(); } catch (e) { console.warn('[keepAwake]', e); }
   const b = $('#callToggle'); if (!b) return;
   b.classList.toggle('dialing', on);
   const lbl = $('#callToggleLabel');
@@ -5661,10 +5680,49 @@ function setCallDialing(on) {
     }
   }
 }
+// 通話中螢幕不睡（2026-11-08 Edward：「開啟聊聊時應該都要判定是通話中，螢幕不應該跳保護程式」）。
+// 撥號前置／撥通中／通話中任一成立就叫手機別自動鎖屏；三個都結束才放回去。
+// iPhone／Android 走 App 自帶的原生小外掛 KeepAwake（iOS isIdleTimerDisabled、Android FLAG_KEEP_SCREEN_ON）；
+// 瀏覽器（官網試用、開發）退而用標準的螢幕喚醒鎖，拿不到就算了——不能讓這件事影響通話。
+const CallKeepAwake = {
+  on: false,
+  _web: null,
+  _plugin() { return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KeepAwake) || null; },
+  sync() {
+    const want = !!(callPreflightPending || callDialing || callConnected);
+    if (want === this.on) return;
+    this.on = want;
+    const p = this._plugin();
+    if (p) {
+      try {
+        const done = want ? p.keepAwake() : p.allowSleep();
+        if (done && typeof done.catch === 'function') done.catch(err => console.warn('[keepAwake] native', err));
+      } catch (err) { console.warn('[keepAwake] native', err); }
+      return;
+    }
+    this._webLock(want);
+  },
+  async _webLock(want) {
+    try {
+      if (!want) { if (this._web) { const l = this._web; this._web = null; await l.release(); } return; }
+      if (navigator.wakeLock && typeof navigator.wakeLock.request === 'function' && document.visibilityState === 'visible') {
+        this._web = await navigator.wakeLock.request('screen');
+        this._web.addEventListener('release', () => { this._web = null; });
+      }
+    } catch (err) { console.warn('[keepAwake] web', err); }
+  },
+};
+// 網頁版的喚醒鎖切到背景會被系統收走；回到前景、還在通話就再要一次
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && CallKeepAwake.on && !CallKeepAwake._plugin() && !CallKeepAwake._web) {
+    CallKeepAwake._webLock(true);
+  }
+});
 function setCallToggle(connected) {
   callConnected = connected;
   callDialing = false;
   setCallPreflightPending(false);
+  try { CallKeepAwake.sync(); } catch (e) { console.warn('[keepAwake]', e); }
   const _b0 = $('#callToggle'); if (_b0) _b0.classList.remove('dialing');
   // 在線狀態：撥通前「未在線」（灰點）、撥通後「在線」（綠點呼吸）
   const fn = document.querySelector('.face-name');
@@ -5864,6 +5922,9 @@ function showView(id) {
   $$('.modal-mask.show').forEach(m => m.classList.remove('show'));
   // 回到首頁就去看有沒有家人帶話——長輩不會為了看訊息特地去按什麼，話要自己送到他眼前
   if (id === 'home') { try { syncHomeFamilyRelay(); } catch (e) {} }
+  // 2026-11-05 Edward 拍板 C：語音機器沒人用會睡（醒來要 3–6 秒）。進聊聊頁就先輕拍一下，
+  // 等他按撥號時已經醒了；不常駐、不多花錢。preDialConnWarm 自帶 60 秒防抖，開 App／回前景已會拍。
+  if (id === 'chat') { try { preDialConnWarm('chat_view'); } catch (e) {} }
   if (id === 'status') {
     renderStatusCharts();
     if (typeof window.__muneaRefreshMedicationUi === 'function') window.__muneaRefreshMedicationUi();
@@ -8594,7 +8655,7 @@ async function connectCall() {
     voiceCallMark('app_session_created', 'pass', { sessionId: activeChatSessionId });
     setFaceState('idle');
     // 新引擎首通冷開機較久（喚醒優化交先鋒車道）——誠實預告、不讓人以為當機（Edward 2026-07-11「等20秒」）
-    setLocalizedCallHint(faceEngine() === 'flashhead' && !Avatar.warm ? 'firstWarmup' : 'connecting', true);
+    setLocalizedCallHint(faceEngine() === 'flashhead' && remoteFaceEnabled() && !Avatar.warm ? 'firstWarmup' : 'connecting', true);
     trackProductEvent('voice_session_started', { locale: muneaLocale(), mode: 'live' });
     const chatEl = document.getElementById('chat');
     if (chatEl) chatEl.dataset.state = 'connecting';
@@ -8667,11 +8728,11 @@ async function connectCall() {
           markConnected();                               // 現在才切「通話中」並開始計時——跟能講話同一刻
           voiceCallMark('call_connected', 'pass', { basis });
           CallChime.play();                              // 「線通了」用耳朵就聽得到
-          setLocalizedCallHint('connected');             // 接通了、可以直接講——她預設等使用者先開口
+          setLocalizedCallHint('connected');             // 接通了、可以直接講——她會先招呼一句
           voiceCallMark('connected_ux_shown', basis === 'uplink_ok' ? 'pass' : 'warn', { basis });
           if (!noFace) Avatar.showLiveFrame();           // 第一個有效影格確認後才切換，撥號中不露出黑色視訊層
           try { FaceIdle.stop(); } catch (e) {}
-          // greet() 只在「有家人託她轉達」時才真的請她開口；其餘一律等使用者先說。
+          // greet()：她先開口（家人傳話優先；沒有就招呼一句）。使用者搶先說話，伺服器會讓他先。
           LiveVoice.greet();
         };
         // 新伺服器（ready 有宣告 uplinkAck）：等真的證明、最多 6 秒；等不到＝這通就是
