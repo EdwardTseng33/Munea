@@ -70,6 +70,19 @@ window.MuneaNotify = (function () {
     finally { if (timeout) clearTimeout(timeout); }
   }
 
+  // 推播註冊全程的診斷麵包屑（2026-11-08）：本來 registrationError 事件丟出去
+  // 沒人接、也沒有任何一步寫進 product_events，出事完全看不到。這支只負責回報、
+  // 絕不拋錯、絕不擋流程——診斷回報失敗也不能連帶讓推播本身失敗。
+  function reportPushDiagnostic(eventName, properties) {
+    try {
+      void api('/product-event', {
+        eventName: eventName,
+        source: 'push-notify',
+        properties: Object.assign({ platform: isNative() ? 'ios' : 'web' }, properties || {})
+      });
+    } catch (e) {}
+  }
+
   function normalizeNotificationSettings(value) {
     var source = value && typeof value === 'object' ? value : {};
     var categories = source.categories && typeof source.categories === 'object' ? source.categories : {};
@@ -629,6 +642,12 @@ window.MuneaNotify = (function () {
     });
     if (result && result.device && result.device.id) {
       try { localStorage.setItem('munea.pushDeviceId', result.device.id); } catch (e) {}
+      reportPushDiagnostic('push_registered', { environment: data.environment || 'production' });
+    } else {
+      // 2026-11-08 補：以前這裡完全沒有回報——伺服器拒絕（401/403/驗證失敗）或
+      // api() 因為拿不到登入 token／逾時直接回 null，兩種情況在 product_events
+      // 裡長得一樣：什麼都沒有。現在至少留一筆「試過、但沒成功」。
+      reportPushDiagnostic('push_register_failed', { error: (result && result.error) || 'no_response' });
     }
     return result;
   }
@@ -790,6 +809,11 @@ window.MuneaNotify = (function () {
       try { window.dispatchEvent(new CustomEvent('munea:notification-received', { detail: data || {} })); } catch (e) {}
     });
     await native.addListener('registrationError', function (data) {
+      // 2026-11-08 修：這個事件原本只 dispatch 給網頁內的 CustomEvent，但沒有任何
+      // 地方在聽——APNs 註冊失敗（例如 provisioning profile 沒帶 aps-environment、
+      // 裝置沒網路）會完全無聲無息。現在同時回報診斷，下次才看得到「失敗」跟
+      // 「從沒試過」的差別。
+      reportPushDiagnostic('push_registration_error', { message: (data && data.message) || '' });
       try { window.dispatchEvent(new CustomEvent('munea:notification-registration-error', { detail: data || {} })); } catch (e) {}
     });
     if (typeof native.getPendingLaunchNotification === 'function') {
@@ -804,12 +828,21 @@ window.MuneaNotify = (function () {
   async function requestPermission() {
     var native = plugin();
     if (!native) return _permission;
-    var result = await native.requestPermission();
-    _permission = Object.assign(_permission, result || {});
-    await refreshPermission();
-    if (_permission.granted && typeof native.registerRemoteNotifications === 'function') {
-      var registration = await native.registerRemoteNotifications();
-      if (registration && registration.token) await registerToken(registration);
+    // 2026-11-08 修：native.requestPermission() 以前沒包 try/catch，一旦 reject
+    // 就會變成 changeNotificationSetting() 裡吞不到的 unhandled rejection——使用者
+    // 按下開關後畫面什麼都沒發生、也完全查不到原因。現在失敗一律當「沒拿到授權」
+    // 處理（回傳現有 _permission），並回報診斷，讓呼叫端走既有的「請去設定開」路。
+    try {
+      var result = await native.requestPermission();
+      _permission = Object.assign(_permission, result || {});
+      await refreshPermission();
+      reportPushDiagnostic('push_permission_result', { status: _permission.status, granted: !!_permission.granted });
+      if (_permission.granted && typeof native.registerRemoteNotifications === 'function') {
+        var registration = await native.registerRemoteNotifications();
+        if (registration && registration.token) await registerToken(registration);
+      }
+    } catch (e) {
+      reportPushDiagnostic('push_permission_request_failed', { message: String((e && e.message) || e || '') });
     }
     return _permission;
   }
