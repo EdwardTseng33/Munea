@@ -1953,7 +1953,7 @@ function renderVisitSummary(summary) {
     parts.push('</div>');
   } else {
     parts.push('<p class="vs-empty">' + rptEsc(muneaT('visit.questionsEmpty',
-      '還沒有記下要問的問題。跟{companion}聊到身體上的疑問時，她會幫你記下來。',
+      '還沒有記下要問的問題。跟{companion}聊到身體上的疑問時，會幫你記下來。',
       { companion: (typeof cname === 'function' ? cname() : '寧寧') })) + '</p>');
   }
   // 滿了就不給加，並且講明為什麼——不能讓他按了沒反應
@@ -9317,7 +9317,7 @@ function init() {
     if (hint) {
       hint.textContent = (city || '').trim()
         ? muneaT('profile.locationEditHint', '打錯或搬家了，在這裡改就好')
-        : muneaT('profile.locationNotYet', '還沒聊到——聊天時說一次就好，她會記起來');
+        : muneaT('profile.locationNotYet', '還沒聊到——聊天時說一次就好，就會記起來');
     }
   }
   function pfLocationValue() { return (($('#pfCityFree') && $('#pfCityFree').value) || '').trim(); }
@@ -12654,7 +12654,7 @@ function init() {
   if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
     $('#safetyModal').classList.remove('show');
     const sel = loadSafety();
-    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。異常時我會第一時間讓家人知道。', { names: sel.join(muneaListSeparator()) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
+    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。', { names: sel.join(muneaListSeparator()) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();
