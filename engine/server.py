@@ -80,6 +80,23 @@ PRIMARY_CARE_RECIPIENT_ID = os.environ.get("MUNEA_SUPABASE_PERSON_ID") or "local
 MAX_JSON_BODY_BYTES = 1_000_000
 MAX_AUDIO_NOTE_BYTES = 12_000_000
 
+def client_ip_from_headers(headers, fallback_addr=None):
+    """從請求頭算出『這個人真正的來源 IP』，給登入/邀請碼防猜計數用。
+
+    Cloud Run 前面是 Google Front End（GFE）：GFE 收到請求後一定會把自己
+    量到的真實來源 IP 補在 X-Forwarded-For 的『最後一個』欄位；呼叫端自己
+    想塞什麼值只擠得進前面幾格。原本取第一個值＝完全讓對方說了算，
+    防猜計數等於沒上鎖（每次換一個假 IP 就重新歸零）。
+    本機沒有 GFE 轉發時 X-Forwarded-For 是空的，退回連線本身的位址。"""
+    headers = headers or {}
+    xff = headers.get("X-Forwarded-For") or headers.get("x-forwarded-for") or ""
+    if xff:
+        parts = [p.strip() for p in str(xff).split(",") if p.strip()]
+        if parts:
+            return parts[-1]
+    return fallback_addr or ""
+
+
 # 邀請碼防爆破（P0-3）：同來源猜錯太多次就暫時擋。記憶體、只計失敗、成功不算。
 _INVITE_ATTEMPTS = {}
 _INVITE_ATTEMPTS_LOCK = threading.Lock()
@@ -7140,20 +7157,82 @@ def admin_cached_read(metric_version, data, producer):
     return payload
 
 
+# 後台短期通行碼（2026-11-08 沙利曼盤點後加固）：原本 /admin/login 成功後
+# 直接把「定時任務也在用、永不過期」的那把萬能通行碼（MUNEA_ADMIN_API_TOKEN）
+# 發給瀏覽器——瀏覽器那把一旦外流（分享螢幕、裝置遺失、XSS），要廢掉它就得
+# 連 6 個 Cloud Scheduler 定時任務一起換。改成登入發「簽過章、8 小時就過期」
+# 的短期憑證；定時任務繼續吃原本那把萬能通行碼，兩條路 admin_authorized 都認。
+ADMIN_SESSION_TOKEN_VERSION = "v1"
+ADMIN_SESSION_TOKEN_TTL_SECONDS = 8 * 60 * 60  # 8 小時
+
+
+def admin_session_secret():
+    """簽章密語：優先吃專屬環境變數，沒設就用萬能通行碼衍生一把（HMAC，不是明碼複用）。
+    萬能通行碼本來就是登入能成功的必要條件（見 admin_login_response），
+    所以這裡『衍生不出密語』只會發生在萬能通行碼本身也沒設的時候——
+    那種情況下登入本來就會先被 login_not_configured 擋下，不會走到這裡。
+    沒有密語就一律簽不出、也驗不過短期憑證＝安全失敗（fail closed）。"""
+    override = os.environ.get("MUNEA_ADMIN_SESSION_SECRET") or ""
+    if override:
+        return override
+    base_token = os.environ.get("MUNEA_ADMIN_API_TOKEN") or ""
+    if not base_token:
+        return ""
+    return hmac.new(base_token.encode("utf-8"), b"munea-admin-session-v1", hashlib.sha256).hexdigest()
+
+
+def issue_admin_session_token(now=None):
+    """帳密核對通過後發一張短期後台憑證：exp 內嵌在憑證本身，Cloud Run 多台
+    伺服器互不共享記憶體也驗得了（不需要伺服器端 session store）。"""
+    secret = admin_session_secret()
+    if not secret:
+        return None
+    exp = int((now if now is not None else time.time())) + ADMIN_SESSION_TOKEN_TTL_SECONDS
+    payload = f"{ADMIN_SESSION_TOKEN_VERSION}.{exp}"
+    signature = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{payload}.{signature}"
+
+
+def verify_admin_session_token(token, now=None):
+    """驗簽章＋驗過期；任何一步不對都算無效（不區分原因，避免洩漏細節給嘗試破解的人）。"""
+    secret = admin_session_secret()
+    if not secret or not token:
+        return False
+    parts = str(token).split(".")
+    if len(parts) != 3 or parts[0] != ADMIN_SESSION_TOKEN_VERSION:
+        return False
+    payload = f"{parts[0]}.{parts[1]}"
+    try:
+        exp = int(parts[1])
+    except (TypeError, ValueError):
+        return False
+    now = now if now is not None else time.time()
+    if now >= exp:
+        return False
+    expected_signature = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(str(parts[2]), expected_signature)
+
+
 def admin_authorized(headers):
     token = os.environ.get("MUNEA_ADMIN_API_TOKEN") or ""
     if not token:
         return False, "admin_token_not_configured"
-    supplied = headers.get("X-Munea-Admin-Token") or headers.get("x-munea-admin-token") or ""
-    if not hmac.compare_digest(str(supplied), str(token)):
-        return False, "invalid_admin_token"
-    return True, None
+    supplied = str(headers.get("X-Munea-Admin-Token") or headers.get("x-munea-admin-token") or "")
+    # 兩條路都認：定時任務（Cloud Scheduler）繼續帶萬能通行碼，不能壞；
+    # 後台瀏覽器登入後帶的是短期憑證，兩者互不干擾、互不取代。
+    if hmac.compare_digest(supplied, str(token)):
+        return True, None
+    if verify_admin_session_token(supplied):
+        return True, None
+    return False, "invalid_admin_token"
 
 
 def admin_login_response(data=None, client_ip=None):
     """後台帳密登入門：帳號(email)+密碼對了，才發後台通行碼。
     密碼存在 Secret Manager（MUNEA_ADMIN_PASSWORD）、不寫在程式裡。
-    比對用 compare_digest 防側錄；同來源錯太多次先擋（防猜）。"""
+    比對用 compare_digest 防側錄；同來源錯太多次先擋（防猜）。
+    2026-11-08 起：發的不再是萬能通行碼本身，是 8 小時就過期的短期憑證
+    （admin_authorized 兩條路都認，定時任務用的萬能通行碼不受影響）。"""
     data = data or {}
     if login_rate_limited(client_ip):
         return {"ok": False, "error": "too_many_attempts"}
@@ -7169,7 +7248,10 @@ def admin_login_response(data=None, client_ip=None):
     if not (email_ok and password_ok):
         record_login_failure(client_ip)
         return {"ok": False, "error": "invalid_credentials"}
-    return {"ok": True, "token": admin_token}
+    session_token = issue_admin_session_token()
+    if not session_token:
+        return {"ok": False, "error": "login_not_configured"}
+    return {"ok": True, "token": session_token, "expiresIn": ADMIN_SESSION_TOKEN_TTL_SECONDS}
 
 
 def provider_webhook_authorized(headers):
@@ -10455,6 +10537,16 @@ class H(BaseHTTPRequestHandler):
     def _json(self, obj):
         self._send(200, "application/json; charset=utf-8", json.dumps(obj, ensure_ascii=False).encode())
 
+    def _json_scheduler(self, obj):
+        """給 Cloud Scheduler 直接打的定時任務端點用（/admin/retention/run 等）：
+        跟 _json 一樣回同一包 JSON，但 obj.ok 是 false 時要回非 2xx。
+        _json 一律回 200——Scheduler 只認 HTTP 狀態碼，不解析 body，於是失敗的
+        排程被記成『成功』、沒人收到告警也沒有自動重試（2026-11-08 沙利曼盤點）。
+        只用在這幾支排程端點，刻意不改全域 _json（其餘幾十支 /admin/* 讀取接口
+        前端靠 body.ok 自己判斷，不能跟著改 HTTP 狀態碼）。"""
+        status = 500 if isinstance(obj, dict) and obj.get("ok") is False else 200
+        self._send(status, "application/json; charset=utf-8", json.dumps(obj, ensure_ascii=False).encode())
+
     def _json_error(self, code, err_code, message="Request could not be processed", detail=None, extra_headers=None):
         rid = request_id()
         body = {"ok": False, "error": {"code": err_code, "message": message, "requestId": rid}}
@@ -10557,8 +10649,7 @@ class H(BaseHTTPRequestHandler):
             if request_path in AI_RATE_LIMITED_PATHS:
                 _actor = (auth_gate.get("auth") or {}).get("authUserId")
                 if not _actor:
-                    _xff = self.headers.get("X-Forwarded-For") or ""
-                    _actor = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                    _actor = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 _limited, _retry_after = ai_rate_limited(_actor, request_path)
                 if _limited:
                     self._json_error(429, "rate_limited", "Too many requests, please slow down",
@@ -10605,8 +10696,7 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/butler/post-turn":
                 self._json(butler_post_turn_response(data))
             elif self.path == "/admin/login":
-                _xff = self.headers.get("X-Forwarded-For") or ""
-                _cip = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 self._json(admin_login_response(data, client_ip=_cip))
             elif self.path == "/admin/memory-consolidate":
                 ok, code = admin_authorized(self.headers)
@@ -10632,8 +10722,7 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":
-                _xff = self.headers.get("X-Forwarded-For") or ""
-                _cip = _xff.split(",")[0].strip() if _xff else (self.client_address[0] if self.client_address else "")
+                _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 self._json(family_invitations_response(data, client_ip=_cip, actor=auth_gate.get("auth")))
             elif self.path == "/family-members":
                 self._json(family_members_response(data))
@@ -10668,13 +10757,13 @@ class H(BaseHTTPRequestHandler):
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(refresh_daily_briefing(data.get("region"), data.get("personId") or data.get("person_id")))
+                    self._json_scheduler(refresh_daily_briefing(data.get("region"), data.get("personId") or data.get("person_id")))
             elif self.path == "/admin/worker-clock-patrol":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(worker_clock_patrol_response(data))
+                    self._json_scheduler(worker_clock_patrol_response(data))
             elif self.path == "/guardian/evaluate":
                 self._json(guardian_evaluate_response(data))
             elif self.path == "/perception/topic-plan":
@@ -10782,13 +10871,13 @@ class H(BaseHTTPRequestHandler):
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(drain_notification_outbox_response(data))
+                    self._json_scheduler(drain_notification_outbox_response(data))
             elif self.path == "/admin/retention/run":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(admin_retention_run(data))
+                    self._json_scheduler(admin_retention_run(data))
             elif self.path == "/admin/enterprise/clients":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
@@ -10922,7 +11011,9 @@ class H(BaseHTTPRequestHandler):
                             "targetTable": "enterprise_seats",
                             "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
                         })
-                    self._json(response)
+                    # Cloud Scheduler 直接打的定時任務（非乾跑的 enterprise seat sweep）之一，
+                    # 失敗要回非 2xx 才會被排程器記成失敗。
+                    self._json_scheduler(response)
             elif self.path == "/admin/enterprise/billing-settings":
                 ok, code = admin_authorized(self.headers)
                 if not ok:
