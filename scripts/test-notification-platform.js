@@ -22,7 +22,7 @@ assert(entitlements.includes('aps-environment'), 'Push entitlement is required')
 assert(project.includes('com.apple.Push'), 'Xcode target must enable Push Notifications capability');
 assert(project.includes('APS_ENVIRONMENT = development') && project.includes('APS_ENVIRONMENT = production'), 'Debug and release APNs environments must be explicit');
 assert(web.includes("api('/push/devices'"), 'Web bridge must register device tokens with the backend');
-assert(html.includes('src/notify.js?v=20260729b-visit2h'), 'Notification UI changes must invalidate the stale WebView script cache');
+assert(html.includes('src/notify.js?v=20261108-pushdiag'), 'Notification UI changes must invalidate the stale WebView script cache');
 assert(web.includes("api('/notifications'"), 'Web bridge must mark opened notifications in the durable inbox');
 assert(web.includes('notificationInboxModal') && web.includes('openNotificationInbox'), 'App must expose a durable notification inbox');
 assert(web.includes("api('/notifications/settings'") && web.includes("action: 'set'"), 'Notification switches must persist through the backend settings API');
@@ -74,6 +74,21 @@ for (const key of [
 assert(
   web.includes("new Intl.DateTimeFormat(locale"),
   'Notification inbox timestamps must follow the current App language',
+);
+
+// 2026-11-08 補（push_registration_zero 調查）：push_devices 與 notification_deliveries
+// 正式庫 0 筆、Cloud Run 60 天日誌對 /push/devices 零打進——真因是整條註冊流程完全沒有
+// 任何診斷麵包屑，連「失敗」跟「從沒試過」都分不清楚。鎖住這次補的回報路徑，避免被日後
+// 改動悄悄砍掉而又變回全黑箱。
+assert(web.includes('function reportPushDiagnostic'), 'Push bridge must have a diagnostic reporter so registration attempts are observable in product_events');
+assert(web.includes("reportPushDiagnostic('push_registration_error'"), 'A failed native APNs registration must be reported, not only dispatched into an uncaught CustomEvent');
+assert(web.includes("reportPushDiagnostic('push_permission_result'"), 'The permission prompt outcome (granted/denied) must be reported');
+assert(web.includes("reportPushDiagnostic('push_permission_request_failed'"), 'A thrown/rejected permission request must be caught and reported, not left as an unhandled rejection inside changeNotificationSetting()');
+assert(web.includes("reportPushDiagnostic('push_registered'"), 'A successful /push/devices registration must be reported');
+assert(web.includes("reportPushDiagnostic('push_register_failed'"), 'A failed /push/devices registration (null/erroring server response) must be reported');
+assert(
+  /async function requestPermission[\s\S]*?try \{[\s\S]*?await native\.requestPermission\(\)[\s\S]*?\} catch \(e\) \{/.test(web),
+  'requestPermission() must not let native.requestPermission() rejections escape as an unhandled promise rejection'
 );
 
 console.log('Notification platform native/web contract: ALL PASS');
