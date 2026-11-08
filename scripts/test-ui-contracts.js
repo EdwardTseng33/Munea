@@ -686,7 +686,12 @@ assert(app.includes('先登入帳號，才能邀請家人') && app.includes('網
 assert(/family_plan_required.*upsell|upsell\('family-invite'\)/s.test(app.match(/function fillInvCode[\s\S]*?\n  \}/)?.[0] || ''), 'Plan-gated invite failures must open the same upgrade sheet as the entry gate');
 assert(!app.includes('需要連上雲端並完成帳號驗證'), 'The old catch-all invite error sentence must stay dead');
 assert(/id="invTempNote" style="display:none"><\/p>/.test(html), 'Invite note must start empty; the stale offline-temp-code copy must stay removed');
-assert(app.includes('function syncAccountScopedCaches') && app.includes("removeItem('munea.inviteCode')") && app.includes("removeItem('munea.plan')"), 'Switching accounts must clear the previous account\'s plan and invite-code cache');
+// 2026-11-08 個資漏洞修補：原本直接 removeItem('munea.inviteCode')／removeItem('munea.plan')，
+// 改成「掃過全部 munea.* 鍵、只留裝置偏好白名單」的通用清理（見 clearAccountScopedLocalData）——
+// 守的重點改成：這兩個帳號專屬鍵一定不在白名單裡（白名單外＝換帳號一定清掉）。
+const accountScopeKeepBlock = (app.match(/const ACCOUNT_SCOPE_KEEP_KEYS = new Set\(\[[\s\S]*?\]\);/) || [''])[0];
+assert(app.includes('function syncAccountScopedCaches') && app.includes('function clearAccountScopedLocalData'), 'Switching accounts must run through the shared account-scope cleanup helpers');
+assert(!!accountScopeKeepBlock && !accountScopeKeepBlock.includes("'munea.plan'") && !accountScopeKeepBlock.includes("'munea.inviteCode'"), "Switching accounts must clear the previous account's plan and invite-code cache");
 
 // 情緒監測卡防磚（2026-07-16 真機事故）：後端 moodKey 曾以英文字串回來，重畫時炸掉＝按鍵綁定消失、整卡死掉
 assert(html.includes('function normMoodKey'), 'Mood card must normalize every mood key before use');
