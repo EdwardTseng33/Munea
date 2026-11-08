@@ -6216,19 +6216,80 @@ function enableSheetDrag() {
   window.addEventListener('mousemove', e => { if (active) move(e.clientY); });
   window.addEventListener('mouseup', end);
 }
+// 2026-11-08（個資漏洞修補）：登出或切換帳號時，上一個人留在本機的個人資料若沒清乾淨，
+// 共用裝置（例：家裡共用一台平板）換人登入就會看到前一個人的健康紀錄、用藥、緊急聯絡人、
+// 家人圈、個人資料、AI 使用同意紀錄——新登入的人也會因為舊的同意記號還在而跳過該看的
+// 同意畫面。原則：帳號一變，就把「跟這個人綁定」的本機資料全部清掉，只留「跟這台裝置
+// 綁定」的偏好設定；清掉的東西雲端有備份的會在下次登入重新同步回來（見 syncPullAll／
+// syncPersonProfileCloud／configureMedicationService／MuneaHealth.refresh 等），本機
+// 沒有雲端備份的（例如緊急聯絡人挑選）也本就不該留給下一個登入的人看到。
+//
+// 下面是「裝置偏好」白名單——換人登入／登出都不清：
+//   字體大小、隱藏字幕、除錯旗標、顯示引擎與音畫同步等技術調校、開發用的伺服器網址、
+//   教學／系統通知「已看過」記號、App 評分提示的節流記號、天氣快取、A/V 回退技術標記、
+//   App Store 購買交易的技術去重記錄（跟 Apple ID／裝置綁定，不是跟沐寧帳號綁定）。
+// 白名單以外，只要是 `munea.` 開頭的本機資料，一律視為「跟這個人綁定」，換人就清。
+const ACCOUNT_SCOPE_KEEP_KEYS = new Set([
+  'munea.deviceId',
+  'munea.debug',
+  'munea.fontScale',
+  'munea.captions',
+  'munea.faceEngine',
+  'munea.faceSameLine',
+  'munea.faceSyncMs',
+  'munea.avSyncAuto',
+  'munea.avatarRelay',
+  'munea.avatarUrl',
+  'munea.remoteFace',
+  'munea.brainUrl',
+  'munea.liveVoiceUrl',
+  'munea.developmentFixtures.v1',
+  'munea.onboardingCompleted.v1',
+  'munea.onboardingIntroSeen.v1',
+  'munea.companionRetiredNotice.v1',
+  'munea.reviewCoolOff',
+  'munea.wxCache',
+  'munea.sameLineFellBack',
+  'munea.store.processedTransactions.v1',
+  'munea.store.verifyFailures.v1',
+]);
+// 'munea.admin.*' 是獨立的後台主控台（web/src/admin.js），不隨 App 打包、不會真的出現在這裡，
+// 留著純屬防呆；'munea.reviewAsked.*' 是評分提示的節流記號，不是個人資料。
+const ACCOUNT_SCOPE_KEEP_PREFIXES = ['munea.reviewAsked.', 'munea.admin.'];
+const ACCOUNT_SCOPE_LAST_USER_KEY = 'munea.lastAuthUser';
+function isAccountScopeKeepKey(key) {
+  if (key === ACCOUNT_SCOPE_LAST_USER_KEY) return true; // 機制本身的記號，由呼叫端改寫新值
+  if (ACCOUNT_SCOPE_KEEP_KEYS.has(key)) return true;
+  return ACCOUNT_SCOPE_KEEP_PREFIXES.some(p => key.indexOf(p) === 0);
+}
+function clearAccountScopedLocalData() {
+  [window.localStorage, window.sessionStorage].forEach(store => {
+    if (!store) return;
+    try {
+      const keys = [];
+      for (let i = 0; i < store.length; i++) {
+        const k = store.key(i);
+        if (k && k.indexOf('munea.') === 0 && !isAccountScopeKeepKey(k)) keys.push(k);
+      }
+      keys.forEach(k => { try { store.removeItem(k); } catch (e2) {} });
+    } catch (e) {}
+  });
+}
 function syncAccountScopedCaches(state) {
-  // 換帳號（含登出）就清掉「跟上一個帳號綁定」的本機殘留：
-  // 方案等級與邀請碼都是伺服器按帳號算的，殘留會讓人走進註定失敗的畫面
-  // （例：測試帳號的 Pro 殘留讓真帳號穿過免費門、到雲端才被擋）。
   try {
     const uid = String((state && (state.authUserId || state.userId)) || '');
-    const last = localStorage.getItem('munea.lastAuthUser') || '';
+    const last = localStorage.getItem(ACCOUNT_SCOPE_LAST_USER_KEY) || '';
     if (uid === last) return;
-    localStorage.setItem('munea.lastAuthUser', uid);
-    localStorage.removeItem('munea.inviteCode');
-    localStorage.removeItem('munea.inviteCodeAt');
-    localStorage.removeItem('munea.plan');
+    clearAccountScopedLocalData();
+    localStorage.setItem(ACCOUNT_SCOPE_LAST_USER_KEY, uid);
     if (uid && typeof refreshServerPlanEntitlement === 'function') refreshServerPlanEntitlement();
+    // 本機清乾淨後，首頁幾張卡與提醒排程要跟著刷新，不然舊資料的畫面會留到下次切頁才消失。
+    try { if (typeof renderDailyTasks === 'function') renderDailyTasks(); } catch (e2) {}
+    try { if (typeof renderCareCarousel === 'function') renderCareCarousel(); } catch (e2) {}
+    try { if (typeof renderPoints === 'function') renderPoints(); } catch (e2) {}
+    // 原生端（iOS/Android）已排的用藥／回診／行程本機提醒也要跟著取消——否則上一個人的
+    // 提醒還是會在這台裝置上跳出來（sync() 會用現在（已清空）的本機資料重新計算待排清單）。
+    try { if (window.MuneaNotify && typeof window.MuneaNotify.sync === 'function') window.MuneaNotify.sync(); } catch (e2) {}
   } catch (e) {}
 }
 function updateAuthUI() {
