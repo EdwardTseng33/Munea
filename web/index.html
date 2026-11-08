@@ -557,7 +557,7 @@ setTimeout(function () {
         <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒您</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
 
         <div class="set-row" id="visitSummaryRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="sr-main"><span data-i18n="settings.visitSummary">就診摘要</span><small data-i18n="settings.visitSummarySubtitle">帶去給醫生看的一頁整理</small></span><span class="sr-arrow"><b id="visitSummaryPeriodLabel"></b> ›</span></div>
-        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">同步到需留意的數據時，通知你選定的家人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
         <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="settings.myData">我的資料</span><small data-i18n="settings.myDataSubtitle">匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進登入流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
@@ -873,7 +873,7 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="legacyUi.safetyTitle">安全通知</h2>
-      <p class="modal-sub" data-i18n="legacyUi.safetyDescription">當你開啟沐寧並同步到超出留意範圍的健康數據時，事件會保留在通知中心，並通知你選定的家人。這不是即時或醫療級監測。</p>
+      <p class="modal-sub" data-i18n="legacyUi.safetyDescription">當你開啟沐寧並同步到超出留意範圍的健康數據時，事件會保留在通知中心。這不是即時或醫療用的量測。</p>
       <div class="field-label" data-i18n="legacyUi.safetyContacts">誰來當緊急聯絡人（最多 3 位）</div>
       <div class="safety-picks" id="safetyPicks"></div>
       <div class="field-label" data-i18n="legacyUi.safetyConditions">什麼情況會通知</div>
@@ -884,8 +884,8 @@ setTimeout(function () {
       </ul>
       <div class="safety-flow">
         <div class="sf-step"><b>1</b><span id="sfStep1Text"></span></div>
-        <div class="sf-step"><b>2</b><span data-i18n="legacyUi.safetyLog">記進通知中心，並通知你選定的家人</span></div>
-        <div class="sf-step"><b>3</b><span data-i18n="legacyUi.safetyEmergency">聯絡人打電話或趕來確認；真的危急請直接撥 119</span></div>
+        <div class="sf-step"><b>2</b><span data-i18n="legacyUi.safetyLog">記進通知中心</span></div>
+        <div class="sf-step"><b>3</b><span data-i18n="legacyUi.safetyEmergency">真的危急請直接撥 119</span></div>
       </div>
       <button class="modal-btn" id="safetySave" data-i18n="legacyUi.topic.save">存起來</button>
     </div>
