@@ -85,7 +85,7 @@ assert.equal(
 );
 assert.equal(previewRuntime.tp('en-US', 'time.minutes', 1), '1 minute');
 assert.equal(previewRuntime.tp('en-US', 'time.minutes', 3), '3 minutes');
-assert.equal(previewRuntime.tp('ja-JP', 'time.minutes', 3), '3 分');
+assert.equal(previewRuntime.tp('ja-JP', 'time.minutes', 3), '3分');
 assert.equal(previewRuntime.tp('es-MX', 'time.minutes', 1), '1 minuto');
 assert.equal(previewRuntime.formatNumber('en-US', 1234.5), '1,234.5');
 assert.match(
