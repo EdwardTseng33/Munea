@@ -6,6 +6,9 @@
 -- save_family_state_entry 遇到 'safetyContacts' 這把鑰匙會撞 23514（check constraint 不認），
 -- engine/server.py 的 family_state_response 既有機制會安靜接住、退本機 json 檔，不會噴錯給用戶。
 
+-- ⚠ 2026-11-09 驗收補：008 加了 'vitals'、011 重寫時又漏掉它；這份一定要把 'vitals' 列回來，
+-- 不然正式庫已有的健康數據列會讓 alter 失敗，或之後健康數據同步全被擋。
+
 begin;
 
 alter table public.family_state_entries
@@ -13,6 +16,6 @@ alter table public.family_state_entries
 
 alter table public.family_state_entries
   add constraint family_state_entries_state_key_check
-  check (state_key in ('circle', 'activities', 'familyFeed', 'meds', 'visit', 'routine', 'wallet', 'safetyContacts'));
+  check (state_key in ('circle', 'activities', 'familyFeed', 'meds', 'visit', 'routine', 'wallet', 'vitals', 'safetyContacts'));
 
 commit;
