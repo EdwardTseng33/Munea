@@ -22,7 +22,7 @@ assert(entitlements.includes('aps-environment'), 'Push entitlement is required')
 assert(project.includes('com.apple.Push'), 'Xcode target must enable Push Notifications capability');
 assert(project.includes('APS_ENVIRONMENT = development') && project.includes('APS_ENVIRONMENT = production'), 'Debug and release APNs environments must be explicit');
 assert(web.includes("api('/push/devices'"), 'Web bridge must register device tokens with the backend');
-assert(html.includes('src/notify.js?v=20261108-pushdiag'), 'Notification UI changes must invalidate the stale WebView script cache');
+assert(html.includes('src/notify.js?v=20261109-askincontext'), 'Notification UI changes must invalidate the stale WebView script cache');
 assert(web.includes("api('/notifications'"), 'Web bridge must mark opened notifications in the durable inbox');
 assert(web.includes('notificationInboxModal') && web.includes('openNotificationInbox'), 'App must expose a durable notification inbox');
 assert(web.includes("api('/notifications/settings'") && web.includes("action: 'set'"), 'Notification switches must persist through the backend settings API');
@@ -90,5 +90,31 @@ assert(
   /async function requestPermission[\s\S]*?try \{[\s\S]*?await native\.requestPermission\(\)[\s\S]*?\} catch \(e\) \{/.test(web),
   'requestPermission() must not let native.requestPermission() rejections escape as an unhandled promise rejection'
 );
+
+// 2026-11-09 Edward 拍板 A 案：通知權限改成「需要時才問」——第一次成功建立吃藥提醒之後
+// 才用一句人話問要不要開通知，不在開 App 就先問。
+assert(web.includes('async function askInContext(reasonKey)'), 'A shared ask-in-context entry point must exist so other features (e.g. emergency contacts) can trigger it');
+assert(web.includes('askInContext: askInContext'), 'askInContext must be exposed on window.MuneaNotify for other scripts to call');
+assert(web.includes("if (!plugin()) return;") && web.includes('askInContext'), 'Android/web without the native plugin must end askInContext quietly, with no card shown');
+assert(web.includes('if (notificationMasterOn()) return;'), 'Already-enabled devices must not be asked again');
+assert(web.includes("_permission.status === 'denied'") && web.includes('notification.askInContext.deniedHint'), 'A denied iOS permission must fall back to a gentle hint instead of the explanation card');
+assert(web.includes('ASK_IN_CONTEXT_THROTTLE_MS') && web.includes('7 * 24 * 60 * 60 * 1000'), 'A declined (or hinted) reason must stay quiet for 7 days before asking again');
+assert(web.includes("ensureAskInContextModal") && web.includes("pushAskAccept") && web.includes("pushAskDecline"), 'The in-context ask must reuse the App modal-mask/modal-btn styling, not a new bespoke UI');
+for (const key of [
+  'notification.askInContext.title',
+  'notification.askInContext.medicationBody',
+  'notification.askInContext.clinicBody',
+  'notification.askInContext.safetyContactBody',
+  'notification.askInContext.defaultBody',
+  'notification.askInContext.accept',
+  'notification.askInContext.decline',
+  'notification.askInContext.deniedHint',
+]) {
+  assert(web.includes(`'${key}'`), `In-context notification ask must localize ${key}`);
+}
+const appWeb = fs.readFileSync('web/src/app.js', 'utf8');
+assert(appWeb.includes("window.MuneaNotify.askInContext('medication')"), 'The first successful medication reminder must trigger the in-context notification ask');
+assert(appWeb.includes("window.MuneaNotify.askInContext('clinic')"), 'A successful clinic-visit reminder must also trigger the in-context notification ask');
+assert(appWeb.includes('window.__muneaToast = toast;'), 'app.js must expose its toast() so notify.js (a separate, non-module script) can reuse the same gentle-hint UI');
 
 console.log('Notification platform native/web contract: ALL PASS');

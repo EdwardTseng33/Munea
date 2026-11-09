@@ -92,7 +92,6 @@ const migratedAttributeKeys = [
   'purchase.close',
   'subscription.creditRulesTitle',
   'subscription.topUpCreditRulesTitle',
-  'textChat.inputAria',
 ];
 for (const key of migratedAttributeKeys) {
   const lingeringAttributeOccurrence = worklist.entries
