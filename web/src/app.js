@@ -790,11 +790,11 @@ function setLocalizedRuntimeCaption(state) {
 // 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：
 // 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
 // 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
-// mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿，附「先用文字聊」出口）
+// mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿）
 function showBusyCard(mode, payload) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = mode;
-  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
   const rendererCopy = muneaRendererCopy();
   if (rendererCopy) {
     const q = payload || {};
@@ -809,13 +809,11 @@ function showBusyCard(mode, payload) {
     if (pos) pos.textContent = localized.position;
     if (note) note.textContent = localized.note;
     if (btn) btn.textContent = localized.button;
-    if (alt) alt.hidden = !localized.showTextFallback;
     card.hidden = false;
     return;
   }
   if (mode === 'queued') {
     card.dataset.action = 'cancel';
-    if (alt) alt.hidden = true;
     const q = payload || {};
     const position = Math.max(1, parseInt(q.position, 10) || 1);
     const preparing = position <= 1;   // 排第 1 位＝其實是在幫你準備、不是真的一堆人在排（Edward 2026-07-24 拍板）
@@ -847,7 +845,7 @@ function showBusyCard(mode, payload) {
     );
     if (btn) btn.textContent = muneaT('voice.queue.cancel', '取消排隊');
   } else {
-    // 'full'：連排隊的位子都滿了——除了「知道了」，多給一個不用等 GPU 席位的出口
+    // 'full'：連排隊的位子都滿了——講清楚請稍後再試，不再提供打字聊天出口（2026-11-09 Edward 拍板拿掉）
     card.dataset.action = 'dismiss';
     if (title) title.textContent = muneaT('voice.queue.fullTitle', '現在忙線中');
     if (pos) pos.textContent = '';
@@ -857,7 +855,6 @@ function showBusyCard(mode, payload) {
       { companion: cname() },
     );
     if (btn) btn.textContent = muneaT('common.okay', '知道了');
-    if (alt) alt.hidden = false;
   }
   card.hidden = false;
 }
@@ -889,65 +886,12 @@ function showCallStatusCard(stateOrOptions) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = 'error';
   card.dataset.action = opts.action || 'dismiss';
-  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
   if (title) title.textContent = opts.title || muneaT('voice.call.unavailable', '');
   if (pos) pos.textContent = '';
   if (note) note.textContent = opts.note || muneaT('voice.call.retryLater', '');
   if (btn) btn.textContent = opts.button || opts.btnText || muneaT('common.okay', '');
-  if (alt) alt.hidden = true;
   card.hidden = false;
-}
-// ===== 全滿出口：先用文字聊（2026-07-24 Edward 拍板 P0）=====
-// Avatar／即時語音兩個 GPU 席位滿了時，不用讓長輩乾等排隊——直接借既有文字聊天管線（window.__chatSay，
-// 內部就是 init() 裡的 chatHandle／voiceProvider.sendText）繼續聊，這條路本來就不吃 Avatar／Voice 席位，
-// 也不用排隊。別新造頁面，只在通話畫面裡疊一塊簡單的文字面板，讀「打字」不讀「說話」。
-// （這幾個函式放頂層 scope，是因為 connectCall() 本身也是頂層函式，需要在真的要撥號前呼叫
-// exitTextFallbackChat() 收掉面板——放進 init() 裡面 connectCall 會拿不到。）
-function appendTextChatBubble(role, text) {
-  const log = $('#textChatLog'); if (!log || !text) return;
-  const row = document.createElement('div');
-  row.className = 'tc-row ' + (role === 'user' ? 'tc-user' : 'tc-ai');
-  row.textContent = text;
-  log.appendChild(row);
-  log.scrollTop = log.scrollHeight;
-}
-function startTextFallbackChat() {
-  const panel = $('#textChatPanel'); if (!panel) return;
-  chatOpened = true;
-  activeChatSessionId = makeSessionId('text');
-  activeChatStartedAt = Date.now();
-  activeChatTurnCount = 0;
-  panel.hidden = false;
-  const inp = $('#textChatInput'); if (inp) { inp.value = ''; inp.focus(); }
-  try { trackProductEvent('call_full_text_fallback_started', {}); } catch (e) {}
-}
-function exitTextFallbackChat() {
-  const panel = $('#textChatPanel');
-  if (panel && !panel.hidden) {
-    panel.hidden = true;
-    if (chatOpened) { try { trackProductEvent('call_full_text_fallback_ended', { turnCount: activeChatTurnCount }); } catch (e) {} }
-    chatOpened = false;
-  }
-}
-async function sendTextFallbackMessage() {
-  const input = $('#textChatInput'); const sendBtn = $('#textChatSend');
-  if (!input) return;
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  appendTextChatBubble('user', text);
-  setBtnBusy(sendBtn, muneaT('common.sending', ''));
-  const beforeLen = chatHistory.length;
-  try {
-    await window.__chatSay(text);   // init() 裡掛出來的 chatHandle 橋（chatHandle 本身是 init() 內部函式，拿不到）
-  } finally {
-    clearBtnBusy(sendBtn, muneaT('textChat.send', ''));
-    if (input) input.focus();
-  }
-  // chatHandle 內部會把新的一輪對話（含 AI 回覆）推進 chatHistory；掃新增的區段找出「她」的回覆貼上面板。
-  for (let i = beforeLen; i < chatHistory.length; i++) {
-    if (chatHistory[i] && chatHistory[i].role === 'model') appendTextChatBubble('ai', chatHistory[i].text);
-  }
 }
 // 等待中按鈕：加轉圈、鎖點擊（Edward 7/8：Loading 要有動態，不然像當機）
 function setBtnBusy(b, text) {
@@ -1953,7 +1897,7 @@ function renderVisitSummary(summary) {
     parts.push('</div>');
   } else {
     parts.push('<p class="vs-empty">' + rptEsc(muneaT('visit.questionsEmpty',
-      '還沒有記下要問的問題。跟{companion}聊到身體上的疑問時，她會幫你記下來。',
+      '還沒有記下要問的問題。跟{companion}聊到身體上的疑問時，會幫你記下來。',
       { companion: (typeof cname === 'function' ? cname() : '寧寧') })) + '</p>');
   }
   // 滿了就不給加，並且講明為什麼——不能讓他按了沒反應
@@ -6216,19 +6160,92 @@ function enableSheetDrag() {
   window.addEventListener('mousemove', e => { if (active) move(e.clientY); });
   window.addEventListener('mouseup', end);
 }
+// 2026-11-08（個資漏洞修補）：登出或切換帳號時，上一個人留在本機的個人資料若沒清乾淨，
+// 共用裝置（例：家裡共用一台平板）換人登入就會看到前一個人的健康紀錄、用藥、緊急聯絡人、
+// 家人圈、個人資料、AI 使用同意紀錄——新登入的人也會因為舊的同意記號還在而跳過該看的
+// 同意畫面。原則：帳號一變，就把「跟這個人綁定」的本機資料全部清掉，只留「跟這台裝置
+// 綁定」的偏好設定；清掉的東西雲端有備份的會在下次登入重新同步回來（見 syncPullAll／
+// syncPersonProfileCloud／configureMedicationService／MuneaHealth.refresh 等），本機
+// 沒有雲端備份的（例如緊急聯絡人挑選）也本就不該留給下一個登入的人看到。
+//
+// 下面是「裝置偏好」白名單——換人登入／登出都不清：
+//   字體大小、隱藏字幕、除錯旗標、顯示引擎與音畫同步等技術調校、開發用的伺服器網址、
+//   教學／系統通知「已看過」記號、App 評分提示的節流記號、天氣快取、A/V 回退技術標記、
+//   App Store 購買交易的技術去重記錄（跟 Apple ID／裝置綁定，不是跟沐寧帳號綁定）。
+// 白名單以外，只要是 `munea.` 開頭的本機資料，一律視為「跟這個人綁定」，換人就清。
+const ACCOUNT_SCOPE_KEEP_KEYS = new Set([
+  'munea.deviceId',
+  'munea.debug',
+  'munea.fontScale',
+  'munea.captions',
+  'munea.faceEngine',
+  'munea.faceSameLine',
+  'munea.faceSyncMs',
+  'munea.avSyncAuto',
+  'munea.avatarRelay',
+  'munea.avatarUrl',
+  'munea.remoteFace',
+  'munea.brainUrl',
+  'munea.liveVoiceUrl',
+  'munea.developmentFixtures.v1',
+  'munea.onboardingCompleted.v1',
+  'munea.onboardingIntroSeen.v1',
+  'munea.companionRetiredNotice.v1',
+  'munea.reviewCoolOff',
+  'munea.wxCache',
+  'munea.sameLineFellBack',
+  'munea.store.processedTransactions.v1',
+  'munea.store.verifyFailures.v1',
+]);
+// 'munea.admin.*' 是獨立的後台主控台（web/src/admin.js），不隨 App 打包、不會真的出現在這裡，
+// 留著純屬防呆；'munea.reviewAsked.*' 是評分提示的節流記號，不是個人資料。
+const ACCOUNT_SCOPE_KEEP_PREFIXES = ['munea.reviewAsked.', 'munea.admin.'];
+const ACCOUNT_SCOPE_LAST_USER_KEY = 'munea.lastAuthUser';
+const ACCOUNT_SCOPE_SIGNED_OUT_MARK = '__signed_out__';
+function isAccountScopeKeepKey(key) {
+  if (key === ACCOUNT_SCOPE_LAST_USER_KEY) return true; // 機制本身的記號，由呼叫端改寫新值
+  if (ACCOUNT_SCOPE_KEEP_KEYS.has(key)) return true;
+  return ACCOUNT_SCOPE_KEEP_PREFIXES.some(p => key.indexOf(p) === 0);
+}
+function clearAccountScopedLocalData() {
+  [window.localStorage, window.sessionStorage].forEach(store => {
+    if (!store) return;
+    try {
+      const keys = [];
+      for (let i = 0; i < store.length; i++) {
+        const k = store.key(i);
+        if (k && k.indexOf('munea.') === 0 && !isAccountScopeKeepKey(k)) keys.push(k);
+      }
+      keys.forEach(k => { try { store.removeItem(k); } catch (e2) {} });
+    } catch (e) {}
+  });
+}
 function syncAccountScopedCaches(state) {
-  // 換帳號（含登出）就清掉「跟上一個帳號綁定」的本機殘留：
-  // 方案等級與邀請碼都是伺服器按帳號算的，殘留會讓人走進註定失敗的畫面
-  // （例：測試帳號的 Pro 殘留讓真帳號穿過免費門、到雲端才被擋）。
   try {
     const uid = String((state && (state.authUserId || state.userId)) || '');
-    const last = localStorage.getItem('munea.lastAuthUser') || '';
+    const last = localStorage.getItem(ACCOUNT_SCOPE_LAST_USER_KEY) || '';
     if (uid === last) return;
-    localStorage.setItem('munea.lastAuthUser', uid);
-    localStorage.removeItem('munea.inviteCode');
-    localStorage.removeItem('munea.inviteCodeAt');
-    localStorage.removeItem('munea.plan');
+    // 只在兩種情況清：①真的按了登出（event＝SIGNED_OUT）②換成另一個人登入（前後兩個都有身分、而且不同）。
+    // App 剛打開、登入狀態還沒讀出來時也會短暫回報「沒登入」；網路不穩、登入過期也一樣——
+    // 那些都不是「換人」，清下去會把本人只存在手機上的紀錄（例如吃藥打勾）整批弄丟。
+    // 第一次記到身分（last 是空的）也不清：手機上的東西本來就是這個人的。
+    const explicitSignOut = !uid && String((state && state.event) || '') === 'SIGNED_OUT';
+    const switchedUser = !!uid && !!last && uid !== last;
+    if (!explicitSignOut && !switchedUser) {
+      if (uid) localStorage.setItem(ACCOUNT_SCOPE_LAST_USER_KEY, uid);
+      return;
+    }
+    clearAccountScopedLocalData();
+    // 真的登出後記一個「已登出」記號：下一個不管誰登入都算換人、再清一次（中間訪客留下的也清掉）
+    localStorage.setItem(ACCOUNT_SCOPE_LAST_USER_KEY, uid || ACCOUNT_SCOPE_SIGNED_OUT_MARK);
     if (uid && typeof refreshServerPlanEntitlement === 'function') refreshServerPlanEntitlement();
+    // 本機清乾淨後，首頁幾張卡與提醒排程要跟著刷新，不然舊資料的畫面會留到下次切頁才消失。
+    try { if (typeof renderDailyTasks === 'function') renderDailyTasks(); } catch (e2) {}
+    try { if (typeof renderCareCarousel === 'function') renderCareCarousel(); } catch (e2) {}
+    try { if (typeof renderPoints === 'function') renderPoints(); } catch (e2) {}
+    // 原生端（iOS/Android）已排的用藥／回診／行程本機提醒也要跟著取消——否則上一個人的
+    // 提醒還是會在這台裝置上跳出來（sync() 會用現在（已清空）的本機資料重新計算待排清單）。
+    try { if (window.MuneaNotify && typeof window.MuneaNotify.sync === 'function') window.MuneaNotify.sync(); } catch (e2) {}
   } catch (e) {}
 }
 function updateAuthUI() {
@@ -6942,10 +6959,31 @@ function pushOwnHealthLog(log) {
     const day = keys[keys.length - 1] || _todayISO();
     const current = (log || {})[day] || {};
     const mine = {};
-    // 7/16 心情真串接：今日粗心情標籤（只有詞＋色，不含聊天內容）跟健康數據走同一條家庭帳本水管
     const mood = myMoodToday();
     mine[personId] = Object.assign({ name: (pf.name || '').trim(), nick: (pf.nick || '').trim(), day, updatedAt: Date.now(), log }, current, mood ? { mood } : {});
     syncPush('vitals', mine);
+    maybeNotifySafetyContactsFromVitals(current);
+  } catch (e) {}
+}
+// 健康數據超出留意範圍時通知緊急聯絡人（2026-11-09）：warn 判定沿用「平安燈」同一套門檻
+// （vitalsToDisplay，定義在 init() 裡，透過 window.__muneaVitalsToDisplay 匯出給這支頂層函式用），
+// 不在這裡另開一套數字，避免兩套門檻日後各自改、彼此飄掉。只送「category=vitals」這個粗分類，
+// 不把血壓/心率等數值帶進請求——伺服器那邊組文案本來就不碰這些數值。
+function maybeNotifySafetyContactsFromVitals(current) {
+  try {
+    const toDisplay = window.__muneaVitalsToDisplay;
+    const d = typeof toDisplay === 'function' ? toDisplay(current) : null;
+    const spo2Low = !!(+((current || {}).spo2) && +current.spo2 < 90);
+    if (d && ((d.bp && d.bp.warn) || (d.hr && d.hr.warn) || spo2Low)) requestSafetyAlert('vitals');
+  } catch (e) {}
+}
+function requestSafetyAlert(category) {
+  if (!isLoggedIn()) return;
+  try {
+    let contacts = [];
+    try { contacts = JSON.parse(localStorage.getItem('munea.safetyContacts') || '[]'); } catch (e) {}
+    if (!Array.isArray(contacts) || !contacts.length) return;
+    brainPost('/safety-alert', { category, familyGroupId: famGroupId(), personId: muneaCloudPersonId() }).catch(() => {});
   } catch (e) {}
 }
 // 自己的今日心情摘要（loadMoodWeekReal 寫入）：只留 {label, key, date} 粗標籤、觀察細節不出這支手機
@@ -8035,6 +8073,7 @@ function toast(text, duration = 2600) {
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
+window.__muneaToast = toast;   // 給非模組的獨立小程式（如 notify.js 的場景化通知說明）借用同一顆提示條，不要各寫一份
 
 // 版本顯示 + 「版本更新」彈窗（讀 window.MuneaVersion 這個單一真相）
 function applyAppVersion() {
@@ -8496,7 +8535,6 @@ async function connectCall() {
     setLocalizedCallHint('connecting', true);
   } catch (e) {}
   hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
-  if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 若正在「先用文字聊」，重新真的撥號前先收掉面板，避免兩層畫面疊在一起（2026-07-24 P0）
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
   try {
@@ -9040,6 +9078,7 @@ function init() {
   const __medicationPromise = __pullPromise.then(configureMedicationService);
   refreshServerPlanEntitlement();
   refreshServerCredits();
+  checkSafetyContactAssignment();
   if (_familySyncTimer) clearInterval(_familySyncTimer);
   _familySyncTimer = setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
   if (!_familyVisibilityBound) {
@@ -9093,7 +9132,6 @@ function init() {
         setTimeout(() => window.__muneaMaybeAskReview('chat_completed'), 800);   // 自己掛斷＝好好聊完 → 開心時刻
       }
     }
-    if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 離開時順手收掉「先用文字聊」面板，下次進來是乾淨的通話畫面
     FaceWave.stop();
     showView('home');
   });
@@ -9116,17 +9154,14 @@ function init() {
     else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} }
   });
   window.addEventListener('pagehide', () => _hangupOnLeave('pagehide'));
-  // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；其餘＝知道了、收卡
+  // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；
+  // 聽不到你的聲音＝再試一次（重新開始收音，2026-11-09 取代原本跳系統文字輸入框的做法）；其餘＝知道了、收卡
   if ($('#busyCardBtn')) $('#busyCardBtn').addEventListener('click', () => {
     const card = $('#busyCard'); const action = card && card.dataset.action;
     hideBusyCard();
     if (action === 'cancel' && !callConnected && (callDialing || callPreflightPending)) { try { $('#callToggle').click(); } catch (e) {} }
     else if (action === 'reopen-auth') { setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0); }
-  });
-  // 全滿出口（2026-07-24 P0）：不用乾等 GPU 席位，先切去既有 /chat 文字管線聊
-  if ($('#busyCardAlt')) $('#busyCardAlt').addEventListener('click', () => {
-    hideBusyCard();
-    if (typeof startTextFallbackChat === 'function') startTextFallbackChat();
+    else if (action === 'retry-microphone') { setTimeout(() => { try { startVoiceCapture(); } catch (e2) {} }, 0); }
   });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     // 撥通中（含排隊／前置連線）再按一次＝取消撥號、回到待機
@@ -9244,7 +9279,7 @@ function init() {
     if (hint) {
       hint.textContent = (city || '').trim()
         ? muneaT('profile.locationEditHint', '打錯或搬家了，在這裡改就好')
-        : muneaT('profile.locationNotYet', '還沒聊到——聊天時說一次就好，她會記起來');
+        : muneaT('profile.locationNotYet', '還沒聊到——聊天時說一次就好，就會記起來');
     }
   }
   function pfLocationValue() { return (($('#pfCityFree') && $('#pfCityFree').value) || '').trim(); }
@@ -9924,6 +9959,7 @@ function init() {
     if (steps) d.steps = Math.round(steps).toLocaleString();
     return (d.bp || d.hr || d.spo2 || d.sleep || d.steps) ? d : null;
   }
+  window.__muneaVitalsToDisplay = vitalsToDisplay;  // 讓頂層的 maybeNotifySafetyContactsFromVitals 共用同一套 warn 門檻（2026-11-09）
   function renderPersonStats(p) {
     const grid = $('#personGrid');
     if (!grid) return;
@@ -10224,6 +10260,9 @@ function init() {
         name,
       },
     ));
+    // 2026-11-09 Edward 拍板 A 案：通知權限改成「需要時才問」——第一次成功建立吃藥提醒之後，
+    // 才用一句人話問要不要開通知，不在開 App 時就問。
+    try { if (window.MuneaNotify) window.MuneaNotify.askInContext('medication'); } catch (e) {}
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
@@ -12506,6 +12545,8 @@ function init() {
     resetVisitLead();
     toast(muneaT('visit.savedToast', '好，「{title}」{label}記下了，{companion}會{lead}提醒你',
       { title, label, companion: cname(), lead: visitLeadSpoken(visit.remindBefore) }));
+    // 看診提醒建立成功，一樣接「需要時才問」通知（2026-11-09）
+    try { if (window.MuneaNotify) window.MuneaNotify.askInContext('clinic'); } catch (e) {}
   });
   renderVisitRow();
   refreshRoutineRemindersFromBackend();
@@ -12544,44 +12585,107 @@ function init() {
   });
   applyFontScale();
   // 條款／隱私閱讀器由最早期控制綁定，避免其他初始化失敗時連返回都不能操作。
-  // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常時通知他們確認
-  // 名單直接吃「設定 → 全家健康圈」同一份資料（單一真相）；圈裡移除了人，這裡自動跟著消失
-  function safetyMembers() { return loadCircle().filter(m => !m.self); }
+  // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常或通話中有讓人擔心的狀況時通知他們
+  // 2026-11-09：名單改存 personId（不是名字）＋同步到伺服器（/safety-contacts），伺服器驗證
+  // 對方確實在同一個家庭圈。只能選「已經真的加入健康圈」的家人（有 personId）——還沒接受邀請的人
+  // 沒有身分，沒法真的通知到，也就不給選。
+  function safetyMembers() { return loadCircle().filter(m => !m.self && m.personId); }
+  let _safetyReadiness = {};
   function loadSafety() {
     try {
       const raw = JSON.parse(localStorage.getItem('munea.safetyContacts')) || [];
-      const valid = new Set(safetyMembers().map(m => m.name));
-      const sel = raw.filter(n => valid.has(n));
-      if (sel.length !== raw.length) localStorage.setItem('munea.safetyContacts', JSON.stringify(sel));
+      const mem = safetyMembers();
+      const validIds = new Set(mem.map(m => m.personId));
+      const migrated = raw.map(item => {
+        if (validIds.has(item)) return item;
+        const byName = mem.find(m => m.name === item);
+        return byName ? byName.personId : null;
+      }).filter(Boolean);
+      const sel = [...new Set(migrated)].slice(0, 3);
+      if (JSON.stringify(sel) !== JSON.stringify(raw)) { try { localStorage.setItem('munea.safetyContacts', JSON.stringify(sel)); } catch (e2) {} }
       return sel;
     } catch (e) { return []; }
   }
-  function updateSafetyCount() { const el = $('#safetyCount'); if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.join('、') : ''; } }
+  function safetyContactName(pid) { const m = safetyMembers().find(x => x.personId === pid); return m ? m.name : ''; }
+  function updateSafetyCount() {
+    const el = $('#safetyCount');
+    if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.map(safetyContactName).filter(Boolean).join('、') : ''; }
+  }
+  function renderSafetyHints() {
+    const sel = loadSafety();
+    document.querySelectorAll("#safetyPicks .safety-pick").forEach(btn => {
+      const pid = btn.dataset.id;
+      const nameEl = btn.querySelector(".sp-name");
+      if (!nameEl) return;
+      const existing = nameEl.querySelector(".sp-hint");
+      if (existing) { existing.parentNode.removeChild(existing); }
+      if (sel.includes(pid) && _safetyReadiness[pid] === false) {
+        const span = document.createElement("span");
+        span.className = "sp-hint";
+        span.textContent = muneaT("safety.contactNotReady", "他的手機還沒開通知，可能只會在App裡看到");
+        nameEl.appendChild(span);
+      }
+    });
+  }
+  function refreshSafetyReadiness() {
+    if (!isLoggedIn()) return;
+    brainPost("/safety-contacts", { action: "load", familyGroupId: famGroupId(), personId: muneaCloudPersonId() }).then(data => {
+      if (data && data.readiness) { _safetyReadiness = data.readiness; renderSafetyHints(); }
+    }).catch(() => {});
+  }
+  // 子女端：被設為緊急聯絡人時，App 開啟要看得到「你是 X 的緊急聯絡人」，順勢在那個時機問要不要
+  // 開通知（沿用 #686 準備好的 askInContext('safetyContact') 文案，不在這裡另寫一套同義說明）。
+  // 只在第一次看到這個長輩的指派時提示一次，不每次開 App 都跳（記在 localStorage）。
+  function checkSafetyContactAssignment() {
+    if (!isLoggedIn()) return;
+    brainPost('/safety-contacts', { action: 'load', familyGroupId: famGroupId(), personId: muneaCloudPersonId() }).then(data => {
+      if (!data || !Array.isArray(data.contactFor) || !data.contactFor.length) return;
+      let seen = [];
+      try { seen = JSON.parse(localStorage.getItem('munea.safetyContactAssignmentsSeen') || '[]'); } catch (e) {}
+      if (!Array.isArray(seen)) seen = [];
+      const fresh = data.contactFor.filter(a => a && a.personId && seen.indexOf(a.personId) === -1);
+      if (!fresh.length) return;
+      try { localStorage.setItem('munea.safetyContactAssignmentsSeen', JSON.stringify(seen.concat(fresh.map(a => a.personId)))); } catch (e) {}
+      const names = fresh.map(a => a.label).filter(Boolean).join(muneaListSeparator()) || muneaT('familyCircle.memberFallback', '家人');
+      toast(muneaT('safety.youAreContactToast', '你被設為{names}的緊急聯絡人', { names }));
+      if (window.MuneaNotify && typeof window.MuneaNotify.askInContext === 'function') window.MuneaNotify.askInContext('safetyContact');
+      else if (window.MuneaNotify && typeof window.MuneaNotify.openInbox === 'function') window.MuneaNotify.openInbox();
+    }).catch(() => {});
+  }
   function renderSafety() {
     const picks = $('#safetyPicks'); if (!picks) return;
     const sel = loadSafety();
     const mem = safetyMembers();
     picks.innerHTML = mem.length ? mem.map(m =>
-      '<button type="button" class="safety-pick' + (sel.includes(m.name) ? ' on' : '') + '" data-name="' + m.name + '">' +
+      '<button type="button" class="safety-pick' + (sel.includes(m.personId) ? ' on' : '') + '" data-id="' + m.personId + '">' +
       '<span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + (m.init || (m.name || '')[0] || '') + '</span><span class="sp-name">' + m.name + '</span>' +
       '<span class="sp-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></button>').join('')
       : '<p class="modal-sub" style="margin:4px 0 0">' + muneaT('familyCircle.emptyContactPick', '圈裡還沒有家人。先到「家人」頁邀請家人加入，就能選緊急聯絡人。') + '</p>';
     updateSafetyCount();
+    refreshSafetyReadiness();
   }
   if ($('#safetyPicks')) $('#safetyPicks').addEventListener('click', e => {
     const b = e.target.closest('.safety-pick'); if (!b) return;
-    let sel = loadSafety(); const name = b.dataset.name;
-    if (sel.includes(name)) sel = sel.filter(n => n !== name);
-    else { if (sel.length >= 3) { toast(muneaT('safety.maxContactsToast', '最多選 3 位緊急聯絡人')); return; } sel.push(name); }
+    let sel = loadSafety(); const pid = b.dataset.id;
+    if (sel.includes(pid)) sel = sel.filter(n => n !== pid);
+    else { if (sel.length >= 3) { toast(muneaT('safety.maxContactsToast', '最多選 3 位緊急聯絡人')); return; } sel.push(pid); }
     try { localStorage.setItem('munea.safetyContacts', JSON.stringify(sel)); } catch (e2) {}
-    b.classList.toggle('on', sel.includes(name));
+    b.classList.toggle('on', sel.includes(pid));
     updateSafetyCount();
+    renderSafetyHints();
   });
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => { renderSafety(); $('#safetyModal').classList.add('show'); });
   if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
     $('#safetyModal').classList.remove('show');
     const sel = loadSafety();
-    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。異常時我會第一時間讓家人知道。', { names: sel.join(muneaListSeparator()) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
+    const names = sel.map(safetyContactName).filter(Boolean);
+    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。', { names: names.join(muneaListSeparator()) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
+    if (isLoggedIn()) {
+      brainPost('/safety-contacts', { action: 'save', familyGroupId: famGroupId(), personId: muneaCloudPersonId(), contactPersonIds: sel }).then(data => {
+        if (data && Array.isArray(data.contactPersonIds)) { try { localStorage.setItem('munea.safetyContacts', JSON.stringify(data.contactPersonIds)); } catch (e) {} }
+        if (data && data.readiness) { _safetyReadiness = data.readiness; renderSafetyHints(); }
+      }).catch(() => {});
+    }
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();
@@ -13382,13 +13486,6 @@ function init() {
       postTurnReview();
     }
   }
-  // 全滿出口「先用文字聊」的送出／面板事件綁定（函式本體移到頂層 scope，見 showCallStatusCard 附近——
-  // connectCall() 是頂層函式，需要在真的要撥號前呼叫 exitTextFallbackChat() 收面板，兩邊都要拿得到）。
-  window.__muneaSendTextFallback = sendTextFallbackMessage;   // 供 Chrome MCP／自動測試直接觸發送出
-  if ($('#textChatSend')) $('#textChatSend').addEventListener('click', sendTextFallbackMessage);
-  if ($('#textChatInput')) $('#textChatInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextFallbackMessage(); }
-  });
   function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -13419,12 +13516,10 @@ function init() {
         durationMs,
       });
       setLocalizedCallHint('unavailable');
-      const s = prompt(muneaT(
-        'voice.runtime.textFallbackPrompt',
-        '我先用文字接住你，想跟{companion}說什麼？',
-        { companion: companionDisplayName },
-      ));
-      if (s) chatHandle(s);
+      // 2026-11-09 Edward 拍板：Munea 只有語音，拿掉系統文字輸入框後備。
+      // 這裡是錄到了聲音、但送不出去（網路／服務問題），不是麥克風被擋——
+      // 用「連線中斷了」卡，別叫長輩去檢查麥克風。
+      showCallStatusCard('disconnected');
     }
     setFaceState('idle');
   }
@@ -13432,12 +13527,8 @@ function init() {
   let mediaRec = null, mediaChunks = [], mediaStartedAt = 0;
   async function startVoiceCapture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      const s = prompt(muneaT(
-        'voice.runtime.deviceTextFallbackPrompt',
-        '這個裝置暫時無法使用語音，我們先用文字。想跟{companion}說什麼？',
-        { companion: companionDisplayName },
-      ));
-      if (s) chatHandle(s);
+      // 這個裝置完全沒有錄音能力：一樣用提示卡講清楚，不再跳系統文字輸入框（2026-11-09）
+      showCallStatusCard('microphoneBlocked');
       return;
     }
     try {
@@ -13460,12 +13551,8 @@ function init() {
       setLocalizedRuntimeHint('recordingTapWhenDone');
     } catch (e) {
       setLocalizedRuntimeHint('microphonePermission');
-      const s = prompt(muneaT(
-        'voice.runtime.microphoneTextFallbackPrompt',
-        '想跟{companion}說什麼？',
-        { companion: companionDisplayName },
-      ));
-      if (s) chatHandle(s);
+      // 拿不到麥克風（被擋或使用者取消授權）：提示卡＋再試一次，不再跳系統文字輸入框（2026-11-09）
+      showCallStatusCard('microphoneBlocked');
     }
   }
   let micMuted = false;

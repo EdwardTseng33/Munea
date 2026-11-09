@@ -104,11 +104,12 @@ try {
   assert.equal(evidence.locale, 'en');
   // 2026-08-10：39 個畫面（原 38）＋ screen:onboarding-intro；每畫面 3 種機型＝117 張
   // 2026-10-28：40 個畫面（原 39）＋ modal:care-week（補助案 B4）；每畫面 3 種機型＝120 張
-  assert.equal(evidence.screens.length, 40);
-  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 120);
+  // 2026-11-09：39 個畫面（原 40）－拿掉 chat:text-fallback；每畫面 3 種機型＝117 張
+  assert.equal(evidence.screens.length, 39);
+  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 117);
   assert.equal(
     new Set(evidence.screens.flatMap(({ captures }) => captures.map(({ sha256 }) => sha256))).size,
-    120,
+    117,
   );
   assert.equal(evidence.binaryBytes, fs.statSync(candidateIpa(temp)).size);
 

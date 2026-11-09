@@ -95,15 +95,6 @@
       "localizationStatus": "integrated"
     },
     {
-      "state": "chat:text-fallback",
-      "kind": "chat-state",
-      "source": "web/index.html",
-      "anchorId": "textChatPanel",
-      "captureMode": "composite-state",
-      "coverageGroup": "chat-active",
-      "localizationStatus": "integrated"
-    },
-    {
       "state": "chat:error",
       "kind": "chat-state",
       "source": "web/index.html",

@@ -462,13 +462,15 @@ def guardian_scan_text(text):
         return None
 
 
-def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None):
+def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, person_id=None):
     """side effect 段（會打 Supabase/Slack，一律在背景執行緒跑）：
     一記一筆安全事件，沿用既有 audit/product event 機制（跟 /chat 文字線同一張表、同一個 admin 後台看得到），
     多帶 protectionEvent／familyNotificationCandidate／protectionLine／who／source 幾個欄位，
     方便未來做「真的推播家人」時直接查得到（現在還沒有主動推播家人的功能，這裡先把料記好）。
     二內部安全告警（Slack #沐寧-告警），只送等級/類別，不送逐字稿、不送個資。
     record_fn / alert_fn 可注入假函式做測試（語音線模擬），預設用 server.append_product_event / notify.alert。
+    person_id 有帶且 familyNotificationCandidate 為真時，另外呼叫 server.dispatch_safety_alert
+    通知長輩設定的緊急聯絡人（2026-11-09 1.0.72）——best-effort、絕不拋例外回呼叫端。
     """
     risk = (result or {}).get("risk") or {}
     policy = (result or {}).get("responsePolicy") or {}
@@ -506,6 +508,11 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None):
             )
         except Exception as e:
             _diag(cid, "guardian.alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+    if policy.get("familyNotificationCandidate") and person_id:
+        try:
+            server.dispatch_safety_alert(person_id, "guardian")
+        except Exception as e:
+            _diag(cid, "guardian.safety_alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
 
 def _guardian_begin_real_user_turn(st):
@@ -536,13 +543,18 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
             turn_id = int(st.get("guardian_real_turn_id", 0))
         if allow_cue is None:
             allow_cue = not (who == "ai" and st.get("guardian_internal_followup_active"))
+        # 緊急聯絡人通知（2026-11-09）要用到長輩的 person_id——Gateway 正式路徑把 call token
+        # 驗出的 user_id 放進 memory_scope（格式 "voice-<user_id>"）；開發包直連沒 token 時
+        # memory_scope 是 None，這裡就不帶 person_id，guardian_record_and_alert 會安靜跳過。
+        _scope = st.get("memory_scope") or ""
+        safety_person_id = _scope[len("voice-"):] if _scope.startswith("voice-") else None
         result = await asyncio.to_thread(guardian_scan_text, text)
         if not result:
             return
         risk = (result or {}).get("risk") or {}
         level = risk.get("level") or "none"
         categories = tuple(risk.get("categories") or [])
-        await asyncio.to_thread(guardian_record_and_alert, who, cid, result)
+        await asyncio.to_thread(guardian_record_and_alert, who, cid, result, person_id=safety_person_id)
         if level not in ("high", "critical"):
             # 第二層：第一層沒抓到硬危機的用戶句子 → 升級便宜 AI 判語意（只判用戶說的、背景跑不擋通話）。
             # 2026-10-28 閘全開後每句都送：上限從 5 次放到 80 次（長通話也蓋得到；每句約 NT$0.013，80 句 NT$1 封頂）
@@ -563,7 +575,7 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
                                            "protectionLine": "113" if is_protect else None},
                     }
                     _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
-                    await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result)
+                    await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result, person_id=safety_person_id)
                     key = (turn_id, "semantic", scat)
                     if key not in st["user_flagged"]:
                         st["user_flagged"].add(key)

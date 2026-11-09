@@ -24,7 +24,7 @@ const LOCALES = Object.freeze([
     locale: 'en',
     htmlLang: 'en',
     medicationName: 'Vitamin D',
-    expected: ['Take Vitamin D', 'After breakfast', 'Follow-up visit', 'Time with family', 'You walked'],
+    expected: ['Take Vitamin D', 'After breakfast', 'Doctor’s appointment', 'Time with family', 'You walked'],
   }),
   Object.freeze({
     locale: 'ja',

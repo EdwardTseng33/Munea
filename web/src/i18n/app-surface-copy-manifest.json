@@ -132,7 +132,8 @@
       "keyPrefixes": [
         "voice.call.",
         "voice.runtime.",
-        "credits."
+        "credits.",
+        "chat."
       ],
       "requiredKeys": [
         "voice.ready",
@@ -145,21 +146,11 @@
         "voice.runtime.microphonePermission",
         "voice.runtime.recoveredTitle",
         "voice.runtime.degradedTitle",
+        "voice.call.microphoneBlockedTitle",
+        "voice.call.microphoneBlockedNote",
         "credits.lowTitle",
         "credits.lowBody",
         "credits.freeTrialOneMinute"
-      ]
-    },
-    {
-      "state": "chat:text-fallback",
-      "keyPrefixes": [
-        "textChat.",
-        "chat."
-      ],
-      "requiredKeys": [
-        "textChat.title",
-        "textChat.send",
-        "textChat.exit"
       ]
     },
     {

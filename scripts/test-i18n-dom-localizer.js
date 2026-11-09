@@ -76,7 +76,7 @@ const applied = apply(root, runtime, 'en', (key) => (
   key === 'voice.queue.position.one' ? { count: 3 } : undefined
 ));
 assert.equal(applied, 5, 'Every text and attribute binding should be applied once');
-assert.equal(text.textContent, 'You are number 3 in line');
+assert.equal(text.textContent, 'You’re number 3 in line');
 assert.equal(aria.getAttribute('aria-label'), 'Back');
 assert.equal(placeholder.getAttribute('placeholder'), catalogs.en['feedback.placeholder']);
 assert.equal(alt.getAttribute('alt'), catalogs.en['companion.nening.name']);
