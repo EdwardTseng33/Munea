@@ -145,11 +145,12 @@ assert(!/setCallPreflightPending\([^)]*點數/.test(connectCall) && !/setCallHin
 // 開發者 Gateway 模式（真登入、非直連）測試帳號不能被 0 點卡住；正式用戶（非開發者旁路）依然照擋。
 assert(connectCall.includes("if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');"), 'Only the developer Gateway profile may skip the zero-credit block; production callers must still be stopped');
 
-// 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：排隊要顯示第幾位或準備中敘事＋
-// 帶粗略等待時間；隊伍全滿要明講請稍後再試並提供「先用文字聊」出口；撥號各種失敗一律要有看得見的卡，不能只寫進被
+// 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡 →
+// 2026-11-09 Edward 拍板拿掉「先用文字聊」出口）：排隊要顯示第幾位或準備中敘事＋
+// 帶粗略等待時間；隊伍全滿要明講請稍後再試；撥號各種失敗一律要有看得見的卡，不能只寫進被
 // CSS 藏起來的 #chatCaption；排隊／前置連線中都必須能取消（按通話鍵、離開聊聊頁、切走 App 三條路都要真取消）。
 assert(html.includes('id="busyCard"') && html.includes('id="busyCardBtn"'), 'Busy card markup must exist on the call screen');
-assert(html.includes('id="busyCardAlt"'), 'Busy card must expose a secondary exit button element for the full-queue text-chat fallback');
+assert(!html.includes('id="busyCardAlt"'), 'Munea is voice-only — the busy card must not keep a text-chat fallback exit button');
 assert(css.includes('.busy-card'), 'Busy card styles must exist');
 assert(app.includes("showBusyCard('queued', queue)"), 'Queued gateway responses must surface the busy card with the full queue payload (position and eta_s), not just a bare position number');
 assert(app.includes("showBusyCard('full')"), 'A full queue must surface the explicit busy-try-later card');
@@ -222,11 +223,15 @@ const runtimeVoiceKeys = [
   'voice.runtime.recoveredBody',
   'voice.runtime.degradedTitle',
   'voice.runtime.degradedBody',
-  'voice.runtime.textFallbackPrompt',
-  'voice.runtime.deviceTextFallbackPrompt',
-  'voice.runtime.microphoneTextFallbackPrompt',
 ];
 runtimeVoiceKeys.forEach(key => assert(zhCatalog[key], `Voice runtime catalog key missing for: ${key}`));
+// Munea 只有語音，拿不到麥克風一律接清楚的提示卡＋再試一次，不再跳系統文字輸入框（2026-11-09）。
+// 只檢查麥克風失敗這條線的 bare prompt()（看診口袋問題 window.prompt('visit.promptQuestion'...) 是另一個功能、不是這次要拿掉的東西）。
+assert(!app.includes('const s = prompt(muneaT('), 'Microphone failures must not fall back to a native prompt() text box');
+['voice.call.microphoneBlockedTitle', 'voice.call.microphoneBlockedNote'].forEach(key =>
+  assert(zhCatalog[key], `Microphone-blocked catalog key missing for: ${key}`));
+assert(app.includes("showCallStatusCard('microphoneBlocked')"),
+  'Voice-note upload failure, unsupported device, and getUserMedia rejection must all surface the microphone-blocked card');
 assert(app.includes('function setLocalizedRuntimeHint(state, busy = false)')
   && app.includes('function setLocalizedRuntimeCaption(state)'),
   'Voice runtime hints and recovery captions must use named localized renderers');
@@ -335,15 +340,14 @@ assert(app.includes("new Intl.DateTimeFormat(muneaLocale(), { weekday: 'narrow' 
   && /function _visitDayShort[\s\S]*?new Intl\.DateTimeFormat\(muneaLocale\(\)/.test(app),
   'Weekday labels and visit dates must use the active locale instead of fixed Chinese date text');
 
-// 全滿態給出口：先用文字聊（2026-07-24 Edward 拍板 P0）——不新造頁面，重用既有 chatHandle 文字管線，
-// 不佔用 Avatar／即時語音席位，讓長輩在滿載時仍有話可聊而不是只能乾等或放棄。
-assert(html.includes('id="textChatPanel"') && html.includes('id="textChatLog"') && html.includes('id="textChatInput"') && html.includes('id="textChatSend"'),
-  'The text-chat fallback panel markup must exist on the call screen');
-assert(app.includes('function startTextFallbackChat()') && app.includes('function sendTextFallbackMessage()') && app.includes('function exitTextFallbackChat()'),
-  'The text-chat fallback lifecycle functions must exist');
-assert(app.includes('await window.__chatSay(text);'), 'The text-chat fallback must reuse the existing chatHandle pipeline (via its window.__chatSay bridge) instead of a new chat backend');
-assert(app.includes("$('#busyCardAlt')") && app.includes('startTextFallbackChat()'), 'The full-queue card alt button must trigger the text-chat fallback');
-assert(app.includes('exitTextFallbackChat()'), 'Leaving the call screen must also tear down the text-chat fallback panel so the next visit starts clean');
+// Munea 只有語音、沒有打字聊天（Edward 2026-11-09 拍板拿掉全滿出口與麥克風失敗時的文字輸入框）：
+// 整個文字聊天後備面板與它的生命週期函式都不應該再存在。
+assert(!html.includes('id="textChatPanel"') && !html.includes('id="textChatLog"') && !html.includes('id="textChatInput"') && !html.includes('id="textChatSend"'),
+  'The text-chat fallback panel markup must not exist — Munea is voice-only');
+assert(!app.includes('function startTextFallbackChat(') && !app.includes('function sendTextFallbackMessage(') && !app.includes('function exitTextFallbackChat('),
+  'The text-chat fallback lifecycle functions must not exist');
+assert(!app.includes('startTextFallbackChat()') && !app.includes('exitTextFallbackChat()'),
+  'Nothing may still call the removed text-chat fallback lifecycle functions');
 
 const challengeSheet = html.match(/<div class="modal-mask" id="chalModal">([\s\S]*?)<div class="modal-mask" id="actDetailModal">/)?.[1] || '';
 assert(challengeSheet, 'Missing challenge creation sheet');

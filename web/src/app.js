@@ -790,11 +790,11 @@ function setLocalizedRuntimeCaption(state) {
 // 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡）：
 // 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
 // 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
-// mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿，附「先用文字聊」出口）
+// mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿）
 function showBusyCard(mode, payload) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = mode;
-  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
   const rendererCopy = muneaRendererCopy();
   if (rendererCopy) {
     const q = payload || {};
@@ -809,13 +809,11 @@ function showBusyCard(mode, payload) {
     if (pos) pos.textContent = localized.position;
     if (note) note.textContent = localized.note;
     if (btn) btn.textContent = localized.button;
-    if (alt) alt.hidden = !localized.showTextFallback;
     card.hidden = false;
     return;
   }
   if (mode === 'queued') {
     card.dataset.action = 'cancel';
-    if (alt) alt.hidden = true;
     const q = payload || {};
     const position = Math.max(1, parseInt(q.position, 10) || 1);
     const preparing = position <= 1;   // 排第 1 位＝其實是在幫你準備、不是真的一堆人在排（Edward 2026-07-24 拍板）
@@ -847,7 +845,7 @@ function showBusyCard(mode, payload) {
     );
     if (btn) btn.textContent = muneaT('voice.queue.cancel', '取消排隊');
   } else {
-    // 'full'：連排隊的位子都滿了——除了「知道了」，多給一個不用等 GPU 席位的出口
+    // 'full'：連排隊的位子都滿了——講清楚請稍後再試，不再提供打字聊天出口（2026-11-09 Edward 拍板拿掉）
     card.dataset.action = 'dismiss';
     if (title) title.textContent = muneaT('voice.queue.fullTitle', '現在忙線中');
     if (pos) pos.textContent = '';
@@ -857,7 +855,6 @@ function showBusyCard(mode, payload) {
       { companion: cname() },
     );
     if (btn) btn.textContent = muneaT('common.okay', '知道了');
-    if (alt) alt.hidden = false;
   }
   card.hidden = false;
 }
@@ -889,65 +886,12 @@ function showCallStatusCard(stateOrOptions) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = 'error';
   card.dataset.action = opts.action || 'dismiss';
-  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn'), alt = $('#busyCardAlt');
+  const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
   if (title) title.textContent = opts.title || muneaT('voice.call.unavailable', '');
   if (pos) pos.textContent = '';
   if (note) note.textContent = opts.note || muneaT('voice.call.retryLater', '');
   if (btn) btn.textContent = opts.button || opts.btnText || muneaT('common.okay', '');
-  if (alt) alt.hidden = true;
   card.hidden = false;
-}
-// ===== 全滿出口：先用文字聊（2026-07-24 Edward 拍板 P0）=====
-// Avatar／即時語音兩個 GPU 席位滿了時，不用讓長輩乾等排隊——直接借既有文字聊天管線（window.__chatSay，
-// 內部就是 init() 裡的 chatHandle／voiceProvider.sendText）繼續聊，這條路本來就不吃 Avatar／Voice 席位，
-// 也不用排隊。別新造頁面，只在通話畫面裡疊一塊簡單的文字面板，讀「打字」不讀「說話」。
-// （這幾個函式放頂層 scope，是因為 connectCall() 本身也是頂層函式，需要在真的要撥號前呼叫
-// exitTextFallbackChat() 收掉面板——放進 init() 裡面 connectCall 會拿不到。）
-function appendTextChatBubble(role, text) {
-  const log = $('#textChatLog'); if (!log || !text) return;
-  const row = document.createElement('div');
-  row.className = 'tc-row ' + (role === 'user' ? 'tc-user' : 'tc-ai');
-  row.textContent = text;
-  log.appendChild(row);
-  log.scrollTop = log.scrollHeight;
-}
-function startTextFallbackChat() {
-  const panel = $('#textChatPanel'); if (!panel) return;
-  chatOpened = true;
-  activeChatSessionId = makeSessionId('text');
-  activeChatStartedAt = Date.now();
-  activeChatTurnCount = 0;
-  panel.hidden = false;
-  const inp = $('#textChatInput'); if (inp) { inp.value = ''; inp.focus(); }
-  try { trackProductEvent('call_full_text_fallback_started', {}); } catch (e) {}
-}
-function exitTextFallbackChat() {
-  const panel = $('#textChatPanel');
-  if (panel && !panel.hidden) {
-    panel.hidden = true;
-    if (chatOpened) { try { trackProductEvent('call_full_text_fallback_ended', { turnCount: activeChatTurnCount }); } catch (e) {} }
-    chatOpened = false;
-  }
-}
-async function sendTextFallbackMessage() {
-  const input = $('#textChatInput'); const sendBtn = $('#textChatSend');
-  if (!input) return;
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  appendTextChatBubble('user', text);
-  setBtnBusy(sendBtn, muneaT('common.sending', ''));
-  const beforeLen = chatHistory.length;
-  try {
-    await window.__chatSay(text);   // init() 裡掛出來的 chatHandle 橋（chatHandle 本身是 init() 內部函式，拿不到）
-  } finally {
-    clearBtnBusy(sendBtn, muneaT('textChat.send', ''));
-    if (input) input.focus();
-  }
-  // chatHandle 內部會把新的一輪對話（含 AI 回覆）推進 chatHistory；掃新增的區段找出「她」的回覆貼上面板。
-  for (let i = beforeLen; i < chatHistory.length; i++) {
-    if (chatHistory[i] && chatHistory[i].role === 'model') appendTextChatBubble('ai', chatHistory[i].text);
-  }
 }
 // 等待中按鈕：加轉圈、鎖點擊（Edward 7/8：Loading 要有動態，不然像當機）
 function setBtnBusy(b, text) {
@@ -8108,6 +8052,7 @@ function toast(text, duration = 2600) {
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
+window.__muneaToast = toast;   // 給非模組的獨立小程式（如 notify.js 的場景化通知說明）借用同一顆提示條，不要各寫一份
 
 // 版本顯示 + 「版本更新」彈窗（讀 window.MuneaVersion 這個單一真相）
 function applyAppVersion() {
@@ -8569,7 +8514,6 @@ async function connectCall() {
     setLocalizedCallHint('connecting', true);
   } catch (e) {}
   hideBusyCard();   // 上一輪的「全滿」卡若還留著，重撥就收掉
-  if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 若正在「先用文字聊」，重新真的撥號前先收掉面板，避免兩層畫面疊在一起（2026-07-24 P0）
   // Give immediate, cancellable feedback before any optional network work.
   const developmentDirectCall = usesDevelopmentDirectCall();
   try {
@@ -9166,7 +9110,6 @@ function init() {
         setTimeout(() => window.__muneaMaybeAskReview('chat_completed'), 800);   // 自己掛斷＝好好聊完 → 開心時刻
       }
     }
-    if (typeof exitTextFallbackChat === 'function') exitTextFallbackChat();   // 離開時順手收掉「先用文字聊」面板，下次進來是乾淨的通話畫面
     FaceWave.stop();
     showView('home');
   });
@@ -9189,17 +9132,14 @@ function init() {
     else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} }
   });
   window.addEventListener('pagehide', () => _hangupOnLeave('pagehide'));
-  // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；其餘＝知道了、收卡
+  // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；
+  // 聽不到你的聲音＝再試一次（重新開始收音，2026-11-09 取代原本跳系統文字輸入框的做法）；其餘＝知道了、收卡
   if ($('#busyCardBtn')) $('#busyCardBtn').addEventListener('click', () => {
     const card = $('#busyCard'); const action = card && card.dataset.action;
     hideBusyCard();
     if (action === 'cancel' && !callConnected && (callDialing || callPreflightPending)) { try { $('#callToggle').click(); } catch (e) {} }
     else if (action === 'reopen-auth') { setTimeout(() => { try { openAuthSheet(); } catch (e2) {} }, 0); }
-  });
-  // 全滿出口（2026-07-24 P0）：不用乾等 GPU 席位，先切去既有 /chat 文字管線聊
-  if ($('#busyCardAlt')) $('#busyCardAlt').addEventListener('click', () => {
-    hideBusyCard();
-    if (typeof startTextFallbackChat === 'function') startTextFallbackChat();
+    else if (action === 'retry-microphone') { setTimeout(() => { try { startVoiceCapture(); } catch (e2) {} }, 0); }
   });
   if ($('#callToggle')) $('#callToggle').addEventListener('click', () => {
     // 撥通中（含排隊／前置連線）再按一次＝取消撥號、回到待機
@@ -10297,6 +10237,9 @@ function init() {
         name,
       },
     ));
+    // 2026-11-09 Edward 拍板 A 案：通知權限改成「需要時才問」——第一次成功建立吃藥提醒之後，
+    // 才用一句人話問要不要開通知，不在開 App 時就問。
+    try { if (window.MuneaNotify) window.MuneaNotify.askInContext('medication'); } catch (e) {}
   });
   if ($('#medEntryStatus')) $('#medEntryStatus').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
   if ($('#medTileBtn')) $('#medTileBtn').addEventListener('click', () => { renderMedList(); $('#medMgrModal').classList.add('show'); });
@@ -12579,6 +12522,8 @@ function init() {
     resetVisitLead();
     toast(muneaT('visit.savedToast', '好，「{title}」{label}記下了，{companion}會{lead}提醒你',
       { title, label, companion: cname(), lead: visitLeadSpoken(visit.remindBefore) }));
+    // 看診提醒建立成功，一樣接「需要時才問」通知（2026-11-09）
+    try { if (window.MuneaNotify) window.MuneaNotify.askInContext('clinic'); } catch (e) {}
   });
   renderVisitRow();
   refreshRoutineRemindersFromBackend();
@@ -13455,13 +13400,6 @@ function init() {
       postTurnReview();
     }
   }
-  // 全滿出口「先用文字聊」的送出／面板事件綁定（函式本體移到頂層 scope，見 showCallStatusCard 附近——
-  // connectCall() 是頂層函式，需要在真的要撥號前呼叫 exitTextFallbackChat() 收面板，兩邊都要拿得到）。
-  window.__muneaSendTextFallback = sendTextFallbackMessage;   // 供 Chrome MCP／自動測試直接觸發送出
-  if ($('#textChatSend')) $('#textChatSend').addEventListener('click', sendTextFallbackMessage);
-  if ($('#textChatInput')) $('#textChatInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextFallbackMessage(); }
-  });
   function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -13492,12 +13430,9 @@ function init() {
         durationMs,
       });
       setLocalizedCallHint('unavailable');
-      const s = prompt(muneaT(
-        'voice.runtime.textFallbackPrompt',
-        '我先用文字接住你，想跟{companion}說什麼？',
-        { companion: companionDisplayName },
-      ));
-      if (s) chatHandle(s);
+      // 2026-11-09 Edward 拍板：Munea 只有語音，拿掉系統文字輸入框後備——
+      // 改成清楚的提示卡＋「再試一次」，按下去會重新呼叫 startVoiceCapture() 收音。
+      showCallStatusCard('microphoneBlocked');
     }
     setFaceState('idle');
   }
@@ -13505,12 +13440,8 @@ function init() {
   let mediaRec = null, mediaChunks = [], mediaStartedAt = 0;
   async function startVoiceCapture() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      const s = prompt(muneaT(
-        'voice.runtime.deviceTextFallbackPrompt',
-        '這個裝置暫時無法使用語音，我們先用文字。想跟{companion}說什麼？',
-        { companion: companionDisplayName },
-      ));
-      if (s) chatHandle(s);
+      // 這個裝置完全沒有錄音能力：一樣用提示卡講清楚，不再跳系統文字輸入框（2026-11-09）
+      showCallStatusCard('microphoneBlocked');
       return;
     }
     try {
@@ -13533,12 +13464,8 @@ function init() {
       setLocalizedRuntimeHint('recordingTapWhenDone');
     } catch (e) {
       setLocalizedRuntimeHint('microphonePermission');
-      const s = prompt(muneaT(
-        'voice.runtime.microphoneTextFallbackPrompt',
-        '想跟{companion}說什麼？',
-        { companion: companionDisplayName },
-      ));
-      if (s) chatHandle(s);
+      // 拿不到麥克風（被擋或使用者取消授權）：提示卡＋再試一次，不再跳系統文字輸入框（2026-11-09）
+      showCallStatusCard('microphoneBlocked');
     }
   }
   let micMuted = false;

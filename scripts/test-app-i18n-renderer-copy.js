@@ -66,7 +66,6 @@ for (const locale of LOCALES) {
   });
   assert.equal(preparing.action, 'cancel');
   assert.equal(preparing.position, '');
-  assert.equal(preparing.showTextFallback, false);
   assert.ok(preparing.title.includes('Ning'));
 
   const queued = copy.queueCard({
@@ -81,7 +80,6 @@ for (const locale of LOCALES) {
 
   const full = copy.queueCard({ mode: 'full', companion: 'Ning' });
   assert.equal(full.action, 'dismiss');
-  assert.equal(full.showTextFallback, true);
   assert.ok(full.note.includes('Ning'));
 
   assert.equal(copy.authMessage('idle'), '');
@@ -116,6 +114,7 @@ for (const locale of LOCALES) {
     'activationPending',
     'authExpired',
     'disconnected',
+    'microphoneBlocked',
     'microphoneHttps',
     'microphonePermission',
     'readinessPending',
@@ -127,6 +126,8 @@ for (const locale of LOCALES) {
     assert.ok(status.title && status.note && status.button);
   }
   assert.equal(copy.callStatus('authExpired').action, 'reopen-auth');
+  // 麥克風受阻的提示卡＝「再試一次」就是重新收音，不是知道了就收掉（2026-11-09）
+  assert.equal(copy.callStatus('microphoneBlocked').action, 'retry-microphone');
   assert.equal(copy.callStatus('not-a-state').action, 'dismiss');
 
   const buy = copy.purchaseButton({ credits: 200, price, state: 'ready' });

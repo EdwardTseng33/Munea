@@ -935,6 +935,103 @@ window.MuneaNotify = (function () {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootWhenReady);
   else setTimeout(bootWhenReady, 0);
 
+  // ===== 場景化通知邀請：需要時才問（2026-11-09 Edward 拍板 A 案） =====
+  // 背景：推播預設關、只有使用者自己到「設定→通知中心」打開總開關才會跳 iPhone 授權視窗——
+  // 結果正式環境 0 台裝置登記，吃藥提醒推播、家人消息全都送不到。改成在「剛做完一件看得懂
+  // 為什麼要開通知」的當下才問：先出一張 App 自己的說明卡（不是系統視窗），按「好」才真的去
+  // 跑系統授權流程；按「先不要」同一個理由 7 天內不再問；iOS 已經 denied 就不再跳說明卡，
+  // 改成溫和提示可以去系統設定開。Android／瀏覽器沒有這支原生外掛（iOS-only），直接安靜結束。
+  var ASK_IN_CONTEXT_THROTTLE_PREFIX = 'munea.notification.askInContext.';
+  var ASK_IN_CONTEXT_THROTTLE_MS = 7 * 24 * 60 * 60 * 1000;
+  function askInContextThrottled(reasonKey) {
+    try {
+      var at = Number(localStorage.getItem(ASK_IN_CONTEXT_THROTTLE_PREFIX + reasonKey) || 0);
+      return at > 0 && (Date.now() - at) < ASK_IN_CONTEXT_THROTTLE_MS;
+    } catch (e) { return false; }
+  }
+  function setAskInContextThrottle(reasonKey) {
+    try { localStorage.setItem(ASK_IN_CONTEXT_THROTTLE_PREFIX + reasonKey, String(Date.now())); } catch (e) {}
+  }
+
+  // reasonKey → 說明卡那句「為什麼要開」。另一位同事做緊急聯絡人功能時會呼叫
+  // askInContext('safetyContact')，先把這個理由的文案備好；不認得的 reasonKey 走預設句。
+  function askInContextBody(reasonKey) {
+    if (reasonKey === 'medication') return t('notification.askInContext.medicationBody', '要在吃藥時間提醒你，需要先打開通知。');
+    if (reasonKey === 'clinic') return t('notification.askInContext.clinicBody', '要在回診前提醒你，需要先打開通知。');
+    if (reasonKey === 'safetyContact') return t('notification.askInContext.safetyContactBody', '要在需要留意時通知你選定的家人，需要先打開通知。');
+    return t('notification.askInContext.defaultBody', '要能提醒你，需要先打開通知。');
+  }
+
+  function ensureAskInContextModal() {
+    var mask = document.getElementById('pushAskModal');
+    if (mask) return mask;
+    mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.id = 'pushAskModal';
+    mask.setAttribute('aria-hidden', 'true');
+    mask.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="pushAskTitle">'
+      + '<div class="modal-grab"></div>'
+      + '<h2 id="pushAskTitle">' + escapeHtml(t('notification.askInContext.title', '開啟通知')) + '</h2>'
+      + '<p class="modal-sub" id="pushAskBody"></p>'
+      + '<button class="modal-btn" id="pushAskAccept" type="button"></button>'
+      + '<button class="modal-btn quiet" id="pushAskDecline" type="button" style="margin-top:10px"></button>'
+      + '</div>';
+    document.body.appendChild(mask);
+    mask.addEventListener('click', function (event) { if (event.target === mask) closeAskInContextModal(); });
+    return mask;
+  }
+
+  function closeAskInContextModal() {
+    var mask = document.getElementById('pushAskModal');
+    if (mask) { mask.classList.remove('show'); mask.setAttribute('aria-hidden', 'true'); }
+  }
+
+  // 真正開通知：跟「設定→通知中心」手動開總開關走同一條路（saveNotificationSettings／
+  // requestPermission／enablePushNow），差別只是觸發時機不同；拿不到授權就記「想開」意向，
+  // 使用者之後去 iPhone 設定打開、回到沐寧會自動接上（既有 resumePermissionSync 機制）。
+  async function askInContext(reasonKey) {
+    if (!plugin()) return;                  // Android／瀏覽器沒有這支原生外掛，安靜結束
+    if (notificationMasterOn()) return;      // 已經開了，什麼都不用做
+    await refreshPermission();
+    if (_permission.status === 'denied') {
+      if (askInContextThrottled(reasonKey)) return;
+      setAskInContextThrottle(reasonKey);
+      reportPushDiagnostic('push_ask_denied_hint_shown', { reason: reasonKey });
+      if (typeof window.__muneaToast === 'function') {
+        window.__muneaToast(t('notification.askInContext.deniedHint', '通知目前是關閉的，可以到 iPhone 設定裡打開'));
+      }
+      return;
+    }
+    if (askInContextThrottled(reasonKey)) return;
+    var mask = ensureAskInContextModal();
+    var body = mask.querySelector('#pushAskBody');
+    var accept = mask.querySelector('#pushAskAccept');
+    var decline = mask.querySelector('#pushAskDecline');
+    if (body) body.textContent = askInContextBody(reasonKey);
+    if (accept) accept.textContent = t('notification.askInContext.accept', '好，開通知');
+    if (decline) decline.textContent = t('notification.askInContext.decline', '先不要');
+    mask.classList.add('show');
+    mask.setAttribute('aria-hidden', 'false');
+    reportPushDiagnostic('push_ask_shown', { reason: reasonKey });
+    if (accept) accept.onclick = async function () {
+      if (accept) accept.onclick = null;
+      if (decline) decline.onclick = null;
+      closeAskInContextModal();
+      reportPushDiagnostic('push_ask_accepted', { reason: reasonKey });
+      if (_permission.granted) { await enablePushNow(); return; }
+      await requestPermission();
+      if (_permission.granted) await enablePushNow();
+      else setEnableIntent();
+    };
+    if (decline) decline.onclick = function () {
+      if (accept) accept.onclick = null;
+      if (decline) decline.onclick = null;
+      closeAskInContextModal();
+      setAskInContextThrottle(reasonKey);
+      reportPushDiagnostic('push_ask_declined', { reason: reasonKey });
+    };
+  }
+
   return {
     available: function () { return !!plugin(); },
     boot: boot,
@@ -946,6 +1043,7 @@ window.MuneaNotify = (function () {
     list: function (options) { return api('/notifications', Object.assign({ action: 'list' }, options || {})); },
     mark: function (id, action) { return api('/notifications', { id: id, action: action || 'read' }); },
     openInbox: openNotificationInbox,
-    unregisterBeforeSignOut: unregisterBeforeSignOut
+    unregisterBeforeSignOut: unregisterBeforeSignOut,
+    askInContext: askInContext
   };
 })();

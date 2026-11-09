@@ -89,9 +89,8 @@
       "voice.runtime.recoveredBody",
       "voice.runtime.degradedTitle",
       "voice.runtime.degradedBody",
-      "voice.runtime.textFallbackPrompt",
-      "voice.runtime.deviceTextFallbackPrompt",
-      "voice.runtime.microphoneTextFallbackPrompt",
+      "voice.call.microphoneBlockedTitle",
+      "voice.call.microphoneBlockedNote",
       "voice.fallback"
     ],
     "family": [
@@ -150,6 +149,7 @@
       "voice.call.unavailable",
       "voice.call.retryLater",
       "voice.call.microphonePermissionTitle",
+      "voice.call.microphoneBlockedTitle",
       "voice.call.authExpiredTitle",
       "voice.call.disconnectedTitle",
       "family.noActivities",

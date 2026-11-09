@@ -77,6 +77,12 @@
       title: 'voice.call.microphoneHttpsTitle',
       note: 'voice.call.microphoneHttpsNote',
     }),
+    microphoneBlocked: Object.freeze({
+      title: 'voice.call.microphoneBlockedTitle',
+      note: 'voice.call.microphoneBlockedNote',
+      button: 'common.retry',
+      action: 'retry-microphone',
+    }),
     microphonePermission: Object.freeze({
       title: 'voice.call.microphonePermissionTitle',
       note: 'voice.call.microphonePermissionNote',
@@ -158,7 +164,6 @@
           button: t('common.okay'),
           note: t('voice.queue.fullBody', { companion }),
           position: '',
-          showTextFallback: true,
           title: t('voice.queue.fullTitle'),
         });
       }
@@ -170,7 +175,6 @@
         button: t('voice.queue.cancel'),
         note: t('voice.queue.note', { eta }),
         position: preparing ? '' : t('voice.queue.position', { count: position }),
-        showTextFallback: false,
         title: t(
           preparing
             ? 'voice.queue.preparingWithCompanion'

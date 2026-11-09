@@ -287,8 +287,6 @@ async function resetAndPrepareState(page, state) {
     if (toast) toast.classList.remove('show');
     const busy = $('#busyCard');
     if (busy) busy.hidden = true;
-    const textPanel = $('#textChatPanel');
-    if (textPanel) textPanel.hidden = true;
 
     // 開場三頁是蓋在最上層的覆蓋層，不是分頁裡的 .screen，所以不能走 setScreen
     if (requestedState === 'screen:onboarding-intro') {
@@ -331,13 +329,6 @@ async function resetAndPrepareState(page, state) {
       } else if (chatState === 'active') {
         caption.textContent = t('voice.runtime.listening', 'Listening');
         callLabel.textContent = t('voice.call.end', 'End call');
-      } else if (chatState === 'text-fallback') {
-        textPanel.hidden = false;
-        const input = $('#textChatInput');
-        input.placeholder = t('textChat.placeholder', 'Type what you would like to say');
-        input.setAttribute('aria-label', input.placeholder);
-        $('#textChatSend').textContent = t('textChat.send', 'Send');
-        caption.textContent = t('textChat.title', 'Continue by text');
       } else if (chatState === 'error') {
         busy.hidden = false;
         $('#busyCardTitle').textContent = t('voice.call.unavailable', 'Calling is unavailable');
