@@ -7015,10 +7015,31 @@ function pushOwnHealthLog(log) {
     const day = keys[keys.length - 1] || _todayISO();
     const current = (log || {})[day] || {};
     const mine = {};
-    // 7/16 心情真串接：今日粗心情標籤（只有詞＋色，不含聊天內容）跟健康數據走同一條家庭帳本水管
     const mood = myMoodToday();
     mine[personId] = Object.assign({ name: (pf.name || '').trim(), nick: (pf.nick || '').trim(), day, updatedAt: Date.now(), log }, current, mood ? { mood } : {});
     syncPush('vitals', mine);
+    maybeNotifySafetyContactsFromVitals(current);
+  } catch (e) {}
+}
+// 健康數據超出留意範圍時通知緊急聯絡人（2026-11-09）：warn 判定沿用「平安燈」同一套門檻
+// （vitalsToDisplay，定義在 init() 裡，透過 window.__muneaVitalsToDisplay 匯出給這支頂層函式用），
+// 不在這裡另開一套數字，避免兩套門檻日後各自改、彼此飄掉。只送「category=vitals」這個粗分類，
+// 不把血壓/心率等數值帶進請求——伺服器那邊組文案本來就不碰這些數值。
+function maybeNotifySafetyContactsFromVitals(current) {
+  try {
+    const toDisplay = window.__muneaVitalsToDisplay;
+    const d = typeof toDisplay === 'function' ? toDisplay(current) : null;
+    const spo2Low = !!(+((current || {}).spo2) && +current.spo2 < 90);
+    if (d && ((d.bp && d.bp.warn) || (d.hr && d.hr.warn) || spo2Low)) requestSafetyAlert('vitals');
+  } catch (e) {}
+}
+function requestSafetyAlert(category) {
+  if (!isLoggedIn()) return;
+  try {
+    let contacts = [];
+    try { contacts = JSON.parse(localStorage.getItem('munea.safetyContacts') || '[]'); } catch (e) {}
+    if (!Array.isArray(contacts) || !contacts.length) return;
+    brainPost('/safety-alert', { category, familyGroupId: famGroupId(), personId: muneaCloudPersonId() }).catch(() => {});
   } catch (e) {}
 }
 // 自己的今日心情摘要（loadMoodWeekReal 寫入）：只留 {label, key, date} 粗標籤、觀察細節不出這支手機
@@ -9997,6 +10018,7 @@ function init() {
     if (steps) d.steps = Math.round(steps).toLocaleString();
     return (d.bp || d.hr || d.spo2 || d.sleep || d.steps) ? d : null;
   }
+  window.__muneaVitalsToDisplay = vitalsToDisplay;  // 讓頂層的 maybeNotifySafetyContactsFromVitals 共用同一套 warn 門檻（2026-11-09）
   function renderPersonStats(p) {
     const grid = $('#personGrid');
     if (!grid) return;
@@ -12617,44 +12639,88 @@ function init() {
   });
   applyFontScale();
   // 條款／隱私閱讀器由最早期控制綁定，避免其他初始化失敗時連返回都不能操作。
-  // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常時通知他們確認
-  // 名單直接吃「設定 → 全家健康圈」同一份資料（單一真相）；圈裡移除了人，這裡自動跟著消失
-  function safetyMembers() { return loadCircle().filter(m => !m.self); }
+  // 安全通知：選 1~3 位家庭圈家人當緊急聯絡人，健康數據危險異常或通話中有讓人擔心的狀況時通知他們
+  // 2026-11-09：名單改存 personId（不是名字）＋同步到伺服器（/safety-contacts），伺服器驗證
+  // 對方確實在同一個家庭圈。只能選「已經真的加入健康圈」的家人（有 personId）——還沒接受邀請的人
+  // 沒有身分，沒法真的通知到，也就不給選。
+  function safetyMembers() { return loadCircle().filter(m => !m.self && m.personId); }
+  let _safetyReadiness = {};
   function loadSafety() {
     try {
       const raw = JSON.parse(localStorage.getItem('munea.safetyContacts')) || [];
-      const valid = new Set(safetyMembers().map(m => m.name));
-      const sel = raw.filter(n => valid.has(n));
-      if (sel.length !== raw.length) localStorage.setItem('munea.safetyContacts', JSON.stringify(sel));
+      const mem = safetyMembers();
+      const validIds = new Set(mem.map(m => m.personId));
+      const migrated = raw.map(item => {
+        if (validIds.has(item)) return item;
+        const byName = mem.find(m => m.name === item);
+        return byName ? byName.personId : null;
+      }).filter(Boolean);
+      const sel = [...new Set(migrated)].slice(0, 3);
+      if (JSON.stringify(sel) !== JSON.stringify(raw)) { try { localStorage.setItem('munea.safetyContacts', JSON.stringify(sel)); } catch (e2) {} }
       return sel;
     } catch (e) { return []; }
   }
-  function updateSafetyCount() { const el = $('#safetyCount'); if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.join('、') : ''; } }
+  function safetyContactName(pid) { const m = safetyMembers().find(x => x.personId === pid); return m ? m.name : ''; }
+  function updateSafetyCount() {
+    const el = $('#safetyCount');
+    if (el) { const sel = loadSafety(); el.textContent = sel.length ? sel.map(safetyContactName).filter(Boolean).join('、') : ''; }
+  }
+  function renderSafetyHints() {
+    const sel = loadSafety();
+    document.querySelectorAll("#safetyPicks .safety-pick").forEach(btn => {
+      const pid = btn.dataset.id;
+      const nameEl = btn.querySelector(".sp-name");
+      if (!nameEl) return;
+      const existing = nameEl.querySelector(".sp-hint");
+      if (existing) { existing.parentNode.removeChild(existing); }
+      if (sel.includes(pid) && _safetyReadiness[pid] === false) {
+        const span = document.createElement("span");
+        span.className = "sp-hint";
+        span.textContent = muneaT("safety.contactNotReady", "他的手機還沒開通知，可能只會在App裡看到");
+        nameEl.appendChild(span);
+      }
+    });
+  }
+  function refreshSafetyReadiness() {
+    if (!isLoggedIn()) return;
+    brainPost("/safety-contacts", { action: "load", familyGroupId: famGroupId(), personId: muneaCloudPersonId() }).then(data => {
+      if (data && data.readiness) { _safetyReadiness = data.readiness; renderSafetyHints(); }
+    }).catch(() => {});
+  }
   function renderSafety() {
     const picks = $('#safetyPicks'); if (!picks) return;
     const sel = loadSafety();
     const mem = safetyMembers();
     picks.innerHTML = mem.length ? mem.map(m =>
-      '<button type="button" class="safety-pick' + (sel.includes(m.name) ? ' on' : '') + '" data-name="' + m.name + '">' +
+      '<button type="button" class="safety-pick' + (sel.includes(m.personId) ? ' on' : '') + '" data-id="' + m.personId + '">' +
       '<span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + (m.init || (m.name || '')[0] || '') + '</span><span class="sp-name">' + m.name + '</span>' +
       '<span class="sp-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span></button>').join('')
       : '<p class="modal-sub" style="margin:4px 0 0">' + muneaT('familyCircle.emptyContactPick', '圈裡還沒有家人。先到「家人」頁邀請家人加入，就能選緊急聯絡人。') + '</p>';
     updateSafetyCount();
+    refreshSafetyReadiness();
   }
   if ($('#safetyPicks')) $('#safetyPicks').addEventListener('click', e => {
     const b = e.target.closest('.safety-pick'); if (!b) return;
-    let sel = loadSafety(); const name = b.dataset.name;
-    if (sel.includes(name)) sel = sel.filter(n => n !== name);
-    else { if (sel.length >= 3) { toast(muneaT('safety.maxContactsToast', '最多選 3 位緊急聯絡人')); return; } sel.push(name); }
+    let sel = loadSafety(); const pid = b.dataset.id;
+    if (sel.includes(pid)) sel = sel.filter(n => n !== pid);
+    else { if (sel.length >= 3) { toast(muneaT('safety.maxContactsToast', '最多選 3 位緊急聯絡人')); return; } sel.push(pid); }
     try { localStorage.setItem('munea.safetyContacts', JSON.stringify(sel)); } catch (e2) {}
-    b.classList.toggle('on', sel.includes(name));
+    b.classList.toggle('on', sel.includes(pid));
     updateSafetyCount();
+    renderSafetyHints();
   });
   if ($('#safetyRow')) $('#safetyRow').addEventListener('click', () => { renderSafety(); $('#safetyModal').classList.add('show'); });
   if ($('#safetySave')) $('#safetySave').addEventListener('click', () => {
     $('#safetyModal').classList.remove('show');
     const sel = loadSafety();
-    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。', { names: sel.join(muneaListSeparator()) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
+    const names = sel.map(safetyContactName).filter(Boolean);
+    toast(sel.length ? muneaT('safety.contactsSavedToast', '名單記好了：{names}。', { names: names.join(muneaListSeparator()) }) : muneaT('safety.contactsNoneToast', '還沒選聯絡人，等你想好再設定就好'));
+    if (isLoggedIn()) {
+      brainPost('/safety-contacts', { action: 'save', familyGroupId: famGroupId(), personId: muneaCloudPersonId(), contactPersonIds: sel }).then(data => {
+        if (data && Array.isArray(data.contactPersonIds)) { try { localStorage.setItem('munea.safetyContacts', JSON.stringify(data.contactPersonIds)); } catch (e) {} }
+        if (data && data.readiness) { _safetyReadiness = data.readiness; renderSafetyHints(); }
+      }).catch(() => {});
+    }
   });
   if ($('#safetyModal')) $('#safetyModal').addEventListener('click', e => { if (e.target === $('#safetyModal')) $('#safetyModal').classList.remove('show'); });
   updateSafetyCount();

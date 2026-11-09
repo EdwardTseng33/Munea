@@ -233,6 +233,13 @@
       "filename": "031_fix_free_account_retention_delete.sql",
       "type": "schema",
       "sha256": "74140bb87e88908cd082313356d669dc53623cdc8bd01dcf6ca62378869772aa"
+    },
+    {
+      "order": 32,
+      "identity": "032",
+      "filename": "032_safety_contacts_state_key.sql",
+      "type": "schema",
+      "sha256": "18777783c96dfa98c2d3d778e9977eb793ecfc9252e484b0e3f8edbf93ade6ac"
     }
   ]
 }

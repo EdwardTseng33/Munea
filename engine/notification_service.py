@@ -101,6 +101,48 @@ GENERIC_TITLE = GENERIC_COPY["zh-TW"]["title"]
 GENERIC_BODY = GENERIC_COPY["zh-TW"]["body"]
 
 
+# health_alert（2026-11-09 緊急聯絡人通知）：鎖定畫面一律用 HEALTH_ALERT_PUBLIC_BODY（完全通用，
+# 不帶任何健康數值／逐字稿／長輩姓名），解鎖後在通知中心看到的 title/body 才用這兩張表（帶長輩稱呼，
+# 但同樣不帶數值或逐字稿——category 只分「通話中讓人擔心」vs「健康數據異常」兩種，不細分到底是什麼症狀，
+# 避免被滑過手機的人看到會引發恐慌或曝露隱私的內容）。
+HEALTH_ALERT_PUBLIC_BODY = {
+    "zh-TW": "家人的健康有提醒，解鎖後查看。",
+    "en": "There's a health check-in alert from your family. Unlock to view.",
+    "ja": "ご家族の健康に関するお知らせです。ロックを解除して確認してください。",
+    "es": "Hay un aviso de salud de un familiar. Desbloquea para verlo.",
+}
+
+HEALTH_ALERT_TITLES = {
+    "guardian": {
+        "zh-TW": "沐寧提醒：{name}可能需要關心",
+        "en": "Munea alert: {name} may need a check-in",
+        "ja": "Muneaからのお知らせ：{name}さんが心配な様子です",
+        "es": "Aviso de Munea: {name} puede necesitar que lo contactes",
+    },
+    "vitals": {
+        "zh-TW": "沐寧提醒：{name}的健康數據有異常",
+        "en": "Munea alert: {name}'s health numbers look unusual",
+        "ja": "Muneaからのお知らせ：{name}さんの健康データに変化があります",
+        "es": "Aviso de Munea: los datos de salud de {name} se ven distintos a lo habitual",
+    },
+}
+
+HEALTH_ALERT_BODIES = {
+    "guardian": {
+        "zh-TW": "剛剛通話中，有些話讓人有點擔心。方便的話，打個電話關心一下，或到App裡看看近況。真的危急的話，請直接聯絡當地的緊急服務。",
+        "en": "During a recent call, something {name} said sounded concerning. When you can, give them a call or check the app for more. If this looks like a real emergency, contact local emergency services right away.",
+        "ja": "さきほどの通話で、{name}さんの話に少し心配な内容がありました。都合がよければ電話で様子を聞いてみてください。アプリでも近況が見られます。本当に危険な状況だと思われる場合は、すぐに地域の緊急窓口に連絡してください。",
+        "es": "Durante una llamada reciente, algo que dijo {name} pareció preocupante. Cuando puedas, llámalo o revisa la app para más detalles. Si parece una emergencia real, contacta de inmediato con los servicios de emergencia locales.",
+    },
+    "vitals": {
+        "zh-TW": "最近一次健康數據超出平常留意的範圍。方便的話，打個電話關心一下，或到App裡看看近況。數據可能有延遲，有狀況還是打電話問他本人最準。",
+        "en": "A recent health reading from {name} was outside their usual range. When you can, give them a call or check the app for details. Readings can be delayed, so calling them directly is the most reliable way to check in.",
+        "ja": "最近の健康データが、いつもと違う値になっています。都合がよければ電話で様子を聞いてみてください。アプリでも近況が見られます。データには遅れが出ることがあるので、本人に直接聞くのが一番確実です。",
+        "es": "Una lectura reciente de salud de {name} estuvo fuera de su rango habitual. Cuando puedas, llámalo o revisa la app para más detalles. Las lecturas pueden tener retraso, así que llamarlo directamente es la forma más segura de saber cómo está.",
+    },
+}
+
+
 def utc_now():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -132,6 +174,24 @@ def family_relay_copy(sender_label=None, locale=None):
         "title": titles[locale],
         "publicTitle": copy["title"],
         "publicBody": copy["familyRelayPublicBody"],
+    }
+
+
+def health_alert_copy(category=None, elder_label=None, locale=None):
+    """緊急聯絡人通知文案——category 只收 'guardian'（通話守護腦 high/critical）或
+    'vitals'（健康數據超出留意範圍），帶不進來的值一律退回 'guardian'。
+    title/body 不放健康數值、不放通話逐字稿；public_* 進一步收斂成完全通用的句子（鎖定畫面用）。"""
+    locale = notification_locale(locale)
+    category = category if category in HEALTH_ALERT_TITLES else "guardian"
+    copy = generic_copy(locale)
+    name = _text(elder_label, 40, FAMILY_SENDER_FALLBACK[locale])
+    title = HEALTH_ALERT_TITLES[category][locale].format(name=name)
+    body = HEALTH_ALERT_BODIES[category][locale].format(name=name)
+    return {
+        "title": title,
+        "body": body,
+        "publicTitle": copy["title"],
+        "publicBody": HEALTH_ALERT_PUBLIC_BODY[locale],
     }
 
 

@@ -233,6 +233,12 @@
           "sha256": "74140bb87e88908cd082313356d669dc53623cdc8bd01dcf6ca62378869772aa",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+        },
+        {
+          "filename": "032_safety_contacts_state_key.sql",
+          "sha256": "18777783c96dfa98c2d3d778e9977eb793ecfc9252e484b0e3f8edbf93ade6ac",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {

@@ -482,9 +482,26 @@ window.MuneaNotify = (function () {
     if (row) row.click();
   }
 
+  // 2026-11-09：名單改存 personId，這裡要對回 munea.circleMembers 的名字才能顯示
+  // （跟 app.js 的 safetyContactName() 同一份資料源、各自用自己的 localStorage 讀法，不互相 import）。
   function safetyContactNames() {
-    try { return (JSON.parse(localStorage.getItem('munea.safetyContacts')) || []).filter(function (n) { return typeof n === 'string' && n; }); }
-    catch (e) { return []; }
+    try {
+      var ids = JSON.parse(localStorage.getItem('munea.safetyContacts')) || [];
+      if (!Array.isArray(ids)) return [];
+      var members = [];
+      try { members = JSON.parse(localStorage.getItem('munea.circleMembers')) || []; } catch (e2) {}
+      if (!Array.isArray(members)) members = [];
+      var names = [];
+      for (var i = 0; i < ids.length; i++) {
+        var pid = ids[i];
+        var found = null;
+        for (var j = 0; j < members.length; j++) {
+          if (members[j] && members[j].personId === pid) { found = members[j]; break; }
+        }
+        if (found && found.name) names.push(found.name);
+      }
+      return names;
+    } catch (e) { return []; }
   }
 
   function renderNotificationSettings() {

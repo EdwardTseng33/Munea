@@ -3368,6 +3368,59 @@ class SupabaseAdapter:
         )
         return self.push_device_row_to_device(rows[0]) if rows else None
 
+    def family_group_id_for_person(self, person_id):
+        """這個人掛在哪個家庭圈——緊急聯絡人派送（dispatch_safety_alert）只有 person_id，
+        沒帶 family_group_id 時用這支補（唯讀、service role 本來就不受 RLS 限制，查別人帳號底下的
+        family_memberships 沒問題——這支只回一個 UUID，不洩任何個資）。"""
+        if not self.enabled() or not self._is_uuid(person_id or ""):
+            return None
+        row = self._first("family_memberships", {
+            "person_id": f"eq.{person_id}", "select": "family_group_id", "limit": "1",
+        })
+        return (row or {}).get("family_group_id")
+
+    def person_label(self, person_id):
+        """緊急聯絡人通知文案要怎麼稱呼這位長輩——本人填過的稱呼/名稱優先，沒填就退到
+        persons.relationship（跟既有 create_family_relay 的 sender_person.get('display_name') or
+        sender_person.get('relationship') 同一套退路，差別是這裡優先 profile_name/nickname：
+        persons.display_name 實際存的是 AI 陪伴角色名稱、不是本人姓名，不適合拿來叫長輩）。"""
+        if not self.enabled() or not self._is_uuid(person_id or ""):
+            return ""
+        person = self._first("persons", {
+            "id": f"eq.{person_id}",
+            "select": "profile_name,nickname,display_name,relationship",
+        }) or {}
+        label = (
+            person.get("profile_name") or person.get("nickname")
+            or person.get("display_name") or person.get("relationship") or ""
+        )
+        return str(label).strip()
+
+    def push_readiness_for_persons(self, person_ids):
+        """這幾個 person_id 裡誰至少有一台「推播送得到」的手機（notifications_enabled、
+        permission 已授權、沒被標失效）——只回 True/False，不回 token／裝置細節。給緊急聯絡人
+        選人畫面用的誠實提示（『他的手機還沒開通知』），不是給聯絡人的個資查詢。
+        跨帳號查（聯絡人通常是另一個 Supabase 帳號）：service role 本來就不受 RLS 限制，
+        push_devices 本身 revoke all from anon/authenticated，只有這條服務端路徑能查。"""
+        if not self.enabled() or not person_ids:
+            return {}
+        ids = [pid for pid in person_ids if self._is_uuid(pid or "")]
+        if not ids:
+            return {}
+        id_str = ",".join(ids)
+        try:
+            rows = self._select("push_devices", {
+                "person_id": f"in.({id_str})",
+                "notifications_enabled": "eq.true",
+                "permission_status": "in.(authorized,provisional)",
+                "invalidated_at": "is.null",
+                "select": "person_id",
+            })
+        except Exception:
+            return {}
+        ready = {r.get("person_id") for r in (rows or []) if r.get("person_id")}
+        return {pid: (pid in ready) for pid in person_ids}
+
     def enqueue_notification_event(self, event):
         if not self.enabled():
             return None
