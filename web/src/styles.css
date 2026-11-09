@@ -2355,6 +2355,7 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 .safety-pick .sp-check .ic { width: 13px; height: 13px; color: #fff; stroke: #fff; }
 .safety-pick.on { border-color: var(--teal); background: var(--mint); }
 .safety-pick.on .sp-check { display: grid; }
+.safety-pick .sp-hint { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 2px; }
 
 .safety-triggers { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .safety-triggers li { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--ink); line-height: 1.4; }

@@ -1,5 +1,18 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-09 卡西法｜🔔 1.0.72 緊急聯絡人真的通知家人（PR · call-path risk：動到 engine/live_voice_server.py）
+
+- **為什麼**：「安全通知」畫面原本只存在長輩手機 localStorage、伺服器完全不知道，沒有任何通知流程。Edward 拍板這版要做出真的通知。
+- **觸發來源**：① 守護腦 high/critical 且 `familyNotificationCandidate` 為真（通話中講到危急狀況，保護事件/家暴類已被既有判準排除、不自動通知家庭圈）；② App 端偵測到自己的健康數據超出「平安燈」同一套 warn 門檻（血壓/心率/血氧，`vitalsToDisplay`）。兩者都呼叫 `server.dispatch_safety_alert(elder_person_id, category)`。
+- **名單**：長輩選的聯絡人改存 personId（不是名字），存在 `family_state_entries` 既有的 `safetyContacts` 鑰匙裡（跟 `vitals` 同一套「整家一筆、按人合併」慣例，沒開新表）。存檔時伺服器驗證每個 personId 真的是同一個家庭圈成員（`load_family_members`）、排除自己、最多 3 位；查不到成員名單時整批不收（寧可少收不收錯人）。
+- **去重／限頻**：30 分鐘時間桶拼進 `dedupeKey`，同一位長輩對同一位聯絡人、同一類事件 30 分鐘內只真的排一次推播（沿用 `enqueue_notification_event` 既有的 on-conflict-do-nothing 機制，沒有另開節流邏輯）。
+- **文案**：鎖定畫面一律用完全通用句（不帶長輩名字、不帶健康數值、不帶逐字稿）；解鎖後的通知內容只分 `guardian`／`vitals` 兩個粗分類，一樣不帶數值或逐字稿。四語新增 `safety.contactNotReady`；順手把 `safety.checkInFlow`／`legacyUi.safetyStep1`／`legacyUi.safetyLog`／`legacyUi.safetyDescription`／`safety.triggerBloodPressure` 幾句舊文案改成跟現在真的做出來的行為一致（原本寫「{companion}先關心你確認還好嗎」是沒做的功能；血壓門檻文字寫「180」跟實際門檻 140/90 不符），並修掉西語 `safety.contactsSavedToast` 裡一句做不到的「立即通知」承諾。
+- **新端點**：`POST /safety-contacts`（選人讀寫＋每位聯絡人的推播就緒狀態 readiness）、`POST /safety-alert`（App 端健康數據觸發，只收 `category=vitals`——`guardian` 類別只走伺服器內部呼叫，不開放公開端點冒用）。
+- **SQL**：`supabase/sql/032_safety_contacts_state_key.sql`——`family_state_entries` 的 state_key 白名單加 `safetyContacts`（跟著 008/011 同招）。⚠ **還沒在正式 Supabase 跑過**（Edward 目前登不進正式庫）；沒跑之前 `save_family_state_entry` 會撞 23514、既有機制已接住退回本機 json，不會炸。已登記進 `migration-manifest.json`／`deployment-ledger.json`（status unknown、blocker not_yet_applied_to_tokyo_pending_manual_run）。
+- **測試**：`engine/test_safety_contacts_notify.py` 新增 16 案（選人驗證／存檔合併／去重／鎖屏無敏感內容／守護腦 hook 4 情境含「dispatch 壞掉也不拋例外」）；`npm run test:ui-contracts`／`test:supabase-governance`／`test:api-contracts`／`test:product-alignment`／`engine/test_notification_settings.py`／`test_notification_platform.py`／`test_voice_guardian_loop.py` 全綠。`docs/API-CONTRACT-INVENTORY.json` 用 `write` 模式重生成（103 brain routes）。
+- **已知做不到／風險**：① 聯絡人沒開手機通知時，收到的推播實際上送不到——這種情況只會出現在 App 內通知中心，選人畫面會標「他的手機還沒開通知，可能只會在 App 裡看到」；② 正式庫 Supabase 還沒跑過 032 遷移，實際雲端行為要等 Edward 能登入後驗證；③ 本機／JSON 開發模式下，守護腦觸發的派送找不到 `familyGroupId` 時退回 `"shared"`，若那台裝置本地 `famGroupId()` 不是 `"shared"`（一般裝置會是），dev 模式會對不到同一包名單——正式 Supabase 模式不受影響（查真實 `family_memberships`）；④ 沒有實機通話驗證（`App E2E pending`，環境沒有實體 iPhone）。
+- **檔**：`engine/notification_service.py`、`engine/server.py`、`engine/supabase_adapter.py`、`engine/live_voice_server.py`、`engine/test_safety_contacts_notify.py`（新）、`web/src/app.js`、`web/src/notify.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`supabase/sql/032_safety_contacts_state_key.sql`（新）、`supabase/migration-manifest.json`、`supabase/deployment-ledger.json`、`docs/API-CONTRACT-INVENTORY.json`、`scripts/test_api_contract_inventory.py`、本看板。
+
 ### 2026-11-05 蘇菲｜🧹 B2B 宣稱對齊現況＋手機頂部「預約」被切修好（PR · 不碰 App 通話路徑）
 
 - **宣稱**（四語 `b2b-src/i18n`）：拿掉「即時通知家人與照護者／出事會叫人」——查證 `engine/live_voice_server.py` `guardian_record_and_alert`：高風險只記安全事件＋送內部 Slack，註解明寫「現在還沒有主動推播家人的功能」；改成「先關心本人＋家屬 App 看近況＋機構每月關懷與異常摘要」。「自研即時語音影像引擎」改「即時語音對話＋手機上即時畫出的臉」。「其他語言不支援」改「App 另有英日西版本」、拿掉台語進度。「2026 是政策大年」「長照 3.0（2026-07 上路）、每 3 年 6 萬」改成不會過期、不需查證的寫法。英日西角色名照 App：Nina／あかり／Lucía。

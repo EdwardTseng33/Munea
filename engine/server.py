@@ -964,9 +964,9 @@ def load_wellbeing_signals(person_id=None, limit=200):
     return signals[-limit:]
 
 
-FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "visits", "routine", "wallet", "circle", "vitals"}
+FAMILY_STATE_KEYS = {"activities", "familyFeed", "meds", "visit", "visits", "routine", "wallet", "circle", "vitals", "safetyContacts"}
 
-FAMILY_STATE_SUPABASE_KEYS = {"circle", "activities", "familyFeed", "meds", "visit", "routine", "wallet", "vitals"}  # 雲端桌子收的鑰匙（vitals 需 008 遷移；沒上桌前自動退引擎本子）
+FAMILY_STATE_SUPABASE_KEYS = {"circle", "activities", "familyFeed", "meds", "visit", "routine", "wallet", "vitals", "safetyContacts"}  # 雲端桌子收的鑰匙（vitals 需 008 遷移、safetyContacts 需 032 遷移；沒上桌前自動退引擎本子）
 
 def _looks_like_uuid(v):
     try:
@@ -1068,6 +1068,281 @@ def family_state_response(data):
         if isinstance(v, dict):
             merged[k] = v.get("value")
     return {"ok": True, "state": merged, "backend": backend_name}
+
+# ----------------------------------------------------------------------
+# 緊急聯絡人通知（2026-11-09 1.0.72）：長輩在「設定→安全通知」選的 1~3 位家人，真的同步到
+# 伺服器（存 personId、不是名字）＋真的在守護腦 high/critical 或健康數據超標時收到通知。
+# 存放位置刻意不開新表：沿用 family_state_entries 的 safetyContacts 鑰匙（跟 vitals 同一套
+# 「整家一筆、按人合併」慣例），只需要在 032 遷移把這把鑰匙加進白名單——SQL 還沒跑時，
+# save_family_state_entry 會撞 23514（check constraint 不認這把鑰匙），family_state_response
+# 既有的安靜退本機 json 機制已經接住，這裡不必再多包一層容錯。
+SAFETY_CONTACTS_MAX = 3
+SAFETY_ALERT_WINDOW_MINUTES = 30  # 同一位長輩對同一位聯絡人、同一類事件，30 分鐘內只送一次
+
+
+def load_safety_contacts_entry(family_group_id):
+    """讀這個家庭圈目前存的 {elderPersonId: [contactPersonId, ...]} 整包。"""
+    group = str(family_group_id or "shared")
+    use_supabase = _looks_like_uuid(group) or group == "shared"
+    if use_supabase:
+        try:
+            remote_state = data_backend().load_family_state_store(
+                family_group_id=group if _looks_like_uuid(group) else None,
+            )
+            ent = (remote_state or {}).get("safetyContacts")
+            if isinstance(ent, dict) and isinstance(ent.get("value"), dict):
+                return dict(ent["value"])
+        except Exception as e:
+            if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e) and "23514" not in str(e):
+                raise e
+            log_fallback_exception("load safety contacts from Supabase", e)
+    ent = (_family_state_json_all().get(group) or {}).get("safetyContacts") or {}
+    value = ent.get("value")
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def save_safety_contacts_entry(family_group_id, elder_person_id, contact_person_ids):
+    """合併存檔（跟 vitals 同招）：只覆蓋這位長輩自己那一條，不動家裡其他長輩的名單。"""
+    group = str(family_group_id or "shared")
+    group_uuid = group if _looks_like_uuid(group) else None
+    current = load_safety_contacts_entry(group)
+    current[elder_person_id] = list(contact_person_ids or [])
+    use_supabase = bool(group_uuid) or group == "shared"
+    if use_supabase:
+        try:
+            remote_entry = data_backend().save_family_state_entry(
+                "safetyContacts", current,
+                family_group_id=group_uuid, updated_by_person_id=elder_person_id,
+            )
+            if remote_entry is not None:
+                return True
+        except Exception as e:
+            if data_backend().enabled() and not is_missing_table_error(e) and "22P02" not in str(e) and "23514" not in str(e):
+                raise e
+            log_cloud_write_fallback("save safety contacts to Supabase", e)
+    allstate = _family_state_json_all()
+    g = allstate.setdefault(group, {})
+    g["safetyContacts"] = {"value": current, "updatedAt": utc_now()}
+    write_json_file(FAMILY_STATE_STORE_PATH, allstate)
+    return True
+
+
+def normalize_safety_contacts_selection(elder_person_id, family_group_id, contact_person_ids):
+    """驗證＋清洗：每個 contactId 必須真的是同一個家庭圈的成員、不能是自己、最多 3 位、不重複。
+    查不到成員名單（load_family_members 壞了／連不上）時一律當作沒有有效成員——寧可整批不收，
+    不要在驗證失效時還放行（緊急聯絡人這段寧可少收，不能收錯人）。"""
+    try:
+        members = load_family_members(family_group_id=family_group_id, limit=200) or []
+    except Exception as e:
+        log_fallback_exception("load family members for safety contacts validation", e)
+        members = []
+    valid_ids = {str(m.get("personId") or m.get("id") or "") for m in members}
+    valid_ids.discard("")
+    cleaned = []
+    for raw in contact_person_ids or []:
+        pid = str(raw or "").strip()
+        if not pid or pid == str(elder_person_id or "") or pid in cleaned or pid not in valid_ids:
+            continue
+        cleaned.append(pid)
+        if len(cleaned) >= SAFETY_CONTACTS_MAX:
+            break
+    return cleaned
+
+
+def safety_contacts_readiness(contact_person_ids):
+    """這幾位聯絡人誰的手機能收到推播——只回 True/False，給選人畫面的誠實提示用。"""
+    contact_person_ids = [str(pid) for pid in (contact_person_ids or []) if pid]
+    if not contact_person_ids:
+        return {}
+    backend = data_backend()
+    try:
+        if backend.enabled():
+            result = backend.push_readiness_for_persons(contact_person_ids)
+            if isinstance(result, dict):
+                return result
+    except Exception as e:
+        log_fallback_exception("check safety contact push readiness", e)
+    items = read_json_file(PUSH_DEVICES_PATH, [])
+    ready_ids = set()
+    for raw in items if isinstance(items, list) else []:
+        device = notification_service.normalize_device(raw)
+        if (
+            device.get("personId") in contact_person_ids
+            and device.get("notificationsEnabled")
+            and not device.get("invalidatedAt")
+            and device.get("permissionStatus") in ("authorized", "provisional")
+        ):
+            ready_ids.add(device.get("personId"))
+    return {pid: (pid in ready_ids) for pid in contact_person_ids}
+
+
+def _safety_actor_person_id(data):
+    """誰在存／查這份名單——一律以後端身分為準，不信任用戶端傳的 personId
+    （不然有人可以用自己的 App 把別人的緊急聯絡人名單蓋掉）。雲端沒配置（本機／測試）時
+    才退回 body 帶的 personId，跟其他既有端點同一套退路。"""
+    backend = data_backend()
+    if backend.enabled() and backend.person_id:
+        return str(backend.person_id)
+    return str((data or {}).get("personId") or (data or {}).get("person_id") or "").strip()
+
+
+def _family_group_id_for_person(person_id):
+    """猜這位的 family_group_id——守護腦背景任務手上只有 person_id，沒有 familyGroupId
+    可以帶。雲端模式查 family_memberships；本機／JSON 模式沒有 per-person 的分組記錄，
+    退回跟 /family/state 預設一致的 shared。"""
+    if not person_id:
+        return "shared"
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            group_id = backend.family_group_id_for_person(person_id)
+            if group_id:
+                return group_id
+    except Exception as e:
+        log_fallback_exception("resolve family group id for safety alert", e)
+    return "shared"
+
+
+def _safety_alert_elder_label(elder_person_id):
+    try:
+        backend = data_backend()
+        if backend.enabled():
+            label = backend.person_label(elder_person_id)
+            if label:
+                return label
+    except Exception as e:
+        log_fallback_exception("resolve elder label for safety alert", e)
+    return ""
+
+
+def _safety_alert_bucket():
+    """30 分鐘時間桶（UTC）——拼進 dedupeKey，讓同一類事件 30 分鐘內只真的送一次
+    （enqueue_notification_event 對同 recipientPersonId+dedupeKey 的事件本來就是
+    找到既有的就回既有的、不會多排一筆推播投遞，不必另外自己做節流判斷）。"""
+    now = datetime.now(timezone.utc)
+    bucket_minute = (now.minute // SAFETY_ALERT_WINDOW_MINUTES) * SAFETY_ALERT_WINDOW_MINUTES
+    return now.replace(minute=bucket_minute, second=0, microsecond=0).strftime("%Y%m%d%H%M")
+
+
+def dispatch_safety_alert(elder_person_id, category, family_group_id=None):
+    """守護網最後一段：elder_person_id 設定的緊急聯絡人每位各收一筆 health_alert。
+    全程 best-effort——這是多一道安全網，絕不能因為這段壞掉拖累呼叫端
+    （守護腦判讀背景任務／健康數據同步請求）。category 只收 guardian｜vitals，
+    不帶任何逐字稿或健康數值進事件內容。"""
+    elder_person_id = str(elder_person_id or "").strip()
+    if not elder_person_id or category not in ("guardian", "vitals"):
+        return {"queued": 0, "contactCount": 0}
+    group = family_group_id or _family_group_id_for_person(elder_person_id)
+    try:
+        entry = load_safety_contacts_entry(group)
+        contact_ids = entry.get(elder_person_id) or []
+        if not isinstance(contact_ids, list):
+            contact_ids = []
+        contact_ids = normalize_safety_contacts_selection(elder_person_id, group, contact_ids)
+    except Exception as e:
+        log_fallback_exception("load safety contacts for dispatch", e)
+        return {"queued": 0, "contactCount": 0}
+    if not contact_ids:
+        return {"queued": 0, "contactCount": 0}
+    elder_label = _safety_alert_elder_label(elder_person_id)
+    bucket = _safety_alert_bucket()
+    queued = 0
+    for contact_id in contact_ids:
+        try:
+            copy = notification_service.health_alert_copy(category, elder_label)
+            dedupe_key = "health-alert:" + category + ":" + elder_person_id + ":" + contact_id + ":" + bucket
+            notification, _backend_name = enqueue_notification_event({
+                "eventType": "health_alert",
+                "recipientPersonId": contact_id,
+                "actorPersonId": elder_person_id,
+                "familyGroupId": group if _looks_like_uuid(group) else None,
+                "resourceType": "safety_alert",
+                "resourceId": elder_person_id,
+                "title": copy["title"],
+                "body": copy["body"],
+                "publicTitle": copy["publicTitle"],
+                "publicBody": copy["publicBody"],
+                "sensitivity": "health_sensitive",
+                "deepLink": "munea://notifications",
+                "dedupeKey": dedupe_key,
+                "metadata": {"category": category},
+            })
+            if notification:
+                queued += 1
+        except Exception as e:
+            log_fallback_exception("dispatch safety alert to contact", e)
+    return {"queued": queued, "contactCount": len(contact_ids)}
+
+
+def safety_contact_assignments_for(contact_person_id, family_group_id):
+    """這位是誰的緊急聯絡人（2026-11-09 補）——給子女端 App 顯示『你是 X 的緊急聯絡人』、
+    順勢在那個時機問要不要開通知（App 端呼叫 window.MuneaNotify.askInContext('safetyContact')，
+    文案已由 #686 備好，這裡只回資料，不管文案）。掃 safetyContacts 整包找自己被列在哪些長輩的名單裡。"""
+    contact_person_id = str(contact_person_id or "").strip()
+    if not contact_person_id:
+        return []
+    try:
+        entry = load_safety_contacts_entry(family_group_id)
+    except Exception as e:
+        log_fallback_exception("load safety contacts for assignment lookup", e)
+        return []
+    assignments = []
+    for elder_id, contact_ids in (entry or {}).items():
+        if isinstance(contact_ids, list) and contact_person_id in contact_ids:
+            assignments.append({"personId": elder_id, "label": _safety_alert_elder_label(elder_id) or ""})
+    return assignments
+
+
+def safety_contacts_response(data):
+    """`/safety-contacts`：長輩選緊急聯絡人的讀寫端點。
+    action=load：回目前名單＋每位聯絡人的推播就緒狀態（readiness）＋我自己被哪些長輩設成
+    緊急聯絡人（contactFor，2026-11-09 補、給子女端『你是 X 的緊急聯絡人』提示用）。
+    action=save：驗證（同家庭圈成員、最多 3 位）後存檔，回清洗後的名單＋readiness。"""
+    data = data or {}
+    action = str(data.get("action") or "load").lower()
+    actor_person_id = _safety_actor_person_id(data)
+    family_group_id = str(data.get("familyGroupId") or data.get("family_group_id") or "shared")
+    if action == "save":
+        if not actor_person_id:
+            return {"ok": False, "error": "person_id_required"}
+        raw_ids = data.get("contactPersonIds") or data.get("contact_person_ids") or []
+        if not isinstance(raw_ids, list):
+            raw_ids = []
+        cleaned = normalize_safety_contacts_selection(actor_person_id, family_group_id, raw_ids)
+        save_safety_contacts_entry(family_group_id, actor_person_id, cleaned)
+        return {"ok": True, "contactPersonIds": cleaned, "readiness": safety_contacts_readiness(cleaned)}
+    if not actor_person_id:
+        return {"ok": True, "contactPersonIds": [], "readiness": {}, "contactFor": []}
+    entry = load_safety_contacts_entry(family_group_id)
+    contact_ids = entry.get(actor_person_id) or []
+    if not isinstance(contact_ids, list):
+        contact_ids = []
+    return {
+        "ok": True,
+        "contactPersonIds": contact_ids,
+        "readiness": safety_contacts_readiness(contact_ids),
+        "contactFor": safety_contact_assignments_for(actor_person_id, family_group_id),
+    }
+
+
+def safety_alert_response(data):
+    """`/safety-alert`：目前只開放 App 端自己觸發 category=vitals（健康數據超出留意範圍）；
+    guardian（通話守護腦）只走伺服器內部 dispatch_safety_alert 直接呼叫，不開給用戶端點，
+    避免有人直接呼叫這個端點冒充通話中講到危急狀況濫發通知。"""
+    data = data or {}
+    category = str(data.get("category") or "").strip()
+    if category != "vitals":
+        return {"ok": False, "error": "category_not_allowed"}
+    actor_person_id = _safety_actor_person_id(data)
+    if not actor_person_id:
+        return {"ok": False, "error": "person_id_required"}
+    family_group_id = str(data.get("familyGroupId") or data.get("family_group_id") or "shared")
+    result = dispatch_safety_alert(actor_person_id, category, family_group_id=family_group_id)
+    return {"ok": True, **result}
+
+
+# ----------------------------------------------------------------------
+
 
 FAMILY_INVITATION_STATUSES = {"pending", "applied", "accepted", "rejected", "revoked", "expired"}
 
@@ -10573,7 +10848,7 @@ class H(BaseHTTPRequestHandler):
                 "release": BRAIN_RELEASE_METADATA,
                 "time": utc_now(),
                 "runtime": {"concurrency": "threading", "jsonStoreWrites": "atomic", "authRequired": auth_required_mode()},
-                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "person-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "visit-summary", "feedback", "family-invitations", "family-members", "family-relays", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
+                "contracts": ["auth-status", "account-bootstrap", "app-profile", "companion-profile", "person-profile", "persona-context", "entitlements", "credits-balance", "credits-grant", "credits-consume", "apple-transaction", "apple-notifications-v2", "voice-session", "avatar-session", "ai-brain-status", "memory-extract", "memory-retrieve", "conversation-summary", "butler-post-turn", "guardian-evaluate", "perception-topic-plan", "perception-snapshot", "product-event", "visit-summary", "feedback", "family-invitations", "family-members", "family-relays", "safety-contacts", "safety-alert", "consent-records", "routine-reminders", "medication-doses", "push-devices", "notification-inbox", "admin-accounts", "admin-north-star", "admin-usage", "admin-credits", "admin-conversation-summaries", "admin-privacy-requests", "admin-feedback", "admin-safety-events", "admin-audit-events", "admin-voice-diagnostics", "privacy-export", "account-deletion"],
                 "backend": data_backend_status(),
                 "notificationPush": apns_status(),
                 # 2026-07-29：機器活著不等於她講得出話。今晚額度用完、兩台都啞了，
@@ -10728,6 +11003,10 @@ class H(BaseHTTPRequestHandler):
                 self._json(family_members_response(data))
             elif self.path == "/family-relays":
                 self._json(family_relays_response(data))
+            elif self.path == "/safety-contacts":
+                self._json(safety_contacts_response(data))
+            elif self.path == "/safety-alert":
+                self._json(safety_alert_response(data))
             elif self.path == "/consent-records":
                 self._json(consent_records_response(data))
             elif self.path == "/family/activity":
