@@ -13430,9 +13430,10 @@ function init() {
         durationMs,
       });
       setLocalizedCallHint('unavailable');
-      // 2026-11-09 Edward 拍板：Munea 只有語音，拿掉系統文字輸入框後備——
-      // 改成清楚的提示卡＋「再試一次」，按下去會重新呼叫 startVoiceCapture() 收音。
-      showCallStatusCard('microphoneBlocked');
+      // 2026-11-09 Edward 拍板：Munea 只有語音，拿掉系統文字輸入框後備。
+      // 這裡是錄到了聲音、但送不出去（網路／服務問題），不是麥克風被擋——
+      // 用「連線中斷了」卡，別叫長輩去檢查麥克風。
+      showCallStatusCard('disconnected');
     }
     setFaceState('idle');
   }
