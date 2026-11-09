@@ -1093,6 +1093,7 @@
   "safety.contactsSavedToast": "連絡先を保存しました：{names}",
   "safety.contactsNoneToast": "連絡先はまだ選ばれていません。決まったらいつでも設定できます",
   "safety.contactNotReady": "まだ通知が有効になっていないため、アプリの中でしか見られない場合があります",
+  "safety.youAreContactToast": "{names}さんの緊急連絡先に設定されました",
   "companionPicker.title": "会話相手を選ぶ",
   "companionPicker.subtitle": "会話相手を変更しても、会話の記憶はアカウントに残ります。",
   "companionPicker.memoryFollowsUser": "会話相手を替えても、記憶はあなたに残ります。",

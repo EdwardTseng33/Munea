@@ -1093,6 +1093,7 @@
   "safety.contactsSavedToast": "名單記好了：{names}。",
   "safety.contactsNoneToast": "還沒選聯絡人，等你想好再設定就好",
   "safety.contactNotReady": "他的手機還沒開通知，可能只會在App裡看到",
+  "safety.youAreContactToast": "你被設為{names}的緊急聯絡人",
   "companionPicker.title": "選擇陪伴角色",
   "companionPicker.subtitle": "角色可以更換，對話記憶仍跟著你的帳號。",
   "companionPicker.memoryFollowsUser": "記憶跟著你，不跟角色走。",

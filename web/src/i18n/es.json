@@ -1093,6 +1093,7 @@
   "safety.contactsSavedToast": "Lista guardada: {names}.",
   "safety.contactsNoneToast": "Aún no elegiste contactos; configúralos cuando lo tengas claro",
   "safety.contactNotReady": "Su teléfono aún no tiene las notificaciones activadas; puede que solo lo vea dentro de la app",
+  "safety.youAreContactToast": "Te han puesto como contacto de emergencia de {names}",
   "companionPicker.title": "Elegir acompañante",
   "companionPicker.subtitle": "Puedes cambiar de acompañante y la memoria de las conversaciones seguirá vinculada a tu cuenta.",
   "companionPicker.memoryFollowsUser": "La memoria es tuya, no del acompañante.",

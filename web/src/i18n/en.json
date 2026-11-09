@@ -1093,6 +1093,7 @@
   "safety.contactsSavedToast": "List saved: {names}.",
   "safety.contactsNoneToast": "No contacts chosen yet — set them up whenever you’re ready",
   "safety.contactNotReady": "Their phone hasn’t turned on notifications yet — they may only see this inside the app",
+  "safety.youAreContactToast": "You’ve been set as {names}’s emergency contact",
   "companionPicker.title": "Choose a companion",
   "companionPicker.subtitle": "You can change companions while your conversation memory stays with your account.",
   "companionPicker.memoryFollowsUser": "Your memory stays with you, not the character.",

@@ -1274,9 +1274,29 @@ def dispatch_safety_alert(elder_person_id, category, family_group_id=None):
     return {"queued": queued, "contactCount": len(contact_ids)}
 
 
+def safety_contact_assignments_for(contact_person_id, family_group_id):
+    """這位是誰的緊急聯絡人（2026-11-09 補）——給子女端 App 顯示『你是 X 的緊急聯絡人』、
+    順勢在那個時機問要不要開通知（App 端呼叫 window.MuneaNotify.askInContext('safetyContact')，
+    文案已由 #686 備好，這裡只回資料，不管文案）。掃 safetyContacts 整包找自己被列在哪些長輩的名單裡。"""
+    contact_person_id = str(contact_person_id or "").strip()
+    if not contact_person_id:
+        return []
+    try:
+        entry = load_safety_contacts_entry(family_group_id)
+    except Exception as e:
+        log_fallback_exception("load safety contacts for assignment lookup", e)
+        return []
+    assignments = []
+    for elder_id, contact_ids in (entry or {}).items():
+        if isinstance(contact_ids, list) and contact_person_id in contact_ids:
+            assignments.append({"personId": elder_id, "label": _safety_alert_elder_label(elder_id) or ""})
+    return assignments
+
+
 def safety_contacts_response(data):
     """`/safety-contacts`：長輩選緊急聯絡人的讀寫端點。
-    action=load：回目前名單＋每位聯絡人的推播就緒狀態（readiness）。
+    action=load：回目前名單＋每位聯絡人的推播就緒狀態（readiness）＋我自己被哪些長輩設成
+    緊急聯絡人（contactFor，2026-11-09 補、給子女端『你是 X 的緊急聯絡人』提示用）。
     action=save：驗證（同家庭圈成員、最多 3 位）後存檔，回清洗後的名單＋readiness。"""
     data = data or {}
     action = str(data.get("action") or "load").lower()
@@ -1292,12 +1312,17 @@ def safety_contacts_response(data):
         save_safety_contacts_entry(family_group_id, actor_person_id, cleaned)
         return {"ok": True, "contactPersonIds": cleaned, "readiness": safety_contacts_readiness(cleaned)}
     if not actor_person_id:
-        return {"ok": True, "contactPersonIds": [], "readiness": {}}
+        return {"ok": True, "contactPersonIds": [], "readiness": {}, "contactFor": []}
     entry = load_safety_contacts_entry(family_group_id)
     contact_ids = entry.get(actor_person_id) or []
     if not isinstance(contact_ids, list):
         contact_ids = []
-    return {"ok": True, "contactPersonIds": contact_ids, "readiness": safety_contacts_readiness(contact_ids)}
+    return {
+        "ok": True,
+        "contactPersonIds": contact_ids,
+        "readiness": safety_contacts_readiness(contact_ids),
+        "contactFor": safety_contact_assignments_for(actor_person_id, family_group_id),
+    }
 
 
 def safety_alert_response(data):

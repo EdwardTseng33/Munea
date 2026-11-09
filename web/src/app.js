@@ -9134,6 +9134,7 @@ function init() {
   const __medicationPromise = __pullPromise.then(configureMedicationService);
   refreshServerPlanEntitlement();
   refreshServerCredits();
+  checkSafetyContactAssignment();
   if (_familySyncTimer) clearInterval(_familySyncTimer);
   _familySyncTimer = setInterval(() => { try { syncPullAll(); } catch (e) {} }, 120000);   // 家人動態每 2 分鐘拉一次（傳話/告警跨裝置到達）
   if (!_familyVisibilityBound) {
@@ -12685,6 +12686,25 @@ function init() {
     if (!isLoggedIn()) return;
     brainPost("/safety-contacts", { action: "load", familyGroupId: famGroupId(), personId: muneaCloudPersonId() }).then(data => {
       if (data && data.readiness) { _safetyReadiness = data.readiness; renderSafetyHints(); }
+    }).catch(() => {});
+  }
+  // 子女端：被設為緊急聯絡人時，App 開啟要看得到「你是 X 的緊急聯絡人」，順勢在那個時機問要不要
+  // 開通知（沿用 #686 準備好的 askInContext('safetyContact') 文案，不在這裡另寫一套同義說明）。
+  // 只在第一次看到這個長輩的指派時提示一次，不每次開 App 都跳（記在 localStorage）。
+  function checkSafetyContactAssignment() {
+    if (!isLoggedIn()) return;
+    brainPost('/safety-contacts', { action: 'load', familyGroupId: famGroupId(), personId: muneaCloudPersonId() }).then(data => {
+      if (!data || !Array.isArray(data.contactFor) || !data.contactFor.length) return;
+      let seen = [];
+      try { seen = JSON.parse(localStorage.getItem('munea.safetyContactAssignmentsSeen') || '[]'); } catch (e) {}
+      if (!Array.isArray(seen)) seen = [];
+      const fresh = data.contactFor.filter(a => a && a.personId && seen.indexOf(a.personId) === -1);
+      if (!fresh.length) return;
+      try { localStorage.setItem('munea.safetyContactAssignmentsSeen', JSON.stringify(seen.concat(fresh.map(a => a.personId)))); } catch (e) {}
+      const names = fresh.map(a => a.label).filter(Boolean).join(muneaListSeparator()) || muneaT('familyCircle.memberFallback', '家人');
+      toast(muneaT('safety.youAreContactToast', '你被設為{names}的緊急聯絡人', { names }));
+      if (window.MuneaNotify && typeof window.MuneaNotify.askInContext === 'function') window.MuneaNotify.askInContext('safetyContact');
+      else if (window.MuneaNotify && typeof window.MuneaNotify.openInbox === 'function') window.MuneaNotify.openInbox();
     }).catch(() => {});
   }
   function renderSafety() {

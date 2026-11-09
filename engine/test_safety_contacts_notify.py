@@ -103,6 +103,27 @@ class DispatchDedupeTest(unittest.TestCase):
         self.assertEqual(ev["eventType"], "health_alert")
 
 
+class ContactAssignmentTest(unittest.TestCase):
+    """子女端『你是 X 的緊急聯絡人』提示要用的資料來源（2026-11-09 補、#687 coordinator 提醒後補）。"""
+
+    def test_contact_sees_who_picked_them(self):
+        _seed_members(("g1", "大女兒"))
+        server.save_safety_contacts_entry("shared", "elder-g", ["g1"])
+        load_as_contact = server.safety_contacts_response({"action": "load", "personId": "g1", "familyGroupId": "shared"})
+        self.assertEqual(len(load_as_contact["contactFor"]), 1)
+        self.assertEqual(load_as_contact["contactFor"][0]["personId"], "elder-g")
+
+    def test_elder_does_not_see_themselves_as_a_contact(self):
+        _seed_members(("g2", "二兒子"))
+        server.save_safety_contacts_entry("shared", "elder-h", ["g2"])
+        load_as_elder = server.safety_contacts_response({"action": "load", "personId": "elder-h", "familyGroupId": "shared"})
+        self.assertEqual(load_as_elder["contactFor"], [])
+
+    def test_no_assignment_is_clean_empty_list(self):
+        result = server.safety_contact_assignments_for("nobody-picked-me", "shared")
+        self.assertEqual(result, [])
+
+
 class SafetyAlertEndpointGuardTest(unittest.TestCase):
     def test_guardian_category_rejected_from_public_endpoint(self):
         result = server.safety_alert_response({"category": "guardian", "personId": "elder-1"})
