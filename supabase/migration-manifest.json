@@ -229,13 +229,20 @@
     },
     {
       "order": 31,
+      "identity": "030",
+      "filename": "030_org_staff_consent.sql",
+      "type": "schema",
+      "sha256": "c578134bb237fe2739386afce0443d403b007dd940200b42fb946a7b0cdab0e7"
+    },
+    {
+      "order": 32,
       "identity": "031",
       "filename": "031_fix_free_account_retention_delete.sql",
       "type": "schema",
       "sha256": "74140bb87e88908cd082313356d669dc53623cdc8bd01dcf6ca62378869772aa"
     },
     {
-      "order": 32,
+      "order": 33,
       "identity": "032",
       "filename": "032_safety_contacts_state_key.sql",
       "type": "schema",

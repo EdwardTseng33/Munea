@@ -227,6 +227,8 @@ $enterpriseGateBodies = [ordered]@{
   "/admin/enterprise/invoices" = @{}
   "/admin/enterprise/billing-settings" = @{}
   "/admin/enterprise/portal/issue-link" = @{ clientId = "smoke-no-such-client" }
+  "/admin/enterprise/staff/invite" = @{ clientId = "smoke-no-such-client"; email = "smoke@example.invalid" }
+  "/admin/enterprise/consent/status" = @{ clientId = "smoke-no-such-client" }
 }
 
 Step "Enterprise gate"
@@ -252,6 +254,14 @@ foreach ($body in @(@{}, @{ token = "smoke-not-a-real-portal-token" })) {
   }
 }
 Pass "org portal summary refuses missing/forged links without leaking any numbers"
+
+# Org staff API (B2B2C stage 2): identity is the sign-in token itself. Without a bearer token
+# every /org/* call must stop at the door (HTTP 401), even on local/demo servers.
+Step "Org API gate"
+foreach ($orgPath in @("/org/me", "/org/summary", "/org/elders", "/org/elder/care-week", "/org/reports")) {
+  Expect-AdminHttpError $orgPath @{} 401 $identityHeaders
+}
+Pass "org staff endpoints refuse requests without a sign-in token"
 
 if (-not $AdminToken) {
   Skip "Admin token not provided; skipped privileged admin read checks"
@@ -283,6 +293,13 @@ foreach ($path in @("/admin/enterprise/clients", "/admin/enterprise/invoices", "
   }
 }
 Pass "enterprise read endpoints ok with admin token"
+
+Step "Enterprise consent status"
+$consentStatus = Invoke-AdminJson "/admin/enterprise/consent/status" @{ clientId = "smoke-no-such-client" } $adminHeaders
+if ($consentStatus.ok -or [string]$consentStatus.error -ne "client_not_found") {
+  throw "/admin/enterprise/consent/status for an unknown client returned '$($consentStatus.error)', expected 'client_not_found'"
+}
+Pass "enterprise consent status answers with admin token and refuses unknown clients"
 $accounts = $adminResults["/admin/accounts"]
 $usage = $adminResults["/admin/usage"]
 $privacy = $adminResults["/admin/privacy-requests"]
