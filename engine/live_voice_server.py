@@ -61,8 +61,18 @@ from websockets.datastructures import Headers
 # 7/30 三關實測：吃 cmn-TW+Leda ✅、附和/主動接話開關存在 ✅、第一聲 750ms（僅比 3.1 慢 0.1 秒）。
 # 7/25 否決三理由全數失效——但正式採用前仍要過 19 題考卷＋Edward 人耳。
 VOICE_ENGINE = os.environ.get("MUNEA_VOICE_ENGINE", "31").strip().lower()
+#
+# 38＝gemini-3.8-live（2026-09-15 正式版）。Google 官方停用頁（2026-11-12 查）：
+# gemini-3.1-flash-live-preview 最早 2026-11-17 關閉、接替者就是 gemini-3.8-live。
+# 跟 31 走同一條路（開發者鑰匙、同一份 live_config、同價），只換模型名；
+# 預設仍是 31、零改變——測試機先設 MUNEA_VOICE_ENGINE=38 跑完考卷＋真機，再切正式。
+# 11/12 本機同設定初測：完整設定接得上、首聲中位 847ms（3.1 是 550ms）、
+# 工具呼叫改成「先叫工具、該輪無聲音就 turn_complete，收到工具結果才開口」。
 if VOICE_ENGINE in ("vertex25", "25", "native25"):
     MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-live-2.5-flash-native-audio"
+elif VOICE_ENGINE in ("38", "live38", "3.8"):
+    VOICE_ENGINE = "38"
+    MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-3.8-live"
 else:
     VOICE_ENGINE = "31"
     MODEL = "gemini-3.1-flash-live-preview"
@@ -1457,6 +1467,32 @@ def _voice_thinking_level(explicit=None):
     return None
 
 
+def _tools_for_engine(tools):
+    """3.8 的工具呼叫預設改成「非同步」（官方遷移頁：behavior NON_BLOCKING 為預設）。
+    2026-11-12 實測：預設下她先送 tool_call、該輪 0 聲音就 turn_complete，App 會多收到一個
+    無聲的回合結束；把每個函式明確標成 BLOCKING 後，順序回到跟 3.1 一樣
+    （叫工具→收到結果→開口→一次 turn_complete），App 端不用改。
+    回傳新的 Tool 物件，不改動模組層的共用宣告；31／vertex25 原樣回傳、零改變。"""
+    if VOICE_ENGINE != "38":
+        return tools
+    out = []
+    for tool in tools:
+        decls = getattr(tool, "function_declarations", None)
+        if not decls:
+            out.append(tool)
+            continue
+        out.append(types.Tool(function_declarations=[
+            decl.model_copy(update={"behavior": types.Behavior.BLOCKING}) for decl in decls
+        ]))
+    return out
+
+
+def _model_accepts_thinking_level():
+    """這顆語音模型收不收 thinking_level。3.8 基本款不收（硬送＝1007 斷線）；
+    3.8 的 extended-thinking 款與 3.1／2.5 照舊。"""
+    return not (VOICE_ENGINE == "38" and "extended-thinking" not in MODEL)
+
+
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
                  allow_care_questions=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
@@ -1496,6 +1532,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_EVENT_TOOLS)
     if allow_care_questions and not demo_mode:
         tools.append(_CARE_QUESTION_TOOLS)
+    tools = _tools_for_engine(tools)
     # vertex25 專屬配備（2026-07-30）：附和（affective）與主動接話判斷（proactive）。
     # 預設關＝先考「同條件品質」；開了之後她會自己決定該不該接話、語氣跟情緒走。
     # 只在 vertex25 引擎下送這兩個欄位（3.1 沒有、送了會被拒連）。
@@ -1506,6 +1543,11 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         if os.environ.get("MUNEA_VOICE_AFFECTIVE", "0").strip() == "1":
             extra_cfg["enable_affective_dialog"] = True
     resolved_thinking = _voice_thinking_level(thinking_level)
+    if resolved_thinking is not None and not _model_accepts_thinking_level():
+        # 2026-11-12 實測：gemini-3.8-live 收到 thinking_level 直接回
+        # 「1007 Thinking level is not supported for this model」＝整通撥不通。
+        # 語音線任何設定錯都不能讓長輩撥不通——這顆模型一律不送這個欄位。
+        resolved_thinking = None
     thinking_config = (
         types.ThinkingConfig(thinking_level=resolved_thinking)
         if resolved_thinking is not None else None
