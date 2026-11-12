@@ -61,8 +61,18 @@ from websockets.datastructures import Headers
 # 7/30 三關實測：吃 cmn-TW+Leda ✅、附和/主動接話開關存在 ✅、第一聲 750ms（僅比 3.1 慢 0.1 秒）。
 # 7/25 否決三理由全數失效——但正式採用前仍要過 19 題考卷＋Edward 人耳。
 VOICE_ENGINE = os.environ.get("MUNEA_VOICE_ENGINE", "31").strip().lower()
+#
+# 38＝gemini-3.8-live（2026-09-15 正式版）。Google 官方停用頁（2026-11-12 查）：
+# gemini-3.1-flash-live-preview 最早 2026-11-17 關閉、接替者就是 gemini-3.8-live。
+# 跟 31 走同一條路（開發者鑰匙、同一份 live_config、同價），只換模型名；
+# 預設仍是 31、零改變——測試機先設 MUNEA_VOICE_ENGINE=38 跑完考卷＋真機，再切正式。
+# 11/12 本機同設定初測：完整設定接得上、首聲中位 847ms（3.1 是 550ms）、
+# 工具呼叫改成「先叫工具、該輪無聲音就 turn_complete，收到工具結果才開口」。
 if VOICE_ENGINE in ("vertex25", "25", "native25"):
     MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-live-2.5-flash-native-audio"
+elif VOICE_ENGINE in ("38", "live38", "3.8"):
+    VOICE_ENGINE = "38"
+    MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-3.8-live"
 else:
     VOICE_ENGINE = "31"
     MODEL = "gemini-3.1-flash-live-preview"

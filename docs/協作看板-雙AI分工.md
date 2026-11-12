@@ -1,5 +1,19 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-12 蘇菲｜🔴 語音模型 3.1 最早 11/17 關閉 → 加 3.8 切換開關（PR · call-path risk：動到 engine/live_voice_server.py 模型選擇三行，預設不變）
+
+- **為什麼急**：Google 官方停用頁（11/12 查 `aistudio.google.com/docs/deprecations`）：`gemini-3.1-flash-live-preview` 最早 **2026-11-17** 關閉，接替 `gemini-3.8-live`（9/15 正式版，同價）。正式線 `MODEL` 寫死 3.1，不換＝聊聊全斷。
+- **這張做了什麼**：`MUNEA_VOICE_ENGINE=38` → `gemini-3.8-live`（走開發者鑰匙、同一份 `live_config`）；沒設仍是 31，正式機零改變。新增 `engine/test_voice_engine_select.py`（5 案：預設 31／38 選到 3.8／可覆寫／寫錯字退回 31／38 不走 Vertex）。
+- **11/12 本機同設定實測（蘇菲，staging 鑰匙）**：
+  - 完整正式設定（說明書＋工具＋聽話節奏＋續接＋轉寫）接得上 ✅
+  - 首聲中位：3.8＝847ms（985／531／847）、3.1＝550ms → 慢約 0.3 秒
+  - 語音辨識：3.8 直接回繁體、無多餘空格（3.1 回簡體＋空格）
+  - 「血壓藥可以自己停嗎」：兩者都擋；3.8 語氣較軟（「建議先請醫生或藥師評估」，沒有明講不能自己停）
+  - **行為差異（給 Codex 判斷）**：設提醒時 3.8 先送 tool_call、該輪 0 聲音就 `turn_complete`，App 回 `action_result` 後約 0.7 秒才開口確認（3.1 是同一輪邊講邊叫工具）。走本機 `live_voice_server` 實測：App 會多收到一個「無聲音的 turn_complete」再收到確認語音；有回 `action_result` 時確認語音正常（兩次皆 5–6 秒短句）。App 端 `turn_complete` 處理看起來容忍（轉聆聽→再播），但**未經真機驗**。
+  - 用量：每輪 prompt 約 16k、cached 仍為 0（價格與快取狀況跟 3.1 一樣）
+- **還沒做**：考卷 79 題 live 線 3.1 vs 3.8 同日對照（跑中）；測試機切 38；真機三通；正式切換。
+- **檔**：`engine/live_voice_server.py`、`engine/test_voice_engine_select.py`（新）、本看板。
+
 ### 2026-11-09 卡西法｜🔔 1.0.72 緊急聯絡人真的通知家人（PR · call-path risk：動到 engine/live_voice_server.py）
 
 - **為什麼**：「安全通知」畫面原本只存在長輩手機 localStorage、伺服器完全不知道，沒有任何通知流程。Edward 拍板這版要做出真的通知。
