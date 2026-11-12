@@ -29,6 +29,7 @@ import io
 import wave
 import hmac
 import hashlib
+import re
 from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -461,6 +462,46 @@ def impossible_promise_cue(dropped):
         "下一句請**自然地把它收回來，並馬上給他一個他自己做得到的替代**，"
         "像『欸不好意思，我沒辦法幫你撥電話，不過你現在打給她，我在這邊陪你等她接』。"
         "不要長篇道歉、不要解釋你是AI，一句帶過就好，重點放在他接下來可以怎麼做。）" % said
+    )
+
+
+# 「說設好了卻沒去設」防線（2026-11-13）。
+# 實測（測試機、3.1 與 3.8 各約 10 通「幫我設提醒」）：兩顆模型都會有約兩成的回答是
+# 嘴上說「幫你記下來了／會提醒你」但那一輪根本沒呼叫設定工具——長輩會以為設好了、
+# 到時候沒人提醒他吃藥。最常見在我們不支援的提醒（量血壓、喝水），吃藥提醒也發生過。
+# 做法跟 impossible_promise_cue 同一條路：聲音收不回，就在下一個輪替空檔讓她自己補上。
+_REMINDER_WRITE_TOOLS = frozenset({
+    "set_clinic_reminder", "set_medication_reminder", "set_personal_event",
+})
+_REMINDER_CLAIM_RE = re.compile(
+    r"(?:記下|記好|記起來|記在|設好|設定好|設了|設定了|設下)[^。！？!?]{0,24}(?:提醒|鬧鐘|App|裡)"
+    r"|幫[你您妳](?:設定|設|記)[^。！？!?]{0,24}(?:提醒|鬧鐘)(?:好了|了|囉|喔|啦)"
+    r"|(?:提醒|鬧鐘)[^。！？!?]{0,12}(?:記下|記好|記起來|設好|設定好|設了)"
+    r"|(?:到時候|準時|每天|明天|今天|今晚|晚上|早上|中午|下午)[^。！？!?]{0,16}會(?:準時)?(?:提醒|叫)[你您妳]"
+    r"|我會(?:準時|按時|再)?(?:提醒|叫)[你您妳]"
+)
+
+
+def reminder_claim_in(text):
+    """她這句話有沒有「已經幫你設好提醒」的意思。回傳命中的那一小段（沒有就空字串）。
+
+    只認「已經做了／一定會做」的講法；「要幫你設沒問題，請問是哪一種藥？」這種還在問清楚的不算。
+    純函式，方便單元測試。"""
+    m = _REMINDER_CLAIM_RE.search(str(text or ""))
+    return m.group(0) if m else ""
+
+
+def reminder_unfulfilled_cue(said):
+    """她說設好了、但這一輪沒有任何一筆提醒真的寫進 App——排一句讓她下一句自己補上。"""
+    return (
+        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」，但其實**還沒有任何提醒真的設成功**。"
+        "下一句請自然地補上，不要長篇道歉。"
+        "・如果他要的是吃藥或回診提醒：把還缺的問清楚（哪一種藥、幾點、每天還是只有這次），"
+        "然後**一定要呼叫設定提醒的工具**，工具回報成功之後才可以說設好了。"
+        "・如果是你設不了的提醒（量血壓、喝水、運動這類）或你沒有設定提醒的工具："
+        "老實說目前只能幫忙設吃藥和回診提醒，請他用手機鬧鐘或請家人幫忙設，"
+        "像『欸不好意思，量血壓的提醒我這邊還設不了，你用手機鬧鐘設一個，我陪你想幾點比較好』。）"
+        % str(said or "")[:40]
     )
 
 
@@ -3588,6 +3629,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
+                                if not st.get("turn_reminder_claim"):
+                                    st["turn_reminder_claim"] = reminder_claim_in(st["ai_buf"])
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(
                                     cid, "ai", st["ai_buf"], st, session,
                                     turn_id=st.get("guardian_real_turn_id", 0),
@@ -3717,6 +3760,21 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["ai_buf"] = ""
                             st["guardian_internal_followup_active"] = False
                             st["guardian_internal_followup_sources"] = ()
+                            _reminder_claim = st.get("turn_reminder_claim") or ""
+                            _reminder_written = bool(st.get("turn_reminder_written"))
+                            st["turn_reminder_claim"] = ""
+                            st["turn_reminder_written"] = False
+                            if _reminder_claim and not _reminder_written:
+                                if st.get("reminder_cue_just_sent"):
+                                    # 更正過一次她還是只說不做——不再追，留紀錄給人看
+                                    st["reminder_cue_just_sent"] = False
+                                    _diag(cid, "reminder.claim_unfulfilled_after_cue", said=_reminder_claim[:30])
+                                elif not st.get("pending_promise_cue"):
+                                    st["pending_promise_cue"] = reminder_unfulfilled_cue(_reminder_claim)
+                                    st["reminder_cue_just_sent"] = True
+                                    _diag(cid, "reminder.claim_without_write", said=_reminder_claim[:30])
+                            else:
+                                st["reminder_cue_just_sent"] = False
                             if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if st.get("locale_reconnect_requested"):
@@ -3760,6 +3818,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     response = {"status": "error", "error": "app_write_timeout"}
                                 finally:
                                     st["action_results"].pop(action_id, None)
+                                if function_name in _REMINDER_WRITE_TOOLS and response.get("status") == "ok":
+                                    st["turn_reminder_written"] = True
                             responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response=response))
                         try:
                             await session.send_tool_response(function_responses=responses)
