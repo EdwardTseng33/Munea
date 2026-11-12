@@ -491,6 +491,30 @@ def reminder_claim_in(text):
     return m.group(0) if m else ""
 
 
+_NOTE_CLAIM_RE = re.compile(
+    r"(?:幫[你您妳]|我會?(?:先)?(?:幫[你您妳])?)(?:先)?(?:記著|記下|記好|記起來|記住|記錄|存起來|存好)"
+)
+
+
+def note_claim_in(text):
+    """她這句話有沒有「我幫你記著／記下來」的意思（不限提醒，含要問醫生的問題、傳話這類）。"""
+    m = _NOTE_CLAIM_RE.search(str(text or ""))
+    return m.group(0) if m else ""
+
+
+def write_failed_cue(said):
+    """她說記好了，但這一輪那筆寫入其實回報失敗（例：要問醫生的清單滿了）——讓她下一句老實講。
+
+    考卷 S59（2026-11-13，3.8）：清單滿了存不進去，她卻說「我會幫你記著喔」，
+    要等長輩自己發現再問才解釋。聲音收不回，改成下一個空檔自己先講。"""
+    return (
+        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」，但那一筆其實**沒有存成功**。"
+        "下一句請自然地老實告訴他剛剛沒記進去，並照工具回報的原因給他一個做得到的下一步"
+        "（例如清單滿了，就問他要不要換掉其中一題）。不要再說已經記好了，也不要長篇道歉。）"
+        % str(said or "")[:40]
+    )
+
+
 def reminder_unfulfilled_cue(said):
     """她說設好了、但這一輪沒有任何一筆提醒真的寫進 App——排一句讓她下一句自己補上。"""
     return (
@@ -3631,6 +3655,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
                                 if not st.get("turn_reminder_claim"):
                                     st["turn_reminder_claim"] = reminder_claim_in(st["ai_buf"])
+                                if not st.get("turn_note_claim"):
+                                    st["turn_note_claim"] = note_claim_in(st["ai_buf"])
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(
                                     cid, "ai", st["ai_buf"], st, session,
                                     turn_id=st.get("guardian_real_turn_id", 0),
@@ -3762,9 +3788,23 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["guardian_internal_followup_sources"] = ()
                             _reminder_claim = st.get("turn_reminder_claim") or ""
                             _reminder_written = bool(st.get("turn_reminder_written"))
+                            _note_claim = st.get("turn_note_claim") or ""
+                            _write_failed = st.get("turn_write_failed") or ""
                             st["turn_reminder_claim"] = ""
                             st["turn_reminder_written"] = False
-                            if _reminder_claim and not _reminder_written:
+                            st["turn_note_claim"] = ""
+                            st["turn_write_failed"] = ""
+                            if _write_failed and (_note_claim or _reminder_claim) and not _reminder_written:
+                                # 那筆寫入回報失敗，她卻說記好了
+                                if st.get("reminder_cue_just_sent"):
+                                    st["reminder_cue_just_sent"] = False
+                                    _diag(cid, "write.claim_after_failure_after_cue", tool=_write_failed)
+                                elif not st.get("pending_promise_cue"):
+                                    st["pending_promise_cue"] = write_failed_cue(_note_claim or _reminder_claim)
+                                    st["reminder_cue_just_sent"] = True
+                                    _diag(cid, "write.claim_after_failure", tool=_write_failed,
+                                          said=(_note_claim or _reminder_claim)[:30])
+                            elif _reminder_claim and not _reminder_written:
                                 if st.get("reminder_cue_just_sent"):
                                     # 更正過一次她還是只說不做——不再追，留紀錄給人看
                                     st["reminder_cue_just_sent"] = False
@@ -3820,6 +3860,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     st["action_results"].pop(action_id, None)
                                 if function_name in _REMINDER_WRITE_TOOLS and response.get("status") == "ok":
                                     st["turn_reminder_written"] = True
+                                if response.get("status") != "ok":
+                                    st["turn_write_failed"] = function_name or "?"
                             responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response=response))
                         try:
                             await session.send_tool_response(function_responses=responses)

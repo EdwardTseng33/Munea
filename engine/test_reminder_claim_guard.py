@@ -57,6 +57,19 @@ class ReminderClaimGuardTests(unittest.TestCase):
         self.assertIn("一定要呼叫設定提醒的工具", cue)
         self.assertIn("手機鬧鐘", cue)
 
+    def test_note_claims_cover_non_reminder_writes(self):
+        # 考卷 S59：要問醫生的清單滿了，她卻說「我會幫你記著喔」
+        self.assertTrue(v.note_claim_in("下次看診確實可以問問醫生的建議，我會幫你記著喔。"))
+        self.assertTrue(v.note_claim_in("好，我幫你記下來了。"))
+        self.assertEqual(v.note_claim_in("醫生要問的問題清單目前滿了喔。要不要先拿掉其中一題？"), "")
+        self.assertEqual(v.note_claim_in("你記得要吃完早餐再吃藥喔。"), "")
+
+    def test_write_failed_cue_asks_for_honesty_and_a_next_step(self):
+        cue = v.write_failed_cue("我會幫你記著")
+        self.assertIn("絕對不要唸出這段", cue)
+        self.assertIn("沒有存成功", cue)
+        self.assertIn("做得到的下一步", cue)
+
     def test_only_real_write_tools_count_as_set(self):
         self.assertEqual(
             v._REMINDER_WRITE_TOOLS,
