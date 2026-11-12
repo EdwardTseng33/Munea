@@ -62,5 +62,64 @@ class VoiceEngineSelectTests(unittest.TestCase):
         self.assertEqual(out.stdout.strip().splitlines()[-1], "False")
 
 
+class VoiceEngineThinkingGuardTests(unittest.TestCase):
+    """3.8 基本款收到 thinking_level 會回 1007、整通撥不通（2026-11-12 實測）。
+    測試機若留著 MUNEA_VOICE_THINKING_LEVEL，切到 38 不可以因此斷線。"""
+
+    def _thinking(self, engine, override=None):
+        env = dict(os.environ, GEMINI_API_KEY="test", PYTHONIOENCODING="utf-8",
+                   MUNEA_VOICE_ENGINE=engine, MUNEA_VOICE_THINKING_LEVEL="low")
+        env.pop("MUNEA_VOICE_MODEL_OVERRIDE", None)
+        if override:
+            env["MUNEA_VOICE_MODEL_OVERRIDE"] = override
+        code = "import live_voice_server as v; print(v.live_config().thinking_config is not None)"
+        out = subprocess.run([sys.executable, "-c", code], cwd=HERE, env=env,
+                             capture_output=True, text=True, encoding="utf-8", timeout=120)
+        self.assertEqual(out.returncode, 0, out.stderr[-400:])
+        return out.stdout.strip().splitlines()[-1] == "True"
+
+    def test_38_never_sends_thinking_level(self):
+        self.assertFalse(self._thinking("38"))
+
+    def test_31_still_sends_when_asked(self):
+        self.assertTrue(self._thinking("31"))
+
+    def test_38_extended_thinking_variant_may_send(self):
+        self.assertTrue(self._thinking("38", "gemini-3.8-live-extended-thinking"))
+
+
+class VoiceEngineToolBehaviorTests(unittest.TestCase):
+    """3.8 工具預設非同步＝App 多收一個無聲 turn_complete（2026-11-12 實測）。
+    38 要把每個函式標成 BLOCKING；31 不可以多送這個欄位；共用宣告不可被改到。"""
+
+    CODE = (
+        "import live_voice_server as v\n"
+        "cfg = v.live_config(allow_reminders=True, allow_events=True, allow_care_questions=True)\n"
+        "decls = [d for t in cfg.tools for d in (t.function_declarations or [])]\n"
+        "shared = [d for t in (v._REMINDER_TOOLS, v._EVENT_TOOLS, v._CARE_QUESTION_TOOLS) for d in t.function_declarations]\n"
+        "print(len(decls), sum(1 for d in decls if d.behavior == v.types.Behavior.BLOCKING),"
+        " sum(1 for d in shared if d.behavior is not None))\n"
+    )
+
+    def _counts(self, engine):
+        env = dict(os.environ, GEMINI_API_KEY="test", PYTHONIOENCODING="utf-8", MUNEA_VOICE_ENGINE=engine)
+        out = subprocess.run([sys.executable, "-c", self.CODE], cwd=HERE, env=env,
+                             capture_output=True, text=True, encoding="utf-8", timeout=120)
+        self.assertEqual(out.returncode, 0, out.stderr[-400:])
+        return tuple(int(x) for x in out.stdout.strip().splitlines()[-1].split())
+
+    def test_38_marks_every_function_blocking(self):
+        total, blocking, shared_touched = self._counts("38")
+        self.assertGreater(total, 0)
+        self.assertEqual(blocking, total)
+        self.assertEqual(shared_touched, 0)
+
+    def test_31_sends_no_behavior_field(self):
+        total, blocking, shared_touched = self._counts("31")
+        self.assertGreater(total, 0)
+        self.assertEqual(blocking, 0)
+        self.assertEqual(shared_touched, 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
