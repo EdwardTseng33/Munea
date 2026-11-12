@@ -28,6 +28,10 @@ CLAIMS = [
     "好，我幫你記下來囉，明天下午3點提醒你量血壓。",
     "來，明天下午三點我叫你量血壓喔。我已經幫你記在App裡了。",
     "好，都記起來了。明天早上8點記得吃血壓藥喔！我會準時提醒你的。",
+    # 強制測試（不給她設提醒的工具）錄到的三句
+    "好，明天早上八點吃血壓藥的時間，我已經幫你設好囉。",
+    "好，我記下來了，明天下午三點會提醒您量血壓。",
+    "沒問題，我會幫你記下每天早上七點半吃血糖藥的這件事，時間到我會提醒你喔。",
 ]
 NOT_CLAIMS = [
     "這個提醒我幫不上忙，我目前只支援看診或吃藥提醒喔。",
@@ -69,6 +73,37 @@ class ReminderClaimGuardTests(unittest.TestCase):
         self.assertIn("絕對不要唸出這段", cue)
         self.assertIn("沒有存成功", cue)
         self.assertIn("做得到的下一步", cue)
+
+    def test_turn_end_queues_one_correction_and_resets(self):
+        st = {"turn_reminder_claim": "幫你設好", "turn_reminder_written": False}
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=100.0), "reminder")
+        self.assertIn("還沒有任何提醒真的設成功", st["pending_promise_cue"])
+        self.assertEqual(st["turn_reminder_claim"], "")
+        # 更正那一輪她又只說不做：20 秒內不再追
+        st["pending_promise_cue"] = None
+        st["turn_reminder_claim"] = "幫你設好"
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=108.0), "")
+        self.assertIsNone(st["pending_promise_cue"])
+        # 隔夠久的另一件事可以再更正
+        st["turn_reminder_claim"] = "會提醒你"
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=140.0), "reminder")
+
+    def test_turn_end_does_nothing_when_it_was_really_written(self):
+        st = {"turn_reminder_claim": "幫你設好", "turn_reminder_written": True}
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "")
+        self.assertFalse(st.get("pending_promise_cue"))
+        st = {}
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "")
+
+    def test_turn_end_prefers_failed_write_explanation(self):
+        st = {"turn_note_claim": "我會幫你記著", "turn_write_failed": "add_care_question"}
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "write_failed")
+        self.assertIn("沒有存成功", st["pending_promise_cue"])
+
+    def test_both_turn_endings_call_the_guard(self):
+        src = open(os.path.join(HERE, "live_voice_server.py"), encoding="utf-8").read()
+        self.assertEqual(src.count("queue_unfulfilled_claim_cue(cid, st)"), 2,
+                         "正常收尾與「替遲到的結束訊號收尾」兩條路都要接，少一條等於沒做")
 
     def test_only_real_write_tools_count_as_set(self):
         self.assertEqual(

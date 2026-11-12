@@ -479,6 +479,8 @@ _REMINDER_CLAIM_RE = re.compile(
     r"|(?:提醒|鬧鐘)[^。！？!?]{0,12}(?:記下|記好|記起來|設好|設定好|設了)"
     r"|(?:到時候|準時|每天|明天|今天|今晚|晚上|早上|中午|下午)[^。！？!?]{0,16}會(?:準時)?(?:提醒|叫)[你您妳]"
     r"|我會(?:準時|按時|再)?(?:提醒|叫)[你您妳]"
+    r"|幫[你您妳](?:設好|設定好|設下|記好|記下來|記起來)"
+    r"|我(?:已經)?(?:記下來|記好|記起來)了"
 )
 
 
@@ -527,6 +529,44 @@ def reminder_unfulfilled_cue(said):
         "像『欸不好意思，量血壓的提醒我這邊還設不了，你用手機鬧鐘設一個，我陪你想幾點比較好』。）"
         % str(said or "")[:40]
     )
+
+
+_CLAIM_CUE_MIN_GAP_S = 20.0
+
+
+def queue_unfulfilled_claim_cue(cid, st, now=None):
+    """一輪講完時呼叫：她這一輪說了「設好了／記著了」，但沒有任何一筆真的寫成功 → 排一句更正。
+
+    回傳排了哪一種（"write_failed"／"reminder"／""）。兩條收尾路（正常收尾、替遲到的結束訊號收尾）
+    都要呼叫；同一通電話 20 秒內最多更正一次，避免她一直繞著同一件事道歉。"""
+    reminder_claim = st.get("turn_reminder_claim") or ""
+    written = bool(st.get("turn_reminder_written"))
+    note_claim = st.get("turn_note_claim") or ""
+    failed = st.get("turn_write_failed") or ""
+    st["turn_reminder_claim"] = ""
+    st["turn_reminder_written"] = False
+    st["turn_note_claim"] = ""
+    st["turn_write_failed"] = ""
+    kind, said = "", ""
+    if failed and (note_claim or reminder_claim) and not written:
+        kind, said = "write_failed", (note_claim or reminder_claim)
+    elif reminder_claim and not written:
+        kind, said = "reminder", reminder_claim
+    if not kind:
+        return ""
+    now = time.monotonic() if now is None else now
+    last = st.get("claim_cue_at")
+    if last is not None and now - last < _CLAIM_CUE_MIN_GAP_S:
+        _diag(cid, "claim.unfulfilled_after_cue", kind=kind, said=said[:30])
+        return ""
+    if st.get("pending_promise_cue"):
+        return ""
+    st["pending_promise_cue"] = (
+        write_failed_cue(said) if kind == "write_failed" else reminder_unfulfilled_cue(said)
+    )
+    st["claim_cue_at"] = now
+    _diag(cid, "claim.without_write", kind=kind, said=said[:30], tool=failed or "-")
+    return kind
 
 
 def guardian_scan_text(text):
@@ -3786,35 +3826,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["ai_buf"] = ""
                             st["guardian_internal_followup_active"] = False
                             st["guardian_internal_followup_sources"] = ()
-                            _reminder_claim = st.get("turn_reminder_claim") or ""
-                            _reminder_written = bool(st.get("turn_reminder_written"))
-                            _note_claim = st.get("turn_note_claim") or ""
-                            _write_failed = st.get("turn_write_failed") or ""
-                            st["turn_reminder_claim"] = ""
-                            st["turn_reminder_written"] = False
-                            st["turn_note_claim"] = ""
-                            st["turn_write_failed"] = ""
-                            if _write_failed and (_note_claim or _reminder_claim) and not _reminder_written:
-                                # 那筆寫入回報失敗，她卻說記好了
-                                if st.get("reminder_cue_just_sent"):
-                                    st["reminder_cue_just_sent"] = False
-                                    _diag(cid, "write.claim_after_failure_after_cue", tool=_write_failed)
-                                elif not st.get("pending_promise_cue"):
-                                    st["pending_promise_cue"] = write_failed_cue(_note_claim or _reminder_claim)
-                                    st["reminder_cue_just_sent"] = True
-                                    _diag(cid, "write.claim_after_failure", tool=_write_failed,
-                                          said=(_note_claim or _reminder_claim)[:30])
-                            elif _reminder_claim and not _reminder_written:
-                                if st.get("reminder_cue_just_sent"):
-                                    # 更正過一次她還是只說不做——不再追，留紀錄給人看
-                                    st["reminder_cue_just_sent"] = False
-                                    _diag(cid, "reminder.claim_unfulfilled_after_cue", said=_reminder_claim[:30])
-                                elif not st.get("pending_promise_cue"):
-                                    st["pending_promise_cue"] = reminder_unfulfilled_cue(_reminder_claim)
-                                    st["reminder_cue_just_sent"] = True
-                                    _diag(cid, "reminder.claim_without_write", said=_reminder_claim[:30])
-                            else:
-                                st["reminder_cue_just_sent"] = False
+                            queue_unfulfilled_claim_cue(cid, st)
                             if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if st.get("locale_reconnect_requested"):
@@ -3956,6 +3968,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     st["ai_buf"] = ""
                     st["guardian_internal_followup_active"] = False
                     st["guardian_internal_followup_sources"] = ()
+                    # 這條「對方的結束訊號遲到、我們先替它收尾」的路才是實務上最常走的
+                    # （2026-11-13 測試機每一通都是走這裡），不接這裡等於沒做。
+                    queue_unfulfilled_claim_cue(cid, st)
                     if (
                         st.get("pending_cues")
                         or st.get("pending_health_cue")
