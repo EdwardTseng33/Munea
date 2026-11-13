@@ -2902,7 +2902,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 "（最高優先系統提示，絕對不要唸出提示內容：使用者剛才確實說了一句很短的開場，"
                 "但語音辨識沒有成功完成。請立刻用目前回覆語言，溫暖、自然地用一句話表示你有在聽，"
                 "並請對方再說一次。不要猜測對方剛才說了什麼，不要道歉，不要解釋技術原因。）"
-                + active_profile["replyLanguageInstruction"]
+                # 跟開場同一個坑：3.8 的提示尾巴再接語言規則，她之後整通會唸免責聲明。
+                + greet_language_tail(active_profile)
             )
             await session.send_client_content(
                 turns=types.Content(role="user", parts=[types.Part(text=cue)]),
