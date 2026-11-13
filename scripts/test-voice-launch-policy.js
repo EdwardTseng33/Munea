@@ -247,10 +247,14 @@ expect(avatarServer.includes('self.slot.audio_out.video_playout_held(VIDEO_LEAD_
        avatarServer.includes('0.35, max(-0.35, float(os.environ.get("MUNEA_FH_VIDEO_LEAD_MS", "0"))'),
   'Avatar video is not held on the real turn gate with a bounded signed correction');
 expect([voiceCanaryDeploy, voiceProdDeploy].every((deployScript) =>
-  deployScript.includes('MUNEA_VOICE_ENGINE=31') &&
+  // 2026-11-13：Google 最早 11/17 關閉 3.1，Edward 11/12 拍板換 3.8。部署工具改成
+  // 「第二個參數明確指定 31｜38、不給就是 31」——仍然不准靜默換模型、也不准出現第三種值。
+  deployScript.includes('VOICE_ENGINE="${2:-31}"') &&
+  deployScript.includes('31|38) ;;') &&
+  deployScript.includes('MUNEA_VOICE_ENGINE=$VOICE_ENGINE') &&
   deployScript.includes('MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS,MUNEA_VERTEX_LOCATION,MUNEA_VOICE_MODEL_OVERRIDE') &&
   deployScript.includes('MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01')),
-  'Voice deploy can silently change the approved Gemini 3.1 voice engine or break the Gateway shard identity');
+  'Voice deploy can silently change the approved voice engine (31 default, 38 only when explicitly passed) or break the Gateway shard identity');
 expect(voiceServer.includes('"voiceEngine": VOICE_ENGINE') &&
        voiceServer.includes('"voiceModel": MODEL') &&
        voiceServer.includes('"voiceName":'),

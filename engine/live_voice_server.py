@@ -29,6 +29,7 @@ import io
 import wave
 import hmac
 import hashlib
+import re
 from urllib.parse import urlencode
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -61,8 +62,18 @@ from websockets.datastructures import Headers
 # 7/30 三關實測：吃 cmn-TW+Leda ✅、附和/主動接話開關存在 ✅、第一聲 750ms（僅比 3.1 慢 0.1 秒）。
 # 7/25 否決三理由全數失效——但正式採用前仍要過 19 題考卷＋Edward 人耳。
 VOICE_ENGINE = os.environ.get("MUNEA_VOICE_ENGINE", "31").strip().lower()
+#
+# 38＝gemini-3.8-live（2026-09-15 正式版）。Google 官方停用頁（2026-11-12 查）：
+# gemini-3.1-flash-live-preview 最早 2026-11-17 關閉、接替者就是 gemini-3.8-live。
+# 跟 31 走同一條路（開發者鑰匙、同一份 live_config、同價），只換模型名；
+# 預設仍是 31、零改變——測試機先設 MUNEA_VOICE_ENGINE=38 跑完考卷＋真機，再切正式。
+# 11/12 本機同設定初測：完整設定接得上、首聲中位 847ms（3.1 是 550ms）、
+# 工具呼叫改成「先叫工具、該輪無聲音就 turn_complete，收到工具結果才開口」。
 if VOICE_ENGINE in ("vertex25", "25", "native25"):
     MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-live-2.5-flash-native-audio"
+elif VOICE_ENGINE in ("38", "live38", "3.8"):
+    VOICE_ENGINE = "38"
+    MODEL = os.environ.get("MUNEA_VOICE_MODEL_OVERRIDE") or "gemini-3.8-live"
 else:
     VOICE_ENGINE = "31"
     MODEL = "gemini-3.1-flash-live-preview"
@@ -452,6 +463,158 @@ def impossible_promise_cue(dropped):
         "像『欸不好意思，我沒辦法幫你撥電話，不過你現在打給她，我在這邊陪你等她接』。"
         "不要長篇道歉、不要解釋你是AI，一句帶過就好，重點放在他接下來可以怎麼做。）" % said
     )
+
+
+# 「說設好了卻沒去設」防線（2026-11-13）。
+# 實測（測試機、3.1 與 3.8 各約 10 通「幫我設提醒」）：兩顆模型都會有約兩成的回答是
+# 嘴上說「幫你記下來了／會提醒你」但那一輪根本沒呼叫設定工具——長輩會以為設好了、
+# 到時候沒人提醒他吃藥。最常見在我們不支援的提醒（量血壓、喝水），吃藥提醒也發生過。
+# 做法跟 impossible_promise_cue 同一條路：聲音收不回，就在下一個輪替空檔讓她自己補上。
+_REMINDER_WRITE_TOOLS = frozenset({
+    "set_clinic_reminder", "set_medication_reminder", "set_personal_event",
+})
+_REMINDER_CLAIM_RE = re.compile(
+    r"(?:記下|記好|記起來|記在|設好|設定好|設了|設定了|設下)[^。！？!?]{0,24}(?:提醒|鬧鐘|App|裡)"
+    r"|幫[你您妳](?:設定|設|記)[^。！？!?]{0,24}(?:提醒|鬧鐘)(?:好了|了|囉|喔|啦)"
+    r"|(?:提醒|鬧鐘)[^。！？!?]{0,12}(?:記下|記好|記起來|設好|設定好|設了)"
+    r"|(?:到時候|準時|每天|明天|今天|今晚|晚上|早上|中午|下午)[^。！？!?]{0,16}會(?:準時)?(?:提醒|叫)[你您妳]"
+    r"|我會(?:準時|按時|再)?(?:提醒|叫)[你您妳]"
+    r"|幫[你您妳](?:設好|設定好|設下)"
+)
+
+
+# 詢問或提議不是「已經做了」。2026-11-13 測試機誤判：她說「我幫妳記下來，回診時再問他們好嗎？」
+# 被當成「說了沒做」而多補了一句。所以改成整輪講完後逐句看，問句與提議一律跳過。
+_OFFER_RE = re.compile(r"(要不要|需不需要|需要我|好嗎|好不好|可以嗎|你覺得|妳覺得|您覺得|我可以幫|可以幫[你您妳]|我們可以|我也可以)")
+_SENTENCE_RE = re.compile(r"[^。！？!?]+[。！？!?]?")
+
+
+def _statement_sentences(text):
+    """把一輪的話切成句子，只留「陳述句」（去掉問句與提議）。"""
+    out = []
+    for m in _SENTENCE_RE.finditer(" ".join(str(text or "").split())):
+        sentence = m.group(0).strip()
+        if not sentence or sentence[-1] in "？?" or _OFFER_RE.search(sentence):
+            continue
+        out.append(sentence)
+    return out
+
+
+def reminder_claim_in(text):
+    """她這一輪有沒有「已經幫你設好提醒」的意思。回傳命中的那一小段（沒有就空字串）。
+
+    只認陳述句裡「已經做了／一定會做」的講法；還在問清楚、或問他要不要的不算。
+    純函式，方便單元測試。"""
+    for sentence in _statement_sentences(text):
+        m = _REMINDER_CLAIM_RE.search(sentence)
+        if m:
+            return m.group(0)
+    return ""
+
+
+_NOTE_CLAIM_RE = re.compile(
+    r"(?:幫[你您妳]|我會?(?:先)?(?:幫[你您妳])?)(?:先)?(?:記著|記下|記好|記起來|記住|記錄|存起來|存好)"
+)
+
+
+def note_claim_in(text):
+    """她這一輪有沒有「我幫你記著／記下來」的意思（不限提醒，含要問醫生的問題、傳話這類）。"""
+    for sentence in _statement_sentences(text):
+        m = _NOTE_CLAIM_RE.search(sentence)
+        if m:
+            return m.group(0)
+    return ""
+
+
+def write_failed_cue(said):
+    """她說記好了，但這一輪那筆寫入其實回報失敗（例：要問醫生的清單滿了）——讓她下一句老實講。
+
+    考卷 S59（2026-11-13，3.8）：清單滿了存不進去，她卻說「我會幫你記著喔」，
+    要等長輩自己發現再問才解釋。聲音收不回，改成下一個空檔自己先講。"""
+    return (
+        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」，但那一筆其實**沒有存成功**。"
+        "下一句請自然地老實告訴他剛剛沒記進去，並照工具回報的原因給他一個做得到的下一步"
+        "（例如清單滿了，就問他要不要換掉其中一題）。不要再說已經記好了，也不要長篇道歉。）"
+        % str(said or "")[:40]
+    )
+
+
+def reminder_unfulfilled_cue(said):
+    """她說設好了／記下來了，但這一輪沒有任何一筆真的寫進 App——排一句讓她下一句自己補上。"""
+    return (
+        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」，但其實**還沒有任何東西真的存成功**。"
+        "下一句請自然地補上，不要長篇道歉。"
+        "・如果他要的是吃藥或回診提醒：把還缺的問清楚（哪一種藥、幾點、每天還是只有這次），"
+        "然後**一定要呼叫設定提醒的工具**，工具回報成功之後才可以說設好了。"
+        "・如果是要記下來問醫生的問題：呼叫記錄問題的工具，成功了才說記好了。"
+        "・如果是你設不了的提醒（量血壓、喝水、運動這類）或你沒有對應的工具："
+        "老實說目前只能幫忙設吃藥和回診提醒，請他用手機鬧鐘或請家人幫忙設，"
+        "像『欸不好意思，量血壓的提醒我這邊還設不了，你用手機鬧鐘設一個，我陪你想幾點比較好』。）"
+        % str(said or "")[:40]
+    )
+
+
+def tool_response_for_model(response):
+    """把 App 回報的寫入結果補成 3.8 官方要求的樣子（2026-11-13）。
+
+    Google 3.8 Live 開發者指南：工具回覆不可以是空的，要帶 status、retryable、message；
+    否則遇到失敗或空結果，3.8 可能換參數一直重呼叫。這裡只補欄位、不改原有內容：
+      成功 → retryable=False
+      失敗 → retryable=False＋一句給她看的 message：老實說沒存成功、不要再試、不要說已經好了。"""
+    out = dict(response or {})
+    if not out.get("status"):
+        out["status"] = "error"
+    out.setdefault("retryable", False)
+    if out["status"] != "ok" and not out.get("message"):
+        out["message"] = (
+            "這一筆沒有存成功。不要再呼叫同一個工具重試；老實告訴使用者剛剛沒記進去，"
+            "並給他一個做得到的下一步。不可以說已經設好或已經記下來。"
+        )
+    return out
+
+
+_CLAIM_CUE_MIN_GAP_S = 20.0
+
+
+def queue_unfulfilled_claim_cue(cid, st, now=None):
+    """一輪講完時呼叫：她這一輪說了「設好了／記著了」，但沒有任何一筆真的寫成功 → 排一句更正。
+
+    回傳排了哪一種（"write_failed"／"reminder"／"note"／""）。兩條收尾路（正常收尾、替遲到的結束訊號
+    收尾）都要呼叫；同一通電話 20 秒內最多更正一次，避免她一直繞著同一件事道歉。
+    判讀用整輪講完的文字逐句看（問句與提議不算），不在字幕進來的當下就下結論。"""
+    text = st.get("turn_ai_text") or ""
+    written_any = bool(st.get("turn_any_write_ok")) or bool(st.get("turn_reminder_written"))
+    failed = st.get("turn_write_failed") or ""
+    st["turn_ai_text"] = ""
+    st["turn_any_write_ok"] = False
+    st["turn_reminder_written"] = False
+    st["turn_write_failed"] = ""
+    if written_any or not text:
+        return ""
+    reminder_claim = reminder_claim_in(text)
+    note_claim = note_claim_in(text)
+    kind, said = "", ""
+    if failed and (note_claim or reminder_claim):
+        kind, said = "write_failed", (note_claim or reminder_claim)
+    elif reminder_claim:
+        kind, said = "reminder", reminder_claim
+    elif note_claim:
+        kind, said = "note", note_claim
+    if not kind:
+        return ""
+    now = time.monotonic() if now is None else now
+    last = st.get("claim_cue_at")
+    if last is not None and now - last < _CLAIM_CUE_MIN_GAP_S:
+        _diag(cid, "claim.unfulfilled_after_cue", kind=kind, said=said[:30])
+        return ""
+    if st.get("pending_promise_cue"):
+        return ""
+    st["pending_promise_cue"] = (
+        write_failed_cue(said) if kind == "write_failed" else reminder_unfulfilled_cue(said)
+    )
+    st["claim_cue_at"] = now
+    _diag(cid, "claim.without_write", kind=kind, said=said[:30], tool=failed or "-")
+    return kind
 
 
 def guardian_scan_text(text):
@@ -1469,6 +1632,47 @@ def _voice_thinking_level(explicit=None):
     return None
 
 
+def greet_language_tail(profile):
+    """開場提示後面要不要再接一次「回覆語言規則」。
+
+    2026-11-13 實測（3.8、語音進、多輪健康對話）：開場提示尾巴只要帶語言規則——不管是整段
+    replyLanguageInstruction 還是一句「這句招呼只用台灣華語說」——她之後整通的回答就會在結尾
+    自己唸免責聲明（「本資訊不構成醫療建議或診斷，請務必諮詢專業醫療人員」）：
+      帶整段 2/3 通、帶一句 5/5 通、經語音主機 12/14 通；**不帶 0/8 通**、不請她開場 0/7 通。
+    3.1 沒這個現象（經語音主機 0/2 通）。語言規則本來就在說明書裡，開場再講一次沒有必要。
+    所以：3.8＋台灣中文 → 不接；其他組合維持原樣（別的語系在 3.8 上還沒驗）。"""
+    profile = profile or {}
+    if VOICE_ENGINE == "38" and profile.get("sessionLocale") == "zh-TW":
+        return ""
+    return profile.get("replyLanguageInstruction") or ""
+
+
+def _tools_for_engine(tools):
+    """3.8 的工具呼叫預設改成「非同步」（官方遷移頁：behavior NON_BLOCKING 為預設）。
+    2026-11-12 實測：預設下她先送 tool_call、該輪 0 聲音就 turn_complete，App 會多收到一個
+    無聲的回合結束；把每個函式明確標成 BLOCKING 後，順序回到跟 3.1 一樣
+    （叫工具→收到結果→開口→一次 turn_complete），App 端不用改。
+    回傳新的 Tool 物件，不改動模組層的共用宣告；31／vertex25 原樣回傳、零改變。"""
+    if VOICE_ENGINE != "38":
+        return tools
+    out = []
+    for tool in tools:
+        decls = getattr(tool, "function_declarations", None)
+        if not decls:
+            out.append(tool)
+            continue
+        out.append(types.Tool(function_declarations=[
+            decl.model_copy(update={"behavior": types.Behavior.BLOCKING}) for decl in decls
+        ]))
+    return out
+
+
+def _model_accepts_thinking_level():
+    """這顆語音模型收不收 thinking_level。3.8 基本款不收（硬送＝1007 斷線）；
+    3.8 的 extended-thinking 款與 3.1／2.5 照舊。"""
+    return not (VOICE_ENGINE == "38" and "extended-thinking" not in MODEL)
+
+
 def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, location=None, allow_reminders=False, fam=0, memory_scope=None, allow_events=False, demo_mode=False,
                  allow_care_questions=False,
                  start_sensitivity=None, end_sensitivity=None, prefix_padding_ms=None, silence_duration_ms=None,
@@ -1508,6 +1712,7 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         tools.append(_EVENT_TOOLS)
     if allow_care_questions and not demo_mode:
         tools.append(_CARE_QUESTION_TOOLS)
+    tools = _tools_for_engine(tools)
     # vertex25 專屬配備（2026-07-30）：附和（affective）與主動接話判斷（proactive）。
     # 預設關＝先考「同條件品質」；開了之後她會自己決定該不該接話、語氣跟情緒走。
     # 只在 vertex25 引擎下送這兩個欄位（3.1 沒有、送了會被拒連）。
@@ -1518,6 +1723,11 @@ def live_config(char="寧寧", name=None, mood=None, topics=None, user=None, loc
         if os.environ.get("MUNEA_VOICE_AFFECTIVE", "0").strip() == "1":
             extra_cfg["enable_affective_dialog"] = True
     resolved_thinking = _voice_thinking_level(thinking_level)
+    if resolved_thinking is not None and not _model_accepts_thinking_level():
+        # 2026-11-12 實測：gemini-3.8-live 收到 thinking_level 直接回
+        # 「1007 Thinking level is not supported for this model」＝整通撥不通。
+        # 語音線任何設定錯都不能讓長輩撥不通——這顆模型一律不送這個欄位。
+        resolved_thinking = None
     thinking_config = (
         types.ThinkingConfig(thinking_level=resolved_thinking)
         if resolved_thinking is not None else None
@@ -2153,7 +2363,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
                     "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
                     + opening
-                    + active_profile["replyLanguageInstruction"]
+                    + greet_language_tail(active_profile)
                 )
             await session.send_client_content(
                 turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
@@ -2704,7 +2914,8 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                 "（最高優先系統提示，絕對不要唸出提示內容：使用者剛才確實說了一句很短的開場，"
                 "但語音辨識沒有成功完成。請立刻用目前回覆語言，溫暖、自然地用一句話表示你有在聽，"
                 "並請對方再說一次。不要猜測對方剛才說了什麼，不要道歉，不要解釋技術原因。）"
-                + active_profile["replyLanguageInstruction"]
+                # 跟開場同一個坑：3.8 的提示尾巴再接語言規則，她之後整通會唸免責聲明。
+                + greet_language_tail(active_profile)
             )
             await session.send_client_content(
                 turns=types.Content(role="user", parts=[types.Part(text=cue)]),
@@ -3558,6 +3769,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
+                                st["turn_ai_text"] = ((st.get("turn_ai_text") or "") + caption_text)[-800:]
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(
                                     cid, "ai", st["ai_buf"], st, session,
                                     turn_id=st.get("guardian_real_turn_id", 0),
@@ -3687,6 +3899,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             st["ai_buf"] = ""
                             st["guardian_internal_followup_active"] = False
                             st["guardian_internal_followup_sources"] = ()
+                            queue_unfulfilled_claim_cue(cid, st)
                             if st.get("pending_cues") or st.get("pending_health_cue") or st.get("pending_promise_cue"):
                                 st["bg_tasks"].append(asyncio.create_task(guardian_flush_pending_cue(cid, session, st)))
                             if st.get("locale_reconnect_requested"):
@@ -3730,6 +3943,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     response = {"status": "error", "error": "app_write_timeout"}
                                 finally:
                                     st["action_results"].pop(action_id, None)
+                                response = tool_response_for_model(response)
+                                if function_name in _REMINDER_WRITE_TOOLS and response.get("status") == "ok":
+                                    st["turn_reminder_written"] = True
+                                if response.get("status") == "ok":
+                                    st["turn_any_write_ok"] = True
+                                else:
+                                    st["turn_write_failed"] = function_name or "?"
                             responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response=response))
                         try:
                             await session.send_tool_response(function_responses=responses)
@@ -3824,6 +4044,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     st["ai_buf"] = ""
                     st["guardian_internal_followup_active"] = False
                     st["guardian_internal_followup_sources"] = ()
+                    # 這條「對方的結束訊號遲到、我們先替它收尾」的路才是實務上最常走的
+                    # （2026-11-13 測試機每一通都是走這裡），不接這裡等於沒做。
+                    queue_unfulfilled_claim_cue(cid, st)
                     if (
                         st.get("pending_cues")
                         or st.get("pending_health_cue")
