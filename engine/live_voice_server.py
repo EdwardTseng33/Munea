@@ -531,6 +531,25 @@ def reminder_unfulfilled_cue(said):
     )
 
 
+def tool_response_for_model(response):
+    """把 App 回報的寫入結果補成 3.8 官方要求的樣子（2026-11-13）。
+
+    Google 3.8 Live 開發者指南：工具回覆不可以是空的，要帶 status、retryable、message；
+    否則遇到失敗或空結果，3.8 可能換參數一直重呼叫。這裡只補欄位、不改原有內容：
+      成功 → retryable=False
+      失敗 → retryable=False＋一句給她看的 message：老實說沒存成功、不要再試、不要說已經好了。"""
+    out = dict(response or {})
+    if not out.get("status"):
+        out["status"] = "error"
+    out.setdefault("retryable", False)
+    if out["status"] != "ok" and not out.get("message"):
+        out["message"] = (
+            "這一筆沒有存成功。不要再呼叫同一個工具重試；老實告訴使用者剛剛沒記進去，"
+            "並給他一個做得到的下一步。不可以說已經設好或已經記下來。"
+        )
+    return out
+
+
 _CLAIM_CUE_MIN_GAP_S = 20.0
 
 
@@ -3870,6 +3889,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                     response = {"status": "error", "error": "app_write_timeout"}
                                 finally:
                                     st["action_results"].pop(action_id, None)
+                                response = tool_response_for_model(response)
                                 if function_name in _REMINDER_WRITE_TOOLS and response.get("status") == "ok":
                                     st["turn_reminder_written"] = True
                                 if response.get("status") != "ok":

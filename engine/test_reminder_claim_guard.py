@@ -105,6 +105,17 @@ class ReminderClaimGuardTests(unittest.TestCase):
         self.assertEqual(src.count("queue_unfulfilled_claim_cue(cid, st)"), 2,
                          "正常收尾與「替遲到的結束訊號收尾」兩條路都要接，少一條等於沒做")
 
+    def test_tool_response_always_carries_status_and_no_retry(self):
+        ok = v.tool_response_for_model({"status": "ok", "id": "r1"})
+        self.assertEqual((ok["status"], ok["retryable"], ok["id"]), ("ok", False, "r1"))
+        self.assertNotIn("message", ok)
+        err = v.tool_response_for_model({"status": "error", "error": "care_question_list_full"})
+        self.assertEqual((err["status"], err["retryable"], err["error"]), ("error", False, "care_question_list_full"))
+        self.assertIn("不要再呼叫同一個工具重試", err["message"])
+        self.assertIn("不可以說已經設好", err["message"])
+        empty = v.tool_response_for_model({})
+        self.assertEqual((empty["status"], empty["retryable"]), ("error", False))
+
     def test_only_real_write_tools_count_as_set(self):
         self.assertEqual(
             v._REMINDER_WRITE_TOOLS,
