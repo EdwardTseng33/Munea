@@ -42,6 +42,13 @@ NOT_CLAIMS = [
     "記得吃完早餐後，再配水吃下去喔。",
     "你要不要用手機鬧鐘設一個提醒？",
     "",
+    # 2026-11-13 測試機誤判過的詢問／提議句——這些不是「已經做了」
+    "血壓藥千萬不能自己停掉喔！這要請醫師或藥師評估，我幫妳記下來，回診時再問他們好嗎？",
+    "您要不要我幫您記著，下次回診時問清楚呢？",
+    "要不要我幫你記下這個問題，下次回診時問醫生呢？",
+    "如果你有這方面的疑問，我們可以先記下來，下次回診時問醫生，你覺得好嗎？",
+    "需不需要我幫你設個提醒，提醒自己記得熱敷休息呢？",
+    "一定要先請教醫師或藥師，我也可以幫你記下來下次問醫生。",
 ]
 
 
@@ -53,12 +60,14 @@ class ReminderClaimGuardTests(unittest.TestCase):
     def test_questions_and_honest_declines_are_not_claims(self):
         for text in NOT_CLAIMS:
             self.assertEqual(v.reminder_claim_in(text), "", text)
+            self.assertEqual(v.note_claim_in(text), "", text)
 
     def test_cue_tells_her_to_really_set_it_or_say_she_cannot(self):
         cue = v.reminder_unfulfilled_cue("幫你記下來了")
         self.assertIn("絕對不要唸出這段", cue)
         self.assertIn("幫你記下來了", cue)
         self.assertIn("一定要呼叫設定提醒的工具", cue)
+        self.assertIn("記錄問題的工具", cue)
         self.assertIn("手機鬧鐘", cue)
 
     def test_note_claims_cover_non_reminder_writes(self):
@@ -75,28 +84,40 @@ class ReminderClaimGuardTests(unittest.TestCase):
         self.assertIn("做得到的下一步", cue)
 
     def test_turn_end_queues_one_correction_and_resets(self):
-        st = {"turn_reminder_claim": "幫你設好", "turn_reminder_written": False}
+        st = {"turn_ai_text": "好，明天早上八點吃血壓藥的時間，我已經幫你設好囉。"}
         self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=100.0), "reminder")
-        self.assertIn("還沒有任何提醒真的設成功", st["pending_promise_cue"])
-        self.assertEqual(st["turn_reminder_claim"], "")
+        self.assertIn("還沒有任何東西真的存成功", st["pending_promise_cue"])
+        self.assertEqual(st["turn_ai_text"], "")
         # 更正那一輪她又只說不做：20 秒內不再追
         st["pending_promise_cue"] = None
-        st["turn_reminder_claim"] = "幫你設好"
+        st["turn_ai_text"] = "好，我已經幫你設好囉。"
         self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=108.0), "")
         self.assertIsNone(st["pending_promise_cue"])
         # 隔夠久的另一件事可以再更正
-        st["turn_reminder_claim"] = "會提醒你"
+        st["turn_ai_text"] = "明天下午三點會提醒你量血壓喔。"
         self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=140.0), "reminder")
 
-    def test_turn_end_does_nothing_when_it_was_really_written(self):
-        st = {"turn_reminder_claim": "幫你設好", "turn_reminder_written": True}
+    def test_turn_end_does_nothing_when_something_was_really_written(self):
+        st = {"turn_ai_text": "好，我已經幫你設好囉。", "turn_reminder_written": True}
         self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "")
         self.assertFalse(st.get("pending_promise_cue"))
-        st = {}
+        # 記問題的工具寫成功了，她說「幫你記下來了」是真的
+        st = {"turn_ai_text": "好，我幫你記下來了，下次回診問醫生。", "turn_any_write_ok": True}
         self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "")
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", {}, now=1.0), "")
+
+    def test_turn_end_ignores_offers_and_questions(self):
+        st = {"turn_ai_text": "血壓藥千萬不能自己停掉喔！這要請醫師或藥師評估，我幫妳記下來，回診時再問他們好嗎？"}
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "")
+        self.assertFalse(st.get("pending_promise_cue"))
+
+    def test_turn_end_catches_note_claim_without_any_write(self):
+        st = {"turn_ai_text": "這個藥能不能停，一定要請醫生決定喔。我幫你記下來，下次看診的時候問醫生，這樣比較安全。"}
+        self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "note")
+        self.assertIn("記錄問題的工具", st["pending_promise_cue"])
 
     def test_turn_end_prefers_failed_write_explanation(self):
-        st = {"turn_note_claim": "我會幫你記著", "turn_write_failed": "add_care_question"}
+        st = {"turn_ai_text": "下次看診確實可以問問醫生的建議，我會幫你記著喔。", "turn_write_failed": "add_care_question"}
         self.assertEqual(v.queue_unfulfilled_claim_cue("t", st, now=1.0), "write_failed")
         self.assertIn("沒有存成功", st["pending_promise_cue"])
 

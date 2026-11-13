@@ -479,18 +479,37 @@ _REMINDER_CLAIM_RE = re.compile(
     r"|(?:提醒|鬧鐘)[^。！？!?]{0,12}(?:記下|記好|記起來|設好|設定好|設了)"
     r"|(?:到時候|準時|每天|明天|今天|今晚|晚上|早上|中午|下午)[^。！？!?]{0,16}會(?:準時)?(?:提醒|叫)[你您妳]"
     r"|我會(?:準時|按時|再)?(?:提醒|叫)[你您妳]"
-    r"|幫[你您妳](?:設好|設定好|設下|記好|記下來|記起來)"
-    r"|我(?:已經)?(?:記下來|記好|記起來)了"
+    r"|幫[你您妳](?:設好|設定好|設下)"
 )
 
 
-def reminder_claim_in(text):
-    """她這句話有沒有「已經幫你設好提醒」的意思。回傳命中的那一小段（沒有就空字串）。
+# 詢問或提議不是「已經做了」。2026-11-13 測試機誤判：她說「我幫妳記下來，回診時再問他們好嗎？」
+# 被當成「說了沒做」而多補了一句。所以改成整輪講完後逐句看，問句與提議一律跳過。
+_OFFER_RE = re.compile(r"(要不要|需不需要|需要我|好嗎|好不好|可以嗎|你覺得|妳覺得|您覺得|我可以幫|可以幫[你您妳]|我們可以|我也可以)")
+_SENTENCE_RE = re.compile(r"[^。！？!?]+[。！？!?]?")
 
-    只認「已經做了／一定會做」的講法；「要幫你設沒問題，請問是哪一種藥？」這種還在問清楚的不算。
+
+def _statement_sentences(text):
+    """把一輪的話切成句子，只留「陳述句」（去掉問句與提議）。"""
+    out = []
+    for m in _SENTENCE_RE.finditer(" ".join(str(text or "").split())):
+        sentence = m.group(0).strip()
+        if not sentence or sentence[-1] in "？?" or _OFFER_RE.search(sentence):
+            continue
+        out.append(sentence)
+    return out
+
+
+def reminder_claim_in(text):
+    """她這一輪有沒有「已經幫你設好提醒」的意思。回傳命中的那一小段（沒有就空字串）。
+
+    只認陳述句裡「已經做了／一定會做」的講法；還在問清楚、或問他要不要的不算。
     純函式，方便單元測試。"""
-    m = _REMINDER_CLAIM_RE.search(str(text or ""))
-    return m.group(0) if m else ""
+    for sentence in _statement_sentences(text):
+        m = _REMINDER_CLAIM_RE.search(sentence)
+        if m:
+            return m.group(0)
+    return ""
 
 
 _NOTE_CLAIM_RE = re.compile(
@@ -499,9 +518,12 @@ _NOTE_CLAIM_RE = re.compile(
 
 
 def note_claim_in(text):
-    """她這句話有沒有「我幫你記著／記下來」的意思（不限提醒，含要問醫生的問題、傳話這類）。"""
-    m = _NOTE_CLAIM_RE.search(str(text or ""))
-    return m.group(0) if m else ""
+    """她這一輪有沒有「我幫你記著／記下來」的意思（不限提醒，含要問醫生的問題、傳話這類）。"""
+    for sentence in _statement_sentences(text):
+        m = _NOTE_CLAIM_RE.search(sentence)
+        if m:
+            return m.group(0)
+    return ""
 
 
 def write_failed_cue(said):
@@ -518,13 +540,14 @@ def write_failed_cue(said):
 
 
 def reminder_unfulfilled_cue(said):
-    """她說設好了、但這一輪沒有任何一筆提醒真的寫進 App——排一句讓她下一句自己補上。"""
+    """她說設好了／記下來了，但這一輪沒有任何一筆真的寫進 App——排一句讓她下一句自己補上。"""
     return (
-        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」，但其實**還沒有任何提醒真的設成功**。"
+        "（系統提示，絕對不要唸出這段：你剛剛說了「%s」，但其實**還沒有任何東西真的存成功**。"
         "下一句請自然地補上，不要長篇道歉。"
         "・如果他要的是吃藥或回診提醒：把還缺的問清楚（哪一種藥、幾點、每天還是只有這次），"
         "然後**一定要呼叫設定提醒的工具**，工具回報成功之後才可以說設好了。"
-        "・如果是你設不了的提醒（量血壓、喝水、運動這類）或你沒有設定提醒的工具："
+        "・如果是要記下來問醫生的問題：呼叫記錄問題的工具，成功了才說記好了。"
+        "・如果是你設不了的提醒（量血壓、喝水、運動這類）或你沒有對應的工具："
         "老實說目前只能幫忙設吃藥和回診提醒，請他用手機鬧鐘或請家人幫忙設，"
         "像『欸不好意思，量血壓的提醒我這邊還設不了，你用手機鬧鐘設一個，我陪你想幾點比較好』。）"
         % str(said or "")[:40]
@@ -556,21 +579,27 @@ _CLAIM_CUE_MIN_GAP_S = 20.0
 def queue_unfulfilled_claim_cue(cid, st, now=None):
     """一輪講完時呼叫：她這一輪說了「設好了／記著了」，但沒有任何一筆真的寫成功 → 排一句更正。
 
-    回傳排了哪一種（"write_failed"／"reminder"／""）。兩條收尾路（正常收尾、替遲到的結束訊號收尾）
-    都要呼叫；同一通電話 20 秒內最多更正一次，避免她一直繞著同一件事道歉。"""
-    reminder_claim = st.get("turn_reminder_claim") or ""
-    written = bool(st.get("turn_reminder_written"))
-    note_claim = st.get("turn_note_claim") or ""
+    回傳排了哪一種（"write_failed"／"reminder"／"note"／""）。兩條收尾路（正常收尾、替遲到的結束訊號
+    收尾）都要呼叫；同一通電話 20 秒內最多更正一次，避免她一直繞著同一件事道歉。
+    判讀用整輪講完的文字逐句看（問句與提議不算），不在字幕進來的當下就下結論。"""
+    text = st.get("turn_ai_text") or ""
+    written_any = bool(st.get("turn_any_write_ok")) or bool(st.get("turn_reminder_written"))
     failed = st.get("turn_write_failed") or ""
-    st["turn_reminder_claim"] = ""
+    st["turn_ai_text"] = ""
+    st["turn_any_write_ok"] = False
     st["turn_reminder_written"] = False
-    st["turn_note_claim"] = ""
     st["turn_write_failed"] = ""
+    if written_any or not text:
+        return ""
+    reminder_claim = reminder_claim_in(text)
+    note_claim = note_claim_in(text)
     kind, said = "", ""
-    if failed and (note_claim or reminder_claim) and not written:
+    if failed and (note_claim or reminder_claim):
         kind, said = "write_failed", (note_claim or reminder_claim)
-    elif reminder_claim and not written:
+    elif reminder_claim:
         kind, said = "reminder", reminder_claim
+    elif note_claim:
+        kind, said = "note", note_claim
     if not kind:
         return ""
     now = time.monotonic() if now is None else now
@@ -3712,10 +3741,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
-                                if not st.get("turn_reminder_claim"):
-                                    st["turn_reminder_claim"] = reminder_claim_in(st["ai_buf"])
-                                if not st.get("turn_note_claim"):
-                                    st["turn_note_claim"] = note_claim_in(st["ai_buf"])
+                                st["turn_ai_text"] = ((st.get("turn_ai_text") or "") + caption_text)[-800:]
                                 st["bg_tasks"].append(asyncio.create_task(guardian_watch(
                                     cid, "ai", st["ai_buf"], st, session,
                                     turn_id=st.get("guardian_real_turn_id", 0),
@@ -3892,7 +3918,9 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 response = tool_response_for_model(response)
                                 if function_name in _REMINDER_WRITE_TOOLS and response.get("status") == "ok":
                                     st["turn_reminder_written"] = True
-                                if response.get("status") != "ok":
+                                if response.get("status") == "ok":
+                                    st["turn_any_write_ok"] = True
+                                else:
                                     st["turn_write_failed"] = function_name or "?"
                             responses.append(types.FunctionResponse(id=getattr(fc, "id", None), name=fc.name, response=response))
                         try:
