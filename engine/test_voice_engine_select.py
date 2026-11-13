@@ -121,5 +121,30 @@ class VoiceEngineToolBehaviorTests(unittest.TestCase):
         self.assertEqual(shared_touched, 0)
 
 
+class VoiceEngineGreetTailTests(unittest.TestCase):
+    """3.8 的開場提示尾巴不可以再接語言規則（2026-11-13 實測：接了她整通會在回答結尾唸免責聲明）。
+    3.1 與其他語系維持原樣。"""
+
+    CODE = "; ".join((
+        "import live_voice_server as v",
+        "tw = {'sessionLocale': 'zh-TW', 'replyLanguageInstruction': 'LANG-RULES'}",
+        "en = {'sessionLocale': 'en-US', 'replyLanguageInstruction': 'LANG-RULES'}",
+        "print(repr(v.greet_language_tail(tw)) + '|' + repr(v.greet_language_tail(en)))",
+    ))
+
+    def _tails(self, engine):
+        env = dict(os.environ, GEMINI_API_KEY="test", PYTHONIOENCODING="utf-8", MUNEA_VOICE_ENGINE=engine)
+        out = subprocess.run([sys.executable, "-c", self.CODE], cwd=HERE, env=env,
+                             capture_output=True, text=True, encoding="utf-8", timeout=120)
+        self.assertEqual(out.returncode, 0, out.stderr[-400:])
+        return out.stdout.strip().splitlines()[-1]
+
+    def test_38_drops_language_rules_from_zh_tw_greeting_only(self):
+        self.assertEqual(self._tails("38"), "''|'LANG-RULES'")
+
+    def test_31_keeps_language_rules_in_greeting(self):
+        self.assertEqual(self._tails("31"), "'LANG-RULES'|'LANG-RULES'")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

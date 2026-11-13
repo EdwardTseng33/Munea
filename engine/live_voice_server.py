@@ -1620,6 +1620,21 @@ def _voice_thinking_level(explicit=None):
     return None
 
 
+def greet_language_tail(profile):
+    """開場提示後面要不要再接一次「回覆語言規則」。
+
+    2026-11-13 實測（3.8、語音進、多輪健康對話）：開場提示尾巴只要帶語言規則——不管是整段
+    replyLanguageInstruction 還是一句「這句招呼只用台灣華語說」——她之後整通的回答就會在結尾
+    自己唸免責聲明（「本資訊不構成醫療建議或診斷，請務必諮詢專業醫療人員」）：
+      帶整段 2/3 通、帶一句 5/5 通、經語音主機 12/14 通；**不帶 0/8 通**、不請她開場 0/7 通。
+    3.1 沒這個現象（經語音主機 0/2 通）。語言規則本來就在說明書裡，開場再講一次沒有必要。
+    所以：3.8＋台灣中文 → 不接；其他組合維持原樣（別的語系在 3.8 上還沒驗）。"""
+    profile = profile or {}
+    if VOICE_ENGINE == "38" and profile.get("sessionLocale") == "zh-TW":
+        return ""
+    return profile.get("replyLanguageInstruction") or ""
+
+
 def _tools_for_engine(tools):
     """3.8 的工具呼叫預設改成「非同步」（官方遷移頁：behavior NON_BLOCKING 為預設）。
     2026-11-12 實測：預設下她先送 tool_call、該輪 0 聲音就 turn_complete，App 會多收到一個
@@ -2336,7 +2351,7 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                     "（這是系統提示，絕對不要唸出這段、也不要提到系統：使用者剛接起這通電話。"
                     "請你「立刻、主動」開口打招呼，不要等對方先開口。" + _len_rule + "）"
                     + opening
-                    + active_profile["replyLanguageInstruction"]
+                    + greet_language_tail(active_profile)
                 )
             await session.send_client_content(
                 turns=types.Content(role="user", parts=[types.Part(text=greet_cue)]),
