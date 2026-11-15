@@ -6947,6 +6947,30 @@ function mergeHealthHistory(days, syncCloud = true) {
 }
 window.__muneaSetHealthHistory = function (days) { return mergeHealthHistory(days, true); };
 
+// 健康讀取診斷（2026-11-15）：health.js 每次真的讀過 Apple 健康就發 munea:health-read，
+// 這裡記成 health_read 事件——只有「讀到哪幾項、有沒有錯、旗子開沒開」，沒有任何數值。
+// 起因：Edward 真機回報「連了卻沒資料」時，後台完全看不到他的手機到底讀到了什麼。
+// 有變化才記（同樣的結果 6 小時內不重複），不讓事件表被每次切回前景灌爆。
+let _healthReadLastSignature = '';
+let _healthReadLastAt = 0;
+window.addEventListener('munea:health-read', event => {
+  try {
+    const d = (event && event.detail) || {};
+    const fields = Array.isArray(d.fields) ? d.fields.filter(name => typeof name === 'string').slice(0, 12) : [];
+    const signature = [d.connected ? 1 : 0, d.hasError ? 1 : 0, fields.slice().sort().join(',')].join('|');
+    if (signature === _healthReadLastSignature && Date.now() - _healthReadLastAt < 6 * 3600 * 1000) return;
+    _healthReadLastSignature = signature;
+    _healthReadLastAt = Date.now();
+    trackProductEvent('health_read', {
+      trigger: String(d.trigger || ''),
+      healthConnected: !!d.connected,
+      healthFields: fields.join(','),
+      healthFieldCount: fields.length,
+      healthReadError: !!d.hasError,
+    });
+  } catch (e) {}
+});
+
 function muneaCloudPersonId() {
   try { return localStorage.getItem('munea.cloudPersonId') || muneaDeviceId(); }
   catch (e) { return muneaDeviceId(); }
@@ -7625,6 +7649,17 @@ let _syncPullCompletedAt = 0;
 let _familySyncTimer = null;
 let _familyVisibilityBound = false;
 let _lastPlanRecheckAt = 0;   // 回前景重新確認會員身分的節流時間戳
+// 家庭狀態上傳被後端拒收：每把鑰匙＋狀態碼 10 分鐘內只記一次（只記鑰匙名與狀態碼，不帶內容）。
+const _familySyncRejectedAt = new Map();
+function noteFamilySyncRejected(key, status) {
+  try {
+    const id = String(key) + '|' + String(status);
+    const last = _familySyncRejectedAt.get(id) || 0;
+    if (Date.now() - last < 10 * 60 * 1000) return;
+    _familySyncRejectedAt.set(id, Date.now());
+    trackProductEvent('family_sync_rejected', { stateKey: String(key), httpStatus: Number(status) || 0 });
+  } catch (e) {}
+}
 function syncPush(key, value) {
   if (isDeveloperBypassAllowed()) return;
   try {
@@ -7644,7 +7679,12 @@ function syncPush(key, value) {
       if (!pendingBody) return;
       muneaAuthHeaders({ 'Content-Type': 'application/json' }).then(headers => {
         fetch(brainURL('/family/state'), { method: 'POST', headers, body: pendingBody })
-          .then(response => { if (response.ok) _syncPushLastSent.set(key, { body: pendingBody, at: Date.now() }); })
+          .then(response => {
+            if (response.ok) { _syncPushLastSent.set(key, { body: pendingBody, at: Date.now() }); return; }
+            // 後端拒收要留紀錄（2026-11-15）。2026-11-07 Edward 的手機讀到了健康資料、
+            // 上傳卻被後端回 403，這裡原本什麼都不做——資料沒上去，三個月沒有人知道。
+            noteFamilySyncRejected(key, response.status);
+          })
           .catch(() => {});
       }).catch(() => {});
     }, 350));
