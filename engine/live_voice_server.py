@@ -374,6 +374,132 @@ def process_request(connection, request):
     return _file_response(path)
 
 
+# ============================================================================
+# 自我檢查：真的接一次 Google（2026-11-16）
+# ----------------------------------------------------------------------------
+# 11/8 重建時工具包自動升到 3.x，Gemini Live 連線被拒，正式聊聊整整四天打不通沒人知道——
+# 上線關卡只看「主機有沒有起來、版號對不對」，從來沒有真的去接 Google。
+# 這裡補一個門：GET /selftest/live，用這台主機自己的鑰匙、自己的模型、（預設）自己整份的
+# 通話設定開一條真的 Live 連線，請她說一個字，等到第一包聲音才算過。
+#   - 上線前關卡（canary-verify）打一次：整份設定＝「真的電話接不接得通」。
+#   - 每日巡邏打 ?mode=light：不帶說明書、幾乎不花錢，抓「鑰匙失效／額度用完／模型下架／工具包被拒」。
+# 只認薄門鑰匙（標頭 X-Munea-Selftest-Key）；沒帶或不對一律回 404，不讓陌生人拿它燒通話費。
+# 同一台主機 60 秒內重複打只回上次結果（cached），不會重複開線。
+SELFTEST_MIN_GAP_S = 60.0
+SELFTEST_TIMEOUT_S = 15.0
+_selftest_cache = {}          # mode -> (monotonic 時刻, 結果)
+_selftest_lock = None         # asyncio.Lock，第一次用到才建（要在事件迴圈裡建）
+_SELFTEST_SECRET_RE = re.compile(r"(key|token|secret)=[^&\s\"']+", re.IGNORECASE)
+
+
+def _selftest_authorized(request, environ=None):
+    env = os.environ if environ is None else environ
+    expected = str(env.get("MUNEA_APP_KEY") or "").strip()
+    supplied = str(request.headers.get("X-Munea-Selftest-Key", "") or "").strip()
+    if not expected or not supplied:
+        return False
+    return hmac.compare_digest(supplied.encode("utf-8"), expected.encode("utf-8"))
+
+
+def _selftest_mode(request):
+    query = request.path.split("?", 1)[1] if "?" in request.path else ""
+    return "light" if "mode=light" in query.split("&") else "full"
+
+
+def _selftest_config(mode):
+    """full＝跟真的電話同一份設定（說明書、工具、聲音都帶）；light＝只要她出聲。"""
+    if mode == "light":
+        return types.LiveConnectConfig(response_modalities=["AUDIO"])
+    return live_config(allow_reminders=True)
+
+
+def _selftest_safe_detail(exc):
+    return _SELFTEST_SECRET_RE.sub(r"\1=<hidden>", str(exc))[:200]
+
+
+async def run_live_selftest(mode="full", timeout_s=SELFTEST_TIMEOUT_S, connect=None):
+    """開一條真的 Live 連線、請她說一個字、等到第一包聲音。回傳結果 dict（不丟例外）。
+
+    connect 只給測試換假的連線用；平常留 None＝用這台主機自己的鑰匙。"""
+    started = time.monotonic()
+    result = {"ok": False, "mode": mode, "engine": VOICE_ENGINE, "model": MODEL,
+              "sdk": getattr(genai, "__version__", "")}
+    idx = None
+    try:
+        cfg = _selftest_config(mode)
+        if connect is None:
+            idx, cli = _pick_client()
+            connect = cli.aio.live.connect
+
+        async def _go():
+            async with connect(model=MODEL, config=cfg) as session:
+                result["connect_ms"] = round((time.monotonic() - started) * 1000)
+                await session.send_client_content(
+                    turns=types.Content(role="user", parts=[types.Part(text="請只說一個字：好")]),
+                    turn_complete=True,
+                )
+                async for msg in session.receive():
+                    if getattr(msg, "data", None):
+                        result["first_audio_ms"] = round((time.monotonic() - started) * 1000)
+                        return True
+                    sc = getattr(msg, "server_content", None)
+                    if sc is not None and getattr(sc, "turn_complete", False):
+                        break
+            return False
+
+        got_audio = await asyncio.wait_for(_go(), timeout_s)
+        result["ok"] = bool(got_audio)
+        if not got_audio:
+            result["error"] = "no_audio"
+    except asyncio.TimeoutError:
+        result["error"] = "timeout"
+    except Exception as exc:  # 連線被拒、鑰匙失效、額度用完、模型下架……都落在這裡
+        result["error"] = type(exc).__name__
+        result["detail"] = _selftest_safe_detail(exc)
+    finally:
+        if idx is not None:
+            _release_client(idx)
+    result["total_ms"] = round((time.monotonic() - started) * 1000)
+    return result
+
+
+async def live_selftest_cached(mode="full", now=None, runner=None):
+    """60 秒內同一種檢查只真的跑一次；其餘回上次結果並標 cached。"""
+    global _selftest_lock
+    if _selftest_lock is None:
+        _selftest_lock = asyncio.Lock()
+    clock = time.monotonic if now is None else now
+    async with _selftest_lock:
+        hit = _selftest_cache.get(mode)
+        if hit and clock() - hit[0] < SELFTEST_MIN_GAP_S:
+            return dict(hit[1], cached=True)
+        result = await (runner or run_live_selftest)(mode)
+        _selftest_cache[mode] = (clock(), result)
+        return result
+
+
+def _selftest_response(result):
+    body = json.dumps(result, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    headers = Headers()
+    headers["Content-Type"] = "application/json; charset=utf-8"
+    headers["Cache-Control"] = "no-store"
+    headers["Content-Length"] = str(len(body))
+    if result.get("ok") is True:
+        return Response(200, "OK", headers, body)
+    return Response(503, "Service Unavailable", headers, body)
+
+
+async def process_request_with_selftest(connection, request):
+    """正式掛在門口的版本：先看是不是自我檢查，其餘照舊交給 process_request。"""
+    if request.headers.get("Upgrade", "").lower() != "websocket":
+        path = request.path.split("?")[0].strip("/")
+        if path == "selftest/live":
+            if not _selftest_authorized(request):
+                return Response(404, "Not Found", Headers({"Content-Length": "0"}), b"")
+            return _selftest_response(await live_selftest_cached(_selftest_mode(request)))
+    return process_request(connection, request)
+
+
 import server  # 重用文字聊天同一套「腦」組裝：人格層＋記憶層＋感知層＋守護腦，確保即時語音同步
 import notify as guardian_notify  # 守護腦命中 high/critical 時的內部安全告警（Slack #沐寧-告警 kind=voice）；送不出去就默默記日誌，不影響通話
 import perception_engine  # 守護腦第二層：拐彎危機語意判讀（Gemini Flash）——第一層沒抓到硬危機、但有軟訊號苗頭時才升級
@@ -4511,7 +4637,7 @@ async def main():
     host = os.environ.get("LIVE_VOICE_HOST", "0.0.0.0")
     # 門牌：雲端主機（Cloud Run）會用 PORT 指定；本機沒設就照舊 8201
     port = int(os.environ.get("PORT") or os.environ.get("MUNEA_VOICE_PORT") or "8201")
-    async with websockets.serve(handle, host, port, max_size=None, process_request=process_request):
+    async with websockets.serve(handle, host, port, max_size=None, process_request=process_request_with_selftest):
         print(f"即時語音橋接已啟動：{host}:{port} （網頁＋語音同門，模型 {MODEL}）")
         await asyncio.Future()
 

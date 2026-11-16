@@ -49,6 +49,12 @@ assert.match(verify, /production:voice.*munea-voice/s);
 assert.match(verify, /apple\/notifications/);
 assert.match(verify, /NOTIFICATION_CODE.*400/s);
 assert.match(verify, /尚未涵蓋.*Call Token/);
+// 2026-11-16：語音版一定要「真的接一次 Google」才放行（11/8 工具包升版、連線被拒四天沒人知道）。
+assert.match(verify, /\$CANARY_URL\/selftest\/live/);
+assert.match(verify, /X-Munea-Selftest-Key/);
+assert.match(verify, /"\$SELFTEST_CODE" != "200"[\s\S]{0,400}exit 1/);
+assert.match(verify, /live_selftest_unexpected_payload/);
+assert.match(verify, /MUNEA_SKIP_LIVE_SELFTEST/);
 assert.doesNotMatch(verify, /update-traffic|--to-latest|promote\.sh/);
 
 assert.match(promote, /canary-verify\.sh "\$WHAT" "\$TAG" "\$PROFILE" "\$EXPECTED_VERSION" "\$EXPECTED_COMMIT"/);
