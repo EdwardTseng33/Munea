@@ -91,6 +91,8 @@
       "voice.runtime.degradedBody",
       "voice.call.microphoneBlockedTitle",
       "voice.call.microphoneBlockedNote",
+      "voice.call.audioRestartTitle",
+      "voice.call.audioRestartNote",
       "voice.fallback"
     ],
     "family": [

@@ -791,10 +791,17 @@ function setLocalizedRuntimeCaption(state) {
 // 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
 // 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
 // mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿）
+// 2026-11-16：這張卡的標題與按鈕在 index.html 帶著預設字的標記（data-i18n＝「現在忙線中／取消排隊」）。
+// 四語自動套字只要看到內容被改，就照標記把字套回去——結果每一種卡的標題、按鈕都被改回那兩句
+//（實測：麥克風受阻卡顯示成「現在忙線中」＋「取消排隊」）。卡片的字由這兩個函式決定，先把標記拿掉。
+function releaseBusyCardDefaultCopy(...elements) {
+  elements.forEach(el => { if (el && el.hasAttribute('data-i18n')) el.removeAttribute('data-i18n'); });
+}
 function showBusyCard(mode, payload) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = mode;
   const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
+  releaseBusyCardDefaultCopy(title, btn);
   const rendererCopy = muneaRendererCopy();
   if (rendererCopy) {
     const q = payload || {};
@@ -887,6 +894,7 @@ function showCallStatusCard(stateOrOptions) {
   card.dataset.mode = 'error';
   card.dataset.action = opts.action || 'dismiss';
   const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
+  releaseBusyCardDefaultCopy(title, btn);
   if (title) title.textContent = opts.title || muneaT('voice.call.unavailable', '');
   if (pos) pos.textContent = '';
   if (note) note.textContent = opts.note || muneaT('voice.call.retryLater', '');
@@ -4088,6 +4096,150 @@ const LiveVoice = {
     [this.ac, this.playCtx, CallChime._ctx].forEach(ctx => {
       try { if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
     });
+  },
+  // ── 撥號前確認聲音引擎的時鐘真的在走（2026-11-16）──────────────────────────
+  // 11/13 真機（1.0.71）：App 從背景回來後的下一通，引擎自稱 running、麥克風 live，
+  // 但時鐘停在 0、一包都送不出去，撥出去 18 秒後整通被收掉；#660 的「換一顆新引擎」
+  // 時鐘一樣不走。所以改成：向總機叫號之前先量時鐘，不走就由輕到重一層一層救，
+  // 每層做完重新量；全部沒用才請使用者把 App 關掉重開（目前唯一有真機證據的解法）。
+  // 順序與量測在 voice-audio-clock.js；這裡只提供每一層的實際動作。
+  _audioSessionPlugin() {
+    const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioSession;
+    return (p && typeof p.reactivate === 'function') ? p : null;
+  },
+  _audioClockWait(promise, ms) {
+    return Promise.race([
+      Promise.resolve(promise).catch(() => null),
+      new Promise(resolve => setTimeout(() => resolve(null), ms)),
+    ]);
+  },
+  // 第 1 層的動作：暫停再恢復。WebKit 已知「狀態 running、時鐘不走」時這招有效；
+  // resume() 在這種狀況可能永遠不回來，所以每一步都限時，不能卡住撥號。
+  async _audioClockKick() {
+    const contexts = [this.ac, this.playCtx, CallChime._ctx].filter(ctx => ctx && ctx.state !== 'closed');
+    await Promise.all(contexts.map(async ctx => {
+      try { if (ctx.state === 'running') await this._audioClockWait(ctx.suspend(), 250); } catch (e) {}
+      try { await this._audioClockWait(ctx.resume(), 250); } catch (e) {}
+    }));
+  },
+  // 第 4 層的動作：網頁這層整組重來——停掉所有軌道、關掉舊引擎，再重新要麥克風＋建新引擎。
+  async _audioClockRebuild() {
+    if (this._primeCancelled) return { primed: false };   // 使用者已取消：不可以再把麥克風打開
+    try { if (this.proc) this.proc.disconnect(); } catch (e) {}
+    try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
+    try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
+    try { if (this.ac) this.ac.close(); } catch (e) {}
+    try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
+    try { if (CallChime._ctx) CallChime._ctx.close(); } catch (e) {}
+    this.proc = this._micSrc = this.mic = this.ac = this.playCtx = null;
+    this._avAnalyser = null; this._playGain = null; CallChime._ctx = null;
+    this._primeMicPromise = null; this._primePipelinePromise = null;
+    CallChime.arm();
+    if (!this.prime()) return { primed: false };
+    const pipeline = await this._audioClockWait(this._primePipelinePromise, 4000);
+    return { primed: true, microphone: !!(pipeline && pipeline.ok) };
+  },
+  _audioClockLayers() {
+    return [
+      { name: 'web_suspend_resume', run: () => this._audioClockKick() },
+      {
+        // iPhone 16.4 起網頁可以指定聲音工作階段類型；切一次等於請系統重新設定收放音。
+        name: 'web_audio_session',
+        available: () => !!(navigator.audioSession && 'type' in navigator.audioSession),
+        run: async () => {
+          const session = navigator.audioSession;
+          const before = String(session.type || '');
+          try { session.type = 'auto'; } catch (e) {}
+          session.type = 'play-and-record';
+          await this._audioClockKick();
+          return { before, after: String(session.type || '') };
+        },
+      },
+      {
+        // 原生層：請 App 外殼把系統的聲音工作階段重新走一次（AudioSessionPlugin.swift）。
+        name: 'native_audio_session',
+        available: () => !!this._audioSessionPlugin(),
+        run: async () => {
+          const res = await this._audioClockWait(this._audioSessionPlugin().reactivate(), 2500);
+          await this._audioClockKick();
+          if (!res) return { answered: false };
+          return {
+            answered: true, pulsed: !!res.pulsed, failedStep: String(res.failedStep || ''), errorCode: Number(res.errorCode) || 0,
+            captureBefore: String(res.captureBefore || ''), captureAfter: String(res.captureAfter || ''), unmuted: !!res.unmuted,
+          };
+        },
+      },
+      { name: 'web_rebuild', run: () => this._audioClockRebuild() },
+    ];
+  },
+  async ensureAudioClock() {
+    const Clock = window.MuneaVoiceAudioClock;
+    if (!Clock || typeof Clock.ensure !== 'function') return { ok: true, outcome: 'no_module' };
+    // 先等麥克風接好再量：剛要到麥克風那一下系統會重設收放音，太早量會誤判。
+    // 第一次用要等使用者按「允許」，等太久就不量、照原本流程走。
+    const pipelinePromise = this._primePipelinePromise;
+    const pipeline = pipelinePromise ? await this._audioClockWait(pipelinePromise, 4000) : { ok: true };
+    if (this._primeCancelled || !this.ac) return { ok: true, outcome: 'cancelled' };
+    if (!pipeline || !pipeline.ok) {
+      voiceCallMark('audio_clock_preflight', 'skipped', { reason: pipeline ? 'microphone_unavailable' : 'microphone_pending' });
+      return { ok: true, outcome: 'skipped' };
+    }
+    const events = {
+      stalled: 'voice_audio_clock_stalled',
+      step: 'voice_audio_clock_step',
+      recovered: 'voice_audio_clock_recovered',
+      unrecovered: 'voice_audio_clock_unrecovered',
+    };
+    const report = (kind, details) => {
+      const props = Object.assign({}, details);
+      // 原生層回來的小物件攤平成一層，後台好查；只有狀態，沒有任何聲音內容
+      if (props.detail && typeof props.detail === 'object') Object.assign(props, props.detail);
+      delete props.detail;
+      if (kind === 'stalled') {
+        const track = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+        Object.assign(props, {
+          audioState: this.ac ? this.ac.state : null,
+          playState: this.playCtx ? this.playCtx.state : null,
+          chimeState: CallChime._ctx ? CallChime._ctx.state : null,
+          playTime: this.playCtx ? +Number(this.playCtx.currentTime || 0).toFixed(2) : null,
+          trackState: track ? track.readyState : null,
+          trackMuted: track ? !!track.muted : null,
+          sinceForegroundMs: this._foregroundAt ? Date.now() - this._foregroundAt : null,
+          nativeLayer: !!this._audioSessionPlugin(),
+          webSessionType: navigator.audioSession ? String(navigator.audioSession.type || '') : 'unsupported',
+        });
+        // 原生層看到的麥克風狀態（進背景前／回前景時／現在）一起附上；問不到就照送，不等它
+        const plugin = this._audioSessionPlugin();
+        if (plugin && typeof plugin.status === 'function') {
+          this._audioClockWait(plugin.status(), 800).then(native => {
+            if (native) Object.assign(props, {
+              capture: String(native.capture || ''), captureAtResign: String(native.captureAtResign || ''),
+              captureAtResume: String(native.captureAtResume || ''), resumeUnmuted: !!native.resumeUnmuted,
+            });
+            try { trackProductEvent(events[kind], props); } catch (e) {}
+          });
+          return;
+        }
+      }
+      try { trackProductEvent(events[kind], props); } catch (e) {}
+    };
+    const result = await Clock.ensure({
+      measure: () => Clock.measure(this.ac),
+      layers: this._audioClockLayers(),
+      report,
+      isCancelled: () => !!this._primeCancelled,
+    });
+    if (result.outcome === 'healthy') {
+      voiceCallMark('audio_clock_preflight', 'pass', { waitedMs: result.first && result.first.waitedMs });
+    } else if (result.outcome === 'recovered') {
+      voiceCallMark('audio_clock_preflight', 'pass', { recoveredBy: result.recoveredBy, trail: result.trail, totalMs: result.totalMs });
+    } else if (result.outcome === 'unrecovered') {
+      voiceCallFail('audio_clock_preflight', 'audio_clock_stuck', { trail: result.trail, totalMs: result.totalMs, audioState: this.ac && this.ac.state });
+    } else if (result.outcome === 'not_running_passthrough') {
+      // 引擎不是 running（例如還在等使用者點一下）：不擋撥號，交給既有的「點一下畫面」處理
+      voiceCallMark('audio_clock_preflight', 'fallback', { trail: result.trail, totalMs: result.totalMs, audioState: this.ac && this.ac.state });
+    }
+    return result;
   },
   _setMicOpen(open) {
     this.micOpen = !!open;
@@ -8514,6 +8666,15 @@ function setupHscrollHints() {
   window.addEventListener('resize', refreshHscrollHints);
 }
 
+// 撥號前發現聲音引擎卡死、每一層都救不回來（2026-11-16）：這通不撥出去，
+// 明講「把 App 關掉再打開」——11/13 真機唯一確定有效的解法——不讓人空等 18 秒。
+function abortCallForStuckAudio() {
+  voiceCallEnd('failed', 'audio_clock_stuck');
+  try { LiveVoice.stop(); } catch (e) {}
+  setCallPreflightPending(false); setCallDialing(false); stopCallTimer();
+  setLocalizedCallHint('unavailable');
+  showCallStatusCard('audioRestart');
+}
 async function connectCall() {
   // 真的要撥號才要求登入（Edward 2026-07-30：訪客能進聊聊頁看，點「開始通話」才跳登入）。
   // 守門放在這裡＝所有撥號入口的共同關卡（通話鈕／同意跨境後接著撥／選完話題後接著撥），
@@ -8588,6 +8749,10 @@ async function connectCall() {
     showCallStatusCard(micHttpsOnly ? 'microphoneHttps' : 'microphonePermission');
     return;
   }
+  // 2026-11-16：向總機叫號之前，先確認聲音引擎的時鐘真的在走（App 從背景回來後會卡死，
+  // 撥出去只會空等 18 秒被收線）。跟下面的帳號／點數前置同時跑；結果在叫號前才收。
+  // 檢查本身出錯一律放行，不能因為這道檢查讓原本打得通的電話打不出去。
+  const _audioClockReady = LiveVoice.ensureAudioClock().catch(() => ({ ok: true, outcome: 'check_failed' }));
   // 前置並行（2026-07-29 接通提速）：家人傳話準備、帳號確認、點數同步原本一條龍
   // 等完才向總機叫號——行動網路一趟來回幾百毫秒、串起來破秒。改成同時跑，語意不變：
   // 傳話仍最多等 1.2 秒（從這裡就開始計時、跟其他前置重疊）、帳號沒好照樣擋在叫號前、
@@ -8600,6 +8765,7 @@ async function connectCall() {
   if (developmentDirectCall) {
     setCallDialing(true);
     setLocalizedCallHint('developerConnecting', true);
+    if ((await _audioClockReady).ok === false) { abortCallForStuckAudio(); return; }
   } else {
     // 點數是否足夠這件事只在後端靜默判斷，畫面維持一般撥號觀感，不對用戶顯示「查點數」字樣（Edward 2026-07-20拍板）。
     setLocalizedCallHint('connecting', true);
@@ -8624,6 +8790,8 @@ async function connectCall() {
         // 正式用戶（非開發者旁路）完全不受影響，0 點依然照擋。
         if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');
       }
+      // 聲音引擎每一層都救不回來 → 不叫號、不佔席位、不扣點，請使用者把 App 關掉重開
+      if ((await _audioClockReady).ok === false) { abortCallForStuckAudio(); return; }
       // 用戶可能在前置檢查途中就按了取消／離開（排隊可取消上線後，取消會把 preflight 收掉）——不再往下向總機叫號
       if (!callPreflightPending && !callDialing && !callConnected) return;
       // 撥號中就是撥號中：不把「安排通話／安排席位」這種後台調度字眼推到畫面上，
@@ -9151,7 +9319,7 @@ function init() {
   };
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') _hangupOnLeave('visibility_hidden');
-    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} }
+    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} LiveVoice._foregroundAt = Date.now(); }
   });
   window.addEventListener('pagehide', () => _hangupOnLeave('pagehide'));
   // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；

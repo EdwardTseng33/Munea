@@ -138,6 +138,8 @@
         "voice.call.serviceUpdatingNote",
         "voice.call.serviceBusyNote",
         "voice.call.activationPendingTitle",
+        "voice.call.audioRestartTitle",
+        "voice.call.audioRestartNote",
         "voice.call.readinessPendingTitle",
         "voice.call.readinessPendingNote",
         "voice.call.disconnectedTitle",

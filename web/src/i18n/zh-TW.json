@@ -461,6 +461,8 @@
   "voice.call.microphoneHttpsNote": "手機或區網測試需要 HTTPS 才能開麥，請改用公開測試連結。",
   "voice.call.microphoneBlockedTitle": "聽不到你的聲音",
   "voice.call.microphoneBlockedNote": "請檢查麥克風有沒有被擋住，或到 iPhone 設定裡打開沐寧的麥克風權限。",
+  "voice.call.audioRestartTitle": "聲音還沒準備好",
+  "voice.call.audioRestartNote": "請把沐寧整個關掉再重新打開，然後再撥一次。這次沒有扣點數。",
   "voice.call.microphonePermissionTitle": "拿不到麥克風權限",
   "voice.call.microphonePermissionNote": "請到手機或瀏覽器設定裡，允許沐寧使用麥克風，再重新撥一次。",
   "voice.call.authExpiredTitle": "登入狀態已失效",

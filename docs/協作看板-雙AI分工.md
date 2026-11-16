@@ -1,5 +1,19 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-16 Claude｜🎙️ 背景回來後下一通沒有麥克風——撥號前先量聲音時鐘＋分層救援（Draft PR · call-path risk：動到 App 通話路徑＋iOS 原生外掛 · App E2E pending）
+
+- **病徵（11/13 真機，1.0.71+543）**：7 通有 2 通失敗、連續兩通，都在 App 從背景回到前景之後。App 自報 `voice_mic_uplink_stalled`：聲音引擎自稱 running、麥克風軌道 live，但引擎時鐘停在 0，一包聲音都沒送出；重建兩次一樣，約 18 秒後整通被收掉。把 App 整個關掉重開，下一通正常。#660（1.0.71 已含）的「重建一律換新引擎」沒有修好——新引擎的時鐘一樣不走。
+- **判斷**：卡住的是 iPhone 那一層的聲音工作階段，不是網頁這層的物件（依據與外部資料連結寫在 PR）。這是推論，**只有真機能證實**。
+- **做法**：① 向總機叫號**之前**先量引擎時鐘（最多看 300ms，正常通話只多等一格 50ms）；② 不走就由輕到重救，每層做完重新量：`web_suspend_resume`（暫停再恢復）→ `web_audio_session`（網頁指定收放音類型，手機不支援就跳過）→ `native_audio_session`（新原生外掛，外殼的聲音工作階段開一下再放手並通知）→ `web_rebuild`（停掉軌道、關掉舊引擎、重新要麥克風＋新引擎）；③ 全部沒用才不撥出去，顯示「聲音還沒準備好／請把沐寧整個關掉再重新打開…這次沒有扣點數」（四語），不佔席位、不扣點。
+- **診斷（下一次真機通話後從後台就看得出哪一層有效）**：`voice_audio_clock_stalled`、`voice_audio_clock_step`（每層一筆）、`voice_audio_clock_recovered`、`voice_audio_clock_unrecovered`；通話診斷多一個階段 `audio_clock_preflight`。只記狀態，不記聲音內容。
+- **跟原本想法不同的地方**：原生層**不在每次回到前景時自動做**——Apple 工程師明講外殼啟用自己的聲音工作階段會打斷網頁那邊的（講到一半的通話、使用者在聽的音樂都會被停掉）。回到前景只做不打斷聲音的事（系統把網頁麥克風標成靜音就打開）；真正的「開一下再放手」只在量到時鐘不走時才做，而且一定放手。
+- **順手修到的既有問題**：通話狀態卡（忙線／麥克風／登入失效…）的標題與按鈕會被四語自動套字改回「現在忙線中／取消排隊」（瀏覽器實測：麥克風受阻卡顯示成那兩句）。不修的話這次新增的卡也會顯示錯字，所以兩個出卡函式先把預設字標記拿掉。
+- **守門**：新增 `scripts/test-voice-audio-clock.js`（假時鐘跑順序＋把 app.js 真正的救援動作抽出來跑＋原始碼守門），已掛進 `test:launch`；變異測試 12 條全紅。
+- **沒驗到的**：iPhone 真機（唯一能重現的地方）；Swift 沒有編譯過（這台是 Windows，要等 Mac／雲端打包）；原生層到底有沒有用、是哪一層有用，都要等真機事件。
+- **真機怎麼驗**：打一通 → 通話中切到背景一兩分鐘 → 回來 → 再撥。看①有沒有接通、講話有沒有被聽到 ②後台有沒有 `voice_audio_clock_*` 事件、`recovered` 的 `layer` 是哪一層。
+- **檔**：`web/src/voice-audio-clock.js`（新）、`web/src/app.js`、`web/index.html`、`web/src/i18n/app-renderer-copy.js`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-binding-manifest.json`、`web/src/i18n/app-screen-manifest.json`、`ios/App/App/AudioSessionPlugin.swift`（新）、`ios/App/App/MuneaViewController.swift`、`ios/App/App.xcodeproj/project.pbxproj`、`scripts/test-voice-audio-clock.js`（新）、`scripts/test-app-i18n-renderer-copy.js`、`package.json`、本看板。**沒動 `engine/`。**
+- ⚠ **同檔提醒**：開著的 #693（蘋果健康）與 #692（活動四語）也改 `web/src/app.js`／`web/index.html`／四語檔，改的段落不同；誰後合併誰要從 `origin/main` 更新一次，`index.html` 的 `app.js?v=` 會撞，取較新的日期即可。
+
 ### 2026-11-09 卡西法｜🔔 1.0.72 緊急聯絡人真的通知家人（PR · call-path risk：動到 engine/live_voice_server.py）
 
 - **為什麼**：「安全通知」畫面原本只存在長輩手機 localStorage、伺服器完全不知道，沒有任何通知流程。Edward 拍板這版要做出真的通知。

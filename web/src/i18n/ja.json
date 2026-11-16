@@ -461,6 +461,8 @@
   "voice.call.microphoneHttpsNote": "スマートフォンやローカルネットワークでマイクを使うには HTTPS が必要です。公開テストリンクをご利用ください。",
   "voice.call.microphoneBlockedTitle": "声が聞こえません",
   "voice.call.microphoneBlockedNote": "マイクが何かでふさがれていないか確認するか、iPhoneの設定でMuneaのマイクを許可してください。",
+  "voice.call.audioRestartTitle": "音声の準備ができていません",
+  "voice.call.audioRestartNote": "Muneaを完全に終了してから開き直し、もう一度発信してください。ポイントは使われていません。",
   "voice.call.microphonePermissionTitle": "マイクへのアクセスが許可されていません",
   "voice.call.microphonePermissionNote": "スマートフォンまたはブラウザの設定で Munea のマイク使用を許可してから、もう一度発信してください。",
   "voice.call.authExpiredTitle": "ログインの有効期限が切れました",

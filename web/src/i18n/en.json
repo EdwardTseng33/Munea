@@ -461,6 +461,8 @@
   "voice.call.microphoneHttpsNote": "Microphone access on a phone or local network requires HTTPS. Please use the public test link.",
   "voice.call.microphoneBlockedTitle": "I can't hear you",
   "voice.call.microphoneBlockedNote": "Check that your microphone isn't blocked, or open iPhone Settings and turn on the microphone for Munea.",
+  "voice.call.audioRestartTitle": "Sound isn't ready yet",
+  "voice.call.audioRestartNote": "Close Munea completely, open it again, then call again. No credits were used.",
   "voice.call.microphonePermissionTitle": "Microphone access is blocked",
   "voice.call.microphonePermissionNote": "Allow Munea to use the microphone in your phone or browser settings, then call again.",
   "voice.call.authExpiredTitle": "Your sign-in has expired",

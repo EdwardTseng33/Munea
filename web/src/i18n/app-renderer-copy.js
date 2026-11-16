@@ -63,6 +63,10 @@
       title: 'voice.call.activationPendingTitle',
       note: 'voice.call.retryLater',
     }),
+    audioRestart: Object.freeze({
+      title: 'voice.call.audioRestartTitle',
+      note: 'voice.call.audioRestartNote',
+    }),
     authExpired: Object.freeze({
       title: 'voice.call.authExpiredTitle',
       note: 'voice.call.authExpiredNote',
