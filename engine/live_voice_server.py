@@ -1754,9 +1754,10 @@ def greet_language_tail(profile):
     自己唸免責聲明（「本資訊不構成醫療建議或診斷，請務必諮詢專業醫療人員」）：
       帶整段 2/3 通、帶一句 5/5 通、經語音主機 12/14 通；**不帶 0/8 通**、不請她開場 0/7 通。
     3.1 沒這個現象（經語音主機 0/2 通）。語言規則本來就在說明書裡，開場再講一次沒有必要。
-    所以：3.8＋台灣中文 → 不接；其他組合維持原樣（別的語系在 3.8 上還沒驗）。"""
+    2026-11-16 補驗英／日／西（3.8、同一份設定）：西文帶尾巴 7/11 通唸免責聲明、不帶 1/9；
+    不帶尾巴的開場 12/12 都還是用對的語言。所以：3.8 一律不接；3.1 維持原樣。"""
     profile = profile or {}
-    if VOICE_ENGINE == "38" and profile.get("sessionLocale") == "zh-TW":
+    if VOICE_ENGINE == "38":
         return ""
     return profile.get("replyLanguageInstruction") or ""
 
