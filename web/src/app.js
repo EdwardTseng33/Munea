@@ -5798,6 +5798,23 @@ const CallKeepAwake = {
     }
     this._webLock(want);
   },
+  // 回到前景時強制再套一次（2026-11-16）：sync() 看到「想要的跟記著的一樣」就不動，
+  // 但離開畫面那段時間系統可能已經把「不睡」收回去——仍在通話就重新要一次。
+  reassert() {
+    const want = !!(callPreflightPending || callDialing || callConnected);
+    this.on = want;
+    if (!want) return false;
+    const p = this._plugin();
+    if (p) {
+      try {
+        const done = p.keepAwake();
+        if (done && typeof done.catch === 'function') done.catch(err => console.warn('[keepAwake] native', err));
+      } catch (err) { console.warn('[keepAwake] native', err); }
+      return true;
+    }
+    if (!this._web) this._webLock(true);
+    return true;
+  },
   async _webLock(want) {
     try {
       if (!want) { if (this._web) { const l = this._web; this._web = null; await l.release(); } return; }
@@ -5808,11 +5825,10 @@ const CallKeepAwake = {
     } catch (err) { console.warn('[keepAwake] web', err); }
   },
 };
-// 網頁版的喚醒鎖切到背景會被系統收走；回到前景、還在通話就再要一次
+// 回到前景、還在通話就再要一次「不睡」：網頁版的喚醒鎖切到背景會被系統收走，
+// 手機 App 也重新套用一次（reassert 不看記著的狀態，一律重設）。
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && CallKeepAwake.on && !CallKeepAwake._plugin() && !CallKeepAwake._web) {
-    CallKeepAwake._webLock(true);
-  }
+  if (document.visibilityState === 'visible') { try { CallKeepAwake.reassert(); } catch (e) { console.warn('[keepAwake]', e); } }
 });
 function setCallToggle(connected) {
   callConnected = connected;
@@ -5965,8 +5981,10 @@ async function openVoiceSession() {
 function completeChatSession(reason = 'ended') {
   const trackedSession = Boolean(activeChatSessionId && activeChatStartedAt);
   const serverAuthoritative = Boolean(CallControl.url());
-  const completedReasons = new Set(['ended', 'user_ended', 'idle_timeout', 'out_of_points', 'free_signup_trial_exhausted']);
-  const diagnosticOutcome = reason === 'user_cancelled'
+  // background_release＝離開畫面滿 5 秒由 App 收線（不是使用者按的）。已接通的照樣算「講完」、
+  // 還在撥號的照樣算「取消」——跟改名前一樣，不會被算進失敗率；差別只在原因看得出是誰掛的。
+  const completedReasons = new Set(['ended', 'user_ended', 'background_release', 'idle_timeout', 'out_of_points', 'free_signup_trial_exhausted']);
+  const diagnosticOutcome = (reason === 'user_cancelled' || (reason === 'background_release' && !callConnected))
     ? 'cancelled'
     : (callConnected && completedReasons.has(reason) ? 'completed' : 'failed');
   voiceCallEnd(diagnosticOutcome, reason, {
@@ -6008,6 +6026,37 @@ function completeChatSession(reason = 'ended') {
   activeChatSessionId = null;
   activeChatStartedAt = 0;
   activeChatTurnCount = 0;
+}
+
+// 離開畫面滿 5 秒由 App 收線（2026-11-16）。原本的做法是「替使用者按一次通話鍵」，結束原因
+// 被記成 user_ended，跟使用者自己掛的分不出來——螢幕自動鎖造成的斷線，後台看起來像他自己掛的，
+// 回到畫面也沒有任何說明。現在改成自己收線、原因記 background_release。
+// 收線動作跟通話鍵一模一樣（席位照樣釋放、已經講的時間照樣由總機結算），只差兩件事：
+// 不走「好好聊完 → 請你評分」那條路；回到畫面時說明一次。
+let _backgroundReleaseNotice = false;
+function releaseCallForBackground(source) {
+  if (!(callConnected || callDialing || callPreflightPending)) return false;
+  const wasConnected = callConnected;
+  LiveVoice.stop(); FaceWave.stop(); completeChatSession('background_release'); chatOpened = false;
+  setCallToggle(false);
+  if (!wasConnected) {
+    stopCallTimer();
+    const chatEl = document.getElementById('chat'); if (chatEl) chatEl.dataset.state = 'idle';
+    setFaceState('idle');
+  }
+  if (window.__muneaStopListen) window.__muneaStopListen();
+  FaceIdle.start();
+  _backgroundReleaseNotice = true;
+  return true;
+}
+// 回到畫面：剛剛若是因為離開畫面被收線，用提示卡說明一次（只這一次）。
+// 不在收線當下出卡——撥號流程收尾時會把卡收掉，等使用者回來再出才看得到。
+function showBackgroundReleaseNotice() {
+  if (!_backgroundReleaseNotice) return false;
+  _backgroundReleaseNotice = false;
+  if (callConnected || callDialing || callPreflightPending) return false;   // 已經又在撥了就不打擾
+  showCallStatusCard('backgroundEnded');
+  return true;
 }
 
 function showView(id) {
@@ -9314,12 +9363,12 @@ function init() {
       _hangupOnLeaveT = null;
       if (document.visibilityState !== 'hidden') return;
       try { trackProductEvent('voice_background_release', { source, hiddenMs: 5000 }); } catch (e) {}
-      try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {}
+      try { releaseCallForBackground(source); } catch (e) {}
     }, 5000);
   };
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') _hangupOnLeave('visibility_hidden');
-    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} LiveVoice._foregroundAt = Date.now(); }
+    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} LiveVoice._foregroundAt = Date.now(); try { showBackgroundReleaseNotice(); } catch (e) {} }
   });
   window.addEventListener('pagehide', () => _hangupOnLeave('pagehide'));
   // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；

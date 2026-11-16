@@ -114,6 +114,7 @@ for (const locale of LOCALES) {
     'activationPending',
     'audioRestart',
     'authExpired',
+    'backgroundEnded',
     'disconnected',
     'microphoneBlocked',
     'microphoneHttps',

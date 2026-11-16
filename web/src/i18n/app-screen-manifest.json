@@ -93,6 +93,8 @@
       "voice.call.microphoneBlockedNote",
       "voice.call.audioRestartTitle",
       "voice.call.audioRestartNote",
+      "voice.call.backgroundEndedTitle",
+      "voice.call.backgroundEndedNote",
       "voice.fallback"
     ],
     "family": [

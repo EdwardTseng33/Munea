@@ -67,6 +67,10 @@
       title: 'voice.call.audioRestartTitle',
       note: 'voice.call.audioRestartNote',
     }),
+    backgroundEnded: Object.freeze({
+      title: 'voice.call.backgroundEndedTitle',
+      note: 'voice.call.backgroundEndedNote',
+    }),
     authExpired: Object.freeze({
       title: 'voice.call.authExpiredTitle',
       note: 'voice.call.authExpiredNote',

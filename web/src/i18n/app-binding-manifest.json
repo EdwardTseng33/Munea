@@ -140,6 +140,8 @@
         "voice.call.activationPendingTitle",
         "voice.call.audioRestartTitle",
         "voice.call.audioRestartNote",
+        "voice.call.backgroundEndedTitle",
+        "voice.call.backgroundEndedNote",
         "voice.call.readinessPendingTitle",
         "voice.call.readinessPendingNote",
         "voice.call.disconnectedTitle",

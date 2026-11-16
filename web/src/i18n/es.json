@@ -463,6 +463,8 @@
   "voice.call.microphoneBlockedNote": "Comprueba que el micrófono no esté bloqueado, o abre Configuración del iPhone y activa el micrófono para Munea.",
   "voice.call.audioRestartTitle": "El sonido aún no está listo",
   "voice.call.audioRestartNote": "Cierra Munea por completo, vuelve a abrirla y llama de nuevo. No se han usado créditos.",
+  "voice.call.backgroundEndedTitle": "Saliste de la pantalla y la llamada terminó",
+  "voice.call.backgroundEndedNote": "Para seguir hablando, vuelve a tocar Llamar.",
   "voice.call.microphonePermissionTitle": "El acceso al micrófono está bloqueado",
   "voice.call.microphonePermissionNote": "Permite que Munea use el micrófono en los ajustes del teléfono o del navegador y vuelve a llamar.",
   "voice.call.authExpiredTitle": "Debes volver a entrar",
