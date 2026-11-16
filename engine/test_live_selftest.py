@@ -181,6 +181,42 @@ class SelftestRunTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertEqual(result["error"], "timeout")
 
+    def test_slow_setup_runs_off_the_event_loop_and_inside_the_timeout(self):
+        """整份設定會讀資料庫；讀慢了不可以卡住同一台主機上的通話，也不可以拖過逾時。"""
+        import threading
+        import time as _time
+        seen = {}
+
+        def slow_config(mode):
+            seen["thread"] = threading.get_ident()
+            _time.sleep(1.0)
+            return object()
+
+        async def go():
+            loop_thread = threading.get_ident()
+            ticks = 0
+
+            async def heartbeat():
+                nonlocal ticks
+                while True:
+                    await asyncio.sleep(0.02)
+                    ticks += 1
+
+            beat = asyncio.create_task(heartbeat())
+            started = _time.monotonic()
+            with mock.patch.object(v, "_selftest_config", slow_config):
+                result = await v.run_live_selftest("full", timeout_s=0.3, connect=_fake_connect(messages=[_audio()]))
+            elapsed = _time.monotonic() - started
+            beat.cancel()
+            return result, elapsed, ticks, loop_thread
+
+        result, elapsed, ticks, loop_thread = asyncio.run(go())
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"], "timeout")
+        self.assertLess(elapsed, 0.8)                 # 沒有等滿那 1 秒
+        self.assertGreaterEqual(ticks, 5)             # 等的時候事件迴圈照常在跑
+        self.assertNotEqual(seen["thread"], loop_thread)
+
     def test_full_mode_uses_the_real_call_setup(self):
         config = v._selftest_config("full")
         self.assertTrue(config.system_instruction)

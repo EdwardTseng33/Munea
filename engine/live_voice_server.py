@@ -426,12 +426,15 @@ async def run_live_selftest(mode="full", timeout_s=SELFTEST_TIMEOUT_S, connect=N
               "sdk": getattr(genai, "__version__", "")}
     idx = None
     try:
-        cfg = _selftest_config(mode)
         if connect is None:
             idx, cli = _pick_client()
             connect = cli.aio.live.connect
 
         async def _go():
+            # 整份通話設定會去讀資料庫（人物設定、記憶），是會卡住的同步動作——跟真的通話一樣
+            # 丟到背景執行緒做，不能卡住同一台主機上正在講的電話；也算進整體逾時裡。
+            cfg = await asyncio.to_thread(_selftest_config, mode)
+            result["config_ms"] = round((time.monotonic() - started) * 1000)
             async with connect(model=MODEL, config=cfg) as session:
                 result["connect_ms"] = round((time.monotonic() - started) * 1000)
                 await session.send_client_content(
