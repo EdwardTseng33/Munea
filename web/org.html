@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3AA8A0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <!-- 只放行自己網域＋登入元件（jsDelivr 上的 Supabase SDK、Supabase 登入服務）＋Google 字型 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <title>沐寧 Munea · 機構專區</title>
+  <link rel="icon" href="icons/munea-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/org.css">
+</head>
+<body>
+  <!-- 照護人員登入版機構專區（2026-11-18）。畫面全部由 src/org.js 畫；網址帶 ?demo=1 是示範模式（不連網路、用虛構資料）。
+       免登入的機構窗口彙總頁是另一頁 org-portal.html，兩頁互不相干。 -->
+  <div id="app">
+    <div class="screen"><p class="screen-loading">讀取中…</p></div>
+  </div>
+  <noscript><p class="screen-loading">機構專區需要開啟 JavaScript 才能使用。</p></noscript>
+  <script src="src/org.js"></script>
+</body>
+</html>

@@ -541,6 +541,14 @@ def require_verified_auth(headers=None, path="", data=None):
     return {"ok": True, "required": True, "auth": public_auth_context(auth_context)}
 
 
+def auth_email_verified(auth_context):
+    """登入身分的 email 確認過沒（Supabase 使用者資料的 email_confirmed_at）。
+    只給 /org/* 用：機構人員第一次登入要用 email 對邀請名單（org_api.email_binding_allowed）。
+    開發用假證沒有這份資料，一律當沒確認。"""
+    user = (auth_context or {}).get("user")
+    return bool(isinstance(user, dict) and user.get("email_confirmed_at"))
+
+
 def public_auth_context(auth_context):
     return {
         "verified": bool(auth_context.get("ok")),
@@ -11012,8 +11020,28 @@ def static_cache_control(path):
     return "no-cache, must-revalidate"
 
 
+# 機構專區（照護人員版，2026-11-18）：org.html 自己在 <meta> 帶了內容安全政策（只放行自己網域、jsDelivr 上的
+# Supabase SDK、Supabase 登入、Google 字型）。frame-ancestors 寫在 meta 裡瀏覽器不認，只能靠回應標頭——
+# 所以給這一頁的標頭政策只有這一條，不跟 meta 那份打架（兩份同時生效、各管各的）。
+ORG_PORTAL_SURFACE = {"/org.html", "/src/org.js", "/src/org.css"}
+ORG_PORTAL_CONTENT_SECURITY_POLICY = "frame-ancestors 'none'"
+
+
+def normalized_request_path(path):
+    """跟 do_GET 讀檔用同一套正規化：/org.html/、//org.html、/src/../org.html 都拿得到 org.html，標頭也要一樣。"""
+    clean = str(path or "").split("?", 1)[0].split("#", 1)[0]
+    if clean in ("", "/"):
+        return "/"
+    return "/" + posixpath.normpath(clean).lstrip("/")
+
+
 def admin_security_headers(path, content_type=""):
-    clean_path = str(path or "").split("?", 1)[0].split("#", 1)[0]
+    clean_path = normalized_request_path(path)
+    if clean_path in ORG_PORTAL_SURFACE:
+        headers = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer"}
+        if clean_path == "/org.html":
+            headers["Content-Security-Policy"] = ORG_PORTAL_CONTENT_SECURITY_POLICY
+        return headers
     is_admin_surface = (
         clean_path in {"/admin", "/admin.html", "/src/admin.js", "/src/admin.css", "/src/version.js"}
         or clean_path.startswith("/admin/")
@@ -11191,6 +11219,9 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
                     return
                 auth_gate = {"ok": True, "required": True, "auth": public_auth_context(family_auth)}
+                if request_path.startswith("/org/"):
+                    # 機構人員第一次登入用 email 對邀請名單：只有 email 確認過才准對（#722 信任關卡）
+                    auth_gate["auth"]["emailVerified"] = auth_email_verified(family_auth)
             if not auth_gate.get("ok"):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
