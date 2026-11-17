@@ -11,7 +11,7 @@
     "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
-    "brain": 112,
+    "brain": 114,
     "gateway": 23,
     "voice": 4
   },
@@ -357,6 +357,20 @@
       "surface": "brain",
       "method": "POST",
       "path": "/admin/enterprise/portal/issue-link",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/seats/create-codes",
       "auth": "operator",
       "criticality": "high",
       "idempotency": "operation-defined",
@@ -949,6 +963,18 @@
         "engine/test_org_portal_endpoints.py",
         "engine/test_org_portal_monthly.py"
       ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/enterprise/redeem-code",
+      "auth": "user",
+      "criticality": "standard",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": []
     },
     {
       "surface": "brain",

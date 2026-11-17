@@ -122,6 +122,40 @@ def record_invite_failure(client_ip):
         fails.append(now)
         _INVITE_ATTEMPTS[client_ip] = fails
 
+# 機構席次開通碼防猜（2026-11-17）：碼只有 8 位數字，安全靠「要先登入＋猜錯就鎖」。
+# 同一個登入帳號 10 分鐘內錯 5 次、或同一個來源 IP 錯 20 次（機構現場很多長輩共用一條
+# Wi-Fi，IP 的門檻放寬）就暫時擋。記憶體、只計失敗、成功不算——跟邀請碼同一套、獨立計數。
+_SEAT_CODE_ATTEMPTS = {}
+_SEAT_CODE_ATTEMPTS_LOCK = threading.Lock()
+SEAT_CODE_FAIL_WINDOW = 600
+SEAT_CODE_MAX_FAILS_PER_USER = 5
+SEAT_CODE_MAX_FAILS_PER_IP = 20
+
+
+def _seat_code_limit_for(key):
+    return SEAT_CODE_MAX_FAILS_PER_IP if str(key).startswith("ip:") else SEAT_CODE_MAX_FAILS_PER_USER
+
+
+def seat_code_rate_limited(keys, now=None):
+    now = time.time() if now is None else now
+    with _SEAT_CODE_ATTEMPTS_LOCK:
+        for key in [k for k in (keys or []) if k]:
+            fails = [t for t in _SEAT_CODE_ATTEMPTS.get(key, []) if now - t < SEAT_CODE_FAIL_WINDOW]
+            _SEAT_CODE_ATTEMPTS[key] = fails
+            if len(fails) >= _seat_code_limit_for(key):
+                return True
+    return False
+
+
+def record_seat_code_failure(keys, now=None):
+    now = time.time() if now is None else now
+    with _SEAT_CODE_ATTEMPTS_LOCK:
+        for key in [k for k in (keys or []) if k]:
+            fails = [t for t in _SEAT_CODE_ATTEMPTS.get(key, []) if now - t < SEAT_CODE_FAIL_WINDOW]
+            fails.append(now)
+            _SEAT_CODE_ATTEMPTS[key] = fails
+
+
 # 後台登入防爆破：帳密輸錯太多次就暫時擋（跟邀請碼同一套邏輯、獨立計數）。
 _LOGIN_ATTEMPTS = {}
 _LOGIN_ATTEMPTS_LOCK = threading.Lock()
@@ -451,6 +485,8 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/seats/import-commit",
     "/admin/enterprise/seats/export",
     "/admin/enterprise/seats/grant",
+    # 開通碼（2026-11-17）：幫機構產生一批帶開通碼的待開通席次。處理端再驗一次管理鑰匙。
+    "/admin/enterprise/seats/create-codes",
     "/admin/enterprise/invoices",
     "/admin/enterprise/invoice/mark-sent",
     "/admin/enterprise/invoice/mark-paid",
@@ -7832,6 +7868,97 @@ def enterprise_seats_grant_response(data=None):
 
 
 
+def _public_code_seat(seat):
+    """後台畫面要的席次欄位（含開通碼——只有帶管理鑰匙的後台拿得到）。"""
+    seat = seat or {}
+    return {
+        "id": seat.get("id"), "status": seat.get("status"),
+        "redeemCode": seat.get("redeemCode"),
+        "redeemCodeDisplay": enterprise_seats.format_redeem_code(seat.get("redeemCode")),
+        "memberName": seat.get("memberName"), "memberPhone": seat.get("memberPhone"),
+        "notes": seat.get("notes"),
+    }
+
+
+def enterprise_seats_create_codes_response(data=None):
+    """/admin/enterprise/seats/create-codes：幫一家機構產生一批開通碼（每席一組）。
+    rows＝名冊（name／phone／note 都選填）或 count＝只要 N 組空白的碼。
+    超過合約席次上限時不建、回 overQuota，畫面二次確認後帶 confirmOverQuota 再送一次。"""
+    data = data or {}
+    client_id = str(data.get("clientId") or data.get("client_id") or "").strip()
+    if not client_id:
+        return {"ok": False, "error": {"code": "client_id_required"}}
+    rows = data.get("rows") if isinstance(data.get("rows"), list) else None
+    confirm_over_quota = bool(data.get("confirmOverQuota") or data.get("confirm_over_quota"))
+    try:
+        result = enterprise_seats.create_code_seats(
+            client_id, rows=rows, count=data.get("count"), confirm_over_quota=confirm_over_quota,
+        )
+    except ValueError as exc:
+        return {"ok": False, "error": {"code": str(exc)}}
+    if result.get("overQuota"):
+        return {"ok": False, "error": {"code": "over_quota", **result["overQuota"]}}
+    failed = result.get("failed") or []
+    if failed and not result.get("created"):
+        # 一席都沒建成：最常見是資料庫還沒套用 033（email 欄位仍是必填）。把原因講清楚。
+        return {"ok": False, "error": {"code": "code_seat_create_failed", "detail": str(failed[0].get("error") or "")[:300]}}
+    return {
+        "ok": True,
+        "seats": [_public_code_seat(s) for s in result.get("created") or []],
+        "failedCount": len(failed),
+        "summary": result.get("summary") or {},
+    }
+
+
+# App 端看得到的兌換失敗原因：只有這幾種，其餘一律收斂成 redeem_failed（不把內部錯誤字串丟給前端）。
+SEAT_CODE_PUBLIC_ERRORS = {
+    "invalid_code_format", "code_not_found", "code_already_used", "code_expired", "already_has_seat",
+}
+# 這幾種算「猜錯」：累計到門檻就暫時擋。already_has_seat 不算——那是碼對了、人已經有席次。
+SEAT_CODE_COUNTED_FAILURES = {"invalid_code_format", "code_not_found", "code_already_used", "code_expired"}
+
+
+def enterprise_redeem_code_response(data=None, client_ip=None, actor=None):
+    """/enterprise/redeem-code：使用者登入後輸入機構給的開通碼，把席次綁到自己的帳號。
+    身分一律取自驗證過的登入證（actor），不收請求內容裡的 accountId——誰登入就是幫誰開。
+    回 result：activated（已開通）／registered（已登記、機構入帳後生效）／waiting（個人方案較高、到期後接手）。"""
+    data = data or {}
+    backend, actor_error = family_actor_backend(actor)
+    if actor_error:
+        return {"ok": False, "error": {"code": actor_error}}
+    account_id = str(getattr(backend, "account_id", "") or "")
+    if not account_id:
+        return {"ok": False, "error": {"code": "account_required"}}
+    limiter_keys = [f"user:{backend.auth_user_id}", f"ip:{client_ip}" if client_ip else None]
+    if seat_code_rate_limited(limiter_keys):
+        return {"ok": False, "error": {"code": "too_many_attempts", "retryAfterSeconds": SEAT_CODE_FAIL_WINDOW}}
+    try:
+        outcome = enterprise_seats.redeem_seat_code(data.get("code"), account_id, actor="member")
+    except ValueError as exc:
+        code = str(exc)
+        if code in SEAT_CODE_COUNTED_FAILURES:
+            record_seat_code_failure(limiter_keys)
+        return {"ok": False, "error": {"code": code if code in SEAT_CODE_PUBLIC_ERRORS else "redeem_failed"}}
+    seat, client = outcome.get("seat") or {}, outcome.get("client") or {}
+    if not outcome.get("alreadyYours"):
+        append_audit_event({
+            "eventType": "enterprise_seat_code_redeemed",
+            "targetTable": "enterprise_seats",
+            "targetId": seat.get("id"),
+            # 不記開通碼本身（紀錄外流就等於碼外流）；記是哪一席、哪家、結果。
+            "details": {"accountId": account_id, "enterpriseClientId": client.get("id"),
+                        "result": outcome.get("result"), "grantBlockedBy": outcome.get("grantBlockedBy")},
+        })
+    return {
+        "ok": True,
+        "result": outcome.get("result"),
+        "alreadyYours": bool(outcome.get("alreadyYours")),
+        "organizationName": client.get("name") or "",
+        "planTier": client.get("planTier") or "",
+        "waitingUntil": seat.get("waitingUntil"),
+    }
+
+
 # ── 請款單／月結四條接口（需求單 3.6 最後一批）──
 # 薄薄一層：路由與參數驗證在這裡，計費／請款單產出／月報產出全部呼叫
 # engine/enterprise_billing.py 既有的公開函式，不重寫一份計費邏輯。
@@ -10922,7 +11049,7 @@ class H(BaseHTTPRequestHandler):
             # A join code is never an authentication credential.
             # 機構端專區 /org/*（2026-10-29）同理：機構人員的身分就是登入證本身（org_staff 對照），
             # 本機／示範模式也不能放行沒登入的人——沒身分＝不知道他是哪家的人。
-            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings") or request_path.startswith("/org/"):
+            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings", "/enterprise/redeem-code") or request_path.startswith("/org/"):
                 family_auth = verify_auth_context(self.headers)
                 if not family_auth.get("ok"):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
@@ -11041,6 +11168,9 @@ class H(BaseHTTPRequestHandler):
             elif self.path == "/family/invitations":
                 _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 self._json(family_invitations_response(data, client_ip=_cip, actor=auth_gate.get("auth")))
+            elif self.path == "/enterprise/redeem-code":
+                _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
+                self._json(enterprise_redeem_code_response(data, client_ip=_cip, actor=auth_gate.get("auth")))
             elif self.path == "/family-members":
                 self._json(family_members_response(data))
             elif self.path == "/family-relays":
@@ -11264,6 +11394,20 @@ class H(BaseHTTPRequestHandler):
                         append_audit_event({
                             "eventType": "enterprise_seats_grant_attempted",
                             "targetTable": "subscription_ledger",
+                            "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
+                        })
+                    self._json(response)
+            elif self.path == "/admin/enterprise/seats/create-codes":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    response = enterprise_seats_create_codes_response(data)
+                    if response.get("ok"):
+                        append_audit_event({
+                            "eventType": "enterprise_seat_codes_created",
+                            "targetTable": "enterprise_seats",
+                            "targetId": data.get("clientId") or data.get("client_id"),
                             "details": {**privileged_actor_context(self.headers), **(response.get("summary") or {})},
                         })
                     self._json(response)

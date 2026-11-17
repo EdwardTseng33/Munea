@@ -1355,6 +1355,30 @@ class SupabaseAdapter:
         row = self._first("enterprise_seats", {"id": f"eq.{seat_id}", "select": "*"})
         return self.enterprise_seat_row_to_item(row) if row else None
 
+    def get_enterprise_seat_by_redeem_code(self, code):
+        """033：用開通碼找席次。碼是全表唯一，最多一筆。"""
+        if not self.enabled() or not code:
+            return None
+        row = self._first("enterprise_seats", {"redeem_code": f"eq.{code}", "select": "*"})
+        return self.enterprise_seat_row_to_item(row) if row else None
+
+    def claim_enterprise_seat(self, seat_id, account_id, now_iso):
+        """033：把一席「還沒人認領」的席次綁到帳號——條件寫在同一個 PATCH 裡
+        （account_id 是 null 且 status 還是 pending），兩個人同時輸入同一組碼時，
+        資料庫只會讓其中一個成功；另一個拿到空結果（回 None）。
+        回 False 代表後端沒啟用（呼叫端退本機備援）。"""
+        if not self.enabled():
+            return False
+        if not self._is_uuid(seat_id or "") or not self._is_uuid(account_id or ""):
+            return None
+        rows = self._request(
+            "PATCH", "enterprise_seats",
+            query={"id": f"eq.{seat_id}", "account_id": "is.null", "status": "eq.pending", "select": "*"},
+            payload={"account_id": account_id, "status": "active", "activated_at": now_iso, "redeemed_at": now_iso},
+            prefer="return=representation",
+        )
+        return self.enterprise_seat_row_to_item(rows[0]) if rows else None
+
     def create_enterprise_seat(self, seat):
         if not self.enabled():
             return None
@@ -1377,7 +1401,9 @@ class SupabaseAdapter:
         seat = seat or {}
         row = {
             "enterprise_client_id": seat.get("enterpriseClientId") or seat.get("enterprise_client_id"),
-            "invite_email": str(seat.get("inviteEmail") or seat.get("invite_email") or "").strip().lower(),
+            # 033（2026-11-17）：開通碼席次沒有 email，要送 null 不是空字串——空字串會撞
+            # 「同公司 email 不可重複」的唯一索引（第二席起就寫不進去）。
+            "invite_email": (str(seat.get("inviteEmail") or seat.get("invite_email") or "").strip().lower() or None),
             "account_id": seat.get("accountId") or seat.get("account_id"),
             "status": seat.get("status") or "pending",
             "activated_at": seat.get("activatedAt") or seat.get("activated_at"),
@@ -1392,6 +1418,13 @@ class SupabaseAdapter:
         site_label = seat.get("siteLabel") or seat.get("site_label")
         if site_label:
             row["site_label"] = str(site_label).strip()[:80]
+        # 033：開通碼與機構名冊上的稱呼／手機。同 030 的做法——033 未套用前只在真的有值時才送，
+        # 舊的 email 席次不受影響。
+        for item_key, column in (("redeemCode", "redeem_code"), ("memberName", "member_name"),
+                                 ("memberPhone", "member_phone"), ("redeemedAt", "redeemed_at")):
+            value = seat.get(item_key) or seat.get(column)
+            if value:
+                row[column] = value
         return row
 
     @staticmethod
@@ -1410,6 +1443,10 @@ class SupabaseAdapter:
             "releasedAt": row.get("released_at"),
             "releasedReason": row.get("released_reason"),
             "siteLabel": row.get("site_label"),
+            "redeemCode": row.get("redeem_code"),
+            "memberName": row.get("member_name"),
+            "memberPhone": row.get("member_phone"),
+            "redeemedAt": row.get("redeemed_at"),
             "notes": row.get("notes"),
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
