@@ -454,16 +454,20 @@ def _visible_seats(staff, client):
     return seats
 
 
+def _only_consented(seats, client):
+    """從席次裡挑出「現在綁的這個人自己同意過」的。
+    同意是人給的：席次之後換綁到別的帳號，舊同意不能讓新的人被看到（或被算進已同意人數），
+    所以除了席次有同意，還要同意當時的帳號＝席次現在的帳號。"""
+    granted_by = {c["seatId"]: str(c.get("accountId") or "")
+                  for c in list_consents(client_id=client["id"], status="granted") if c.get("seatId")}
+    return [s for s in seats if s.get("accountId") and granted_by.get(s.get("id")) == str(s.get("accountId"))]
+
+
 def _consented_seats(staff, client):
     """鐵線 2：只拿已同意的席次。這裡是 inner join，不是撈出來再遮。"""
     if _client_kind(client) == "esg":
         return []
-    # 同意是「這個人」給的。席次之後換綁到別的帳號，舊的同意不能讓新的人被看到，
-    # 所以除了席次有同意，還要同意當時的帳號＝席次現在的帳號。
-    granted_by = {c["seatId"]: str(c.get("accountId") or "")
-                  for c in list_consents(client_id=client["id"], status="granted") if c.get("seatId")}
-    return [s for s in _visible_seats(staff, client)
-            if s.get("accountId") and granted_by.get(s.get("id")) == str(s.get("accountId"))]
+    return _only_consented(_visible_seats(staff, client), client)
 
 
 def _staff_and_client(auth):
@@ -697,7 +701,7 @@ def org_summary_response(auth, data=None):
         LOGGER.warning("org_api summary build failed: %s", exc.code)
         return _not_found()
     summary["scope"] = {"siteLabel": caps["siteLabel"], "siteScoped": caps["siteScoped"]}
-    summary["consent"] = {"grantedSeats": len([s for s in seats if s.get("id") in granted_seat_ids(client["id"])])} if caps["elders"] else None
+    summary["consent"] = {"grantedSeats": len(_only_consented(seats, client))} if caps["elders"] else None
     return assert_no_forbidden({"ok": True, **summary}, org_portal.FORBIDDEN_KEYS | {"email", "phone"})
 
 

@@ -422,6 +422,8 @@ class ConsentSafetyTests(Base):
         write("MUNEA_ENTERPRISE_SEATS_PATH", seats)
         out = org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())
         self.assertNotIn(SEAT_A1, {e["seatId"] for e in out["elders"]})
+        # 「已同意人數」也不能把換了人的席次算進去：原本 A1、A2 兩位，現在只剩 A2
+        self.assertEqual(org_api.org_summary_response(auth(ADMIN_A))["consent"]["grantedSeats"], 1)
 
     def test_revoke_still_works_when_audit_is_down(self):
         def boom(_event):
