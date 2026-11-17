@@ -348,7 +348,7 @@ for (const l of guideLocales) {
     assert.doesNotMatch(html, /\{\{[^}]+\}\}/, `${file} has an unresolved template key`);
     const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
     assert.ok(ld["@graph"].some((n) => n["@type"] === "Article" && n.mainEntityOfPage === url), `${file} needs Article data`);
-    const visible = html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+    const visible = html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]+>/g, " ");
     assert.doesNotMatch(visible, guideRed[l.code], `${file} uses a red-line word`);
   }
 }
@@ -362,7 +362,8 @@ const homeRed = {
 };
 for (const l of locales) {
   for (const file of [l.dir ? `${l.dir}/index.html` : "index.html", l.dir ? `${l.dir}/${ORG_SLUG}/index.html` : `${ORG_SLUG}/index.html`]) {
-    const visible = read(file).replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+    // 只看讀者看得到的字：去掉程式、樣式、註解與標籤本身（class="pain-track" 這種版型名稱不算）
+    const visible = read(file).replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]+>/g, " ");
     assert.doesNotMatch(visible, homeRed[l.code], `${file} uses a red-line word`);
   }
 }
