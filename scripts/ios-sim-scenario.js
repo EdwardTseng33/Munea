@@ -226,13 +226,13 @@
 
     // Short tour so the other 1.0.72 screens get a screenshot each.
     await sleep(3000);
-    click('.tab-btn[data-view="status"]'); await sleep(5000); log('TOUR', { at: 'status' }); await sleep(12000);
-    click('.tab-btn[data-view="settings"]'); await sleep(3000); log('TOUR', { at: 'settings' }); await sleep(12000);
+    click('.tab-btn[data-view="status"]'); await sleep(5000); log('TOUR', { at: 'status' }); await sleep(16000);
+    click('.tab-btn[data-view="settings"]'); await sleep(3000); log('TOUR', { at: 'settings' }); await sleep(16000);
     var entry = q('#seatCodeEntry');
     if (entry) { try { entry.scrollIntoView({ block: 'center' }); } catch (e) {} entry.click(); }
     await sleep(2500);
     log('TOUR', { at: 'seat-code', modal: !!(q('#seatCodeModal') && q('#seatCodeModal').classList.contains('show')), entry: !!entry });
-    await sleep(13000);
+    await sleep(17000);
     log('TOUR_DONE', {});
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { main(); });

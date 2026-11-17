@@ -47,6 +47,9 @@ sleep 5
 echo "== install =="
 xcrun simctl install "$UDID" "$APP_PATH" || { echo "install failed"; exit 1; }
 xcrun simctl privacy "$UDID" grant microphone "$BUNDLE" || true
+echo "== warm up Settings (it is what we switch to when sending the App away) =="
+xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null 2>&1 || true
+sleep 20
 
 T0=$(date +%s)
 shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; echo "  shot $1 at $(( $(date +%s) - T0 ))s"; }
@@ -67,37 +70,32 @@ pty.spawn(["xcrun", "simctl", "launch", "--console-pty", sys.argv[1], sys.argv[2
 LAUNCH_PID=$!
 T0=$(date +%s)
 
-# --- timetable (seconds after launch). Scenario side: see scripts/ios-sim-scenario.js ---
-# Two independent clocks, because on the cloud Mac a single screenshot can take many seconds
-# (run 4: one took 44 s and pushed every later step off schedule):
-#   control: the thumb. Only sends the App away and brings it back, at fixed times.
-#   camera:  screenshots. If one is slow, only later screenshots slip, never the thumb.
-(
-  at 60;  to_background      # between call 1 and call 2: 25 s away
-  at 85;  to_foreground
-  at 180; to_background      # in the middle of call 4: 16 s away (the App hangs up after 5 s)
-  at 196; to_foreground
-) > "$OUT/control.log" 2>&1 &
-CONTROL_PID=$!
-(
-  at 12;  shot 02-consent-sheet
-  at 24;  shot 03-call1-live
-  at 34;  shot 03b-call1-live-later
-  at 48;  shot 04-call1-ended
-  at 99;  shot 06a-topics-sheet
-  at 114; shot 06-call2-live
-  at 138; shot 08-call3-live
-  at 165; shot 09-call4-live
-  at 204; shot 11-call4-after-return
-  at 210; shot 12-call4-after-return-later
-  at 233; shot 14-status
-  at 249; shot 15-settings
-  at 264; shot 16-seat-code
-) > "$OUT/camera.log" 2>&1 &
-CAMERA_PID=$!
-at 285
-kill "$CONTROL_PID" "$CAMERA_PID" >/dev/null 2>&1 || true
-cat "$OUT/control.log" "$OUT/camera.log"
+# --- sequence. Scenario side: see scripts/ios-sim-scenario.js ---
+# One loop, timed RELATIVE to each step finishing, because on the cloud Mac the simulator
+# commands themselves are slow and uneven (run 5: opening Settings the first time took ~90 s,
+# bringing the App back 10-16 s). The scenario waits up to 4 minutes at each of the two points
+# where it needs to be sent away, so the host only has to be "late enough", never exact.
+after() { sleep "$1"; }
+after 8;  shot 02-consent-sheet
+after 10; shot 03-call1-live
+after 30                                  # call 1 has ended by now (connected ~15 s, held 20 s)
+shot 04-call1-ended
+to_background                             # between call 1 and call 2
+after 20
+to_foreground                             # returns once the App is in front again
+after 7;  shot 06a-topics-sheet           # asked once before an early call (stays up 8 s)
+after 14; shot 06-call2-live              # first call after coming back
+after 24; shot 08-call3-live              # call right after the native audio pulse
+after 26; shot 09-call4-live              # call 4 is up and waiting to be left
+to_background                             # leave the screen in the middle of call 4
+after 14                                  # the App hangs up after 5 s away
+to_foreground
+after 1;  shot 11-call4-after-return      # the notice card
+after 5;  shot 12-call4-after-return-later
+after 22; shot 14-status
+after 17; shot 15-settings
+after 18; shot 16-seat-code
+after 14
 
 kill "$LAUNCH_PID" >/dev/null 2>&1 || true
 
