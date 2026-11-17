@@ -2656,6 +2656,40 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .modal .modal-btn.sc-btn { margin-top: 16px; }
 /* 標題右邊留位子給關閉鍵：英文、西文標題比較長，大字級時會排到關閉鍵底下。 */
 .modal .sc-title { padding-right: 48px; }
+/* 機構照護模式同意視窗（2026-11-17）：看的人是長輩——整列都是開關（好按）、字放大；
+ * 開關的樣子沿用通知設定那顆（.notification-switch）。兩張清單用勾與叉分開「看得到／永遠看不到」。
+ * 「處理中…」用中性底色；成功、失敗沿用開通碼視窗的綠底與淡紅底（.sc-msg.ok／.err）。
+ * 斷行：帶機構名稱的短句（標題、開關那句、次要按鈕），機構名稱後面那一截由程式包成 .oc-keep，
+ * 換行時整截一起下去（不然中文的「看到」、日文的「サービス」會被拆成兩行）；機構名稱本身照常折行。
+ * 清單、說明與結果訊息：中文只在空白與標點斷，太長時 overflow-wrap 照樣會折，不會撐破版面。 */
+.oc-switch-row { display: flex; align-items: center; gap: 14px; width: 100%; margin: 14px 0 0; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font-family: inherit; font-size: 18px; font-weight: 700; line-height: 1.45; text-align: left; cursor: pointer; }
+.oc-switch-row[aria-checked="true"] { border-color: var(--teal); background: var(--mint); }
+.oc-switch-row:disabled { cursor: default; color: var(--ink); }
+.oc-switch-row:disabled .oc-knob { opacity: .42; }
+.oc-switch-row:focus-visible { outline: 3px solid rgba(58,168,160,.25); outline-offset: 2px; }
+.oc-switch-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#orgConsentTitle, .modal .modal-btn.oc-from-seat { overflow-wrap: anywhere; }
+/* 沒有後半截可包的句子（西文標題：機構名稱在句尾）才用 balance；有包的話 balance 反而會去拆機構名稱。 */
+:is(#orgConsentTitle, .modal .modal-btn.oc-from-seat):not(:has(.oc-keep)) { text-wrap: balance; }
+/* 後半截自己一行也放不下時（小螢幕、特大字級的日文），在裡面平均折成兩行，不要最後只剩一個字。 */
+.oc-keep { display: inline-block; max-width: 100%; text-wrap: balance; }
+html:lang(zh) :is(.oc-list li, .oc-anytime, .sc-msg) { word-break: keep-all; overflow-wrap: anywhere; text-wrap: balance; }
+.oc-msg { text-wrap: pretty; }
+/* 設定頁那一列的標題帶機構名稱，英文、西文一定比一行長；那兩個語言的列標題原本規定不換行（會被切掉），這一列放行。 */
+html .set-row .sr-main > #orgConsentRowTitle { white-space: normal; overflow-wrap: anywhere; }
+.oc-knob { display: block; pointer-events: none; }
+.oc-msg.busy { background: var(--cream-2); color: var(--ink-2); }
+.oc-list-title { margin: 20px 0 6px; font-family: var(--display); font-size: 16px; font-weight: 800; color: var(--ink); }
+.oc-list { list-style: none; margin: 0; padding: 0; }
+.oc-list li { position: relative; padding: 5px 0 5px 28px; font-size: 16px; line-height: 1.55; color: var(--ink-2); }
+.oc-list li { text-wrap: pretty; }
+/* 勾與叉用畫的，不用字元：日文字型的「✓」又細又小，四語要長得一樣。 */
+.oc-list li::before { content: ""; position: absolute; left: 2px; top: calc(5px + .3em); width: 16px; height: 16px; background: currentColor; -webkit-mask: var(--oc-mark) center / contain no-repeat; mask: var(--oc-mark) center / contain no-repeat; }
+.oc-sees li::before { color: var(--teal-d); --oc-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 12.5l5 5 10-11'/%3E%3C/svg%3E"); }
+.oc-never li::before { color: var(--danger-d); --oc-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E"); }
+.oc-anytime { margin: 12px 2px 0; font-size: 15px; line-height: 1.6; color: var(--ink-2); text-wrap: pretty; }
+.modal .modal-btn.oc-done { margin-top: 18px; }
+.modal .modal-btn.oc-from-seat { margin-top: 10px; }
 
 /* 訂閱頁 v2：產品價值 + 適合誰 + 堆疊卡（Edward 7/7 去寧寧、講優勢） */
 .sub-intro { font-size: 13.5px; line-height: 1.7; color: var(--muted); margin: 2px 2px 12px; }

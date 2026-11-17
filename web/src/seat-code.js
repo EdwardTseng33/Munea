@@ -205,6 +205,11 @@
       try { if (tools && typeof tools.track === 'function') tools.track(EVENT_NAME, next.event); } catch (error) {}
       // 綁好之後重讀一次方案，設定頁的方案名稱才會跟著變（跟購買成功後呼叫的是同一支）。
       try { if (next.ok && tools && typeof tools.refreshPlan === 'function') tools.refreshPlan(); } catch (error) {}
+      // 綁好的如果是照護機構的名額，成功畫面多一顆次要按鈕帶去「看得到什麼」（web/src/org-consent.js）。
+      // 只是通知它重讀一次；要不要打開開關由使用者自己按，這裡不代勞。
+      try {
+        if (next.ok && win.MuneaOrgConsent && typeof win.MuneaOrgConsent.afterSeatCode === 'function') win.MuneaOrgConsent.afterSeatCode();
+      } catch (error) {}
     }
 
     async function submit() {
