@@ -97,6 +97,7 @@ Apple 產品頁面預覽已驗證呈現為：
 ## 三、需要 Edward 拍板的判斷題
 
 ### D-1 · 城市欄位算不算 Coarse Location？
+> **2026-11-17 更正**：下面「不存我方伺服器」的前提已經不成立——縣市現在會跟個人資料一起存到雲端（Brain `/person-profile` 的 county／district，App 的個人資料頁也這樣告訴使用者）。`PrivacyInfo.xcprivacy` 已改成 Coarse Location／App Functionality／**Linked=Yes**／追蹤=No；**App Store Connect 的 App 隱私權問卷要由有權限的人同步改成同一組答案**（上表「Coarse Location：不收集」那一格也以這則更正為準）。
 - 事實：使用者自己打「台北市中山區」→ 存 localStorage → 送 open-meteo 天氣 API 當搜尋字串 → **不存我方伺服器**
 - 選項 A（建議）：**不勾**。理由：Apple 的 Location 指從裝置取得的位置資料；這是使用者主動輸入的偏好設定，我方不留存
 - 選項 B：保守勾 Coarse Location／App Functionality／Linked=No／追蹤=No

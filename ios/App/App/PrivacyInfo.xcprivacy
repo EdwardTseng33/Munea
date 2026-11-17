@@ -53,11 +53,12 @@
 			<key>NSPrivacyCollectedDataTypeTracking</key><false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key><array><string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string><string>NSPrivacyCollectedDataTypePurposeProductPersonalization</string></array>
 		</dict>
-		<!-- 5. 粗略位置：使用者自填縣市 → open-meteo 查天氣。不存我方伺服器、不帶識別碼 → 不與身分連結。
+		<!-- 5. 粗略位置：使用者自填縣市 → 查天氣。縣市會跟個人資料一起存到雲端（Brain /person-profile 的 county／district）
+		     → 與身分連結。2026-11-17 由「不連結」更正；App Store Connect 的 App 隱私權問卷要同步改。
 		     （2026-07-09 已移除 GPS 精確定位備援；Info.plist 亦無任何定位權限說明字串。） -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key><string>NSPrivacyCollectedDataTypeCoarseLocation</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key><false/>
+			<key>NSPrivacyCollectedDataTypeLinked</key><true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key><false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key><array><string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string></array>
 		</dict>
