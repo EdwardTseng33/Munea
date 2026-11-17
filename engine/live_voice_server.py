@@ -772,7 +772,10 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
     level = risk.get("level") or "none"
     categories = risk.get("categories") or []
     from_user = who != "ai"
-    notify_family = bool(policy.get("familyNotificationCandidate")) and from_user and bool(person_id)
+    protection = bool(risk.get("protectionEvent")) or bool(risk.get("protectionMentioned"))
+    # 受暴受剝削：加害人可能就是家人——就算這句被標成急症或想不開，也一律不通知家庭圈（#717 信任關卡）
+    family_candidate = bool(policy.get("familyNotificationCandidate")) and from_user and not protection
+    notify_family = family_candidate and bool(person_id)
     brain_url, brain_secret = _brain_memory_config()
     via_brain = record_fn is None and bool(person_id) and (brain_post is not None or bool(brain_url))
     if via_brain and (risk.get("requiresAuditEvent") or notify_family):
@@ -780,17 +783,45 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
             payload = {
                 "userId": str(person_id), "level": level, "categories": list(categories), "who": "ai" if not from_user else "user",
                 "protectionEvent": bool(risk.get("protectionEvent")),
-                "familyNotificationCandidate": bool(policy.get("familyNotificationCandidate")) and from_user,
+                "protectionMentioned": bool(risk.get("protectionMentioned")),
+                "familyNotificationCandidate": family_candidate,
                 "protectionLine": policy.get("protectionLine"), "record": bool(risk.get("requiresAuditEvent")),
             }
-            if brain_post is not None:
-                resp = brain_post(payload)
-            else:
-                resp = post_internal(brain_url, brain_secret, "/voice/guardian-event", payload, timeout=5,
-                                     app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
-            _diag(cid, "guardian.brain_event", who=who, level=level,
-                  resolved=(resp or {}).get("identityResolved"), recorded=(resp or {}).get("recorded"),
-                  queued=((resp or {}).get("dispatch") or {}).get("queued"))
+            high = level in ("high", "critical")
+            resp, last_err = None, None
+            for attempt in range(2 if high else 1):          # 高風險送不出去重試一次
+                try:
+                    if brain_post is not None:
+                        resp = brain_post(payload)
+                    else:
+                        resp = post_internal(brain_url, brain_secret, "/voice/guardian-event", payload, timeout=5,
+                                             app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
+                    last_err = None
+                    break
+                except Exception as e:  # noqa: BLE001
+                    last_err = e
+                    _diag(cid, "guardian.brain_event_err", attempt=attempt + 1, err="%s:%s" % (type(e).__name__, str(e)[:60]))
+            if resp is not None:
+                _diag(cid, "guardian.brain_event", who=who, level=level,
+                      resolved=resp.get("identityResolved"), recorded=resp.get("recorded"),
+                      queued=(resp.get("dispatch") or {}).get("queued"))
+            # 高風險「沒記到、沒發到、沒人知道」要有人知道：內部告警只帶等級、類別、原因，不帶任何 ID
+            if high:
+                reason = None
+                if last_err is not None:
+                    reason = "brain_unreachable"
+                elif not (resp or {}).get("identityResolved"):
+                    reason = "caller_not_resolved"
+                elif family_candidate and ((resp or {}).get("dispatch") or {}).get("contactCount") and \
+                        not ((resp or {}).get("dispatch") or {}).get("queued"):
+                    reason = "contacts_not_queued"
+                if reason:
+                    try:
+                        (alert_fn or guardian_notify.alert)(
+                            "voice", "guardian:delivery_failed",
+                            "level=%s categories=%s reason=%s" % (level, ",".join(categories) or "-", reason))
+                    except Exception as e:  # noqa: BLE001
+                        _diag(cid, "guardian.delivery_alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
         except Exception as e:
             _diag(cid, "guardian.brain_event_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
     elif risk.get("requiresAuditEvent"):
@@ -853,6 +884,20 @@ def _guardian_begin_real_user_turn(st):
 GUARDIAN_SEMANTIC_CALL_CAP = int(os.environ.get("MUNEA_GUARDIAN_SEMANTIC_CAP", "80") or 80)
 
 
+def _guardian_side_effects(cid, who, result, person_id, st, dedupe_key):
+    """記錄＋通知交給專用池、不等回應（安全導引不必等 Brain）；同一輪同一類只送一次——
+    字幕每進一小段就重判一次整段，不去重的話同一句會被記好幾次、家人與機構看到的亮燈次數會灌水。"""
+    sent = st.setdefault("guardian_sent", set())
+    if dedupe_key in sent:
+        return
+    sent.add(dedupe_key)
+    try:
+        asyncio.get_running_loop().run_in_executor(
+            _GUARDIAN_EVENT_EXECUTOR, lambda: guardian_record_and_alert(who, cid, result, person_id=person_id))
+    except RuntimeError:  # 沒有事件迴圈（測試直接呼叫）：就地做
+        guardian_record_and_alert(who, cid, result, person_id=person_id)
+
+
 async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=None):
     """背景任務：非同步跑守護腦判讀 + 記錄/告警 +（high/critical）排隊安全導引。絕不擋音訊管線。"""
     try:
@@ -871,7 +916,7 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
         risk = (result or {}).get("risk") or {}
         level = risk.get("level") or "none"
         categories = tuple(risk.get("categories") or [])
-        await asyncio.to_thread(guardian_record_and_alert, who, cid, result, person_id=safety_person_id)
+        _guardian_side_effects(cid, who, result, safety_person_id, st, (turn_id, who, level, categories))
         if level not in ("high", "critical"):
             # 第二層：第一層沒抓到硬危機的用戶句子 → 升級便宜 AI 判語意（只判用戶說的、背景跑不擋通話）。
             # 2026-10-28 閘全開後每句都送：上限從 5 次放到 80 次（長通話也蓋得到；每句約 NT$0.013，80 句 NT$1 封頂）
@@ -884,15 +929,17 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
                                     "protection": "protection_event", "mental_state": "mental_state_abnormal"}
                     scat = _sem_cat_map.get(sem.get("category"), sem.get("category") or "semantic")
                     is_protect = scat == "protection_event"
+                    # 第二層 AI 判成急症或想不開的句子，只要提到受暴就一樣不通知家人（#717 信任關卡）
+                    mentions_protection = is_protect or bool(server.model_router.guardian_mentions_protection(text))
                     sem_result = {
                         "risk": {"level": sem["level"], "categories": [scat],
                                  "requiresAuditEvent": True, "requiresHumanEscalation": True,
-                                 "protectionEvent": is_protect},
-                        "responsePolicy": {"familyNotificationCandidate": (not is_protect),
+                                 "protectionEvent": is_protect, "protectionMentioned": mentions_protection},
+                        "responsePolicy": {"familyNotificationCandidate": not mentions_protection,
                                            "protectionLine": "113" if is_protect else None},
                     }
                     _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
-                    await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result, person_id=safety_person_id)
+                    _guardian_side_effects(cid, who, sem_result, safety_person_id, st, (turn_id, who, "semantic", scat))
                     key = (turn_id, "semantic", scat)
                     if key not in st["user_flagged"]:
                         st["user_flagged"].add(key)
@@ -2036,6 +2083,9 @@ _CALL_MEMORY_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=4, thread_name_prefix="call-memory")
 _VOICE_CUE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=2, thread_name_prefix="voice-cue")
+# 守護腦亮燈送 Brain（記錄＋通知緊急聯絡人）專用池：不佔接通／換線的共用池，也不讓安全導引等 Brain 回應。
+_GUARDIAN_EVENT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=2, thread_name_prefix="guardian-event")
 
 
 def _brain_memory_config():

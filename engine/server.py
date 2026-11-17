@@ -10673,21 +10673,29 @@ def voice_guardian_event_response(data):
         categories = [str(c)[:48] for c in (data.get("categories") or []) if c][:6]
         who = "ai" if str(data.get("who") or "") == "ai" else "user"
         family_candidate = bool(data.get("familyNotificationCandidate"))
+        protection = bool(data.get("protectionEvent")) or bool(data.get("protectionMentioned")) or "protection_event" in categories
         props = {
             "riskLevel": level, "categories": categories, "analyticsExcluded": True, "source": "live_voice",
-            "who": who, "protectionEvent": bool(data.get("protectionEvent")),
-            "familyNotificationCandidate": family_candidate,
+            "who": who, "protectionEvent": bool(data.get("protectionEvent")), "protectionMentioned": protection,
+            "familyNotificationCandidate": family_candidate and not protection,
             "protectionLine": (str(data.get("protectionLine"))[:8] if data.get("protectionLine") else None),
         }
         if not person:
             return {"ok": True, "identityResolved": False, "recorded": False, "dispatch": None}
+        group = _current_family_group_id()
         recorded = False
         if data.get("record", True):
-            append_product_event({"eventName": "guardian_risk_evaluated", "source": "live_voice", "properties": props})
-            recorded = True
+            try:
+                # personId／familyGroupId 一定明講：不帶的話會被一份全程序共用、不分人的快取補上，記到別人身上（#717 信任關卡）
+                append_product_event({"eventName": "guardian_risk_evaluated", "source": "live_voice", "properties": props,
+                                      "personId": person, "familyGroupId": group})
+                recorded = True
+            except Exception as e:  # 記錄出錯不能連通知一起沒了
+                log_fallback_exception("record voice guardian event", e)
         dispatch = None
-        if who == "user" and family_candidate:
-            dispatch = dispatch_safety_alert(person, "guardian")
+        # 只有長輩本人說的、high／critical、通知候選、而且沒提到受暴，才通知緊急聯絡人（Brain 這邊再鎖一次）
+        if who == "user" and family_candidate and not protection and level in ("high", "critical"):
+            dispatch = dispatch_safety_alert(person, "guardian", family_group_id=group)
         return {"ok": True, "identityResolved": True, "recorded": recorded, "dispatch": dispatch}
     finally:
         if scope_token is not None:

@@ -8,6 +8,15 @@
   3. 另一個洞：寧寧自己講的話（`who=ai`，例如「胸口痛要馬上打 119」這種安全提醒）也會被記成亮燈；如果第 2 點是通的，還會因為寧寧自己的話去通知家人。
 - **改法**：跟「收線回寫記憶」同一個模子。Voice 有來電者身分（`memory_scope`＝`voice-<user_id>`）且 Brain 通道設好時，改 POST `/voice/guardian-event`（內部密語門，跟 `/voice/call-memory` 同一道）；Brain 認人 → 記一筆帶長輩帳號與 personId 的 `guardian_risk_evaluated`（`source=live_voice`、`who`）→ **只有長輩本人說的、而且是通知候選**才 `dispatch_safety_alert`。認不出人就不記不發（不能記到預設那位身上）。Voice 送不出去只寫診斷、絕不拋例外；沒身分或通道沒設（本機開發）照舊在本機記。家人週摘要（`server.py`）與機構的守護事件讀取（`org_api.py`）都跳過 `who=ai`。
 - **測試**：新 `engine/test_voice_guardian_brain_route.py` 13 條（Voice 走 Brain 不在本機記發、寧寧的話不要求通知、沒身分退回本機、Brain 掛了不拋、真的打內部通道、Brain 端認不出人不記、寧寧的話不發、等級亂填當 none、路由在密語門後、兩處讀取跳過寧寧的話）；突變 9 種全紅。既有 `test_safety_contacts_notify`（11/9 的派送測試）、`test_voice_guardian_loop`、`test_voice_call_memory`、`test_voice_health_context`、`test_org_api` 都過；接口清冊 brain 114→115（`/voice/guardian-event` 列 internal／critical）。
+- **信任關卡（沙利曼，11/18 02:49）第一輪「改完再上」，4 個 🔴 都改了**：
+  1. 🔴 **受暴線**：守護腦每句只標一個類別、先中先贏——「他打我，我胸口好痛喘不過氣」「被家暴好想死」「兒子把我錢拿走了，我很喘」會被標成急症／想不開而通知家人，加害人可能就是家人。以前通知從沒真的送出所以沒發生，這張一上線就會發生。→ `model_router` 另外獨立判一次「有沒有提到受暴」（`protectionMentioned`；另加三條只擋通知、不改分級的說法，危機辨識量測不受影響：自建題庫 93.8%／0%／100% 不變），提到就不是通知候選；第二層 AI 那條路也照擋；Voice 端、Brain 端各再鎖一次（Brain 還要 high／critical、而且是長輩本人說的）。
+  2. 🔴 **記到別人身上**：寫事件沒帶 personId，會被全程序共用、不分人的 5 秒快取補上。→ 明講 personId 與 familyGroupId。
+  3. 🔴 **通知找錯家庭圈**：長輩若在兩個家庭圈，派送沒帶圈會抓到沒排序的第一筆、名單是空的、安靜不發。→ 派送帶目前所在的圈。
+  4. 🔴 **失敗沒人知道**：送 Brain 失敗、認不出人、有名單卻一筆都沒排進去，都只印一行診斷。→ 高風險送不出去重試一次；以上三種各發一則內部告警（只帶等級、類別、原因，不帶 ID）。⚠ 但 **voice 與 brain 正式機都沒設 Slack 告警網址**（只有 gateway-monitor 有），告警目前送不出去——要不要把同一把掛給 voice／brain，要問 Edward（改部署設定）。
+  - 🟡 一併改：同一輪同一類只送一次（字幕每進一段就重判，不去重會灌水亮燈次數）；送 Brain 改丟專用小池子、不等回應（安全導引不再等 Brain）；Brain 記錄出錯不會連通知一起沒了。
+  - 🟡 留給之後：機構總覽與月報的「高風險件數」還沒跳過寧寧的話（`org_portal.py`）；語音內部密語 7/15 建立、8/13 事件後沒換（換鑰匙在 11/8 盤點清單，要 Edward）；週摘要把受暴事件算進亮燈、類別也在回傳資料裡（目前家人看不到是碰巧）。
+  - 測試 13 → 30 條（受暴三句整條路不通知、Brain 三道鎖、帶本人與圈、記錄失敗照發、重試與告警不帶 ID、同一輪只送一次、第二層 AI 那條路）；突變 12 種全紅；`npm run test:launch` 全過。
+- **上線後最少步驟驗證（沙利曼給的）**：兩支裝 1.0.72 的手機，長輩 A、家人 B（B 在 A 目前所在的圈、開通知）；A 在「設定 → 安全通知」選 B **並重新按儲存**（032 在 11/17 才進正式庫，之前存的名單已隨重建消失）。A 打聊聊說「我胸口好痛，喘不過氣」→ 1–2 分鐘內 B 收到「沐寧提醒：A可能需要關心」；語音主機日誌要有 `guardian.brain_event … resolved=True recorded=True queued=1`（queued=0＝名單或圈有問題、resolved=False＝認不出人）。同一對人 30 分鐘內只送一次。反向：A 說「他打我」，B 不該收到。
 - **上線要注意**：要 **Brain 先上、Voice 後上**（Voice 先上會打到還沒有這支接口的 Brain，只是寫診斷、不影響通話）。上線後用一通真機通話講一句會亮燈的話驗：正式庫要多一筆 `source=live_voice` 的事件、緊急聯絡人手機要收到通知。**App E2E pending**（緊急聯絡人的設定畫面在 1.0.72）。
 - **沒做**：歷史上漏記的亮燈補不回來（Voice 容器暫存檔已隨重建消失）。
 - **檔**：`engine/live_voice_server.py`（只有 `guardian_record_and_alert`）、`engine/server.py`（新 `voice_guardian_event_response`＋內部路由兩行＋家人週摘要讀取一行）、`engine/org_api.py`（一行）、`engine/test_voice_guardian_brain_route.py`（新）、`docs/API-CONTRACT-INVENTORY.json`、`scripts/api_contract_inventory.py`、`scripts/test_api_contract_inventory.py`、本看板。
