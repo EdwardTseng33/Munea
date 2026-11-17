@@ -111,6 +111,7 @@
       setTimeout(function () { if (!done) { done = true; document.removeEventListener('visibilitychange', h); res(false); } }, timeoutMs);
     });
   }
+  var topicsSeen = 0;
   async function dial(name, maxMs) {
     log(name + '_BEGIN', snap());
     click('.tab-btn[data-view="chat"]'); await sleep(1500);
@@ -137,13 +138,26 @@
         await sleep(16000);
         var skip = q('#interestsSkip');
         var closeBtn = q('#interestsModal .mx-close, #interestsModal .auth-close');
+        var skipVisible = !!(skip && getComputedStyle(skip).display !== 'none' && skip.offsetHeight > 0);
+        topicsSeen += 1;
         log(name + '_TOPICS_SHEET', {
+          times: topicsSeen,
           skipText: text('#interestsSkip'),
-          skipVisible: !!(skip && getComputedStyle(skip).display !== 'none' && skip.offsetHeight > 0),
+          skipVisible: skipVisible,
           hasCloseButton: !!closeBtn,
           askedFlag: localStorage.getItem('munea.interestsAsked'),
         });
-        click('#interestsSave');
+        if (topicsSeen === 1 && closeBtn) {
+          // What a confused person does: close it with the X, then press the call button again.
+          // Fixed behaviour: the call goes out. Old behaviour: the same sheet comes back.
+          closeBtn.click();
+          await sleep(1500);
+          log(name + '_TOPICS_CLOSED_WITH_X', { stillOpen: topics.classList.contains('show'), askedFlag: localStorage.getItem('munea.interestsAsked') });
+          click('#callToggle');
+        } else {
+          log(name + '_TOPICS_CAME_BACK', { times: topicsSeen });
+          click('#interestsSave');
+        }
         start = Date.now();
         continue;
       }

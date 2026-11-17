@@ -12992,7 +12992,8 @@ function init() {
   window.__muneaOpenInterests = function (fromCall) {
     _intSel = loadInterests(); _intFromCall = !!fromCall;
     renderInterestPicks();
-    const skip = $('#interestsSkip'); if (skip) skip.style.display = fromCall ? '' : 'none';
+    const skip = $('#interestsSkip'); if (skip) skip.style.display = fromCall ? 'block' : 'none';
+    if (fromCall) { try { localStorage.setItem('munea.interestsAsked', '1'); } catch (e2) {} }
     $('#interestsModal').classList.add('show');
   };
   function closeInterests(startAfter) {

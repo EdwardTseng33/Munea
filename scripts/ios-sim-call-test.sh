@@ -51,10 +51,12 @@ echo "== warm up Settings (it is what we switch to when sending the App away) ==
 xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null 2>&1 || true
 sleep 20
 
+# perl alarm = a timeout that exists on every Mac: a hung simulator command gets cut off.
+sc() { perl -e 'alarm shift; exec @ARGV' "$1" xcrun simctl "${@:2}"; }
 T0=$(date +%s)
-shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; echo "  shot $1 at $(( $(date +%s) - T0 ))s"; }
-to_background() { xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null 2>&1 || echo "could not open Settings"; echo "  -> background at $(( $(date +%s) - T0 ))s"; }
-to_foreground() { xcrun simctl launch "$UDID" "$BUNDLE" >/dev/null 2>&1 || echo "could not bring App back"; echo "  -> foreground at $(( $(date +%s) - T0 ))s"; }
+shot() { sc 45 io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; echo "  shot $1 at $(( $(date +%s) - T0 ))s"; }
+to_background() { sc 90 launch "$UDID" com.apple.Preferences >/dev/null 2>&1 || echo "could not open Settings"; echo "  -> background at $(( $(date +%s) - T0 ))s"; }
+to_foreground() { sc 90 launch "$UDID" "$BUNDLE" >/dev/null 2>&1 || echo "could not bring App back"; echo "  -> foreground at $(( $(date +%s) - T0 ))s"; }
 at() { # sleep until N seconds after launch
   local now=$(( $(date +%s) - T0 ))
   if [ "$now" -lt "$1" ]; then sleep $(( $1 - now )); fi

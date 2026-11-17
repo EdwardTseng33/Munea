@@ -23,7 +23,7 @@ jobs:
   sim:
     name: iPhone 模擬器實跑通話與切背景
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v5
