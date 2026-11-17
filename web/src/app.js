@@ -1264,6 +1264,17 @@ async function refreshServerPlanEntitlement() {
   return result;
 }
 
+// 機構開通碼視窗（web/src/seat-code.js，一般程式、看不到這個模組裡的東西）要用的工具借給它：
+// 組後端網址、帶登入證與通行碼、登入把關、記產品事件、綁好後重讀方案。流程本身都在那支裡。
+window.__muneaSeatCodeBridge = {
+  brainURL,
+  authHeaders: muneaAuthHeaders,
+  isLoggedIn,
+  requireLogin,
+  track: trackProductEvent,
+  refreshPlan: refreshServerPlanEntitlement,
+};
+
 function renderSubscriptionEndDate(subscription) {
   const el = $('#setPlanRenewalDate');
   if (!el) return;
