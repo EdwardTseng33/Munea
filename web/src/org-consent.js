@@ -50,7 +50,15 @@
   const ERROR_MESSAGES = Object.freeze({
     ...Object.fromEntries(SIGN_IN_ERRORS.map((code) => [code, 'errorSignIn'])),
     not_found: 'errorGone',
+    // 後端先留下「誰在什麼時候打開」再讓同意生效；留不下來就不算數，開關維持關（2026-11-17 #711）。
+    // 對使用者只說「這次沒有開成功」，不講後端的內部原因。
+    consent_not_recorded: 'errorNotSaved',
+    // 名額其實是企業福利的（企業永遠只看總數，開關沒有作用）。正常不會走到這裡——企業名額根本不顯示開關；
+    // 會遇到是畫面上的資料舊了，所以下面收到這個代碼會重讀一次，把入口收掉。
+    consent_not_applicable: 'errorNotApplicable',
   });
+  // 收到這幾種代碼代表畫面上的名額資料已經跟伺服器對不上，要重讀一次。
+  const STALE_SEAT_ERRORS = Object.freeze(['not_found', 'consent_not_applicable']);
 
   // 每一句都寫成 t('鍵', '中文')：文案盤點工具（scripts/i18n-surface-inventory.js）認這個寫法，
   // 才知道這些中文已經綁了四語的鍵。中文是語系檔還沒載到時的後備。
@@ -68,6 +76,8 @@
     fromSeatCode: (t, values) => t('orgConsent.fromSeatCode', '設定 {org} 看得到什麼', values),
     errorSignIn: (t) => t('orgConsent.errorSignIn', '請先登入再設定。'),
     errorGone: (t) => t('orgConsent.errorGone', '找不到這個機構給你的方案，沒有改到。'),
+    errorNotSaved: (t) => t('orgConsent.errorNotSaved', '這次沒有開成功，開關還是關的。請稍後再試一次。'),
+    errorNotApplicable: (t) => t('orgConsent.errorNotApplicable', '這個機構用不到這項設定，沒有改到。'),
     errorNetwork: (t) => t('orgConsent.errorNetwork', '現在連不上，沒有改到。請稍後再試一次。'),
   });
 
@@ -277,6 +287,8 @@
       const tools = bridge();
       // 只送結果或失敗原因——next.event 裡沒有機構名稱與名額代號，也不要在這裡加。
       try { if (tools && typeof tools.track === 'function') tools.track(EVENT_NAME, next.event); } catch (error) {}
+      // 名額不在了、或其實是企業的名額：重讀一次，設定頁的入口會跟著收掉（視窗裡那句原因留著給他看）。
+      if (!next.ok && next.event && STALE_SEAT_ERRORS.includes(next.event.error)) refresh(true);
     }
 
     async function onToggle() {
@@ -366,6 +378,7 @@
     EVENT_NAME,
     APPLICABLE_KINDS,
     ERROR_MESSAGES,
+    STALE_SEAT_ERRORS,
     MESSAGES,
     pickSeat,
     interpretSet,

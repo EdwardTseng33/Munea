@@ -7,7 +7,8 @@
  *      開通碼成功畫面多一顆次要按鈕（預設收著）。
  *   B. 行為（真的把 web/src/org-consent.js 跑起來）：有照護機構名額才顯示入口、企業福利不顯示；
  *      開與關各打 /org-consent/set、帶登入證、參數只有 { seatId, granted }；處理中不能連點；
- *      成功才動開關，失敗留在原位並講原因；絕不自動幫人打開；產品事件不帶機構名稱與名額代號。
+ *      成功才動開關，失敗留在原位並講原因（含後端「同意留不下來就不算數」「企業名額不收同意」兩種）；
+ *      絕不自動幫人打開；產品事件不帶機構名稱與名額代號。
  *   C. 文案：四語都有全部 orgConsent.* 鍵、程式裡的中文後備跟語系檔一致、沒有公文字與禁用字、
  *      日文對照護機構用「施設」。
  *   D. 文案跟後端對得上：兩張清單各對到 engine/org_api.py 實際給機構的欄位（見下表）。
@@ -18,12 +19,14 @@
  *   sees2 哪幾天聊、聊幾次   ← _strip_week_for_org 的 contact（calls、daysWithCall、longestGapDays、lastCallDate）
  *                               ＋ moodTrend.daily[].chats；L1 的 lastInteractionDate、noInteractionToday
  *   sees3 每天的心情高低     ← moodTrend（daily[].level 1–5、weekAverage、baselineAverage、lowestDay）；L1 的 lowMood
- *   sees4 提到的掛心事       ← spokenHealth.categories＝心情訊號的 concerns（perception_engine：身體不適／想念／煩惱／
- *                               火氣的事，一次最多 3 則短語、一週最多 10 則）。⚠ 後端自己的說明寫「症狀類別」，
- *                               實際比那個寬——文案照實際寫。
- *   sees5 需要留意的次數     ← safety（counts、highOrCritical）；L1 的 guardianLit；異常規則的 fact 都是由上面的數字組的
+ *   sees4 四類各提到幾次     ← spokenHealth.categories＝[{key, label, count}]，由 _spoken_categories 把心情訊號的 concerns
+ *                               歸成固定四類再數次數：吃不下（appetite）／睡不好（sleep）／身體不舒服（body）／
+ *                               心情或生活上的掛心事（other）。只有類別與次數，任何短語都不回（2026-11-17 #711；
+ *                               在那之前機構拿到的是短語本身，這支測試就是那時候對出落差的）。
+ *   sees5 需要留意的次數     ← safety（counts 只認已知風險等級、highOrCritical）；L1 的 guardianLit；
+ *                               異常規則的 fact 都是由上面的數字組的
  *   「永遠看不到」           ← _consent_view 的 whatOrgNeverSees 四項，一對一：
- *   never1 聊天的內容 ← 對話內容｜never2 原話 ← 心情與口述的原句｜never3 吃什麼藥 ← 用藥明細｜never4 家人留的話 ← 家人帶話
+ *   never1 聊天的內容 ← 對話內容｜never2 原話 ← 心情與口述的原句或短語｜never3 吃什麼藥 ← 用藥明細｜never4 家人留的話 ← 家人帶話
  *
  * 跑法：node scripts/test-org-consent-ui.js（不需網路、不需鑰匙）
  * ⚠ 還沒掛進 npm run test:launch：#694／#696 正在改 package.json 同一行，等它們合併後跟 test-seat-code-ui.js 一起補。
@@ -137,15 +140,20 @@ assert.ok(!/\.whatOrg(Sees|NeverSees)\b|\[['"]whatOrg/.test(source), 'org-consen
 // ---------- D. 文案跟後端對得上 ----------
 // 這裡釘住後端「機構端實際拿到什麼」的幾行。任何一行變了，回來對 orgConsent.sees*／never* 四語文案。
 const BACKEND_FACTS = [
-  ['never1–4', '"whatOrgNeverSees": ["對話內容", "心情與口述的原句", "用藥明細", "家人帶話"],'],
+  ['never1–4', '"whatOrgNeverSees": ["對話內容", "心情與口述的原句或短語", "用藥明細", "家人帶話"],'],
+  ['後端自述看得到什麼', '"whatOrgSees": ["整家彙總", "名單（稱呼）與三個旗標（今天沒互動／心情低落／守護亮燈）", "週關懷摘要（通話次數、心情走勢、掛心事的類別與次數、亮燈次數）"],'],
   ['sees1（稱呼）', 'label = person_info.get("nickname") or person_info.get("profileName") or ""'],
   ['sees2（聊了幾次、哪幾天）', '"source": contact.get("source"), "calls": contact.get("calls"), "daysWithCall": contact.get("daysWithCall"),'],
   ['sees2（最長空檔、最後一次）', '"longestGapDays": contact.get("longestGapDays"), "lastCallDate": contact.get("lastCallDate"),'],
   ['sees2／sees3（每天心情與次數，沒有原句）', 'daily = [{"date": d.get("date"), "level": d.get("level"), "chats": d.get("chats")} for d in mood.get("daily") or []]'],
   ['sees3（最低那天只有日期與級數）', '"lowestDay": {"date": lowest.get("date"), "level": lowest.get("level")} if lowest else None,'],
-  ['sees4（掛心事短語）', '"categories": list((week.get("spokenHealth") or {}).get("items") or [])[:10],'],
-  ['sees5（只有次數）', '"source": safety.get("source"), "counts": safety.get("counts") or {},'],
+  ['sees4（掛心事只經過歸類）', '"categories": _spoken_categories((week.get("spokenHealth") or {}).get("items")),'],
+  ['sees4（只回類別與次數，不回短語）', 'return [{"key": k, "label": label, "count": counts[k]} for k, label in order if counts.get(k)]'],
+  ['sees4（其他掛心事那一類）', 'SPOKEN_CATEGORY_OTHER = ("other", "心情或生活上的掛心事")'],
+  ['sees5（只有次數、只認已知等級）', '"counts": {k: v for k, v in (safety.get("counts") or {}).items() if k in ORG_RISK_LEVELS},'],
   ['企業福利永遠沒有個人層', 'if _client_kind(client) == "esg":\n        return []'],
+  ['企業名額不收同意（consent_not_applicable）', 'return {"ok": False, "error": "consent_not_applicable"}'],
+  ['同意留不下來就不算數（consent_not_recorded）', 'return {"ok": False, "error": "consent_not_recorded", "seat": _consent_view(seat, client, existing)}'],
 ];
 for (const [what, line] of BACKEND_FACTS) {
   assert.ok(backend.includes(line), `engine/org_api.py 這一行變了（${what}）——請回來對 orgConsent.sees*／never* 四語文案是否還跟機構端實際拿到的一致：\n  ${line}`);
@@ -157,6 +165,14 @@ assert.deepEqual(
   [...stripBody.matchAll(/^ {8}"([A-Za-z]+)":/gm)].map((match) => match[1]),
   ['period', 'contact', 'moodTrend', 'spokenHealth', 'safety', 'honesty', 'partial'],
   '機構版週摘要（_strip_week_for_org）回的區塊變了——請回來對 orgConsent.sees* 文案',
+);
+// 掛心事固定歸成這幾類（sees4 一項一項寫出來的就是這幾類，加上「其他掛心事」）。多一類、少一類、改名，都要回來對文案。
+const rulesStart = backend.indexOf('SPOKEN_CATEGORY_RULES = (');
+const rulesBody = backend.slice(rulesStart, backend.indexOf('SPOKEN_CATEGORY_OTHER = ', rulesStart));
+assert.deepEqual(
+  [...rulesBody.matchAll(/^ {4}\("([a-z]+)", "([^"]+)", \(/gm)].map((match) => `${match[1]}:${match[2]}`),
+  ['appetite:吃不下', 'sleep:睡不好', 'body:身體不舒服'],
+  '機構端掛心事的類別（SPOKEN_CATEGORY_RULES）變了——請回來對 orgConsent.sees4 四語文案',
 );
 
 // ---------- B1. 純邏輯：挑名額、看懂回應 ----------
@@ -218,8 +234,17 @@ const EXPECTED_ERRORS = {
   family_cloud_identity_required: 'errorSignIn',
   account_scope_missing: 'errorSignIn',
   not_found: 'errorGone',
+  consent_not_recorded: 'errorNotSaved',
+  consent_not_applicable: 'errorNotApplicable',
 };
 assert.deepEqual({ ...OrgConsent.ERROR_MESSAGES }, EXPECTED_ERRORS, '失敗代碼對照表變了');
+assert.deepEqual([...OrgConsent.STALE_SEAT_ERRORS], ['not_found', 'consent_not_applicable'], '哪幾種失敗要重讀名額');
+// 後端回 consent_not_recorded 時會帶 seat（狀態維持原樣）——不可以因為有 seat 就當成功
+for (const status of ['none', 'granted']) {
+  const outcome = OrgConsent.interpretSet(200, { ok: false, error: 'consent_not_recorded', seat: seatItem({ status }) }, true);
+  assert.equal(outcome.ok, false, 'ok 不是 true 就不算數（就算帶回來的狀態是 granted）');
+  assert.equal(outcome.message, 'errorNotSaved');
+}
 for (const [code, message] of Object.entries(EXPECTED_ERRORS)) {
   // 後端這兩支回的是字串（{"ok": false, "error": "not_found"}）；登入把關那層回的是物件（{"error": {"code": …}}）
   for (const body of [{ ok: false, error: code }, { ok: false, error: { code, message: 'x', requestId: 'y' } }]) {
@@ -261,10 +286,10 @@ const zhKeys = Object.keys(catalogs['zh-TW']).filter((key) => key.startsWith('or
 assert.deepEqual(zhKeys, [...requiredKeys].sort(), '語系檔的 orgConsent.* 鍵要跟畫面／程式用到的完全一致（不多不少）');
 // 公文字、禁用字（老闆親訂：白話、不煽情、不後台腔；對外不用「追蹤」「監測」）
 const BANNED = {
-  'zh-TW': /追蹤|監測|監控|同意書|授權|資料處理|個資|用戶|您/,
-  en: /\b(track|tracking|monitor|monitoring|surveillance|consent form|authoriz\w*|data processing)\b/i,
-  ja: /団体|追跡|監視|同意書|データ処理/,
-  es: /\b(rastre\w*|monitor\w*|vigil\w*|consentimiento|autoriz\w*|tratamiento de datos)\b/i,
+  'zh-TW': /追蹤|監測|監控|同意書|授權|資料處理|個資|用戶|您|稽核|紀錄|寫入/,
+  en: /\b(track|tracking|monitor|monitoring|surveillance|consent form|authoriz\w*|data processing|audit\w*|log|logged)\b/i,
+  ja: /団体|追跡|監視|同意書|データ処理|監査|ログ(?!イン)/,
+  es: /\b(rastre\w*|monitor\w*|vigil\w*|consentimiento|autoriz\w*|tratamiento de datos|auditor\w*|registro)\b/i,
 };
 for (const locale of LOCALES) {
   assert.deepEqual(
@@ -373,7 +398,8 @@ function createApp({ loggedIn = true, locale = 'zh-TW', realDom = false } = {}) 
       } : {}),
     },
     addEventListener(type, handler) { (windowListeners[type] = windowListeners[type] || []).push(handler); },
-    setTimeout,
+    // 逾時計時器不要拖住測試：有些情境故意不回應（例如重讀名額那一次），12 秒的逾時不該讓整支多等 12 秒。
+    setTimeout: (handler, ms) => { const timer = setTimeout(handler, ms); timer.unref(); return timer; },
     clearTimeout,
     AbortController,
     MuneaI18n: {
@@ -579,6 +605,11 @@ async function behaviour() {
       text: zh['orgConsent.errorSignIn'], event: { error: 'identity_required' } },
     { label: 'not_found', respond: (ui, call) => ui.reply(call, 200, { ok: false, error: 'not_found' }),
       text: zh['orgConsent.errorGone'], event: { error: 'not_found' } },
+    { label: 'consent_not_recorded（同意留不下來，這次不算數）',
+      respond: (ui, call, wanted) => ui.reply(call, 200, { ok: false, error: 'consent_not_recorded', seat: seatItem({ status: wanted ? 'none' : 'granted' }) }),
+      text: zh['orgConsent.errorNotSaved'], event: { error: 'consent_not_recorded' } },
+    { label: 'consent_not_applicable（其實是企業名額）', respond: (ui, call) => ui.reply(call, 200, { ok: false, error: 'consent_not_applicable' }),
+      text: zh['orgConsent.errorNotApplicable'], event: { error: 'consent_not_applicable' } },
     { label: '回成功但狀態對不上', respond: (ui, call, wanted) => ui.reply(call, 200, viewBody(wanted ? 'revoked' : 'granted')),
       text: zh['orgConsent.errorNetwork'], event: { error: 'unavailable' } },
   ];
@@ -610,6 +641,25 @@ async function behaviour() {
       await ui.reply(ui.setCalls()[1], 200, viewBody(startGranted ? 'revoked' : 'granted'));
       await retry;
       assert.equal(ui.checked(), String(!startGranted), `${label}：重送成功後開關才動`);
+    }
+  }
+
+  // 名額對不上了（其實是企業的、或已經不在）：講原因之外重讀一次，設定頁的入口跟著收掉；其他失敗不重讀
+  for (const [error, reread] of [['consent_not_applicable', true], ['not_found', true], ['consent_not_recorded', false], ['identity_required', false]]) {
+    const ui = createApp();
+    await ui.boot(statusBody(seatItem()));
+    await ui.elements.orgConsentRow.fire('click');
+    const pending = ui.elements.orgConsentSwitch.fire('click');
+    await ui.tick();
+    await ui.reply(ui.setCalls()[0], 200, { ok: false, error });
+    await pending;
+    await ui.tick();
+    assert.equal(ui.statusCalls().length, reread ? 2 : 1, `${error}：${reread ? '要' : '不用'}重讀名額`);
+    if (reread) {
+      await ui.reply(ui.statusCalls()[1], 200, error === 'not_found' ? statusBody() : statusBody(seatItem({ kind: 'esg' })));
+      assert.equal(ui.elements.orgConsentRow.hidden, true, `${error}：重讀後設定頁的入口要收掉`);
+      assert.equal(ui.elements.orgConsentMsg.textContent, zh[`orgConsent.${EXPECTED_ERRORS[error]}`], `${error}：視窗裡那句原因要留著`);
+      assert.equal(ui.checked(), 'false');
     }
   }
 
