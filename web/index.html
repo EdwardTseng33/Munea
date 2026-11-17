@@ -1867,8 +1867,7 @@ window.MMDEV = function(){
       document.getElementById('sleepUnit').textContent=d.sleep.unit;
       document.getElementById('stepsNum').textContent=d.steps.num;
       document.getElementById('stepsUnit').textContent=d.steps.unit;
-      // 沒連／連了讀不到，各有各的說法（MMDEV 才分得出來）；不讓上面那句「接 Apple 健康帶入」蓋掉它
-      if(window.MMDEV) window.MMDEV();
+      // 沒連／連了讀不到，各有各的說法：這個函式結尾的 MMDEV(period) 會再講一次，蓋過上面那句「接 Apple 健康帶入」
     }
     if(period==='today' && window.__muneaObsReal){ document.getElementById('obsText').innerHTML=window.__muneaObsReal; }
     else { document.getElementById('obsText').textContent=d.obs; }
