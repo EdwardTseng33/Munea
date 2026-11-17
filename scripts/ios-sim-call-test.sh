@@ -62,13 +62,14 @@ to_background() { xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null 2
 to_foreground() { xcrun simctl launch "$UDID" "$BUNDLE" >/dev/null 2>&1 || echo "could not bring App back"; }
 
 echo "== launch =="
-xcrun simctl launch --console-pty "$UDID" "$BUNDLE" >> "$CONSOLE" 2>&1 &
+xcrun simctl launch --console-pty "$UDID" "$BUNDLE" -AppleLanguages "(zh-Hant-TW)" -AppleLocale zh_TW >> "$CONSOLE" 2>&1 &
 LAUNCH_PID=$!
 sleep 12; shot 01-launch
 wait_marker 'MUNEA_SIM BOOT' 90; shot 02-booted
 
 echo "== call 1 (cold start) =="
-wait_marker 'CALL1_(CONNECTED|DONE)' 80; sleep 3; shot 03-call1-live
+wait_marker "CALL1_CONSENT_SHEET" 40 && shot 03a-consent-sheet
+wait_marker "CALL1_(CONNECTED|DONE)" 90; sleep 3; shot 03-call1-live
 wait_marker 'READY_FOR_BACKGROUND_1' 60; shot 04-call1-ended
 
 echo "== background 20s between calls =="

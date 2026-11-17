@@ -25,6 +25,8 @@
     }
     if (el) el.textContent = lines.slice(-7).join('\n');
   }
+  // The console channel works on the simulator, so keep screenshots clean: no overlay.
+  overlay = function () {};
   function log(tag, obj) {
     var line;
     try { line = tag + ' ' + JSON.stringify(Object.assign({ t: Date.now() - T0 }, obj || {})); } catch (e) { line = tag + ' {}'; }
@@ -43,6 +45,23 @@
       if (url.indexOf('/product-event') >= 0 && init && typeof init.body === 'string') {
         var b = JSON.parse(init.body);
         if (/^voice_/.test(b.eventName || '')) log('EVENT', { name: b.eventName, p: slim(b.properties) });
+      }
+      // The two requests 1.0.71 always had rejected: do they carry both credentials now, and what comes back?
+      var hit = /\/(wellbeing\/[a-z]+|notifications(\/settings)?|push\/devices)(\?|$)/.exec(url);
+      if (hit) {
+        var hs = (init && init.headers) || {};
+        var names = (typeof hs.forEach === 'function' && !Array.isArray(hs))
+          ? (function () { var out = []; hs.forEach(function (v, k) { out.push(k); }); return out; })()
+          : Object.keys(hs);
+        var lower = names.map(function (n) { return String(n).toLowerCase(); });
+        var info = { path: hit[1], appKey: lower.indexOf('x-munea-key') >= 0, signIn: lower.indexOf('authorization') >= 0 };
+        return origFetch.apply(this, arguments).then(function (res) {
+          log('GATED_REQUEST', Object.assign(info, { status: res.status }));
+          return res;
+        }, function (err) {
+          log('GATED_REQUEST', Object.assign(info, { status: 'network_error' }));
+          throw err;
+        });
       }
     } catch (e) {}
     return origFetch.apply(this, arguments);
@@ -102,6 +121,15 @@
       var s = snap();
       var key = JSON.stringify([s.label, s.dialing, s.chat, s.online, s.card]);
       if (key !== last) { log(name + '_STATE', s); last = key; }
+      // First call ever: the App shows its privacy notice and waits for the person to agree.
+      var sheet = q('#consentSheet');
+      if (sheet && sheet.classList.contains('show')) {
+        await sleep(2500);
+        log(name + '_CONSENT_SHEET', { title: text('#consentSheet .mr-say span'), button: text('#consentAgree') });
+        click('#consentAgree');
+        start = Date.now();
+        continue;
+      }
       if (s.online && !connectedAt) { connectedAt = Date.now(); log(name + '_CONNECTED', { afterMs: connectedAt - start }); break; }
       if (s.card && !s.dialing && !s.online) { cardSince = cardSince || Date.now(); if (Date.now() - cardSince > 4000) break; } else cardSince = null;
     }
