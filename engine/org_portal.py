@@ -73,6 +73,8 @@ FORBIDDEN_KEYS = {
     "personid", "person_id", "personids", "person_ids",
     "familygroupid", "family_group_id", "authuserid", "auth_user_id", "userid", "user_id",
     "email", "inviteemail", "invite_email",
+    # 033（2026-11-17）：開通碼、名冊稱呼、名冊手機同樣不得出現在機構窗口摘要。
+    "redeemcode", "redeem_code", "membername", "member_name", "memberphone", "member_phone",
     "contactemail", "contact_email", "contactname", "contact_name",
     "phone", "contactphone", "contact_phone",
     "displayname", "display_name", "username", "user_name",

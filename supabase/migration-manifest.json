@@ -247,6 +247,13 @@
       "filename": "032_safety_contacts_state_key.sql",
       "type": "schema",
       "sha256": "fcf97db085719ae23000f48882b003b08f9909bf29eded0d2e45ac61fb8388aa"
+    },
+    {
+      "order": 34,
+      "identity": "033",
+      "filename": "033_enterprise_seat_redeem_codes.sql",
+      "type": "schema",
+      "sha256": "b2083c3bf94e2da8675dc2900107f927abb927cc748135e7fd39cdde5e7ac2b4"
     }
   ]
 }

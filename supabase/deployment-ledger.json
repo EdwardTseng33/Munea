@@ -245,6 +245,12 @@
           "sha256": "fcf97db085719ae23000f48882b003b08f9909bf29eded0d2e45ac61fb8388aa",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+        },
+        {
+          "filename": "033_enterprise_seat_redeem_codes.sql",
+          "sha256": "b2083c3bf94e2da8675dc2900107f927abb927cc748135e7fd39cdde5e7ac2b4",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {

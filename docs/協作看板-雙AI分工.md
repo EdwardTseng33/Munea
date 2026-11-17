@@ -1,5 +1,14 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-17 蘇菲｜🎟️ 機構席次開通碼：後端＋後台（PR · 不碰 App 通話路徑）
+
+- **為什麼**：席次原本只認 email 對人。正式庫 14 個帳號有 6 個是蘋果隱藏信箱、手機號碼 0 筆，機構名單對不上；名單先匯入、之後才註冊的人也沒有補對機制。Edward 11/17 拍板改用開通碼。
+- **做了**：每席一組 8 位數字；後台 `/admin/enterprise/seats/create-codes` 產生（給名冊或給數量）、使用者 `/enterprise/redeem-code` 登入後輸入就綁到自己帳號。鐵律不變——機構沒入帳只會登記、不開會員資格。防猜：同帳號 10 分鐘錯 5 次、同 IP 錯 20 次暫時擋。機構端回應禁帶開通碼與名冊稱呼／手機。後台席次明細多「對象」「開通碼」兩欄，可下載清單與可列印小卡。設計記在需求單第 9 節。
+- **SQL**：`supabase/sql/033_enterprise_seat_redeem_codes.sql`。⚠ **還沒在正式 Supabase 跑過**；沒跑之前產生開通碼會失敗（後台會提示是 033 沒跑），舊的 email 匯入不受影響。
+- **測試**：`engine/test_enterprise_seat_codes.py` 49 案；七個突變（可佔兩席／猜錯不計次／字母濾掉照比對／已用的碼再綁／不必登入／身分收請求內容／機構端帶出開通碼）全部會紅。既有席次、月結、機構專區測試全過；接口清冊 112→114、資料庫變更登記通過。後台畫面用假資料在 1280 與 390 寬各看過（產生、超過上限二次確認）。
+- **未做**：App 端「設定 → 機構開通碼」輸入畫面（四語、要跟 1.0.72 出；會動 `web/src/app.js` 與四語文案，等 #692／#693／#694 先合併再開，避免撞檔）。後台英日西介面的新字串沒翻（後台只有我們自己用中文）。新測試還沒掛進 `npm run test:launch`（#694 正在改 `package.json` 同一行，等它合併後補一句 `python engine/test_enterprise_seat_codes.py`）。
+- **檔**：`engine/enterprise_seats.py`、`engine/server.py`、`engine/supabase_adapter.py`、`engine/org_api.py`、`engine/org_portal.py`、`engine/test_enterprise_seat_codes.py`（新）、`supabase/sql/033_enterprise_seat_redeem_codes.sql`（新）、`supabase/migration-manifest.json`、`supabase/deployment-ledger.json`、`docs/API-CONTRACT-INVENTORY.json`、`scripts/test_api_contract_inventory.py`、`web/src/admin.js`、`web/src/admin.css`、`web/admin.html`、`docs/企業席次-後台管理與月結-需求單-2026-07-20.md`、本看板。
+
 ### 2026-11-09 卡西法｜🔔 1.0.72 緊急聯絡人真的通知家人（PR · call-path risk：動到 engine/live_voice_server.py）
 
 - **為什麼**：「安全通知」畫面原本只存在長輩手機 localStorage、伺服器完全不知道，沒有任何通知流程。Edward 拍板這版要做出真的通知。
