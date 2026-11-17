@@ -78,7 +78,8 @@ to_foreground
 wait_marker 'BACK_FROM_BACKGROUND_1' 30
 
 echo "== call 2 (first call after coming back) =="
-wait_marker 'CALL2_(CONNECTED|DONE)' 80; sleep 3; shot 06-call2-live
+wait_marker "CALL2_TOPICS_SHEET" 30 && shot 06a-topics-sheet
+wait_marker "CALL2_(CONNECTED|DONE)" 90; sleep 3; shot 06-call2-live
 wait_marker 'CALL2_DONE' 60; shot 07-call2-ended
 
 echo "== native pulse, then call 3 =="

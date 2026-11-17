@@ -130,6 +130,23 @@
         start = Date.now();
         continue;
       }
+      // Asked once before an early call: "topics you like". Record whether the skip link is actually
+      // visible to a person, then go on the way a person would (Save with nothing picked starts the call).
+      var topics = q('#interestsModal');
+      if (topics && topics.classList.contains('show')) {
+        await sleep(2500);
+        var skip = q('#interestsSkip');
+        var closeBtn = q('#interestsModal .mx-close, #interestsModal .auth-close');
+        log(name + '_TOPICS_SHEET', {
+          skipText: text('#interestsSkip'),
+          skipVisible: !!(skip && getComputedStyle(skip).display !== 'none' && skip.offsetHeight > 0),
+          hasCloseButton: !!closeBtn,
+          askedFlag: localStorage.getItem('munea.interestsAsked'),
+        });
+        click('#interestsSave');
+        start = Date.now();
+        continue;
+      }
       if (s.online && !connectedAt) { connectedAt = Date.now(); log(name + '_CONNECTED', { afterMs: connectedAt - start }); break; }
       if (s.card && !s.dialing && !s.online) { cardSince = cardSince || Date.now(); if (Date.now() - cardSince > 4000) break; } else cardSince = null;
     }
