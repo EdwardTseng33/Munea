@@ -23,6 +23,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import websockets
 
+import gemini_models
 import localization
 
 
@@ -47,7 +48,7 @@ def _synthetic_input(phrase):
 
         client = genai.Client(api_key=api_key)
         errors = []
-        for model in ("gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"):
+        for model in gemini_models.TTS_MODELS:
             try:
                 response = client.models.generate_content(
                     model=model,
@@ -62,7 +63,7 @@ def _synthetic_input(phrase):
                         ),
                     ),
                 )
-                pcm = response.candidates[0].content.parts[0].inline_data.data
+                pcm = gemini_models.pcm24k_from_inline(response.candidates[0].content.parts[0].inline_data)
                 if pcm:
                     return pcm, 24000
             except Exception as exc:

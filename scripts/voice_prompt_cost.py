@@ -49,7 +49,7 @@ def split_sections(prompt):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--locale", default="zh-TW", help="用哪一國的書（zh-TW／en／ja／es）")
-    ap.add_argument("--model", default="gemini-2.5-flash", help="用哪個模型的計價單位換算")
+    ap.add_argument("--model", default="gemini-3.5-flash-lite", help="用哪個模型的計價單位換算（2.5-flash 2026-12-01 停用）")
     args = ap.parse_args()
 
     key = (os.environ.get("GEMINI_API_KEY") or "").strip()
