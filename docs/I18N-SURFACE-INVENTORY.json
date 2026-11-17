@@ -129,7 +129,7 @@
         "landing-desktop"
       ],
       "releaseGate": "Localized acquisition surface",
-      "baselineHanCandidates": 244,
+      "baselineHanCandidates": 294,
       "localizationContract": {
         "runtime": "site-src/build.mjs",
         "validation": "scripts/test-app-site-seo.js",

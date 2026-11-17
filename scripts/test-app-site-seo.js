@@ -376,6 +376,21 @@ for (const l of locales) {
 }
 assert.doesNotMatch(llms, /@gmail\.com/i, "llms.txt must not publish a personal mailbox");
 
+// 官網中文字數守門（docs/I18N-SURFACE-INVENTORY.json 的 marketing-site）也在這裡驗一次：
+// 雲端 Smoke 每張 PR 只跑 test:seo，原本要到本機 test:launch 才會發現官網文案超過基準（#725）。
+{
+  const { buildReport, loadInventory } = require("./i18n-surface-inventory.js");
+  const inventory = loadInventory();
+  inventory.surfaces = inventory.surfaces.filter((surface) => surface.id === "marketing-site");
+  const [site] = buildReport(inventory).surfaces;
+  assert.equal(site.unboundHanCandidates, 0, "Every Chinese string on the homepage must bind to the four-locale catalogs");
+  assert.ok(
+    site.hanCandidates <= site.baselineHanCandidates,
+    `Homepage Chinese strings grew ${site.baselineHanCandidates} -> ${site.hanCandidates}; if all are bound, raise the marketing-site baseline in docs/I18N-SURFACE-INVENTORY.json and scripts/test-i18n-surface-inventory.js together`,
+  );
+}
+
 console.log(`[ok] munea.net SEO contract passed (${locales.length} locales)`);
 
 require("./test-app-site-legal-localizations.js");
+require("./test-marketing-site-localizations.js");
