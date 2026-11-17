@@ -1,0 +1,100 @@
+name: iOS simulator call test
+
+# Test branches only. Builds the same source as a release build for the iOS simulator,
+# switches the generated copy to the development profile (auto sign-in, staging voice),
+# and runs a scripted scenario: calls, background/foreground between calls, a direct poke
+# of the native AudioSession plugin, and leaving the screen mid-call.
+# What it cannot prove: real iPhone audio hardware behaviour. See the run summary.
+
+on:
+  push:
+    branches:
+      - "test/ios-sim-**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sim:
+    name: iPhone 模擬器實跑通話與切背景
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Audio devices on this machine (and add a virtual one if there is none)
+        continue-on-error: true
+        run: |
+          echo "== before =="
+          system_profiler SPAudioDataType || true
+          if ! system_profiler SPAudioDataType 2>/dev/null | grep -qi "Input Channels"; then
+            echo "== no input device: installing a virtual one =="
+            brew install --cask blackhole-2ch || true
+            brew install switchaudio-osx || true
+            sudo killall coreaudiod || true
+            sleep 6
+            SwitchAudioSource -a || true
+            SwitchAudioSource -t input -s "BlackHole 2ch" || true
+            SwitchAudioSource -t output -s "BlackHole 2ch" || true
+            echo "== after =="
+            system_profiler SPAudioDataType || true
+          fi
+
+      - name: Build simulator App (release source + development profile + scenario)
+        run: |
+          set -euo pipefail
+          npx cap sync ios
+          npm run ios:dev-profile:direct
+          cat scripts/ios-sim-scenario.js >> ios/App/App/public/src/auth-config.js
+          grep -c "MUNEA iOS SIMULATOR SCENARIO" ios/App/App/public/src/auth-config.js
+          BUILD_ROOT="$RUNNER_TEMP/munea-sim"
+          mkdir -p "$BUILD_ROOT"
+          if ! xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath "$BUILD_ROOT/dd" \
+            -clonedSourcePackagesDirPath "$BUILD_ROOT/spm" \
+            CODE_SIGNING_ALLOWED=NO \
+            build > "$BUILD_ROOT/build.log" 2>&1; then
+            tail -80 "$BUILD_ROOT/build.log"
+            exit 1
+          fi
+          APP="$BUILD_ROOT/dd/Build/Products/Debug-iphonesimulator/App.app"
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" -c "Print :CFBundleVersion" "$APP/Info.plist"
+          echo "APP_PATH=$APP" >> "$GITHUB_ENV"
+
+      - name: Run the scenario in the simulator
+        env:
+          OUT: ios-sim-out
+        run: bash scripts/ios-sim-call-test.sh
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-sim-call-test-${{ github.run_number }}
+          path: ios-sim-out/
+          retention-days: 14
