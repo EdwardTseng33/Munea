@@ -18,6 +18,7 @@ const RED_LINES = {
   zh: /追蹤|監測|監控/,
   ja: /監視|追跡|モニタリング/,
   en: /\b(track|tracks|tracked|tracking|monitor|monitors|monitored|monitoring|surveillance|spy)\b/i,
+  es: /seguimiento|monitore|monitoriz|vigilancia|rastre/i,
 };
 
 const FAQ_HEADINGS = /^(常見問題|よくある質問|FAQ|Preguntas frecuentes)$/i;

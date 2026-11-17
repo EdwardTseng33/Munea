@@ -11,7 +11,7 @@ related: ai-companion-for-seniors, check-in-on-elderly-parent-living-alone
 
 If you are comparing ElliQ with other options, the biggest question is not which brand but which kind of product: a dedicated tabletop robot, or an app that runs on a phone. ElliQ is the robot. The alternatives are mostly apps that give your parent a voice companion without new hardware. Each suits a different parent and a different home.
 
-This guide compares them fairly, using only what the companies publish. Everything below about ElliQ and other products was checked on their own pages in November 2026. Details change, so confirm with each company before you buy.
+Munea publishes this guide and makes one of the apps below, so we stick to what each company publishes about itself. Everything below about ElliQ and other products was checked on their own pages in November 2026. Details change, so confirm with each company before you buy.
 
 ## What ElliQ is
 
@@ -21,11 +21,9 @@ According to its official site, ElliQ is a voice-activated companion robot for o
 - **What it offers:** Medication reminders, exercise suggestions, music, news and stories, trivia and games, photo and message sharing with loved ones, and group activities.
 - **Family side:** A caregiver app that lets family start a video call, send photos to ElliQ's display, set medication and hydration reminders, and see alerts if the member reports pain or a change in mood. The site also lists a view of when the member was last active. The primary caregiver gets full access, and other family members or trusted contacts can be invited.
 - **What it is not:** ElliQ states that it is not a medical device. For emergencies, it encourages members to contact their caregiver and trusted contacts. Its caregiver page calls it "a helping hand, not a replacement" for human care.
-- **Cost model:** The pages mention leasing, which includes hardware, software, updates and support, along with free shipping and home installation. The pages we could open show a monthly fee only as a placeholder with no amount, so the price is not published there. Ask ElliQ for current pricing.
+- **Cost model:** ElliQ is sold as a membership with a monthly fee. Plans, fees and what is included are listed on ElliQ's website; check there for current pricing.
 - **Where it is sold:** Countries and regions served are not published on the pages we reviewed.
 - **Try it:** The site offers a free online trial on a computer using Chrome or Safari.
-
-One caution: the ElliQ pages we opened still showed an expected shipping notice of "End of 2019," which looks out of date. That is a reason to confirm availability and terms with the company directly.
 
 ## The phone-app route
 
@@ -33,9 +31,9 @@ An app companion works on the phone your parent may already own. You trade the a
 
 ### Munea
 
-Munea is an iPhone app (iOS 15 or later). Your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. It keeps the highlights of past chats, such as a family member's name, rather than raw recordings, and users can view or delete them. It sends medication and appointment reminders, and family members can join a family circle that shows the health and mood updates your parent chooses to share. Munea is free to download with 5 trial points (about 1 minute of conversation each); Plus is US$19.99 per month and Pro is US$39.99 per month, and prices shown in the app are the final word. Right now, creating or joining a family circle requires each member to have a Plus or Pro plan (Plus circles hold up to 4 people, Pro up to 12, including the creator).
+Munea is an iPhone app (iOS 15 or later). Your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. Munea doesn't keep raw recordings; it keeps the highlights of past chats, such as a family member's name, and users can view or delete them. It sends medication and appointment reminders, and family members can join a family circle that shows the health and mood updates your parent chooses to share. Munea is free to download with 5 trial credits (about 1 minute of conversation each). Plus is US$19.99 a month with 100 credits and Pro is US$39.99 a month with 200 credits; prices shown in the app are the final word. Right now, creating or joining a family circle requires each member to have a Plus or Pro plan (Plus circles hold up to 4 people, Pro up to 12, including the creator).
 
-What Munea does not do: it has no fall detection, no emergency button, no location, and no camera or sensors; it does not phone your parent; and it will not tell you something is wrong if the app is not opened. It is not a medical device. It is available on the App Store in the US, Canada, Taiwan and Japan, and not yet in the UK or Australia. There is no Android version.
+What Munea does not do: it has no fall detection, no emergency button, no location sharing, and no camera or sensors; it does not phone your parent; and it will not tell you something is wrong if the app is not opened. It is not a medical device. It is available on the App Store in the US, Canada, Taiwan and Japan, and is not currently available in the UK or Australia. There is no Android version.
 
 ### EverFriends
 
@@ -52,7 +50,7 @@ Other voice companion apps exist, and new ones appear often. Whichever one you c
 | How your parent talks to it | Voice | Voice, no typing | Video-based AI companions |
 | Reminders | Medication reminders | Medication and appointment reminders | Not stated on the listing we reviewed |
 | Family features | Caregiver app: video calls, photos, reminders, alerts, last-active view | Family circle showing what your parent chooses to share; each member needs a paid plan | Not stated on the listing we reviewed |
-| Price model | Lease with monthly fee; amount not published on the pages we opened | Free download with 5 trial points; Plus US$19.99 and Pro US$39.99 per month | Free download; plans US$14.99 to US$199.99 per month by minutes |
+| Price model | Membership with a monthly fee; see elliq.com for current plans | Free download with 5 trial credits; Plus US$19.99/mo (100 credits), Pro US$39.99/mo (200 credits) | Free download; plans US$14.99 to US$199.99 per month by minutes |
 | Emergency services | Not a medical device; refers members to their caregiver and contacts | No emergency button; not a medical device | Not a substitute for emergency services |
 | Availability | Regions not published | App Store in the US, Canada, Taiwan and Japan | Listed on the US App Store |
 
@@ -63,12 +61,12 @@ Other voice companion apps exist, and new ones appear often. Whichever one you c
 - They are home most of the day and would like a companion that is simply there on a table.
 - They don't use a smartphone comfortably, or you would rather they not have to.
 - You want a caregiver app with video calls, photo sending and alerts built around one dedicated device.
-- Your household is comfortable with a lease and a monthly fee.
+- Your household is comfortable with a monthly membership fee.
 
 **A phone app may suit your parent better if:**
 
 - They already use an iPhone for calls and photos.
-- You prefer no new hardware to buy, lease or install.
+- You prefer no new hardware to buy or install.
 - They go out often and would like their companion with them.
 - You want to try something for a few weeks before committing.
 
@@ -94,7 +92,7 @@ Not in every case. ElliQ is a dedicated device with a caregiver app, and it need
 
 ### Can an AI companion replace a caregiver or carer?
 
-No. ElliQ, Munea and EverFriends all state that they are not medical or emergency services, and ElliQ calls itself a helping hand, not a replacement for human care. Think of any AI companion as company and routine for your parent, with family, neighbors and professionals still involved.
+No. ElliQ says it is not a medical device, EverFriends says it does not replace medical care or emergency services, and Munea is neither a medical device nor an emergency service. ElliQ also calls itself a helping hand, not a replacement for human care. Think of any AI companion as company and routine for your parent, with family, neighbors and professionals still involved.
 
 ## Sources
 

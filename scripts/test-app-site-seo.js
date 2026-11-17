@@ -353,6 +353,20 @@ for (const l of guideLocales) {
   }
 }
 
+// 2026-11-18 首頁本文也要掃紅線字（原本只掃常見問題與機構頁；西文頁曾出現 Seguimiento＝追蹤）
+const homeRed = {
+  zh: /追蹤|監測|監控/,
+  en: /(track|tracking|monitor|monitoring|surveillance)/i,
+  ja: /監視|追跡|モニタリング/,
+  es: /seguimiento|monitore|monitoriz|vigilancia|rastre/i,
+};
+for (const l of locales) {
+  for (const file of [l.dir ? `${l.dir}/index.html` : "index.html", l.dir ? `${l.dir}/${ORG_SLUG}/index.html` : `${ORG_SLUG}/index.html`]) {
+    const visible = read(file).replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+    assert.doesNotMatch(visible, homeRed[l.code], `${file} uses a red-line word`);
+  }
+}
+
 const llms = read("llms.txt");
 assert.match(llms, /^# Munea/m, "llms.txt needs a title line");
 assert.match(llms, /https:\/\/apps\.apple\.com\/app\/id6788658125/, "llms.txt must link the App Store listing");

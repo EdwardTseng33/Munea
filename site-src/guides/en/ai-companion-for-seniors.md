@@ -75,7 +75,7 @@ Both can work. Neither is better in every home.
 | Hardware | A dedicated device that stays in one room | Uses a phone your parent may already own |
 | Setup | Often plugged in and connected to Wi-Fi at home | Download, sign in, grant microphone permission |
 | Presence | Always visible, can start conversations on its own | Your parent opens the app, or responds to a reminder |
-| Cost model | Often a membership or lease; check current terms | Often free to download with a paid plan; check the listing |
+| Cost model | Often a membership with a monthly fee; check current terms | Often free to download with a paid plan; check the listing |
 | Portability | Stays home | Goes wherever the phone goes |
 | Good fit | A parent who is home most of the day and likes a device that is simply there | A parent who already uses a smartphone comfortably |
 
@@ -96,7 +96,7 @@ For more ideas on keeping in touch without hovering, read [how to check in on an
 
 ## Where Munea fits
 
-Munea is an iPhone app (iOS 15 or later) where your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. It keeps the highlights of past chats rather than raw recordings, which users can view or delete, and it sends medication and appointment reminders. It does not diagnose, has no fall detection or emergency button, does not use location, and will not phone your parent or alert you if the app is not opened. It is on the App Store in the US, Canada, Taiwan and Japan, not yet in the UK or Australia.
+Munea is an iPhone app (iOS 15 or later) where your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. Munea doesn't keep raw recordings; it keeps the highlights of past chats, which users can view or delete, and it sends medication and appointment reminders. It does not diagnose, has no fall detection, emergency button or location sharing, and will not phone your parent or alert you if the app is not opened. It is on the App Store in the US, Canada, Taiwan and Japan, and is not currently available in the UK or Australia.
 
 ## FAQ
 
@@ -106,7 +106,7 @@ It can help fill quiet moments with conversation, but it works best alongside pe
 
 ### Are AI companions safe for seniors?
 
-Safety depends on the specific product. Choose one that clearly says it is an AI, explains what it saves, lets your parent delete their data, and is open about pricing. No AI companion is a medical or emergency device, so keep a human plan for emergencies.
+Safety depends on the specific product. Choose one that clearly says it is an AI, explains what it saves, lets your parent delete their data, and is open about pricing. Most AI companions are not medical or emergency devices, so keep a human plan for emergencies.
 
 ### What is the difference between an AI companion robot and an AI companion app?
 
