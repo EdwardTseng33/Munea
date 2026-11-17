@@ -16,11 +16,18 @@
  *   守門：scripts/test-version-changelog.js
  */
 window.MuneaVersion = {
-  current: '1.0.71',
+  current: '1.0.72',
   callProtocol: 3,
   voiceProtocol: 'speaker-arbiter-v2',
   channel: '',
   changelog: [
+    {
+      version: '1.0.72',
+      date: '2026-11-17',
+      title: "通話更穩定：修好聊完一通、切出去再回來後打不通的問題。接通後寧寧會先跟你打招呼；打開 App 不再閃兩個標誌；個人資料可以設定「希望 AI 怎麼叫你」。",
+      // 發布流程自動建立；要補細項請寫給用戶看的白話，內部備註只能留在註解。
+      items: [],
+    },
     {
       version: '1.0.71',
       date: '2026-11-08',
