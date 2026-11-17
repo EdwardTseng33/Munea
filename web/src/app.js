@@ -109,10 +109,10 @@ function localizeCanonicalLegacyPanels() {
   }
 
   const consentPairs = [
-    ['consent.cloudProcessingTitle', 'Voice and text are encrypted and sent to the cloud for processing', 'consent.cloudProcessingBody', 'They are used only to understand you and provide the service.'],
-    ['consent.summaryOnlyTitle', 'Only necessary conversation highlights are retained', 'consent.summaryOnlyBody', 'Original recordings are not stored.'],
-    ['consent.voicePurposeTitle', 'Your voice is used only to understand what you say', 'consent.voicePurposeBody', 'It is not used for identity recognition or unrelated purposes.'],
-    ['consent.profileCloudTitle', 'Profile information you provide is securely synced', 'consent.profileCloudBody', 'Your photo stays on this phone.'],
+    ['consent.cloudProcessingTitle', 'What you say is sent to Google’s AI for processing, which may be outside your country', 'consent.cloudProcessingBody', 'Your health numbers and mood are also given to the AI for reference. We don’t sell your data or use it for ads.'],
+    ['consent.summaryOnlyTitle', 'We don’t store recordings — only the key points of your chats', 'consent.summaryOnlyBody', 'You can view or delete your records in My data.'],
+    ['consent.voicePurposeTitle', 'Your voice isn’t used to identify you', 'consent.voicePurposeBody', 'Your chats are used to put together key points and your mood. Family in your circle can see your mood, but not what you said.'],
+    ['consent.profileCloudTitle', 'The name, birth month and year, and city you enter are stored online', 'consent.profileCloudBody', 'They’re kept in the cloud in Japan, so you can get them back on a new phone. Photos stay only on this phone.'],
   ];
   $$('#consentSheet .consent-points li').forEach((item, index) => {
     const pair = consentPairs[index];
@@ -122,14 +122,14 @@ function localizeCanonicalLegacyPanels() {
     if (title) title.textContent = muneaT(pair[0], pair[1]);
     if (body) body.textContent = muneaT(pair[2], pair[3]);
   });
-  setText('#consentSheet .consent-note', 'consent.dataController', 'Munea manages this data. You can request access, correction, or deletion.');
+  setText('#consentSheet .consent-note', 'consent.dataController', 'Your data is kept until you delete it. You can view, change, or delete it anytime.');
   setText('#consentAgree', 'consent.agree', 'I understand. Start talking');
   setText('#consentDetail', 'consent.detail', 'Read the full privacy notice first');
 
   setText(
     '#connect .cn-intro p',
     'health.connectDisclosure',
-    'Apple Health syncs steps, heart rate, sleep, and other data when Munea opens. Munea can notify you when something needs attention. This is not real-time or medical-grade monitoring.',
+    'Once Apple Health is connected, Munea reads your steps, heart rate, blood pressure (systolic and diastolic), blood oxygen, and sleep each time you open it. It isn’t a medical device. If you feel unwell, see a doctor.',
   );
   setText('#connect .cn-note p', 'health.optionalBody', 'Health data is optional. Your companion can still support you through daily conversations and reminders.', {
     companion: cname(),
@@ -137,7 +137,7 @@ function localizeCanonicalLegacyPanels() {
   setDirectText(
     '#connect .cn-privacy',
     'health.familyVisibility',
-    'Only family members you authorize can view health information.',
+    'Everyone in your family circle can see your health numbers.',
   );
 
   setText('#feedbackModal h2', 'feedback.title', 'Feedback');
@@ -173,7 +173,7 @@ function localizeCanonicalLegacyPanels() {
   setText('#interestsSave', 'interests.save', 'Save topics');
 
   setText('#safetyModal h2', 'safety.title', 'Safety notifications');
-  setText('#safetyModal > .modal > .modal-sub', 'legacyUi.safetyDescription', 'Choose when selected family members should be notified. This is not real-time or medical-grade monitoring.');
+  setText('#safetyModal > .modal > .modal-sub', 'legacyUi.safetyDescription', 'If your numbers look off, or something in a chat sounds worrying, the family members you chose are notified. This isn’t a real-time alert. In an emergency, contact local emergency services.');
   const safetyTriggers = [
     ['safety.triggerBloodPressure', 'Blood pressure is very high or low (above 180 or below 90)'],
     ['safety.triggerHeartRate', 'Heart rate is unusually fast or slow'],
@@ -1156,7 +1156,7 @@ function syncCompanionUI() {
   $$('.mr-face').forEach(i => { i.src = thumbSrc; });   // 同意卡、吃藥提醒卡的小臉也跟著角色（2026-10-28 沐沐回歸後抓到）
   const obsHeading = $('#obsHeading'); if (obsHeading) obsHeading.textContent = muneaT('status.companionObservation', '{companion}的觀察', { companion: display });
   const medSub = $('#medSub'); if (medSub) medSub.textContent = muneaT('medication.emptyHint', '還沒設定用藥，跟{companion}說一聲就好', { companion: display });
-  const retentionNotice = $('#retentionNotice'); if (retentionNotice) retentionNotice.textContent = muneaT('history.retentionNotice', '保存一年；滿一年前{companion}會先問你要不要留下來。', { companion: display });
+  const retentionNotice = $('#retentionNotice'); if (retentionNotice) retentionNotice.textContent = muneaT('history.retentionNotice', '可以往回看一年內的紀錄。', { companion: display });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
   // 聊聊頁會動的那層跟著換人（通話中不動，掛斷後下次進聊聊再換）
@@ -6084,7 +6084,7 @@ function localizeAuthTerms() {
       privacyLink,
       document.createTextNode(` — ${muneaT(
         'auth.aiProcessingDisclosure',
-        '語音與文字會由 Munea 的 AI 系統處理，部分服務位於境外。',
+        '聲音和文字會送到 Google 的 AI（在國外）處理。',
       )}`),
     );
     if (link.dataset.readerBound !== '1') {
@@ -12976,7 +12976,7 @@ function init() {
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 30000);
       }
-      toast(muneaT('profile.exportReadyToast', '資料副本已建立，只包含你本人與你的帳務資料'));
+      toast(muneaT('profile.exportReadyToast', '你的資料已經整理好了；健康紀錄和吃藥清單目前不含在內'));
     } catch (e) {
       if (e && e.name !== 'AbortError') toast(muneaT('profile.exportShareIncomplete', "資料已建立，但分享視窗沒有完成；可以再按一次"));
     }
@@ -12986,7 +12986,7 @@ function init() {
     const signedIn = authState().status === 'signed-in';
     if (b.dataset.arm !== '1') {
       b.dataset.arm = '1';
-      b.textContent = signedIn ? muneaT('data.confirmDeleteAccount', '再按一次：永久刪除帳號與資料') : muneaT('data.confirmDeleteLocal', '再按一次：清除這台裝置的資料');
+      b.textContent = signedIn ? muneaT('data.confirmDeleteAccount', '再按一次就刪除帳號，救不回來') : muneaT('data.confirmDeleteLocal', '再按一次：清除這台裝置的資料');
       setTimeout(() => { b.dataset.arm = ''; b.textContent = muneaT('data.delete', '刪除我的資料'); }, 6000);
       return;
     }
@@ -13012,7 +13012,7 @@ function init() {
       } catch (e) {}
       $('#dataModal').classList.remove('show');
       if (!signedIn) toast(muneaT('profile.localDataCleared', "這台裝置上的沐寧資料已清除"));
-      else if (deletion.authUserDeleted) toast(muneaT('profile.accountDeletedToast', "帳號與雲端資料已永久刪除；Apple 訂閱需另行取消"));
+      else if (deletion.authUserDeleted) toast(muneaT('profile.accountDeletedToast', "帳號和你帳號裡的資料已刪除；Apple 訂閱要另外取消"));
       else toast(muneaT('profile.cloudDeletedToast', "雲端資料已刪除，登入帳號移除正在完成；Apple 訂閱需另行取消"));
       setTimeout(() => { location.reload(); }, 1200);
     })();
@@ -13085,7 +13085,7 @@ function init() {
   });
   if ($('#rcPrev')) $('#rcPrev').addEventListener('click', () => {
     const min = new Date(); min.setFullYear(min.getFullYear() - 1);
-    if (new Date(rcYear, rcMonth - 1, 28) < min) { toast(muneaT('report.retentionLimitToast', '紀錄保存一年，再往前就沒有了')); return; }
+    if (new Date(rcYear, rcMonth - 1, 28) < min) { toast(muneaT('report.retentionLimitToast', '只能往回看一年內的紀錄')); return; }
     rcMonth--; if (rcMonth < 0) { rcMonth = 11; rcYear--; }
     renderRangeCal();
   });
@@ -13699,7 +13699,7 @@ function refreshLocalizedDynamicUi() {
       // 急難號碼跟安全區走、不跟語言走：安全區接線前，中文＝台灣現行（119/1925 粗體），
       // 其他語言用區域安全政策的「聯絡當地緊急服務」通用句、不輸出台灣號碼。
       const zhSafety = (muneaLocale() || 'zh-TW').startsWith('zh');
-      consentNote.innerHTML = muneaT('consent.custody', '資料由沐寧（Munea）保管，只在你使用期間保存；隨時可查詢、更正或要求刪除。沐寧是陪伴、不是緊急服務。')
+      consentNote.innerHTML = muneaT('consent.custody', '資料會留到你自己刪除，隨時可以看、改、刪。沐寧是陪伴，不是緊急服務。')
         + (zhSafety ? '' : ' ')
         + muneaT('consent.emergency', '遇到急難請撥 {emergency}，想找人說說話可撥 {talkline}。', {
           emergency: zhSafety ? '<b>119</b>' : '',
@@ -13718,7 +13718,7 @@ function refreshLocalizedDynamicUi() {
     const rptFootEl = $('#rptFoot');
     if (rptFootEl) rptFootEl.innerHTML = muneaT('report.footerLine', '{companion}整理 · 家屬提供的紀錄，非醫療診斷', { companion: cnameSpan });
     const cnIntro = $('#cnHealthIntro');
-    if (cnIntro) cnIntro.innerHTML = muneaT('settings.connectIntro', '連上 {appleHealth}，每次開啟沐寧時會同步步數、心跳、睡眠等資料；同步到需要留意的變化時會提醒你。這不是即時或醫療級監測。', { appleHealth: '<b>' + muneaT('settings.appleHealth', 'Apple 健康') + '</b>' });
+    if (cnIntro) cnIntro.innerHTML = muneaT('settings.connectIntro', '連上 {appleHealth}，每次打開沐寧會讀你的步數、心跳、血壓（收縮壓、舒張壓）、血氧和睡眠。這不是醫療儀器，不舒服請看醫生。', { appleHealth: '<b>' + muneaT('settings.appleHealth', 'Apple 健康') + '</b>' });
     const interestsHint = $('#interestsPickHint');
     if (interestsHint) interestsHint.innerHTML = muneaT('interests.pickHint', '挑幾個有興趣的（最多 5 個），{companion}會幫你留意這些話題的新鮮事，聊起來更對味。之後隨時可以回來改。', { companion: cnameSpan });
   } catch (e) {}
