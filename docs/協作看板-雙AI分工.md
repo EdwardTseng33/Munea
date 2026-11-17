@@ -1,5 +1,18 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-17 蘇菲｜🧹 主線兩支本機紅燈修掉（只動測試與證據來源欄位，不碰 App、不碰通話路徑）
+
+- **紅燈一：全畫面截圖證據「來源不在主線歷史裡」**（`test-ui-contracts` → `test-app-full-surface-i18n-browser-precheck.js`）。原因＝#704 是壓成一筆合併，拍照工具記的是分支上的存檔點 `c1066be9`，合併後那一點不在主線上。核對過：`c1066be9` 與主線合併點 `576a5e03` 除了 `docs/qa` 之外只差兩份文件，App 原始碼一模一樣，所以證據本身有效。
+  - 證據檔只改來源三個欄位：`sourceBaseCommit` 改記從主線分出來的那一點 `7b437fd0`、新增 `sourceHeadCommit`（拍照當下的存檔點）、`sourceChangedFiles` 列出這條分支改的 16 個檔。480 張圖與雜湊一個位元都沒動。
+  - 拍照工具 `scripts/app-full-surface-i18n-browser-precheck.js` 照同一個規則記來源（找不到 `origin/main` 就退回原本寫法），以後壓成一筆合併不會再紅。
+- **紅燈二：語音說明書字數上限三案**（`engine/test_voice_style_rules.py`）。**說明書一個字都沒變**（11/13 的 `fdf400a7` 與現在量出來一樣長）。真因有三個，都在測試自己身上：
+  1. 隔離用的暫存檔檔名固定、不會自己清；跑完後 `server` 的資料檔路徑還指在那裡，同一輪後面的測試把「今天空氣品質普通」寫進去，下次量就多 101 字。→ 每次量之前先刪。
+  2. 組說明書時發現沒有當日簡報，會開背景線去網路抓真天氣再寫檔，抓回來的時間不一定。→ 量的時候關掉這條線。
+  3. 時段問候那一行隨「現在幾點」差 6 個字，而上限只剩 1～4 字空間，半夜跑就紅。→ 量之前換成固定的一句；格式改了會直接報錯。
+- **驗證**：`node scripts/test-ui-contracts.js` 全過；`python -m unittest test_voice_style_rules` 21 案全過（白天、把殘留檔放回去、假裝半夜三點，三種都綠）；突變「規則多 6 個字」仍會紅。上限數字沒有動。
+- **沒做**：說明書目前離上限只剩 1～4 字（16956／16960、18750／18760、17259／17260），下一句新規則一定要先在同段刪字。
+- **檔**：`scripts/app-full-surface-i18n-browser-precheck.js`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/full-surface-all-profiles-local-browser-precheck.json`、`engine/test_voice_style_rules.py`、本看板。
+
 ### 2026-11-17 蘇菲｜🎟️ 機構開通碼：App 端輸入視窗（Draft PR · call-path risk 低 · App E2E pending）
 
 - **為什麼**：機構發的紙卡印「點『設定』→『機構開通碼』」，後端（#697）與正式資料庫（#701）都好了，App 一直沒有地方輸入。要跟 1.0.72 一起出。
