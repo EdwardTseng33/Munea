@@ -233,8 +233,8 @@ function careWeek(seatId) {
     week: {
       period: { start: '2026-11-12', end: '2026-11-18', days: 7 },
       contact: { source: '系統紀錄', calls: 5, daysWithCall: ['2026-11-12', '2026-11-13', '2026-11-15', '2026-11-16', '2026-11-17'], longestGapDays: 1, lastCallDate: '2026-11-17', daysSinceLastCall: 1, empty: false },
-      moodTrend: { source: '機器觀察', daysWithChat: 3, daily: [{ date: '2026-11-15', level: 2, chats: 1 }, { date: '2026-11-16', level: 1, chats: 1 }, { date: '2026-11-17', level: 2, chats: 1 }], weekAverage: 1.7, baselineAverage: 3.6, baselineDays: 14, lowestDay: { date: '2026-11-16', level: 1 }, empty: false },
-      spokenHealth: { source: '本人口述的掛心事，只給類別與次數', categories: [{ key: 'sleep', label: '睡不好', count: 2 }], empty: false },
+      moodTrend: { source: '機器觀察（每次通話後由沐寧記錄的心情天氣，1–5 級）', daysWithChat: 3, daily: [{ date: '2026-11-15', level: 2, chats: 1 }, { date: '2026-11-16', level: 1, chats: 1 }, { date: '2026-11-17', level: 2, chats: 1 }], weekAverage: 1.7, baselineAverage: 3.6, baselineDays: 14, lowestDay: { date: '2026-11-16', level: 1 }, empty: false },
+      spokenHealth: { source: '本人口述的掛心事，只給類別與次數（不含原句與短語；由記憶層歸類、不是臨床事實）', categories: [{ key: 'sleep', label: '睡不好', count: 2 }, { key: 'other', label: '心情或生活上的掛心事', count: 1 }], empty: false },
       safety: { source: '系統紀錄', counts: {}, highOrCritical: 0, empty: true },
       honesty: { allEmpty: false, note: '' },
       partial: [],
@@ -443,6 +443,39 @@ const pathsOf = calls => calls.map(c => c.path);
     assert.ok(text(w.doc.body).includes('陳社工（社工／個管） 判為 誤報'), '判定歷程沒有列出誰判了什麼');
   });
 
+  await check('畫面沒有內部用語：守護腦、高風險燈、機器觀察、記憶層、掛心事、旗標、留存…都換成白話', async () => {
+    const seen = [];
+    for (const role of ['org_admin', 'case_manager']) {
+      const w = await boot('https://admin.munea.net/org.html?demo=1&role=' + role);
+      for (const label of tabLabels(w.doc)) {
+        await openTab(w.doc, label);
+        if (label === '長輩') {
+          const toggle = byClass(w.doc.body, 'legend-toggle')[0];
+          assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+          await click(toggle);
+          assert.equal(toggle.getAttribute('aria-expanded'), 'true', '圖例按了沒展開');
+          assert.ok(hasClass(toggle.parentNode, 'open'));
+          for (const row of all(w.doc.body, el => el.tagName === 'BUTTON' && hasClass(el, 'elder-row')).slice(0, 2)) {
+            await click(row);
+            seen.push(text(w.doc.body));
+          }
+        }
+        seen.push(text(w.doc.body));
+      }
+    }
+    const pageText = seen.join('\n');
+    for (const bad of ['守護腦', '高風險燈', 'high×', '機器觀察', '記憶層', '掛心事', '旗標', '留存', '人數太少不顯示', '規則', '守護提醒', '守護亮燈']) {
+      assert.ok(!pageText.includes(bad), '畫面還有內部用語：' + bad);
+    }
+    for (const good of ['需要關心', '需要關心的次數', '持續使用', '提醒多的排前面', '本人提到的煩惱', '沐寧從通話聽出來的心情', '由系統從通話整理',
+      '系統每天檢查一次，有狀況會列在這裡（近 90 天）。請逐筆判定。', '這週通話中有 2 次提到需要馬上關心的事（緊急 1 次、高風險 1 次）。', '人數太少，為保護隱私先不顯示']) {
+      assert.ok(pageText.includes(good), '畫面少了：' + good);
+    }
+    for (const keep of ['正確', '誤報', '觀察中', '判定', '再判一次', '準確率（參考）', '名額', '機構管理者']) {
+      assert.ok(pageText.includes(keep), '這幾個字要留（補助案判定表對照用）：' + keep);
+    }
+  });
+
   // ── 三、分頁只看 capabilities ──
   await check('照服員：只有總覽與長輩；名單點不進去、不會去要週摘要或提醒', async () => {
     const w = await boot('https://admin.munea.net/org.html#alerts', { respond: backend('care_worker') });
@@ -492,6 +525,21 @@ const pathsOf = calls => calls.map(c => c.path);
       assert.equal(c.init.headers['Content-Type'], 'application/json');
     }
     assert.ok(byClass(w.doc.body, 'tab-badge').some(b => !b.hidden && text(b) === '1'), '提醒分頁要標還沒判定的筆數');
+    assert.equal(byClass(w.doc.body, 'demo-badge').length, 0, '正常模式不能出現「示範資料」標籤');
+  });
+
+  await check('提醒卡：還沒判定的「判定」是實心主按鈕、判過的「再判一次」不是；名額代號與編號在最底一行', async () => {
+    const w = await boot('https://admin.munea.net/org.html#alerts', { respond: backend('org_admin') });
+    const cards = byClass(w.doc.body, 'alert-card');
+    assert.equal(cards.length, 3);
+    const judge = all(cards[0], el => el.tagName === 'BUTTON' && text(el) === '判定')[0];
+    assert.ok(judge && hasClass(judge, 'btn-primary'), '還沒判定的「判定」要是實心主按鈕');
+    const again = all(cards[1], el => el.tagName === 'BUTTON' && text(el) === '再判一次')[0];
+    assert.ok(again && !hasClass(again, 'btn-primary'), '「再判一次」維持次要樣式');
+    assert.ok(!text(byClass(cards[0], 'alert-top')[0]).includes('名額代號'), '名額代號不要跟姓名擠同一行');
+    const meta = text(byClass(cards[0], 'alert-meta')[0]);
+    assert.ok(meta.includes('名額代號 6F1E2D3C') && meta.includes('編號 ALR-20261117-AAAAAA'), '最底一行要有名額代號與編號：' + meta);
+    assert.ok(text(w.doc.body).includes('系統每天檢查一次，有狀況會列在這裡（近 90 天）。請逐筆判定。'));
   });
 
   await check('判定：送不出去時視窗不關、內容不清空；成功才更新卡片與數字', async () => {
@@ -612,7 +660,7 @@ const pathsOf = calls => calls.map(c => c.path);
     assert.ok(pathsOf(w.calls).filter(p => p === '/org/alerts').length > alertsBefore, '存好之後要重讀提醒匣');
   });
 
-  await check('週關懷摘要：只帶 seatId；七格心情、四類掛心事、底下寫「這次查看已留下紀錄」', async () => {
+  await check('週關懷摘要：只帶 seatId；七格心情、四類煩惱、底下寫「這次查看已留下紀錄」；來源用白話', async () => {
     const w = await boot('https://admin.munea.net/org.html#elders', { respond: backend('org_admin') });
     await click(all(w.doc.body, el => el.tagName === 'BUTTON' && hasClass(el, 'elder-row'))[0]);
     const req = w.calls.filter(c => c.path === '/org/elder/care-week');
@@ -623,6 +671,9 @@ const pathsOf = calls => calls.map(c => c.path);
     assert.equal(byClass(detail, 'cat').length, 4);
     assert.ok(text(detail).includes('這次查看已留下紀錄'));
     assert.ok(text(detail).includes('睡不好2次'));
+    assert.ok(text(detail).includes('心情或生活上的煩惱1次'), '類別名要用畫面的白話');
+    for (const word of ['機器觀察', '記憶層', '掛心事']) assert.ok(!text(detail).includes(word), '週摘要出現內部用語：' + word);
+    assert.ok(text(detail).includes('沐寧從通話聽出來的心情') && text(detail).includes('由系統從通話整理'));
   });
 
   await check('各種錯誤都有白話：提醒、紀錄、週摘要、登入、權限', async () => {
@@ -652,6 +703,7 @@ const pathsOf = calls => calls.map(c => c.path);
     const w = await boot('https://admin.munea.net/org.html?from=mail#alerts', { respond: backend('org_admin'), token: null });
     assert.deepEqual(w.doc.scripts, ['src/auth-config.js', 'src/auth.js']);
     assert.ok(text(w.doc.body).includes('只有機構邀請過的帳號才能進來'));
+    assert.equal(byClass(w.doc.body, 'demo-badge').length, 0, '正常模式的登入頁不能出現「示範資料」');
     assert.deepEqual(pathsOf(w.calls), [], '沒登入就打了接口');
     await click(buttonsNamed(w.doc.body, '用 Google 帳號登入')[0]);
     assert.deepEqual(w.authCalls, ['signIn:google']);

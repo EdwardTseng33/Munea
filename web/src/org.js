@@ -42,16 +42,18 @@
 
   const TAB_LABELS = { overview: '總覽', elders: '長輩', alerts: '提醒', audit: '紀錄', reports: '月報' };
   const ROLE_LABELS = { org_admin: '機構管理者', case_manager: '社工／個管', care_worker: '照服員' };
-  const TYPE_LABELS = { mood_drop: '心情下降', no_contact: '沒聯絡', guardian: '守護腦亮燈' };
+  const TYPE_LABELS = { mood_drop: '心情下降', no_contact: '沒聯絡', guardian: '需要關心' };
   const RESULT_LABELS = { correct: '正確', false_alarm: '誤報', watching: '觀察中' };
   // 每顆按鈕的說明固定兩行、在標點處斷，手機上也不會把「通知」「值得」拆成兩半
   const RESULT_HINTS = { correct: ['事情屬實，', '也值得通知'], false_alarm: ['事情不屬實，', '或不值得通知'], watching: ['還不能確定，', '之後再判'] };
   const STATUS_LABELS = { unmarked: '還沒判定', correct: '正確', false_alarm: '誤報', watching: '觀察中' };
   const STATUS_ORDER = ['unmarked', 'correct', 'false_alarm', 'watching'];
   const YES_NO = { yes: '是', no: '否' };
-  const FLAG_TEXT = { none: '今天沒互動', mood: '心情低落', guard: '守護亮燈' };
-  // 掛心事四類：順序與名稱跟後端 org_api.SPOKEN_CATEGORY_RULES 一致；後端只回次數大於 0 的，這裡補成四類都列。
-  const SPOKEN_CATS = [['appetite', '吃不下'], ['sleep', '睡不好'], ['body', '身體不舒服'], ['other', '心情或生活上的掛心事']];
+  const FLAG_TEXT = { none: '今天沒互動', mood: '心情低落', guard: '需要關心' };
+  // 本人提到的煩惱四類：key 與順序跟後端 org_api.SPOKEN_CATEGORY_RULES 一致；後端只回次數大於 0 的，這裡補成四類都列。
+  // 名稱用畫面上的白話（後端的「心情或生活上的掛心事」這裡叫「心情或生活上的煩惱」）。
+  const SPOKEN_CATS = [['appetite', '吃不下'], ['sleep', '睡不好'], ['body', '身體不舒服'], ['other', '心情或生活上的煩惱']];
+  const SUPPRESSED = '人數太少，為保護隱私先不顯示';
 
   // ───────────────────────── 模式 ─────────────────────────
   const query = new URLSearchParams(W.location.search || '');
@@ -630,7 +632,7 @@
 
   function rateValue(rate, suppressed, emptyText) {
     if (isNum(rate)) return h('div', { class: 'tile-value num', text: pct(rate) });
-    return naValue(suppressed ? '人數太少不顯示' : emptyText || '還沒有資料');
+    return naValue(suppressed ? SUPPRESSED : emptyText || '還沒有資料');
   }
 
   function meter(ratio) {
@@ -670,28 +672,26 @@
 
       const suppressed = !!(usage.smallSampleSuppressed || guardian.smallSampleSuppressed);
       const usageKids = [];
-      if (suppressed) usageKids.push(note('人數太少時不顯示比例，避免指認到個人（未滿 ' + min + ' 人）。'));
+      if (suppressed) usageKids.push(note('人數太少（未滿 ' + min + ' 人）時，為保護隱私，比例與次數先不顯示。'));
       usageKids.push(h('div', { class: 'tiles' }, [
         tile('啟用人數', numValue(usage.enabledCount, '位'), null, '名額已綁定的人'),
         tile('近 30 天有互動', numValue(usage.activeCount, '位'), null,
-          isNum(usage.activeRate) ? '佔啟用人數 ' + pct(usage.activeRate) : suppressed ? '比例：人數太少不顯示' : null),
-        tile('留存', rateValue(usage.retentionRate, suppressed, usage.retentionBaseCount === 0 ? '上一期還沒有人使用' : '還沒有資料'), null,
+          isNum(usage.activeRate) ? '佔啟用人數 ' + pct(usage.activeRate) : null),
+        tile('持續使用', rateValue(usage.retentionRate, suppressed, usage.retentionBaseCount === 0 ? '上一期還沒有人使用' : '還沒有資料'), null,
           '上一個 30 天有用、這 30 天還在用'),
         tile('平均每人每週互動', isNum(usage.avgWeeklyInteractionsPerPerson)
           ? numValue(usage.avgWeeklyInteractionsPerPerson, '次')
-          : naValue(suppressed ? '人數太少不顯示' : '還沒有資料'), null, '通話、提醒完成、App 操作都算一次'),
+          : naValue(suppressed ? SUPPRESSED : '還沒有資料'), null, '通話、提醒完成、App 操作都算一次'),
       ]));
       add(body, section('使用狀況', '近 30 天，開通的長輩有多少人真的在用。', usageKids));
 
-      add(body, section('守護', '只有次數，沒有內容。', h('div', { class: 'tiles' }, [
-        tile('守護提醒', isNum(guardian.highRiskEventCount)
+      add(body, section('需要關心', '只有次數，沒有內容。', h('div', { class: 'tiles' }, [
+        tile('需要關心的次數', isNum(guardian.highRiskEventCount)
           ? numValue(guardian.highRiskEventCount, '次')
-          : naValue(suppressed ? '人數太少不顯示' : '還沒有資料'), null, '近 30 天，需要留意或立即處理'),
+          : naValue(suppressed ? SUPPRESSED : '還沒有資料'), null, '近 30 天，通話中提到的次數'),
         tile('用藥提醒完成率', rateValue(guardian.medicationCompletionRate, suppressed,
           guardian.medicationDecidedCount === 0 ? '近 30 天沒有用藥提醒' : '還沒有資料'), null, '到點提醒後，有按「吃了」的比例'),
       ])));
-      // 企業窗口的頁尾已經是這句，不重複
-      if (S.caps.level !== 'L0') add(body, h('p', { class: 'privacy-line', text: '這一頁只有加總的數字，沒有任何一位長輩的個人資料。' }));
     });
   }
 
@@ -701,12 +701,22 @@
   function pageElders(main, seq) {
     const canOpen = S.caps.careWeek === true;
     const top = pageHead('長輩', function () { reload('elders'); });
-    add(top.sub, ['只列出同意', nw('「機構照護模式」'), '的長輩，旗標多的排前面。']);
-    const legend = h('ul', { class: 'legend', 'aria-label': '旗標說明' }, [
+    add(top.sub, ['只列出同意', nw('「機構照護模式」'), '的長輩，提醒多的排前面。']);
+    const legendList = h('ul', { class: 'legend', id: 'flagLegend', 'aria-label': '標籤說明' }, [
       h('li', null, [flagTag('none'), '今天還沒跟沐寧通話']),
       h('li', null, [flagTag('mood'), '心情連續偏低，或比自己平常低']),
-      h('li', null, [flagTag('guard'), '這週有守護提醒']),
+      h('li', null, [flagTag('guard'), '這週通話中提到需要關心的事']),
     ]);
+    // 手機上收成一行（三個標籤＋「說明」），點了才展開；電腦上一直攤開、這顆按鈕藏起來（org.css）
+    const legend = h('div', { class: 'legend-box' });
+    const legendToggle = h('button', { type: 'button', class: 'legend-toggle', 'aria-expanded': 'false', 'aria-controls': 'flagLegend' },
+      [flagTag('none'), flagTag('mood'), flagTag('guard'), h('span', { class: 'legend-more', text: '說明' }), icon('chevron', 'legend-chev')]);
+    legendToggle.addEventListener('click', function () {
+      const open = legendToggle.getAttribute('aria-expanded') !== 'true';
+      legendToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      legend.className = 'legend-box' + (open ? ' open' : '');
+    });
+    add(legend, [legendToggle, legendList]);
     const list = h('ul', { class: 'elder-list', 'aria-label': '長輩名單' }, h('li', null, loadingLine()));
     const listCard = h('div', { class: 'card' }, list);
     const layout = h('div', { class: 'elders' + (canOpen ? '' : ' single') }, listCard);
@@ -718,7 +728,7 @@
     }
     add(main, [
       top.head,
-      canOpen ? null : note('你的帳號看得到名單與旗標；本週關懷摘要由社工或機構管理者查看。'),
+      canOpen ? null : note('你的帳號看得到名單；本週關懷摘要由社工或機構管理者查看。'),
       legend,
       layout,
     ]);
@@ -732,8 +742,8 @@
       }
       const elders = res.elders || [];
       clear(top.sub);
-      add(top.sub, ['已同意', nw('「機構照護模式」'), '的長輩 ' + elders.length + ' 位，旗標多的排前面。']);
-      if (res.partial && res.partial.length) listCard.insertBefore(note('部分資料暫時讀不到，旗標可能不完整。'), list);
+      add(top.sub, ['已同意', nw('「機構照護模式」'), '的長輩 ' + elders.length + ' 位，提醒多的排前面。']);
+      if (res.partial && res.partial.length) listCard.insertBefore(note('部分資料暫時讀不到，標籤可能不完整。'), list);
       if (!elders.length) {
         clear(listCard);
         return add(listCard, emptyBox('目前還沒有長輩同意「機構照護模式」。同意之後會出現在這裡。'));
@@ -834,7 +844,7 @@
       tile('最長空檔', numValue(contact.longestGapDays, '天'), null, '期間內連續沒通話'),
       tile('最後通話', contact.lastCallDate ? h('div', { class: 'tile-value num', text: day(contact.lastCallDate) }) : naValue('沒有紀錄'), null,
         isNum(since) ? (since === 0 ? '今天' : since + ' 天前') : null),
-      tile('需要留意', numValue(safety.highOrCritical || 0, '次'), null, urgent ? '其中立即處理 ' + urgent + ' 次' : '守護提醒'),
+      tile('需要關心', numValue(safety.highOrCritical || 0, '次'), null, urgent ? '其中緊急 ' + urgent + ' 次' : '通話中提到的次數'),
     ]));
 
     const moodKids = [];
@@ -842,18 +852,18 @@
     const base = isNum(mood.baselineAverage) ? '；自己前 ' + (mood.baselineDays || 14) + ' 天平均 ' + fmtLevel(mood.baselineAverage) + ' 級' : '';
     moodKids.push(h('p', { class: 'mood-sum', text: avg + base + '。' }));
     moodKids.push(moodChart(week.period || {}, mood.daily || []));
-    if (mood.source) moodKids.push(h('p', { class: 'block-src', text: '來源：' + mood.source }));
+    moodKids.push(h('p', { class: 'block-src', text: '來源：沐寧從通話聽出來的心情（每次通話後記一次，1–5 級）' }));
     add(box, h('div', { class: 'block' }, [h('h3', { text: '心情（1–5 級，5 最好）' })].concat(moodKids)));
 
     add(box, h('div', { class: 'block' }, [
-      h('h3', { text: '本人提到的掛心事' }),
+      h('h3', { text: '本人提到的煩惱' }),
       spokenCats(spoken.categories),
-      spoken.source ? h('p', { class: 'block-src', text: '來源：' + spoken.source }) : null,
+      h('p', { class: 'block-src', text: '來源：本人在通話中提到的煩惱，只給類別與次數（不含原句與短語；由系統從通話整理，不是臨床事實）' }),
     ]));
 
     const anomalies = res.anomalies || [];
     add(box, h('div', { class: 'block' }, [
-      h('h3', { text: '規則跑出來的提醒' }),
+      h('h3', { text: '這週的提醒' }),
       anomalies.length
         ? h('div', { class: 'anoms' }, anomalies.map(function (a) {
           return h('div', { class: 'anom' }, [
@@ -862,7 +872,7 @@
             a.suggestion ? h('p', { class: 'anom-sugg' }, ['建議：', a.suggestion]) : null,
           ]);
         }))
-        : h('p', { class: 'none-line', text: '這週沒有規則提醒。' }),
+        : h('p', { class: 'none-line', text: '這週沒有提醒。' }),
     ]));
     add(box, logged());
   }
@@ -902,7 +912,7 @@
     (list || []).forEach(function (c) { if (c && c.key) got[c.key] = c; });
     const rows = SPOKEN_CATS.map(function (pair) {
       const c = got[pair[0]];
-      return { label: (c && c.label) || pair[1], count: c && isNum(c.count) ? c.count : 0 };
+      return { label: pair[1], count: c && isNum(c.count) ? c.count : 0 };
     });
     (list || []).forEach(function (c) {
       if (c && c.key && !SPOKEN_CATS.some(function (pair) { return pair[0] === c.key; })) {
@@ -950,7 +960,7 @@
 
   function pageAlerts(main, seq) {
     const top = pageHead('提醒', function () { delete S.cache.settings; reload('alerts'); });
-    top.sub.textContent = glue('規則每天算一次，第一次算到就發到這裡（近 90 天）。請逐筆判定。');
+    top.sub.textContent = glue('系統每天檢查一次，有狀況會列在這裡（近 90 天）。請逐筆判定。');
     const setting = h('div', { class: 'setting-bar' }, loadingLine());
     const stats = h('div', { class: 'alert-stats' });
     const acc = h('p', { class: 'accuracy' });
@@ -1084,7 +1094,7 @@
     clear(ui.list);
     S.alertEls = {};
     S.judgeBtns = {};
-    if (!S.alerts.length) return add(ui.list, h('div', { class: 'card' }, emptyBox('目前沒有提醒。規則算到新的提醒時，會出現在這裡。')));
+    if (!S.alerts.length) return add(ui.list, h('div', { class: 'card' }, emptyBox('目前沒有提醒。系統檢查到新的狀況時，會列在這裡。')));
     const shown = S.alerts.filter(function (a) { return S.alertFilter === 'all' || a.status === S.alertFilter; });
     if (!shown.length) return add(ui.list, h('div', { class: 'card' }, emptyBox('這個篩選底下沒有提醒。')));
     shown.forEach(function (a) {
@@ -1101,20 +1111,24 @@
 
   function alertCard(a) {
     const status = a.status || 'unmarked';
-    const seatBits = ['名額代號 ' + (a.seatCode || '—')];
-    if (a.siteLabel && !S.caps.siteScoped) seatBits.push(a.siteLabel);
-    const judge = h('button', { type: 'button', class: 'btn btn-sm ' + (status === 'unmarked' ? 'btn-secondary' : 'btn-outline') }, status === 'unmarked' ? '判定' : '再判一次');
+    const judge = h('button', { type: 'button', class: 'btn btn-sm ' + (status === 'unmarked' ? 'btn-primary' : 'btn-outline') }, status === 'unmarked' ? '判定' : '再判一次');
     judge.addEventListener('click', function () { openMark(a, judge); });
     S.judgeBtns[a.alertId] = judge;
     return h('article', { class: 'card alert-card' }, [
       h('div', { class: 'alert-top' }, [
         typeTag(a.type, a.typeLabel),
-        h('div', { class: 'alert-who' }, [h('span', { class: 'alert-name', text: a.label || '—' }), h('span', { class: 'alert-seat', text: seatBits.join(' · ') })]),
+        h('div', { class: 'alert-who' }, [
+          h('span', { class: 'alert-name', text: a.label || '—' }),
+          a.siteLabel && !S.caps.siteScoped ? h('span', { class: 'alert-site', text: a.siteLabel }) : null,
+        ]),
         statusPill(status, a.statusLabel),
       ]),
       h('p', { class: 'alert-fact' }, withDates(a.fact)),
       a.suggestion ? h('p', { class: 'alert-sugg' }, ['建議：', a.suggestion]) : null,
-      h('div', { class: 'alert-foot' }, [h('span', { class: 'alert-meta', text: '發出 ' + when(a.raisedAt) + ' · 編號 ' + (a.alertId || '—') }), judge]),
+      h('div', { class: 'alert-foot' }, [
+        h('span', { class: 'alert-meta' }, units(['發出 ' + when(a.raisedAt), '名額代號 ' + (a.seatCode || '—'), '編號 ' + (a.alertId || '—')])),
+        judge,
+      ]),
       markHistory(a.markHistory),
     ]);
   }
@@ -1426,8 +1440,6 @@
       return !me.capabilities.siteScoped || !me.capabilities.siteLabel || siteLabel === me.capabilities.siteLabel;
     }
 
-    const MOOD_SRC = '機器觀察（每次通話後由沐寧記錄的心情天氣，1–5 級）';
-    const SPOKEN_SRC = '本人口述的掛心事，只給類別與次數（不含原句與短語；由記憶層歸類、不是臨床事實）';
     const GUARD_SUGG = '聯絡本人或家屬確認狀況。機構端看不到通話原句。';
     function moodStreak(offsets) { // 句型照 engine/care_week.py _low_streak_fact
       const listed = offsets.map(ymd).join('、');
@@ -1441,8 +1453,12 @@
       const ref = asOf || 0;
       return { type: 'no_contact', when: ymd(ref), fact: '最後一次通話是 ' + ymd(lastOffset) + '，到 ' + ymd(ref) + ' 已經 ' + (lastOffset - ref) + ' 天沒聯絡（設定：' + (days || settings.noContactDays) + ' 天提醒）。', suggestion: '確認一下人在不在、電話通不通。' };
     }
-    function guardianLit(count, offset, hh, mm) {
-      return { type: 'guardian', when: at(offset, hh, mm), fact: '守護腦這週亮了 ' + count + ' 次高風險燈（high×' + count + '）。', suggestion: GUARD_SUGG };
+    function guardianLit(levels, offset, hh, mm) { // 句型照 engine/care_week.py（#717）：等級排序後列「緊急 N 次、高風險 N 次」
+      const names = { critical: '緊急', crisis: '緊急', high: '高風險' };
+      const keys = Object.keys(levels).sort();
+      const total = keys.reduce(function (sum, k) { return sum + levels[k]; }, 0);
+      const parts = keys.map(function (k) { return names[k] + ' ' + levels[k] + ' 次'; }).join('、');
+      return { type: 'guardian', when: at(offset, hh, mm), fact: '這週通話中有 ' + total + ' 次提到需要馬上關心的事（' + parts + '）。', suggestion: GUARD_SUGG };
     }
     function cat(key, count) {
       const label = SPOKEN_CATS.filter(function (p) { return p[0] === key; })[0][1];
@@ -1452,9 +1468,9 @@
     // 七位已同意的長輩：mood＝{幾天前: 心情級數}、calls＝哪幾天有通話（幾天前）、last＝最後一次通話是幾天前
     const ELDERS = [
       { seatId: '3f2a9c1b-5d7e-4a10-9c2b-7e1f0a6d4b21', label: '王阿嬤', site: '北院', mood: { 6: 3, 5: 4, 4: 3, 3: 2, 2: 1, 1: 2 }, calls: [6, 5, 4, 3, 2, 1], extra: 1, base: 3.6,
-        cats: [cat('sleep', 2), cat('other', 1)], safety: { high: 1 }, anomalies: function () { return [moodStreak([3, 2, 1]), guardianLit(1, 2, 21, 40)]; } },
+        cats: [cat('sleep', 2), cat('other', 1)], safety: { high: 1 }, anomalies: function () { return [moodStreak([3, 2, 1]), guardianLit({ high: 1 }, 2, 21, 40)]; } },
       { seatId: '17ae5f30-8b2c-4d6e-a1f9-3c5d7e9b0a42', label: '黃伯伯', site: '南院', mood: { 6: 4, 5: 4, 3: 3, 2: 4 }, calls: [6, 5, 3, 2], extra: 0, base: 3.9,
-        cats: [cat('body', 1)], safety: { high: 1 }, anomalies: function () { return [guardianLit(1, 2, 15, 20)]; } },
+        cats: [cat('body', 1)], safety: { critical: 1, high: 1 }, anomalies: function () { return [guardianLit({ critical: 1, high: 1 }, 2, 15, 20)]; } },
       { seatId: '5b7c19d2-6e4a-4f80-8d3b-2a9c1e7f5d63', label: '張爺爺', site: '北院', mood: { 6: 3, 4: 4, 1: 3 }, calls: [6, 4, 1], extra: 0, base: 3.4,
         cats: [], safety: null, anomalies: function () { return []; } },
       { seatId: 'c95b2e64-1a3f-4b7d-9e05-6f8a2d4c1b84', label: '林奶奶', site: '北院', mood: { 6: 4, 5: 3, 4: 4, 3: 2, 1: 1, 0: 2 }, calls: [6, 5, 4, 3, 1, 0], extra: 2, base: 3.8,
@@ -1486,12 +1502,12 @@
       const hi = (safety.high || 0) + (safety.critical || 0);
       return {
         period: { start: ymd(6), end: TODAY, days: 7 },
-        contact: { source: '系統紀錄（每通電話結束後的摘要）', calls: e.calls.length + e.extra, daysWithCall: e.calls.slice().sort(function (a, b) { return b - a; }).map(ymd),
+        contact: { calls: e.calls.length + e.extra, daysWithCall: e.calls.slice().sort(function (a, b) { return b - a; }).map(ymd),
           longestGapDays: longest, lastCallDate: last === null ? null : ymd(last), daysSinceLastCall: last, empty: e.calls.length === 0 },
-        moodTrend: { source: MOOD_SRC, daysWithChat: daily.length, daily: daily, weekAverage: avg, baselineAverage: e.base, baselineDays: 14,
+        moodTrend: { daysWithChat: daily.length, daily: daily, weekAverage: avg, baselineAverage: e.base, baselineDays: 14,
           lowestDay: lowest ? { date: lowest.date, level: lowest.level } : null, empty: !daily.length },
-        spokenHealth: { source: SPOKEN_SRC, categories: e.cats, empty: !e.cats.length },
-        safety: { source: '系統紀錄（守護腦風險評估）', counts: safety, highOrCritical: hi, empty: !hi },
+        spokenHealth: { categories: e.cats, empty: !e.cats.length },
+        safety: { counts: safety, highOrCritical: hi, empty: !hi },
         honesty: { allEmpty: false, note: '每一段都標了來源；沒資料的段落寫「這週沒有紀錄」，不是「他沒事」。' },
         partial: [],
       };
@@ -1511,9 +1527,9 @@
     const ALERTS = [
       { alertId: 'ALR-' + ymd(1).replace(/-/g, '') + '-3FA2C1', seatId: ELDERS[0].seatId, pick: function () { return moodStreak([3, 2, 1]); }, raisedAt: at(0, 8, 5), marks: [] },
       { alertId: 'ALR-' + ymd(0).replace(/-/g, '') + '-9B04E7', seatId: ELDERS[3].seatId, pick: function () { return moodStreak([3, 1, 0]); }, raisedAt: at(0, 8, 6), marks: [] },
-      { alertId: 'ALR-' + ymd(2).replace(/-/g, '') + '-58D1AA', seatId: ELDERS[0].seatId, pick: function () { return guardianLit(1, 2, 21, 40); }, raisedAt: at(1, 8, 10),
+      { alertId: 'ALR-' + ymd(2).replace(/-/g, '') + '-58D1AA', seatId: ELDERS[0].seatId, pick: function () { return guardianLit({ high: 1 }, 2, 21, 40); }, raisedAt: at(1, 8, 10),
         marks: [{ result: 'watching', isReal: 'yes', worthNotifying: null, remark: '已請家屬今晚陪同，明天再確認。', markedAt: at(1, 9, 0), by: 'org_admin' }] },
-      { alertId: 'ALR-' + ymd(2).replace(/-/g, '') + '-C7E390', seatId: ELDERS[1].seatId, pick: function () { return guardianLit(1, 2, 15, 20); }, raisedAt: at(1, 8, 10),
+      { alertId: 'ALR-' + ymd(2).replace(/-/g, '') + '-C7E390', seatId: ELDERS[1].seatId, pick: function () { return guardianLit({ critical: 1, high: 1 }, 2, 15, 20); }, raisedAt: at(1, 8, 10),
         marks: [{ result: 'false_alarm', isReal: 'no', worthNotifying: 'no', remark: '家屬說是在聊電視劇情，本人沒事。', markedAt: at(1, 10, 32), by: 'org_admin' }] },
       { alertId: 'ALR-' + ymd(9).replace(/-/g, '') + '-1D6F2B', seatId: ELDERS[4].seatId, pick: function () { return noContact(9, 6, 3); }, raisedAt: at(6, 8, 0),
         marks: [
@@ -1611,7 +1627,7 @@
       if (path === API.elders) {
         if (!caps.elders) return NF;
         const items = ELDERS.filter(function (e) { return inScope(me, e.site); }).map(elderItem);
-        items.sort(function (a, b) { // 照後端：旗標多的在前，同樣多的照稱呼
+        items.sort(function (a, b) { // 照後端：標籤多的在前，同樣多的照稱呼
           const fa = Object.keys(a.flags).filter(function (k) { return a.flags[k]; }).length;
           const fb = Object.keys(b.flags).filter(function (k) { return b.flags[k]; }).length;
           return fb - fa || (a.label < b.label ? -1 : a.label > b.label ? 1 : 0);
