@@ -320,6 +320,25 @@ class EvaluationTests(unittest.TestCase):
         ]
         self.assertEqual(monitor.evaluate_alerts(result, now=NOW), [])
 
+    def test_on_device_face_seat_never_raises_a_stale_heartbeat(self) -> None:
+        # 2026-11-17：手機自己畫臉的虛擬座位不會有人替它回報心跳，不能當成失聯的臉機。
+        result = healthy_result()
+        result.health["snapshot"]["workers"] = [
+            {"worker_id": "on-device-face", "status": "ready", "last_heartbeat_at": NOW - 19 * 86400},
+            {"worker_id": "phone-seat-2", "provider": "on-device", "status": "ready",
+             "last_heartbeat_at": NOW - 19 * 86400},
+        ]
+        self.assertEqual(monitor.evaluate_alerts(result, now=NOW), [])
+
+    def test_real_worker_with_stale_heartbeat_still_alerts(self) -> None:
+        result = healthy_result()
+        result.health["snapshot"]["workers"] = [
+            {"worker_id": "glows-tw07", "provider": "glows", "status": "ready",
+             "last_heartbeat_at": NOW - 999},
+        ]
+        keys = [alert.key for alert in monitor.evaluate_alerts(result, now=NOW)]
+        self.assertEqual(keys, ["worker_heartbeat_stale:glows-tw07"])
+
 
 class SlackNotifierTests(unittest.TestCase):
     def test_successful_send_is_deduplicated_for_ten_minutes(self) -> None:
@@ -563,6 +582,87 @@ class ObserveModeTests(unittest.TestCase):
     def test_observe_only_notifier_never_delivers(self) -> None:
         notifier = monitor.ObserveOnlyNotifier()
         self.assertFalse(notifier.send("queue", "Queue alert", fields={"depth": 2}))
+
+
+class ScheduledServiceTests(unittest.TestCase):
+    """2026-11-17：監看服務改成「定時叫一次、查一次」，不再靠常駐迴圈。"""
+
+    class _Monitor:
+        def __init__(self, fail: bool = False) -> None:
+            self.calls = 0
+            self.fail = fail
+
+        def run_once(self) -> dict[str, object]:
+            self.calls += 1
+            if self.fail:
+                raise RuntimeError("gateway exploded")
+            return {"alert_keys": [], "sent": [], "notification_errors": {}}
+
+    def _client(self, monitor_stub):
+        try:
+            from fastapi.testclient import TestClient
+            import monitor_service
+        except ImportError as exc:  # fastapi/httpx are service-only dependencies
+            self.skipTest(f"fastapi test client unavailable: {exc}")
+        import os
+        from unittest import mock
+
+        env_patch = mock.patch.dict(os.environ, {}, clear=False)
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+        os.environ.pop("MUNEA_GATEWAY_MONITOR_LOOP", None)
+        build_patch = mock.patch.object(
+            monitor_service, "build_monitor_from_env", lambda: (monitor_stub, 3600.0)
+        )
+        build_patch.start()
+        self.addCleanup(build_patch.stop)
+        monitor_service.STATE.update(cycles=0, last_error="", last_report=None, last_cycle_at=0.0)
+        client = TestClient(monitor_service.app)
+        client.__enter__()
+        self.addCleanup(client.__exit__, None, None, None)
+        return client, monitor_service
+
+    def test_scheduled_mode_runs_no_background_loop(self) -> None:
+        stub = self._Monitor()
+        client, service = self._client(stub)
+        self.assertEqual(stub.calls, 0)  # nothing runs until the scheduler ticks
+        self.assertEqual(client.get("/health").json()["mode"], "scheduled")
+        self.assertIsNone(service.app.state.monitor_task)
+
+    def test_each_run_once_call_is_exactly_one_cycle(self) -> None:
+        stub = self._Monitor()
+        client, _service = self._client(stub)
+        first = client.post("/run-once")
+        second = client.post("/run-once")
+        self.assertEqual((first.status_code, second.status_code), (200, 200))
+        self.assertEqual(stub.calls, 2)
+        self.assertEqual(second.json()["cycles"], 2)
+        self.assertTrue(second.json()["ok"])
+        self.assertEqual(client.get("/health").json()["cycles"], 2)
+
+    def test_failed_cycle_answers_500_so_the_scheduler_notices(self) -> None:
+        stub = self._Monitor(fail=True)
+        client, _service = self._client(stub)
+        response = client.post("/run-once")
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(response.json()["ok"])
+        self.assertIn("gateway exploded", response.json()["last_error"])
+        self.assertFalse(client.get("/health").json()["ok"])
+
+    def test_loop_flag_is_opt_in(self) -> None:
+        try:
+            import monitor_service
+        except ImportError as exc:
+            self.skipTest(f"fastapi unavailable: {exc}")
+        import os
+        from unittest import mock
+
+        with mock.patch.dict(os.environ, {"MUNEA_GATEWAY_MONITOR_LOOP": "1"}):
+            self.assertTrue(monitor_service.loop_enabled())
+        with mock.patch.dict(os.environ, {"MUNEA_GATEWAY_MONITOR_LOOP": "0"}):
+            self.assertFalse(monitor_service.loop_enabled())
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertFalse(monitor_service.loop_enabled())
 
 
 if __name__ == "__main__":
