@@ -13,6 +13,43 @@
 - **上線順序**：含這張的 App 版本上架前，後端要先帶上 #711（不然機構端還是舊行為，App 上寫的「只有次數」就不是事實）。
 - **跟開著的 PR 重疊的檔**：`web/index.html`、`web/src/app.js`、四語 json（#694／#696／#706）——都是各加各的、位置錯開；日文 `seatCode.*` 那七行是唯一改到既有行的地方。這個分支有全畫面證據，跟上 main 用 merge。
 - **檔**：`web/src/org-consent.js`（新）、`scripts/test-org-consent-ui.js`（新）、`web/index.html`、`web/src/app.js`、`web/src/seat-code.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-surface-manifest.json`、`web/src/i18n/app-surface-copy-manifest.json`、`scripts/app-full-surface-i18n-browser-precheck.js`、`scripts/test-app-surface-manifest.js`、`scripts/test-i18n-visual-qa-worklist.js`、`scripts/test-i18n-visual-qa-evidence.js`、`docs/I18N-SURFACE-INVENTORY.json`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/`（492 張＋報告）、本看板。
+### 2026-11-18 蘇菲｜🚨 通話中守護腦亮燈「沒記進雲端、緊急聯絡人沒發出去」——改走 Brain（PR · call-path risk 中：只動亮燈後的背景記錄與通知，不碰收音／出聲）
+
+- **怎麼發現的**：做 C4 機構異常提醒時查正式庫，8 月以來 `guardian_risk_evaluated` 只有 9 筆、全部沒有 `who`／`source`——不是通話來的。往回追：`live_voice_server.guardian_record_and_alert` 直接在 Voice 本機呼叫 `server.append_product_event` 與 `server.dispatch_safety_alert`，但 **Voice 那台沒有雲端鑰匙**（正式機環境變數只有 `MUNEA_BRAIN_INTERNAL_URL`、`MUNEA_VOICE_BRAIN_SECRET`；`server.py` 的 `voice_health_context_response` 註解自己也寫了）。所以：
+  1. 通話中的亮燈紀錄只落在 Voice 容器暫存檔——家人 App 的週摘要「守護」段、機構週摘要與異常提醒都看不到。
+  2. 「通話中講出危險的話 → 通知長輩設定的緊急聯絡人」（11/9，1.0.72）在 Voice 本機查不到聯絡人，**等於沒發**。
+  3. 另一個洞：寧寧自己講的話（`who=ai`，例如「胸口痛要馬上打 119」這種安全提醒）也會被記成亮燈；如果第 2 點是通的，還會因為寧寧自己的話去通知家人。
+- **改法**：跟「收線回寫記憶」同一個模子。Voice 有來電者身分（`memory_scope`＝`voice-<user_id>`）且 Brain 通道設好時，改 POST `/voice/guardian-event`（內部密語門，跟 `/voice/call-memory` 同一道）；Brain 認人 → 記一筆帶長輩帳號與 personId 的 `guardian_risk_evaluated`（`source=live_voice`、`who`）→ **只有長輩本人說的、而且是通知候選**才 `dispatch_safety_alert`。認不出人就不記不發（不能記到預設那位身上）。Voice 送不出去只寫診斷、絕不拋例外；沒身分或通道沒設（本機開發）照舊在本機記。家人週摘要（`server.py`）與機構的守護事件讀取（`org_api.py`）都跳過 `who=ai`。
+- **測試**：新 `engine/test_voice_guardian_brain_route.py` 13 條（Voice 走 Brain 不在本機記發、寧寧的話不要求通知、沒身分退回本機、Brain 掛了不拋、真的打內部通道、Brain 端認不出人不記、寧寧的話不發、等級亂填當 none、路由在密語門後、兩處讀取跳過寧寧的話）；突變 9 種全紅。既有 `test_safety_contacts_notify`（11/9 的派送測試）、`test_voice_guardian_loop`、`test_voice_call_memory`、`test_voice_health_context`、`test_org_api` 都過；接口清冊 brain 114→115（`/voice/guardian-event` 列 internal／critical）。
+- **信任關卡（沙利曼，11/18 02:49）第一輪「改完再上」，4 個 🔴 都改了**：
+  1. 🔴 **受暴線**：守護腦每句只標一個類別、先中先贏——「他打我，我胸口好痛喘不過氣」「被家暴好想死」「兒子把我錢拿走了，我很喘」會被標成急症／想不開而通知家人，加害人可能就是家人。以前通知從沒真的送出所以沒發生，這張一上線就會發生。→ `model_router` 另外獨立判一次「有沒有提到受暴」（`protectionMentioned`；另加三條只擋通知、不改分級的說法，危機辨識量測不受影響：自建題庫 93.8%／0%／100% 不變），提到就不是通知候選；第二層 AI 那條路也照擋；Voice 端、Brain 端各再鎖一次（Brain 還要 high／critical、而且是長輩本人說的）。
+  2. 🔴 **記到別人身上**：寫事件沒帶 personId，會被全程序共用、不分人的 5 秒快取補上。→ 明講 personId 與 familyGroupId。
+  3. 🔴 **通知找錯家庭圈**：長輩若在兩個家庭圈，派送沒帶圈會抓到沒排序的第一筆、名單是空的、安靜不發。→ 派送帶目前所在的圈。
+  4. 🔴 **失敗沒人知道**：送 Brain 失敗、認不出人、有名單卻一筆都沒排進去，都只印一行診斷。→ 高風險送不出去重試一次；以上三種各發一則內部告警（只帶等級、類別、原因，不帶 ID）。⚠ 但 **voice 與 brain 正式機都沒設 Slack 告警網址**（只有 gateway-monitor 有），告警目前送不出去——要不要把同一把掛給 voice／brain，要問 Edward（改部署設定）。（**複審後已處理**：正式 brain／voice 上線時掛上告警網址，見下方複審那段）
+  - 🟡 一併改：同一輪同一類只送一次（字幕每進一段就重判，不去重會灌水亮燈次數）；送 Brain 改丟專用小池子、不等回應（安全導引不再等 Brain）；Brain 記錄出錯不會連通知一起沒了。
+  - 🟡 留給之後：機構總覽與月報的「高風險件數」還沒跳過寧寧的話（`org_portal.py`）；語音內部密語 7/15 建立、8/13 事件後沒換（換鑰匙在 11/8 盤點清單，要 Edward）；週摘要把受暴事件算進亮燈、類別也在回傳資料裡（目前家人看不到是碰巧）。
+  - 測試 13 → 26 條（原本寫 30 是我數錯，複審點出）（受暴三句整條路不通知、Brain 三道鎖、帶本人與圈、記錄失敗照發、重試與告警不帶 ID、同一輪只送一次、第二層 AI 那條路）；突變 12 種全紅；`npm run test:launch` 全過。
+- **複審（沙利曼，11/18 03:09）：4 個 🔴 解掉 2 個，剩下的與新發現的都改了**：
+  1. 🔴 **講話順序**：字幕一小段一小段進來，加上「同一輪只送一次」，長輩說「我胸口好痛，喘不過氣，因為他打我」時，**前半句就通知了家人**、後半句被當重複略過。→ 通話中只記錄（請 Brain `notify=false`）；**通知家人改成先排隊等 25 秒**（`MUNEA_GUARDIAN_FAMILY_HOLD_S`；電話掛斷就立刻決定），等完再用整通的判讀決定；這通裡長輩只要提過受暴（第一層關鍵字或第二層 AI），**整通都不通知家人**；一通最多通知一次；寧寧自己的話不排通知。Brain 新增 `notify` 欄（舊版 Voice 不帶＝照舊當場通知），另送一筆 `record=false／notify=true` 才發。後半句才提到受暴的，記錄再補一筆帶受暴標記。推播本來一分鐘才發一批，晚 25 秒不影響。
+  2. 🔴 **告警網址**：`prod-deploy.sh` 的 brain／voice 都掛上 `MUNEA_SLACK_ALERT_WEBHOOK=munea-slack-alert-webhook:latest`。兩台本來就用 compute 預設帳號、那把密鑰早就准它讀（11/18 查過），**不用改權限**。測試機刻意不掛。也查過掛上後會不會半夜狂叫：brain 唯一會 @channel 的是顯卡時鐘巡邏，那個排程已暫停；其餘是安靜的一般告警。
+  3. 🟡 **收線那一刻**：Voice 沒開 CPU 常駐，handler 一返回背景工作就可能卡死。→ 收線時先收尾再收背景任務：還在判的最後幾句給 3 秒、等著通知家人的那則立刻決定、送 Brain 的工作最多等 10 秒（跟通話記憶同一招）。
+  4. 🟡 **沒通知到改用最高級告警**（@channel＝「叫不到人」那一級）；告警在背景執行緒裡就地送完（`notify.alert(..., wait=True)`），不另開會被節流的小執行緒。
+  5. 🟢 **沒有家庭圈的人**，紀錄的家庭圈不再被共用快取補上（`normalize_product_event` 認 `explicitScope`）。**關鍵字補兩種**：「對我動手／動粗」（不含「動手術」）、「是我兒子打的」（句子裡有電話／119／球／毛衣／針這類就不算）——只用來擋通知家人，不影響危機辨識量測（召回 93.8%、誤報 0%、紅線 100% 照舊）。
+  - 測試 26 → 46 條（先講症狀後講受暴、普通急症等完只發一次、掛斷立刻決定、前一輪提過受暴擋後面、一通一次、寧寧的話不排、收線等工作做完、最後一句有寬限、handler 先收尾再收背景任務、Brain `notify` 三種、不借別人的圈、新說法與長得像的、告警最高級且就地送）；突變 31 種全紅（新 22＋第一輪 9 重跑）；`npm run test:launch` 全過。
+  - ⚠ **還擋不到的**：①受暴在 25 秒之後才講（例如隔好幾輪）——通知已經發出、收不回來；②關鍵字以外的講法（「是我兒子推的」這種模稜兩可的刻意沒加）。上線說明照實寫。
+- **第三輪（沙利曼 03:46）：後端可以上**（現在只有 TestFlight 測試者存得了緊急聯絡人，會被誤通知的人很少）；**1.0.72 正式上架前要先補 2 個 🔴**，已列成緊接的下一張：
+  1. 🔴 同一輪先講症狀、後講關鍵字沒收的受暴說法（「都是我兒子害的」）：前面有急症字就整段判高，第二層 AI 根本不會被叫，家人照樣收到。
+  2. 🔴 反方向（**這張自己弄出來的**）：「整通記住」＋幾條太寬的說法，一句平常話就讓整通都不通知——「他不會打我啦」「我兒子從來不會打我」「沒人管我吃什麼啦」「字是我孫子打的」「我女兒罵我都不吃藥」，12 句平常話誤擋 9 句。
+  - 改法（下一張）：關鍵字只當線索；到決定時間（25 秒到或掛斷）請 AI 看一次這通長輩說過的話，有沒有提到被家人或照顧的人打、拿錢、關起來、不給吃、威脅——有就不發；AI 逾時照關鍵字走。一通最多問一次。另補：排除字只看緊貼前面幾個字、收線有待發通知時用短逾時、收尾接住取消、通知家人專用一條執行緒、Brain 派送前查這個人最近 N 天有沒有受暴紀錄（N 天待 Edward）、題庫加誤擋句、第二層 AI 換模型後重量受暴類。
+  - 這張順手改：寧寧自己講的安全提醒照記、但**不發內部告警**（告警網址掛上後會洗版）。
+- **上線前再補（蘇菲 03:40）：亮燈第一次真的進雲端，家人週摘要與機構端會開始看到**——
+  1. 🔴 **提到受暴的亮燈不進家人週摘要、也不進機構畫面**（`server._guardian_mentions_abuse`、`org_api` 讀取）。不然長輩說「他打我」，家人（可能就是加害人）週摘要會看到「這週有 1 次需要關心」；機構的建議句是「聯絡本人或家屬」，對受暴也不安全。內部告警照發、由營運處理。要不要另開一條給社工的處理方式＝政策決定，留給 Edward。
+  2. 🟡 **週摘要那句改白話、而且是真的**：舊句「守護腦這週亮了 N 次高風險燈（high×1）；即時通知已另外送出」——寧寧自己的話、提到受暴、沒設緊急聯絡人都不會通知，「已送出」不一定是真的；建議句「看即時通知裡的原句」也不對（通知裡沒有原句）。→「這週通話中有 N 次提到需要馬上關心的事（緊急 1 次、高風險 1 次）」＋「打個電話，關心一下現在好不好」。
+  3. 🟢 機構提醒的類型名「守護腦亮燈」→「需要關心」（視覺關卡：內部用語）。C4 演練預檢照舊 39／40（X02 要第二層 AI）。
+- **上線後最少步驟驗證（沙利曼給的）**：兩支裝 1.0.72 的手機，長輩 A、家人 B（B 在 A 目前所在的圈、開通知）；A 在「設定 → 安全通知」選 B **並重新按儲存**（032 在 11/17 才進正式庫，之前存的名單已隨重建消失）。A 打聊聊說「我胸口好痛，喘不過氣」→ 約 25 秒後排進通知、1–2 分鐘內 B 收到「沐寧提醒：A可能需要關心」；語音主機日誌要有 `guardian.family_notify_held` → `guardian.family_notify … queued=1 reason=-`（queued=0＝名單或圈有問題、resolved=False＝認不出人）。同一對人 30 分鐘內只送一次。反向：A 說「他打我」，B 不該收到；A 先說「我胸口好痛，喘不過氣」、緊接著說「因為他打我」，B 也不該收到（日誌 `guardian.family_notify_suppressed reason=protection_mentioned`）。
+- **上線要注意**：要 **Brain 先上、Voice 後上**（Voice 先上會打到還沒有這支接口的 Brain，只是寫診斷、不影響通話）。上線後用一通真機通話講一句會亮燈的話驗：正式庫要多一筆 `source=live_voice` 的事件、緊急聯絡人手機要收到通知。**App E2E pending**（緊急聯絡人的設定畫面在 1.0.72）。
+- **沒做**：歷史上漏記的亮燈補不回來（Voice 容器暫存檔已隨重建消失）。
+- **檔**：`engine/live_voice_server.py`（只有 `guardian_record_and_alert`）、`engine/server.py`（新 `voice_guardian_event_response`＋內部路由兩行＋家人週摘要讀取一行）、`engine/org_api.py`（一行）、`engine/test_voice_guardian_brain_route.py`（新）、`docs/API-CONTRACT-INVENTORY.json`、`scripts/api_contract_inventory.py`、`scripts/test_api_contract_inventory.py`、本看板。
 ### 2026-11-18 蘇菲｜🔔 機構端異常提醒匣＋逐筆判定（補助案 C4 · 設計書第 3 段 · 只動後端，不碰 App、不碰通話路徑）
 
 - **為什麼**：C4（116/3）要「異常通知上線、準確率 80% 以上、50 筆以上由場域人員逐筆判定」。三條規則（#620／C3）早就會算，但沒有「發出去」這個動作、也沒有標記，準確率沒辦法量。分工：11/18 三個工作階段協調，C4 開發歸我；量測設計（40 筆情境演練、逐筆判定表）在 `補助案-驗收管理/驗收證據/3-116年3月/C4/`，欄位照那份對齊。
