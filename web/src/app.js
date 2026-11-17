@@ -13721,8 +13721,9 @@ function refreshLocalizedDynamicUi() {
     const cnameSpan = '<span class="cname">' + muneaT('companion.nening.name', '寧寧') + '</span>';
     const sf1 = $('#sfStep1Text');
     if (sf1) sf1.innerHTML = muneaT('legacyUi.safetyStep1', '異常發生，{companion}先關心你一句、確認你還好嗎', { companion: cnameSpan });
-    const mcSubEl = $('#mcSub');
-    if (mcSubEl && !mcSubEl.textContent.trim()) mcSubEl.innerHTML = muneaT('demo.family.chatSubSample', '今天聊了 2 次 · 有一小段有點火氣', { companion: cnameSpan });
+    // 2026-11-17 拿掉：這裡原本在 #mcSub 空著時補一句示範「今天聊了 2 次 · 有一小段有點火氣」。
+    // #mcSub 是家人頁「某位家人的心情」底下那行；家人有心情標籤時 renderPersonMood() 會刻意把它清空，
+    // 這時只要重跑一次本函式，就會在真的家人名下寫出一句編出來的話。那行字只能由 renderPersonMood() 決定。
     const cnNoData = $('#cnNoDataText');
     if (cnNoData) cnNoData.innerHTML = '<b>' + muneaT('legacyUi.connectNoDataTitle', '沒有這些也沒關係。') + '</b>' + muneaT('legacyUi.connectNoDataBody', '{companion}也能從每天聊天陪你留意生活狀態，健康數據是加分，陪伴和提醒不受影響。', { companion: cnameSpan });
     const rptFootEl = $('#rptFoot');
