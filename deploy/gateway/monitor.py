@@ -38,6 +38,8 @@ DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS = 90.0
 # Healthy/ready workers are never touched; a retired worker can always be
 # re-registered. Non-positive disables the behavior.
 DEFAULT_AUTO_RETIRE_SECONDS = 1800.0
+# 手機自己畫臉的虛擬座位（與 call_control_store.ON_DEVICE_FACE_WORKER_ID 同值）。
+ON_DEVICE_FACE_WORKER_ID = "on-device-face"
 UTILIZATION_THRESHOLD = 0.80
 
 
@@ -399,7 +401,16 @@ def evaluate_alerts(
                 ))
             heartbeat_value = worker.get("last_heartbeat_at")
             heartbeat = _timestamp(heartbeat_value)
-            if status not in terminal_statuses and heartbeat_value not in (None, "") and heartbeat is not None:
+            # 2026-11-17：臉改在手機上畫之後，名冊裡的 on-device-face 是一個「虛擬座位」，
+            # 沒有任何機器會替它回報心跳。把它當成失聯的臉機＝每次冷啟動都發一則假警報。
+            provider = str(worker.get("provider") or worker.get("kind") or "").lower()
+            heartbeatless = worker_id == ON_DEVICE_FACE_WORKER_ID or provider == "on-device"
+            if (
+                not heartbeatless
+                and status not in terminal_statuses
+                and heartbeat_value not in (None, "")
+                and heartbeat is not None
+            ):
                 age = max(0.0, current - heartbeat)
                 if age > stale_heartbeat_seconds:
                     alerts.append(Alert(
