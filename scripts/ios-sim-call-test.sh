@@ -2,8 +2,11 @@
 # iOS simulator call test (test branch only).
 # Installs the simulator build, lets the injected scenario (scripts/ios-sim-scenario.js) drive
 # the App, and plays the part of the thumb: sends the App to the background and brings it back.
-# Everything is recorded to $OUT (console log, screenshots, summary). Never fails the job on a
-# product finding: the point is to see what really happens.
+#
+# The host runs on a FIXED TIMETABLE (seconds after launch). Run 3 showed that reading the App's
+# console to decide when to act lags badly (the stream is buffered), so the timetable is the
+# master and the scenario simply reacts to being hidden/shown. The console is still recorded.
+# Never fails the job on a product finding: the point is to see what really happens.
 set -uo pipefail
 
 OUT="${OUT:-ios-sim-out}"
@@ -26,7 +29,8 @@ for runtime, devs in d.items():
         name = dev.get("name", "")
         if not name.startswith("iPhone") or not dev.get("isAvailable", True):
             continue
-        score = (ver, 1 if "Pro" not in name and "Plus" not in name and "SE" not in name and "e" != name[-1] else 0, name)
+        plain = all(tag not in name for tag in ("Pro", "Plus", "SE", "Air", "mini"))
+        score = (ver, 1 if plain else 0, name)
         if best is None or score > best[0]:
             best = (score, dev["udid"], name, runtime)
 print(best[1] if best else "")
@@ -38,80 +42,61 @@ echo "UDID=$UDID"
 xcrun simctl boot "$UDID" || true
 xcrun simctl bootstatus "$UDID" -b || true
 open -a Simulator --args -CurrentDeviceUDID "$UDID" >/dev/null 2>&1 || true
+sleep 5
 
 echo "== install =="
 xcrun simctl install "$UDID" "$APP_PATH" || { echo "install failed"; exit 1; }
 xcrun simctl privacy "$UDID" grant microphone "$BUNDLE" || true
 
-xcrun simctl spawn "$UDID" log stream --level debug --style compact \
-  --predicate 'process == "App" OR process CONTAINS "WebKit" OR eventMessage CONTAINS "MUNEA_SIM"' > "$OUT/oslog.txt" 2>&1 &
-OSLOG_PID=$!
-
-shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; }
-have() { grep -qE "$1" "$CONSOLE" "$OUT/oslog.txt" 2>/dev/null; }
-wait_marker() { # $1 = regex, $2 = timeout seconds
-  local i=0
-  while [ "$i" -lt "$2" ]; do
-    if have "$1"; then echo "  seen: $1 (${i}s)"; return 0; fi
-    sleep 1; i=$((i + 1))
-  done
-  echo "  NOT seen within ${2}s: $1"
-  return 1
+T0=$(date +%s)
+shot() { xcrun simctl io "$UDID" screenshot "$OUT/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; echo "  shot $1 at $(( $(date +%s) - T0 ))s"; }
+to_background() { xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null 2>&1 || echo "could not open Settings"; echo "  -> background at $(( $(date +%s) - T0 ))s"; }
+to_foreground() { xcrun simctl launch "$UDID" "$BUNDLE" >/dev/null 2>&1 || echo "could not bring App back"; echo "  -> foreground at $(( $(date +%s) - T0 ))s"; }
+at() { # sleep until N seconds after launch
+  local now=$(( $(date +%s) - T0 ))
+  if [ "$now" -lt "$1" ]; then sleep $(( $1 - now )); fi
 }
-to_background() { xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null 2>&1 || echo "could not open Settings"; }
-to_foreground() { xcrun simctl launch "$UDID" "$BUNDLE" >/dev/null 2>&1 || echo "could not bring App back"; }
 
 echo "== launch =="
-xcrun simctl launch --console-pty "$UDID" "$BUNDLE" -AppleLanguages "(zh-Hant-TW)" -AppleLocale zh_TW >> "$CONSOLE" 2>&1 &
+# A pty around simctl keeps the console stream flowing line by line instead of in big late chunks.
+python3 -c '
+import pty, sys
+pty.spawn(["xcrun", "simctl", "launch", "--console-pty", sys.argv[1], sys.argv[2],
+           "-AppleLanguages", "(zh-Hant-TW)", "-AppleLocale", "zh_TW"])
+' "$UDID" "$BUNDLE" >> "$CONSOLE" 2>&1 < /dev/null &
 LAUNCH_PID=$!
-sleep 12; shot 01-launch
-wait_marker 'MUNEA_SIM BOOT' 90; shot 02-booted
+T0=$(date +%s)
 
-echo "== call 1 (cold start) =="
-wait_marker "CALL1_CONSENT_SHEET" 40 && shot 03a-consent-sheet
-wait_marker "CALL1_(CONNECTED|DONE)" 90; sleep 3; shot 03-call1-live
-wait_marker 'READY_FOR_BACKGROUND_1' 60; shot 04-call1-ended
+# --- timetable (seconds after launch). Scenario side: see scripts/ios-sim-scenario.js ---
+at 4;   shot 01-launch-4s
+at 8;   shot 01b-launch-8s
+at 12;  shot 02-consent-sheet            # first call ever: privacy notice
+at 22;  shot 03-call1-live               # call 1 connected (cold start)
+at 32;  shot 03b-call1-live-later
+at 46;  shot 04-call1-ended
+at 50;  to_background                    # between calls: 25 s away
+at 55;  shot 05-in-background-1
+at 75;  to_foreground
+F=75
+at $((F + 5));   shot 06a-topics-sheet   # asked once before an early call
+at $((F + 16));  shot 06-call2-live      # first call after coming back
+at $((F + 34));  shot 08-call3-live      # call right after the native audio pulse
+at $((F + 54));  shot 09-call4-live
+at $((F + 60));  to_background           # leave the screen in the middle of call 4 (12 s)
+at $((F + 65));  shot 10-in-background-2
+at $((F + 72));  to_foreground
+at $((F + 75));  shot 11-call4-after-return
+at $((F + 80));  shot 12-call4-after-return-later
+at $((F + 94));  shot 14-status
+at $((F + 104)); shot 15-settings
+at $((F + 115)); shot 16-seat-code
+at $((F + 126))
 
-echo "== background 20s between calls =="
-to_background; sleep 4; shot 05-in-background-1; sleep 16
-to_foreground
-wait_marker 'BACK_FROM_BACKGROUND_1' 30
-
-echo "== call 2 (first call after coming back) =="
-wait_marker "CALL2_TOPICS_SHEET" 30 && shot 06a-topics-sheet
-wait_marker "CALL2_(CONNECTED|DONE)" 90; sleep 3; shot 06-call2-live
-wait_marker 'CALL2_DONE' 60; shot 07-call2-ended
-
-echo "== native pulse, then call 3 =="
-wait_marker 'CALL3_(CONNECTED|DONE)' 90; sleep 3; shot 08-call3-live
-wait_marker 'CALL3_DONE' 60
-
-echo "== call 4, leave the screen mid-call for 12s =="
-wait_marker 'READY_FOR_BACKGROUND_2' 90; shot 09-call4-live
-to_background; sleep 12; shot 10-in-background-2
-to_foreground; sleep 3; shot 11-call4-after-return
-wait_marker 'CALL4_AFTER_RETURN_LATER' 30; shot 12-call4-after-return-later
-wait_marker 'SCENARIO_DONE' 40; shot 13-scenario-done
-
-echo "== tour =="
-wait_marker 'TOUR .*"at":"status"' 30 && { sleep 2; shot 14-status; }
-wait_marker 'TOUR .*"at":"settings"' 30 && { sleep 2; shot 15-settings; }
-wait_marker 'TOUR .*"at":"seat-code"' 30 && { sleep 2; shot 16-seat-code; }
-wait_marker 'TOUR_DONE' 30
-
-sleep 2
 kill "$LAUNCH_PID" >/dev/null 2>&1 || true
-kill "$OSLOG_PID" >/dev/null 2>&1 || true
 
 echo "== summary =="
-{
-  echo "# MUNEA_SIM lines (console)"
-  grep -ao 'MUNEA_SIM .*' "$CONSOLE" | cut -c1-1200
-  echo
-  echo "# MUNEA_SIM lines (os log, only if console is empty)"
-  if ! grep -q 'MUNEA_SIM' "$CONSOLE"; then grep -ao 'MUNEA_SIM .*' "$OUT/oslog.txt" | cut -c1-1200; fi
-} > "$OUT/summary.txt"
-wc -l "$OUT/summary.txt" "$CONSOLE" "$OUT/oslog.txt"
-grep -aE 'MUNEA_SIM (BOOT|NATIVE_|CLOCK_PROBE|CALL._CONNECTED|CALL._DONE|PHASE|CALL4_AFTER|SCENARIO_DONE|JS_ERROR|JS_REJECTION|MISSING)' "$OUT/summary.txt" | cut -c1-400
+grep -ao 'MUNEA_SIM .*' "$CONSOLE" | cut -c1-1400 > "$OUT/summary.txt"
+wc -l "$OUT/summary.txt" "$CONSOLE"
+grep -aE 'MUNEA_SIM (BOOT|NATIVE_|CLOCK_PROBE|CALL._CONNECTED|CALL._DONE|CALL._TOPICS|CALL._CONSENT|PHASE|VIS|CALL4_AFTER|SCENARIO_DONE|TOUR|JS_ERROR|JS_REJECTION|MISSING)' "$OUT/summary.txt" | cut -c1-400
 ls -la "$OUT"
 exit 0

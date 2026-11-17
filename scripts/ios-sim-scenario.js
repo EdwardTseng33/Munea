@@ -194,9 +194,9 @@
     await nativeStatus('boot');
     await clockProbe('boot');
 
-    var c1 = await call('CALL1', 12000);
+    var c1 = await call('CALL1', 20000);
     log('PHASE', { name: 'READY_FOR_BACKGROUND_1', connected: c1 });
-    var cyc1 = await waitHiddenThenVisible(180000);
+    var cyc1 = await waitHiddenThenVisible(240000);
     log('PHASE', { name: 'BACK_FROM_BACKGROUND_1', cycled: cyc1 });
     await sleep(2000);
     await nativeStatus('after_background');
@@ -215,23 +215,24 @@
     var r4 = await dial('CALL4', 45000);
     if (r4.connectedAt) await sleep(4000);
     log('PHASE', { name: 'READY_FOR_BACKGROUND_2', connected: !!r4.connectedAt });
-    var cyc2 = await waitHiddenThenVisible(180000);
+    var cyc2 = await waitHiddenThenVisible(240000);
     await sleep(2500);
     log('CALL4_AFTER_RETURN', Object.assign({ cycled: cyc2 }, snap()));
-    await sleep(4000);
+    await sleep(7000);
     log('CALL4_AFTER_RETURN_LATER', snap());
     await hangUp('CALL4');
 
     log('SCENARIO_DONE', { call1: c1, call2: c2, call3: c3, call4: !!r4.connectedAt });
 
     // Short tour so the other 1.0.72 screens get a screenshot each.
-    click('.tab-btn[data-view="status"]'); await sleep(5000); log('TOUR', { at: 'status' }); await sleep(5000);
-    click('.tab-btn[data-view="settings"]'); await sleep(3000); log('TOUR', { at: 'settings' }); await sleep(5000);
+    await sleep(3000);
+    click('.tab-btn[data-view="status"]'); await sleep(5000); log('TOUR', { at: 'status' }); await sleep(6000);
+    click('.tab-btn[data-view="settings"]'); await sleep(3000); log('TOUR', { at: 'settings' }); await sleep(7000);
     var entry = q('#seatCodeEntry');
     if (entry) { try { entry.scrollIntoView({ block: 'center' }); } catch (e) {} entry.click(); }
     await sleep(2500);
     log('TOUR', { at: 'seat-code', modal: !!(q('#seatCodeModal') && q('#seatCodeModal').classList.contains('show')), entry: !!entry });
-    await sleep(5000);
+    await sleep(9000);
     log('TOUR_DONE', {});
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { main(); });
