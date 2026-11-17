@@ -322,7 +322,8 @@ for (const l of LOCALES) {
       'g.canonical': guideUrl(l),
       'g.hreflang': idxHreflang,
       'g.langMenu': homeMenu,
-      'g.cards': GUIDES[l.code].map((g) => guideCard(l, g, dict)).join('\n'),
+      // 列表順序：搜尋字研究的優先三篇在前，其他照日期
+      'g.cards': [...featured(l.code), ...GUIDES[l.code].filter((g) => !featured(l.code).includes(g))].map((g) => guideCard(l, g, dict)).join('\n'),
       'g.jsonLd': ld([
         org,
         { '@type': 'CollectionPage', '@id': `${guideUrl(l)}#page`, name: dict['guide.indexH1'], description: dict['guide.indexDesc'], inLanguage: l.htmlLang, url: guideUrl(l),

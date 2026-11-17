@@ -52,7 +52,7 @@ html:lang(en) .g-body,html:lang(es) .g-body{font-size:18px;line-height:1.75}
 .g-list{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .g-card{display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px;transition:border-color .2s,transform .2s}
 .g-card:hover{border-color:var(--teal);transform:translateY(-3px)}
-.g-card b{font-size:17px;line-height:1.45;color:var(--ink)}
+.g-card b{font-size:17px;line-height:1.45;color:var(--ink);text-wrap:balance}
 .g-card span{font-size:14.5px;color:var(--muted);line-height:1.7}
 .g-card small{font-size:13px;color:var(--teal-dd);font-weight:600;margin-top:auto}
 .g-hero{padding:56px 0 18px}

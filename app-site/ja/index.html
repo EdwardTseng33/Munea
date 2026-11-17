@@ -287,7 +287,8 @@
   .g-list{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
   .g-card{display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px;transition:border-color .2s,transform .2s}
   .g-card:hover{border-color:var(--teal);transform:translateY(-3px)}
-  .g-card b{font-size:17px;line-height:1.45;color:var(--ink)}
+  .g-card b{font-size:17px;line-height:1.45;color:var(--ink);text-wrap:balance}
+  html:lang(zh-Hant) .g-card b,html:lang(ja) .g-card b{word-break:keep-all;overflow-wrap:anywhere}
   .g-card span{font-size:14.5px;color:var(--muted);line-height:1.7}
   .g-more{display:flex;justify-content:center;margin-top:24px}
   .g-more a{display:inline-flex;align-items:center;min-height:44px;padding:0 22px;border-radius:100px;border:1.5px solid var(--mint-2);background:#fff;color:var(--teal-dd);font-weight:700;font-size:15px}
