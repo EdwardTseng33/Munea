@@ -329,7 +329,7 @@ for (const l of locales) {
 }
 
 // 2026-11-18 指南文章：每篇一個 H1、自己的 canonical、文章結構化資料、不准出現紅線字
-const guideRed = { zh: /追蹤|監測|監控/, ja: /監視|追跡|モニタリング/, en: /(track|tracking|monitor|monitoring|surveillance)/i };
+const guideRed = { zh: /追蹤|監測|監控/, ja: /監視|追跡|モニタリング/, en: /\b(track|tracking|monitor|monitoring|surveillance)\b/i };
 for (const l of guideLocales) {
   const idx = read(l.dir ? `${l.dir}/guide/index.html` : "guide/index.html");
   assert.match(idx, new RegExp(`<link rel="canonical" href="${guideIndexUrl(l.dir).replaceAll(".", "\\.")}">`), `${l.code} guide index canonical`);
@@ -356,7 +356,7 @@ for (const l of guideLocales) {
 // 2026-11-18 首頁本文也要掃紅線字（原本只掃常見問題與機構頁；西文頁曾出現 Seguimiento＝追蹤）
 const homeRed = {
   zh: /追蹤|監測|監控/,
-  en: /(track|tracking|monitor|monitoring|surveillance)/i,
+  en: /\b(track|tracking|monitor|monitoring|surveillance)\b/i,
   ja: /監視|追跡|モニタリング/,
   es: /seguimiento|monitore|monitoriz|vigilancia|rastre/i,
 };
