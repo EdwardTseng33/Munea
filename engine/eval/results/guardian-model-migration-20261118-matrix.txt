@@ -1,0 +1,47 @@
+== gemini-2.5-flash-default
+  b7    n=66/66 reps=3  recall worst 93.9 mean 94.9 | FPR worst 16.7 mean 16.2 | redline 12%(24) | err 0 retry 0
+  b7b   n=43/60 reps=3  recall worst 97.7 mean 99.2 | FPR worst 3.3 mean 2.8 | redline 100%(22) | err 0 retry 0
+  self  n=65/66 reps=3  recall worst 100.0 mean 100.0 | FPR worst 1.5 mean 0.5 | redline 100%(22) | err 0 retry 0
+  h1    n=45/55 reps=3  recall worst 97.8 mean 97.8 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b2    n=45/55 reps=3  recall worst 73.3 mean 74.8 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b3    n=45/55 reps=3  recall worst 91.1 mean 91.9 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b4    n=45/55 reps=3  recall worst 95.6 mean 97.0 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b5    n=44/57 reps=3  recall worst 95.5 mean 96.2 | FPR worst 5.3 mean 4.7 | redline 100%(22) | err 0 retry 0
+  b6    n=45/55 reps=3  recall worst 86.7 mean 89.6 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  pooled blind (worst-of-3) recall 90.7% (333) FPR 4.0% (403)
+  pooled blind (mean-of-3) recall 92.1% (333) FPR 3.7% (403)
+== gemini-3.5-flash-lite-default
+  b7    n=66/66 reps=3  recall worst 98.5 mean 98.5 | FPR worst 15.2 mean 14.6 | redline 12%(24) | err 0 retry 0
+  b7b   n=43/60 reps=3  recall worst 95.3 mean 96.9 | FPR worst 1.7 mean 1.7 | redline 100%(22) | err 0 retry 0
+  self  n=65/66 reps=3  recall worst 100.0 mean 100.0 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  h1    n=45/55 reps=3  recall worst 100.0 mean 100.0 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b2    n=45/55 reps=3  recall worst 75.6 mean 76.3 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b3    n=45/55 reps=3  recall worst 93.3 mean 95.6 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b4    n=45/55 reps=3  recall worst 97.8 mean 97.8 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b5    n=44/57 reps=3  recall worst 93.2 mean 93.2 | FPR worst 1.8 mean 1.8 | redline 100%(22) | err 0 retry 0
+  b6    n=45/55 reps=3  recall worst 93.3 mean 94.1 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  pooled blind (worst-of-3) recall 92.8% (333) FPR 3.0% (403)
+  pooled blind (mean-of-3) recall 93.5% (333) FPR 2.9% (403)
+== gemini-3.5-flash-lite-low
+  b7    n=66/66 reps=3  recall worst 97.0 mean 98.0 | FPR worst 13.6 mean 13.6 | redline 12%(24) | err 0 retry 0
+  b7b   n=43/60 reps=3  recall worst 93.0 mean 94.6 | FPR worst 1.7 mean 1.7 | redline 100%(22) | err 0 retry 0
+  self  n=65/66 reps=3  recall worst 100.0 mean 100.0 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  h1    n=45/55 reps=3  recall worst 97.8 mean 98.5 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b2    n=45/55 reps=3  recall worst 73.3 mean 74.1 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b3    n=45/55 reps=3  recall worst 95.6 mean 95.6 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b4    n=45/55 reps=3  recall worst 93.3 mean 94.8 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  b5    n=44/57 reps=3  recall worst 95.5 mean 95.5 | FPR worst 1.8 mean 1.8 | redline 100%(22) | err 0 retry 0
+  b6    n=45/55 reps=3  recall worst 93.3 mean 94.8 | FPR worst 0.0 mean 0.0 | redline 100%(22) | err 0 retry 0
+  pooled blind (worst-of-3) recall 91.9% (333) FPR 2.7% (403)
+  pooled blind (mean-of-3) recall 92.8% (333) FPR 2.7% (403)
+--- 單次、未加格式（第一輪，含 3.8-flash）
+config                         self          h1            b2            b3            b4            b5            b6            b7             errors
+gemini-2.5-flash-default       100.0/ 0.0    100.0/ 0.0     77.8/ 0.0     91.1/ 0.0     97.8/ 0.0     95.5/ 5.3     88.9/ 0.0    -               0
+gemini-3.5-flash-lite-default  100.0/ 0.0    100.0/ 0.0     77.8/ 0.0     97.8/ 0.0     97.8/ 0.0     93.2/ 1.8     91.1/ 0.0    -               11
+gemini-3.5-flash-lite-low      100.0/ 0.0    100.0/ 0.0     73.3/ 0.0     97.8/ 0.0     97.8/ 0.0     95.5/ 1.8     95.6/ 0.0    -               11
+gemini-3.8-flash-default       100.0/ 0.0    100.0/ 0.0     68.9/ 0.0     86.7/ 0.0     97.8/ 0.0     95.5/ 1.8     91.1/ 0.0    -               0
+
+gemini-2.5-flash-default       pooled blind recall 90.2% (224)  FPR 1.1% (277)
+gemini-3.5-flash-lite-default  pooled blind recall 91.5% (224)  FPR 0.4% (277)
+gemini-3.5-flash-lite-low      pooled blind recall 92.0% (224)  FPR 0.4% (277)
+gemini-3.8-flash-default       pooled blind recall 87.9% (224)  FPR 0.4% (277)
