@@ -269,7 +269,7 @@ def _pii(route: Route) -> str:
         return "aggregate-only"
     if route.surface == "brain" and path == "/org/summary":
         return "aggregate-only"
-    if route.surface == "brain" and path in {"/org/elders", "/org/elder/care-week"}:
+    if route.surface == "brain" and path in {"/org/elders", "/org/elder/care-week", "/org/alerts", "/org/alert/mark"}:
         # Consented elders only; org_api.assert_no_forbidden strips sentences, summaries and identifiers.
         return "health"
     if any(token in path for token in ("credits", "subscription", "apple/transaction", "entitlements")):
@@ -328,6 +328,9 @@ def _tests(route: Route) -> list[str]:
         "/org/elders": ["engine/test_org_api.py"],
         "/org/elder/care-week": ["engine/test_org_api.py"],
         "/org/reports": ["engine/test_org_api.py"],
+        "/org/alerts": ["engine/test_org_alerts.py"],
+        "/org/alert/mark": ["engine/test_org_alerts.py"],
+        "/org/audit": ["engine/test_org_alerts.py"],
         "/org-consent": ["engine/test_org_api.py"],
         "/org-consent/set": ["engine/test_org_api.py"],
         "/enterprise/portal/summary": [

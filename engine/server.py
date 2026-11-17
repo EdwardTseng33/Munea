@@ -36,6 +36,7 @@ import enterprise_seats
 import enterprise_billing
 import org_portal
 import org_api
+import org_alerts
 import model_router
 import notify
 import apple_store
@@ -499,6 +500,8 @@ ADMIN_POST_PATHS = {
     # 機構端專區第 2 段（2026-10-29）：幫機構開人員帳號、看各席次同意狀態。處理端再驗一次管理鑰匙。
     "/admin/enterprise/staff/invite",
     "/admin/enterprise/consent/status",
+    # 第 3 段（2026-11-18 · C4）：匯出機構的異常提醒與逐筆判定，對齊 C4 逐筆判定表。
+    "/admin/enterprise/alerts/export",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -7680,6 +7683,31 @@ def append_audit_event(event=None):
 org_api.set_audit_sink(append_audit_event)
 
 
+def load_org_audit_events(client_id, since_iso, event_types):
+    """機構端異常提醒匣（org_alerts）讀「發出／判定」等紀錄：雲端優先，雲端沒開或失敗退本機稽核本子。"""
+    types = tuple(event_types or ())
+    backend = data_backend()
+    try:
+        remote = backend.load_org_audit_events(client_id, types, since_iso=since_iso)
+        if remote is not None:
+            return [normalize_audit_event(e) for e in remote]
+    except Exception as e:
+        if backend.enabled():
+            raise
+        log_fallback_exception("load org audit events from Supabase", e)
+    store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
+    rows = [normalize_audit_event(e) for e in (store.get("events", []) if isinstance(store, dict) else [])]
+    return [
+        e for e in rows
+        if e.get("eventType") in types
+        and str((e.get("details") or {}).get("clientId") or "") == str(client_id)
+        and str(e.get("createdAt") or "") >= str(since_iso or "")
+    ]
+
+
+org_alerts.set_event_loader(load_org_audit_events)
+
+
 def admin_audit_events_summary(data=None):
     data = data or {}
     limit = max(1, min(200, int(data.get("limit") or 50)))
@@ -11146,6 +11174,13 @@ class H(BaseHTTPRequestHandler):
                 self._json(org_api.org_elder_care_week_response(auth_gate.get("auth"), data))
             elif self.path == "/org/reports":
                 self._json(org_api.org_reports_response(auth_gate.get("auth"), data))
+            # 第 3 段（2026-11-18 · 補助案 C4）：異常提醒匣、逐筆判定、自家紀錄。
+            elif self.path == "/org/alerts":
+                self._json(org_alerts.org_alerts_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/alert/mark":
+                self._json(org_alerts.org_alert_mark_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/audit":
+                self._json(org_alerts.org_audit_response(auth_gate.get("auth"), data))
             # App 端（家庭成員）：機構照護模式同意——只認已驗證的帳號身分，席次必須綁在自己帳號上。
             elif self.path == "/org-consent":
                 self._json(org_api.org_consent_status_response(REQUEST_DATA_IDENTITY.get(), data))
@@ -11163,6 +11198,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(org_api.admin_org_consent_status_response(data))
+            elif self.path == "/admin/enterprise/alerts/export":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(org_alerts.admin_alerts_export_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":

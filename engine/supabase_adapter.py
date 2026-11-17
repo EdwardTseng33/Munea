@@ -2705,6 +2705,26 @@ class SupabaseAdapter:
         )
         return [self.audit_row_to_event(row) for row in rows or []]
 
+    def load_org_audit_events(self, client_id, event_types, since_iso=None, limit=5000):
+        """機構端稽核（異常提醒的發出／判定、讀取、同意）：照事件種類＋details.clientId 撈。
+        給 org_alerts 用；不帶 account_id 過濾（一家機構跨很多帳號）。"""
+        if not self.enabled():
+            return None
+        types = [str(t) for t in (event_types or []) if t]
+        if not client_id or not types:
+            return []
+        query = {
+            "select": "*",
+            "event_type": "in.(" + ",".join(types) + ")",
+            "details->>clientId": f"eq.{client_id}",
+            "order": "created_at.asc",
+            "limit": str(max(1, min(20000, int(limit or 5000)))),
+        }
+        if since_iso:
+            query["created_at"] = f"gte.{since_iso}"
+        rows = self._request("GET", "audit_events", query=query)
+        return [self.audit_row_to_event(row) for row in rows or []]
+
     def load_product_events(self, since_iso=None, limit=500):
         if not self.enabled():
             return None
