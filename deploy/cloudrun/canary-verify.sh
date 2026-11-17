@@ -169,6 +169,42 @@ if payload.get("ok") is not True or errors:
 ' "$EXPECTED_SERVICE" "$EXPECTED_ENV" "$REVISION" "$EXPECTED_VERSION" "$EXPECTED_COMMIT"
 unset VERSION_JSON
 
+# 真的接一次 Google（2026-11-16）：11/8 重建時工具包自動升版、即時語音連線被拒，正式聊聊
+# 四天打不通——當時這個關卡只看「主機起來了、版號對」，全綠放行。現在語音版一定要先用
+# 自己的鑰匙、自己的模型、整份通話設定真的開一條線、聽到第一包聲音，才算過。
+LIVE_SELFTEST=""
+if [ "$WHAT" = "voice" ]; then
+  if [ "${MUNEA_SKIP_LIVE_SELFTEST:-0}" = "1" ]; then
+    echo "⚠️ 跳過「真的接一次 Google」（MUNEA_SKIP_LIVE_SELFTEST=1）——只有重新放行沒有這個檢查的舊版時才該這樣做"
+    LIVE_SELFTEST="skipped"
+  else
+    SELFTEST_KEY="${MUNEA_APP_KEY:-}"
+    if [ -z "$SELFTEST_KEY" ] && [ -f deploy/.munea-app-key ]; then
+      SELFTEST_KEY="$(tr -d '\r\n' < deploy/.munea-app-key)"
+    fi
+    [ -n "$SELFTEST_KEY" ] || { echo "⛔ 找不到 MUNEA_APP_KEY 或 deploy/.munea-app-key——沒辦法做「真的接一次 Google」"; exit 1; }
+    SELFTEST_OUT="$(curl -sS --max-time 40 -w '\n%{http_code}' -H "X-Munea-Selftest-Key: $SELFTEST_KEY" "$CANARY_URL/selftest/live" || true)"
+    unset SELFTEST_KEY
+    SELFTEST_CODE="$(printf '%s\n' "$SELFTEST_OUT" | tail -n 1)"
+    SELFTEST_BODY="$(printf '%s\n' "$SELFTEST_OUT" | sed '$d')"
+    unset SELFTEST_OUT
+    if [ "$SELFTEST_CODE" != "200" ]; then
+      echo "⛔ 這一版接不上 Google 的即時語音（/selftest/live 回 ${SELFTEST_CODE:-沒有回應}）"
+      printf '%s\n' "$SELFTEST_BODY" | head -c 400; echo
+      echo "   404＝這一版沒有自我檢查或鑰匙不對；503＝真的接不上（看上面的 error）；沒有回應＝主機卡住。"
+      exit 1
+    fi
+    LIVE_SELFTEST="$(printf '%s' "$SELFTEST_BODY" | "${PYTHON[@]}" -c '
+import json, sys
+d = json.load(sys.stdin)
+if d.get("ok") is not True or d.get("mode") != "full":
+    raise SystemExit("live_selftest_unexpected_payload")
+print("%s · 首聲 %sms" % (d.get("model"), d.get("first_audio_ms")))
+')"
+    unset SELFTEST_BODY
+  fi
+fi
+
 if [ "$WHAT" = "brain" ]; then
   NOTIFICATION_CODE="$(curl --retry 2 --retry-delay 1 -sS -o /dev/null -w '%{http_code}' \
     -H 'Content-Type: application/json' \
@@ -180,8 +216,8 @@ if [ "$WHAT" = "brain" ]; then
   }
   echo "✅ Brain canary PASS：$REVISION · 0% · root 200 · invalid Apple JWS 400"
 else
-  echo "✅ Voice canary 部署層 PASS：$REVISION · 0% · root 200 · locale=$LOCALE_MODE"
-  echo "⚠️ 尚未涵蓋：正式 Call Token、Gemini 音訊、ASR、插話、靜音與真人體感。"
+  echo "✅ Voice canary PASS：$REVISION · 0% · root 200 · locale=$LOCALE_MODE · 真的接上 Google：$LIVE_SELFTEST"
+  echo "⚠️ 尚未涵蓋：正式 Call Token、ASR、插話、靜音與真人體感。"
 fi
 echo "revision=$REVISION"
 echo "canary_url=$CANARY_URL"
