@@ -1,4 +1,8 @@
-google-genai>=2.10
+# ⚠ 一定要釘死版本（2026-11-12 事故）：原本寫 >=2.10，11/8 重建時自動裝到 11/6 剛出的 3.0，
+#   語音線一連 Gemini Live 就被拒（HTTP 404），正式聊聊從 11/8 起整條打不通、沒人發現。
+#   2.34.0＝11/5 那版正式機實際用的版本，11/12 實測 3.1 與 3.8 都連得上；3.0／3.2 實測都被拒。
+#   要升級：先在本機用新版本跑 engine/test_voice_engine_select.py 與一次真連線，過了再改這行。
+google-genai==2.34.0
 websockets>=16
 app-store-server-library==3.1.2
 opencc==1.4.0
