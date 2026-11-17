@@ -90,7 +90,7 @@
         "locale-segmentation"
       ],
       "releaseGate": "Country and locale operational visibility",
-      "baselineHanCandidates": 725,
+      "baselineHanCandidates": 727,
       "localizationContract": {
         "runtime": "web/src/admin-i18n.js",
         "validation": "scripts/test-admin-localizations.js",

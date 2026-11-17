@@ -265,7 +265,12 @@
     "（未填公司名）": "(sin nombre de empresa)",
     "合約已到期 · 緩衝期中": "Contrato finalizado · en periodo de gracia",
     "等待個人訂閱到期": "Esperando que caduque el plan personal",
-    "聊聊分鐘": "Minutos de charla"
+    "聊聊分鐘": "Minutos de charla",
+    "資料庫暫時讀不到": "Base de datos no disponible temporalmente",
+    "下面是這台主機上的備份，可能少了真實長輩的警訊——「沒有警訊」不代表沒事。": "Se muestra la copia local de este servidor; pueden faltar alertas reales: “sin alertas” no significa que todo esté bien.",
+    "備份裡沒有安全警訊——資料庫讀不到，不代表沒事。": "No hay alertas de seguridad en la copia de respaldo; la base de datos no está disponible, así que no significa que todo esté bien.",
+    "AI 判過受暴": "Maltrato confirmado por IA",
+    "提到受暴": "Menciona maltrato"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Últimos {0} días" },
