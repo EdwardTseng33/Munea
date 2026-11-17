@@ -102,7 +102,10 @@ def test_anomaly_no_contact():
 
 def test_anomaly_guardian():
     a = cw.detect_anomalies(_week(summaries=[_call("2026-10-13")], events=[_ev("2026-10-11", "high", ["protection_event"])]))
-    assert [x["type"] for x in a] == ["guardian"] and "高風險燈" in a[0]["fact"]
+    assert [x["type"] for x in a] == ["guardian"] and "提到需要馬上關心的事" in a[0]["fact"]
+    # 不講不一定是真的話、不露內部用語與英文等級（#717）
+    assert "即時通知" not in a[0]["fact"] and "守護腦" not in a[0]["fact"] and "high" not in a[0]["fact"]
+    assert "原句" not in a[0]["suggestion"]
 
 
 def test_render_text_is_fact_only():
@@ -183,7 +186,7 @@ def test_guardian_alarm_ignores_medium():
     assert cw.detect_anomalies(w) == []
     w2 = _week(summaries=[_call("2026-10-13")], events=[_ev("2026-10-10", "critical", ["self_harm_crisis"])])
     a = cw.detect_anomalies(w2)
-    assert [x["type"] for x in a] == ["guardian"] and "critical×1" in a[0]["fact"]
+    assert [x["type"] for x in a] == ["guardian"] and "緊急 1 次" in a[0]["fact"]
 
 
 def test_signals_outside_period_and_baseline_are_ignored():
