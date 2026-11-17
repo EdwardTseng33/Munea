@@ -10,6 +10,15 @@ sys.path.insert(0, os.path.dirname(__file__))
 import server
 from supabase_adapter import SupabaseAdapter
 
+# 刪帳號／下載副本 × 家人圈共用狀態的守門測試寫在另一支檔案；從這裡帶進來，
+# 上線前檢查（npm run test:launch 列的是這支）才會一併跑到。
+from test_account_delete_export_family_state import (  # noqa: E402,F401
+    CircleOwnerDeletesAccountTests,
+    FakeDatabaseSelfCheck,
+    MemberDeletesAccountTests,
+    MemberExportsDataTests,
+)
+
 
 ACCOUNT = "11111111-1111-4111-8111-111111111111"
 PERSON = "22222222-2222-4222-8222-222222222222"

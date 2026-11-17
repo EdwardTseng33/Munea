@@ -169,6 +169,10 @@ class SupabaseAdapter:
         if not owner:
             raise PermissionError("account_deletion_owner_required")
 
+        # 先清「留在別人家人圈裡、屬於自己的那幾格」，清不乾淨就整個停下來（帳號還在、可以再按一次）。
+        # 放在刪帳號之前：帳號一刪，成員資格跟著連動刪，就再也查不到他待過哪幾個家人圈。
+        family_state_cells_removed = self._remove_own_cells_from_other_family_circles()
+
         receipt_hash = hashlib.sha256(f"{self.account_id}:{auth_user_id}".encode("utf-8")).hexdigest()
         self._request(
             "POST",
@@ -183,6 +187,8 @@ class SupabaseAdapter:
                 "details": {
                     "receiptHash": receipt_hash,
                     "scope": "account_and_cascading_personal_data",
+                    # 只記清了幾格，不記是哪個家人圈、哪些人。
+                    "familyStateCellsRemoved": family_state_cells_removed,
                 },
             },
             prefer="return=minimal",
@@ -212,7 +218,86 @@ class SupabaseAdapter:
             "cleanupRequired": not auth_deleted,
             "receiptHash": receipt_hash,
             "authCleanupError": auth_error,
+            "familyStateCellsRemoved": family_state_cells_removed,
         }
+
+    # family_state_entries 裡「按人分格」的鑰匙。整列掛在家人圈建立者的帳號底下，
+    # 資料庫的連動刪除摸不到別人那一列 JSON 裡的某一格，所以刪帳號／匯出要自己處理：
+    #   vitals、safetyContacts：{personId: 那個人的資料}
+    #   circle：[{personId, name, relationship, …}]（家人圈名單，一人一筆）
+    # 其餘鑰匙（meds／familyFeed／activities／visit／routine／wallet）是整家共用一份、
+    # 裡面沒有記是誰的，分不出哪一筆屬於誰——刪帳號不動、匯出不放（寧可少刪、不帶別人的出去）。
+    FAMILY_STATE_PERSON_KEYED = ("vitals", "safetyContacts")
+    FAMILY_STATE_ROSTER_KEY = "circle"
+
+    @classmethod
+    def _split_person_from_family_state(cls, state_key, value, person_id):
+        """把一個家人圈條目拆成（有沒有他那一格, 他那一格, 拿掉之後剩下的值）。
+
+        形狀認不得（不是預期的物件／清單）一律回「沒有」、原值不動。"""
+        if state_key in cls.FAMILY_STATE_PERSON_KEYED and isinstance(value, dict) and person_id in value:
+            return True, value[person_id], {k: v for k, v in value.items() if k != person_id}
+        if state_key == cls.FAMILY_STATE_ROSTER_KEY and isinstance(value, list):
+            def is_mine(member):
+                return isinstance(member, dict) and person_id in (member.get("personId"), member.get("id"))
+            mine = [member for member in value if is_mine(member)]
+            if mine:
+                return True, mine, [member for member in value if not is_mine(member)]
+        return False, None, value
+
+    def _family_state_query_for_groups(self, family_group_ids):
+        keys = ",".join(self.FAMILY_STATE_PERSON_KEYED + (self.FAMILY_STATE_ROSTER_KEY,))
+        return {
+            "family_group_id": f"in.({','.join(family_group_ids)})",
+            "state_key": f"in.({keys})",
+            "select": "id,account_id,family_group_id,state_key,value",
+        }
+
+    def _remove_own_cells_from_other_family_circles(self):
+        """刪帳號前：把本人留在「別人帳號的家人圈」裡的那幾格拿掉，回傳清了幾格。
+
+        只改有他那一格的那幾列的 value，一次一列、用列編號指定；不刪整列、不碰其他人的格子。
+        自己帳號底下的家人圈不處理——那整個會跟著帳號連動刪，維持原本的行為。
+        任何一步失敗就丟例外，呼叫端不會往下刪帳號。"""
+        memberships = self._select(
+            "family_memberships",
+            {"person_id": f"eq.{self.person_id}", "select": "family_group_id"},
+        ) or []
+        group_ids = sorted({
+            row.get("family_group_id") for row in memberships
+            if self._is_uuid(row.get("family_group_id") or "")
+        })
+        if not group_ids:
+            return 0
+        try:
+            entries = self._select("family_state_entries", self._family_state_query_for_groups(group_ids)) or []
+        except SupabaseRequestError as exc:
+            if exc.error_kind == "missing_table":
+                return 0  # 這個環境還沒有這張表＝沒有任何一格可清，不擋刪帳號
+            raise
+        removed = 0
+        for row in entries:
+            if row.get("account_id") == self.account_id:
+                continue
+            found, _mine, rest = self._split_person_from_family_state(
+                row.get("state_key"), row.get("value"), self.person_id,
+            )
+            if not found:
+                continue
+            row_id = row.get("id")
+            if not self._is_uuid(row_id or ""):
+                raise RuntimeError("family_state_cleanup_row_unidentified")
+            patched = self._request(
+                "PATCH",
+                "family_state_entries",
+                query={"id": f"eq.{row_id}", "select": "id"},
+                payload={"value": rest},
+                prefer="return=representation",
+            )
+            if not patched:
+                raise RuntimeError("family_state_cleanup_incomplete")
+            removed += 1
+        return removed
 
     def export_scoped_personal_data(self):
         """Build a portable export for only the authenticated person's data."""
@@ -283,6 +368,26 @@ class SupabaseAdapter:
             })
             for key, (table, select) in person_tables.items()
         }
+        # 家人圈共用狀態裡屬於本人的那一格（健康數字、緊急聯絡人、名單上自己那一筆）。
+        # 整列掛在家人圈建立者帳號底下、裡面有其他家人的格子，所以只挑本人那一格放進副本。
+        family_state_entries = []
+        family_group_ids = sorted({
+            row.get("family_group_id") for row in family_memberships
+            if self._is_uuid(row.get("family_group_id") or "")
+        })
+        if family_group_ids:
+            for row in rows("family_state_entries", self._family_state_query_for_groups(family_group_ids)):
+                found, mine, _rest = self._split_person_from_family_state(
+                    row.get("state_key"), row.get("value"), self.person_id,
+                )
+                if found:
+                    family_state_entries.append({
+                        "familyGroupId": row.get("family_group_id"),
+                        "stateKey": row.get("state_key"),
+                        "value": mine,
+                    })
+        family_state_entries.sort(key=lambda entry: (entry["familyGroupId"] or "", entry["stateKey"] or ""))
+        personal["familyStateEntries"] = family_state_entries
         account_tables = {
             "subscription": "subscription_ledger",
             "usage": "usage_ledger",
