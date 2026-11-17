@@ -1,15 +1,16 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
-### 2026-11-17 蘇菲｜🔘 機構照護模式：App 端同意開關（Draft PR · 設計書 PR-b · call-path risk 無／低 · App E2E pending · 文案待老闆看過才合併）
+### 2026-11-17 蘇菲｜🔘 機構照護模式：App 端同意開關（Draft PR #708 · 設計書 PR-b · call-path risk 無／低 · App E2E pending · 文案待老闆看過才合併）
 
 - **為什麼**：一月要在照護據點試辦，照護人員要看得到「本人同意的那幾位」的每週關懷摘要。後端（#640 的 `/org-consent`、`/org-consent/set`）與正式資料庫（#701）都上線了，App 一直沒有畫面——沒有這個開關，機構端一個人都看不到。
-- **做了**：設定頁「帳號與家庭」那組多一列「{機構} 看得到什麼」，副標寫現在開或關；**有照護機構名額的人才看得到**，沒有名額的人設定頁不多東西。新視窗 `#orgConsentModal`：整列式開關（預設關）→ 結果訊息 →「隨時可以關」→「打開後看得到」五項 →「永遠看不到」四項 → 完成。按下去先「處理中…」不能連點，伺服器說好了開關才動；失敗（斷線、沒登入、後端錯）開關留在原位並講原因。開通碼成功畫面多一顆次要按鈕帶去這個視窗（不會自動幫他打開）。產品事件 `org_consent_set` 只帶 `{ result }` 或 `{ error }`，不帶機構名稱與名額代號。
+- **做了**：設定頁「帳號與家庭」那組多一列「{機構} 看得到什麼」，副標寫現在開或關；**有照護機構名額的人才看得到**，沒有名額的人設定頁不多東西。新視窗 `#orgConsentModal`：整列式開關（預設關）→ 結果訊息 →「隨時可以關」→「打開後看得到」五項 →「永遠看不到」四項 → 完成。按下去先「處理中…」不能連點，伺服器說好了開關才動；失敗（斷線、沒登入、後端錯、後端說這次不算數）開關留在原位並講原因。開通碼成功畫面多一顆次要按鈕帶去這個視窗（不會自動幫他打開）。產品事件 `org_consent_set` 只帶 `{ result }` 或 `{ error }`，不帶機構名稱與名額代號。
 - **企業類型（esg）不顯示**：設計書 2.2「企業 HR 窗口永遠沒有 L1／L2」、第 5 節「企業 HR 永遠停在 L0」；後端 `engine/org_api.py` 的 `_consented_seats` 對 esg 直接回空名單——開關對企業沒有任何作用，給了是騙人。App 用白名單（只認 `care`），不認得的類型也先不顯示。
-- **⚠ 文案對照後端時發現（要老闆定）**：後端 `whatOrgSees` 寫「症狀類別」，但機構端實際拿到的 `spokenHealth.categories` 是心情訊號的 `concerns`——每次通話由模型摘的「掛心事」短語，範圍含**身體不適／想念／煩惱／火氣的事**（`engine/perception_engine.py`）。App 文案照實際寫成「你提到的掛心事…只有幾個字的重點，不是原話」。要不要把後端收窄成只給身體狀況（文案就能改回「身體狀況」），這次沒動後端。
-- **怎麼放**：行為全在新檔 `web/src/org-consent.js`；`web/src/app.js` 只加一個掛勾（`window.__muneaOrgConsentBridge`）、`web/src/seat-code.js` 多五行（綁好後通知重讀一次）。**沒碰撥號／語音任何一行**。四語文案 26 鍵（`orgConsent.*`）；日文 `seatCode.*` 七處「団体」統一成「施設」（官網 `site-src` 與 B2B 網站 `b2b-src` 的日文對照護機構都用「施設」）。
+- **文案對照後端（已跟上 #711）**：第一版對照時發現機構端實際拿到的是掛心事短語、比後端自述的「症狀類別」寬；這個落差已由下面那一則（#711）在後端修掉——現在只給四類的次數（身體不舒服／睡不好／吃不下／心情或生活上的掛心事）。本張已併入主線，第 4 項文案改成「身體不舒服、睡不好、吃不下、其他掛心事，各提到幾次（只有次數，沒有內容）」；其餘八項對照新後端逐條核過、不用改。#711 新增的兩個失敗代碼也接上了：`consent_not_recorded` →「這次沒有開成功，開關還是關的。請稍後再試一次。」、`consent_not_applicable` →「這個機構用不到這項設定，沒有改到。」（後者與 `not_found` 會順手重讀名額，把入口收掉）。
+- **怎麼放**：行為全在新檔 `web/src/org-consent.js`；`web/src/app.js` 只加一個掛勾（`window.__muneaOrgConsentBridge`）、`web/src/seat-code.js` 多五行（綁好後通知重讀一次）。**沒碰撥號／語音任何一行**。四語文案 28 鍵（`orgConsent.*`）；日文 `seatCode.*` 七處「団体」統一成「施設」（官網 `site-src` 與 B2B 網站 `b2b-src` 的日文對照護機構都用「施設」）。
 - **call-path risk（無／低）**：動到 App／WebView 程式，但只加設定頁一列與獨立視窗。**App E2E pending**——要新版 App 裝到真 iPhone 才驗得到（登入 → 輸入照護機構的開通碼 → 設定頁出現那一列 → 打開／關掉 → 機構專區名單跟著出現／消失，另外照例撥一通）；目前只有本機瀏覽器預檢，不算已驗證。
-- **測試**：新增 `node scripts/test-org-consent-ui.js`（入口顯示條件、預設關、開與關各打 `/org-consent/set` 且參數只有 `{ seatId, granted }`、六種失敗都留在原位、不自動打開、事件不帶機構與名額、四語 26 鍵、文案對照後端 9 行；**51 種突變都會紅**）。`npm run test:ui-contracts`、`node scripts/test-seat-code-ui.js`、畫面清單與所有 i18n 測試全過。畫面數 40→41、全畫面證據重拍 492 張（PASS、0 失敗、0 外連請求）。手機尺寸 390×844 四語各狀態都截圖逐張看過（另看了 375×667 與特大字級）。
-- **未做**：新測試還沒掛進 `npm run test:launch`（#694／#696 正在改 `package.json` 同一行，等它們合併後跟 `test-seat-code-ui.js` 一起補）。`web/index.html` 的快取版號沒升（改版號時一起）。真機沒驗。「已登記、機構還沒開通」的名額後端 `/org-consent` 不會列出來，所以那種情況成功畫面沒有次要按鈕，要等名額生效後從設定頁進。Q5（家人看得到「機構的誰看過」）是第 3 段。
+- **測試**：`node scripts/test-org-consent-ui.js`（入口顯示條件、預設關、開與關各打 `/org-consent/set` 且參數只有 `{ seatId, granted }`、八種失敗都留在原位、不自動打開、事件不帶機構與名額、四語 28 鍵、文案對照後端 14 行＋週摘要區塊清單＋掛心事類別清單；**64 種突變都會紅**）。`npm run test:ui-contracts`、`node scripts/test-seat-code-ui.js`、`npm run test:launch`（112 步）全過。畫面數 40→41、全畫面證據 492 張（PASS、0 失敗、0 外連請求；併入 #711 後整套重拍過一次）。手機尺寸 390×844 四語各狀態都截圖看過（另看了 375×667 與特大字級）。
+- **未做**：新測試還沒掛進 `npm run test:launch`（#694／#696 正在改 `package.json` 同一行，等它們合併後跟 `test-seat-code-ui.js` 一起補）。`web/index.html` 的快取版號沒升（改版號時一起）。真機沒驗。英日西沒有母語者看過。「已登記、機構還沒開通」的名額後端 `/org-consent` 不會列出來，所以那種情況成功畫面沒有次要按鈕，要等名額生效後從設定頁進。Q5（家人看得到「機構的誰看過」）是第 3 段。
+- **上線順序**：含這張的 App 版本上架前，後端要先帶上 #711（不然機構端還是舊行為，App 上寫的「只有次數」就不是事實）。
 - **跟開著的 PR 重疊的檔**：`web/index.html`、`web/src/app.js`、四語 json（#694／#696／#706）——都是各加各的、位置錯開；日文 `seatCode.*` 那七行是唯一改到既有行的地方。這個分支有全畫面證據，跟上 main 用 merge。
 - **檔**：`web/src/org-consent.js`（新）、`scripts/test-org-consent-ui.js`（新）、`web/index.html`、`web/src/app.js`、`web/src/seat-code.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-surface-manifest.json`、`web/src/i18n/app-surface-copy-manifest.json`、`scripts/app-full-surface-i18n-browser-precheck.js`、`scripts/test-app-surface-manifest.js`、`scripts/test-i18n-visual-qa-worklist.js`、`scripts/test-i18n-visual-qa-evidence.js`、`docs/I18N-SURFACE-INVENTORY.json`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/`（492 張＋報告）、本看板。
 
