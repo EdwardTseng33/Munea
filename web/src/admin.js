@@ -632,12 +632,15 @@
       { label:"低風險", value:n((t.byRiskLevel||{}).low||0), sub:"情緒低落等" },
     ]);
     html+=principle("守護原則：沐寧偵測到不對勁時協助聯繫指定家人並引導撥打 119／1925。系統不做醫療判讀——所有警示皆需真人確認後處理。");
+    // 資料庫讀不到、改顯示這台主機上的備份時要說出來：備份可能少了真實長輩的警訊，「沒有」不代表沒事（#727）
+    const backup=!!(s.source&&s.source.degraded);
+    if(backup) html+=`<div class="ops-notice warn" role="status"><strong>資料庫暫時讀不到</strong>下面是這台主機上的備份，可能少了真實長輩的警訊——「沒有警訊」不代表沒事。</div>`;
     if(!rec.length){
-      html+=card("安全警訊清單", "聊天中出現高風險訊號會記在這", emptyBox("目前沒有安全警訊——是好消息。"));
+      html+=card("安全警訊清單", "聊天中出現高風險訊號會記在這", emptyBox(backup?"備份裡沒有安全警訊——資料庫讀不到，不代表沒事。":"目前沒有安全警訊——是好消息。"));
     } else {
       html+=card("安全警訊清單", "標紅為高風險，需 30 分內確認", `<div class="rows">${rec.slice(0,20).map((e)=>{
         const tone=String(e.riskLevel).match(/high|crisis|crit/i)?"bad":String(e.riskLevel).match(/med|mod/i)?"warn":"mute";
-        return `<div class="row-item ${tone==="bad"?"tint-bad":tone==="warn"?"tint-warn":""}"><div class="ri-body"><div class="ri-title">${esc(zh(RISK_ZH,e.riskLevel,"待查看"))} <span class="pill ${tone}">${esc((e.categories&&e.categories[0])||"訊號")}</span></div><div class="ri-desc">${esc(e.summary||"聊天中偵測到需關注訊號，請真人確認。")}</div><div class="ri-meta">${esc(e.personId||"用戶")} · ${esc(fmtTime(e.eventTime))}</div></div></div>`;
+        return `<div class="row-item ${tone==="bad"?"tint-bad":tone==="warn"?"tint-warn":""}"><div class="ri-body"><div class="ri-title">${esc(zh(RISK_ZH,e.riskLevel,"待查看"))} <span class="pill ${tone}">${esc((e.categories&&e.categories[0])||"訊號")}</span>${e.abuseConfirmed?'<span class="pill bad">AI 判過受暴</span>':(e.protectionMentioned?'<span class="pill bad">提到受暴</span>':"")}</div><div class="ri-desc">${esc(e.summary||"聊天中偵測到需關注訊號，請真人確認。")}</div><div class="ri-meta">${esc(e.personId||"用戶")} · ${esc(fmtTime(e.eventTime))}</div></div></div>`;
       }).join("")}</div>`);
     }
     html+=principle(`<b>出事時怎麼處理</b><div class="step-row"><span class="step"><i>1</i>30 分鐘內先確認</span><span class="step"><i>2</i>聯繫家庭圈指定的人</span><span class="step"><i>3</i>必要時引導撥 119／1925 並記錄</span><span class="step"><i>4</i>結案回填</span></div><div style="margin-top:8px">所有紀錄僅授權營運與安全團隊檢視。</div>`);

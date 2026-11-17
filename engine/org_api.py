@@ -599,19 +599,13 @@ def default_loaders():
     def guardian_events(account_ids, since_iso):
         activity = org_portal.load_cohort_activity(account_ids, since_iso, since_iso[:10], backend=backend)
         out = []
-        for ev in activity.get("productEvents") or []:
-            if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
-                continue
+        guardian = [ev for ev in activity.get("productEvents") or []
+                    if isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"]
+        # 寧寧自己講的話不算；提到受暴受剝削的先不放進機構畫面：機構的建議句是「聯絡本人或家屬」，對受暴不安全
+        # （加害人可能就是家人）——同一通只要有一筆提到受暴，那通每一筆都不放（#717 第二張）。要不要另開一條給社工的
+        # 處理方式，是政策決定；在那之前，內部告警照發、由營運處理。規則在 care_week.guardian_events_shareable。
+        for ev in care_week.guardian_events_shareable(guardian):
             props = ev.get("properties") or {}
-            if props.get("who") == "ai":
-                continue  # 寧寧自己講的話不是長輩亮燈（2026-11-18）
-            cats = props.get("categories") or []
-            if isinstance(cats, str):
-                cats = [cats]
-            if props.get("protectionEvent") or props.get("protectionMentioned") or "protection_event" in cats:
-                # 提到受暴受剝削先不放進機構畫面：機構的建議句是「聯絡本人或家屬」，對受暴不安全（加害人可能就是家人）。
-                # 要不要另開一條給社工的處理方式，是政策決定；在那之前，內部告警照發、由營運處理（#717）。
-                continue
             out.append({
                 "accountId": ev.get("accountId") or ev.get("account_id"),
                 "personId": ev.get("personId") or ev.get("person_id"),

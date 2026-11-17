@@ -265,7 +265,12 @@
     "（未填公司名）": "(company name blank)",
     "合約已到期 · 緩衝期中": "Contract ended · in grace period",
     "等待個人訂閱到期": "Waiting for personal plan to expire",
-    "聊聊分鐘": "Chat minutes"
+    "聊聊分鐘": "Chat minutes",
+    "資料庫暫時讀不到": "Database temporarily unavailable",
+    "下面是這台主機上的備份，可能少了真實長輩的警訊——「沒有警訊」不代表沒事。": "Showing this server's local backup, which may be missing real alerts — “no alerts” does not mean everyone is fine.",
+    "備份裡沒有安全警訊——資料庫讀不到，不代表沒事。": "No safety alerts in the backup — the database is unavailable, so this does not mean everyone is fine.",
+    "AI 判過受暴": "AI-confirmed abuse",
+    "提到受暴": "Mentions abuse"
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },
