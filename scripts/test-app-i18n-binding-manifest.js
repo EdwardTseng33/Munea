@@ -113,12 +113,12 @@ for (const binding of manifest.staticBindings) {
 
 assert.equal(
   manifest.staticBindings.filter(({ applyMode }) => applyMode === 'static').length,
-  20,
+  17,
   'Safe static binding inventory drifted',
 );
 assert.equal(
   manifest.staticBindings.filter(({ applyMode }) => applyMode === 'state-owned').length,
-  22,
+  19,
   'State-owned binding inventory drifted',
 );
 
