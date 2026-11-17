@@ -14,6 +14,13 @@
   [string]$AvatarAppKeySecret = "munea-avatar-app-key",
   [switch]$NoWorkerClockProbe,
   [int]$IntervalSeconds = 60,
+  # 2026-11-17: scheduled mode is the default. Cloud Scheduler calls
+  # POST /run-once every $TickMinutes minutes; the service bills per request
+  # and scales to zero. Pass -AlwaysOn for the legacy background loop, which
+  # needs one instance with CPU always allocated (the costly setup).
+  [switch]$AlwaysOn,
+  [int]$TickMinutes = 2,
+  [string]$SchedulerJob = "munea-gateway-monitor-tick-production",
   [switch]$Notify,
   [switch]$DryRun
 )
@@ -24,6 +31,11 @@ $source = Join-Path $root "deploy\gateway"
 
 if ($IntervalSeconds -lt 30) {
   throw "IntervalSeconds must be at least 30 seconds"
+}
+if ($TickMinutes -lt 1 -or $TickMinutes -gt 10) {
+  # Longer than 10 minutes lets the instance go cold between ticks, which
+  # resets the in-memory "already notified" state and repeats active alerts.
+  throw "TickMinutes must be between 1 and 10"
 }
 
 $gcloud = Get-Command gcloud.cmd -ErrorAction SilentlyContinue
@@ -40,6 +52,9 @@ if ($Notify) {
 }
 
 $notifyValue = if ($Notify) { "1" } else { "0" }
+$loopValue = if ($AlwaysOn) { "1" } else { "0" }
+$minInstances = if ($AlwaysOn) { "1" } else { "0" }
+$cpuFlag = if ($AlwaysOn) { "--no-cpu-throttling" } else { "--cpu-throttling" }
 $secretBindings = "MUNEA_GATEWAY_ADMIN_KEY=$($AdminKeySecret):latest"
 if ($Notify) {
   $secretBindings += ",MUNEA_SLACK_ALERT_WEBHOOK=$($SlackWebhookSecret):latest"
@@ -58,14 +73,14 @@ $argsList = @(
   "--command", "uvicorn",
   "--args", "monitor_service:app,--host,0.0.0.0,--port,8080",
   "--update-secrets", $secretBindings,
-  "--set-env-vars", "MUNEA_GATEWAY_URL=$GatewayUrl,MUNEA_GATEWAY_MONITOR_INTERVAL_SECONDS=$IntervalSeconds,MUNEA_GATEWAY_MONITOR_NOTIFY=$notifyValue",
+  "--set-env-vars", "MUNEA_GATEWAY_URL=$GatewayUrl,MUNEA_GATEWAY_MONITOR_INTERVAL_SECONDS=$IntervalSeconds,MUNEA_GATEWAY_MONITOR_NOTIFY=$notifyValue,MUNEA_GATEWAY_MONITOR_LOOP=$loopValue",
   "--memory", "512Mi",
   "--cpu", "1",
-  "--min-instances", "1",
+  "--min-instances", $minInstances,
   "--max-instances", "1",
   "--concurrency", "10",
-  "--timeout", "30",
-  "--no-cpu-throttling",
+  "--timeout", "60",
+  $cpuFlag,
   "--no-allow-unauthenticated",
   "--quiet"
 )
@@ -76,14 +91,57 @@ if ($removeSecrets.Count -gt 0) {
   $argsList += @("--remove-secrets", ($removeSecrets -join ","))
 }
 
-Write-Host "Deploying $Service (notify=$notifyValue)" -ForegroundColor Cyan
+$modeLabel = if ($AlwaysOn) { "always-on loop" } else { "scheduled every $TickMinutes min" }
+Write-Host "Deploying $Service (notify=$notifyValue, mode=$modeLabel)" -ForegroundColor Cyan
 if ($DryRun) {
   Write-Host ("gcloud " + ($argsList -join " "))
+  if (-not $AlwaysOn) {
+    Write-Host "then: allow $ServiceAccount to invoke $Service, and create or update Cloud Scheduler job $SchedulerJob (*/$TickMinutes * * * *, POST /run-once, OIDC)"
+  }
   exit 0
 }
 
 & $gcloud.Source @argsList
 if ($LASTEXITCODE -ne 0) { throw "Gateway monitor deployment failed" }
+
+if ($AlwaysOn) {
+  # The loop does the polling; a leftover tick would only double the work.
+  & $gcloud.Source scheduler jobs describe $SchedulerJob --project $ProjectId --location $Region --format="value(name)" 2>$null | Out-Null
+  if ($LASTEXITCODE -eq 0) {
+    & $gcloud.Source scheduler jobs pause $SchedulerJob --project $ProjectId --location $Region --quiet | Out-Null
+    Write-Host "Paused scheduler job $SchedulerJob (always-on mode)" -ForegroundColor Yellow
+  }
+} else {
+  $serviceUrl = (& $gcloud.Source run services describe $Service --project $ProjectId --region $Region --format="value(status.url)").Trim()
+  if (-not $serviceUrl) { throw "Could not read the $Service URL" }
+
+  # The service stays private. Only this one service account may call it,
+  # and only this one service.
+  & $gcloud.Source run services add-iam-policy-binding $Service `
+    --project $ProjectId --region $Region `
+    --member "serviceAccount:$ServiceAccount" --role "roles/run.invoker" --quiet | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Could not allow $ServiceAccount to invoke $Service" }
+
+  $jobArgs = @(
+    "--project", $ProjectId, "--location", $Region,
+    "--schedule", "*/$TickMinutes * * * *", "--time-zone", "Asia/Taipei",
+    "--uri", "$serviceUrl/run-once", "--http-method", "POST",
+    "--oidc-service-account-email", $ServiceAccount,
+    "--oidc-token-audience", $serviceUrl,
+    "--attempt-deadline", "60s",
+    "--max-retry-attempts", "1", "--min-backoff", "20s"
+  )
+  & $gcloud.Source scheduler jobs describe $SchedulerJob --project $ProjectId --location $Region --format="value(name)" 2>$null | Out-Null
+  if ($LASTEXITCODE -eq 0) {
+    & $gcloud.Source scheduler jobs update http $SchedulerJob @jobArgs --quiet | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Could not update scheduler job $SchedulerJob" }
+    & $gcloud.Source scheduler jobs resume $SchedulerJob --project $ProjectId --location $Region --quiet 2>$null | Out-Null
+  } else {
+    & $gcloud.Source scheduler jobs create http $SchedulerJob @jobArgs --quiet | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Could not create scheduler job $SchedulerJob" }
+  }
+  Write-Host "Scheduler job $SchedulerJob calls $serviceUrl/run-once every $TickMinutes min" -ForegroundColor Green
+}
 
 & $gcloud.Source run services describe $Service --project $ProjectId --region $Region `
   --format="table(status.url,status.latestReadyRevisionName,spec.template.metadata.annotations.'autoscaling.knative.dev/minScale')"

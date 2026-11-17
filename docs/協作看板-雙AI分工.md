@@ -1,5 +1,16 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-17 蘇菲｜💸 雲端省錢四項＋總機看門狗改「定時叫醒」（PR · 不碰 App 通話路徑）
+
+- **為什麼**：Edward 11/17 問「還有哪裡可省」，拍板四項都做。查帳時發現看門狗（munea-gateway-monitor）11/5 被拿掉「至少一台」之後，常駐迴圈就沒有機器可跑——**警報靜靜停了 12 天**，錢沒在燒、但也沒人在看。
+- **看門狗**：`deploy/gateway/monitor_service.py` 新增 `POST /run-once`（叫一次、查一次）；常駐迴圈改成要 `MUNEA_GATEWAY_MONITOR_LOOP=1` 才開。`scripts/cloud-run-deploy-gateway-monitor.ps1` 預設改成「按請求計費、可縮到零」＋建立排程 `munea-gateway-monitor-tick-production`（每 2 分鐘、OIDC），`-AlwaysOn` 可回舊模式。服務維持不公開，只讓 `munea-call-control` 服務帳號呼叫這一個服務。
+- **假警報**：`deploy/gateway/monitor.py` 不再把手機畫臉的虛擬座位 `on-device-face` 當成「心跳斷了的臉機」（它本來就沒有心跳）。真的臉機失聯照樣報。
+- **另外三項（雲端設定、不在程式庫）**：① 舊臉部轉接主機 `munea-turn` 關機（磁碟與固定位址 34.81.102.52 保留，只關不拆）；② `munea-gpu` 印象檔的日本、歐洲兩份副本刪除（逐一比對過內容都在台灣正本裡；要在那兩區重開備援卡得先從台灣正本推一份過去）；③ `cloud-run-source-deploy` 設自動清理（每個服務留最近 15 版，其餘超過 30 天刪）、部署原始檔桶超過 30 天自動刪。
+- **測試**：`python scripts/test_gateway_monitor.py` 35 案（新增 6：虛擬座位不誤報、真臉機照報、定時模式不跑迴圈、叫一次只跑一次、失敗回 500、迴圈預設關）。
+- **還沒做**：雲端監控那條「正式線巡邏鈴」規則沒接任何通知管道（響了沒人收得到），且裡面的租卡管家探針永遠失敗——待 Edward 決定要不要接上信箱。
+- **檔**：`deploy/gateway/monitor.py`、`deploy/gateway/monitor_service.py`、`scripts/cloud-run-deploy-gateway-monitor.ps1`、`scripts/test_gateway_monitor.py`、本看板。
+
+
 ### 2026-11-09 卡西法｜🔔 1.0.72 緊急聯絡人真的通知家人（PR · call-path risk：動到 engine/live_voice_server.py）
 
 - **為什麼**：「安全通知」畫面原本只存在長輩手機 localStorage、伺服器完全不知道，沒有任何通知流程。Edward 拍板這版要做出真的通知。
