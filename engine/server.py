@@ -4877,8 +4877,12 @@ def normalize_product_event(data=None):
     data = data or {}
     store = load_app_profile_store()
     account_id = data.get("accountId") or data.get("account_id") or store.get("account", {}).get("id") or "local-demo-account"
-    person_id = data.get("personId") or data.get("person_id") or store.get("primaryCareRecipientId")
-    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or store.get("familyGroup", {}).get("id")
+    # explicitScope：呼叫端已經明講是誰（例如通話亮燈由 Brain 認人後寫入）——沒有家庭圈就是沒有，
+    # 不拿那份全程序共用、不分人的設定快取補上，免得記到別人的家庭圈（#717 複審）。
+    explicit_scope = bool(data.get("explicitScope"))
+    person_id = data.get("personId") or data.get("person_id") or (None if explicit_scope else store.get("primaryCareRecipientId"))
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or (
+        None if explicit_scope else store.get("familyGroup", {}).get("id"))
     event_time = parse_iso_datetime(data.get("eventTime") or data.get("event_time"))
     event_name = str(data.get("eventName") or data.get("event_name") or "unknown_event").strip()[:80] or "unknown_event"
     properties = data.get("properties") if isinstance(data.get("properties"), dict) else {}
@@ -10738,6 +10742,9 @@ def voice_guardian_event_response(data):
         categories = [str(c)[:48] for c in (data.get("categories") or []) if c][:6]
         who = "ai" if str(data.get("who") or "") == "ai" else "user"
         family_candidate = bool(data.get("familyNotificationCandidate"))
+        # notify=False：Voice 通話中先只記錄，等整段話講完、確定沒提到受暴才另外送一筆 record=False／notify=True 來發（#717 複審）。
+        # 舊版 Voice 不帶這欄＝照舊當場通知。
+        notify_now = bool(data.get("notify", True))
         protection = bool(data.get("protectionEvent")) or bool(data.get("protectionMentioned")) or "protection_event" in categories
         props = {
             "riskLevel": level, "categories": categories, "analyticsExcluded": True, "source": "live_voice",
@@ -10753,13 +10760,13 @@ def voice_guardian_event_response(data):
             try:
                 # personId／familyGroupId 一定明講：不帶的話會被一份全程序共用、不分人的快取補上，記到別人身上（#717 信任關卡）
                 append_product_event({"eventName": "guardian_risk_evaluated", "source": "live_voice", "properties": props,
-                                      "personId": person, "familyGroupId": group})
+                                      "personId": person, "familyGroupId": group, "explicitScope": True})
                 recorded = True
             except Exception as e:  # 記錄出錯不能連通知一起沒了
                 log_fallback_exception("record voice guardian event", e)
         dispatch = None
         # 只有長輩本人說的、high／critical、通知候選、而且沒提到受暴，才通知緊急聯絡人（Brain 這邊再鎖一次）
-        if who == "user" and family_candidate and not protection and level in ("high", "critical"):
+        if notify_now and who == "user" and family_candidate and not protection and level in ("high", "critical"):
             dispatch = dispatch_safety_alert(person, "guardian", family_group_id=group)
         return {"ok": True, "identityResolved": True, "recorded": recorded, "dispatch": dispatch}
     finally:

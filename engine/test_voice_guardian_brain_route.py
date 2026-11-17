@@ -10,11 +10,17 @@
   三、沒有來電者身分 → 退回本機舊寫法；Brain 送不出去 → 絕不拋例外。
   四、Brain 端：認不出人就不記不發；長輩本人說、而且是通知候選才通知；等級亂填一律當 none。
   五、家人週摘要與機構提醒都不把 who=ai 的亮燈算進去。
+  六、通知家人等整段話講完才決定（#717 複審）：先講症狀、後講「是他打的」也不通知；這通提過受暴，整通都不通知；
+      電話掛斷就立刻決定；一通最多通知一次；寧寧自己的話不排通知。
+  七、收線前把守護腦的事做完（最後幾句判完、送 Brain 的工作做完）；沒通知到走最高級告警、不帶 ID；
+      沒有家庭圈的人，紀錄不會被共用快取補上別人的圈。
 跑法：python -m unittest test_voice_guardian_brain_route
 """
+import asyncio
 import os
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -305,9 +311,10 @@ class DedupeTests(unittest.TestCase):
         voice.guardian_record_and_alert = lambda *a, **k: calls.append(a)
         try:
             st = {}
+            hit = _risk("high", "medical_emergency_signal", True)
             for _ in range(5):                                            # 字幕每進一小段就重判一次
-                voice._guardian_side_effects(1, "user", {}, "u", st, (3, "user", "high", ("medical_emergency_signal",)))
-            voice._guardian_side_effects(1, "user", {}, "u", st, (4, "user", "high", ("medical_emergency_signal",)))
+                voice._guardian_side_effects(1, "user", hit, "u", st, (3, "user", "high", ("medical_emergency_signal",)))
+            voice._guardian_side_effects(1, "user", hit, "u", st, (4, "user", "high", ("medical_emergency_signal",)))
         finally:
             voice.guardian_record_and_alert = original
         self.assertEqual(len(calls), 2)                                   # 第 3 輪一次、第 4 輪一次
@@ -331,6 +338,285 @@ class AiSpeechNotCountedTests(unittest.TestCase):
         block = src[src.index('for ev in load_product_events(since_iso=since_iso, limit=2000) or []:'):]
         block = block[:block.index("except Exception as e:")]
         self.assertIn('props.get("who") == "ai"', block)
+
+
+class HoldFamilyNoticeTests(unittest.TestCase):
+    """通知家人等整段話講完才決定（#717 複審）：字幕一小段一小段進來，長輩常先講症狀、再講原因。"""
+
+    def setUp(self):
+        import live_voice_server as voice
+        self.voice = voice
+        self.records, self.notices = [], []
+        self._orig = (voice.guardian_record_and_alert, voice.guardian_family_notify,
+                      voice.perception_engine.guardian_semantic_review, voice.GUARDIAN_FAMILY_HOLD_S)
+        voice.guardian_record_and_alert = lambda who, cid, result, person_id=None, **k: self.records.append(
+            (who, result["risk"].get("level"), bool(result["risk"].get("protectionMentioned")), k.get("defer_family")))
+        voice.guardian_family_notify = lambda cid, pid, level, cats, **k: self.notices.append((pid, level, list(cats))) or True
+        voice.perception_engine.guardian_semantic_review = lambda *a, **k: None
+        voice.GUARDIAN_FAMILY_HOLD_S = 0.2
+
+    def tearDown(self):
+        v = self.voice
+        (v.guardian_record_and_alert, v.guardian_family_notify,
+         v.perception_engine.guardian_semantic_review, v.GUARDIAN_FAMILY_HOLD_S) = self._orig
+
+    def _state(self):
+        st = self.voice._new_call_state()
+        st["memory_scope"] = "voice-auth-user-1"
+        return st
+
+    async def _speak(self, st, chunks, turn_id=1):
+        buf = ""
+        for c in chunks:                                                  # 字幕每進一小段，就拿整段重判一次
+            buf = (buf + c)[-200:]
+            await self.voice.guardian_watch(1, "user", buf, st, None, turn_id=turn_id, allow_cue=True)
+
+    def test_symptom_first_abuse_later_never_notifies_family(self):
+        async def run():
+            st = self._state()
+            await self._speak(st, ["我", "胸口好痛", "，喘不過氣", "，因為", "他打我"])
+            await asyncio.sleep(0.5)
+            await self.voice._guardian_drain_on_close(1, st)
+        asyncio.run(run())
+        self.assertEqual(self.notices, [])
+        self.assertTrue(any(r[2] for r in self.records))                  # 後半句補記一筆、帶受暴標記
+        self.assertTrue(self.records and all(r[3] for r in self.records))  # 通話中的記錄一律請 Brain 先別通知
+
+    def test_plain_emergency_notifies_once_after_the_hold(self):
+        async def run():
+            st = self._state()
+            await self._speak(st, ["我胸口好痛", "，喘不過氣"])
+            before = list(self.notices)
+            await asyncio.sleep(0.5)
+            return st, before
+        st, before = asyncio.run(run())
+        self.assertEqual(before, [])                                      # 還在等
+        self.assertEqual(len(self.notices), 1)
+        self.assertEqual(self.notices[0][0], "auth-user-1")
+        self.assertIn(self.notices[0][1], ("high", "critical"))
+        self.assertTrue(st.get("guardian_family_notified"))
+
+    def test_hangup_decides_right_away(self):
+        self.voice.GUARDIAN_FAMILY_HOLD_S = 30
+        async def run():
+            st = self._state()
+            await self._speak(st, ["我胸口好痛，喘不過氣"])
+            t0 = time.monotonic()
+            await self.voice._guardian_drain_on_close(1, st)
+            return time.monotonic() - t0
+        took = asyncio.run(run())
+        self.assertEqual(len(self.notices), 1)
+        self.assertLess(took, 5)
+
+    def test_abuse_earlier_in_the_call_blocks_later_emergencies(self):
+        async def run():
+            st = self._state()
+            await self._speak(st, ["他打我"], turn_id=1)
+            await self._speak(st, ["我胸口好痛，喘不過氣"], turn_id=2)
+            await asyncio.sleep(0.5)
+            await self.voice._guardian_drain_on_close(1, st)
+        asyncio.run(run())
+        self.assertEqual(self.notices, [])
+
+    def test_only_one_family_notice_per_call(self):
+        async def run():
+            st = self._state()
+            await self._speak(st, ["我胸口好痛，喘不過氣"], turn_id=1)
+            await asyncio.sleep(0.5)
+            await self._speak(st, ["我不想活了"], turn_id=2)
+            await asyncio.sleep(0.5)
+            await self.voice._guardian_drain_on_close(1, st)
+        asyncio.run(run())
+        self.assertEqual(len(self.notices), 1)
+
+    def test_ai_speech_never_queues_a_family_notice(self):
+        async def run():
+            st = self._state()
+            await self.voice.guardian_watch(1, "ai", "胸口痛、喘不過氣要馬上打 119", st, None, turn_id=1, allow_cue=False)
+            await self.voice._guardian_drain_on_close(1, st)
+        asyncio.run(run())
+        self.assertEqual(self.notices, [])
+
+
+class CloseDrainTests(unittest.TestCase):
+    """收線前把守護腦的事做完：Voice 沒開 CPU 常駐，handler 一返回背景工作就可能卡死。"""
+
+    def test_close_waits_for_brain_work_still_in_flight(self):
+        import live_voice_server as voice
+        done = []
+        original = voice.guardian_record_and_alert
+
+        def slow(*a, **k):
+            time.sleep(0.5)
+            done.append(True)
+
+        voice.guardian_record_and_alert = slow
+        try:
+            async def run():
+                st = voice._new_call_state()
+                voice._guardian_side_effects(1, "user", _risk("medium", "medical_boundary", False), "u", st,
+                                             (1, "user", "medium", ("medical_boundary",)))
+                started = list(done)
+                await voice._guardian_drain_on_close(1, st)
+                return started, list(done)
+            started, finished = asyncio.run(run())
+        finally:
+            voice.guardian_record_and_alert = original
+        self.assertEqual((started, finished), ([], [True]))
+
+    def test_close_gives_the_last_sentence_a_moment_to_be_judged(self):
+        import live_voice_server as voice
+
+        async def run():
+            st = voice._new_call_state()
+            finished = []
+
+            async def slow_watch():
+                await asyncio.sleep(0.3)
+                finished.append(True)
+
+            voice._spawn_guardian_watch(st, slow_watch())
+            await voice._guardian_drain_on_close(1, st)
+            return finished
+        self.assertEqual(asyncio.run(run()), [True])
+
+
+    def test_handler_drains_before_cancelling_background_work(self):
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "live_voice_server.py"), encoding="utf-8").read()
+        block = src[src.index("        if _key_idx is not None:"):]
+        block = block[:block.index('        fw = st.get("face_ws")')]
+        self.assertLess(block.index("await _guardian_drain_on_close(cid, st)"), block.index('for t in st.get("bg_tasks", []):'))
+
+
+class NotifyWaitTests(unittest.TestCase):
+    def test_wait_sends_before_returning(self):
+        import threading
+        import notify
+        seen = []
+        with patch.object(notify, "_ALERT", "https://alerts.invalid/x"),                 patch.object(notify.urllib.request, "urlopen",
+                             side_effect=lambda *a, **k: seen.append(threading.current_thread().name) or _Resp()):
+            notify.alert("voice", "guardian:wait-test-%s" % time.time(), "d", critical=True, wait=True)
+            sent_inline = list(seen)
+        self.assertEqual(sent_inline, [threading.current_thread().name])   # 回來之前就送完、在同一條執行緒
+
+
+class _Resp:
+    def read(self):
+        return b"ok"
+
+class VoiceDeferTests(unittest.TestCase):
+    def test_in_call_record_asks_brain_not_to_notify_yet(self):
+        import live_voice_server as voice
+        posted = []
+        voice.guardian_record_and_alert("user", 1, _risk("high", "medical_emergency_signal", True), alert_fn=lambda *a, **k: None,
+                                        person_id="u1", defer_family=True,
+                                        brain_post=lambda p: posted.append(p) or {"identityResolved": True, "recorded": True})
+        self.assertEqual((posted[0]["notify"], posted[0]["familyNotificationCandidate"], posted[0]["record"]), (False, True, True))
+
+    def test_deferred_record_does_not_report_contacts_not_queued(self):
+        import live_voice_server as voice
+        alerts = []
+        voice.guardian_record_and_alert("user", 1, _risk("high", "medical_emergency_signal", True),
+                                        alert_fn=lambda *a, **k: alerts.append(a), person_id="u1", defer_family=True,
+                                        brain_post=lambda p: {"identityResolved": True, "recorded": True,
+                                                              "dispatch": {"contactCount": 2, "queued": 0}})
+        self.assertFalse([a for a in alerts if a[1] == "guardian:delivery_failed"])
+
+    def test_family_notice_payload_and_urgent_failure_alert(self):
+        import live_voice_server as voice
+        posted, alerts = [], []
+        ok = voice.guardian_family_notify(1, "auth-user-secret", "critical", ["self_harm_crisis"],
+                                          alert_fn=lambda *a, **k: alerts.append((a, k)),
+                                          brain_post=lambda p: posted.append(p) or {"identityResolved": True,
+                                                                                    "dispatch": {"queued": 1, "contactCount": 1}})
+        self.assertTrue(ok)
+        self.assertEqual((posted[0]["record"], posted[0]["notify"], posted[0]["who"], posted[0]["familyNotificationCandidate"]),
+                         (False, True, "user", True))
+        calls = []
+
+        def boom(payload):
+            calls.append(payload)
+            raise RuntimeError("brain down")
+
+        ok = voice.guardian_family_notify(1, "auth-user-secret", "critical", ["self_harm_crisis"],
+                                          alert_fn=lambda *a, **k: alerts.append((a, k)), brain_post=boom)
+        self.assertFalse(ok)
+        self.assertEqual(len(calls), 2)                                   # 重試一次
+        failed = [x for x in alerts if x[0][1] == "guardian:delivery_failed"]
+        self.assertEqual(len(failed), 1)
+        self.assertTrue(failed[0][1].get("critical"))                     # 「叫不到人」那一級
+        self.assertIn("reason=brain_unreachable", failed[0][0][2])
+        self.assertNotIn("auth-user-secret", str(alerts))                # 不帶任何 ID
+
+    def test_unqueued_contacts_on_the_notice_are_reported(self):
+        import live_voice_server as voice
+        alerts = []
+        ok = voice.guardian_family_notify(1, "u", "high", ["medical_emergency_signal"],
+                                          alert_fn=lambda *a, **k: alerts.append(a),
+                                          brain_post=lambda p: {"identityResolved": True, "dispatch": {"queued": 0, "contactCount": 2}})
+        self.assertFalse(ok)
+        self.assertTrue(any("contacts_not_queued" in a[2] for a in alerts if a[1] == "guardian:delivery_failed"))
+
+
+class BrainNotifyFlagTests(unittest.TestCase):
+    def setUp(self):
+        self.recorded, self.dispatched = [], []
+        self._patches = [
+            patch.object(server, "append_product_event", side_effect=lambda ev: self.recorded.append(ev) or ev),
+            patch.object(server, "dispatch_safety_alert",
+                         side_effect=lambda pid, cat, family_group_id=None, **kw: self.dispatched.append((pid, cat)) or {"queued": 1}),
+            patch.object(server, "_voice_identity_scope", return_value=(None, "person-1")),
+        ]
+        for p in self._patches:
+            p.start()
+
+    def tearDown(self):
+        for p in self._patches:
+            p.stop()
+
+    def test_notify_false_records_but_does_not_notify(self):
+        out = server.voice_guardian_event_response({"userId": "u1", "level": "high", "who": "user",
+                                                    "familyNotificationCandidate": True, "notify": False})
+        self.assertEqual((len(self.recorded), self.dispatched, out["dispatch"]), (1, [], None))
+
+    def test_notice_only_call_notifies_without_a_second_record(self):
+        server.voice_guardian_event_response({"userId": "u1", "level": "high", "who": "user",
+                                              "familyNotificationCandidate": True, "record": False, "notify": True})
+        self.assertEqual((self.recorded, len(self.dispatched)), ([], 1))
+
+    def test_old_voice_without_the_flag_still_notifies(self):
+        server.voice_guardian_event_response({"userId": "u1", "level": "critical", "who": "user", "familyNotificationCandidate": True})
+        self.assertEqual(len(self.dispatched), 1)
+
+    def test_record_never_borrows_someone_elses_circle(self):
+        with patch.object(server, "_current_family_group_id", return_value=None):
+            server.voice_guardian_event_response({"userId": "u1", "level": "high", "who": "user", "familyNotificationCandidate": False})
+        self.assertTrue(self.recorded[0].get("explicitScope"))
+        cached = {"familyGroup": {"id": "someone-elses-circle"}, "primaryCareRecipientId": "someone-else"}
+        with patch.object(server, "load_app_profile_store", return_value=cached):
+            ev = server.normalize_product_event(self.recorded[0])
+            legacy = server.normalize_product_event({"eventName": "x", "personId": "person-1"})
+        self.assertEqual((ev["personId"], ev["familyGroupId"]), ("person-1", None))
+        self.assertEqual(legacy["familyGroupId"], "someone-elses-circle")    # 其他舊呼叫照舊
+
+
+class ProtectionWordingTests(unittest.TestCase):
+    """複審抓到的兩種說法：關鍵字一定會漏，這兩種先補；長得像的不能誤擋。"""
+
+    def test_new_abuse_wordings_block_family(self):
+        import model_router
+        for text in ("我兒子一直對我動手，我好想死", "我胸口好痛，是我兒子打的"):
+            r = model_router.guardian_evaluate_response({"text": text, "effort": "quick"})
+            self.assertTrue(r["risk"]["protectionMentioned"], text)
+            self.assertFalse(r["responsePolicy"]["familyNotificationCandidate"], text)
+
+    def test_look_alikes_still_notify_family(self):
+        import model_router
+        for text in ("醫生說要對我動手術，我胸口好痛喘不過氣", "電話是我兒子打的，我胸口好痛喘不過氣",
+                     "119是我女兒打的，我胸口好痛喘不過氣"):
+            r = model_router.guardian_evaluate_response({"text": text, "effort": "quick"})
+            self.assertFalse(r["risk"]["protectionMentioned"], text)
+            self.assertTrue(r["responsePolicy"]["familyNotificationCandidate"], text)
 
 
 if __name__ == "__main__":
