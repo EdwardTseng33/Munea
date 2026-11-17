@@ -1292,17 +1292,18 @@
     html+=`<div class="ops-notice info" role="status"><strong>內部限定・不可外流</strong>這一頁列出每個席次綁定的 email／狀態，只有我們自己看；企業客戶只會拿到月報上的彙總數字，永遠看不到這一頁。</div>`;
     const seatRows=seats.map((s)=>[
       `<input type="checkbox" class="ent-seat-chk" value="${esc(s.id)}" ${["active","waiting","grace"].includes(s.status)?"":"disabled"}>`,
-      esc(s.inviteEmail||"–"),
+      entSeatWhoHTML(s),
+      entSeatCodeHTML(s),
       entSeatStatusPill(s.status),
       s.activatedAt?esc(fmtDate(s.activatedAt)):`<span class="muted">—</span>`,
       s.graceUntil?esc(fmtDate(s.graceUntil)):`<span class="muted">—</span>`,
       s.usageMinutes!=null?n(s.usageMinutes)+" 分":`<span class="muted">—</span>`,
     ]);
-    html+=card("席次明細", `共 ${seats.length} 席 · 勾選「使用中／等待接手／緩衝期」的席次可批次授予（待開通表示 email 還沒綁定帳號，還不能授予）`, seats.length?`
-      ${tableHTML(["","Email","狀態","綁定時間","緩衝期至","本月用量"], seatRows)}
+    html+=card("席次明細", `共 ${seats.length} 席 · 勾選「使用中／等待接手／緩衝期」的席次可批次授予（待開通表示還沒有人輸入開通碼、或 email 還沒比對到帳號，還不能授予）`, (seats.length?`
+      ${tableHTML(["","對象","開通碼","狀態","綁定時間","緩衝期至","本月用量"], seatRows)}
       <button type="button" class="btn-sm" data-ent-grant="${esc(clientId)}" style="margin-top:10px">批次授予</button>
       <div id="entGrantNote"></div>
-    `:emptyBox("這家公司還沒有匯入任何席次——回企業客戶列表按「＋ 匯入名單」上傳。"));
+    `:emptyBox("這家公司還沒有任何席次——用下面「產生開通碼」開一批，或回企業客戶列表按「＋ 匯入名單」上傳 email 名單。"))+entCodeGeneratorHTML(clientId, seats));
     const invRows=invoices.map((iv)=>[
       esc(iv.invoiceNo||iv.id||"–"),
       `${esc(fmtDate(iv.periodStart))} － ${esc(fmtDate(iv.periodEnd))}`,
@@ -1388,9 +1389,123 @@
     });
     const closeBtn=mo.querySelector("[data-nc-close]"); if(closeBtn) closeBtn.focus();
   }
+  // ── 開通碼（2026-11-17）：每席一組 8 位數字，長輩登入 App 後輸入就綁到自己的帳號 ──
+  // 為什麼要有：席次原本只認 email 對人，但用 Apple 登入的人多半是蘋果隱藏信箱，機構名單對不上。
+  function entFormatCode(code){ const c=String(code||""); return c.length===8 ? c.slice(0,4)+"-"+c.slice(4) : c; }
+  function entSeatWhoHTML(s){
+    const name=s.memberName?`<b>${esc(s.memberName)}</b>`:"", phone=s.memberPhone?`<span class="muted">${esc(s.memberPhone)}</span>`:"";
+    const email=s.inviteEmail?esc(s.inviteEmail):"";
+    const parts=[name,phone,email].filter(Boolean);
+    return parts.length?parts.join(" · "):`<span class="muted">（未填對象）</span>`;
+  }
+  function entSeatCodeHTML(s){
+    if(!s.redeemCode) return `<span class="muted">—</span>`;
+    const used=!!(s.accountId||s.redeemedAt);
+    return `<span class="ent-code">${esc(entFormatCode(s.redeemCode))}</span> <span class="pill ${used?"ok":"mute"}">${used?"已使用":"未使用"}</span>`;
+  }
+  function entCodeGeneratorHTML(clientId, seats){
+    const codeSeats=(seats||[]).filter((s)=>s.redeemCode), unused=codeSeats.filter((s)=>!(s.accountId||s.redeemedAt));
+    return `<details class="ent-code-gen" style="margin-top:14px"${(seats||[]).length?"":" open"}>
+      <summary><b>產生開通碼</b> <span class="muted">每席一組 8 位數字，發給長輩；他登入 App 後到「設定 → 機構開通碼」輸入，就算是這家機構的席次。</span></summary>
+      <div style="margin-top:10px">
+        <label class="field field-wide"><span>名冊（每行一位：稱呼,手機,備註——都可以不填，只是讓我們和機構認得出誰是誰）</span>
+          <textarea id="entCodeRoster" rows="5" placeholder="王奶奶,0912345678,A 棟&#10;李爺爺,0987654321"></textarea></label>
+        <label class="field"><span>或者不給名冊，只要幾組空白的碼</span><input type="number" id="entCodeCount" min="1" max="500" placeholder="例如 10"></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button type="button" class="btn-sm" data-ent-create-codes="${esc(clientId)}">產生開通碼</button>
+          ${codeSeats.length?`<button type="button" class="btn-ghost btn-sm" data-ent-codes-download="${esc(clientId)}">下載開通碼清單（${codeSeats.length}）</button>`:""}
+          ${unused.length?`<button type="button" class="btn-ghost btn-sm" data-ent-codes-cards="${esc(clientId)}">下載開通小卡（未使用 ${unused.length} 張，可列印）</button>`:""}
+        </div>
+        <div id="entCodeNote"></div>
+      </div>
+    </details>`;
+  }
+  const ENT_CODE_ERROR_ZH = {
+    code_seat_rows_required: "請貼上名冊，或填要幾組空白的碼",
+    code_seat_batch_too_large: "一次最多 500 組，請分批產生",
+    enterprise_client_ended: "這家公司合約已結束，不能再產生開通碼",
+    enterprise_client_not_found: "找不到這家公司",
+    code_seat_create_failed: "開通碼建不起來——最可能是正式資料庫還沒執行 033 那支更新",
+  };
+  function entParseCodeRoster(text){
+    return String(text||"").split(/\r?\n/).map((line)=>line.trim()).filter(Boolean).map((line)=>{
+      const cells=line.split(/[,，\t]/).map((c)=>c.trim());
+      return { name:cells[0]||"", phone:cells[1]||"", note:cells.slice(2).join("，") };
+    });
+  }
+  function entCurrentSeats(clientId){
+    const ed=state.tabs.entDetail||{};
+    return ed.clientId===clientId && ed.data ? { seats:ed.data.seats||[], client:ed.data.client||{} } : { seats:[], client:{} };
+  }
+  function entCreateCodes(clientId, confirmOverQuota){
+    const rosterEl=$("entCodeRoster"), countEl=$("entCodeCount");
+    const rows=entParseCodeRoster(rosterEl?rosterEl.value:""), count=Number(countEl&&countEl.value)||0;
+    if(!rows.length && !count){ entActionNote("entCodeNote", `<div class="ops-notice warn" role="alert" style="margin-top:10px"><strong>${esc(ENT_CODE_ERROR_ZH.code_seat_rows_required)}</strong></div>`); return; }
+    const token=state.token||readAdminToken(), base=state.base||initialBaseUrl();
+    const body=rows.length?{ clientId, rows }:{ clientId, count };
+    if(confirmOverQuota) body.confirmOverQuota=true;
+    entActionNote("entCodeNote", `<div class="ops-notice info" role="status" style="margin-top:10px"><strong>產生中…</strong></div>`);
+    postAdmin(base, token, "/admin/enterprise/seats/create-codes", body)
+      .then((p)=>{
+        const made=(p&&p.seats)||[], failed=(p&&p.failedCount)||0;
+        state.tabs.entCodeFlash={ clientId, html:`<div class="ops-notice info" role="status" style="margin-top:10px"><strong>已產生 ${made.length} 組開通碼</strong>${failed?`・${failed} 組沒建成，請再產生一次補上`:""}　席次明細已更新，可以下載清單或小卡發給機構。</div>` };
+        reloadEnterpriseClients(); loadEnterpriseClientDetail(clientId);
+      })
+      .catch((e)=>{
+        // postAdmin 遇到 ok:false 會丟例外，伺服器回的細節掛在 e.payload 上
+        const err=(e&&e.payload&&typeof e.payload.error==="object"&&e.payload.error)||{ code:(e&&e.message)||"fail" };
+        if(err.code==="over_quota"){
+          entActionNote("entCodeNote","");
+          openConfirmModal({
+            title:"會超過合約席次上限",
+            bodyHtml:`<p>合約上限 <b>${n(err.quota)}</b> 席，目前已佔 <b>${n(err.occupied)}</b> 席；這次要產生 <b>${n(err.requested)}</b> 組，會超過 <b>${n(err.overBy)}</b> 席。</p><p>超過的部分要另外跟客戶確認並請款，確定要照樣產生嗎？</p>`,
+            confirmLabel:"照樣產生", danger:true, onConfirm:()=>entCreateCodes(clientId,true),
+          });
+          return;
+        }
+        if(ENT_CODE_ERROR_ZH[err.code]){
+          const detail=err.detail?`<div class="muted" style="margin-top:4px">${esc(err.detail)}</div>`:"";
+          entActionNote("entCodeNote", `<div class="ops-notice error" role="alert" style="margin-top:10px"><strong>${esc(ENT_CODE_ERROR_ZH[err.code])}</strong>${detail}</div>`);
+          return;
+        }
+        entActionNote("entCodeNote", entActionError(err.code));
+      });
+  }
+  function entCsvCell(v){ const s=String(v==null?"":v); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; }
+  function entDownloadCodeList(clientId){
+    const cur=entCurrentSeats(clientId), rows=cur.seats.filter((s)=>s.redeemCode);
+    const lines=[["稱呼","手機","開通碼","狀態","使用時間","備註"].join(",")];
+    rows.forEach((s)=>lines.push([s.memberName||"", s.memberPhone||"", entFormatCode(s.redeemCode), (s.accountId||s.redeemedAt)?"已使用":"未使用", s.redeemedAt||"", s.notes||""].map(entCsvCell).join(",")));
+    // 檔頭加 BOM：Excel 直接點開中文才不會變亂碼
+    downloadTextFile(`munea-開通碼清單-${(cur.client.name||clientId)}.csv`, "\ufeff"+lines.join("\n"), "text/csv;charset=utf-8;");
+  }
+  // 開通小卡：一個可以直接列印的網頁檔（A4 一頁 8 張）。做成下載檔而不是另開視窗，
+  // 是因為後台頁有內容安全政策，另開視窗寫內容進去樣式會被擋。
+  function entDownloadCodeCards(clientId){
+    const cur=entCurrentSeats(clientId), rows=cur.seats.filter((s)=>s.redeemCode && !(s.accountId||s.redeemedAt));
+    const org=esc(cur.client.name||"");
+    const cards=rows.map((s)=>`<div class="card">
+      <div class="brand">沐寧 Munea　機構開通碼</div>
+      <div class="org">${org}</div>
+      <div class="who">${s.memberName?esc(s.memberName):"&nbsp;"}</div>
+      <div class="code">${esc(entFormatCode(s.redeemCode))}</div>
+      <ol><li>到 App Store 下載「沐寧 Munea」</li><li>用 Google 或 Apple 帳號登入</li><li>點「設定」→「機構開通碼」，輸入上面 8 個數字</li></ol>
+      <div class="foot">這組號碼只能用一次，請不要給別人。</div>
+    </div>`).join("");
+    const html=`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>沐寧開通小卡 ${org}</title><style>
+      @page{size:A4;margin:10mm} *{box-sizing:border-box} body{margin:0;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:#2D3A36}
+      .sheet{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+      .card{border:1.5px dashed #9BB5B0;border-radius:4mm;padding:6mm 7mm;break-inside:avoid;min-height:62mm}
+      .brand{font-size:11pt;color:#2E8A83;font-weight:700} .org{font-size:11pt;margin-top:1mm} .who{font-size:15pt;font-weight:700;margin-top:2mm}
+      .code{font-size:30pt;font-weight:700;letter-spacing:.08em;margin:2mm 0 3mm;font-variant-numeric:tabular-nums}
+      ol{margin:0;padding-left:1.4em;font-size:11pt;line-height:1.6} .foot{font-size:9.5pt;color:#6B7A76;margin-top:2mm}
+    </style></head><body><div class="sheet">${cards}</div></body></html>`;
+    downloadTextFile(`munea-開通小卡-${(cur.client.name||clientId)}.html`, html, "text/html;charset=utf-8;");
+  }
+
   const ENT_GRANT_REASON_ZH = {
     enterprise_invoice_not_paid: "這家公司還沒有已收款的請款單，付款確認前不能開通",
-    seat_has_no_bound_account: "這個席次還沒有綁定帳號（email 還沒註冊比對成功）",
+    seat_has_no_bound_account: "這個席次還沒有綁定帳號（還沒有人輸入開通碼，或 email 還沒比對到帳號）",
     seat_must_be_active_or_waiting_to_grant_membership: "這個席次狀態還不能授予",
     enterprise_seat_not_found: "找不到這個席次",
     enterprise_client_not_found: "找不到這家公司",
@@ -2001,7 +2116,7 @@
     const safeBase=normalizeAdminBaseUrl(base);
     const res=await timedFetch(safeBase+path,{method:"POST",headers:requestHeaders({"Content-Type":"application/json; charset=utf-8","X-Munea-Admin-Token":token}),body:JSON.stringify(body||{})});
     const txt=await res.text(); let p={}; try{ p=txt?JSON.parse(txt):{}; }catch(e){ p={ok:false,error:{code:"invalid_json"}}; }
-    if(!res.ok||p.ok===false){ const code=typeof p.error==="string"?p.error:(p.error&&p.error.code); throw new Error(code||("http_"+res.status)); }
+    if(!res.ok||p.ok===false){ const code=typeof p.error==="string"?p.error:(p.error&&p.error.code); const err=new Error(code||("http_"+res.status)); err.payload=p; throw err; }
     return p;
   }
   function explainErr(m){ m=String(m||""); if(/invalid_admin_token/.test(m))return "通行碼已失效或不正確"; if(/admin_token_not_configured/.test(m))return "伺服器還沒設通行碼"; if(/invalid_admin_url/.test(m))return "伺服器網址格式不正確"; if(/insecure_admin_url/.test(m))return "遠端伺服器必須使用 HTTPS"; if(/untrusted_admin_host/.test(m))return "這個伺服器不在後台允許清單內"; if(/request_timeout/.test(m))return "伺服器超過 15 秒沒有回應"; if(/invalid_json/.test(m))return "伺服器回應格式異常"; if(/http_40[13]/.test(m))return "被大門擋住（權限／通行碼）"; if(/account_id_required/.test(m))return "沒有選到帳號"; if(/invalid_credit_amount/.test(m))return "點數格式不正確"; if(/amount_exceeds_admin_limit/.test(m))return "單次最多發 2000 點，請分批發送"; if(/account_not_found/.test(m))return "查無此帳號"; if(/invalid_plan/.test(m))return "方案代碼不正確"; if(/plan_not_eligible_for_extension/.test(m))return "免費帳號沒有到期日，請先改方案"; if(/invalid_days/.test(m))return "天數格式不正確"; if(/days_out_of_range/.test(m))return "單次最多延長 365 天，請分批操作"; if(/days_required/.test(m))return "請輸入延長天數"; if(/account_deletion_requires_test_flag/.test(m))return "只有標記為測試的帳號才能從後台刪除"; if(/account_deletion_not_configured/.test(m))return "這台伺服器沒接上資料庫，不能刪帳號"; if(/account_deletion_failed/.test(m))return "刪除沒有成功，請看系統操作紀錄"; if(/Failed to fetch|NetworkError|load failed/i.test(m))return "連不到伺服器"; return "服務暫時異常（"+m.slice(0,80)+"）"; }
@@ -2227,6 +2342,11 @@
     $("pageRoot").querySelectorAll("[data-ent-retry-detail]").forEach((b)=>b.addEventListener("click",()=>loadEnterpriseClientDetail(b.dataset.entRetryDetail)));
     $("pageRoot").querySelectorAll("[data-ent-save-client]").forEach((b)=>b.addEventListener("click",()=>entSaveClient(b.dataset.entSaveClient)));
     $("pageRoot").querySelectorAll("[data-ent-grant]").forEach((b)=>b.addEventListener("click",()=>entGrantSeats(b.dataset.entGrant)));
+    $("pageRoot").querySelectorAll("[data-ent-create-codes]").forEach((b)=>b.addEventListener("click",()=>entCreateCodes(b.dataset.entCreateCodes,false)));
+    $("pageRoot").querySelectorAll("[data-ent-codes-download]").forEach((b)=>b.addEventListener("click",()=>entDownloadCodeList(b.dataset.entCodesDownload)));
+    $("pageRoot").querySelectorAll("[data-ent-codes-cards]").forEach((b)=>b.addEventListener("click",()=>entDownloadCodeCards(b.dataset.entCodesCards)));
+    // 剛產生完開通碼、畫面重畫之後，把「已產生 N 組」那句補回去（重畫會把原本的提示洗掉）
+    { const flash=state.tabs.entCodeFlash; if(flash && flash.clientId===state.tabs.entClientId && $("entCodeNote")){ const gen=$("pageRoot").querySelector(".ent-code-gen"); if(gen) gen.open=true; entActionNote("entCodeNote", flash.html); state.tabs.entCodeFlash=null; } }
     $("pageRoot").querySelectorAll("[data-ent-download]").forEach((b)=>b.addEventListener("click",()=>entDownloadReport(b.dataset.entClient, +b.dataset.entDownload)));
     $("pageRoot").querySelectorAll("[data-ent-pay-filter]").forEach((b)=>b.addEventListener("click",()=>{ state.tabs.entPayFilter=b.dataset.entPayFilter; renderPage("enterprisePayments"); }));
     $("pageRoot").querySelectorAll("[data-ent-mark-sent]").forEach((b)=>b.addEventListener("click",()=>entMarkSent(b.dataset.entMarkSent)));

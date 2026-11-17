@@ -7148,6 +7148,30 @@ function mergeHealthHistory(days, syncCloud = true) {
 }
 window.__muneaSetHealthHistory = function (days) { return mergeHealthHistory(days, true); };
 
+// 健康讀取診斷（2026-11-15）：health.js 每次真的讀過 Apple 健康就發 munea:health-read，
+// 這裡記成 health_read 事件——只有「讀到哪幾項、有沒有錯、旗子開沒開」，沒有任何數值。
+// 起因：Edward 真機回報「連了卻沒資料」時，後台完全看不到他的手機到底讀到了什麼。
+// 有變化才記（同樣的結果 6 小時內不重複），不讓事件表被每次切回前景灌爆。
+let _healthReadLastSignature = '';
+let _healthReadLastAt = 0;
+window.addEventListener('munea:health-read', event => {
+  try {
+    const d = (event && event.detail) || {};
+    const fields = Array.isArray(d.fields) ? d.fields.filter(name => typeof name === 'string').slice(0, 12) : [];
+    const signature = [d.connected ? 1 : 0, d.hasError ? 1 : 0, fields.slice().sort().join(',')].join('|');
+    if (signature === _healthReadLastSignature && Date.now() - _healthReadLastAt < 6 * 3600 * 1000) return;
+    _healthReadLastSignature = signature;
+    _healthReadLastAt = Date.now();
+    trackProductEvent('health_read', {
+      trigger: String(d.trigger || ''),
+      healthConnected: !!d.connected,
+      healthFields: fields.join(','),
+      healthFieldCount: fields.length,
+      healthReadError: !!d.hasError,
+    });
+  } catch (e) {}
+});
+
 function muneaCloudPersonId() {
   try { return localStorage.getItem('munea.cloudPersonId') || muneaDeviceId(); }
   catch (e) { return muneaDeviceId(); }
@@ -7826,6 +7850,17 @@ let _syncPullCompletedAt = 0;
 let _familySyncTimer = null;
 let _familyVisibilityBound = false;
 let _lastPlanRecheckAt = 0;   // 回前景重新確認會員身分的節流時間戳
+// 家庭狀態上傳被後端拒收：每把鑰匙＋狀態碼 10 分鐘內只記一次（只記鑰匙名與狀態碼，不帶內容）。
+const _familySyncRejectedAt = new Map();
+function noteFamilySyncRejected(key, status) {
+  try {
+    const id = String(key) + '|' + String(status);
+    const last = _familySyncRejectedAt.get(id) || 0;
+    if (Date.now() - last < 10 * 60 * 1000) return;
+    _familySyncRejectedAt.set(id, Date.now());
+    trackProductEvent('family_sync_rejected', { stateKey: String(key), httpStatus: Number(status) || 0 });
+  } catch (e) {}
+}
 function syncPush(key, value) {
   if (isDeveloperBypassAllowed()) return;
   try {
@@ -7845,7 +7880,12 @@ function syncPush(key, value) {
       if (!pendingBody) return;
       muneaAuthHeaders({ 'Content-Type': 'application/json' }).then(headers => {
         fetch(brainURL('/family/state'), { method: 'POST', headers, body: pendingBody })
-          .then(response => { if (response.ok) _syncPushLastSent.set(key, { body: pendingBody, at: Date.now() }); })
+          .then(response => {
+            if (response.ok) { _syncPushLastSent.set(key, { body: pendingBody, at: Date.now() }); return; }
+            // 後端拒收要留紀錄（2026-11-15）。2026-11-07 Edward 的手機讀到了健康資料、
+            // 上傳卻被後端回 403，這裡原本什麼都不做——資料沒上去，三個月沒有人知道。
+            noteFamilySyncRejected(key, response.status);
+          })
           .catch(() => {});
       }).catch(() => {});
     }, 350));
@@ -11604,17 +11644,35 @@ function init() {
       syncPush('familyBook', book.slice(0, FAMILY_BOOK_MAX));
     } catch (e) {}
   }
+  // 活動結束那句首頁動態的共用零件（2026-11-15）。
+  //
+  // 以前這幾句是寫死的中文，英日西的首頁會冒出「「Family walking challenge」結束了，
+  // 收進家庭記錄簿」。現在句子走四語文案表；粗體在這裡包（文案表不准放 HTML），
+  // 活動名、人名、選項是使用者自己打的字，進 innerHTML 前先消毒。
+  // 注意：存進 munea.familyFeed2 的是「當下語言排好的整句」，之後換語言、舊的那幾則不會跟著變。
+  function actEndFeedValues(a, extra) {
+    return Object.assign({
+      title: muneaEscapeHtml((a && a.title) || muneaT('activity.defaultTitle', '活動')),
+      book: '<b>' + muneaT('feed.familyBook', '家庭記錄簿') + '</b>',
+    }, extra || {});
+  }
+  function actFeedBold(text) { return '<b>' + muneaEscapeHtml(text) + '</b>'; }
   // 活動結束時，依種類公布結果進記錄簿（不再只是「結束了」）
   function announceActEnd(a) {
     try {
       if (a.kind === 'quiz' && a.answers && Object.keys(a.answers).length) {
         const top = Object.entries(a.answers).sort((x, y) => y[1] - x[1])[0];
-        pushFamilyFeed('「' + a.title + '」結算了——<b>' + top[0] + '</b> 答對最多（' + top[1] + ' 題），收進<b>家庭記錄簿</b>');
+        // 「你」是存庫代號：自己答對最多時換成當下語言的「你」，句子也走第二人稱那條
+        // （日文不能寫「あなたさん」、西文動詞要跟著變）。
+        const values = actEndFeedValues(a, { name: actFeedBold(actDisplayName(top[0])), n: top[1] });
+        pushFamilyFeed(top[0] === '你'
+          ? muneaT('feed.quizEndedSelf', '「{title}」結算了——{name} 答對最多（{n} 題），收進{book}', values)
+          : muneaT('feed.quizEnded', '「{title}」結算了——{name} 答對最多（{n} 題），收進{book}', values));
         recordInFamilyBook(a, muneaT('book.quizWinner', '{name} 答對最多（{n} 題）', { name: top[0], n: top[1] }), Object.keys(a.answers));
       } else if (a.kind === 'vote' && a.votes && Object.keys(a.votes).length) {
         const tally = {}; Object.values(a.votes).forEach(o => tally[o] = (tally[o] || 0) + 1);
         const win = Object.entries(tally).sort((x, y) => y[1] - x[1])[0];
-        pushFamilyFeed('「' + a.title + '」投票結束——<b>' + win[0] + '</b> 最多票，收進<b>家庭記錄簿</b>');
+        pushFamilyFeed(muneaT('feed.voteEnded', '「{title}」投票結束——{option} 最多票，收進{book}', actEndFeedValues(a, { option: actFeedBold(win[0]) })));
         recordInFamilyBook(a, muneaT('book.voteWinner', '{name} 最多票', { name: win[0] }), Object.keys(a.votes));
       } else if (a.kind === 'draw' && a.picks && Object.keys(a.picks).length) {
         // 新玩法：大家早就各自抽完了，到期只是把結果收攏進記錄簿，不再重抽一次
@@ -11655,13 +11713,17 @@ function init() {
         recordInFamilyBook(a, muneaT('book.drawNobody', '沒有人抽'), []);
       } else if (a.kind === 'event' && a.rsvp) {
         const going = Object.entries(a.rsvp).filter(([, v]) => v === 'go').map(([n]) => n);
-        pushFamilyFeed('「' + a.title + '」結束了' + (going.length ? '（' + going.join('、') + ' 有去）' : '') + '，收進<b>家庭記錄簿</b>');
+        pushFamilyFeed(going.length
+          ? muneaT('feed.eventEndedWent', '「{title}」結束了（{names} 有去），收進{book}', actEndFeedValues(a, {
+            names: going.map(n => muneaEscapeHtml(actDisplayName(n))).join(muneaListSeparator()),
+          }))
+          : muneaT('feed.actEnded', '「{title}」結束了，收進{book}', actEndFeedValues(a)));
         recordInFamilyBook(a, going.length ? muneaT('book.eventWent', '{names} 有去', { names: going.join(muneaListSeparator()) }) : muneaT('book.eventEnded', '結束了'), going);
       } else {
-        pushFamilyFeed('「' + a.title + '」結束了，收進<b>家庭記錄簿</b>');
+        pushFamilyFeed(muneaT('feed.actEnded', '「{title}」結束了，收進{book}', actEndFeedValues(a)));
         recordInFamilyBook(a, muneaT('book.eventEnded', '結束了'), a.names || []);
       }
-    } catch (e) { pushFamilyFeed('「' + (a.title || '活動') + '」結束了，收進<b>家庭記錄簿</b>'); }
+    } catch (e) { pushFamilyFeed(muneaT('feed.actEnded', '「{title}」結束了，收進{book}', actEndFeedValues(a))); }
   }
   // 空狀態 #actEmpty＝唯一插入錨點（示範卡 7/15 拆掉後，頁上可能一張卡都沒有）
   function updateActEmpty() {

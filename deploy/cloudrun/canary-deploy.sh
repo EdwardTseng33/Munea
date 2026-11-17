@@ -51,6 +51,13 @@ gcloud_run() {
 resolve_gcloud
 
 WHAT="${1:-}"
+# 語音模型（2026-11-13）：第二個參數可選 31｜38，不給＝31（現役）。
+# 3.1 最早 2026-11-17 被 Google 關閉，換 3.8 用這個參數明確切，不靠環境變數夾帶。
+VOICE_ENGINE="${2:-31}"
+case "$VOICE_ENGINE" in
+  31|38) ;;
+  *) echo "⛔ 語音模型參數只能是 31 或 38"; exit 1 ;;
+esac
 case "$WHAT" in
   brain) SVC="munea-brain-staging" ;;
   voice) SVC="munea-voice-staging" ;;
@@ -96,7 +103,7 @@ else
     --no-traffic --tag "$TAG" \
     --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
     --remove-env-vars "MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS,MUNEA_VERTEX_LOCATION,MUNEA_VOICE_MODEL_OVERRIDE" \
-    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED,MUNEA_CALL_PROTOCOL_REQUIRED=3,MUNEA_VOICE_FACE_DIRECT=1,MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=$VOICE_ALLOW_LEGACY_LOCALE_CONTEXT,MUNEA_VOICE_ENGINE=31,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
+    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=staging,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=$VOICE_CALL_CONTROL_REQUIRED,MUNEA_CALL_PROTOCOL_REQUIRED=3,MUNEA_VOICE_FACE_DIRECT=1,MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=$VOICE_ALLOW_LEGACY_LOCALE_CONTEXT,MUNEA_VOICE_ENGINE=$VOICE_ENGINE,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-staging-fiu65jd4da-de.a.run.app" \
     --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
     --allow-unauthenticated --quiet
 fi

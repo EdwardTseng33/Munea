@@ -66,6 +66,8 @@ ORG_FORBIDDEN_KEYS = {
     "said", "lastsaid", "last_said", "wordobs", "chatobs", "transcript", "transcripts",
     "summary", "summaries", "content", "utterance", "message", "messages", "conversation", "conversations",
     "memorytags", "memory_tags", "positives", "reporthtml", "report_html", "notes",
+    # 033（2026-11-17）：開通碼＝拿到就能佔一席；名冊稱呼與手機＝個資。機構端回應一律不帶。
+    "redeemcode", "redeem_code", "membername", "member_name", "memberphone", "member_phone",
 }
 
 # 可問責的寫入口：server.py 啟動時設成 append_audit_event；測試可換成自己的收集器。
