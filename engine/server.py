@@ -2534,16 +2534,13 @@ def care_week_response(data):
     try:
         start, _end = care_week.period_bounds(days, today or None)
         since_iso = (start - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
-        for ev in load_product_events(since_iso=since_iso, limit=2000) or []:
-            if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
-                continue
-            if str(ev.get("personId") or "") != str(person_id):
-                continue
+        mine = [ev for ev in load_product_events(since_iso=since_iso, limit=2000) or []
+                if isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"
+                and str(ev.get("personId") or "") == str(person_id)]
+        # 寧寧自己講的話不算；提到受暴受剝削的不進家人週摘要（加害人可能就是家人；內部告警照發、由營運處理）——
+        # 同一通只要有一筆提到受暴，那通每一筆都不進（#717 第二張；規則在 care_week.guardian_events_shareable）
+        for ev in care_week.guardian_events_shareable(mine):
             props = ev.get("properties") or {}
-            if props.get("who") == "ai":
-                continue  # 寧寧自己講的話（例如「胸口痛要馬上打 119」這種安全提醒）不是長輩亮燈
-            if _guardian_mentions_abuse(props):
-                continue  # 提到受暴受剝削：加害人可能就是家人，不進家人週摘要（#717；內部告警照發、由營運處理）
             events.append({
                 "eventTime": ev.get("eventTime") or ev.get("createdAt"),
                 "riskLevel": props.get("riskLevel") or props.get("risk_level"),
@@ -5922,7 +5919,10 @@ def admin_safety_events_summary(data=None):
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
-    events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
+    # 跨全部帳號讀（2026-11-18 #717 第二張）：以前用 load_product_events＝只讀得到示範帳號那一戶（後台路徑不綁登入身分，
+    # 帳號退回 demo），真實長輩的亮燈、受暴事件在這頁從來看不到。跟北極星看板同一個修法（見 load_all_accounts_product_events）。
+    events = load_all_accounts_product_events(limit=20000, since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                              fallback_on_error=True)
     # 2026-07-24 補：這頁原本沒接測試帳號排除。注意：不能借用 is_analytics_excluded_event，
     # 那支連 analyticsExcluded/developerMode 這類「不算進互動指標」的事件級旗標都會濾掉——
     # guardian_evaluate_response 對每一筆守護風險評估都固定寫 analyticsExcluded=True（避免
@@ -5954,6 +5954,10 @@ def admin_safety_events_summary(data=None):
             "eventTime": event.get("eventTime") or event.get("createdAt"),
             "requiresHumanEscalation": risk_level in {"high", "crisis"},
             "analyticsExcluded": bool(props.get("analyticsExcluded")),
+            # 受暴類要有人接（#717 第二張）：家人週摘要、機構畫面都不給，只有這頁與內部告警看得到
+            "protectionMentioned": _guardian_mentions_abuse(props),
+            "abuseConfirmed": bool(props.get("abuseConfirmed")),
+            "who": props.get("who"),
         })
     summaries = load_conversation_summaries(limit=500, include_deleted=False)
     for summary in summaries:
@@ -10735,14 +10739,40 @@ def _voice_identity_scope(user_id):
 GUARDIAN_EVENT_LEVELS = ("none", "low", "medium", "high", "critical")
 
 
-def _guardian_mentions_abuse(props):
-    """這筆通話亮燈有沒有提到受暴受剝削（記錄時標的 protectionEvent／protectionMentioned，或類別是 protection_event）。
-    有的話不進家人週摘要、也不進機構畫面：加害人可能就是家人；機構的建議句是「聯絡本人或家屬」，對受暴不安全。"""
-    props = props or {}
-    categories = props.get("categories") or []
-    if isinstance(categories, str):
-        categories = [categories]
-    return bool(props.get("protectionEvent") or props.get("protectionMentioned") or "protection_event" in categories)
+# 這筆通話亮燈有沒有提到受暴受剝削：有的話不進家人週摘要、也不進機構畫面（加害人可能就是家人；機構的建議句是
+# 「聯絡本人或家屬」，對受暴不安全）。規則寫在 care_week（機構讀取 org_api 也用同一份）。
+_guardian_mentions_abuse = care_week.guardian_mentions_abuse
+
+
+def _guardian_call_id_ok(value):
+    """Voice 帶來的通話編號只收英數、-、_，最長 64 字（存進 properties，不讓奇怪的字串混進資料庫）。"""
+    return 0 < len(value) <= 64 and all((ch.isascii() and ch.isalnum()) or ch in "-_" for ch in value)
+
+
+def _guardian_abuse_lookback_days():
+    """跨通話記住（#717 第二張）：Brain 派送前查這個人最近幾天有沒有 AI 判過的受暴（abuseConfirmed）。
+    MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS，預設 0＝關（天數要 Edward 定）；亂填當 0、最多 365。"""
+    try:
+        return max(0, min(365, int(os.environ.get("MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS", "0") or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _guardian_recent_abuse_confirmed(person_id, days):
+    """這個人最近 days 天有沒有 AI 判過受暴的通話亮燈（只認 abuseConfirmed——關鍵字旗標會把「他不會打我啦」也算進去）。
+    讀的是這位來電者自己帳號的事件（呼叫端已綁好身分）。讀不到就當沒有（記一筆），不擋急症通知。"""
+    if days <= 0 or not person_id:
+        return False
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        for ev in load_product_events(since_iso=since, limit=2000) or []:
+            if (isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"
+                    and str(ev.get("personId") or "") == str(person_id)
+                    and (ev.get("properties") or {}).get("abuseConfirmed")):
+                return True
+    except Exception as e:  # noqa: BLE001
+        log_fallback_exception("check recent abuse-confirmed guardian events", e)
+    return False
 
 
 def voice_guardian_event_response(data):
@@ -10765,13 +10795,21 @@ def voice_guardian_event_response(data):
         # notify=False：Voice 通話中先只記錄，等整段話講完、確定沒提到受暴才另外送一筆 record=False／notify=True 來發（#717 複審）。
         # 舊版 Voice 不帶這欄＝照舊當場通知。
         notify_now = bool(data.get("notify", True))
-        protection = bool(data.get("protectionEvent")) or bool(data.get("protectionMentioned")) or "protection_event" in categories
+        # abuseConfirmed＝Voice 的 AI 裁判看過整通、判定有受暴（#717 第二張）；只認長輩本人說的
+        abuse_confirmed = bool(data.get("abuseConfirmed")) and who == "user"
+        protection = (bool(data.get("protectionEvent")) or bool(data.get("protectionMentioned"))
+                      or "protection_event" in categories or abuse_confirmed)
         props = {
             "riskLevel": level, "categories": categories, "analyticsExcluded": True, "source": "live_voice",
             "who": who, "protectionEvent": bool(data.get("protectionEvent")), "protectionMentioned": protection,
             "familyNotificationCandidate": family_candidate and not protection,
             "protectionLine": (str(data.get("protectionLine"))[:8] if data.get("protectionLine") else None),
         }
+        if abuse_confirmed:
+            props["abuseConfirmed"] = True
+        call_id = str(data.get("callId") or "").strip()
+        if _guardian_call_id_ok(call_id):
+            props["callId"] = call_id        # 同一通的記錄串起來：週摘要／機構讀取「整通一起跳過」
         if not person:
             return {"ok": True, "identityResolved": False, "recorded": False, "dispatch": None}
         group = _current_family_group_id()
@@ -10784,11 +10822,17 @@ def voice_guardian_event_response(data):
                 recorded = True
             except Exception as e:  # 記錄出錯不能連通知一起沒了
                 log_fallback_exception("record voice guardian event", e)
-        dispatch = None
+        dispatch, suppressed = None, None
         # 只有長輩本人說的、high／critical、通知候選、而且沒提到受暴，才通知緊急聯絡人（Brain 這邊再鎖一次）
         if notify_now and who == "user" and family_candidate and not protection and level in ("high", "critical"):
-            dispatch = dispatch_safety_alert(person, "guardian", family_group_id=group)
-        return {"ok": True, "identityResolved": True, "recorded": recorded, "dispatch": dispatch}
+            if _guardian_recent_abuse_confirmed(person, _guardian_abuse_lookback_days()):
+                suppressed = "recent_abuse_confirmed"   # 這個人最近 N 天 AI 判過受暴：這次也不通知家人（預設關）
+            else:
+                dispatch = dispatch_safety_alert(person, "guardian", family_group_id=group)
+        out = {"ok": True, "identityResolved": True, "recorded": recorded, "dispatch": dispatch}
+        if suppressed:
+            out["suppressed"] = suppressed
+        return out
     finally:
         if scope_token is not None:
             REQUEST_DATA_IDENTITY.reset(scope_token)
