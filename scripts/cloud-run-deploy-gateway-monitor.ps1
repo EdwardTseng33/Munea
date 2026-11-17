@@ -19,6 +19,9 @@
   # and scales to zero. Pass -AlwaysOn for the legacy background loop, which
   # needs one instance with CPU always allocated (the costly setup).
   [switch]$AlwaysOn,
+  # Skip the build and deploy; only (re)apply the invoker grant and the
+  # scheduler job, for example to change -TickMinutes.
+  [switch]$ScheduleOnly,
   [int]$TickMinutes = 2,
   [string]$SchedulerJob = "munea-gateway-monitor-tick-production",
   [switch]$Notify,
@@ -91,6 +94,22 @@ if ($removeSecrets.Count -gt 0) {
   $argsList += @("--remove-secrets", ($removeSecrets -join ","))
 }
 
+if ($ScheduleOnly -and $AlwaysOn) { throw "-ScheduleOnly does not apply to -AlwaysOn" }
+
+# "Does this job exist" must not abort the script: under
+# ErrorActionPreference=Stop, Windows PowerShell turns gcloud's NOT_FOUND on
+# stderr into a terminating error even when stderr is redirected.
+function Test-SchedulerJob([string]$Name) {
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    & $gcloud.Source scheduler jobs describe $Name --project $ProjectId --location $Region --format="value(name)" 2>&1 | Out-Null
+    return ($LASTEXITCODE -eq 0)
+  } finally {
+    $ErrorActionPreference = $previous
+  }
+}
+
 $modeLabel = if ($AlwaysOn) { "always-on loop" } else { "scheduled every $TickMinutes min" }
 Write-Host "Deploying $Service (notify=$notifyValue, mode=$modeLabel)" -ForegroundColor Cyan
 if ($DryRun) {
@@ -101,13 +120,14 @@ if ($DryRun) {
   exit 0
 }
 
-& $gcloud.Source @argsList
-if ($LASTEXITCODE -ne 0) { throw "Gateway monitor deployment failed" }
+if (-not $ScheduleOnly) {
+  & $gcloud.Source @argsList
+  if ($LASTEXITCODE -ne 0) { throw "Gateway monitor deployment failed" }
+}
 
 if ($AlwaysOn) {
   # The loop does the polling; a leftover tick would only double the work.
-  & $gcloud.Source scheduler jobs describe $SchedulerJob --project $ProjectId --location $Region --format="value(name)" 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) {
+  if (Test-SchedulerJob $SchedulerJob) {
     & $gcloud.Source scheduler jobs pause $SchedulerJob --project $ProjectId --location $Region --quiet | Out-Null
     Write-Host "Paused scheduler job $SchedulerJob (always-on mode)" -ForegroundColor Yellow
   }
@@ -131,11 +151,13 @@ if ($AlwaysOn) {
     "--attempt-deadline", "60s",
     "--max-retry-attempts", "1", "--min-backoff", "20s"
   )
-  & $gcloud.Source scheduler jobs describe $SchedulerJob --project $ProjectId --location $Region --format="value(name)" 2>$null | Out-Null
-  if ($LASTEXITCODE -eq 0) {
+  if (Test-SchedulerJob $SchedulerJob) {
     & $gcloud.Source scheduler jobs update http $SchedulerJob @jobArgs --quiet | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Could not update scheduler job $SchedulerJob" }
-    & $gcloud.Source scheduler jobs resume $SchedulerJob --project $ProjectId --location $Region --quiet 2>$null | Out-Null
+    $state = (& $gcloud.Source scheduler jobs describe $SchedulerJob --project $ProjectId --location $Region --format="value(state)").Trim()
+    if ($state -eq "PAUSED") {
+      & $gcloud.Source scheduler jobs resume $SchedulerJob --project $ProjectId --location $Region --quiet | Out-Null
+    }
   } else {
     & $gcloud.Source scheduler jobs create http $SchedulerJob @jobArgs --quiet | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Could not create scheduler job $SchedulerJob" }
