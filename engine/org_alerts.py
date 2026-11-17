@@ -465,6 +465,33 @@ def org_audit_response(auth, data=None):
 
 
 # ---------------------------------------------------------------------------
+# 營運端：把每一家照護機構的提醒算一次（給之後的排程呼叫；排程本身還沒設，要老闆點頭）
+# ---------------------------------------------------------------------------
+
+def admin_alerts_refresh_all_response(data=None, loaders=None, today=None):
+    """沒有人打開提醒匣的時候，提醒也該「發出」——之後由排程每天呼叫這支（萬能鑰匙）。
+    只算照護類、還在合約內的機構；一家失敗不擋其他家。回每家新發出幾筆。"""
+    data = data or {}
+    only = str(data.get("clientId") or "").strip()
+    results = []
+    for client in enterprise_seats.list_clients() or []:
+        if only and client.get("id") != only:
+            continue
+        if org_api._client_kind(client) != "care" or client.get("status") == "ended":
+            continue
+        try:
+            since_iso = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
+            before = set(_load_events(client["id"], since_iso)[0])
+            raised, _marks, _seats, _persons, partial = refresh_alerts(client, loaders, today)
+            results.append({"clientId": client["id"], "ok": True, "newAlerts": len(set(raised) - before), "partial": partial})
+        except Exception as exc:
+            LOGGER.error("org_alerts refresh-all failed for %s: %s", client.get("id"), exc)
+            results.append({"clientId": client["id"], "ok": False, "error": "alerts_unavailable"})
+    return {"ok": all(r["ok"] for r in results), "count": len(results), "clients": results,
+            "newAlerts": sum(r.get("newAlerts", 0) for r in results)}
+
+
+# ---------------------------------------------------------------------------
 # 營運端：匯出逐筆判定（欄位順序對齊 C4 逐筆判定表）
 # ---------------------------------------------------------------------------
 

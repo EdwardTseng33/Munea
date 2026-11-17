@@ -287,10 +287,56 @@ class SettingsTests(AlertsBase):
         self.assertEqual(org_alerts.client_settings(ORG_A)["noContactDays"], 3)
 
 
+class LowMoodWordingTests(unittest.TestCase):
+    """「連續 3 天」要跟日期對得上：中間有空檔就說「連續 3 次有紀錄」（C4 演練 M08，11/18）。"""
+
+    def test_consecutive_days_keep_the_old_sentence(self):
+        import care_week
+        self.assertEqual(care_week._low_streak_fact(["2026-11-15", "2026-11-16", "2026-11-17"], 2),
+                         "心情連續 3 天在 2 級以下（2026-11-15、2026-11-16、2026-11-17）。")
+
+    def test_gapped_days_say_records_not_days(self):
+        import care_week
+        text = care_week._low_streak_fact(["2026-11-12", "2026-11-15", "2026-11-18"], 2)
+        self.assertNotIn("連續 3 天", text)
+        self.assertIn("連續 3 次有紀錄", text)
+        self.assertIn("中間幾天沒有紀錄", text)
+
+
+class RefreshAllTests(AlertsBase):
+    """給之後排程用：沒人打開提醒匣也照樣發出；只算照護機構；重跑不重發。"""
+
+    def test_refresh_all_raises_once_for_care_clients_only(self):
+        first = org_alerts.admin_alerts_refresh_all_response({}, loaders=self.loaders)
+        self.assertTrue(first["ok"], first)
+        by_client = {c["clientId"]: c for c in first["clients"]}
+        self.assertIn(ORG_A, by_client)
+        self.assertNotIn(W.ORG_ESG, by_client)                    # 企業不算
+        self.assertGreater(by_client[ORG_A]["newAlerts"], 0)
+        second = org_alerts.admin_alerts_refresh_all_response({}, loaders=self.loaders)
+        self.assertEqual(second["newAlerts"], 0)                  # 重跑不重發
+        listed = self.alerts()["alerts"]                          # 照護人員打開時看到的就是排程發出的那幾筆
+        self.assertEqual(len(self.raised_events()), first["newAlerts"])
+        self.assertTrue(listed)
+
+    def test_one_client_failing_does_not_stop_others(self):
+        real = org_alerts.refresh_alerts
+        def flaky(client, loaders=None, today=None):
+            if client["id"] == ORG_A:
+                raise RuntimeError("down")
+            return real(client, loaders, today)
+        with patch.object(org_alerts, "refresh_alerts", side_effect=flaky):
+            out = org_alerts.admin_alerts_refresh_all_response({}, loaders=self.loaders)
+        self.assertFalse(out["ok"])
+        self.assertEqual({c["clientId"]: c["ok"] for c in out["clients"]}[ORG_A], False)
+        self.assertTrue(any(c["ok"] for c in out["clients"] if c["clientId"] != ORG_A))
+
+
 class ServerWiringTests(unittest.TestCase):
     def test_routes_and_loader_are_wired(self):
         src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()
-        for path in ("/org/alerts", "/org/alert/mark", "/org/audit", "/org/settings", "/org/settings/save", "/admin/enterprise/alerts/export"):
+        for path in ("/org/alerts", "/org/alert/mark", "/org/audit", "/org/settings", "/org/settings/save",
+                     "/admin/enterprise/alerts/export", "/admin/enterprise/alerts/refresh"):
             self.assertIn(f'self.path == "{path}"', src)
         self.assertIn("org_alerts.set_event_loader(load_org_audit_events)", src)
         self.assertIn('"/admin/enterprise/alerts/export",', src)

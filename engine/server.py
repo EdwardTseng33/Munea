@@ -502,6 +502,8 @@ ADMIN_POST_PATHS = {
     "/admin/enterprise/consent/status",
     # 第 3 段（2026-11-18 · C4）：匯出機構的異常提醒與逐筆判定，對齊 C4 逐筆判定表。
     "/admin/enterprise/alerts/export",
+    # 給之後的排程：把每一家照護機構的提醒算一次（沒人打開提醒匣也照樣發出）。
+    "/admin/enterprise/alerts/refresh",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -11234,6 +11236,12 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(org_alerts.admin_alerts_export_response(data))
+            elif self.path == "/admin/enterprise/alerts/refresh":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(org_alerts.admin_alerts_refresh_all_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":

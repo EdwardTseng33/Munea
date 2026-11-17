@@ -202,6 +202,18 @@ def build_person_week(person, signals=None, summaries=None, safety_events=None, 
     }
 
 
+def _low_streak_fact(days, low_level):
+    """連續低落那句話要跟日期對得上（2026-11-18）：規則算的是「連續幾個有紀錄的日子」，
+    中間沒通話的日子會被跳過。日子真的一天接一天才說「連續 N 天」；中間有空檔就說「連續 N 次有紀錄」，
+    不然照護人員看到「連續 3 天」配上 11/12、11/15、11/18，會以為系統算錯。"""
+    parsed = [_parse_date(d) for d in days]
+    consecutive = all(a and b and (b - a).days == 1 for a, b in zip(parsed, parsed[1:]))
+    listed = "、".join(days)
+    if consecutive:
+        return "心情連續 %d 天在 %d 級以下（%s）。" % (len(days), low_level, listed)
+    return "心情連續 %d 次有紀錄都在 %d 級以下（%s，中間幾天沒有紀錄）。" % (len(days), low_level, listed)
+
+
 def detect_anomalies(week, settings=None):
     """三條規則、每條附「為什麼亮」。settings: {noContactDays, lowMoodLevel, lowMoodStreak, moodDropLevels}."""
     settings = settings or {}
@@ -223,7 +235,7 @@ def detect_anomalies(week, settings=None):
                 out.append({
                     "type": "mood_drop",
                     "when": x["date"],
-                    "fact": "心情連續 %d 天在 %d 級以下（%s）。" % (streak, int(low_level), "、".join(streak_days[-streak:])),
+                    "fact": _low_streak_fact(streak_days[-streak:], int(low_level)),
                     "lastSaid": x["said"],
                     "suggestion": "打個電話問候；這是觀察，不是判定。",
                 })
