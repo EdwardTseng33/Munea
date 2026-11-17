@@ -3,7 +3,9 @@
   --cream:#FAF7F2; --cream-2:#F3EEE4; --surface:#ffffff; --mint:#E8F2EE; --mint-2:#DCEDE6;
   --teal:#3AA8A0; --teal-d:#2E8A83; --teal-dd:#236C66;
   --coral:#F4A261; --coral-d:#E08B45; --coral-soft:#FBE7D2;
-  --ink:#33403D; --muted:#6B7B76; --line:#E7E0D6;
+  --ink:#33403D; --muted:#5B6B66; --line:#E7E0D6;
+  /* 2026-11-18 對比度：品牌青 #3AA8A0 留給圖示、底線、裝飾；按鈕底與小字一律用加深階（白字 5.1:1、奶油底小字 5.8:1） */
+  --teal-btn:#277A73; --coral-text:#B5602A;
   --shadow:0 22px 50px -26px rgba(46,138,131,.34);
   --shadow-sm:0 10px 28px -18px rgba(46,138,131,.30);
   --shadow-lg:0 40px 80px -40px rgba(46,138,131,.42);
@@ -14,10 +16,20 @@ html{scroll-behavior:smooth}
 body{font-family:"Noto Sans TC","Poppins",sans-serif;background:var(--cream);color:var(--ink);line-height:1.75;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 h1,h2,h3,.en{font-family:"Poppins","Noto Sans TC",sans-serif}
 .serif{font-family:"Noto Serif TC",serif}
+/* 日文頁：漢字與假名用同一套日文字型，不再混到系統字；英西頁：引言用拉丁襯線，不掉到 Times */
+html:lang(ja) body{font-family:"Noto Sans JP","Poppins",sans-serif}
+html:lang(en) body,html:lang(es) body{font-family:"Poppins","Noto Sans TC",sans-serif}
+html:lang(ja) h1,html:lang(ja) h2,html:lang(ja) h3{font-family:"Poppins","Noto Sans JP",sans-serif}
+html:lang(ja) .serif{font-family:"Noto Serif JP",serif;letter-spacing:.02em}
+html:lang(en) .serif,html:lang(es) .serif{font-family:"Noto Serif",Georgia,serif}
+/* 中日文標題：只在語意斷點換行（標點、<wbr>），不在詞中間斷；真的放不下才允許硬斷 */
+html:lang(zh-Hant) h2,html:lang(zh-Hant) h3,html:lang(ja) h2,html:lang(ja) h3{word-break:keep-all;overflow-wrap:anywhere}
+html:lang(ja) h1,html:lang(ja) h2,html:lang(ja) h3{word-break:auto-phrase}
 .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
 a{text-decoration:none;color:inherit}
 img{max-width:100%}
-.eyebrow{display:inline-flex;align-items:center;flex-wrap:wrap;max-width:100%;gap:9px;font-family:"Poppins";font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-d)}
+.eyebrow{display:inline-flex;align-items:center;flex-wrap:wrap;max-width:100%;gap:9px;font-family:"Poppins";font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--teal-dd)}
+html:lang(zh-Hant) .eyebrow,html:lang(ja) .eyebrow{letter-spacing:.08em}
 .eyebrow::before{content:"";width:22px;height:1.5px;background:var(--coral)}
 .btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:16px;padding:15px 28px;border-radius:100px;border:none;cursor:pointer;transition:transform .25s,box-shadow .25s,background .25s;font-family:inherit;position:relative;overflow:hidden}
 .btn-coral{background:var(--coral);color:#fff;box-shadow:0 14px 28px -12px rgba(224,139,69,.7)}
@@ -31,7 +43,7 @@ img{max-width:100%}
 .progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--teal),var(--coral));z-index:100;transition:width .1s linear}
 
 /* nav */
-header{position:sticky;top:0;z-index:60;background:rgba(250,247,242,.8);backdrop-filter:blur(14px);border-bottom:1px solid rgba(231,224,214,.7)}
+header{position:sticky;top:0;z-index:60;background:var(--cream);border-bottom:1px solid rgba(231,224,214,.7)}
 nav{display:flex;align-items:center;justify-content:space-between;height:76px}
 .logo{font-family:"Poppins";font-weight:700;font-size:22px;letter-spacing:-.025em;display:inline-flex;align-items:center;gap:11px;color:var(--ink)}
 .logo-mark{width:30px;height:30px;flex-shrink:0;display:inline-grid;place-items:center;filter:drop-shadow(0 3px 8px rgba(244,162,97,.28))}
@@ -39,18 +51,20 @@ nav{display:flex;align-items:center;justify-content:space-between;height:76px}
 .logo:hover .logo-mark svg,.logo:hover .logo-mark img{transform:rotate(360deg)}
 .logo-word{line-height:1}
 .logo-word b{color:var(--teal);font-weight:700}
-.logo-zh{font-family:"Noto Sans TC","Poppins",sans-serif;font-size:.78em;font-weight:700;letter-spacing:.04em;margin-left:9px;opacity:.95}
+.logo-zh{font-family:"Noto Sans TC","Poppins",sans-serif;font-size:.78em;font-weight:700;letter-spacing:.04em;margin-left:9px;opacity:.95;white-space:nowrap}
+.logo-word{white-space:nowrap}
+@media(max-width:400px){html:not(:lang(zh-Hant)) .logo-zh{display:none}}
 .navlinks{display:flex;gap:30px;align-items:center}
 .navlinks a{font-size:15px;font-weight:500;color:var(--muted);transition:.2s;position:relative}
 .navlinks a:not(.nav-cta)::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;background:var(--coral);border-radius:2px;transition:width .25s}
 .navlinks a:not(.nav-cta):hover{color:var(--ink)}
 .navlinks a:not(.nav-cta):hover::after{width:100%}
 .navlinks a.active{color:var(--teal-d)}
-.navlinks a.nav-cta{background:var(--teal);color:#fff;padding:10px 20px;border-radius:100px;font-weight:600;font-size:14px;transition:.25s}
-.navlinks a.nav-cta:hover{background:var(--teal-d);transform:translateY(-1px);box-shadow:0 10px 22px -10px rgba(46,138,131,.7)}
+.navlinks a.nav-cta{background:var(--teal-btn);color:#fff;padding:10px 20px;border-radius:100px;font-weight:600;font-size:14px;transition:.25s}
+.navlinks a.nav-cta:hover{background:var(--teal-dd);transform:translateY(-1px);box-shadow:0 10px 22px -10px rgba(46,138,131,.7)}
 /* language switch (中文 / English dropdown) */
 .lang-switch{position:relative;margin-left:2px;font-family:"Poppins",sans-serif}
-.lang-trigger{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--mint-2);color:var(--teal-d);font-family:inherit;font-weight:600;font-size:13px;padding:9px 12px;border-radius:100px;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s;line-height:1}
+.lang-trigger{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1.5px solid var(--mint-2);color:var(--teal-dd);font-family:inherit;font-weight:600;font-size:13px;padding:9px 12px;border-radius:100px;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s;line-height:1;white-space:nowrap;min-height:44px}
 .lang-trigger:hover{border-color:var(--teal);background:var(--mint)}
 .lang-trigger .globe{width:15px;height:15px;flex-shrink:0}
 .lang-trigger .chev{width:11px;height:11px;opacity:.65;transition:transform .25s}
@@ -61,8 +75,8 @@ nav{display:flex;align-items:center;justify-content:space-between;height:76px}
 .lang-opt{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;font-family:inherit;font-weight:600;font-size:14px;color:var(--muted);padding:10px 12px;border-radius:11px;cursor:pointer;text-align:left;transition:background .18s,color .18s}
 .lang-opt:hover{background:var(--mint);color:var(--ink)}
 .lang-opt .tick{width:7px;height:7px;border-radius:50%;background:transparent;flex-shrink:0;transition:background .2s,box-shadow .2s}
-.lang-opt .sub{margin-left:auto;font-size:11px;font-weight:600;color:#b9c6c1;letter-spacing:.04em}
-.lang-opt[aria-selected="true"]{color:var(--teal-d);background:var(--mint)}
+.lang-opt .sub{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.lang-opt[aria-selected="true"]{color:var(--teal-dd);background:var(--mint)}
 .lang-opt[aria-selected="true"] .tick{background:var(--coral);box-shadow:0 0 0 4px rgba(244,162,97,.18)}
 .nav-cluster{display:flex;align-items:center;gap:14px}
 .menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;border-radius:10px;transition:background .2s}
@@ -78,6 +92,7 @@ nav{display:flex;align-items:center;justify-content:space-between;height:76px}
 
 /* ===== hero ===== */
 .hero{position:relative;padding:90px 0 76px;overflow:hidden}
+@media(max-width:900px){.hero{padding:36px 0 56px}}
 .blob{position:absolute;border-radius:50%;filter:blur(10px);z-index:0;will-change:transform}
 .blob.a{width:460px;height:460px;background:radial-gradient(circle,#cfe9e2,transparent 70%);top:-120px;right:-90px;opacity:.6}
 .blob.b{width:340px;height:340px;background:radial-gradient(circle,#fbe2c9,transparent 70%);bottom:-90px;left:-80px;opacity:.55}
@@ -94,9 +109,10 @@ html:lang(zh-Hant) .hero h1 .word{white-space:nowrap}
 @media(max-width:900px){html:lang(zh-Hant) .hero h1 .word{white-space:normal}}
 /* 格線子欄預設 min-width:auto，內容一寬就撐破欄位——一律准縮 */
 .hero-grid>*,.persona-wrap>*,.pz>*,.story-grid>*{min-width:0}
-.hero h1 .hl{color:var(--teal);position:relative;display:inline-block}
-.hero h1 .hl::after{content:"";position:absolute;left:0;right:0;bottom:.08em;height:.18em;background:rgba(244,162,97,.32);border-radius:6px;z-index:-1;transform:scaleX(0);transform-origin:left;animation:underline 1s .9s cubic-bezier(.2,.7,.2,1) forwards}
-@keyframes underline{to{transform:scaleX(1)}}
+/* 2026-11-18：底線改畫在文字本身（逐行跟著字走），英文主標換行時不再拉成整塊寬。
+   字色用 #2E8A83：大字只需 3:1，奶油底 3.9:1 過關；原本 #3AA8A0 只有 2.7:1。 */
+.hero h1 .hl{color:var(--teal-d);background-image:linear-gradient(#F6D8BC,#F6D8BC);background-repeat:no-repeat;background-position:0 92%;background-size:0% .2em;-webkit-box-decoration-break:clone;box-decoration-break:clone;animation:hlgrow 1s .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes hlgrow{to{background-size:100% .2em}}
 .word{display:inline-block;animation:wordin .7s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes wordin{from{opacity:0;transform:translateY(18px) rotate(2deg)}to{opacity:1;transform:none}}
 .hero p.sub{font-size:19px;color:var(--muted);max-width:520px;margin-bottom:34px}
@@ -155,12 +171,12 @@ section{padding:92px 0;position:relative}
 .ptk-item{position:relative;z-index:1;display:grid;grid-template-columns:64px 56px 1fr;align-items:center;gap:0 22px;padding:22px 18px;border-radius:18px;border-bottom:1px solid var(--line);transition:background .35s,transform .35s,box-shadow .35s}
 .pain-track .ptk-item:last-child{border-bottom:none}
 .ptk-item:hover{background:#fff;transform:translateX(8px);box-shadow:var(--shadow-sm)}
-.ptk-num{font-family:"Poppins";font-weight:700;font-size:26px;color:#cfe0d9;transition:color .35s}
+.ptk-num{font-family:"Poppins";font-weight:700;font-size:26px;color:#9DBDB5;transition:color .35s}
 .ptk-item:hover .ptk-num{color:var(--coral)}
 .ptk-ic{width:56px;height:56px;border-radius:16px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--teal-d);transition:.35s}
 .ptk-item:hover .ptk-ic{background:var(--teal);border-color:var(--teal);color:#fff;transform:rotate(-6deg)}
 .ptk-ic svg{width:26px;height:26px}
-.ptk-role{display:inline-block;font-family:"Poppins";font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-d);background:var(--mint);padding:4px 11px;border-radius:100px;margin-bottom:8px}
+.ptk-role{display:inline-block;font-family:"Poppins";font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-dd);background:var(--mint);padding:4px 11px;border-radius:100px;margin-bottom:8px}
 .ptk-body h3{font-size:18.5px;font-weight:700;line-height:1.45}
 @media(max-width:880px){
   .pain-layout{grid-template-columns:1fr;gap:34px}
@@ -179,12 +195,12 @@ section{padding:92px 0;position:relative}
 .pz-vis{position:relative;padding:18px;display:flex}
 .pz-vis .ph{aspect-ratio:16/11;width:100%;border-radius:18px;transition:transform .5s}
 .pz:hover .pz-vis .ph{transform:scale(1.03)}
-.pz-step{position:absolute;top:32px;left:32px;background:#fff;border-radius:100px;font-family:"Poppins";font-weight:700;font-size:12px;color:var(--teal-d);padding:6px 14px;box-shadow:var(--shadow-sm)}
+.pz-step{position:absolute;top:32px;left:32px;background:#fff;border-radius:100px;font-family:"Poppins";font-weight:700;font-size:12px;color:var(--teal-dd);padding:6px 14px;box-shadow:var(--shadow-sm)}
 .pz-txt{padding:18px 44px 18px 10px}
 .pz.reverse .pz-txt{padding:18px 10px 18px 44px}
-.pz-idx{font-family:"Poppins";font-weight:700;font-size:13px;letter-spacing:.14em;color:var(--coral);display:block;margin-bottom:14px}
+.pz-idx{font-family:"Poppins";font-weight:700;font-size:13px;letter-spacing:.14em;color:var(--coral-text);display:block;margin-bottom:14px}
 .pz-txt .badge{margin-bottom:14px}
-.pz-txt h3{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-bottom:12px}
+.pz-txt h3{font-size:26px;font-weight:700;letter-spacing:-.01em;margin-bottom:12px;line-height:1.35}
 .pz-txt p{color:var(--muted);font-size:15.5px}
 .pz-txt .for{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);font-size:14px;color:var(--teal-d);font-weight:600;display:flex;align-items:center;gap:8px}
 .pz-txt .for svg{width:16px;height:16px}
@@ -342,10 +358,10 @@ footer{background:#2b3733;color:#cfd8d5;padding:60px 0 30px}
 footer .logo{color:#fff;margin-bottom:14px}
 footer .logo-mark{filter:drop-shadow(0 3px 10px rgba(244,162,97,.4))}
 footer p.desc{font-size:14.5px;color:#9aa8a3;max-width:320px}
-.foot-col h4{font-family:"Poppins";font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#8a9893;margin-bottom:16px}
-.foot-col a{display:block;color:#cfd8d5;font-size:14.5px;margin-bottom:11px;transition:.2s}
+.foot-col h4{font-family:"Poppins";font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#B4C0BC;margin-bottom:6px}
+.foot-col a{display:block;color:#cfd8d5;font-size:14.5px;padding:10px 0;min-height:44px;transition:.2s}
 .foot-col a:hover{color:var(--coral);transform:translateX(3px)}
-.foot-bottom{border-top:1px solid #3c4844;padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:#8a9893}
+.foot-bottom{border-top:1px solid #3c4844;padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:#B4C0BC}
 @media(max-width:760px){.foot-grid{grid-template-columns:1fr 1fr}}
 
 /* reveal */
@@ -379,5 +395,5 @@ footer p.desc{font-size:14.5px;color:#9aa8a3;max-width:320px}
   *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
   .reveal{opacity:1;transform:none}
   .word{opacity:1;transform:none}
-  .hero h1 .hl::after{transform:scaleX(1)}
+  .hero h1 .hl{background-size:100% .2em}
 }

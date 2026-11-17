@@ -16,6 +16,7 @@
  * 用法：node site-src/build.mjs
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { loadGuides, esc } from './guides.mjs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,7 +35,12 @@ const PAGES = [
 /* 字型是這個頁面最重的一塊（中文字型一套就近 2MB）。
  * 中文頁才需要 Noto Sans/Serif TC；英日西頁只要 Poppins，
  * 標誌裡那兩個中文字交給系統字型就好 —— 光這一刀，非中文頁少扛約 2MB。 */
-const LATIN_ONLY = 'family=Poppins:wght@400;500;600;700';
+const LATIN_ONLY = 'family=Poppins:wght@400;500;600;700&family=Noto+Serif:wght@500;600';
+// 日文：Google 會依頁面實際用到的字切小塊下載，不會整套 2MB 都拉
+const WITH_JP =
+  'family=Poppins:wght@400;500;600;700' +
+  '&family=Noto+Sans+JP:wght@400;700' +
+  '&family=Noto+Serif+JP:wght@600';
 // 中文字型一種粗細就約 500KB（Google 會切成上百個小塊丟給瀏覽器）。
 // 原本載了 Sans 四種＋Serif 三種＝七套，光字型就近 2MB。
 // 中文只留「內文 400 ＋ 標題 700」、襯線只留 600；
@@ -50,7 +56,7 @@ const fontLink = (families) =>
 const LOCALES = [
   { code: 'zh', dir: '', htmlLang: 'zh-Hant-TW', hreflang: 'zh-Hant', ogLocale: 'zh_TW', fonts: WITH_TC },
   { code: 'en', dir: 'en', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_US', fonts: LATIN_ONLY },
-  { code: 'ja', dir: 'ja', htmlLang: 'ja', hreflang: 'ja', ogLocale: 'ja_JP', fonts: LATIN_ONLY },
+  { code: 'ja', dir: 'ja', htmlLang: 'ja', hreflang: 'ja', ogLocale: 'ja_JP', fonts: WITH_JP },
   { code: 'es', dir: 'es', htmlLang: 'es', hreflang: 'es', ogLocale: 'es_ES', fonts: LATIN_ONLY },
 ];
 
@@ -165,6 +171,40 @@ function faqJsonLd(dict, localeCode, htmlLang) {
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
+/** 常見問題的頁面 HTML（跟 faqJsonLd 同一份資料；第一題預設展開） */
+function faqHtml(dict) {
+  const items = [];
+  for (let i = 1; Object.prototype.hasOwnProperty.call(dict, `faq.${i}.q`); i++) {
+    items.push(
+      `      <details class="faq-item"${i === 1 ? ' open' : ''}>\n` +
+      `        <summary><span class="fq"><b>Q${i}</b><span>${dict[`faq.${i}.q`]}</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>\n` +
+      `        <p class="fa">${dict[`faq.${i}.a`]}</p>\n` +
+      `      </details>`
+    );
+  }
+  return items.join('\n');
+}
+
+/* ── 指南：有文章的語系才產生（西文暫無） ── */
+const GUIDES = Object.fromEntries(LOCALES.map((l) => [l.code, loadGuides(SRC, l.code)]));
+const hasGuides = (code) => GUIDES[code].length > 0;
+const guideUrl = (l, slug = '') => urlFor(l.dir, slug ? `guide/${slug}` : 'guide');
+/** 首頁「指南」區塊挑哪三篇（照搜尋字研究的優先序；沒列到就取最新三篇） */
+const FEATURED = {
+  zh: ['topics-to-talk-with-elderly-parents', 'iphone-medication-reminder-for-parents', 'parents-living-alone-7-things'],
+  en: ['ai-companion-for-seniors', 'check-in-on-elderly-parent-living-alone', 'elliq-alternatives'],
+  ja: ['mimamori-app-guide', 'ai-hanashiaite-elderly', 'talking-with-elderly-parents-far-away'],
+};
+function featured(code) {
+  const all = GUIDES[code];
+  const pick = (FEATURED[code] || []).map((s) => all.find((g) => g.slug === s)).filter(Boolean);
+  for (const g of all) if (pick.length < 3 && !pick.includes(g)) pick.push(g);
+  return pick.slice(0, 3);
+}
+const guideCard = (l, g, dict) =>
+  `        <a class="g-card" href="${guideUrl(l, g.slug)}"><b>${esc(g.title)}</b><span>${esc(g.description)}</span>` +
+  (dict ? `<small>${dict['guide.read'].replace('{n}', g.readingMinutes)}</small>` : '') + `</a>`;
+
 let built = 0;
 for (const l of LOCALES) {
   const dict = JSON.parse(readFileSync(join(SRC, 'i18n', `${l.code}.json`), 'utf8'));
@@ -194,6 +234,13 @@ for (const l of LOCALES) {
     'meta.appStoreUrl': config.appStoreUrl,
     'meta.facebookUrl': config.facebookUrl,
     'meta.faqJsonLd': faqJsonLd(dict, l.code, l.htmlLang),
+    'meta.faqHtml': faqHtml(dict),
+    'meta.guideIndex': guideUrl(l),
+    'meta.navGuide': hasGuides(l.code) ? `<a href="${guideUrl(l)}">${dict['guide.navIndex']}</a>` : '',
+    'meta.footGuide': hasGuides(l.code) ? `<a href="${guideUrl(l)}">${dict['guide.navIndex']}</a>` : '',
+    'meta.guidesSection': hasGuides(l.code)
+      ? `<!-- ═══ 指南入口 ═══ -->\n<section id="guides">\n  <div class="wrap">\n    <div class="sec-head reveal">\n      <div class="eyebrow center">${dict['guide.sectionEyebrow']}</div>\n      <h2>${dict['guide.sectionH2']}</h2>\n      <p>${dict['guide.sectionSub']}</p>\n    </div>\n    <div class="g-list reveal">\n${featured(l.code).map((g) => guideCard(l, g)).join('\n')}\n    </div>\n    <div class="g-more"><a href="${guideUrl(l)}">${dict['guide.more']}</a></div>\n  </div>\n</section>`
+      : '',
     // 首頁／「給照護機構」頁互連用的網址（同語系）
     'meta.home': urlFor(l.dir),
     'meta.orgUrl': urlFor(l.dir, 'for-organizations'),
@@ -214,14 +261,91 @@ for (const l of LOCALES) {
     const shown = '/' + [l.dir, page.slug].filter(Boolean).join('/');
     console.log(`  ✓ ${shown}  ${(html.length / 1024).toFixed(0)}KB  (${l.htmlLang})`);
   }
+
+  if (hasGuides(l.code)) {
+    const guideLocales = LOCALES.filter((x) => hasGuides(x.code));
+    const homeMenu = langMenu(l.code, '');
+    const idxHreflang = [
+      ...guideLocales.map((x) => `<link rel="alternate" hreflang="${x.hreflang}" href="${guideUrl(x)}">`),
+      `<link rel="alternate" hreflang="x-default" href="${guideUrl(LOCALES[0])}">`,
+    ].join('\n');
+    const org = { '@type': 'Organization', '@id': `${SITE}/#organization`, name: '沐寧 Munea', url: `${SITE}/`, logo: `${SITE}/assets/paining-logo.png` };
+    const crumbs = (items) => ({ '@type': 'BreadcrumbList', itemListElement: items.map((it, k) => ({ '@type': 'ListItem', position: k + 1, name: it[0], item: it[1] })) });
+    const ld = (graph) => JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
+
+    for (const g of GUIDES[l.code]) {
+      const canonical = guideUrl(l, g.slug);
+      const toc = g.toc.length >= 3
+        ? `<nav class="g-toc" aria-label="${dict['guide.tocTitle']}"><b>${dict['guide.tocTitle']}</b><ol>${g.toc.map((t) => `<li><a href="#${t.id}">${esc(t.text)}</a></li>`).join('')}</ol></nav>`
+        : '';
+      const related = g.related.length
+        ? `<section class="g-related" aria-label="${dict['guide.related']}"><h2>${dict['guide.related']}</h2><div class="g-list">\n${g.related.map((s) => GUIDES[l.code].find((x) => x.slug === s)).filter(Boolean).map((x) => guideCard(l, x, dict)).join('\n')}\n</div></section>`
+        : '';
+      const graph = [
+        org,
+        {
+          '@type': 'Article', '@id': `${canonical}#article`, headline: g.title, description: g.description,
+          inLanguage: l.htmlLang, datePublished: g.published, dateModified: g.updated,
+          author: { '@type': 'Organization', name: dict['guide.byline'], url: `${SITE}/` },
+          publisher: { '@id': `${SITE}/#organization` }, mainEntityOfPage: canonical, image: `${SITE}/assets/og-image.jpg`,
+        },
+        crumbs([[dict['guide.crumbHome'], urlFor(l.dir)], [dict['guide.navIndex'], guideUrl(l)], [g.title, canonical]]),
+      ];
+      if (g.faq.length) {
+        graph.push({ '@type': 'FAQPage', mainEntity: g.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a.join(' ') } })) });
+      }
+      const fmtDate = (d) => (l.code === 'en' ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }) : d.replace(/-/g, '/'));
+      const html = render(readFileSync(join(SRC, 'guide.html'), 'utf8'), {
+        ...vars,
+        'g.title': esc(g.title),
+        'g.titleTag': esc(`${g.title}｜${dict['guide.siteSuffix']}`),
+        'g.description': esc(g.description),
+        'g.canonical': canonical,
+        'g.hreflang': '',
+        'g.published': g.published,
+        'g.updated': g.updated,
+        'g.updatedText': fmtDate(g.updated),
+        'g.readText': dict['guide.read'].replace('{n}', g.readingMinutes),
+        'g.toc': toc,
+        'g.body': g.html,
+        'g.related': related,
+        'g.langMenu': homeMenu,
+        'g.jsonLd': ld(graph),
+      }, `${l.code}/guide/${g.slug}`);
+      const gdir = join(l.dir ? join(OUT, l.dir) : OUT, 'guide', g.slug);
+      mkdirSync(gdir, { recursive: true });
+      writeFileSync(join(gdir, 'index.html'), html, 'utf8');
+    }
+
+    const idx = render(readFileSync(join(SRC, 'guide-index.html'), 'utf8'), {
+      ...vars,
+      'g.canonical': guideUrl(l),
+      'g.hreflang': idxHreflang,
+      'g.langMenu': homeMenu,
+      // 列表順序：搜尋字研究的優先三篇在前，其他照日期
+      'g.cards': [...featured(l.code), ...GUIDES[l.code].filter((g) => !featured(l.code).includes(g))].map((g) => guideCard(l, g, dict)).join('\n'),
+      'g.jsonLd': ld([
+        org,
+        { '@type': 'CollectionPage', '@id': `${guideUrl(l)}#page`, name: dict['guide.indexH1'], description: dict['guide.indexDesc'], inLanguage: l.htmlLang, url: guideUrl(l),
+          hasPart: GUIDES[l.code].map((g) => ({ '@type': 'Article', headline: g.title, url: guideUrl(l, g.slug) })) },
+        crumbs([[dict['guide.crumbHome'], urlFor(l.dir)], [dict['guide.navIndex'], guideUrl(l)]]),
+      ]),
+    }, `${l.code}/guide`);
+    const idir = join(l.dir ? join(OUT, l.dir) : OUT, 'guide');
+    mkdirSync(idir, { recursive: true });
+    writeFileSync(join(idir, 'index.html'), idx, 'utf8');
+    console.log(`  ✓ /${[l.dir, 'guide'].filter(Boolean).join('/')}  ${GUIDES[l.code].length} 篇`);
+  }
   built++;
 }
 
 /* ── sitemap：四個語系全列，每筆帶 hreflang 互指 ── */
 // 法律頁的正本網址在 app.munea.net（蘋果登記的），不混進 munea.net 的網站地圖
 const legalPages = [];
-// 方案頁（智慧取藥櫃・居家給藥機）——舊站就有、本尊也在 munea.net，要列進來
-const extraPages = ['solutions.html'];
+// 2026-11-18：solutions.html（舊定位：取藥櫃／藥師把關）已 301 轉到 /for-organizations，原檔封存在 site-src/_archive/
+const extraPages = [];
+// lastmod 要是真的修改日——每次產生都寫今天，Google 會判定這欄不可信而整欄忽略
+const SITE_UPDATED = config.siteUpdated;
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${PAGES.flatMap((page) =>
@@ -230,10 +354,21 @@ ${PAGES.flatMap((page) =>
     <loc>${urlFor(l.dir, page.slug)}</loc>
 ${LOCALES.map((a) => `    <xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${urlFor(a.dir, page.slug)}"/>`).join('\n')}
     <xhtml:link rel="alternate" hreflang="x-default" href="${urlFor('', page.slug)}"/>
-    <changefreq>${page.slug ? 'monthly' : 'weekly'}</changefreq><priority>${page.slug ? '0.7' : '1.0'}</priority>
+    <lastmod>${SITE_UPDATED}</lastmod><changefreq>monthly</changefreq><priority>${page.slug ? '0.7' : '1.0'}</priority>
   </url>`
   )
 ).join('\n')}
+${LOCALES.filter((l) => hasGuides(l.code)).map((l) => {
+  const alts = LOCALES.filter((x) => hasGuides(x.code));
+  const latest = GUIDES[l.code].map((g) => g.updated).sort().pop();
+  return `  <url>
+    <loc>${guideUrl(l)}</loc>
+${alts.map((a) => `    <xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${guideUrl(a)}"/>`).join('\n')}
+    <xhtml:link rel="alternate" hreflang="x-default" href="${guideUrl(alts[0])}"/>
+    <lastmod>${latest}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+${GUIDES[l.code].map((g) => `  <url><loc>${guideUrl(l, g.slug)}</loc><lastmod>${g.updated}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`).join('\n')}`;
+}).join('\n')}
 ${[...extraPages, ...legalPages]
   .map((p) => `  <url><loc>${SITE}/${p}</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`)
   .join('\n')}
@@ -241,7 +376,7 @@ ${[...extraPages, ...legalPages]
 `;
 writeFileSync(join(OUT, 'sitemap.xml'), sitemap, 'utf8');
 
-console.log(`  ✓ sitemap.xml（${LOCALES.length} 語系 + ${legalPages.length} 條款頁）`);
+console.log(`  ✓ sitemap.xml（${LOCALES.length} 語系＋指南 ${Object.values(GUIDES).reduce((n, g) => n + g.length, 0)} 篇）`);
 console.log(
   `\n完成：${built} 個語系。下載鍵狀態＝${config.appStoreUrl ? 'App Store 正式連結' : '即將上架（App 尚未過審）'}\n`
 );
@@ -252,6 +387,28 @@ for (const l of LOCALES) for (const page of PAGES) {
   const leftover = readFileSync(p, 'utf8').match(/\{\{[^}]+\}\}/g);
   if (leftover) {
     console.error(`✗ ${p} 還有沒換掉的標記：${leftover.slice(0, 5).join(', ')}`);
+    process.exitCode = 1;
+  }
+}
+
+/* ── 保險絲：指南文章裡的站內連結必須指到真的有產生的頁面 ──
+ * 2026-11-18 第二輪評分抓到英文指南寫成 /guides/en/...（實際是 /en/guide/...），4 條全 404。 */
+{
+  const { existsSync: exists } = await import('node:fs');
+  const broken = [];
+  for (const l of LOCALES) {
+    for (const g of GUIDES[l.code]) {
+      for (const m of g.html.matchAll(/href="(\/[^"#?]*)/g)) {
+        const p = m[1].replace(/\/$/, '');
+        const target = join(OUT, p);
+        if (!(exists(join(target, 'index.html')) || exists(target) || exists(target + '.html'))) {
+          broken.push(`${l.code}/${g.slug} → ${m[1]}`);
+        }
+      }
+    }
+  }
+  if (broken.length) {
+    console.error(`✗ 指南裡有 ${broken.length} 條站內連結指到不存在的頁面：\n  ` + broken.join('\n  '));
     process.exitCode = 1;
   }
 }
