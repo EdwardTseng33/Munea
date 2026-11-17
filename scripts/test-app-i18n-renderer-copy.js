@@ -112,7 +112,9 @@ for (const locale of LOCALES) {
   const callStatuses = [
     'accountPreparing',
     'activationPending',
+    'audioRestart',
     'authExpired',
+    'backgroundEnded',
     'disconnected',
     'microphoneBlocked',
     'microphoneHttps',

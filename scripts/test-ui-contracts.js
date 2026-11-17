@@ -163,7 +163,10 @@ const busyCardFallbackBody = app.slice(
 assert(busyCardFallbackBody.includes("muneaT('voice.queue.fullTitle'") && busyCardFallbackBody.includes("'voice.queue.fullBody'"), 'Busy-card fallback copy must stay localized even before renderer-copy initialization');
 assert(/if \(\(callDialing \|\| callPreflightPending\) && !callConnected\)/.test(app), 'Tapping the call button must cancel while queued (preflight pending), not only while dialing');
 assert(app.includes('if (callConnected || callDialing || callPreflightPending)'), 'Leaving the call screen while queued must hang up and release the queue slot');
-assert(/callConnected \|\| callDialing \|\| callPreflightPending\) && \$\('#callToggle'\)/.test(app), 'Backgrounding the App while queued must cancel the queue slot');
+// 2026-11-16：背景收線改由 releaseCallForBackground 自己做（結束原因記 background_release），
+// 不再替使用者按一次通話鍵（那會被記成使用者自己掛的）。排隊中離開一樣要放掉排隊位子。
+assert(/function releaseCallForBackground\(source\) \{\s*if \(!\(callConnected \|\| callDialing \|\| callPreflightPending\)\) return false;/.test(app)
+  && app.includes('try { releaseCallForBackground(source); } catch (e) {}'), 'Backgrounding the App while queued must cancel the queue slot');
 assert(app.includes("if (reason === 'call_cancelled')"), 'A user-initiated cancel must exit quietly instead of reporting a busy failure');
 
 // 排隊敘事＋等待時間人話化（2026-07-24 P0）：position<=1 要用「準備中」講法而不是誤導的「排第 1 位」；
