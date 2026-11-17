@@ -330,6 +330,12 @@ class SpokenCategoryTests(unittest.TestCase):
             self.assertIn(c["label"], allowed)
             self.assertIsInstance(c["count"], int)
 
+    def test_feelings_that_sound_like_symptoms_are_not_counted_as_body(self):
+        cats = org_api._spoken_categories(["怕給孩子添麻煩", "想到就心酸", "想到他就心痛", "整天悶悶不樂", "要去廟裡燒香", "股票跌很多", "找人吐苦水"])
+        self.assertEqual(cats, [{"key": "other", "label": "心情或生活上的掛心事", "count": 7}])
+        real = org_api._spoken_categories(["胸悶", "膝蓋痛", "手麻", "昨天跌倒", "一直吐"])
+        self.assertEqual(real, [{"key": "body", "label": "身體不舒服", "count": 5}])
+
     def test_empty_stays_empty(self):
         self.assertEqual(org_api._spoken_categories([]), [])
         self.assertEqual(org_api._spoken_categories(None), [])
@@ -364,7 +370,7 @@ class ConsentSafetyTests(Base):
         off = org_api.org_consent_set_response(ident, {"seatId": seat_id, "granted": False})
         self.assertTrue(off["ok"])
 
-    def test_grant_without_audit_trail_is_rolled_back(self):
+    def test_grant_without_audit_trail_never_takes_effect(self):
         def boom(_event):
             raise RuntimeError("audit store down")
         org_api.set_audit_sink(boom)
@@ -372,9 +378,50 @@ class ConsentSafetyTests(Base):
         out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A3, "granted": True})
         self.assertFalse(out["ok"])
         self.assertEqual(out["error"], "consent_not_recorded")
-        self.assertEqual(out["seat"]["consent"]["status"], "revoked")
+        self.assertEqual(out["seat"]["consent"]["status"], "none")
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A3), [])
         org_api.set_audit_sink(self.audit.append)
         self.assertNotIn(SEAT_A3, {e["seatId"] for e in org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())["elders"]})
+
+    def test_when_audit_and_storage_are_both_down_consent_is_never_written(self):
+        """資料庫整個掛掉：稽核寫不進去、同意表也寫不進去。同意不能停在「已同意」。"""
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        with patch.object(org_api, "save_consent", side_effect=RuntimeError("consent store down")) as save:
+            out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A3, "granted": True})
+        self.assertEqual(out["error"], "consent_not_recorded")
+        save.assert_not_called()
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A3), [])
+
+    def test_already_granted_stays_granted_when_audit_is_down(self):
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A1, "personId": PER_A1, "authUserId": str(uuid.uuid4())}
+        out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A1, "granted": True})
+        self.assertEqual(out["error"], "consent_not_recorded")
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A1)[0]["status"], "granted")
+
+    def test_grant_audit_is_written_before_the_consent(self):
+        order = []
+        org_api.set_audit_sink(lambda e: order.append("audit"))
+        real_save = org_api.save_consent
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        with patch.object(org_api, "save_consent", side_effect=lambda item: (order.append("save"), real_save(item))[1]):
+            out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A3, "granted": True})
+        self.assertTrue(out["ok"])
+        self.assertEqual(order, ["audit", "save"])
+
+    def test_consent_does_not_carry_over_when_the_seat_changes_hands(self):
+        seats = json.load(open(os.environ["MUNEA_ENTERPRISE_SEATS_PATH"], encoding="utf-8"))
+        for s in seats:
+            if s["id"] == SEAT_A1:
+                s["accountId"] = str(uuid.uuid4())   # 後台把這個席次換綁給另一個人
+        write("MUNEA_ENTERPRISE_SEATS_PATH", seats)
+        out = org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())
+        self.assertNotIn(SEAT_A1, {e["seatId"] for e in out["elders"]})
 
     def test_revoke_still_works_when_audit_is_down(self):
         def boom(_event):
@@ -391,6 +438,31 @@ class ConsentSafetyTests(Base):
         self.assertIn("類別與次數", "".join(view["whatOrgSees"]))
         self.assertNotIn("症狀類別", "".join(view["whatOrgSees"]))
         self.assertIn("短語", "".join(view["whatOrgNeverSees"]))
+
+
+class PoisonPillTests(Base):
+    """把一個獨特字串塞進每一個可能夾帶文字的地方，機構端整份回應都不能出現它。"""
+
+    PILL = "毒餌字串XQ7"
+
+    def test_no_free_text_reaches_the_org(self):
+        s1 = sig(PER_A1, 3, 1, self.PILL + "原句", [self.PILL + "掛心事", "膝蓋痠"])
+        s1["chatObs"] = self.PILL + "聊天觀察"
+        s1["positives"] = [self.PILL + "開心事"]
+        s2 = sig(PER_A1, 2, 1, self.PILL + "又一句", [self.PILL + "睡不好"])
+        s3 = sig(PER_A1, 1, 1, self.PILL, [])
+        g = guardian(ACC_A1, PER_A1, 2, "high")
+        g.setdefault("properties", {})["categories"] = [self.PILL + "類別"]
+        fake_level = guardian(ACC_A1, PER_A1, 1, self.PILL + "等級")
+        loaders = fake_loaders(signals={PER_A1: [s1, s2, s3]}, summaries={PER_A1: [call(PER_A1, 3)]}, events=[g, fake_level])
+        week = org_api.org_elder_care_week_response(auth(CASE_A), {"seatId": SEAT_A1}, loaders=loaders)
+        elders = org_api.org_elders_response(auth(ADMIN_A), loaders=loaders)
+        self.assertTrue(week["ok"] and elders["ok"])
+        for name, payload in (("care-week", week), ("elders", elders)):
+            self.assertNotIn(self.PILL, json.dumps(payload, ensure_ascii=False), name)
+        # 塞進去的短語有被算進次數（證明不是整段沒讀到）
+        cats = {c["key"]: c["count"] for c in week["week"]["spokenHealth"]["categories"]}
+        self.assertEqual(cats, {"sleep": 1, "body": 1, "other": 1})
 
 
 class AuditTests(Base):

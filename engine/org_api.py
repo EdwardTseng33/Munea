@@ -458,8 +458,12 @@ def _consented_seats(staff, client):
     """鐵線 2：只拿已同意的席次。這裡是 inner join，不是撈出來再遮。"""
     if _client_kind(client) == "esg":
         return []
-    granted = granted_seat_ids(client["id"])
-    return [s for s in _visible_seats(staff, client) if s.get("id") in granted and s.get("accountId")]
+    # 同意是「這個人」給的。席次之後換綁到別的帳號，舊的同意不能讓新的人被看到，
+    # 所以除了席次有同意，還要同意當時的帳號＝席次現在的帳號。
+    granted_by = {c["seatId"]: str(c.get("accountId") or "")
+                  for c in list_consents(client_id=client["id"], status="granted") if c.get("seatId")}
+    return [s for s in _visible_seats(staff, client)
+            if s.get("accountId") and granted_by.get(s.get("id")) == str(s.get("accountId"))]
 
 
 def _staff_and_client(auth):
@@ -593,6 +597,12 @@ SPOKEN_CATEGORY_RULES = (
     )),
 )
 SPOKEN_CATEGORY_OTHER = ("other", "心情或生活上的掛心事")
+# 這些說法裡有「痛、酸、麻、悶、燒、跌、吐」，但講的不是身體。比對前先拿掉，
+# 免得機構為了不存在的身體問題打電話。拿不準的一律落到「心情或生活上的掛心事」（只露次數）。
+SPOKEN_NOT_BODY_PHRASES = (
+    "添麻煩", "麻煩", "心酸", "辛酸", "酸言", "心痛", "痛心", "痛苦", "頭痛的事", "悶悶不樂", "鬱悶", "煩悶", "心悶",
+    "燒香", "燒錢", "燒金", "吐苦水", "吐槽", "下跌", "跌價", "股票跌", "跌停", "大跌", "麻將",
+)
 
 
 def _spoken_categories(items):
@@ -603,8 +613,11 @@ def _spoken_categories(items):
         if not text:
             continue
         key = SPOKEN_CATEGORY_OTHER[0]
+        probe = text
+        for phrase in SPOKEN_NOT_BODY_PHRASES:
+            probe = probe.replace(phrase, "")
         for rule_key, _label, words in SPOKEN_CATEGORY_RULES:
-            if any(word in text for word in words):
+            if any(word in probe for word in words):
                 key = rule_key
                 break
         counts[key] = counts.get(key, 0) + 1
@@ -639,7 +652,8 @@ def _strip_week_for_org(week):
             "empty": (week.get("spokenHealth") or {}).get("empty", True),
         },
         "safety": {
-            "source": safety.get("source"), "counts": safety.get("counts") or {},
+            "source": safety.get("source"),
+            "counts": {k: v for k, v in (safety.get("counts") or {}).items() if k in ORG_RISK_LEVELS},
             "highOrCritical": safety.get("highOrCritical") or 0, "empty": safety.get("empty", True),
         },
         "honesty": week.get("honesty"),
@@ -647,6 +661,7 @@ def _strip_week_for_org(week):
     }
 
 
+ORG_RISK_LEVELS = ("low", "medium", "high", "critical", "crisis")
 ORG_GUARDIAN_SUGGESTION = "聯絡本人或家屬確認狀況。機構端看不到通話原句。"
 
 
@@ -903,7 +918,19 @@ def org_consent_set_response(identity, data=None):
     by_role = "self" if identity.get("personId") and str(data.get("asRole") or "") == "self" else "family"
     existing = next(iter(list_consents(seat_id=seat_id)), None)
     now = _utc_now()
+    audit_event = {
+        "eventType": "org_consent_granted" if granted else "org_consent_revoked",
+        "actorUserId": identity.get("authUserId"), "accountId": account_id,
+        "targetTable": "org_care_consents", "targetId": (existing or {}).get("id") or seat_id,
+        "details": {"actorType": "family" if by_role == "family" else "self", "clientId": client["id"], "seatId": seat_id},
+    }
     if granted:
+        # 順序是「先留痕、再生效」。反過來（先存同意、留痕失敗再退回）在資料庫整個掛掉時會兩邊一起失敗：
+        # 退回那一步也寫不進去，同意就停在「已同意」而且沒有任何紀錄。
+        # 先留痕的話，最壞只是多一筆「有同意的紀錄、實際沒生效」——失敗的方向是安全的。
+        if not _audit(audit_event):
+            LOGGER.error("org_api consent grant refused: audit write failed (seat %s)", _seat_code(seat_id))
+            return {"ok": False, "error": "consent_not_recorded", "seat": _consent_view(seat, client, existing)}
         record = save_consent({
             **(existing or {}), "enterpriseClientId": client["id"], "seatId": seat_id, "accountId": account_id,
             "status": "granted", "grantedByAuthUserId": identity.get("authUserId"), "grantedByRole": by_role,
@@ -912,19 +939,9 @@ def org_consent_set_response(identity, data=None):
     else:
         if not existing:
             return {"ok": True, "changed": False, "seat": _consent_view(seat, client, None)}
+        # 撤回：先關、再留痕。沒留到痕也照樣關——寧可少一筆紀錄，不可關不掉。
         record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
-    audited = _audit({
-        "eventType": "org_consent_granted" if granted else "org_consent_revoked",
-        "actorUserId": identity.get("authUserId"), "accountId": account_id,
-        "targetTable": "org_care_consents", "targetId": record.get("id"),
-        "details": {"actorType": "family" if by_role == "family" else "self", "clientId": client["id"], "seatId": seat_id},
-    })
-    if granted and not audited:
-        # 「誰在什麼時候同意讓機構看」留不下紀錄，這次同意就不算數：退回沒同意，請他稍後再試。
-        # 撤回不走這條——沒留到痕也照樣關，寧可少一筆紀錄，不可關不掉。
-        record = save_consent({**record, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
-        LOGGER.error("org_api consent grant rolled back: audit write failed (seat %s)", _seat_code(seat_id))
-        return {"ok": False, "error": "consent_not_recorded", "seat": _consent_view(seat, client, record)}
+        _audit(audit_event)
     return {"ok": True, "changed": True, "seat": _consent_view(seat, client, record)}
 
 
