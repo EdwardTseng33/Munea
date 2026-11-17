@@ -835,7 +835,7 @@ class AiJudgeDecisionTests(_VoiceFlowBase):
         self.asked.clear()
         self.notices.clear()
         results = iter([False, True])
-        asyncio.run(run("他打我，我胸口好痛"))                                  # AI 沒看到這句
+        asyncio.run(run("他打我，我喘不過氣"))                                  # AI 沒看到這句（急症＋提到受暴：會排隊）
         self.assertEqual((len(self.asked), len(self.notices)), (1, 1))
 
     def test_after_the_judge_found_abuse_later_emergencies_stay_blocked(self):
@@ -1289,6 +1289,23 @@ class CallIdAndPayloadTests(_VoiceFlowBase):
         family_notify(1, "u1", "high", ["medical_emergency_signal"], call_id="vc-1",
                       brain_post=lambda p: posted.append(p) or ok)
         self.assertEqual(posted[2]["callId"], "vc-1")
+
+    def test_ai_confirmed_abuse_gets_its_own_internal_alert(self):
+        """告警同一種 10 分鐘只送一次：AI 判過有受暴要用自己的名字，不能被同一通先亮的關鍵字受暴告警吃掉。"""
+        record_and_alert = self._orig[0]
+        alerts = []
+        ok = {"identityResolved": True, "recorded": True}
+        abuse = {"risk": {"level": "high", "categories": ["protection_event"], "requiresAuditEvent": True,
+                          "requiresHumanEscalation": True, "protectionEvent": True, "protectionMentioned": True,
+                          "abuseConfirmed": True},
+                 "responsePolicy": {"familyNotificationCandidate": False, "protectionLine": "113"}}
+        record_and_alert("user", 1, _risk("high", "protection_event", False), alert_fn=lambda *a, **k: alerts.append(a),
+                         person_id="u1", defer_family=True, brain_post=lambda p: ok)
+        record_and_alert("user", 1, abuse, alert_fn=lambda *a, **k: alerts.append(a), person_id="u1", defer_family=True,
+                         brain_post=lambda p: ok)
+        self.assertEqual([a[1] for a in alerts], ["guardian:protection_event", "guardian:abuse_confirmed"])
+        self.assertIn("abuseConfirmed=True", alerts[1][2])
+        self.assertNotIn("u1", " ".join(map(str, alerts)))                     # 不帶任何 ID
 
 
 class BrainAbuseMemoryTests(unittest.TestCase):

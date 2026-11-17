@@ -881,7 +881,8 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
         try:
             al(
                 "voice",
-                "guardian:%s" % ((categories or ["-"])[0]),
+                # AI 判過有受暴的用自己的名字：告警同一種 10 分鐘只送一次，跟關鍵字亮的受暴同名會被吃掉（級數沒改，待 Edward 定）
+                "guardian:%s" % ("abuse_confirmed" if risk.get("abuseConfirmed") else (categories or ["-"])[0]),
                 "level=%s who=%s categories=%s protectionEvent=%s familyNotificationCandidate=%s%s" % (
                     level, who, ",".join(categories) or "-",
                     risk.get("protectionEvent"), policy.get("familyNotificationCandidate"),
@@ -1196,10 +1197,13 @@ async def _guardian_family_notify_later(cid, st):
             return
         verdict = None
         if not st.get("guardian_abuse_confirmed"):        # 同一通 AI 已判過有受暴：不用再問，下面直接不發
+            asked_at = time.monotonic()
             verdict = await _guardian_abuse_verdict(cid, st)
             if verdict is None:
-                # AI 裁判沒回：照旗標走——還在判的字幕再給它們判完（第二層 AI 有自己的 4 秒逾時）
-                await _guardian_wait_inflight(st, perception_engine.GUARDIAN_AI_TIMEOUT_S)
+                # AI 裁判沒回：照旗標走——還在判的字幕（第二層 AI）再給它們判完；連同問 AI 花掉的時間，最多等約 4 秒
+                # （收線時：寬限 3 秒＋這段＋送 Brain 每次 3 秒，15 秒內做得完）
+                await _guardian_wait_inflight(
+                    st, max(0.0, perception_engine.GUARDIAN_AI_TIMEOUT_S - (time.monotonic() - asked_at)))
         send, reason = _guardian_family_decision(st, verdict)
         if verdict is not None and verdict.get("abuse"):
             _guardian_record_abuse_confirmed(cid, st, pending["personId"])
