@@ -196,18 +196,103 @@ vm.runInThisContext(fs.readFileSync('web/src/health.js', 'utf8'), { filename: 'h
   assert.strictEqual(MuneaHealth.uiState(), 'off', '沒讀到過又讀失敗，必須是未連接');
   summaryThrows = '';
 
+  // ⑤ 2026-11-15 Edward 真機回報「我連接了，App 裡卻沒有顯示健康資料」。
+  //    重裝後登入當下探一次讀不到（項目還沒開）；他去健康 App 把項目打開再切回來，
+  //    必須再探一次並自動接回——不可以因為「這次啟動已經探過了」就永遠不讀。
+  MuneaHealth.disconnect();
+  values.delete('munea.health.disconnectedAt');   // 模擬重裝：旗子與解除紀錄都被清掉
+  values.delete('munea.devicesOn');
+  const healthEvents = [];
+  window.dispatchEvent = ev => { healthEvents.push(ev); };
+  const realNow = Date.now;
+  let clockSkew = 60000;                            // 先跳過前面留下的讀取冷卻
+  Date.now = () => realNow() + clockSkew;
+  try {
+    emptySummary = true;
+    let readsBefore = summaryReads;
+    await MuneaHealth.refresh({ force: true });     // 第一次探：項目還沒開
+    await new Promise(resolve => setTimeout(resolve, 1));
+    assert.strictEqual(summaryReads, readsBefore + 1, '沒立旗子時要先探一次');
+    assert.strictEqual(MuneaHealth.connected(), false, '探不到值不得把人標成已連接');
+    assert.ok(/一項都沒有/.test(elements.cnHealthReadState.textContent),
+      '探測讀不到也要留下「幾點讀過、一項都沒有」——這是他判斷是不是項目沒開的唯一線索');
+
+    emptySummary = false;                           // 他去健康 App 把項目打開了
+    readsBefore = summaryReads;
+    await MuneaHealth.refresh({ force: true });     // 馬上切回來：還在冷卻期，不重複打擾原生層
+    assert.strictEqual(summaryReads, readsBefore, '15 秒冷卻期內不重複探測');
+    clockSkew += 20000;                             // 過了冷卻期再切回來
+    await MuneaHealth.refresh({ force: true });
+    await new Promise(resolve => setTimeout(resolve, 1));
+    assert.strictEqual(MuneaHealth.connected(), true,
+      '同一次啟動裡，第一次探不到、之後項目打開了，回到前景必須自動接回');
+    assert.strictEqual(MuneaHealth.uiState(), 'on');
+    assert.strictEqual(elements.healthSettingsStateLabel.textContent, '已連接');
+
+    // 開 App 時沒立旗子也要探一次（重裝後授權可能還在）；他自己按過解除的不准接回。
+    MuneaHealth.disconnect();
+    values.delete('munea.health.disconnectedAt');
+    clockSkew += 120000;
+    readsBefore = summaryReads;
+    MuneaHealth.boot();
+    await new Promise(resolve => setTimeout(resolve, 5));
+    assert.ok(summaryReads > readsBefore, '開 App 時沒立旗子也要探一次，不能等使用者自己切出去再切回來');
+    assert.strictEqual(MuneaHealth.connected(), true);
+    MuneaHealth.disconnect();                       // 這次是他自己按的：留下解除紀錄
+    clockSkew += 120000;
+    readsBefore = summaryReads;
+    MuneaHealth.boot();
+    await new Promise(resolve => setTimeout(resolve, 5));
+    assert.strictEqual(summaryReads, readsBefore, '他自己按過解除連接，開 App 不准自動接回');
+
+    // 診斷事件：只有「讀到哪幾項、有沒有錯」，不可以帶任何數值出去。
+    const reads = healthEvents.filter(ev => ev && ev.type === 'munea:health-read');
+    assert.ok(reads.length >= 2, '每次真的讀過都要發診斷事件，後台才看得到手機讀到了什麼');
+    reads.forEach(ev => {
+      assert.deepStrictEqual(Object.keys(ev.detail).sort(), ['connected', 'fields', 'hasError', 'trigger'],
+        '診斷事件只准帶這四個欄位');
+      assert.ok(ev.detail.fields.every(name => typeof name === 'string'), '診斷事件只能帶項目名稱，不能帶數值');
+    });
+    assert.ok(reads.some(ev => ev.detail.fields.length === 0), '讀不到的那一次也要回報（空清單）');
+    assert.ok(reads.some(ev => ev.detail.fields.indexOf('steps') >= 0), '讀到的項目名稱要回報');
+  } finally {
+    Date.now = realNow;
+    window.dispatchEvent = () => {};
+  }
+
   // 2026-07-31 Edward 實測回報：健康 App 顯示已授權、沐寧卻說未連結。
 // 根因＝「已連結」看的是我們自己存在手機裡的旗子，重裝就被清掉；
 // 但蘋果的授權還在（那個視窗一輩子只跳一次、補不回來）。
 // 這幾條守住「自動接回」的三個分寸。
 const healthSrc = fs.readFileSync('web/src/health.js', 'utf8');
 assert.match(healthSrc, /relinkIfAlreadyAuthorized/, '缺少重裝後自動接回');
-assert.match(healthSrc, /if \(connected\(\) \|\| relinkTried\) return false;/,
-  '自動接回可能在已連線時、或同一次啟動裡重複執行');
+assert.match(healthSrc, /async function relinkIfAlreadyAuthorized\(\) \{\s*if \(connected\(\)\) return false;/,
+  '自動接回不可以在已連線時執行');
+assert.match(healthSrc, /Date\.now\(\) - relinkLastAt < RELINK_COOLDOWN_MS\) return false;/,
+  '自動接回要有冷卻（不重複打擾原生層）');
+assert.ok(!/relinkTried/.test(healthSrc),
+  '自動接回不可以「一次啟動只試一次」——探不到之後他去健康 App 打開項目，這次啟動就再也接不回來');
+assert.ok(!/if \(available\(\) && connected\(\)\) \{ refresh\(\); \}/.test(healthSrc),
+  '開 App 時不可以要求先立旗子才讀——重裝過的人旗子是空的、授權可能還在');
 assert.match(healthSrc, /munea\.health\.disconnectedAt[\s\S]{0,120}return false/,
   '他自己按過解除連接卻被自動接回——那是他的決定、不是重裝造成的失憶');
 assert.match(healthSrc, /if \(!hasAnyValue\(s\)\) return false;/,
   '沒真的讀到值就把人標成已連線');
+
+/* 2026-11-15 Edward 真機回報「連了卻沒資料」：後台要看得到手機讀到了什麼、上傳有沒有被拒收 */
+const appSrc = fs.readFileSync('web/src/app.js', 'utf8');
+assert.match(appSrc, /addEventListener\('munea:health-read'[\s\S]{0,900}?trackProductEvent\('health_read'/,
+  'app.js 要把健康讀取診斷記成 health_read 事件');
+{
+  const block = appSrc.slice(appSrc.indexOf("addEventListener('munea:health-read'"));
+  const body = block.slice(0, block.indexOf('});') + 3);
+  assert.ok(!/\b(steps|hr|spo2|bpSys|bpDia|sleepHours)\s*:/.test(body),
+    'health_read 事件只准帶項目名稱與狀態，不可以把健康數值送出去');
+}
+assert.match(appSrc, /if \(response\.ok\) \{ _syncPushLastSent\.set\([\s\S]{0,80}?return; \}[\s\S]{0,400}?noteFamilySyncRejected\(key, response\.status\)/,
+  '家庭狀態上傳被後端拒收時必須留紀錄——2026-11-07 健康資料上傳被回 403，沒有任何人知道');
+assert.match(appSrc, /function noteFamilySyncRejected\(key, status\)[\s\S]{0,500}?trackProductEvent\('family_sync_rejected', \{ stateKey: String\(key\), httpStatus:/,
+  '拒收紀錄只帶鑰匙名與狀態碼，不帶內容');
 
 /* 2026-08-01 Edward 實機回報的三件事，各留一道門 */
 

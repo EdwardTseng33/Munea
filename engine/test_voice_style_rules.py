@@ -355,9 +355,13 @@ class VoicePromptBudgetTest(unittest.TestCase):
                 else:
                     os.environ[key] = old
 
+    # 2026-11-13：三個上限各放寬 60 字（16900→16960、18700→18760、17200→17260）。
+    # 原因①：改之前今天就已經超 1～4 字（提示詞裡的日期字串長度會隨日子變），這個測試本來就在邊緣；
+    # 原因②：加了一句「請他改口的話同一通最多說一次」（考卷 S33，3.8 連說三次同一句），
+    #        同段順手收短後淨增 43 字。之後要再加規則，請先在同一段刪字，不要再動上限。
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(self._content_len(prompt), 16900)
+        self.assertLessEqual(self._content_len(prompt), 16960)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -372,7 +376,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(self._content_len(prompt), 18700)
+        self.assertLessEqual(self._content_len(prompt), 18760)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -382,7 +386,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(self._content_len(prompt), 17200)
+        self.assertLessEqual(self._content_len(prompt), 17260)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)
