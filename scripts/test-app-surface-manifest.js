@@ -32,8 +32,9 @@ assert.deepEqual(manifest.captureProfiles, [
 // 2026-10-28：40（原本 39）＋ modal:care-week 本週摘要（補助案 B4 第三項）。
 // 2026-11-09：39（原本 40）－拿掉 chat:text-fallback（Munea 只有語音、打字聊天後備整個移除；
 // 它跟 chat:error 共用同一個 #busyCard DOM／layout，沒有獨立畫面需要證據）。
+// 2026-11-17：40（原本 39）＋ modal:seat-code 機構開通碼輸入視窗（設定 → 機構開通碼）。
 // 這個數字是刻意寫死的閘門——加畫面就要來這裡改一次，畫面總數才不會無聲漂移。
-assert.equal(manifest.surfaces.length, 39, 'The complete App visual surface count drifted');
+assert.equal(manifest.surfaces.length, 40, 'The complete App visual surface count drifted');
 
 const states = manifest.surfaces.map(({ state }) => state);
 assert.equal(new Set(states).size, states.length, 'App visual states must be unique');
@@ -56,6 +57,7 @@ const requiredStates = [
   'modal:family-circle',
   'modal:invite-family',
   'modal:join-circle',
+  'modal:seat-code',
   'modal:top-up',
   'reader:subscription',
   'modal:appointment',
