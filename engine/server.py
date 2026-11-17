@@ -36,6 +36,7 @@ import enterprise_seats
 import enterprise_billing
 import org_portal
 import org_api
+import org_alerts
 import model_router
 import notify
 import apple_store
@@ -499,6 +500,10 @@ ADMIN_POST_PATHS = {
     # 機構端專區第 2 段（2026-10-29）：幫機構開人員帳號、看各席次同意狀態。處理端再驗一次管理鑰匙。
     "/admin/enterprise/staff/invite",
     "/admin/enterprise/consent/status",
+    # 第 3 段（2026-11-18 · C4）：匯出機構的異常提醒與逐筆判定，對齊 C4 逐筆判定表。
+    "/admin/enterprise/alerts/export",
+    # 給之後的排程：把每一家照護機構的提醒算一次（沒人打開提醒匣也照樣發出）。
+    "/admin/enterprise/alerts/refresh",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -7738,9 +7743,69 @@ def append_audit_event(event=None):
     return normalized
 
 
-# 機構端專區的稽核（誰看過誰的週摘要、同意開關、開人員）第 2 段先寫進同一張 audit_events；
-# 第 3 段搬專用表時只要換這一行的目的地。
+# 機構端專區的稽核（誰看過誰的週摘要、同意開關、開人員、異常提醒的發出與判定）寫進同一張 audit_events，
+# 但走專用的嚴格寫入口（帳號欄空值、不綁請求身分、寫不進就丟錯）。sink 的定義在下面，這裡先占位，
+# 定義完立刻換上（見 append_org_audit_event_strict 之後那一行）。
 org_api.set_audit_sink(append_audit_event)
+
+
+# 同意／撤回是家人自己按的：這兩種留在家人自己的帳號底下（他「下載我的資料」要看得到自己按過什麼）。
+# 其餘機構端紀錄（判定、備註、誰看過誰、人員啟用、設定、匯出）帳號欄一律空值。
+ORG_FAMILY_OWNED_EVENTS = ("org_consent_granted", "org_consent_revoked")
+
+
+def _org_audit_backend():
+    """機構端稽核用的雲端連線：刻意不綁這次請求的登入身分（測試可換掉這一支）。"""
+    return supabase_adapter.make_adapter(identity=None)
+
+
+def append_org_audit_event_strict(event=None):
+    """機構端稽核專用寫入口（2026-11-18 · #713 信任關卡）。三件事跟一般的 append_audit_event 不同：
+    ① 帳號欄一律空值：家人用自己的登入讀得到自己帳號底下的稽核紀錄（001 的讀取規則），
+       機構的判定與備註、誰看過誰的週摘要都不能掛在任何家庭帳號底下。
+    ② 不綁這次請求的登入身分：照護人員如果也用同一個帳號開過 App，請求會被綁成他自己家。
+    ③ 雲端開著卻寫失敗就往外丟——不退本機暫存檔假裝成功（Cloud Run 每台機器的暫存檔各自獨立、重建就消失），
+       「寫不進就不算數」才真的成立。雲端沒開（本機開發、測試）才寫本機稽核本子。"""
+    normalized = normalize_audit_event(event)
+    backend = _org_audit_backend()
+    if backend.enabled():
+        keep = normalized.get("eventType") in ORG_FAMILY_OWNED_EVENTS
+        return normalize_audit_event(backend.append_org_audit_event(normalized, keep_account=keep))
+    if str(os.environ.get("MUNEA_DATABASE_PROVIDER") or "").strip().lower() == "supabase":
+        # 設定說要用雲端、雲端卻沒啟用（例如有人把示範帳號那兩個環境變數清掉）：不准無聲退回本機檔
+        raise RuntimeError("org audit requires the cloud database but it is not enabled")
+    store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
+    events = [normalize_audit_event(e) for e in store.get("events", [])]
+    events.insert(0, {**normalized, "accountId": None})
+    write_json_file(AUDIT_EVENTS_STORE_PATH, {"schemaVersion": 1, "events": events[:1000], "updatedAt": utc_now()})
+    return normalized
+
+
+def load_org_audit_events(client_id, since_iso, event_types):
+    """機構端異常提醒匣（org_alerts）讀「發出／判定」等紀錄：雲端優先；雲端開著卻讀失敗就往外丟（整頁顯示暫時無法使用），
+    雲端沒開才讀本機稽核本子。不綁這次請求的登入身分。"""
+    types = tuple(event_types or ())
+    backend = _org_audit_backend()
+    try:
+        remote = backend.load_org_audit_events(client_id, types, since_iso=since_iso)
+        if remote is not None:
+            return [normalize_audit_event(e) for e in remote]
+    except Exception as e:
+        if backend.enabled():
+            raise
+        log_fallback_exception("load org audit events from Supabase", e)
+    store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
+    rows = [normalize_audit_event(e) for e in (store.get("events", []) if isinstance(store, dict) else [])]
+    return [
+        e for e in rows
+        if e.get("eventType") in types
+        and str((e.get("details") or {}).get("clientId") or "") == str(client_id)
+        and str(e.get("createdAt") or "") >= str(since_iso or "")
+    ]
+
+
+org_alerts.set_event_loader(load_org_audit_events)
+org_api.set_audit_sink(append_org_audit_event_strict)
 
 
 def admin_audit_events_summary(data=None):
@@ -11209,6 +11274,17 @@ class H(BaseHTTPRequestHandler):
                 self._json(org_api.org_elder_care_week_response(auth_gate.get("auth"), data))
             elif self.path == "/org/reports":
                 self._json(org_api.org_reports_response(auth_gate.get("auth"), data))
+            # 第 3 段（2026-11-18 · 補助案 C4）：異常提醒匣、逐筆判定、自家紀錄。
+            elif self.path == "/org/alerts":
+                self._json(org_alerts.org_alerts_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/alert/mark":
+                self._json(org_alerts.org_alert_mark_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/audit":
+                self._json(org_alerts.org_audit_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/settings":
+                self._json(org_alerts.org_settings_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/settings/save":
+                self._json(org_alerts.org_settings_save_response(auth_gate.get("auth"), data))
             # App 端（家庭成員）：機構照護模式同意——只認已驗證的帳號身分，席次必須綁在自己帳號上。
             elif self.path == "/org-consent":
                 self._json(org_api.org_consent_status_response(REQUEST_DATA_IDENTITY.get(), data))
@@ -11226,6 +11302,18 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(org_api.admin_org_consent_status_response(data))
+            elif self.path == "/admin/enterprise/alerts/export":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(org_alerts.admin_alerts_export_response(data))
+            elif self.path == "/admin/enterprise/alerts/refresh":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json_scheduler(org_alerts.admin_alerts_refresh_all_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/membership":

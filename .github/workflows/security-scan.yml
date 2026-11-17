@@ -21,6 +21,69 @@ permissions:
   contents: read
 
 jobs:
+  secrets:
+    # 2026-11-18（補助案 D4 企業資安評級前測改善第 1 項「對外公開資訊要先審」）：
+    #   這個程式庫是公開的，任何人都看得到每一次上傳。鑰匙、密碼一旦夾帶上來，刪掉也還留在歷史裡。
+    #   所以每次改程式都掃「這次新增的內容」，掃到就擋在合併前；每月例行再把整份目前的檔案掃一遍留檔。
+    #   每月那次先只留報告不擋（舊檔裡有公開用的前端金鑰，要先逐筆確認、列進白名單後才改成擋）。
+    name: 鑰匙外洩（gitleaks）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: 安裝 gitleaks（固定版本＋核對雜湊）
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          set -euo pipefail
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL "$base/$tarball" -o "$RUNNER_TEMP/$tarball"
+          curl -sSfL "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt" -o "$RUNNER_TEMP/checksums.txt"
+          (cd "$RUNNER_TEMP" && grep " $tarball\$" checksums.txt | sha256sum -c -)
+          tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+      - name: 自我檢查：放一把當場產生的假鑰匙，確認掃得到（掃不到＝這關壞了）
+        run: |
+          set -euo pipefail
+          canary="$RUNNER_TEMP/canary"
+          mkdir -p "$canary"
+          # 假的雲端存取金鑰：每次當場亂數產生、只放在這台臨時機器上，不會進程式庫
+          echo "aws_access_key_id = AKIA$(tr -dc 'A-Z2-7' </dev/urandom | head -c 16)" > "$canary/settings.py"
+          if "$RUNNER_TEMP/gitleaks" dir "$canary" --no-banner --redact --exit-code 1 >/dev/null 2>&1; then
+            echo "::error::gitleaks 沒有抓到故意放的假鑰匙——掃描設定壞了"
+            exit 1
+          fi
+          echo "自我檢查通過：假鑰匙有被抓到"
+      - name: 掃這次新增的內容（掃到就擋）
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        env:
+          RANGE_PR: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+          RANGE_PUSH: ${{ github.event.before }}..${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then range="$RANGE_PR"; else range="$RANGE_PUSH"; fi
+          # 新分支第一次上傳時 before 是一串 0，改成只掃最新那一筆
+          case "$range" in 0000000000000000000000000000000000000000..*) range="${{ github.sha }}~1..${{ github.sha }}";; esac
+          echo "掃描範圍：$range"
+          "$RUNNER_TEMP/gitleaks" git --log-opts="$range" --redact --no-banner --report-format sarif --report-path gitleaks-diff.sarif --exit-code 1 .
+      - name: 每月例行：整份目前的檔案掃一遍（只留報告）
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          "$RUNNER_TEMP/gitleaks" dir . --redact --no-banner --report-format json --report-path gitleaks-tree.json --exit-code 0
+          python3 -c "import json;d=json.load(open('gitleaks-tree.json'));print('整份檔案掃描：', len(d), '筆待確認')"
+      - name: 留下掃描報告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secret-scan-${{ github.run_id }}
+          path: |
+            gitleaks-diff.sarif
+            gitleaks-tree.json
+          if-no-files-found: ignore
+          retention-days: 90
+
   dependencies:
     name: 套件弱點（npm ＋ Python）
     runs-on: ubuntu-latest
