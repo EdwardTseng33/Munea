@@ -26,6 +26,7 @@
 稽核寫不進去時 L2 讀取**不給**（audit_unavailable）——可問責優先於可用。
 """
 import datetime as _dt
+import hashlib
 import json
 import logging
 import os
@@ -112,6 +113,17 @@ def _is_missing_table_error(exc):
     return "pgrst205" in text or "could not find the table" in text or "does not exist" in text
 
 
+def _local_write_ok(exc):
+    """寫入失敗時，只有「雲端根本沒設定」或「表還沒建」才准退本機檔。
+    連不上（逾時、斷路器開著）不算：退本機檔會假成功——例如撤回同意寫進那台機器的暫存檔、雲端仍是同意，
+    機構照樣看得到（2026-11-18 #713 信任關卡）。"""
+    kind = getattr(exc, "error_kind", None)
+    if kind == "missing_table":
+        return True
+    text = str(exc).lower()
+    return "pgrst205" in text or "could not find the table" in text
+
+
 def _read_json(path, fallback):
     try:
         with open(path, encoding="utf-8") as f:
@@ -144,6 +156,11 @@ def _write_json(path, data):
 
 def _lower(value):
     return str(value or "").strip().lower()
+
+
+def account_key(account_id):
+    """帳號指紋：紀錄當下席次綁的是誰（不可逆）。席次之後換給別人，用它分得出是哪一位的事。"""
+    return hashlib.sha1(f"munea-org-alert|{account_id}".encode("utf-8")).hexdigest()[:16]
 
 
 def _seat_code(seat_id):
@@ -284,7 +301,7 @@ def create_staff(item):
         if remote is not None:
             return normalize_staff(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api create_staff to Supabase failed; using local: %s", exc)
     record["id"] = record["id"] or str(uuid.uuid4())
@@ -309,7 +326,7 @@ def update_staff(staff_id, patch):
         if remote is not None:
             return normalize_staff(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api update_staff to Supabase failed; using local: %s", exc)
     with _JSON_LOCK:
@@ -357,7 +374,7 @@ def save_consent(item):
         if remote is not None:
             return normalize_consent(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api save_consent to Supabase failed; using local: %s", exc)
     with _JSON_LOCK:
@@ -674,7 +691,11 @@ def _strip_anomalies(anomalies):
     for a in anomalies or []:
         # 家庭版的建議句是「看即時通知裡的原句與處理紀錄」——機構看不到原句，換成機構做得到的事。
         suggestion = ORG_GUARDIAN_SUGGESTION if a.get("type") == "guardian" else a.get("suggestion")
-        out.append({"type": a.get("type"), "when": a.get("when"), "fact": a.get("fact"), "suggestion": suggestion})
+        fact = a.get("fact")
+        if a.get("type") == "guardian" and isinstance(fact, str):
+            # 家庭版那句「即時通知已另外送出」講的是給家人的緊急聯絡人通知；機構沒有收到即時通知，不能這樣寫。
+            fact = fact.replace("；即時通知已另外送出，這裡是週彙整。", "。")
+        out.append({"type": a.get("type"), "when": a.get("when"), "fact": fact, "suggestion": suggestion})
     return out
 
 
@@ -705,6 +726,16 @@ def org_summary_response(auth, data=None):
     return assert_no_forbidden({"ok": True, **summary}, org_portal.FORBIDDEN_KEYS | {"email", "phone"})
 
 
+def _client_alert_settings(client):
+    """機構自訂的「幾天沒聯絡才提醒」（org_alerts 存在稽核紀錄裡）；讀不到就用規則預設。"""
+    try:
+        import org_alerts  # 晚一點才載：org_alerts 本身 import 這支
+        return {"noContactDays": org_alerts.client_settings(client["id"])["noContactDays"]}
+    except Exception as exc:
+        LOGGER.warning("org_api client settings unavailable; using defaults: %s", exc)
+        return {}
+
+
 def org_elders_response(auth, data=None, loaders=None):
     """L1：已同意長輩的名單＋三個旗標。沒同意的根本不在清單裡。"""
     data = data or {}
@@ -731,7 +762,7 @@ def org_elders_response(auth, data=None, loaders=None):
     except Exception as exc:
         LOGGER.warning("org_api guardian events failed: %s", exc)
         events, partial = [], partial + ["safety"]
-    settings = {}
+    settings = _client_alert_settings(client)
     try:
         if data.get("noContactDays") is not None:
             settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))
@@ -796,7 +827,7 @@ def org_elder_care_week_response(auth, data=None, loaders=None):
         days = max(1, min(31, int(data.get("days") or care_week.DEFAULT_DAYS)))
     except (TypeError, ValueError):
         days = care_week.DEFAULT_DAYS
-    settings = {}
+    settings = _client_alert_settings(client)
     try:
         if data.get("noContactDays") is not None:
             settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))
@@ -828,6 +859,7 @@ def org_elder_care_week_response(auth, data=None, loaders=None):
         "eventType": "org_care_week_read", "actorUserId": staff.get("authUserId"), "accountId": account_id,
         "targetTable": "enterprise_seats", "targetId": seat_id,
         "details": {"actorType": "org_staff", "staffId": staff["id"], "role": staff["role"], "clientId": client["id"],
+                    "seatId": seat_id, "accountKey": account_key(account_id),
                     "siteLabel": seat.get("siteLabel"), "periodStart": start.isoformat(), "periodEnd": end.isoformat()},
     })
     if not audited:
@@ -935,16 +967,24 @@ def org_consent_set_response(identity, data=None):
         if not _audit(audit_event):
             LOGGER.error("org_api consent grant refused: audit write failed (seat %s)", _seat_code(seat_id))
             return {"ok": False, "error": "consent_not_recorded", "seat": _consent_view(seat, client, existing)}
-        record = save_consent({
-            **(existing or {}), "enterpriseClientId": client["id"], "seatId": seat_id, "accountId": account_id,
-            "status": "granted", "grantedByAuthUserId": identity.get("authUserId"), "grantedByRole": by_role,
-            "grantedAt": now, "revokedAt": None, "revokedByAuthUserId": None, "note": str(data.get("note") or "")[:200] or None,
-        })
+        try:
+            record = save_consent({
+                **(existing or {}), "enterpriseClientId": client["id"], "seatId": seat_id, "accountId": account_id,
+                "status": "granted", "grantedByAuthUserId": identity.get("authUserId"), "grantedByRole": by_role,
+                "grantedAt": now, "revokedAt": None, "revokedByAuthUserId": None, "note": str(data.get("note") or "")[:200] or None,
+            })
+        except Exception as exc:
+            LOGGER.error("org_api consent grant not saved: %s", exc)
+            return {"ok": False, "error": "consent_not_saved", "seat": _consent_view(seat, client, existing)}
     else:
         if not existing:
             return {"ok": True, "changed": False, "seat": _consent_view(seat, client, None)}
         # 撤回：先關、再留痕。沒留到痕也照樣關——寧可少一筆紀錄，不可關不掉。
-        record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
+        try:
+            record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
+        except Exception as exc:
+            LOGGER.error("org_api consent revoke not saved: %s", exc)
+            return {"ok": False, "error": "consent_not_saved", "seat": _consent_view(seat, client, existing)}
         _audit(audit_event)
     return {"ok": True, "changed": True, "seat": _consent_view(seat, client, record)}
 

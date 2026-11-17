@@ -564,7 +564,8 @@ class ServerWiringTests(unittest.TestCase):
             self.assertIn(f'self.path == "{path}"', src)
 
     def test_audit_sink_is_wired_to_server_audit_events(self):
-        self.assertIs(self.server.org_api.AUDIT_SINK, self.server.append_audit_event)
+        # 2026-11-18：機構端稽核走嚴格寫入口（帳號欄空值、不綁請求身分、寫不進就丟錯）
+        self.assertIs(self.server.org_api.AUDIT_SINK, self.server.append_org_audit_event_strict)
 
 
 if __name__ == "__main__":
