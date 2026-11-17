@@ -10751,6 +10751,36 @@ def voice_health_context_response(data):
             REQUEST_DATA_IDENTITY.reset(scope_token)
 
 
+def voice_reply_context_response(data):
+    """POST /voice/reply-context（內部密語驗證後才會進來）：
+    Voice 開場前向 Brain 要「這位來電者自己的」開場素材——長期記憶、活的側寫（興趣、心情走勢、住哪）、
+    他的身體狀況、今日簡報——組成跟文字線同一份的說明書段落。
+
+    為什麼要有這個窗口（2026-11-18，補助案 A4「記憶接續與情境感知」）：
+    Voice 那台沒有雲端鑰匙、也認不出電話那頭是誰，以前它在自己容器的便條紙裡撈記憶——
+    正式環境撈到的是空的，所以每通電話她都不記得你上週說過的事，只有 12 小時內「上一通」的一句重點接得上。
+    跟健康、上次聊天同一個模子：Brain 認人、Brain 撈、Voice 只拿結果。
+
+    認不出人就回空（就算上一通的身分還黏在執行緒上也不撈）——Voice 會退回原本的路。
+    """
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        if not person:
+            return {"ok": True, "instruction": "", "memoryCount": 0, "identityResolved": False}
+        payload = {k: data.get(k) for k in ("displayName", "location", "userMood", "interests", "locale")
+                   if data.get(k)}
+        ctx = build_reply_context([], str(data.get("char") or DEFAULT_CHAR), payload)
+        return {"ok": True,
+                "instruction": reply_context_instruction(ctx),
+                "memoryCount": len(ctx.get("memories") or []),
+                "hasHealth": bool((ctx.get("healthContext") or {}).get("hasData")),
+                "identityResolved": True}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
@@ -11027,7 +11057,7 @@ class H(BaseHTTPRequestHandler):
             # Voice→Brain 內部通道（通話記憶）：Voice 沒有用戶的登入 token，
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
-            if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context",
+            if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context", "/voice/reply-context",
                                 "/voice/health-recommended"):
                 _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
                 _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
@@ -11040,6 +11070,7 @@ class H(BaseHTTPRequestHandler):
                     "/voice/call-recap": voice_call_recap_response,
                     "/voice/health-context": voice_health_context_response,
                     "/voice/health-recommended": voice_health_recommended_response,
+                    "/voice/reply-context": voice_reply_context_response,
                 }
                 self._json(_voice_internal[request_path](data))
                 return
