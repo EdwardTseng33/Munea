@@ -407,11 +407,15 @@ EMAIL_VERIFIED_PROVIDERS = ("google", "apple")
 def email_binding_allowed(auth):
     """第一次登入用 email 對邀請名單之前，先確定這個 email 真的是他本人的（2026-11-18 · #722 信任關卡）。
 
-    Supabase 目前開著「註冊要收信確認」（mailer_autoconfirm=false），搶先用社工的 email 註冊這招現在不成立；
-    但設定哪天被關掉，別人就能先註冊、搶走名額。所以程式這裡再擋一道，只認：
+    只認：
       · email 已確認（server 從 Supabase 使用者資料的 email_confirmed_at 算出 emailVerified＝True；
         後台建、email_confirm=true 的測試帳號也是這種），或
       · 用 Google／Apple 登入（email 由他們驗過）。
+
+    ⚠ 這一道**靠 Supabase 開著「註冊要收信確認」才成立**（2026-11-18 查：mailer_autoconfirm=false）。
+    哪天把自動確認打開，註冊當下就會自動填上 email_confirmed_at，用 Google 登入的人也能把 email 改成別人的——
+    這裡就擋不住了。所以那個設定必須保持開著；更牢的做法（改看 Google／Apple 那筆身分自己的 email，
+    或每天巡檢公開設定、一變就告警）列在之後再做。
     """
     auth = auth or {}
     if auth.get("emailVerified") is True:
