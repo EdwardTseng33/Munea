@@ -84,7 +84,7 @@ A Sleep Focus can run on a schedule and may still be on at wake-up time. If a mo
 
 ### The ring/silent switch, or the lack of one
 
-Older iPhones have a small ring/silent switch on the side. iPhone 15 Pro and later models do not. If your parent has one of those, check Control Center to see whether the phone is on silent, because a silenced phone may stay quiet. Show your parent where to look.
+Older iPhones have a small ring/silent switch on the side. iPhone 15 Pro and later models do not. If your parent has one of those, make sure the phone is not in silent mode, because a silenced phone may stay quiet; where that setting lives depends on the model and iOS version, so check it together on the phone.
 
 ### The battery is low or the phone is off
 

@@ -31,7 +31,7 @@ Ask each local person whether they are happy to be listed. Tell them how to reac
 
 Find out what exists near your parent before you need it.
 
-- **United States:** the [Eldercare Locator](https://eldercare.acl.gov) is a public service of the Administration for Community Living. Call or text 1-800-677-1116, or use live chat, to find services, including Area Agencies on Aging and community services such as home-delivered meals.
+- **United States:** the [Eldercare Locator](https://eldercare.acl.gov) is a public service of the Administration for Community Living. Call or text 1-800-677-1116, or email, to find services, including Area Agencies on Aging and community services such as home-delivered meals.
 - **United Kingdom:** [Age UK](https://www.ageuk.org.uk/information-advice/care/arranging-care/) runs a free Advice Line on 0800 678 1602, open 8am to 7pm, 365 days a year, and says it has specialist advisers at over 120 local Age UKs. Contacting the local council's social services department is the first step to a care needs assessment, according to the same page.
 - **Canada and Australia:** start with your provincial or national aging services, or ask your parent's doctor or local council where to begin. In Australia, Carers Australia lists the Carer Gateway phone line on 1800 422 737 for carers.
 
@@ -64,8 +64,8 @@ Keep it light. You are checking the home, not inspecting your parent. And set as
 Find out where the important papers are and who has copies. MedlinePlus Magazine recommends keeping legal, financial and medical records current and easy to find. The documents differ by country, so ask a lawyer, solicitor or financial adviser who works with older clients what your parent needs. Two examples:
 
 - **United States:** MedlinePlus describes advance directives, such as a living will and a durable power of attorney for health care, which names a health care proxy.
-- **United Kingdom:** [Age UK](https://www.ageuk.org.uk/information-advice/money-legal/legal-issues/power-of-attorney/) explains that a lasting power of attorney lets someone you trust make decisions if you lose mental capacity, in two types (property and financial affairs, and health and care), and it must be registered before use. The page says you don't have to use a solicitor, but it could prevent problems later.
-- **Canada:** if your parent depends on you because of an infirmity, ask a tax professional about the [Canada caregiver credit](https://www.canada.ca/caregiver-credit), which the CRA says can apply to a parent who depends on you regularly and consistently for basics. Keep your records.
+- **England and Wales:** [Age UK](https://www.ageuk.org.uk/information-advice/money-legal/legal-issues/power-of-attorney/) explains that a lasting power of attorney lets someone you trust make decisions if you lose mental capacity, in two types (property and financial affairs, and health and care), and it must be registered before use. The page says you don't have to use a solicitor, but it could prevent problems later.
+- **Canada:** if your parent depends on you because of an infirmity, ask a tax professional about the [Canada caregiver credit](https://www.canada.ca/caregiver-credit), which the CRA says can apply to a parent who depends on you regularly and consistently for basics (your parent must have lived in Canada at some point in the year). Keep your records.
 
 Raise these topics gently and early, while your parent can lead the decisions.
 
@@ -79,7 +79,7 @@ Distance doesn't make this lighter. It often adds guilt. Decide what you can rea
 
 ## Where Munea fits, and what it doesn't do
 
-Munea is an iPhone app (iOS 15 or later) in which your parent can chat by voice with an AI character, Nina or Milo, and get medication and appointment reminders. A family circle lets you see the health and mood updates your parent chooses to share, and every member of a circle needs a Plus or Pro plan right now. It has no fall detection, emergency button, location sharing, cameras or sensors, and it won't call your parent or alert you if the app isn't opened. It is on the App Store in the US and Canada, and not currently available in the UK or Australia.
+Munea is an iPhone app (iOS 15 or later) in which your parent can chat by voice with an AI character, Nina or Milo, and get medication and appointment reminders. Family members in your parent’s family circle can see their health and mood updates, and every member of a circle needs a Plus or Pro plan right now. It has no fall detection, emergency button, location sharing, cameras or sensors, and it won't call your parent or alert you if the app isn't opened. It is on the App Store in the US and Canada, and not currently available in the UK or Australia.
 
 ## FAQ
 
@@ -97,7 +97,7 @@ There is no right number. Many people plan visits around appointments, holidays 
 
 ## Sources
 
-- [MedlinePlus Magazine: Helping From Miles Away, strategies for long-distance caregiving](https://magazine-local.medlineplus.gov/article/helping-from-miles-away-strategies-for-long-distance-caregiving)
+- [MedlinePlus Magazine: Helping From Miles Away, strategies for long-distance caregiving](https://magazine.medlineplus.gov/article/helping-from-miles-away-strategies-for-long-distance-caregiving)
 - [Eldercare Locator, Administration for Community Living](https://eldercare.acl.gov)
 - [Age UK: arranging care](https://www.ageuk.org.uk/information-advice/care/arranging-care/)
 - [Age UK: power of attorney](https://www.ageuk.org.uk/information-advice/money-legal/legal-issues/power-of-attorney/)

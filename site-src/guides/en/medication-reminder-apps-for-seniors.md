@@ -42,12 +42,12 @@ Checked November 2026. Where a fact is not listed, it means we did not confirm i
 | | iPhone Medications (built in) | Medisafe | MyTherapy | Munea |
 |---|---|---|---|---|
 | What it is | Feature inside Apple's Health app | Medication reminder app | Medication reminder app | AI voice companion app that also sends medication and appointment reminders |
-| Where it runs | iPhone, iOS 16 or later | See its store page | iOS 17 or later (App Store) | iPhone only, iOS 15 or later; no Android version |
-| Reminder at the set time | Yes, by notification | See store page | See store page | Yes, a notification at the set time, even when the app is not open |
-| Reminder if a dose is not logged | Follow-up reminder 30 minutes later (iOS 17 or later) | See store page | See store page | Not confirmed beyond the scheduled reminder |
+| Where it runs | iPhone, iOS 16 or later | iOS 17 or later (App Store) | iOS 17 or later (App Store); Android version linked from its official site | iPhone only, iOS 15 or later; no Android version |
+| Reminder at the set time | Yes, by notification | Yes (App Store listing) | Yes (App Store listing) | Yes, a notification at the set time, even when the app is not open |
+| Reminder if a dose is not logged | Follow-up reminder 30 minutes later (iOS 17 or later) | See store page | See store page | No automatic follow-up reminder |
 | Tells family about a missed dose | Not confirmed | Yes, through Medfriend (see below) | Not confirmed | No |
-| Cost | Free, part of iOS | See store page | Ad-free subscription and a lifetime purchase offered (App Store) | Free download with 5 trial points; Plus US$19.99 a month with 100 points, Pro US$39.99 a month with 200 points, about 1 point per minute of conversation, extra points can be bought |
-| Extra features we confirmed | Works with the Reminders app | Drug interaction warnings, listed on its App Store page as currently offered in the US | Rated 4.8 from 879 ratings on Taiwan's App Store | Talks with your parent by voice in English, Traditional Chinese, Japanese or Spanish; family circle shares only what your parent chooses |
+| Cost | Free, part of iOS | Free download; Premium subscription offered (App Store) | Free download; ad-free subscription and a lifetime purchase offered (App Store) | Free download with 5 trial credits; Plus US$19.99 a month with 100 credits, Pro US$39.99 a month with 200 credits, about 1 credit per minute of conversation, extra credits can be bought |
+| Extra features we confirmed | Part of the Health app | Drug interaction warnings, listed on its App Store page as currently offered in the US | Rated 4.8 from 879 ratings on Taiwan's App Store | Talks with your parent by voice in English, Traditional Chinese, Japanese or Spanish; family circle visible only to its members |
 | What it does not do | Not confirmed | Not confirmed | Not confirmed | Does not evaluate or adjust medication, does not alert family about a missed dose, not a medical device |
 
 ### Medisafe's Medfriend, and what Munea cannot do
@@ -65,7 +65,7 @@ Medisafe's drug interaction warnings are another thing Munea does not offer. Mun
 
 ## Where Munea fits, and what it doesn't do
 
-Munea is an iPhone app where your parent talks by voice with an AI character (Nina or Milo, who say they are an AI), and it can send medication and appointment reminders at the time you set. It only reminds; it does not evaluate or change medication, it is not a medical device, and it has no fall detection, emergency button or location sharing. Munea doesn't keep raw recordings, only the key points of past chats, which your parent can view or delete in the app. It is on the App Store in the US and Canada, and not currently available in the UK or Australia.
+Munea is an iPhone app where your parent talks by voice with an AI character (Nina or Milo, who say they are an AI), and it can send medication and appointment reminders at the time you set. It only reminds; it does not evaluate or change medication, it is not a medical device, and it has no fall detection, emergency button or location sharing. Munea doesn't store raw recordings separately; it keeps only the key points of past chats, which your parent can view or delete in the app. It is on the App Store in the US and Canada, and not currently available in the UK or Australia.
 
 ## FAQ
 
@@ -84,4 +84,7 @@ The built-in feature costs nothing and needs no new app, which suits a parent wh
 ## Sources
 
 - [Apple Support: Add and log medications with iPhone, iPad, and Apple Watch](https://support.apple.com/en-ca/105064)
-- [Medisafe Help Center](https://help-center.medisafe.com)
+- [Medisafe Medication Management (US App Store)](https://apps.apple.com/us/app/medisafe-medication-management/id573916946)
+- [Medisafe Help Center: What is a Medfriend](https://help-center.medisafe.com/en/articles/8097801-what-is-a-medriend-and-how-does-the-feature-work)
+- [MyTherapy (Taiwan App Store)](https://apps.apple.com/tw/app/id662170995)
+- [MyTherapy official site](https://www.mytherapyapp.com/)
