@@ -286,22 +286,59 @@ window.MuneaHealth = (function () {
   // 重裝就被清掉了；但蘋果的授權還在（那個視窗一輩子只跳一次、補不回來）。
   // 這裡在「旗子沒立、但外掛在、而且真的讀得到值」時把旗子補立回去——
   // 完全無害：讀不到就什麼都不做，不會憑空把沒連的人標成已連。
-  let relinkTried = false;
+  //
+  // 2026-11-15 Edward 真機回報「我連接了，App 裡卻沒有顯示健康資料」：
+  // 舊寫法是「一次啟動只探一次」。重裝後登入當下探一次讀不到（項目還沒開），
+  // 他去健康 App 把項目打開、切回沐寧——這次啟動已經探過了，就再也不探，畫面永遠停在未連接，
+  // 要整個關掉重開才會好。改成「有冷卻的重試」：每次回到前景都可以再探，只是 15 秒內不重複。
+  // 探測的結果也要留在「讀取實況」那一行（幾點讀的、讀到哪幾項），不然讀不到時畫面上一點線索都沒有。
+  const RELINK_COOLDOWN_MS = 15000;
+  let relinkLastAt = 0;
   async function relinkIfAlreadyAuthorized() {
-    if (connected() || relinkTried) return false;
+    if (connected()) return false;
     // **他自己按過「解除連接」就不准自動接回**——那是他的決定，不是重裝造成的失憶。
     // （解除時會蓋一個時間戳，重裝會連這個一起清掉，所以兩種情況分得開。）
     try { if (localStorage.getItem('munea.health.disconnectedAt')) return false; } catch (e) {}
-    relinkTried = true;                       // 一次啟動只試一次，不重複打擾原生層
+    if (relinkLastAt && Date.now() - relinkLastAt < RELINK_COOLDOWN_MS) return false;
+    relinkLastAt = Date.now();                // 冷卻期內不重複打擾原生層
     const p = plugin();
     if (!p || typeof p.getSummary !== 'function') return false;
     try {
       const s = await p.getSummary();
+      noteProbe(s, '');
       if (!hasAnyValue(s)) return false;      // 讀不到值＝真的沒連或沒分享項目
       try { localStorage.setItem('munea.devicesOn', '1'); } catch (e) {}
       lastSummary = s;
       return true;
-    } catch (e) { return false; }
+    } catch (e) {
+      noteProbe(null, String((e && (e.message || e.errorMessage)) || e || 'unknown'));
+      return false;
+    }
+  }
+
+  // 探測（還沒立旗子時的那一次讀取）也要留下實況，並回報給診斷事件。
+  function noteProbe(s, error) {
+    lastReadFields = (s && Array.isArray(s.fields))
+      ? s.fields
+      : ['steps', 'hr', 'spo2', 'bpSys', 'bpDia', 'sleepHours'].filter(k => s && typeof s[k] === 'number' && s[k] > 0);
+    lastReadError = error || ((s && Array.isArray(s.errors) && s.errors.length) ? s.errors.join('；') : '');
+    lastReadAt = Date.now();
+    setTimeout(renderConnectionState, 0);
+    emitRead('probe');
+  }
+
+  // 診斷事件：只送「讀到哪幾項、有沒有錯」，**不送任何數值**。
+  // 為什麼要有：2026-11-15 之前，使用者說「連了沒資料」時，我們在後台完全看不到他的手機
+  // 到底讀到了什麼，只能請他截圖。app.js 收這個事件記成 health_read（有變化才記）。
+  function emitRead(trigger) {
+    try {
+      window.dispatchEvent(new CustomEvent('munea:health-read', { detail: {
+        trigger: trigger,
+        connected: connected(),
+        fields: lastReadFields.slice(),
+        hasError: !!lastReadError,
+      } }));
+    } catch (e) {}
   }
 
   async function refresh(options) {
@@ -332,6 +369,7 @@ window.MuneaHealth = (function () {
         lastReadAt = Date.now();
         readDone = true;
         setTimeout(renderConnectionState, 0);
+        emitRead('refresh');
         return null;
       }
       if (!connected()) return null;
@@ -346,6 +384,7 @@ window.MuneaHealth = (function () {
       // 記住這次到底有沒有值——沒有的話畫面要照實講，不能繼續寫「正在同步」
       setHasData(hasAnyValue(s));
       setTimeout(renderConnectionState, 0);
+      emitRead('refresh');
       lastSummary = s;
       // 狀態頁血壓/心率/睡眠等欄位：交給 Windows 端留的接口
       try { if (typeof window.__muneaSetHealth === 'function') window.__muneaSetHealth(s); } catch (e) {}
@@ -441,7 +480,10 @@ window.MuneaHealth = (function () {
     readDone = false; lastReadError = ''; lastReadFields = []; lastReadAt = 0;
     renderConnectionState();
     // 不加 force：重開 App 本來就沒有冷卻期，正常讀一次即可（冷卻期是為了省電，別破壞）
-    if (available() && connected()) { refresh(); }
+    // 2026-11-15：沒立旗子也要探一次（refresh 開頭的 relinkIfAlreadyAuthorized）。
+    // 重裝過的人旗子是空的、但 iPhone 的授權可能還在；以前這裡要求 connected() 才讀，
+    // 等於重裝後每次開 App 都不會自己接回來。他自己按過「解除連接」的不會被接回（探測裡有擋）。
+    if (available()) { refresh(); }
   }
 
   loadHasData();
