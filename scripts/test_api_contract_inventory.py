@@ -42,7 +42,7 @@ class ApiContractInventoryTests(unittest.TestCase):
         # 2026-10-29 再補：機構端專區第 2 段 9 支——機構人員 /org/me、/org/summary、/org/elders、/org/elder/care-week、/org/reports
         #   ＋家庭成員同意開關 /org-consent、/org-consent/set ＋後台 /admin/enterprise/staff/invite、/admin/enterprise/consent/status
         # 2026-11-09 再補：緊急聯絡人通知 2 支（長輩選人 POST /safety-contacts ＋ App 端健康數據觸發 POST /safety-alert）
-        self.assertEqual(self.inventory["routeCounts"], {"brain": 114, "gateway": 23, "voice": 4})
+        self.assertEqual(self.inventory["routeCounts"], {"brain": 121, "gateway": 23, "voice": 4})
         self.assertIn(Route("voice", "WS", "/"), self.routes)
 
     def test_new_source_route_must_be_registered(self) -> None:
