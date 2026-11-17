@@ -26,7 +26,8 @@
         "web/src/notify.js",
         "web/src/medication.js",
         "web/src/companion-profile.js",
-        "web/src/seat-code.js"
+        "web/src/seat-code.js",
+        "web/src/org-consent.js"
       ],
       "requiredStates": [
         "signed-out",

@@ -106,11 +106,12 @@ try {
   // 2026-10-28：40 個畫面（原 39）＋ modal:care-week（補助案 B4）；每畫面 3 種機型＝120 張
   // 2026-11-09：39 個畫面（原 40）－拿掉 chat:text-fallback；每畫面 3 種機型＝117 張
   // 2026-11-17：40 個畫面（原 39）＋ modal:seat-code（機構開通碼）；每畫面 3 種機型＝120 張
-  assert.equal(evidence.screens.length, 40);
-  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 120);
+  // 2026-11-17：41 個畫面（原 40）＋ modal:org-consent（機構照護模式同意開關）；每畫面 3 種機型＝123 張
+  assert.equal(evidence.screens.length, 41);
+  assert.equal(evidence.screens.flatMap(({ captures }) => captures).length, 123);
   assert.equal(
     new Set(evidence.screens.flatMap(({ captures }) => captures.map(({ sha256 }) => sha256))).size,
-    120,
+    123,
   );
   assert.equal(evidence.binaryBytes, fs.statSync(candidateIpa(temp)).size);
 
@@ -188,4 +189,4 @@ try {
   fs.rmSync(temp, { recursive: true, force: true });
 }
 
-console.log('PASS: visual QA evidence requires 120 unique exact-build screenshots');
+console.log('PASS: visual QA evidence requires 123 unique exact-build screenshots');
