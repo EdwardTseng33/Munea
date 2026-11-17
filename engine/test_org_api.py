@@ -278,7 +278,13 @@ class PrivacyTests(Base):
         self.assertNotIn("孫子來看他", text)
         self.assertEqual(out["week"]["contact"]["calls"], 2)
         self.assertEqual(out["week"]["safety"]["highOrCritical"], 1)
-        self.assertIn("膝蓋痠", out["week"]["spokenHealth"]["categories"])
+        cats = out["week"]["spokenHealth"]["categories"]
+        self.assertEqual(cats, [{"key": "sleep", "label": "睡不好", "count": 1}, {"key": "body", "label": "身體不舒服", "count": 1}])
+        for phrase in ("膝蓋痠", "睡不好的事", "很累", "沒力氣"):
+            self.assertNotIn(phrase, text, phrase)
+        guardian_note = next(a for a in out["anomalies"] if a["type"] == "guardian")
+        self.assertNotIn("原句與處理紀錄", guardian_note["suggestion"])
+        self.assertIn("看不到通話原句", guardian_note["suggestion"])
         # 最後一通是昨天、沒到 3 天門檻，所以不該亮 no_contact
         self.assertEqual({a["type"] for a in out["anomalies"]}, {"mood_drop", "guardian"})
         self.assertEqual(out["label"], "阿嬤")
@@ -298,6 +304,93 @@ class PrivacyTests(Base):
     def test_forbidden_key_in_payload_raises_instead_of_leaking(self):
         with self.assertRaises(org_api.OrgPrivacyError):
             org_api.assert_no_forbidden({"ok": True, "elders": [{"label": "x", "email": "a@b"}]})
+
+
+class SpokenCategoryTests(unittest.TestCase):
+    """機構端的掛心事只給「哪一類、幾次」（2026-11-17）。"""
+
+    def test_private_matters_only_show_as_a_count(self):
+        cats = org_api._spoken_categories(["想念過世的先生", "跟兒子吵架", "膝蓋痠", "晚上睡不著", "沒胃口", ""])
+        self.assertEqual(cats, [
+            {"key": "appetite", "label": "吃不下", "count": 1},
+            {"key": "sleep", "label": "睡不好", "count": 1},
+            {"key": "body", "label": "身體不舒服", "count": 1},
+            {"key": "other", "label": "心情或生活上的掛心事", "count": 2},
+        ])
+        flat = json.dumps(cats, ensure_ascii=False)
+        for private in ("先生", "兒子", "吵架", "膝蓋", "想念"):
+            self.assertNotIn(private, flat, private)
+
+    def test_output_only_uses_fixed_labels(self):
+        allowed = {label for _k, label, _w in org_api.SPOKEN_CATEGORY_RULES} | {org_api.SPOKEN_CATEGORY_OTHER[1]}
+        cats = org_api._spoken_categories(["血壓高高的", "隔壁太吵", "擔心錢不夠", "頭暈", "半夜醒來三次"])
+        self.assertTrue(cats)
+        for c in cats:
+            self.assertEqual(set(c), {"key", "label", "count"})
+            self.assertIn(c["label"], allowed)
+            self.assertIsInstance(c["count"], int)
+
+    def test_empty_stays_empty(self):
+        self.assertEqual(org_api._spoken_categories([]), [])
+        self.assertEqual(org_api._spoken_categories(None), [])
+
+
+class ConsentSafetyTests(Base):
+    def test_missing_or_unknown_status_means_not_consented(self):
+        self.assertEqual(org_api.normalize_consent({"seatId": SEAT_A3})["status"], "revoked")
+        self.assertEqual(org_api.normalize_consent({"seatId": SEAT_A3, "status": "whatever"})["status"], "revoked")
+        self.assertEqual(org_api.normalize_consent({"seatId": SEAT_A3, "status": "granted"})["status"], "granted")
+
+    def test_broken_consent_row_does_not_expose_the_elder(self):
+        rows = json.load(open(os.environ["MUNEA_ORG_CONSENTS_PATH"], encoding="utf-8"))
+        rows.append({"id": str(uuid.uuid4()), "enterpriseClientId": ORG_A, "seatId": SEAT_A3, "accountId": ACC_A3})
+        write("MUNEA_ORG_CONSENTS_PATH", rows)
+        out = org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())
+        self.assertNotIn(SEAT_A3, {e["seatId"] for e in out["elders"]})
+
+    def _add_esg_seat(self):
+        seat_id, account_id = str(uuid.uuid4()), str(uuid.uuid4())
+        seats = json.load(open(os.environ["MUNEA_ENTERPRISE_SEATS_PATH"], encoding="utf-8"))
+        seats.append({"id": seat_id, "enterpriseClientId": ORG_ESG, "inviteEmail": "e1@example.org", "accountId": account_id,
+                      "status": "active", "createdAt": "2026-10-05T00:00:00Z"})
+        write("MUNEA_ENTERPRISE_SEATS_PATH", seats)
+        return seat_id, {"accountId": account_id, "authUserId": str(uuid.uuid4())}
+
+    def test_company_seat_cannot_be_switched_on_but_can_always_be_switched_off(self):
+        seat_id, ident = self._add_esg_seat()
+        self.assertEqual(org_api.org_consent_set_response(ident, {"seatId": seat_id, "granted": True}),
+                         {"ok": False, "error": "consent_not_applicable"})
+        self.assertEqual(org_api.list_consents(seat_id=seat_id), [])
+        off = org_api.org_consent_set_response(ident, {"seatId": seat_id, "granted": False})
+        self.assertTrue(off["ok"])
+
+    def test_grant_without_audit_trail_is_rolled_back(self):
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A3, "granted": True})
+        self.assertFalse(out["ok"])
+        self.assertEqual(out["error"], "consent_not_recorded")
+        self.assertEqual(out["seat"]["consent"]["status"], "revoked")
+        org_api.set_audit_sink(self.audit.append)
+        self.assertNotIn(SEAT_A3, {e["seatId"] for e in org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())["elders"]})
+
+    def test_revoke_still_works_when_audit_is_down(self):
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A1, "personId": PER_A1, "authUserId": str(uuid.uuid4())}
+        out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A1, "granted": False})
+        self.assertTrue(out["ok"])
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A1)[0]["status"], "revoked")
+
+    def test_what_org_sees_text_matches_what_is_sent(self):
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        view = org_api.org_consent_status_response(ident)["seats"][0]
+        self.assertIn("類別與次數", "".join(view["whatOrgSees"]))
+        self.assertNotIn("症狀類別", "".join(view["whatOrgSees"]))
+        self.assertIn("短語", "".join(view["whatOrgNeverSees"]))
 
 
 class AuditTests(Base):

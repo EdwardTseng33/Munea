@@ -210,14 +210,16 @@ def normalize_staff(item=None):
 
 def normalize_consent(item=None):
     item = item or {}
-    status = item.get("status") or "granted"
+    # 2026-11-17：沒有狀態或看不懂的狀態，一律當「沒同意」。原本預設成 granted——
+    # 資料壞掉或欄位漏傳時，機構就會看到沒同意的人，方向反了。
+    status = item.get("status") or "revoked"
     by_role = item.get("grantedByRole") or item.get("granted_by_role") or "family"
     return {
         "id": item.get("id") or "",
         "enterpriseClientId": item.get("enterpriseClientId") or item.get("enterprise_client_id") or "",
         "seatId": item.get("seatId") or item.get("seat_id") or "",
         "accountId": item.get("accountId") or item.get("account_id") or "",
-        "status": status if status in CONSENT_STATUSES else "granted",
+        "status": status if status in CONSENT_STATUSES else "revoked",
         "scope": item.get("scope") or "care_week",
         "grantedByAuthUserId": item.get("grantedByAuthUserId") or item.get("granted_by_auth_user_id"),
         "grantedByRole": by_role if by_role in GRANTED_BY_ROLES else "family",
@@ -577,6 +579,39 @@ def _build_week(person_id, account_id, loaders, events_for_person, today, days):
     return week
 
 
+# 機構端只拿「哪一類、幾次」，不拿短語本身（2026-11-17）。
+# 來源是心情訊號的 concerns——AI 從聊天摘出的短語，定義是「身體不適／想念／煩惱／火氣的事」，
+# 「想念過世的先生」「跟兒子吵架」這類也會在裡面。設計書 4.3 核准給機構的是「症狀類別」，
+# 所以這裡把短語歸到固定幾類再數次數；歸不進身體類的一律算「心情或生活上的掛心事」，只露次數。
+# 順序有意義：一句話命中多類時取最前面那一類。
+SPOKEN_CATEGORY_RULES = (
+    ("appetite", "吃不下", ("吃不下", "不想吃", "沒胃口", "胃口", "食慾")),
+    ("sleep", "睡不好", ("睡不", "失眠", "睡眠", "半夜醒", "早醒", "淺眠")),
+    ("body", "身體不舒服", (
+        "痛", "痠", "酸", "暈", "咳", "喘", "悶", "麻", "腫", "燒", "癢", "吐", "瀉", "拉肚子", "便秘",
+        "血壓", "血糖", "心悸", "不舒服", "沒力", "無力", "跌", "摔", "感冒", "發炎", "抽筋", "耳鳴", "頻尿",
+    )),
+)
+SPOKEN_CATEGORY_OTHER = ("other", "心情或生活上的掛心事")
+
+
+def _spoken_categories(items):
+    """把掛心事短語歸類計數。回 [{key, label, count}]，只含次數大於 0 的類別；不回任何短語。"""
+    counts = {}
+    for item in items or []:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        key = SPOKEN_CATEGORY_OTHER[0]
+        for rule_key, _label, words in SPOKEN_CATEGORY_RULES:
+            if any(word in text for word in words):
+                key = rule_key
+                break
+        counts[key] = counts.get(key, 0) + 1
+    order = [(k, label) for k, label, _ in SPOKEN_CATEGORY_RULES] + [SPOKEN_CATEGORY_OTHER]
+    return [{"key": k, "label": label, "count": counts[k]} for k, label in order if counts.get(k)]
+
+
 def _strip_week_for_org(week):
     """L2 給機構的版本：留趨勢與類別、拿掉原句與正文（設計書 4.3「不回什麼」）。"""
     mood = week.get("mood") or {}
@@ -599,8 +634,8 @@ def _strip_week_for_org(week):
             "empty": mood.get("empty"),
         },
         "spokenHealth": {
-            "source": "本人口述的症狀類別（由記憶層萃取的短語；不是原句、不是臨床事實）",
-            "categories": list((week.get("spokenHealth") or {}).get("items") or [])[:10],
+            "source": "本人口述的掛心事，只給類別與次數（不含原句與短語；由記憶層歸類、不是臨床事實）",
+            "categories": _spoken_categories((week.get("spokenHealth") or {}).get("items")),
             "empty": (week.get("spokenHealth") or {}).get("empty", True),
         },
         "safety": {
@@ -612,9 +647,16 @@ def _strip_week_for_org(week):
     }
 
 
+ORG_GUARDIAN_SUGGESTION = "聯絡本人或家屬確認狀況。機構端看不到通話原句。"
+
+
 def _strip_anomalies(anomalies):
-    return [{"type": a.get("type"), "when": a.get("when"), "fact": a.get("fact"), "suggestion": a.get("suggestion")}
-            for a in anomalies or []]
+    out = []
+    for a in anomalies or []:
+        # 家庭版的建議句是「看即時通知裡的原句與處理紀錄」——機構看不到原句，換成機構做得到的事。
+        suggestion = ORG_GUARDIAN_SUGGESTION if a.get("type") == "guardian" else a.get("suggestion")
+        out.append({"type": a.get("type"), "when": a.get("when"), "fact": a.get("fact"), "suggestion": suggestion})
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -813,8 +855,8 @@ def _consent_view(seat, client, consent):
             "grantedAt": (consent or {}).get("grantedAt"), "revokedAt": (consent or {}).get("revokedAt"),
             "grantedByRole": (consent or {}).get("grantedByRole") if consent else None,
         },
-        "whatOrgSees": ["整家彙總", "名單與三個旗標（今天沒互動／心情低落／守護亮燈）", "週關懷摘要（通話次數、心情走勢、症狀類別、亮燈次數）"],
-        "whatOrgNeverSees": ["對話內容", "心情與口述的原句", "用藥明細", "家人帶話"],
+        "whatOrgSees": ["整家彙總", "名單（稱呼）與三個旗標（今天沒互動／心情低落／守護亮燈）", "週關懷摘要（通話次數、心情走勢、掛心事的類別與次數、亮燈次數）"],
+        "whatOrgNeverSees": ["對話內容", "心情與口述的原句或短語", "用藥明細", "家人帶話"],
     }
 
 
@@ -854,6 +896,10 @@ def org_consent_set_response(identity, data=None):
         granted = granted.strip().lower() in ("1", "true", "yes", "on")
     if granted is None:
         return {"ok": False, "error": "granted_required"}
+    # 企業（ESG）永遠只看匿名總數，同意開關對它沒有作用——收下來等於騙使用者「打開了會怎樣」。
+    # 關掉（撤回）一律放行：撤回不該被任何條件擋。
+    if granted and _client_kind(client) == "esg":
+        return {"ok": False, "error": "consent_not_applicable"}
     by_role = "self" if identity.get("personId") and str(data.get("asRole") or "") == "self" else "family"
     existing = next(iter(list_consents(seat_id=seat_id)), None)
     now = _utc_now()
@@ -867,12 +913,18 @@ def org_consent_set_response(identity, data=None):
         if not existing:
             return {"ok": True, "changed": False, "seat": _consent_view(seat, client, None)}
         record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
-    _audit({
+    audited = _audit({
         "eventType": "org_consent_granted" if granted else "org_consent_revoked",
         "actorUserId": identity.get("authUserId"), "accountId": account_id,
         "targetTable": "org_care_consents", "targetId": record.get("id"),
         "details": {"actorType": "family" if by_role == "family" else "self", "clientId": client["id"], "seatId": seat_id},
     })
+    if granted and not audited:
+        # 「誰在什麼時候同意讓機構看」留不下紀錄，這次同意就不算數：退回沒同意，請他稍後再試。
+        # 撤回不走這條——沒留到痕也照樣關，寧可少一筆紀錄，不可關不掉。
+        record = save_consent({**record, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
+        LOGGER.error("org_api consent grant rolled back: audit write failed (seat %s)", _seat_code(seat_id))
+        return {"ok": False, "error": "consent_not_recorded", "seat": _consent_view(seat, client, record)}
     return {"ok": True, "changed": True, "seat": _consent_view(seat, client, record)}
 
 
