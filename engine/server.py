@@ -11012,8 +11012,20 @@ def static_cache_control(path):
     return "no-cache, must-revalidate"
 
 
+# 機構專區（照護人員版，2026-11-18）：org.html 自己在 <meta> 帶了內容安全政策（只放行自己網域、jsDelivr 上的
+# Supabase SDK、Supabase 登入、Google 字型）。frame-ancestors 寫在 meta 裡瀏覽器不認，只能靠回應標頭——
+# 所以給這一頁的標頭政策只有這一條，不跟 meta 那份打架（兩份同時生效、各管各的）。
+ORG_PORTAL_SURFACE = {"/org.html", "/src/org.js", "/src/org.css"}
+ORG_PORTAL_CONTENT_SECURITY_POLICY = "frame-ancestors 'none'"
+
+
 def admin_security_headers(path, content_type=""):
     clean_path = str(path or "").split("?", 1)[0].split("#", 1)[0]
+    if clean_path in ORG_PORTAL_SURFACE:
+        headers = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer"}
+        if clean_path == "/org.html":
+            headers["Content-Security-Policy"] = ORG_PORTAL_CONTENT_SECURITY_POLICY
+        return headers
     is_admin_surface = (
         clean_path in {"/admin", "/admin.html", "/src/admin.js", "/src/admin.css", "/src/version.js"}
         or clean_path.startswith("/admin/")

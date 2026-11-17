@@ -446,14 +446,20 @@ def _client_kind(client):
 
 
 def capabilities_for(staff, client):
-    """角色 × 客戶類型 → 做得到什麼（第 2.3 節矩陣，第 2 段只開讀的部分）。"""
+    """角色 × 客戶類型 → 做得到什麼（第 2.3 節矩陣）。機構專區網頁只看這幾格決定分頁，不自己另算。"""
     role = (staff or {}).get("role") or "case_manager"
     esg = _client_kind(client) == "esg"
     site_scoped = role != "org_admin"
+    care_week = (not esg) and role in ("org_admin", "case_manager")
     return {
         "summary": True,
         "elders": (not esg) and role in ("org_admin", "case_manager", "care_worker"),
-        "careWeek": (not esg) and role in ("org_admin", "case_manager"),
+        "careWeek": care_week,
+        # 第 3 段（2026-11-18）：條件跟 engine/org_alerts.py 的放行一模一樣——
+        # alerts＝/org/alerts、/org/alert/mark、/org/settings（都看 careWeek）；
+        # audit＝/org/audit（機構管理者、而且不是企業客戶）。test_org_alerts 把四種角色的每一格跟實際打接口的結果對過。
+        "alerts": care_week,
+        "audit": (not esg) and role == "org_admin",
         "reports": role in ("org_admin", "case_manager"),
         "siteScoped": site_scoped,
         "siteLabel": (staff or {}).get("siteLabel") if site_scoped else None,

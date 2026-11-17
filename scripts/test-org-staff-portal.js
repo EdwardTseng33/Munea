@@ -177,10 +177,10 @@ async function openTab(doc, label) { await click(byClass(doc.body, 'tab').find(t
 
 // ───────────────────────── 假後端（形狀照 engine/org_api.py、org_alerts.py） ─────────────────────────
 const CAPS = {
-  org_admin: { summary: true, elders: true, careWeek: true, reports: true, siteScoped: false, siteLabel: null, level: 'L2' },
-  case_manager: { summary: true, elders: true, careWeek: true, reports: true, siteScoped: true, siteLabel: '北院', level: 'L2' },
-  care_worker: { summary: true, elders: true, careWeek: false, reports: false, siteScoped: true, siteLabel: '北院', level: 'L1' },
-  esg: { summary: true, elders: false, careWeek: false, reports: true, siteScoped: false, siteLabel: null, level: 'L0' },
+  org_admin: { summary: true, elders: true, careWeek: true, alerts: true, audit: true, reports: true, siteScoped: false, siteLabel: null, level: 'L2' },
+  case_manager: { summary: true, elders: true, careWeek: true, alerts: true, audit: false, reports: true, siteScoped: true, siteLabel: '北院', level: 'L2' },
+  care_worker: { summary: true, elders: true, careWeek: false, alerts: false, audit: false, reports: false, siteScoped: true, siteLabel: '北院', level: 'L1' },
+  esg: { summary: true, elders: false, careWeek: false, alerts: false, audit: false, reports: true, siteScoped: false, siteLabel: null, level: 'L0' },
 };
 const POISON = '<img src=x onerror="alert(1)">';
 const SEAT_A = '6f1e2d3c-0000-4000-8000-00000000000a';
@@ -514,6 +514,13 @@ const pathsOf = calls => calls.map(c => c.path);
   });
 
   // ── 四、送出的 body、錯誤的白話、送不出去不清空 ──
+  await check('分頁照後端給的格子走：後端關掉 alerts／audit，分頁就不見（不自己另算）', async () => {
+    const respond = backend('org_admin', { override: p => (p === '/org/me' ? { ...meFor('org_admin'), capabilities: { ...CAPS.org_admin, alerts: false, audit: false } } : undefined) });
+    const w = await boot('https://admin.munea.net/org.html#audit', { respond });
+    assert.deepEqual(tabLabels(w.doc), ['總覽', '長輩', '月報']);
+    assert.ok(!pathsOf(w.calls).includes('/org/alerts') && !pathsOf(w.calls).includes('/org/audit'));
+  });
+
   await check('機構管理者：五個分頁、每次請求都帶登入證與薄門碼', async () => {
     const w = await boot('https://admin.munea.net/org.html', { respond: backend('org_admin') });
     assert.deepEqual(tabLabels(w.doc), ['總覽', '長輩', '提醒', '紀錄', '月報']);

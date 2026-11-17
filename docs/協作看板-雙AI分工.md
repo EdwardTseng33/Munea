@@ -1,6 +1,6 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
-### 2026-11-18 蘇菲｜🖥️ 照護人員版機構專區網頁（補助案 C4 前端 · Draft PR · 只加新檔，不碰 App、不碰通話路徑）
+### 2026-11-18 蘇菲｜🖥️ 照護人員版機構專區網頁（補助案 C4 前端 · Draft PR · 不碰 App、不碰通話路徑）
 
 - **為什麼**：C4 要「由場域護理或照護人員逐筆判定」。後端 #713 已併主線，缺照護人員登入後看得到、按得到的畫面。
 - **做了**（新頁 `web/org.html`＋`web/src/org.js`＋`web/src/org.css`；部署後網址是 admin.munea.net/org.html，免登入的 `org-portal.html` 不動）：
@@ -9,9 +9,10 @@
   - 判定視窗：正確／誤報／觀察中＋兩個選填是否＋備註 200 字（提醒不要寫個資）；送不出去不關、不清空。「幾天沒聯絡才提醒」管理者可改、社工只看。
   - 示範模式 `?demo=1&role=org_admin|case_manager|care_worker|esg`（`guest`／`none` 看登入頁與沒權限頁）：不打接口、不載登入元件，右上角「示範資料」。
 - **視覺關卡（女巫 84 分）三個 🔴 已改**：還沒判定的「判定」改實心主按鈕；說明字最小 14px、註腳最小 13px、灰字加深到 #4F5D58（各底色對比 ≥ 5.7:1）；內部用語照蘇菲拍板版換白話（守護腦亮燈→需要關心、留存→持續使用、掛心事→本人提到的煩惱…，判定三選一與準確率那行不動）。順手：名額代號與編號移到卡片最底、總覽重複的隱私說明拿掉、手機名單圖例收成一行可展開。
-- **測試**：新 `scripts/test-org-staff-portal.js` 24 項（用假畫面元件把 org.js 真的跑一遍；角色資料對照後端 capabilities_for）；突變 49 種全紅。無頭 Chrome 截圖 1280 寬 16 張＋390 寬 8 張，破框 0、橫向捲動 0、示範模式對外請求 0（字型除外）。正常模式實走：CSP 底下登入元件載得進來、Google 登入的回跳網址是這一頁（往 Supabase 的請求在瀏覽器端擋掉，沒碰登入服務）。
+- **後端兩件（蘇菲指定一起帶）**：`/org.html`、`/src/org.js`、`/src/org.css` 加安全標頭（不准被嵌框、不猜檔案類型、不帶來源網址；頁面的標頭政策只有 `frame-ancestors 'none'`，其他照頁面自己的 meta）；`capabilities_for` 補 `alerts`、`audit` 兩格（條件跟各接口放行一模一樣），前端直接用、拿掉自己換算的那段。
+- **測試**：新 `scripts/test-org-staff-portal.js` 25 項（用假畫面元件把 org.js 真的跑一遍；角色資料對照後端 capabilities_for）；突變 50 種全紅。後端 `test_org_alerts` 新增一條：四種角色的每一格 capabilities 跟實際打接口的結果一致（故意放寬兩格會紅）；`test_admin_security_headers` 補機構專區三個檔。無頭 Chrome 截圖 1280 寬 16 張＋390 寬 8 張，破框 0、橫向捲動 0、示範模式對外請求 0（字型除外）。正常模式實走：CSP 底下登入元件載得進來、Google 登入的回跳網址是這一頁（往 Supabase 的請求在瀏覽器端擋掉，沒碰登入服務）。
 - **還沒做／要確認**：① Supabase 後台 Redirect URLs 要有 `https://admin.munea.net/org.html`（沒有的話登入完會被送回 Site URL；從外面驗不出來）② 網頁版 Apple 登入沒做（Apple 網頁登入設定目前回 Invalid client id）③ 用真的機構人員帳號實走一次（要先開一個 org_staff）④ 測試沒掛進 package.json（要改既有檔）。
-- **檔**：`web/org.html`、`web/src/org.js`、`web/src/org.css`、`scripts/test-org-staff-portal.js`（皆新）、本看板。
+- **檔**：`web/org.html`、`web/src/org.js`、`web/src/org.css`、`scripts/test-org-staff-portal.js`（皆新）、`engine/server.py`（安全標頭）、`engine/org_api.py`（capabilities 兩格）、`engine/test_admin_security_headers.py`、`engine/test_org_alerts.py`、本看板。
 
 ### 2026-11-18 蘇菲｜🚨 通話中守護腦亮燈「沒記進雲端、緊急聯絡人沒發出去」——改走 Brain（PR · call-path risk 中：只動亮燈後的背景記錄與通知，不碰收音／出聲）
 

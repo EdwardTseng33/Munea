@@ -493,19 +493,14 @@
   }
 
   // ───────────────────────── 分頁：只看 capabilities ─────────────────────────
-  function capFlag(caps, key, fallback) {
-    return typeof caps[key] === 'boolean' ? caps[key] : !!fallback;
-  }
-
+  // 每一格的條件在後端 engine/org_api.py capabilities_for，跟各接口的放行一模一樣（test_org_alerts 有比對）
   function tabsFor(caps) {
     caps = caps || {};
     const out = [];
     if (caps.summary) out.push('overview');
     if (caps.elders) out.push('elders');
-    // 提醒：後端 /org/alerts 用 careWeek 這一格放行（照服員、企業窗口沒有）。後端日後補上 alerts 這一格就直接用它。
-    if (capFlag(caps, 'alerts', caps.careWeek)) out.push('alerts');
-    // 紀錄：後端 /org/audit 只給機構管理者（不分分點＝siteScoped 為 false）而且不是企業客戶（level L0）。日後補上 audit 這一格就直接用它。
-    if (capFlag(caps, 'audit', caps.siteScoped === false && caps.level !== 'L0')) out.push('audit');
+    if (caps.alerts) out.push('alerts');
+    if (caps.audit) out.push('audit');
     if (caps.reports) out.push('reports');
     return out;
   }
@@ -1425,6 +1420,8 @@
         summary: true,
         elders: !isEsg && ['org_admin', 'case_manager', 'care_worker'].indexOf(role) >= 0,
         careWeek: !isEsg && ['org_admin', 'case_manager'].indexOf(role) >= 0,
+        alerts: !isEsg && ['org_admin', 'case_manager'].indexOf(role) >= 0,
+        audit: !isEsg && role === 'org_admin',
         reports: ['org_admin', 'case_manager'].indexOf(role) >= 0,
         siteScoped: scoped,
         siteLabel: scoped ? person.siteLabel : null,
@@ -1644,7 +1641,7 @@
           privacy: { statement: '這一頁是事實排列不是判定；沒有對話內容、沒有原句。這次查看已留下紀錄（誰、何時、看了誰）。' } });
       }
       if (path === API.alerts) {
-        if (!caps.careWeek) return NF;
+        if (!caps.alerts) return NF;
         if (DEMO_FAIL === 'alerts') return { ok: false, error: 'alerts_unavailable' };
         const views = ALERTS.map(alertView).filter(function (a) { return inScope(me, a.siteLabel); });
         views.sort(function (a, b) { return a.raisedAt < b.raisedAt ? 1 : a.raisedAt > b.raisedAt ? -1 : 0; });
@@ -1656,7 +1653,7 @@
           privacy: { statement: '只列已同意長輩的提醒；提醒內容是規則的固定句型，沒有對話原句。每一筆判定都會留下紀錄（誰、何時、判成什麼），不能刪改。' } });
       }
       if (path === API.mark) {
-        if (!caps.careWeek) return NF;
+        if (!caps.alerts) return NF;
         if (['correct', 'false_alarm', 'watching'].indexOf(body.result) < 0) return { ok: false, error: 'result_invalid', allowed: ['correct', 'false_alarm', 'watching'] };
         if (DEMO_FAIL === 'mark') return { ok: false, error: 'mark_not_recorded' };
         const raw = ALERTS.filter(function (a) { return a.alertId === body.alertId; })[0];
@@ -1667,13 +1664,13 @@
         return clone({ ok: true, alert: alertView(raw) });
       }
       if (path === API.audit) {
-        if (me.staff.role !== 'org_admin' || me.org.clientKind === 'esg') return NF;
+        if (!caps.audit) return NF;
         if (DEMO_FAIL === 'audit') return { ok: false, error: 'audit_unavailable' };
         return clone({ ok: true, count: AUDIT.length, items: AUDIT.map(auditView), lookbackDays: 90 });
       }
       if (path === API.reports) return caps.reports ? clone(reportsFor()) : NF;
       if (path === API.settings) {
-        if (!caps.careWeek) return NF;
+        if (!caps.alerts) return NF;
         return clone({ ok: true, settings: settings, canEdit: me.staff.role === 'org_admin', limits: { noContactDays: NO_CONTACT_LIMITS } });
       }
       if (path === API.settingsSave) {

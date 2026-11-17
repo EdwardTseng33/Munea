@@ -242,6 +242,36 @@ class AuditAndExportTests(AlertsBase):
         self.assertEqual(org_alerts.admin_alerts_export_response({"clientId": "nope"})["error"], "client_not_found")
 
 
+def _ok(out):
+    return isinstance(out, dict) and out.get("ok") is True
+
+
+class CapabilitiesMatchEndpointsTests(AlertsBase):
+    """機構專區網頁的分頁只看 /org/me 的 capabilities（2026-11-18）：四種角色的每一格都要跟實際打接口的結果一模一樣。"""
+
+    def test_each_capability_matches_what_the_endpoint_allows(self):
+        target = next(a for a in self.alerts(ADMIN_A)["alerts"] if a["seatId"] == SEAT_A1)["alertId"]   # 北院：管理者與社工都看得到
+        for who in (ADMIN_A, CASE_A, WORKER_A, HR_ESG):
+            caps = org_api.org_me_response(auth(who))["capabilities"]
+            observed = {
+                "elders": _ok(org_api.org_elders_response(auth(who), {}, loaders=self.loaders)),
+                "careWeek": _ok(org_api.org_elder_care_week_response(auth(who), {"seatId": SEAT_A1}, loaders=self.loaders)),
+                "reports": _ok(org_api.org_reports_response(auth(who))),
+                "alerts": _ok(org_alerts.org_alerts_response(auth(who), {}, loaders=self.loaders)),
+                "audit": _ok(org_alerts.org_audit_response(auth(who))),
+            }
+            for key, allowed in observed.items():
+                self.assertIs(caps[key], allowed, f"{who[:8]} 的 capabilities.{key} 跟接口不一致")
+            # 跟提醒匣同一道門的另外兩支：讀設定、判定
+            self.assertIs(_ok(org_alerts.org_settings_response(auth(who))), caps["alerts"])
+            mark = org_alerts.org_alert_mark_response(auth(who), {"alertId": target, "result": "watching"}, loaders=self.loaders)
+            self.assertIs(_ok(mark), caps["alerts"])
+        expected = {ADMIN_A: (True, True), CASE_A: (True, False), WORKER_A: (False, False), HR_ESG: (False, False)}
+        for who, (alerts, audit) in expected.items():
+            caps = org_api.org_me_response(auth(who))["capabilities"]
+            self.assertEqual((caps["alerts"], caps["audit"]), (alerts, audit), who[:8])
+
+
 class SettingsTests(AlertsBase):
     """機構自訂「幾天沒聯絡才提醒」（C4 演練 C05／C06／C10 要用）。"""
 
