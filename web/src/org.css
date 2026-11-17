@@ -61,7 +61,7 @@ p { text-wrap: pretty; }
    日期與「名額代號 3F2A9C1B」這種小單位另用 .nw 包住、整個不斷。 */
 .nw { white-space: nowrap; }
 .page-sub, .foot, .note-text, .tile-hint, .legend li, .setting-hint, .modal-rule, .screen-text, .screen-hint, .screen-msg,
-.privacy-line, .block-src, .mood-sum, .section-head p, .accuracy, .empty-box, .detail-empty, .counter, .field-label small,
+.privacy-line, .block-src, .mood-sum, .section-head p, .accuracy, .empty-box, .detail-empty, .remark-hint, .field-label small,
 .loading-line, .elder-meta, .detail-meta, .alert-meta,
 .alert-fact, .alert-sugg, .anom-fact, .anom-sugg, .modal-context p, .hist-extra {
   word-break: keep-all;
@@ -679,7 +679,9 @@ button.elder-row[aria-pressed="true"] { background: var(--mint); }
   resize: vertical;
   line-height: 1.6;
 }
-.counter { text-align: right; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.remark-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; margin-top: 6px; }
+.remark-hint { margin: 0; font-size: 13px; color: var(--muted); }
+.counter { margin-left: auto; text-align: right; font-size: 13px; color: var(--muted); white-space: nowrap; }
 .modal-rule { font-size: 13px; color: var(--muted); margin: 16px 0 0; }
 .modal .note { margin: 16px 0 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }

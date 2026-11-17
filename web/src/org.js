@@ -949,7 +949,7 @@
   }
 
   function pageAlerts(main, seq) {
-    const top = pageHead('提醒', function () { reload('alerts'); });
+    const top = pageHead('提醒', function () { delete S.cache.settings; reload('alerts'); });
     top.sub.textContent = glue('規則每天算一次，第一次算到就發到這裡（近 90 天）。請逐筆判定。');
     const setting = h('div', { class: 'setting-bar' }, loadingLine());
     const stats = h('div', { class: 'alert-stats' });
@@ -983,7 +983,7 @@
 
   // 「幾天沒聯絡才提醒」：能不能改看後端回的 canEdit（只有機構管理者是 true）。
   function renderSetting(bar, seq) {
-    return load('settings', API.settings).then(function (res) {
+    return load('settings', API.settings, {}, FRESH_MS).then(function (res) {
       if (seq !== S.seq) return;
       clear(bar);
       const label = h('span', { class: 'setting-label', text: '幾天沒聯絡才提醒' });
@@ -1060,7 +1060,7 @@
     if (t.rate === null) {
       add(ui.acc, [h('strong', { text: '準確率（參考）' }), '：還沒有可以算的判定。算法是 ', nw('正確 ÷（正確＋誤報）'), '，', nw('觀察中不算。')]);
     } else {
-      add(ui.acc, [h('strong', { text: '準確率（參考）' }), '：', h('strong', { class: 'num', text: pct(t.rate) }), ' ',
+      add(ui.acc, [h('strong', { text: '準確率（參考）' }), '：', h('strong', { class: 'num', text: pct(t.rate) }), '　',
         nw('正確 ÷（正確＋誤報）＝ ' + t.counts.correct + ' ÷ ' + t.judged), '，', nw('觀察中不算。')]);
     }
   }
@@ -1259,7 +1259,8 @@
       ynRow('worthNotifying', '值得通知嗎'),
       h('label', { class: 'field-label', for: 'markRemark' }, ['備註', h('small', { text: '選填，最多 ' + REMARK_MAX + ' 字' })]),
       remark,
-      counter,
+      // 後端會把電話、身分證號遮掉，但全名、病名擋不住，所以先講清楚
+      h('div', { class: 'remark-foot' }, [h('p', { class: 'remark-hint', text: '請不要寫長輩的全名、電話、身分證或病名' }), counter]),
       h('p', { class: 'modal-rule', text: '判定送出後不能修改；想改就再判一次，以最後一次為準。' }),
       err,
       h('div', { class: 'modal-actions' }, [cancel, submit]),
@@ -1428,15 +1429,20 @@
     const MOOD_SRC = '機器觀察（每次通話後由沐寧記錄的心情天氣，1–5 級）';
     const SPOKEN_SRC = '本人口述的掛心事，只給類別與次數（不含原句與短語；由記憶層歸類、不是臨床事實）';
     const GUARD_SUGG = '聯絡本人或家屬確認狀況。機構端看不到通話原句。';
-    function moodStreak(offsets) {
-      return { type: 'mood_drop', when: ymd(offsets[offsets.length - 1]), fact: '心情連續 3 天在 2 級以下（' + offsets.map(ymd).join('、') + '）。', suggestion: '打個電話問候；這是觀察，不是判定。' };
+    function moodStreak(offsets) { // 句型照 engine/care_week.py _low_streak_fact
+      const listed = offsets.map(ymd).join('、');
+      const daily = offsets.every(function (off, i) { return i === 0 || offsets[i - 1] - off === 1; });
+      const fact = daily
+        ? '心情連續 ' + offsets.length + ' 天在 2 級以下（' + listed + '）。'
+        : '心情連續 ' + offsets.length + ' 次有紀錄都在 2 級以下（' + listed + '，中間幾天沒有紀錄）。';
+      return { type: 'mood_drop', when: ymd(offsets[offsets.length - 1]), fact: fact, suggestion: '打個電話問候；這是觀察，不是判定。' };
     }
     function noContact(lastOffset, asOf, days) { // asOf＝這句話是哪一天算的（幾天前）；過去發出的提醒保留當天的句子
       const ref = asOf || 0;
       return { type: 'no_contact', when: ymd(ref), fact: '最後一次通話是 ' + ymd(lastOffset) + '，到 ' + ymd(ref) + ' 已經 ' + (lastOffset - ref) + ' 天沒聯絡（設定：' + (days || settings.noContactDays) + ' 天提醒）。', suggestion: '確認一下人在不在、電話通不通。' };
     }
     function guardianLit(count, offset, hh, mm) {
-      return { type: 'guardian', when: at(offset, hh, mm), fact: '守護腦這週亮了 ' + count + ' 次高風險燈（high×' + count + '）；即時通知已另外送出，這裡是週彙整。', suggestion: GUARD_SUGG };
+      return { type: 'guardian', when: at(offset, hh, mm), fact: '守護腦這週亮了 ' + count + ' 次高風險燈（high×' + count + '）。', suggestion: GUARD_SUGG };
     }
     function cat(key, count) {
       const label = SPOKEN_CATS.filter(function (p) { return p[0] === key; })[0][1];
@@ -1451,8 +1457,8 @@
         cats: [cat('body', 1)], safety: { high: 1 }, anomalies: function () { return [guardianLit(1, 2, 15, 20)]; } },
       { seatId: '5b7c19d2-6e4a-4f80-8d3b-2a9c1e7f5d63', label: '張爺爺', site: '北院', mood: { 6: 3, 4: 4, 1: 3 }, calls: [6, 4, 1], extra: 0, base: 3.4,
         cats: [], safety: null, anomalies: function () { return []; } },
-      { seatId: 'c95b2e64-1a3f-4b7d-9e05-6f8a2d4c1b84', label: '林奶奶', site: '北院', mood: { 6: 4, 5: 3, 4: 4, 2: 2, 1: 1, 0: 2 }, calls: [6, 5, 4, 2, 1, 0], extra: 2, base: 3.8,
-        cats: [cat('appetite', 1), cat('other', 2)], safety: null, anomalies: function () { return [moodStreak([2, 1, 0])]; } },
+      { seatId: 'c95b2e64-1a3f-4b7d-9e05-6f8a2d4c1b84', label: '林奶奶', site: '北院', mood: { 6: 4, 5: 3, 4: 4, 3: 2, 1: 1, 0: 2 }, calls: [6, 5, 4, 3, 1, 0], extra: 2, base: 3.8,
+        cats: [cat('appetite', 1), cat('other', 2)], safety: null, anomalies: function () { return [moodStreak([3, 1, 0])]; } },
       { seatId: '8d41e07a-2f6b-4c19-b7e3-9a0d5c8f2e15', label: '陳阿公', site: '南院', mood: {}, calls: [], extra: 0, base: 3.2, last: 9,
         cats: [], safety: null, anomalies: function () { return [noContact(9)]; } },
       { seatId: 'a04f6e85-9c1d-4e2b-8f7a-5d3b6c0e9a76', label: '吳奶奶', site: '南院', mood: { 5: 4, 3: 5, 0: 4 }, calls: [5, 3, 0], extra: 0, base: 4.1,
@@ -1504,7 +1510,7 @@
     // 提醒：發出時間、判定歷程（by＝誰判的）
     const ALERTS = [
       { alertId: 'ALR-' + ymd(1).replace(/-/g, '') + '-3FA2C1', seatId: ELDERS[0].seatId, pick: function () { return moodStreak([3, 2, 1]); }, raisedAt: at(0, 8, 5), marks: [] },
-      { alertId: 'ALR-' + ymd(0).replace(/-/g, '') + '-9B04E7', seatId: ELDERS[3].seatId, pick: function () { return moodStreak([2, 1, 0]); }, raisedAt: at(0, 8, 6), marks: [] },
+      { alertId: 'ALR-' + ymd(0).replace(/-/g, '') + '-9B04E7', seatId: ELDERS[3].seatId, pick: function () { return moodStreak([3, 1, 0]); }, raisedAt: at(0, 8, 6), marks: [] },
       { alertId: 'ALR-' + ymd(2).replace(/-/g, '') + '-58D1AA', seatId: ELDERS[0].seatId, pick: function () { return guardianLit(1, 2, 21, 40); }, raisedAt: at(1, 8, 10),
         marks: [{ result: 'watching', isReal: 'yes', worthNotifying: null, remark: '已請家屬今晚陪同，明天再確認。', markedAt: at(1, 9, 0), by: 'org_admin' }] },
       { alertId: 'ALR-' + ymd(2).replace(/-/g, '') + '-C7E390', seatId: ELDERS[1].seatId, pick: function () { return guardianLit(1, 2, 15, 20); }, raisedAt: at(1, 8, 10),

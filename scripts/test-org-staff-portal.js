@@ -251,7 +251,7 @@ function alertView(id, status, poison) {
   const latest = history[history.length - 1] || null;
   return {
     alertId: id, seatId: SEAT_A, seatCode: '6F1E2D3C', label: '測試阿嬤' + tag, siteLabel: '北院', type: 'mood_drop', typeLabel: '心情下降',
-    when: '2026-11-17', fact: '心情連續 3 天在 2 級以下（2026-11-15、2026-11-16、2026-11-17）。' + tag, suggestion: '打個電話問候；這是觀察，不是判定。' + tag,
+    when: '2026-11-17', fact: '心情連續 3 次有紀錄都在 2 級以下（2026-11-12、2026-11-15、2026-11-17，中間幾天沒有紀錄）。' + tag, suggestion: '打個電話問候；這是觀察，不是判定。' + tag,
     raisedAt: '2026-11-18T00:05:00Z', status, statusLabel: latest ? latest.resultLabel : '還沒判定', lastMark: latest, markHistory: history,
   };
 }
@@ -500,6 +500,7 @@ const pathsOf = calls => calls.map(c => c.path);
       override(p, body) {
         if (p !== '/org/alert/mark') return undefined;
         if (markMode === 'not_recorded') return { ok: false, error: 'mark_not_recorded' };
+        if (markMode === 'alerts_unavailable') return { ok: false, error: 'alerts_unavailable' };
         const v = alertView(body.alertId, body.result);
         v.markHistory = [{ result: body.result, resultLabel: '誤報', isReal: body.isReal || null, worthNotifying: body.worthNotifying || null, remark: body.remark || '', markedAt: '2026-11-18T03:00:00Z', markedBy: '測試社工', markedByRole: '機構管理者' }];
         v.lastMark = v.markHistory[0];
@@ -512,6 +513,7 @@ const pathsOf = calls => calls.map(c => c.path);
     const modal = () => byClass(w.doc.body, 'modal')[0];
     assert.ok(modal(), '按「判定」沒有跳出視窗');
     assert.ok(text(modal()).includes('判定送出後不能修改；想改就再判一次，以最後一次為準。'));
+    assert.ok(text(modal()).includes('請不要寫長輩的全名、電話、身分證或病名'), '備註框下要提醒不要寫個資');
     const submit = buttonsNamed(modal(), '送出判定')[0];
     assert.equal(submit.disabled, true, '還沒選結果就能送出');
     await click(byClass(modal(), 'result-btn').find(b => text(b).startsWith('誤報')));
@@ -536,6 +538,12 @@ const pathsOf = calls => calls.map(c => c.path);
     await click(submit);
     assert.ok(modal(), '沒網路時視窗不能關');
     assert.ok(text(modal()).includes('連不上沐寧，這筆判定還沒送出'), '沒網路要講白話');
+    assert.equal(remark.value, '  需要   再確認  ');
+
+    markMode = 'alerts_unavailable';
+    await click(submit);
+    assert.ok(modal(), '提醒讀不到時視窗不能關');
+    assert.ok(text(modal()).includes('提醒暫時讀不到，這筆判定還沒送出'), '提醒讀不到要講白話');
     assert.equal(remark.value, '  需要   再確認  ');
 
     markMode = 'ok';
