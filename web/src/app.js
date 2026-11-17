@@ -9648,9 +9648,27 @@ function init() {
       }, 3000);
       return;
     }
-    saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
-    renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
-    toast(muneaT('familyCircle.removedToast', '已把 {name} 移出全家健康圈。', { name: rm.dataset.name }));
+    const target = loadCircle().find(m => m.name === rm.dataset.name) || {};
+    const removeLocally = () => {
+      saveCircle(loadCircle().filter(m => m.name !== rm.dataset.name));
+      renderFcRoster(); renderFamRoster(); updateSafetyCount();   // 家人頁與緊急聯絡人跟著同步（單一名單）
+      toast(muneaT('familyCircle.removedToast', '已把 {name} 移出全家健康圈。', { name: rm.dataset.name }));
+    };
+    // 2026-11-18：以前只改自己畫面上的名單，伺服器上的成員關係沒動，被移除的人照樣看得到全家的
+    // 健康紀錄、下次同步還會被加回來（補助案 B4 查核）。有雲端身分的家人一定先讓伺服器真的移除，
+    // 成功了才從畫面拿掉；沒有雲端身分的（只存在這支手機上的名字）才直接從畫面拿掉。
+    if (!target.personId || !isLoggedIn()) { removeLocally(); return; }
+    (async () => {
+      rm.disabled = true;
+      const r = await brainPost('/family/membership', { action: 'remove', targetPersonId: target.personId });
+      rm.disabled = false;
+      rm.dataset.arm = ''; rm.classList.remove('arm'); rm.textContent = muneaT('familyCircle.remove', '移除');
+      if (r && r.ok) { removeLocally(); try { syncPullAll({ force: true }); } catch (e) {} return; }
+      const code = r && r.error;
+      toast(code === 'family_owner_required'
+        ? muneaT('familyCircle.removeOwnerOnly', '只有建立這個健康圈的人可以移除家人。')
+        : muneaT('familyCircle.removeFailed', '沒有移除成功，請確認網路後再試一次。'));
+    })();
   });
   // 免費也能加入別人的圈（Edward 2026-07-31）：不開這道，免費 A 邀請免費 B 時 B 會被擋在門外，
   // 邀請發得出去卻沒人接得到＝整件事失效。人數由圈主的方案決定，伺服器端另有 circle_full 把關。
@@ -9696,8 +9714,27 @@ function init() {
     const b = $('#fcLeaveBtn');
     if (b.dataset.arm !== '1') { b.dataset.arm = '1'; b.classList.add('arm'); b.textContent = muneaT('familyCircle.leaveConfirm', '再按一次確認退出'); setTimeout(() => { b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = muneaT('familyCircle.leaveAction', '退出這個健康圈'); }, 4000); return; }
     b.dataset.arm = ''; b.classList.remove('arm'); b.textContent = muneaT('familyCircle.leaveAction', '退出這個健康圈');
-    $('#famCircleModal').classList.remove('show');
-    toast(muneaT('familyCircle.leftToast', '已退出這個健康圈。想再回來，請家人重新邀請你。'));
+    // 2026-11-18：以前這裡只關視窗、跳「已退出」——伺服器上的成員關係沒動，對方照樣看得到你的健康紀錄，
+    // 下次同步還會把你加回來（補助案 B4 查核）。現在一定先讓伺服器真的撤銷，成功了才說已退出。
+    if (!isLoggedIn()) { toast(muneaT('familyCircle.leaveFailed', '沒有退出成功，請確認網路後再試一次。')); return; }
+    (async () => {
+      if (typeof setBtnBusy === 'function') setBtnBusy(b, muneaT('familyCircle.leaving', '退出中'));
+      const r = await brainPost('/family/membership', { action: 'leave' });
+      if (typeof clearBtnBusy === 'function') clearBtnBusy(b, muneaT('familyCircle.leaveAction', '退出這個健康圈'));
+      if (!r || !r.ok) {
+        const code = r && r.error;
+        toast(code === 'owner_cannot_leave'
+          ? muneaT('familyCircle.ownerCannotLeave', '這個健康圈是你建立的，沒有圈可以退出；要讓家人離開，請在名單上移除。')
+          : muneaT('familyCircle.leaveFailed', '沒有退出成功，請確認網路後再試一次。'));
+        return;
+      }
+      if (r.familyGroupId) storageSet('munea.familyGroupId', r.familyGroupId);
+      saveCircle([circleSelfMember()]);
+      renderFcRoster(); renderFamRoster(); updateSafetyCount();
+      $('#famCircleModal').classList.remove('show');
+      toast(muneaT('familyCircle.leftToast', '已退出這個健康圈。想再回來，請家人重新邀請你。'));
+      try { syncPullAll({ force: true }); } catch (e) {}
+    })();
   });
   if ($('#famCircleRow')) $('#famCircleRow').addEventListener('click', () => { renderFcRoster(); $('#famCircleModal').classList.add('show'); });
   // 移除家人／封鎖入口也放在家人頁顯眼處（不用鑽進設定才找得到，Edward 7/9 UGC 審核要求）——開的是同一個管理視窗

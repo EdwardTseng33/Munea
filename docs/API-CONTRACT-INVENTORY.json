@@ -11,7 +11,7 @@
     "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
-    "brain": 114,
+    "brain": 115,
     "gateway": 23,
     "voice": 4
   },
@@ -1038,6 +1038,20 @@
       "pii": "account",
       "envelope": "json-object",
       "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/family/membership",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_family_membership.py"
+      ]
     },
     {
       "surface": "brain",
