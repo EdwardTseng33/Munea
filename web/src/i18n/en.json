@@ -1709,7 +1709,7 @@
   "orgConsent.seesTitle": "When it's on, they can see",
   "orgConsent.sees1": "The name you go by",
   "orgConsent.sees2": "Which days you talked, and how many times",
-  "orgConsent.sees3": "Your mood each day, on a 5-level scale",
+  "orgConsent.sees3": "Your mood each day, on a scale of 1 to 5",
   "orgConsent.sees4": "How often you mentioned feeling unwell, poor sleep, poor appetite, or other worries (counts only, no details)",
   "orgConsent.sees5": "How many times something needed attention (the count only)",
   "orgConsent.neverTitle": "They can never see",
