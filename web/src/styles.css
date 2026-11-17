@@ -2643,6 +2643,19 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .fc-leave.arm { background: var(--coral-soft); border-radius: 999px; }
 .fc-privacy { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; margin-top: 14px; }
 .jc-code { text-align: center; letter-spacing: 3px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
+/* 機構開通碼視窗（2026-11-17）：輸入的人是長輩——數字放大、輸入框加高；
+ * 結果訊息成功用綠底、失敗用淡紅底，一眼看得出有沒有成功。沒訊息時整塊收起來。
+ * 綁好之後輸入框鎖住但字不要淡到看不清（iOS 預設會把鎖住的輸入框變很淡）。 */
+.sc-code { min-height: 56px; font-size: 24px; letter-spacing: 2px; text-transform: none; }
+.sc-code::placeholder { font-size: 18px; font-weight: 600; letter-spacing: 0; }
+.sc-code:disabled { opacity: 1; color: var(--muted); -webkit-text-fill-color: var(--muted); }
+.sc-msg { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; font-size: 15px; line-height: 1.6; }
+.sc-msg:empty { display: none; }
+.sc-msg.ok { background: var(--mint); color: var(--teal-dd); }
+.sc-msg.err { background: var(--coral-soft); color: var(--danger-d); }
+.modal .modal-btn.sc-btn { margin-top: 16px; }
+/* 標題右邊留位子給關閉鍵：英文、西文標題比較長，大字級時會排到關閉鍵底下。 */
+.modal .sc-title { padding-right: 48px; }
 
 /* 訂閱頁 v2：產品價值 + 適合誰 + 堆疊卡（Edward 7/7 去寧寧、講優勢） */
 .sub-intro { font-size: 13.5px; line-height: 1.7; color: var(--muted); margin: 2px 2px 12px; }
