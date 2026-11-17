@@ -92,6 +92,16 @@
   .btn-appstore.is-soon:hover{background:var(--teal-dd);transform:none}
   .cta-box .btn-appstore.is-soon:hover{background:#fff;transform:none}
 
+  /* 暫停鈕：會動超過 5 秒的影片都要能停（WCAG 2.2.2），44px 好按 */
+  .vpause{position:absolute;z-index:4;width:44px;height:44px;border-radius:50%;border:none;background:rgba(51,64,61,.62);color:#fff;display:grid;place-items:center;cursor:pointer;padding:0}
+  .vpause svg{width:18px;height:18px;fill:currentColor}
+  .vpause .i-play{display:none}
+  .vpause.paused .i-pause{display:none}
+  .vpause.paused .i-play{display:block}
+  .vpause:hover{background:rgba(51,64,61,.8)}
+  .vp-hero{left:14px;bottom:14px}
+  .vp-demo{right:12px;top:12px}
+
   /* App 截圖 → 完整放進手機框 */
   .pane{aspect-ratio:auto!important;background:#e9f2ed!important;display:grid;place-items:center;padding:30px}
   .dev{width:min(250px,74%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27}
@@ -390,6 +400,7 @@
         <video class="hero-face" id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="auto" aria-label="Munea's AI companion — alive, and here with you">
           <source src="/assets/ningning-hello.mp4" type="video/mp4">
         </video>
+        <button class="vpause vp-hero" type="button" aria-label="Pause video" aria-pressed="false" data-pause="Pause video" data-play="Play video"><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10-6.5a1 1 0 000-1.72l-10-6.5A1 1 0 008 5.5z"/></svg></button>
         <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span>Reminded Mom to take her meds</span></div>
         <div class="float-chip fc-2"><span class="ic" style="background:var(--coral-soft);color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span>She remembers what you said</span></div>
       </div>
@@ -526,6 +537,7 @@
       <figure class="vdemo">
         <div class="vframe">
           <video class="vplay" poster="/assets/ningning-poster.jpg" muted playsinline loop preload="none" data-src="/assets/ningning-talk-demo-en.mp4" aria-label="Munea AI video demo · natural female voice"></video>
+          <button class="vpause vp-demo" type="button" aria-label="Pause video" aria-pressed="false" data-pause="Pause video" data-play="Play video"><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10-6.5a1 1 0 000-1.72l-10-6.5A1 1 0 008 5.5z"/></svg></button>
           <button class="vsound" type="button" aria-label="Sound on" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="Sound on" data-off="Mute">Sound on</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">Nina</span></figcaption>
@@ -533,6 +545,7 @@
       <figure class="vdemo">
         <div class="vframe">
           <video class="vplay" poster="/assets/mumu-poster.jpg" muted playsinline loop preload="none" data-src="/assets/mumu-talk-demo-en.mp4" aria-label="Munea AI video demo · steady male voice"></video>
+          <button class="vpause vp-demo" type="button" aria-label="Pause video" aria-pressed="false" data-pause="Pause video" data-play="Play video"><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 001.5.86l10-6.5a1 1 0 000-1.72l-10-6.5A1 1 0 008 5.5z"/></svg></button>
           <button class="vsound" type="button" aria-label="Sound on" aria-pressed="false"><svg class="ic-on" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.8 5.5a9 9 0 010 13"/></svg><svg class="ic-off" viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg><span class="vs-tx" data-on="Sound on" data-off="Mute">Sound on</span></button>
         </div>
         <figcaption class="vcap"><span class="vlab">Milo</span></figcaption>
@@ -773,8 +786,35 @@
 (function(){
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* 暫停鈕：按了就停、再按繼續；使用者自己按停的影片，捲動回來也不自動再播 */
+  function setPaused(btn, paused){
+    btn.classList.toggle('paused', paused);
+    btn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+    btn.setAttribute('aria-label', paused ? btn.dataset.play : btn.dataset.pause);
+  }
+  [].slice.call(document.querySelectorAll('.vpause')).forEach(function(btn){
+    var vid = btn.parentNode.querySelector('video');
+    if (!vid) return;
+    btn.addEventListener('click', function(){
+      if (vid.paused){
+        if (!vid.src && vid.dataset.src) vid.src = vid.dataset.src;
+        vid.dataset.userPaused = '';
+        vid.play().catch(function(){});
+        setPaused(btn, false);
+      } else {
+        vid.dataset.userPaused = '1';
+        vid.pause();
+        setPaused(btn, true);
+      }
+    });
+  });
+
   /* 招呼影片播完 → 換成待機影片，讓臉一直「在」 */
   var v = document.getElementById('heroVid');
+  if (v && reduce){
+    v.removeAttribute('autoplay'); v.pause(); v.dataset.userPaused = '1';
+    var hb = v.parentNode.querySelector('.vpause'); if (hb) setPaused(hb, true);
+  }
   if (v) v.addEventListener('ended', function(){
     if (v.dataset.i) return;
     v.dataset.i = '1';
@@ -807,6 +847,7 @@
       es.forEach(function(e){
         var vd = e.target;
         if (e.isIntersecting){
+          if (vd.dataset.userPaused || reduce) return;
           if (!vd.src){ vd.src = vd.dataset.src; }
           vd.play().catch(function(){});
         } else if (vd.src && !vd.paused){
@@ -829,6 +870,8 @@
         });
         if (unmute){
           vid.muted = false;
+          vid.dataset.userPaused = '';
+          var pb = btn.closest('.vframe').querySelector('.vpause'); if (pb) setPaused(pb, false);
           vid.play().catch(function(){});
           btn.classList.add('on'); btn.setAttribute('aria-pressed','true');
           var t = btn.querySelector('.vs-tx'); if (t) t.textContent = t.dataset.off;

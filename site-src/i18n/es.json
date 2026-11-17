@@ -267,5 +267,7 @@
   "guide.sectionH2": "Lo que más preguntan las familias",
   "guide.sectionSub": "Guías breves y prácticas.",
   "guide.more": "Ver todas las guías",
-  "price.privacy": "Privacidad: Munea no guarda aparte las grabaciones originales, solo los puntos clave; la voz se cifra y se procesa en la nube fuera de Taiwán; los datos no se venden ni se usan para publicidad, y puedes verlos o borrarlos en la app cuando quieras."
+  "price.privacy": "Privacidad: Munea no guarda aparte las grabaciones originales, solo los puntos clave; la voz se cifra y se procesa en la nube fuera de Taiwán; los datos no se venden ni se usan para publicidad, y puedes verlos o borrarlos en la app cuando quieras.",
+  "a11y.pause": "Pausar el vídeo",
+  "a11y.play": "Reproducir el vídeo"
 }

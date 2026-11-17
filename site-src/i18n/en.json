@@ -267,5 +267,7 @@
   "guide.sectionH2": "What families ask most",
   "guide.sectionSub": "Short, practical guides you can act on today.",
   "guide.more": "See all guides",
-  "price.privacy": "Privacy: Munea doesn’t keep raw recordings, only key points; voice is encrypted and processed in the cloud outside Taiwan; data is never sold or used for ads, and you can view or delete it in the app anytime."
+  "price.privacy": "Privacy: Munea doesn’t keep raw recordings, only key points; voice is encrypted and processed in the cloud outside Taiwan; data is never sold or used for ads, and you can view or delete it in the app anytime.",
+  "a11y.pause": "Pause video",
+  "a11y.play": "Play video"
 }
