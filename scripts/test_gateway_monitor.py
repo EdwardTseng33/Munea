@@ -584,6 +584,175 @@ class ObserveModeTests(unittest.TestCase):
         self.assertFalse(notifier.send("queue", "Queue alert", fields={"depth": 2}))
 
 
+class VoicePatrolTests(unittest.TestCase):
+    """2026-11-17：語音線巡邏——定時真的接一次 Google，連兩次接不上才報。
+
+    11/8–11/12 聊聊四天打不通、11/12 額度用完停兩小時，總機都是好的、巡邏全綠。
+    """
+
+    OK_BODY = b'{"ok":true,"mode":"light","model":"gemini-3.8-live","sdk":"2.34.0","first_audio_ms":656}'
+
+    def _probe(self, responses, *, now, interval=1800.0):
+        calls: list[tuple[str, str, float]] = []
+
+        def opener(request: object, *, timeout: float):
+            calls.append((request.full_url, request.get_header("X-munea-selftest-key"), timeout))
+            item = responses.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return Response(item)
+
+        probe = monitor.VoiceSelftestProbe(
+            "https://voice.test/", key="thin-door-key", interval_seconds=interval,
+            opener=opener, clock=lambda: now[0],
+        )
+        return probe, calls
+
+    @staticmethod
+    def _http_error(status: int, body: bytes) -> Exception:
+        import io as _io
+        import urllib.error
+
+        return urllib.error.HTTPError("https://voice.test/selftest/live", status, "x", {}, _io.BytesIO(body))
+
+    def test_success_hits_the_light_door_with_the_thin_key_then_waits_the_interval(self) -> None:
+        now = [1000.0]
+        probe, calls = self._probe([self.OK_BODY, self.OK_BODY], now=now)
+        first = probe.check()
+        self.assertTrue(first["ok"])
+        self.assertTrue(first["fresh"])
+        self.assertEqual(first["model"], "gemini-3.8-live")
+        self.assertEqual(calls, [("https://voice.test/selftest/live?mode=light", "thin-door-key", 30.0)])
+
+        now[0] += 120  # 下一輪看門狗（2 分鐘後）不該再燒一次
+        again = probe.check()
+        self.assertTrue(again["ok"])
+        self.assertFalse(again["fresh"])
+        self.assertEqual(len(calls), 1)
+
+        now[0] += 1800
+        self.assertTrue(probe.check()["fresh"])
+        self.assertEqual(len(calls), 2)
+
+    def test_one_failure_is_silent_and_rechecked_on_the_very_next_cycle(self) -> None:
+        now = [1000.0]
+        refused = self._http_error(503, b'{"ok":false,"error":"ClientError","detail":"connection refused"}')
+        probe, calls = self._probe([refused, self.OK_BODY], now=now)
+        first = probe.check()
+        self.assertFalse(first["ok"])
+        self.assertEqual(first["consecutive_failures"], 1)
+        result = healthy_result()
+        result = monitor.PollResult(health=result.health, metrics=result.metrics, voice_selftest=first)
+        self.assertEqual(monitor.evaluate_alerts(result, now=NOW), [])  # 單次抖動不吵人
+
+        now[0] += 120
+        second = probe.check()
+        self.assertEqual(len(calls), 2)  # 沒等半小時，下一輪就再確認
+        self.assertTrue(second["ok"])
+        self.assertEqual(second["consecutive_failures"], 0)
+
+    def test_two_failures_in_a_row_raise_one_critical_alert_with_the_reason(self) -> None:
+        now = [1000.0]
+        refused = lambda: self._http_error(  # noqa: E731
+            503, b'{"ok":false,"error":"ClientError","detail":"quota exhausted","model":"gemini-3.8-live","sdk":"2.34.0"}'
+        )
+        probe, _calls = self._probe([refused(), refused()], now=now)
+        probe.check()
+        now[0] += 120
+        second = probe.check()
+        self.assertEqual(second["consecutive_failures"], 2)
+        base = healthy_result()
+        result = monitor.PollResult(health=base.health, metrics=base.metrics, voice_selftest=second)
+        alerts = monitor.evaluate_alerts(result, now=NOW)
+        self.assertEqual([alert.key for alert in alerts], ["voice_live_selftest_failed"])
+        self.assertEqual(alerts[0].severity, "critical")
+        self.assertEqual(alerts[0].fields["原因"], "ClientError")
+        self.assertEqual(alerts[0].fields["細節"], "quota exhausted")
+        self.assertEqual(alerts[0].fields["連續失敗次數"], 2)
+
+    def test_missing_door_or_rejected_key_is_named_plainly(self) -> None:
+        now = [1000.0]
+        probe, _calls = self._probe([self._http_error(404, b"")], now=now)
+        outcome = probe.check()
+        self.assertFalse(outcome["ok"])
+        self.assertEqual(outcome["error"], "selftest_door_missing_or_key_rejected")
+
+    def test_network_failure_counts_as_a_failure_not_a_crash(self) -> None:
+        now = [1000.0]
+        probe, _calls = self._probe([TimeoutError("timed out")], now=now)
+        outcome = probe.check()
+        self.assertFalse(outcome["ok"])
+        self.assertEqual(outcome["error"], "TimeoutError")
+        self.assertEqual(outcome["consecutive_failures"], 1)
+
+    def test_a_200_that_does_not_say_ok_is_still_a_failure(self) -> None:
+        now = [1000.0]
+        probe, _calls = self._probe([b'{"ok":false,"error":"no_audio"}'], now=now)
+        outcome = probe.check()
+        self.assertFalse(outcome["ok"])
+        self.assertEqual(outcome["error"], "no_audio")
+
+    def test_not_patrolling_is_never_an_alert(self) -> None:
+        self.assertEqual(monitor.evaluate_alerts(healthy_result(), now=NOW), [])
+
+    def test_monitor_reports_the_patrol_result_and_alerts_through_the_normal_lifecycle(self) -> None:
+        class Client:
+            def poll(self) -> monitor.PollResult:
+                return healthy_result()
+
+            def retire_worker(self, worker_id: str) -> None:
+                raise AssertionError("nothing should be retired")
+
+        class Notifier:
+            def __init__(self) -> None:
+                self.sent: list[str] = []
+
+            def send(self, key: str, text: str, *, fields=None) -> bool:
+                self.sent.append(key)
+                return True
+
+            def clear(self, key: str) -> None:
+                return None
+
+        now = [1000.0]
+        refused = lambda: self._http_error(503, b'{"ok":false,"error":"ClientError"}')  # noqa: E731
+        probe, _calls = self._probe([refused(), refused(), self.OK_BODY], now=now)
+        notifier = Notifier()
+        watcher = monitor.GatewayMonitor(Client(), notifier, clock=lambda: NOW, voice_selftest=probe)
+
+        first = watcher.run_once()
+        self.assertEqual(first["alert_keys"], [])
+        self.assertFalse(first["voice_selftest"]["ok"])
+        now[0] += 120
+        second = watcher.run_once()
+        self.assertEqual(second["sent"], ["voice_live_selftest_failed"])
+        now[0] += 120
+        third = watcher.run_once()
+        self.assertEqual(third["alert_keys"], [])
+        self.assertEqual(third["recovered"], ["recovered:voice_live_selftest_failed"])
+        self.assertEqual(notifier.sent, ["voice_live_selftest_failed", "recovered:voice_live_selftest_failed"])
+
+    def test_env_wiring_is_off_by_default_and_strict_when_turned_on(self) -> None:
+        import os
+        from unittest import mock
+
+        base = {"MUNEA_GATEWAY_URL": "https://gateway.test", "MUNEA_GATEWAY_MONITOR_NOTIFY": "0"}
+        with tempfile.TemporaryDirectory() as folder:
+            base["MUNEA_GATEWAY_MONITOR_STATE_FILE"] = str(Path(folder) / "state.json")
+            with mock.patch.dict(os.environ, base, clear=True):
+                watcher, _interval = monitor.build_monitor_from_env()
+                self.assertIsNone(watcher.voice_selftest)  # 沒設網址＝跟以前一模一樣
+            with mock.patch.dict(os.environ, {**base, "MUNEA_VOICE_SELFTEST_URL": "https://voice.test"}, clear=True):
+                with self.assertRaises(monitor.MonitorConfigError):
+                    monitor.build_monitor_from_env()  # 要巡卻沒鑰匙＝設定錯，不能靜靜不巡
+            env = {**base, "MUNEA_VOICE_SELFTEST_URL": "https://voice.test", "MUNEA_APP_KEY": "thin-door-key",
+                   "MUNEA_VOICE_SELFTEST_INTERVAL_SECONDS": "900"}
+            with mock.patch.dict(os.environ, env, clear=True):
+                watcher, _interval = monitor.build_monitor_from_env()
+                self.assertEqual(watcher.voice_selftest.url, "https://voice.test/selftest/live?mode=light")
+                self.assertEqual(watcher.voice_selftest.interval_seconds, 900.0)
+
+
 class ScheduledServiceTests(unittest.TestCase):
     """2026-11-17：監看服務改成「定時叫一次、查一次」，不再靠常駐迴圈。"""
 

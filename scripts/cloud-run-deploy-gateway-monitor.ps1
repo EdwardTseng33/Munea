@@ -13,6 +13,13 @@
   # Windows PowerShell 5.1 parsing of the defaults.)
   [string]$AvatarAppKeySecret = "munea-avatar-app-key",
   [switch]$NoWorkerClockProbe,
+  # 2026-11-17: voice patrol. Every 30 minutes the monitor really opens one
+  # Gemini Live connection through the voice service's own /selftest/live
+  # door (light mode, next to free) and alerts after two failures in a row.
+  # Uses the same MUNEA_APP_KEY binding as the worker clock probe. Pass
+  # -NoVoicePatrol to opt out.
+  [string]$VoiceSelftestUrl = "https://munea-voice-491603544409.asia-east1.run.app",
+  [switch]$NoVoicePatrol,
   [int]$IntervalSeconds = 60,
   # 2026-11-17: scheduled mode is the default. Cloud Scheduler calls
   # POST /run-once every $TickMinutes minutes; the service bills per request
@@ -55,9 +62,15 @@ if ($Notify) {
 }
 
 $notifyValue = if ($Notify) { "1" } else { "0" }
+if (-not $NoVoicePatrol -and $NoWorkerClockProbe) {
+  throw "The voice patrol needs the MUNEA_APP_KEY binding; pass -NoVoicePatrol together with -NoWorkerClockProbe"
+}
+$envVars = "MUNEA_GATEWAY_URL=$GatewayUrl,MUNEA_GATEWAY_MONITOR_INTERVAL_SECONDS=$IntervalSeconds,MUNEA_GATEWAY_MONITOR_NOTIFY=$notifyValue"
 $loopValue = if ($AlwaysOn) { "1" } else { "0" }
 $minInstances = if ($AlwaysOn) { "1" } else { "0" }
 $cpuFlag = if ($AlwaysOn) { "--no-cpu-throttling" } else { "--cpu-throttling" }
+$envVars += ",MUNEA_GATEWAY_MONITOR_LOOP=$loopValue"
+if (-not $NoVoicePatrol) { $envVars += ",MUNEA_VOICE_SELFTEST_URL=$VoiceSelftestUrl" }
 $secretBindings = "MUNEA_GATEWAY_ADMIN_KEY=$($AdminKeySecret):latest"
 if ($Notify) {
   $secretBindings += ",MUNEA_SLACK_ALERT_WEBHOOK=$($SlackWebhookSecret):latest"
@@ -76,7 +89,7 @@ $argsList = @(
   "--command", "uvicorn",
   "--args", "monitor_service:app,--host,0.0.0.0,--port,8080",
   "--update-secrets", $secretBindings,
-  "--set-env-vars", "MUNEA_GATEWAY_URL=$GatewayUrl,MUNEA_GATEWAY_MONITOR_INTERVAL_SECONDS=$IntervalSeconds,MUNEA_GATEWAY_MONITOR_NOTIFY=$notifyValue,MUNEA_GATEWAY_MONITOR_LOOP=$loopValue",
+  "--set-env-vars", $envVars,
   "--memory", "512Mi",
   "--cpu", "1",
   "--min-instances", $minInstances,
@@ -111,7 +124,8 @@ function Test-SchedulerJob([string]$Name) {
 }
 
 $modeLabel = if ($AlwaysOn) { "always-on loop" } else { "scheduled every $TickMinutes min" }
-Write-Host "Deploying $Service (notify=$notifyValue, mode=$modeLabel)" -ForegroundColor Cyan
+$patrolLabel = if ($NoVoicePatrol) { "off" } else { $VoiceSelftestUrl }
+Write-Host "Deploying $Service (notify=$notifyValue, mode=$modeLabel, voice patrol=$patrolLabel)" -ForegroundColor Cyan
 if ($DryRun) {
   Write-Host ("gcloud " + ($argsList -join " "))
   if (-not $AlwaysOn) {
