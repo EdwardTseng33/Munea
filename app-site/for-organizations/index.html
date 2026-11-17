@@ -35,7 +35,7 @@
 <meta name="twitter:title" content="沐寧 Munea｜給照護機構：語音陪伴＋家屬看得到近況">
 <meta name="twitter:description" content="長輩開口就能聊、到點提醒用藥與回診，家屬看得到近況，機構每月拿到營運數據報告。先小規模試辦，看到效果再擴大。">
 <meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
-<link rel="stylesheet" href="/warm.css?v=10">
+<link rel="stylesheet" href="/warm.css?v=11">
 <style>
   /* ── Edward 拍板：扁平化，不要陰影與漸層（跟首頁同一套覆寫）── */
   :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
@@ -44,7 +44,6 @@
   .cta-box .glow,.cta-box .glow2{display:none!important}
   .cta-box{background:var(--teal-d)!important}
   .progress{background:var(--teal)!important}
-  .hero h1 .hl::after{background:#F6D8BC!important}
   h2,h3{text-wrap:balance}
   p,li{text-wrap:pretty}
 
@@ -57,8 +56,8 @@
   .org-hero{padding:72px 0 64px}
   .org-hero .hero-grid{grid-template-columns:1.15fr .85fr}
   .org-hero h1{font-size:clamp(30px,4.4vw,50px)}
-  .org-hero .btn-teal{background:var(--teal-dd);color:#fff}
-  .org-hero .btn-teal:hover{background:#1D5A55;transform:translateY(-3px)}
+  .org-hero .btn-teal{background:var(--teal-btn);color:#fff}
+  .org-hero .btn-teal:hover{background:var(--teal-dd);transform:translateY(-3px)}
   .org-hero .btn svg{width:18px;height:18px}
   .org-shot{display:grid;place-items:center;background:#e9f2ed;border-radius:30px;padding:30px}
   .org-shot .dev{width:min(240px,70%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27!important}
@@ -86,19 +85,22 @@
   .org-how .sec-head{margin-bottom:28px}
   .org-steps{list-style:none;max-width:760px;margin:0 auto;display:grid;gap:12px;counter-reset:s}
   .org-steps li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;font-size:16px;color:var(--ink);line-height:1.75}
-  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--coral-soft);color:var(--coral-d);font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
+  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--teal-btn);color:#fff;font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
 
   /* ── 收尾：去 B2B 網站 ── */
   .org-final .btn-b2b{background:#fff;color:var(--teal-dd);position:relative}
   .org-final .btn-b2b:hover{background:#f4f0e8;transform:translateY(-3px)}
-  .org-note{max-width:720px;margin:6px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8;padding:0 8px}
+  .org-note{max-width:720px;margin:16px auto 0;text-align:center;font-size:13.5px;color:var(--muted);line-height:1.8;padding:0 8px}
 
   /* 頁尾 */
   .foot-disc{max-width:720px;margin:26px auto 0;font-size:12.5px;color:#8a9893;line-height:1.85}
   .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
+  .skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
+  .skip:focus{top:12px}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">跳到主要內容</a>
 <div class="progress"></div>
 
 <header>
@@ -129,6 +131,7 @@
   </nav>
 </header>
 
+<main id="main">
 <!-- ═══ 主視覺 ═══ -->
 <section class="hero org-hero">
   <div class="wrap hero-grid">
@@ -138,7 +141,7 @@
       <p class="sub">沐寧可以整批提供給照護機構：長輩開口就能跟 AI 夥伴聊天，家屬在自己的手機上看得到近況，機構每月拿到使用與關懷的數據報告。純軟體，機構平板或長輩手機都能用。</p>
       <div class="hero-actions">
         <a class="btn btn-teal" href="https://munea-b2b.vercel.app/" target="_blank" rel="noopener">看機構合作方案<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a class="btn btn-ghost" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener">先下載 App 試試</a>
+        <a class="btn btn-ghost" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener">先下載 App 試試</a>
       </div>
     </div>
     <div class="org-shot">
@@ -174,7 +177,7 @@
       <div class="org-card">
         <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
         <h3>每月營運數據報告</h3>
-        <p>機構席次附每月報告：使用率、關懷與異常摘要，讓管理者看得到導入後的實際狀況。</p>
+        <p>機構席次附每月使用與關懷彙總（啟用滿 5 位長輩起提供完整比率），讓管理者看得到導入後的實際狀況。</p>
       </div>
     </div>
   </div>
@@ -187,8 +190,8 @@
       <h2>怎麼開始</h2>
     </div>
     <ol class="org-steps">
-      <li>先選 10–20 位長輩，做 2–4 週小規模試辦，每週一起回看用得順不順、家屬回饋與需要人工接手的狀況。</li>
-      <li>席次制、用多少付多少：每席每月含固定通話點數（Plus 100 點、Pro 200 點，1 點約 1 分鐘），用完可加購。</li>
+      <li>先選 10–20 位長輩，做約 4 週的小規模試辦，每週一起回看用得順不順、家屬回饋與需要人工接手的狀況。</li>
+      <li>席次制、用多少付多少：每席每月 NT$499 起，含固定通話點數（Plus 100 點、Pro 200 點，1 點約 1 分鐘），用完可加購。</li>
       <li>依事先講好的目標決定擴大、調整或停止；正式價格與責任範圍以合約確認。</li>
     </ol>
   </div>
@@ -205,6 +208,7 @@
     <p class="org-note">沐寧是輔助關懷提醒工具，不取代人工照護、醫療診斷與緊急救援服務；正式報價以雙方議定之合約為準。</p>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
@@ -217,7 +221,7 @@
         <h4>認識沐寧</h4>
         <a href="https://munea.net/#personas">用戶情境</a>
         <a href="https://munea.net/#features">功能特色</a>
-        <a href="https://munea.net/#tech">技術核心</a>
+        <a href="https://munea.net/#pricing">價格</a>
         <a href="https://munea.net/#faq">常見問題</a>
       </div>
       <div class="foot-col">
@@ -234,6 +238,6 @@
   </div>
 </footer>
 
-<script src="/warm.js?v=10"></script>
+<script src="/warm.js?v=11"></script>
 </body>
 </html>

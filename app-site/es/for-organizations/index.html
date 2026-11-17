@@ -9,9 +9,9 @@
 <title>Para centros de cuidado | Munea para organizaciones</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Serif:wght@500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="/assets/paining-logo.png" type="image/png">
-<meta name="description" content="Residencias, centros de día y viviendas para mayores pueden incorporar Munea en bloque: los residentes hablan con una acompañante de IA que los recuerda, reciben recordatorios de medicación y citas, y la familia ve cómo están desde su propio móvil. La organización recibe un informe mensual de operación. Empiece con un piloto pequeño y amplíe cuando funcione.">
+<meta name="description" content="Residencias y centros de día pueden incorporar Munea en bloque: los residentes hablan con una acompañante de IA que los recuerda y reciben recordatorios de medicación.">
 <link rel="canonical" href="https://munea.net/es/for-organizations">
 <link rel="alternate" hreflang="zh-Hant" href="https://munea.net/for-organizations">
 <link rel="alternate" hreflang="en" href="https://munea.net/en/for-organizations">
@@ -35,7 +35,7 @@
 <meta name="twitter:title" content="Munea para centros de cuidado: compañía por voz que la familia puede ver">
 <meta name="twitter:description" content="Los residentes solo tienen que hablar, reciben recordatorios de medicación y citas a tiempo, la familia ve novedades y su organización recibe un informe mensual. Empiece en pequeño y amplíe cuando funcione.">
 <meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
-<link rel="stylesheet" href="/warm.css?v=10">
+<link rel="stylesheet" href="/warm.css?v=11">
 <style>
   /* ── Edward 拍板：扁平化，不要陰影與漸層（跟首頁同一套覆寫）── */
   :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
@@ -44,7 +44,6 @@
   .cta-box .glow,.cta-box .glow2{display:none!important}
   .cta-box{background:var(--teal-d)!important}
   .progress{background:var(--teal)!important}
-  .hero h1 .hl::after{background:#F6D8BC!important}
   h2,h3{text-wrap:balance}
   p,li{text-wrap:pretty}
 
@@ -57,8 +56,8 @@
   .org-hero{padding:72px 0 64px}
   .org-hero .hero-grid{grid-template-columns:1.15fr .85fr}
   .org-hero h1{font-size:clamp(30px,4.4vw,50px)}
-  .org-hero .btn-teal{background:var(--teal-dd);color:#fff}
-  .org-hero .btn-teal:hover{background:#1D5A55;transform:translateY(-3px)}
+  .org-hero .btn-teal{background:var(--teal-btn);color:#fff}
+  .org-hero .btn-teal:hover{background:var(--teal-dd);transform:translateY(-3px)}
   .org-hero .btn svg{width:18px;height:18px}
   .org-shot{display:grid;place-items:center;background:#e9f2ed;border-radius:30px;padding:30px}
   .org-shot .dev{width:min(240px,70%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27!important}
@@ -86,19 +85,22 @@
   .org-how .sec-head{margin-bottom:28px}
   .org-steps{list-style:none;max-width:760px;margin:0 auto;display:grid;gap:12px;counter-reset:s}
   .org-steps li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;font-size:16px;color:var(--ink);line-height:1.75}
-  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--coral-soft);color:var(--coral-d);font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
+  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--teal-btn);color:#fff;font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
 
   /* ── 收尾：去 B2B 網站 ── */
   .org-final .btn-b2b{background:#fff;color:var(--teal-dd);position:relative}
   .org-final .btn-b2b:hover{background:#f4f0e8;transform:translateY(-3px)}
-  .org-note{max-width:720px;margin:6px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8;padding:0 8px}
+  .org-note{max-width:720px;margin:16px auto 0;text-align:center;font-size:13.5px;color:var(--muted);line-height:1.8;padding:0 8px}
 
   /* 頁尾 */
   .foot-disc{max-width:720px;margin:26px auto 0;font-size:12.5px;color:#8a9893;line-height:1.85}
   .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
+  .skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
+  .skip:focus{top:12px}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Saltar al contenido principal</a>
 <div class="progress"></div>
 
 <header>
@@ -129,6 +131,7 @@
   </nav>
 </header>
 
+<main id="main">
 <!-- ═══ 主視覺 ═══ -->
 <section class="hero org-hero">
   <div class="wrap hero-grid">
@@ -138,7 +141,7 @@
       <p class="sub">Munea puede ofrecerse en bloque a organizaciones de cuidado: los residentes hablan con una acompañante de IA con solo hablar, la familia ve novedades en su propio móvil y su organización recibe un informe mensual de uso y cuidado. Es solo software y funciona en tabletas del centro o en el móvil de cada residente.</p>
       <div class="hero-actions">
         <a class="btn btn-teal" href="https://munea-b2b.vercel.app/es" target="_blank" rel="noopener">Ver las opciones para organizaciones<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a class="btn btn-ghost" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener">Probar la app primero</a>
+        <a class="btn btn-ghost" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener">Probar la app primero</a>
       </div>
     </div>
     <div class="org-shot">
@@ -174,7 +177,7 @@
       <div class="org-card">
         <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
         <h3>Informe mensual de operación</h3>
-        <p>Las plazas para organizaciones incluyen un informe mensual con uso, cuidado y resumen de alertas, para que la dirección vea qué pasa realmente tras la puesta en marcha.</p>
+        <p>Las plazas para organizaciones incluyen un resumen mensual de uso y de acompañamiento (los porcentajes completos se muestran a partir de 5 residentes activos), para que la dirección vea qué pasa realmente tras la puesta en marcha.</p>
       </div>
     </div>
   </div>
@@ -187,8 +190,8 @@
       <h2>Cómo empezar</h2>
     </div>
     <ol class="org-steps">
-      <li>Elija de 10 a 20 residentes para un piloto de 2 a 4 semanas y revisen cada semana cómo funciona, qué dice la familia y cuándo tuvo que intervenir el personal.</li>
-      <li>Por plazas, paga por lo que usa: cada plaza incluye una cantidad fija de créditos de llamada al mes (Plus 100, Pro 200; 1 crédito equivale a 1 minuto aproximadamente), con recargas disponibles.</li>
+      <li>Elija de 10 a 20 residentes para un piloto de unas 4 semanas y revisen cada semana cómo funciona, qué dice la familia y cuándo tuvo que intervenir el personal.</li>
+      <li>Por plazas, paga por lo que usa: desde NT$499 por plaza al mes en Taiwán, con una cantidad fija de créditos de llamada al mes (Plus 100, Pro 200; 1 crédito equivale a 1 minuto aproximadamente) y recargas disponibles.</li>
       <li>Decidan ampliar, ajustar o parar según objetivos acordados de antemano; el precio final y las responsabilidades se fijan en el contrato.</li>
     </ol>
   </div>
@@ -205,6 +208,7 @@
     <p class="org-note">Munea es una herramienta de apoyo para el cuidado y los recordatorios. No sustituye la atención de personas, el diagnóstico médico ni los servicios de emergencia. El presupuesto formal se rige por el contrato acordado entre las partes.</p>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
@@ -217,7 +221,7 @@
         <h4>Conoce Munea</h4>
         <a href="https://munea.net/es#personas">Para quién es</a>
         <a href="https://munea.net/es#features">Funciones</a>
-        <a href="https://munea.net/es#tech">La tecnología</a>
+        <a href="https://munea.net/es#pricing">Precios</a>
         <a href="https://munea.net/es#faq">Preguntas frecuentes</a>
       </div>
       <div class="foot-col">
@@ -234,6 +238,6 @@
   </div>
 </footer>
 
-<script src="/warm.js?v=10"></script>
+<script src="/warm.js?v=11"></script>
 </body>
 </html>

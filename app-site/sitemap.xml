@@ -7,7 +7,7 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
-    <changefreq>weekly</changefreq><priority>1.0</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>1.0</priority>
   </url>
   <url>
     <loc>https://munea.net/en</loc>
@@ -16,7 +16,7 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
-    <changefreq>weekly</changefreq><priority>1.0</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>1.0</priority>
   </url>
   <url>
     <loc>https://munea.net/ja</loc>
@@ -25,7 +25,7 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
-    <changefreq>weekly</changefreq><priority>1.0</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>1.0</priority>
   </url>
   <url>
     <loc>https://munea.net/es</loc>
@@ -34,7 +34,7 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/"/>
-    <changefreq>weekly</changefreq><priority>1.0</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>1.0</priority>
   </url>
   <url>
     <loc>https://munea.net/for-organizations</loc>
@@ -43,7 +43,7 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
-    <changefreq>monthly</changefreq><priority>0.7</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
   </url>
   <url>
     <loc>https://munea.net/en/for-organizations</loc>
@@ -52,7 +52,7 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
-    <changefreq>monthly</changefreq><priority>0.7</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
   </url>
   <url>
     <loc>https://munea.net/ja/for-organizations</loc>
@@ -61,7 +61,7 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
-    <changefreq>monthly</changefreq><priority>0.7</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
   </url>
   <url>
     <loc>https://munea.net/es/for-organizations</loc>
@@ -70,7 +70,42 @@
     <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="es" href="https://munea.net/es/for-organizations"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/for-organizations"/>
-    <changefreq>monthly</changefreq><priority>0.7</priority>
+    <lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority>
   </url>
-  <url><loc>https://munea.net/solutions.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url>
+    <loc>https://munea.net/guide</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/guide"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en/guide"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/guide"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/guide"/>
+    <lastmod>2026-11-18</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url><loc>https://munea.net/guide/ai-companion-for-elderly</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/guide/iphone-medication-reminder-for-parents</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/guide/medication-reminder-app-for-elderly</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/guide/parents-living-alone-7-things</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/guide/topics-to-talk-with-elderly-parents</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url>
+    <loc>https://munea.net/en/guide</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/guide"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en/guide"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/guide"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/guide"/>
+    <lastmod>2026-11-18</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url><loc>https://munea.net/en/guide/ai-companion-for-seniors</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/en/guide/check-in-on-elderly-parent-living-alone</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/en/guide/elliq-alternatives</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url>
+    <loc>https://munea.net/ja/guide</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://munea.net/guide"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://munea.net/en/guide"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://munea.net/ja/guide"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://munea.net/guide"/>
+    <lastmod>2026-11-18</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url><loc>https://munea.net/ja/guide/ai-hanashiaite-elderly</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/ja/guide/mimamori-app-guide</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://munea.net/ja/guide/talking-with-elderly-parents-far-away</loc><lastmod>2026-11-18</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+
 </urlset>

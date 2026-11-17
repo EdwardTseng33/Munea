@@ -1,0 +1,70 @@
+/* ============ 沐寧官網 · 指南（文章與列表）============
+ * 2026-11-18 新增。共用 warm.css 的色票與頁首頁尾；這裡只管文章排版。
+ * 原則：一欄、行長 34–40 個中文字、行高寬鬆、不放陰影與漸層（Edward 拍板的扁平風）。 */
+.skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
+.skip:focus{top:12px}
+.g-main{padding:0 0 64px}
+.g-article{max-width:740px;margin:0 auto;padding:40px 24px 0}
+.g-crumb{display:flex;height:auto;justify-content:flex-start;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px;color:var(--muted);margin-bottom:18px}
+.g-crumb a{color:var(--teal-dd);text-decoration:underline;text-decoration-color:var(--mint-2);text-underline-offset:3px;min-height:24px;display:inline-flex;align-items:center}
+.g-crumb a:hover{text-decoration-color:var(--teal)}
+.g-article h1{font-size:clamp(28px,4.4vw,40px);line-height:1.3;font-weight:700;letter-spacing:-.01em;margin:0 0 14px;text-wrap:balance}
+html:lang(zh-Hant) .g-article h1,html:lang(zh-Hant) .g-hero h1,html:lang(ja) .g-article h1,html:lang(ja) .g-hero h1,html:lang(zh-Hant) .g-card b,html:lang(ja) .g-card b{word-break:keep-all;overflow-wrap:anywhere}
+html:lang(ja) .g-article h1{word-break:auto-phrase}
+.g-meta{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:14px;color:var(--muted);margin-bottom:26px}
+.g-toc{display:block;height:auto;background:var(--cream-2);border-radius:18px;padding:18px 22px;margin:0 0 30px}
+.g-toc b{display:block;font-size:14px;color:var(--teal-dd);margin-bottom:8px;letter-spacing:.04em}
+.g-toc ol{margin:0;padding-left:1.3em;display:grid;gap:4px}
+.g-toc a{color:var(--ink);font-size:15.5px;line-height:1.6;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.g-toc a:hover{text-decoration-color:var(--teal)}
+.g-body{font-size:17.5px;line-height:1.95;color:var(--ink)}
+html:lang(en) .g-body,html:lang(es) .g-body{font-size:18px;line-height:1.75}
+.g-body>p:first-child{font-size:1.08em;color:var(--ink)}
+.g-body p{margin:0 0 1.15em}
+.g-body h2{font-size:clamp(22px,3vw,26px);line-height:1.4;font-weight:700;margin:2.2em 0 .7em;scroll-margin-top:96px;text-wrap:balance}
+.g-body h3{font-size:19px;line-height:1.5;font-weight:700;margin:1.6em 0 .5em;scroll-margin-top:96px}
+.g-body ul,.g-body ol{margin:0 0 1.2em;padding-left:1.4em;display:grid;gap:.45em}
+.g-body li{padding-left:.2em}
+.g-body li::marker{color:var(--teal-dd)}
+.g-body strong{font-weight:700;color:var(--ink);background:linear-gradient(transparent 62%,#F6E3CF 62%)}
+.g-body a{color:var(--teal-dd);text-decoration:underline;text-decoration-color:var(--mint-2);text-decoration-thickness:2px;text-underline-offset:3px;overflow-wrap:anywhere}
+.g-body a:hover{text-decoration-color:var(--teal)}
+.g-body blockquote{margin:1.4em 0;background:var(--mint);border-left:4px solid var(--teal);border-radius:0 14px 14px 0;padding:14px 18px;color:var(--ink);font-size:.95em;line-height:1.85}
+.g-table{overflow-x:auto;margin:1.2em 0 1.6em;border:1px solid var(--line);border-radius:14px;-webkit-overflow-scrolling:touch}
+.g-table table{border-collapse:collapse;width:100%;min-width:520px;font-size:15px;line-height:1.6;background:#fff}
+.g-table th,.g-table td{text-align:left;vertical-align:top;padding:11px 14px;border-bottom:1px solid var(--line)}
+.g-table th{background:var(--cream-2);font-weight:700;color:var(--ink);white-space:nowrap}
+.g-table tr:last-child td{border-bottom:none}
+.g-table td:first-child{font-weight:600}
+.g-cta{display:flex;align-items:center;justify-content:space-between;gap:18px 26px;flex-wrap:wrap;background:var(--mint);border-radius:22px;padding:24px 26px;margin:36px 0 18px}
+.g-cta-txt{flex:1 1 300px}
+.g-cta-txt b{display:block;font-size:19px;line-height:1.45;margin-bottom:4px}
+.g-cta-txt p{color:var(--muted);font-size:15px;line-height:1.75;margin:0}
+.g-cta .btn-appstore{background:var(--teal-btn);color:#fff;flex-shrink:0}
+.g-cta .btn-appstore:hover{background:var(--teal-dd);transform:translateY(-2px)}
+.btn .as-t{display:flex;flex-direction:column;line-height:1.1;text-align:left}
+.btn .as-t small{font-size:11px;font-weight:500;opacity:.9}
+.btn .as-t b{font-size:17px;font-weight:700;letter-spacing:.02em}
+.btn-appstore svg{width:24px;height:24px}
+.g-disc{font-size:13.5px;color:var(--muted);line-height:1.8;margin:18px 0 0}
+.g-related{max-width:1080px;margin:48px auto 0;padding:0 24px}
+.g-related h2{font-size:22px;font-weight:700;margin-bottom:16px}
+.g-list{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.g-card{display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px;transition:border-color .2s,transform .2s}
+.g-card:hover{border-color:var(--teal);transform:translateY(-3px)}
+.g-card b{font-size:17px;line-height:1.45;color:var(--ink)}
+.g-card span{font-size:14.5px;color:var(--muted);line-height:1.7}
+.g-card small{font-size:13px;color:var(--teal-dd);font-weight:600;margin-top:auto}
+.g-hero{padding:56px 0 18px}
+.g-hero h1{font-size:clamp(30px,4.6vw,44px);line-height:1.25;font-weight:700;letter-spacing:-.01em;margin:14px 0 12px;text-wrap:balance}
+.g-hero-sub{color:var(--muted);font-size:17.5px;max-width:680px}
+.g-index{padding:26px 0 0}
+.g-index .g-disc{max-width:740px}
+@media(max-width:880px){.g-list{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .g-article{padding:28px 18px 0}
+  .g-body{font-size:17px}
+  .g-cta{padding:20px}
+  .g-cta .btn-appstore{width:100%;justify-content:center}
+}
+@media print{header,footer,.g-cta,.g-related,.progress,.skip{display:none!important}.g-body{font-size:12pt}}

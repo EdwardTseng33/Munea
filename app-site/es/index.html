@@ -4,12 +4,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Munea | Por fin alguien recuerda su salud · IA de cuidado</title>
+<title>Munea | Acompañante con IA para tus padres mayores</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Noto+Serif:wght@500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/assets/paining-logo.png" type="image/png">
-<meta name="description" content="La Munea App es un asistente de salud con IA que vive en tu móvil: una cara que se mueve, una voz natural, que recuerda lo que le cuentas y mantiene unida a la familia. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar, metido en el día a día. Descarga gratuita.">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="description" content="¿Te preocupan tus padres mayores? Munea es una app para iPhone que charla con ellos por voz, les recuerda la medicación y las citas y mantiene a la familia al día.">
 <link rel="canonical" href="https://munea.net/es">
 <link rel="alternate" hreflang="zh-Hant" href="https://munea.net/">
 <link rel="alternate" hreflang="en" href="https://munea.net/en">
@@ -21,8 +23,8 @@
 <meta name="apple-itunes-app" content="app-id=6788658125">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Munea 沐寧">
-<meta property="og:title" content="Munea App | Asistente de salud con IA · acompañamiento de mayores y cuidado familiar">
-<meta property="og:description" content="La Munea App — un asistente de salud con IA en tu móvil. Una cara que se mueve, una voz natural y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar.">
+<meta property="og:title" content="Munea | Por fin alguien recuerda su salud">
+<meta property="og:description" content="Una acompañante con IA en el iPhone de tus padres: charla con ellos, recuerda lo que cuentan, les avisa de la medicación y las citas y mantiene a la familia al día.">
 <meta property="og:url" content="https://munea.net/es">
 <meta property="og:image" content="https://munea.net/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
@@ -32,8 +34,8 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta property="og:locale:alternate" content="ja_JP">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Munea App | Asistente de salud con IA · acompañamiento de mayores y cuidado familiar">
-<meta name="twitter:description" content="La Munea App — un asistente de salud con IA en tu móvil. Una cara que se mueve, una voz natural y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar.">
+<meta name="twitter:title" content="Munea | Por fin alguien recuerda su salud">
+<meta name="twitter:description" content="Una acompañante con IA en el iPhone de tus padres: charla con ellos, recuerda lo que cuentan, les avisa de la medicación y las citas y mantiene a la familia al día.">
 <meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
 <!-- 品牌識別資料。原本只宣告「我是一個 App」，Google 因此不知道官網／App Store／粉專是同一家，
      搜「沐寧」時被同名的相聲團與餐廳擠掉（2026-08-11 實測：App Store 頁第 1，官網沒進第一頁）。
@@ -41,14 +43,14 @@
      ⚠ @id 一律用固定的 siteUrl、不用 canonical——否則四個語系會被當成四個不同的品牌，反而更散。 -->
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
-{"@type":"Organization","@id":"https://munea.net/#organization","name":"沐寧 Munea","alternateName":["Munea","沐寧","Munea App","沐寧 App"],"url":"https://munea.net/","logo":{"@type":"ImageObject","url":"https://munea.net/assets/paining-logo.png","width":256,"height":256},"image":"https://munea.net/assets/og-image.jpg","sameAs":["https://apps.apple.com/tw/app/id6788658125","https://www.facebook.com/profile.php?id=61592697779724"]},
+{"@type":"Organization","@id":"https://munea.net/#organization","name":"沐寧 Munea","alternateName":["Munea","沐寧","Munea App","沐寧 App"],"url":"https://munea.net/","logo":{"@type":"ImageObject","url":"https://munea.net/assets/paining-logo.png","width":256,"height":256},"image":"https://munea.net/assets/og-image.jpg","sameAs":["https://apps.apple.com/app/id6788658125","https://www.facebook.com/profile.php?id=61592697779724"]},
 {"@type":"WebSite","@id":"https://munea.net/#website","url":"https://munea.net/","name":"沐寧 Munea","alternateName":"Munea","inLanguage":"es","publisher":{"@id":"https://munea.net/#organization"}},
-{"@type":"MobileApplication","@id":"https://munea.net/#app","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"La Munea App — un asistente de salud con IA en tu móvil. Una cara que se mueve, una voz natural y que recuerda lo que le cuentas. No es un sistema de cuidados de larga duración: es acompañamiento de mayores y cuidado familiar.","url":"https://munea.net/es","image":"https://munea.net/assets/og-image.jpg","inLanguage":"es","installUrl":"https://apps.apple.com/tw/app/id6788658125","sameAs":"https://apps.apple.com/tw/app/id6788658125","publisher":{"@id":"https://munea.net/#organization"},"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
+{"@type":"MobileApplication","@id":"https://munea.net/#app","name":"Munea 沐寧","alternateName":"Munea","operatingSystem":"iOS","applicationCategory":"HealthApplication","description":"Una acompañante con IA en el iPhone de tus padres: charla con ellos, recuerda lo que cuentan, les avisa de la medicación y las citas y mantiene a la familia al día.","url":"https://munea.net/es","image":"https://munea.net/assets/og-image.jpg","inLanguage":"es","installUrl":"https://apps.apple.com/app/id6788658125","sameAs":"https://apps.apple.com/app/id6788658125","publisher":{"@id":"https://munea.net/#organization"},"offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}
 ]}
 </script>
 <!-- 常見問題結構化資料：由 build.mjs 從文案表的 faq.N.q／faq.N.a 產生，跟頁面上看得到的問答逐字相同 -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","inLanguage":"es","mainEntity":[{"@type":"Question","name":"Mis padres viven solos y yo estoy lejos. ¿Cómo puedo estar pendiente de ellos?","acceptedAnswer":{"@type":"Answer","text":"Pide a tus padres que instalen Munea, instálala tú también y uníos al mismo círculo familiar de salud. Cuando les apetezca hablar, una acompañante de IA charla con ellos por voz, recuerda lo que le han contado y les avisa a su hora de la medicación y las revisiones. Tú, al abrir la app, ves el estado de salud y el ánimo que ellos decidan compartir. Lo que se comparte siempre lo decide la propia persona."}},{"@type":"Question","name":"¿Hay alguna app que recuerde a las personas mayores tomar su medicación?","acceptedAnswer":{"@type":"Answer","text":"Munea lo hace. Configura en la app las horas de la medicación y llegará una notificación a su hora, aunque la app esté cerrada. También puedes programar recordatorios de revisiones y citas médicas, y si se olvida una toma, nadie riñe a nadie. Munea solo recuerda: no evalúa ni cambia la medicación. Sigue siempre las indicaciones de tu médico y tu farmacéutico."}},{"@type":"Question","name":"¿Qué es Munea y para quién es?","acceptedAnswer":{"@type":"Answer","text":"Munea es una app de cuidado de la salud con IA para iPhone, pensada para toda la familia. Los mayores charlan por voz con una acompañante de IA y reciben recordatorios de medicación y revisiones. Los hijos que viven lejos se unen al círculo familiar de salud para ver cómo están sus padres en el día a día. No es un sistema de cuidados de larga duración ni un producto sanitario: es una compañera para la salud de la familia en el día a día."}},{"@type":"Question","name":"¿Cuánto cuesta Munea?","acceptedAnswer":{"@type":"Answer","text":"La descarga es gratuita y al registrarte recibes 5 puntos de prueba (1 punto equivale a 1 minuto de conversación, aproximadamente). Hay dos planes de pago: Plus incluye 100 puntos al mes y un círculo familiar de salud de hasta 4 personas; Pro incluye 200 puntos al mes y hasta 12 personas. En Taiwán, Plus cuesta NT$599 al mes y Pro NT$1,199 al mes, y también hay planes anuales. El precio que ves en la app es el que pagas. Puedes comprar puntos extra cuando quieras, y las suscripciones se renuevan a través del App Store y se pueden cancelar en cualquier momento."}},{"@type":"Question","name":"¿Lucía es una persona real?","acceptedAnswer":{"@type":"Answer","text":"No. Lucía y Milo son los acompañantes de IA de Munea: personajes ilustrados con voz generada por IA. Te dicen con claridad que son una IA, nunca fingen ser humanos y nunca se hacen pasar por alguien de tu familia."}},{"@type":"Question","name":"¿Se graban las conversaciones? ¿Cómo se protege mi privacidad?","acceptedAnswer":{"@type":"Answer","text":"Tu voz se cifra y se procesa en la nube solo para entender lo que dices. No se guardan las grabaciones de audio originales; solo se conservan los puntos clave de la conversación para que pueda recordarte la próxima vez, y puedes verlos o borrarlos cuando quieras en Mis datos, dentro de la app. Tus datos nunca se venden ni se usan para publicidad. La familia solo ve el estado y los resúmenes que tú autorices, y no se le muestran las conversaciones completas por defecto."}},{"@type":"Question","name":"¿Cómo se une la familia?","acceptedAnswer":{"@type":"Answer","text":"Quien creó el círculo familiar de salud (el titular del círculo) toca Invitar a la familia en la pestaña Familia, obtiene un código de invitación y se lo envía a su familiar. El familiar descarga Munea, inicia sesión, toca Unirse al círculo familiar de salud en la pestaña Familia e introduce el código. Para invitar a la familia hace falta un plan de pago: hasta 4 personas con Plus y hasta 12 con Pro, incluido el titular."}},{"@type":"Question","name":"¿Puede Munea sustituir al médico?","acceptedAnswer":{"@type":"Answer","text":"No. Munea no diagnostica, no receta ni da consejos de tratamiento, y no es un servicio de emergencias. Lo que hace es acompañar con la conversación, recordar la medicación y las revisiones y ayudarte a ver los cambios de salud del día a día. Ante cualquier problema de salud, consulta con un médico o farmacéutico."}}]}</script>
-<link rel="stylesheet" href="/warm.css?v=10">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","inLanguage":"es","mainEntity":[{"@type":"Question","name":"Mis padres viven solos y yo estoy lejos. ¿Cómo puedo estar pendiente de ellos?","acceptedAnswer":{"@type":"Answer","text":"Pide a tus padres que instalen Munea, instálala tú también y uníos al mismo círculo familiar de salud. Cuando les apetezca hablar, una acompañante de IA charla con ellos por voz, recuerda lo que le han contado y les avisa a su hora de la medicación y las revisiones. Tú, al abrir la app, ves el estado de salud y el ánimo que ellos decidan compartir. Lo que se comparte siempre lo decide la propia persona."}},{"@type":"Question","name":"¿Hay alguna app que recuerde a las personas mayores tomar su medicación?","acceptedAnswer":{"@type":"Answer","text":"Munea lo hace. Configura en la app las horas de la medicación y llegará una notificación a su hora, aunque la app esté cerrada. También puedes programar recordatorios de revisiones y citas médicas, y si se olvida una toma, nadie riñe a nadie. Munea solo recuerda: no evalúa ni cambia la medicación. Sigue siempre las indicaciones de tu médico y tu farmacéutico."}},{"@type":"Question","name":"¿Qué es Munea y para quién es?","acceptedAnswer":{"@type":"Answer","text":"Munea es una app de cuidado de la salud con IA para iPhone, pensada para toda la familia. Los mayores charlan por voz con una acompañante de IA y reciben recordatorios de medicación y revisiones. Los hijos que viven lejos se unen al círculo familiar de salud para ver cómo están sus padres en el día a día. No es un sistema de cuidados de larga duración ni un producto sanitario: es una compañera para la salud de la familia en el día a día."}},{"@type":"Question","name":"¿Cuánto cuesta Munea?","acceptedAnswer":{"@type":"Answer","text":"La descarga es gratuita y al registrarte recibes 5 puntos de prueba (1 punto equivale a 1 minuto de conversación, aproximadamente). Hay dos planes de pago: Plus incluye 100 puntos al mes y un círculo familiar de salud de hasta 4 personas; Pro incluye 200 puntos al mes y hasta 12 personas. En el App Store de EE. UU., Plus cuesta US$19.99 al mes y Pro US$39.99 al mes (anual: US$199.99 y US$399.99); en otros países se muestra el precio local. El precio que ves en la app es el que pagas. Puedes comprar puntos extra cuando quieras, y las suscripciones se renuevan a través del App Store y se pueden cancelar en cualquier momento."}},{"@type":"Question","name":"¿Lucía es una persona real?","acceptedAnswer":{"@type":"Answer","text":"No. Lucía y Milo son los acompañantes de IA de Munea: personajes ilustrados con voz generada por IA. Te dicen con claridad que son una IA, nunca fingen ser humanos y nunca se hacen pasar por alguien de tu familia."}},{"@type":"Question","name":"¿Se graban las conversaciones? ¿Cómo se protege mi privacidad?","acceptedAnswer":{"@type":"Answer","text":"Tu voz se cifra y se procesa en la nube solo para entender lo que dices. No se guardan las grabaciones de audio originales; solo se conservan los puntos clave de la conversación para que pueda recordarte la próxima vez, y puedes verlos o borrarlos cuando quieras en Mis datos, dentro de la app. Tus datos nunca se venden ni se usan para publicidad. La familia solo ve el estado y los resúmenes que tú autorices, y no se le muestran las conversaciones completas por defecto."}},{"@type":"Question","name":"¿Cómo se une la familia?","acceptedAnswer":{"@type":"Answer","text":"Quien creó el círculo familiar de salud (el titular del círculo) toca Invitar a la familia en la pestaña Familia, obtiene un código de invitación y se lo envía a su familiar. El familiar descarga Munea, inicia sesión, toca Unirse al círculo familiar de salud en la pestaña Familia e introduce el código; después, el titular aprueba su entrada. Para invitar a la familia hace falta un plan de pago: hasta 4 personas con Plus y hasta 12 con Pro, incluido el titular."}},{"@type":"Question","name":"¿Puede Munea sustituir al médico?","acceptedAnswer":{"@type":"Answer","text":"No. Munea no diagnostica, no receta ni da consejos de tratamiento, y no es un servicio de emergencias. Lo que hace es acompañar con la conversación, recordar la medicación y las revisiones y ayudarte a ver los cambios de salud del día a día. Ante cualquier problema de salud, consulta con un médico o farmacéutico."}},{"@type":"Question","name":"¿Y si mis padres no se manejan bien con el móvil?","acceptedAnswer":{"@type":"Answer","text":"No hace falta escribir: con Munea basta con hablar. Los recordatorios de medicación y de citas aparecen solos a su hora, aunque la app esté cerrada. La primera vez conviene que estés a su lado para descargarla, iniciar sesión y fijar las horas de los recordatorios; después, solo tienen que abrir la app cuando quieran charlar."}},{"@type":"Question","name":"Si mi padre o mi madre se cae o se encuentra mal, ¿avisa Munea a la familia?","acceptedAnswer":{"@type":"Answer","text":"No. Munea no detecta caídas ni es un servicio de emergencias, y no avisa a la familia si tu padre o tu madre no ha abierto la app. Es una app de compañía y recordatorios. Ante un malestar repentino o una emergencia, contacta directamente con los servicios de emergencia o médicos de tu zona."}},{"@type":"Question","name":"¿Hay versión para Android? ¿En qué países está disponible?","acceptedAnswer":{"@type":"Answer","text":"Por ahora solo para iPhone (iOS 15 o posterior). Se puede descargar en el App Store de Estados Unidos, Canadá, Taiwán y Japón; todavía no en España. La app está en español, inglés, japonés y chino tradicional."}}]}</script>
+<link rel="stylesheet" href="/warm.css?v=11">
 <style>
   /* ── Edward 拍板：扁平化，不要陰影與漸層 ── */
   :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
@@ -62,7 +64,6 @@
   .hero-media .frame{background:#e7f0eb!important}
   .why-feature{background:var(--teal-d)!important}
   .story{background:var(--mint)!important}
-  .hero h1 .hl::after{background:#F6D8BC!important}
 
   /* ── 版面基礎 ── */
   /* 這行原本沒帶斷點，會蓋掉樣式表裡「手機改單欄」的規則，
@@ -75,16 +76,16 @@
   .hero-media .frame{position:relative;border-radius:30px;overflow:hidden;background:#e7f0eb;aspect-ratio:9/16;max-width:320px;margin:0 auto}
   .hero-media video{width:100%;height:100%;object-fit:cover;object-position:center center;display:block}
   .hero-media .float-chip{z-index:3}
-  .hero-media .fc-1{top:22px;left:-24px;animation:floaty 7s ease-in-out infinite}
-  .hero-media .fc-2{bottom:30px;right:-22px;animation:floaty 7s ease-in-out infinite 1.6s}
+  .hero-media .fc-1{top:16px;left:16px;animation:floaty 7s ease-in-out infinite}
+  .hero-media .fc-2{bottom:16px;right:16px;animation:floaty 7s ease-in-out infinite 1.6s}
   @media(max-width:900px){.hero-media .frame{max-width:360px}.hero-media .float-chip{display:none}}
 
   /* App Store 徽章 */
   .btn .as-t{display:flex;flex-direction:column;line-height:1.1;text-align:left}
   .btn .as-t small{font-size:11px;font-weight:500;opacity:.9}
   .btn .as-t b{font-size:17px;font-weight:700;letter-spacing:.02em}
-  .btn-appstore{background:var(--teal-dd);color:#fff}
-  .btn-appstore:hover{background:#1D5A55;transform:translateY(-3px)}
+  .btn-appstore{background:var(--teal-btn);color:#fff}
+  .btn-appstore:hover{background:var(--teal-dd);transform:translateY(-3px)}
   .btn-appstore svg{width:24px;height:24px}
   /* App 還沒過審時的「即將上架」樣子——不留死連結 */
   .btn-appstore.is-soon{background:var(--teal-dd);cursor:default}
@@ -125,28 +126,31 @@
   .crow .cend{display:inline-flex;align-items:center;gap:min(6px,2.4cqw);background:#E5533D;color:#fff;border-radius:100px;padding:min(11px,4.4cqw) min(17px,6.7cqw);font-size:min(14px,5.6cqw);min-width:0;font-weight:700;white-space:nowrap}
 
   /* 導覽列 */
+  @media(min-width:901px) and (max-width:1100px){.navlinks a:not(.nav-cta){display:none}}
+  .navlinks{gap:24px}
   .navlinks a.nav-cta{height:42px;padding:0 22px;display:inline-flex;align-items:center;font-size:15px}
   .lang-trigger{height:42px;padding:0 15px}
   .lang-opt{text-decoration:none}
   .lang-menu{min-width:172px}
 
   /* 情境輪播 */
-  .pcar{position:relative}
-  .pslide{display:none}
-  .pslide.active{display:block;animation:pfade .55s ease}
+  .pcar{position:relative;display:grid;grid-template-columns:minmax(0,1fr)}
+  .pslide{grid-row:1;grid-column:1;visibility:hidden;opacity:0;pointer-events:none}
+  .pslide.active{visibility:visible;opacity:1;pointer-events:auto;animation:pfade .55s ease}
+  .pcar .pdots{grid-row:2;grid-column:1}
   @keyframes pfade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
   .pslide .persona-wrap{grid-template-columns:.85fr 1.15fr;gap:56px;align-items:center}
   .pslide .persona-vis .ph{aspect-ratio:4/4.4}
   .parrows{display:flex;gap:12px;justify-content:center;margin-top:30px}
   .parr{width:46px;height:46px;border-radius:50%;background:#fff;border:1.5px solid var(--mint-2);color:var(--teal-d);cursor:pointer;display:grid;place-items:center;transition:.2s}
   .parr:hover{background:var(--mint);border-color:var(--teal);transform:translateY(-2px)}
-  .pdots{display:flex;gap:9px;justify-content:center;margin-top:18px}
-  .pdot{width:10px;height:10px;border-radius:100px;background:var(--mint-2);border:none;cursor:pointer;padding:0;transition:.25s}
-  .pdot.active{background:var(--teal);width:26px}
+  .pdots{display:flex;gap:0;justify-content:center;margin-top:6px}
+  .pdot{box-sizing:content-box;width:10px;height:10px;padding:17px 8px;background-clip:content-box;border-radius:100px;background-color:var(--mint-2);border:none;cursor:pointer;transition:.25s}
+  .pdot.active{background-color:var(--teal);width:26px}
   .cta-box .btn-appstore{background:#fff;color:var(--teal-dd)}
   .cta-box .btn-appstore:hover{background:#f4f0e8;transform:translateY(-3px)}
-  footer .btn-appstore{background:var(--teal);color:#fff}
-  footer .btn-appstore:hover{background:var(--teal-d)}
+  footer .btn-appstore{background:var(--teal-btn);color:#fff}
+  footer .btn-appstore:hover{background:var(--teal-dd)}
 
   @media(min-width:641px) and (max-width:880px){
     #features .pz{grid-template-columns:1fr 1fr;gap:30px}
@@ -178,8 +182,7 @@
   .hero-media .float-chip{padding:8px 12px;font-size:12.5px;border:1px solid var(--line);background:#fff;gap:8px}
   .hero-media .float-chip .ic{width:28px;height:28px;border-radius:9px}
   .hero-media .float-chip .ic svg{width:15px;height:15px}
-  .hero-media .fc-1{top:-20px;left:-16px}
-  .hero-media .fc-2{bottom:-20px;right:-16px}
+  .hero .avail{margin-top:14px;font-size:14px;color:var(--muted)}
 
   /* ══════════ 眼見為憑 ══════════ */
   #livedemo{padding:76px 0;background:var(--mint)}
@@ -189,7 +192,7 @@
   .vdemo{margin:0}
   .vframe{position:relative;aspect-ratio:3/4;border-radius:22px;overflow:hidden;background:var(--cream-2);border:1px solid var(--line)}
   .vframe .vplay{width:100%;height:100%;object-fit:cover;display:block}
-  .vsound{position:absolute;left:12px;bottom:12px;display:inline-flex;align-items:center;gap:7px;padding:8px 14px 8px 12px;border:none;border-radius:999px;background:var(--teal-dd);color:#fff;font-family:inherit;font-weight:700;font-size:13.5px;line-height:1;cursor:pointer}
+  .vsound{position:absolute;left:12px;bottom:12px;display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:10px 16px 10px 14px;border:none;border-radius:999px;background:var(--teal-dd);color:#fff;font-family:inherit;font-weight:700;font-size:14px;line-height:1;cursor:pointer}
   .vsound svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .vsound .ic-off{display:none}
   .vsound.on{background:var(--ink)}
@@ -200,61 +203,100 @@
   .vdisc{max-width:620px;margin:30px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8}
   @media(max-width:640px){.vgrid{grid-template-columns:1fr;max-width:340px}}
 
-  /* ══════════ FamilyWellness AI ══════════ */
-  #tech{padding:78px 0}
-  #tech .sec-head{margin-bottom:48px}
-  #tech .tbrand{display:inline-flex;align-items:center;gap:9px;font-family:"Poppins";font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--teal-d);background:var(--mint);padding:7px 16px;border-radius:100px;margin-bottom:16px}
+  /* ══════════ FamilyWellness AI ══════════
+     2026-11-18：從深色工程風改成跟全頁同一種溫度（白卡＋奶油底），
+     拿掉全大寫英文標籤與「回應＝人格＋記憶＋…」公式；品牌架構（Munea／FamilyWellness AI）不變。 */
+  #tech{padding:84px 0}
+  #tech .sec-head{margin-bottom:40px}
+  #tech .tbrand{display:inline-flex;align-items:center;gap:9px;font-family:"Poppins";font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--teal-dd);background:var(--mint);padding:7px 16px;border-radius:100px;margin-bottom:16px}
   #tech .tbrand .d{width:8px;height:8px;border-radius:50%;background:var(--teal)}
-  #tech .ttag{font-family:"Noto Serif TC",serif;font-size:clamp(17px,2.2vw,21px);color:var(--teal-d);font-weight:600;line-height:1.55;margin:4px 0 2px}
+  #tech .ttag{font-family:"Noto Serif TC",serif;font-size:clamp(17px,2.2vw,21px);color:var(--teal-dd);font-weight:600;line-height:1.55;margin:4px 0 2px}
+  html:lang(ja) #tech .ttag{font-family:"Noto Serif JP",serif}
+  html:lang(en) #tech .ttag,html:lang(es) #tech .ttag{font-family:"Noto Serif",Georgia,serif}
   #tech .tintro{color:var(--muted);font-size:16.5px;line-height:1.85;max-width:640px;margin:8px auto 0}
-  #tech .arch-wrap{background:#1F2B27;border-radius:var(--r);padding:48px 36px 40px;margin:36px 0 40px}
-  #tech .arch-cap{display:flex;align-items:center;justify-content:center;gap:10px;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--mint);margin-bottom:32px}
-  #tech .arch-cap i{width:20px;height:1.5px;background:var(--mint);opacity:.55}
+  #tech .arch-wrap{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:40px 32px 32px;margin:32px 0 40px}
+  #tech .arch-cap{display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--teal-dd);margin-bottom:26px}
+  #tech .arch-cap i{width:20px;height:1.5px;background:var(--coral)}
   #tech .arch-modules{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
-  #tech .arch-card{background:rgba(250,247,242,.05);border:1px solid rgba(250,247,242,.14);border-radius:18px;padding:24px}
-  #tech .arch-ic{width:52px;height:52px;border-radius:50%;background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.18);display:grid;place-items:center;margin-bottom:16px}
-  #tech .arch-ic svg{width:24px;height:24px;stroke:var(--cream);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-  #tech .arch-tag{display:block;font-family:"Poppins";font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,242,.5);margin-bottom:8px}
-  #tech .arch-card h4{font-size:17px;font-weight:700;color:var(--cream);margin-bottom:10px}
-  #tech .arch-card p{font-size:15px;color:rgba(250,247,242,.74);line-height:1.72;margin:0}
+  #tech .arch-card{background:var(--cream);border:1px solid var(--line);border-radius:18px;padding:24px}
+  #tech .arch-ic{width:48px;height:48px;border-radius:14px;background:var(--mint);display:grid;place-items:center;margin-bottom:14px}
+  #tech .arch-ic svg{width:24px;height:24px;stroke:var(--teal-dd);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #tech .arch-tag{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--teal-dd);margin-bottom:6px}
+  #tech .arch-card h4{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  #tech .arch-card p{font-size:15px;color:var(--muted);line-height:1.72;margin:0}
   #tech .arch-link{display:flex;justify-content:center;margin:0 0 16px}
-  #tech .arch-link svg{width:20px;height:20px;stroke:rgba(250,247,242,.3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #tech .arch-link svg{width:20px;height:20px;stroke:var(--mint-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   #tech .arch-orch{background:var(--coral-soft);border-radius:18px;padding:24px;margin-bottom:24px;display:flex;gap:18px;align-items:flex-start}
-  #tech .arch-orch .arch-ic{background:var(--coral-d);border-color:var(--coral-d);flex-shrink:0;margin-bottom:0}
-  #tech .arch-orch .arch-ic svg{stroke:#fff}
-  #tech .arch-orch .arch-body .arch-tag{color:var(--coral-d);opacity:1;margin-bottom:6px}
-  #tech .arch-orch h4{color:var(--ink);margin-bottom:8px}
-  #tech .arch-orch p{color:#4A5651}
-  #tech .arch-formula{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;padding:24px 0;border-top:1px solid rgba(250,247,242,.14);border-bottom:1px solid rgba(250,247,242,.14);margin-bottom:24px}
-  #tech .af-result{font-family:"Poppins";font-weight:700;font-size:16px;color:var(--cream)}
-  #tech .af-eq{font-family:"Poppins";font-weight:700;font-size:16px;color:rgba(250,247,242,.4)}
-  #tech .af-plus{font-size:14px;color:rgba(250,247,242,.35)}
-  #tech .af-term{font-family:"Poppins";font-size:13.5px;font-weight:600;color:var(--cream);background:rgba(250,247,242,.08);border:1px solid rgba(250,247,242,.16);padding:6px 14px;border-radius:100px}
-  #tech .af-term.safe{color:var(--coral-d);background:var(--coral-soft);border-color:var(--coral-soft)}
-  #tech .arch-pipeline{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}
-  #tech .ap-step{font-family:"Poppins";font-size:12.5px;font-weight:600;color:rgba(250,247,242,.85);background:rgba(250,247,242,.06);border:1px solid rgba(250,247,242,.14);padding:8px 14px;border-radius:100px}
-  #tech .ap-arrow{color:rgba(250,247,242,.32);font-size:14px}
+  #tech .arch-orch .arch-ic{background:#fff;flex-shrink:0;margin-bottom:0}
+  #tech .arch-orch .arch-ic svg{stroke:var(--coral-text)}
+  #tech .arch-orch .arch-tag{color:var(--coral-text)}
+  #tech .arch-orch h4{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  #tech .arch-orch p{color:#4A5651;font-size:15px;line-height:1.72;margin:0}
+  #tech .arch-pipeline{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding-top:22px;border-top:1px solid var(--line)}
+  #tech .ap-step{font-size:13.5px;font-weight:600;color:var(--teal-dd);background:var(--mint);padding:8px 14px;border-radius:100px}
+  #tech .ap-arrow{color:var(--muted);font-size:14px}
   #tech .cmp{margin-bottom:40px}
-  #tech .cmp-cap{display:block;text-align:center;font-family:"Poppins";font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-d);margin-bottom:24px}
+  #tech .cmp-cap{display:block;text-align:center;font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--teal-dd);margin-bottom:20px}
   #tech .cmp-table{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
   #tech .cmp-labels{display:grid;grid-template-columns:120px 1fr 1fr;padding:16px 0}
-  #tech .cmp-labels .cl-a,#tech .cmp-labels .cl-b{font-family:"Poppins";font-size:12.5px;font-weight:700;padding:0 20px}
+  #tech .cmp-labels .cl-a,#tech .cmp-labels .cl-b{font-size:13px;font-weight:700;padding:0 20px}
   #tech .cmp-labels .cl-a{color:var(--muted)}
-  #tech .cmp-labels .cl-b{color:var(--teal-d);display:flex;align-items:center;gap:7px}
+  #tech .cmp-labels .cl-b{color:var(--teal-dd);display:flex;align-items:center;gap:7px}
   #tech .cmp-labels .cl-b i{width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0}
   #tech .cmp-item{display:grid;grid-template-columns:120px 1fr 1fr;border-top:1px solid var(--line)}
-  #tech .ci-cat{padding:18px 12px 18px 20px;font-family:"Poppins";font-size:12.5px;font-weight:700;color:var(--muted);display:flex;align-items:center}
+  #tech .ci-cat{padding:18px 12px 18px 20px;font-size:13px;font-weight:700;color:var(--muted);display:flex;align-items:center}
   #tech .ci-a,#tech .ci-b{margin:0;padding:18px 20px;font-size:15px;line-height:1.6;display:flex;align-items:center}
   #tech .ci-a{color:var(--muted)}
   #tech .ci-b{background:var(--mint);color:var(--ink);font-weight:600}
   #tech .tclose{margin:0 auto;text-align:center;font-family:"Noto Serif TC",serif;font-size:clamp(16px,2vw,19px);color:var(--ink);font-weight:600;line-height:1.75;max-width:700px}
-  @media(max-width:820px){#tech .arch-modules{grid-template-columns:1fr}#tech .arch-orch{flex-direction:column}}
+  html:lang(ja) #tech .tclose{font-family:"Noto Serif JP",serif}
+  html:lang(en) #tech .tclose,html:lang(es) #tech .tclose{font-family:"Noto Serif",Georgia,serif}
+  @media(max-width:820px){#tech .arch-modules{grid-template-columns:1fr}#tech .arch-orch{flex-direction:column}#tech .arch-wrap{padding:28px 18px 24px}}
   @media(max-width:640px){
     #tech .cmp-labels{display:none}
     #tech .cmp-item{grid-template-columns:1fr 1fr;border-top:none}
     #tech .ci-cat{grid-column:1/-1;padding:16px 20px 4px;border-top:1px solid var(--line)}
     #tech .ci-a,#tech .ci-b{padding:8px 16px 18px;font-size:14px}
   }
+
+  /* ══════════ 怎麼開始（三步）＋ 方案與價格 ══════════
+     2026-11-18 用戶研究：子女最常卡在「爸媽不會用怎麼辦」「到底多少錢」，原本要翻到常見問題才找得到。 */
+  #start{padding:84px 0;background:var(--mint)}
+  .steps{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .step{background:#fff;border:1px solid var(--line);border-radius:22px;padding:26px 24px}
+  .step-n{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--teal-btn);color:#fff;font-family:"Poppins";font-weight:700;font-size:16px;margin-bottom:14px}
+  .step h3{font-size:19px;font-weight:700;line-height:1.4;margin-bottom:8px}
+  .step p{color:var(--muted);font-size:15.5px;line-height:1.75}
+  .start-note{max-width:720px;margin:26px auto 0;text-align:center;color:var(--ink);font-size:16px;font-weight:500}
+  #pricing{padding:84px 0}
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:stretch}
+  .plan{background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px 24px;display:flex;flex-direction:column}
+  .plan.feat{border:2px solid var(--teal-btn)}
+  .plan-name{font-family:"Poppins";font-weight:700;font-size:15px;color:var(--teal-dd);letter-spacing:.02em}
+  .plan-price{font-family:"Poppins";font-weight:700;font-size:30px;line-height:1.2;color:var(--ink);margin:10px 0 2px}
+  .plan-price small{font-size:15px;font-weight:600;color:var(--muted);margin-left:2px}
+  .plan-year{font-size:13.5px;color:var(--muted);min-height:1.5em}
+  .plan ul{list-style:none;margin-top:16px;display:grid;gap:10px;border-top:1px solid var(--line);padding-top:16px}
+  .plan li{display:flex;gap:9px;font-size:15px;color:var(--ink);line-height:1.6}
+  .plan li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--teal);margin-top:.6em;flex-shrink:0}
+  .plan-note{max-width:760px;margin:22px auto 0;text-align:center;color:var(--muted);font-size:14px;line-height:1.8}
+  @media(max-width:880px){.steps,.plans{grid-template-columns:1fr}.step,.plan{padding:22px 20px}}
+
+  /* ══════════ 指南入口 ══════════ */
+  #guides{padding:76px 0}
+  .g-list{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .g-card{display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px;transition:border-color .2s,transform .2s}
+  .g-card:hover{border-color:var(--teal);transform:translateY(-3px)}
+  .g-card b{font-size:17px;line-height:1.45;color:var(--ink)}
+  .g-card span{font-size:14.5px;color:var(--muted);line-height:1.7}
+  .g-more{display:flex;justify-content:center;margin-top:24px}
+  .g-more a{display:inline-flex;align-items:center;min-height:44px;padding:0 22px;border-radius:100px;border:1.5px solid var(--mint-2);background:#fff;color:var(--teal-dd);font-weight:700;font-size:15px}
+  .g-more a:hover{border-color:var(--teal);background:var(--mint)}
+  @media(max-width:880px){.g-list{grid-template-columns:1fr}}
+
+  /* 跳到主要內容（只有用鍵盤時才看得到） */
+  .skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
+  .skip:focus{top:12px}
 
   /* ══════════ 常見問題（子女會問的事）══════════ */
   #faq{padding:84px 0;background:var(--cream-2)}
@@ -283,6 +325,7 @@
 </style>
 </head>
 <body data-cta="live">
+<a class="skip" href="#main">Saltar al contenido principal</a>
 <div class="progress"></div>
 
 <header>
@@ -293,7 +336,12 @@
     </a>
     <div class="nav-cluster">
       <div class="navlinks">
-        <a class="nav-cta" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener">Descarga gratis</a>
+        <a href="#features">Funciones</a>
+        <a href="#start">Cómo empezar</a>
+        <a href="#pricing">Precios</a>
+        <a href="#faq">Preguntas</a>
+        
+        <a class="nav-cta" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener">Descarga gratis</a>
       </div>
       <div class="lang-switch" data-open="false">
         <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Cambiar idioma / Switch language">
@@ -313,23 +361,25 @@
   </nav>
 </header>
 
+<main id="main">
 <!-- ═══ HERO ═══ -->
 <section class="hero">
   <div class="blob a"></div><div class="blob b"></div><div class="blob c"></div>
   <div class="wrap hero-grid">
     <div>
-      <div class="eyebrow">Asistente de salud con IA · acompañamiento de mayores · cuidado familiar</div>
-      <h1><span class="word">Por fin alguien</span><br><span class="word hl">recuerda su salud</span></h1>
+      <div class="eyebrow">Acompañante con IA para padres mayores</div>
+      <h1><span class="word">Por fin alguien</span><br><span class="word"><span class="hl">recuerda su salud</span></span></h1>
       <p class="sub">Munea es una compañera de salud con IA con cara, voz y memoria de ti. Charla contigo, recuerda cómo has estado, te avisa de la medicación y las revisiones, y os mantiene unidos aunque estéis lejos.</p>
       <div class="hero-actions">
-        <a class="btn btn-appstore" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener" aria-label="Consigue Munea en el App Store">
+        <a class="btn btn-appstore" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener" aria-label="Consigue Munea en el App Store">
           <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
           <span class="as-t"><small>En el App Store</small><b>Descarga gratis</b></span></a>
       </div>
+      <p class="avail">iPhone · EE. UU., Canadá, Taiwán y Japón</p>
       <div class="trust">
-        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></span><span>Una cara que se mueve</span></div>
-        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg></span><span>Una voz natural</span></div>
-        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11a4 4 0 10-8 0"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span>El círculo familiar</span></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></span><span>Recordatorios de medicación y citas</span></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span>Recuerda lo que habláis</span></div>
+        <div><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span><span>La familia, al día</span></div>
       </div>
     </div>
     <div class="hero-media">
@@ -337,12 +387,11 @@
         <video class="hero-face" id="heroVid" poster="/assets/ningning-hero-poster.jpg" muted playsinline autoplay preload="auto" aria-label="La acompañante de Munea: se mueve y está contigo">
           <source src="/assets/ningning-hello.mp4" type="video/mp4">
         </video>
+        <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span>Ya le recordé la medicación a mamá</span></div>
+        <div class="float-chip fc-2"><span class="ic" style="background:var(--coral-soft);color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span>Recuerda lo que le contaste</span></div>
       </div>
-      <div class="float-chip fc-1"><span class="ic" style="background:var(--mint);color:var(--teal-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span><span>Ya le recordé la medicación a mamá</span></div>
-      <div class="float-chip fc-2"><span class="ic" style="background:var(--coral-soft);color:var(--coral-d)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></span><span>Recuerda lo que le contaste</span></div>
     </div>
   </div>
-  <div class="scrollcue"><span class="mouse"></span>SCROLL</div>
 </section>
 
 <!-- ═══ 用戶情境（輪播）═══ -->
@@ -357,13 +406,13 @@
       <div class="pslide active">
         <div class="persona-wrap">
           <div class="persona-vis"><div class="ph"><img src="/assets/persona-elder.jpg" alt="Abuela"></div><div class="tag"><span class="d"></span><span>Abuela · 70 años · vive sola</span></div></div>
-          <div class="persona-txt"><div class="eyebrow">Una situación real</div><p class="q serif">Un día entero sola en casa. La rodilla que duele, la boda del nieto, la calle de siempre. <b>Quiere que alguien recuerde lo que dijo, y quiere alguien con quien hablar.</b></p><p>Munea charla con ella cada día y lo guarda todo. Cuando llega la hora de la medicación o de la revisión, se lo dice con su propia voz, con calma. Sin tener que acordarse, sin molestar a los hijos.</p></div>
+          <div class="persona-txt"><div class="eyebrow">Una situación real</div><p class="q serif">Un día entero sola en casa. La rodilla que duele, la boda del nieto, la calle de siempre. <b>Quiere que alguien recuerde lo que dijo, y quiere alguien con quien hablar.</b></p><p>Munea charla con ella cada día y lo tiene todo presente. Cuando llega la hora de la medicación o de la revisión, el móvil se lo recuerda. Sin tener que acordarse, sin molestar a los hijos.</p></div>
         </div>
       </div>
       <div class="pslide">
         <div class="persona-wrap">
           <div class="persona-vis"><div class="ph"><img src="/assets/persona-daughter.jpg" alt="Hija" loading="lazy"></div><div class="tag"><span class="d"></span><span>Hija · 40 años · vive lejos</span></div></div>
-          <div class="persona-txt"><div class="eyebrow">Una situación real</div><p class="q serif">Ocupada, lejos, con reparo de llamar todo el rato. <b>Solo quiere saber si sus padres están bien hoy.</b></p><p>Abre la app y ve cómo están hoy; si algo va mal, se entera la primera. Esa preocupación de la distancia por fin tiene dónde apoyarse.</p></div>
+          <div class="persona-txt"><div class="eyebrow">Una situación real</div><p class="q serif">Ocupada, lejos, con reparo de llamar todo el rato. <b>Solo quiere saber si sus padres están bien hoy.</b></p><p>Abre la app y ve lo que sus padres han querido compartir hoy: cómo están de ánimo, si se tomaron la medicación. Esa preocupación de la distancia por fin tiene dónde apoyarse.</p></div>
         </div>
       </div>
       <div class="pslide">
@@ -412,28 +461,28 @@
         <div class="pz-txt">
           <span class="pz-idx">Función 01</span>
           <span class="badge"><span class="d"></span><span>Seguimiento de tendencias con IA</span></span>
-          <h3>Medicación, revisiones y las cifras del cuerpo: ella lo va mirando por ti</h3>
-          <p>Munea cuida de la salud por ti: los recordatorios de medicación y de revisiones te llegan al móvil justo a su hora, y los pasos, el pulso, la tensión o el sueño entran solos desde Salud de Apple.</p>
+          <h3>Medicación, revisiones y las cifras del cuerpo: todo presente</h3>
+          <p>Fija las horas de la medicación y de las citas y el móvil avisa justo a tiempo. Conecta Salud de Apple y los pasos, el pulso, la tensión, el oxígeno en sangre y el sueño entran solos.</p>
           <ul class="flist">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span><b>Avisos de medicación y revisiones</b>: te llegan al móvil a su hora, sin reproches si se te pasa</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span><b>Recordatorios de medicación y citas</b>: a su hora, sin reproches si se olvida una</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span><b>La evolución de un vistazo</b>: pasos, pulso, tensión y sueño</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span><b>Sincronización con Salud de Apple</b>: entra solo, sin apuntar nada a mano</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2z"/><path d="M6 8a6 6 0 1112 0c0 7 2 9 2 9H4s2-2 2-9"/></svg><span><b>Avisos en el móvil</b>: llegan aunque la app no esté abierta</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg><span><b>Sincronización con Salud de Apple</b>: con tu permiso, sin apuntar nada a mano</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2z"/><path d="M6 8a6 6 0 1112 0c0 7 2 9 2 9H4s2-2 2-9"/></svg><span><b>Suena aunque la app esté cerrada</b>: los recordatorios quedan programados en el móvil</span></li>
           </ul>
         </div>
       </article>
 
       <!-- 功能 02 -->
       <article class="pz reverse reveal">
-        <div class="pz-vis"><span class="pz-step">Compañía y conversación</span><div class="ph pane"><div class="callphone"><img src="/assets/ningning-call.jpg" alt="Charlando con Lucía" loading="lazy"><div class="cscreen"><div class="csb"><span>8:36</span><span class="isl"></span><span class="sic"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg viewBox="0 0 16 12"><path d="M8 12L1 4a10 10 0 0114 0z"/></svg><svg viewBox="0 0 26 12"><rect x="0.7" y="1" width="21" height="10" rx="2.6" fill="none" stroke="#33403D" stroke-width="1"/><rect x="2.2" y="2.5" width="15" height="7" rx="1.4"/><rect x="23" y="4" width="2" height="4" rx="1"/></svg></span></div><div class="chead"><span class="cname"><i></i>Lucía <small>en línea</small></span><span class="cstat">En vivo · 00:03</span></div><div class="cfoot"><div class="cwave"><i style="height:6px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i></div><div class="crow"><span class="cb" aria-label="Subtítulos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6.5" width="18" height="11" rx="2.5"/><path d="M9.5 11a2 2 0 100 2M15.5 11a2 2 0 100 2"/></svg></span><span class="cb on" aria-label="Micrófono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span><span class="cend"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M21 15.5c-1.2 0-2.4-.2-3.5-.6a1 1 0 00-1 .2l-2.2 2.2a15 15 0 01-6.6-6.6l2.2-2.2a1 1 0 00.2-1A11 11 0 018.5 4a1 1 0 00-1-1H4a1 1 0 00-1 1 17 17 0 0017 17 1 1 0 001-1v-3.5a1 1 0 00-1-1z"/></svg><span>Colgar</span></span></div></div></div></div></div></div>
+        <div class="pz-vis"><span class="pz-step">Compañía y conversación</span><div class="ph pane"><div class="callphone"><img src="/assets/ningning-call.jpg" alt="Charlando con Lucía" loading="lazy"><div class="cscreen"><div class="csb"><span>8:36</span><span class="isl"></span><span class="sic"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg><svg viewBox="0 0 16 12"><path d="M8 12L1 4a10 10 0 0114 0z"/></svg><svg viewBox="0 0 26 12"><rect x="0.7" y="1" width="21" height="10" rx="2.6" fill="none" stroke="#33403D" stroke-width="1"/><rect x="2.2" y="2.5" width="15" height="7" rx="1.4"/><rect x="23" y="4" width="2" height="4" rx="1"/></svg></span></div><div class="chead"><span class="cname"><i></i>Lucía <small>en línea</small></span><span class="cstat">En llamada · 00:03</span></div><div class="cfoot"><div class="cwave"><i style="height:6px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:15px"></i><i style="height:7px"></i><i style="height:11px"></i><i style="height:9px"></i><i style="height:13px"></i><i style="height:6px"></i></div><div class="crow"><span class="cb" aria-label="Subtítulos" style="font-family:Poppins,sans-serif;font-weight:700;font-size:min(12px,4.6cqw);letter-spacing:.02em">CC</span><span class="cb on" aria-label="Micrófono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span><span class="cend"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M21 15.5c-1.2 0-2.4-.2-3.5-.6a1 1 0 00-1 .2l-2.2 2.2a15 15 0 01-6.6-6.6l2.2-2.2a1 1 0 00.2-1A11 11 0 018.5 4a1 1 0 00-1-1H4a1 1 0 00-1 1 17 17 0 0017 17 1 1 0 001-1v-3.5a1 1 0 00-1-1z"/></svg><span>Colgar</span></span></div></div></div></div></div></div>
         <div class="pz-txt">
           <span class="pz-idx">Función 02</span>
           <span class="badge"><span class="d"></span><span>Tan natural como hablar cara a cara</span></span>
           <h3>Una conversación tan natural que parece cara a cara</h3>
-          <p>Como acompañante de cuidado de la familia, Munea charla con los tuyos. La voz en tiempo real y una cara que se mueve hacen que cada conversación sea viva, cálida y natural: como tener a alguien al lado con quien hablar.</p>
+          <p>Munea charla con los tuyos: basta con hablar, sin escribir. Una cara que se mueve, una voz natural, y recuerda dónde lo dejasteis: como tener a alguien al lado con quien hablar.</p>
           <ul class="flist">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg><span><b>Voz en tiempo real</b>: puedes interrumpirla cuando quieras y no se traba</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg><span><b>Una cara que se mueve</b>: te mira y te habla, como si hubiera alguien de verdad</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 00-3 3v7a3 3 0 006 0V5a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v3"/></svg><span><b>Puedes interrumpirla cuando quieras</b>: se detiene y te escucha primero</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg><span><b>Una cara que se mueve</b>: la boca sigue su voz, como si hubiera alguien ahí</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg><span><b>Recuerda lo que le contaste</b>: retoma justo donde lo dejasteis</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4.5 8-11V5l-8-3-8 3v6c0 6.5 8 11 8 11z"/><path d="M9 11.5l2 2 4-4"/></svg><span><b>Dice «no lo sé» cuando no lo sabe</b>: no se lo inventa ni juega a ser médico</span></li>
           </ul>
@@ -452,7 +501,7 @@
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg><span><b>Salud y ánimo</b>: visibles entre vosotros, tranquilidad aunque estéis lejos</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 3v7a6 6 0 0012 0V3"/><path d="M4 21h16M9 3H5m14 0h-4"/></svg><span><b>Retos de pasos</b>: toda la familia compite y todos se mueven más</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 115 .5c0 1.5-2 2-2 3.5M12 17h.01"/></svg><span><b>Juegos de preguntas</b>: mantienen la cabeza despierta y se ríe más</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M13 2L4.5 13H12l-1 9 8.5-11H13l0-9z"/></svg><span><b>Pregunta cuando algo no va bien</b>: primero a la persona; la familia ve las novedades en la app</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M13 2L4.5 13H12l-1 9 8.5-11H13l0-9z"/></svg><span><b>Un poco más de atención cuando algo cambia</b>: pregunta con más suavidad; la familia ve lo que se comparte</span></li>
           </ul>
         </div>
       </article>
@@ -467,8 +516,8 @@
   <div class="wrap">
     <div class="sec-head reveal">
       <div class="eyebrow center">Míralo y escúchalo</div>
-      <h2>Demostración del acompañante con voz (Live Avatar Demo)</h2>
-      <p>Los dos vídeos de abajo son demostraciones con IA de Munea: Lucía y Milo no son personas reales, pero tienen gestos y voces naturales. Sube el sonido, escúchalos hablar y siente lo que es tener a alguien ahí.</p>
+      <h2>Escucha cómo hablan Lucía y Milo</h2>
+      <p>Dos de las acompañantes con IA de Munea, tal como aparecen en la app. Lucía y Milo no son personas reales, pero sus gestos y voces resultan naturales. Sube el sonido y escúchalos.</p>
     </div>
     <div class="vgrid reveal">
       <figure class="vdemo">
@@ -490,6 +539,40 @@
   </div>
 </section>
 
+<!-- ═══ 怎麼開始 ═══ -->
+<section id="start">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">Cómo empezar</div>
+      <h2>¿No se manejan bien con el móvil? Tres pasos</h2>
+      <p>Lo configuráis juntos una vez. Después, basta con abrir la app y hablar.</p>
+    </div>
+    <ol class="steps reveal">
+      <li class="step"><span class="step-n" aria-hidden="true">1</span><h3>Descarga Munea y crea el círculo familiar</h3><p>Inicia sesión con Apple o Google, elige Plus o Pro y genera un código de invitación en la pestaña Familia.</p></li>
+      <li class="step"><span class="step-n" aria-hidden="true">2</span><h3>Instálala en el iPhone de tus padres</h3><p>Ayúdales a iniciar sesión, introducir el código y fijar juntos las horas de medicación y citas. Como titular del círculo, tú apruebas su entrada.</p></li>
+      <li class="step"><span class="step-n" aria-hidden="true">3</span><h3>Después, solo tienen que hablar</h3><p>Abren la app y hablan, sin escribir. Los recordatorios suenan solos. En tu móvil ves las novedades que ellos decidan compartir.</p></li>
+    </ol>
+    <p class="start-note reveal">No hace falta que abran la app cada día: los recordatorios quedan programados en el móvil y llegan a su hora.</p>
+  </div>
+</section>
+
+<!-- ═══ 方案與價格 ═══ -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="eyebrow center">Planes y precios</div>
+      <h2>Pruébala gratis y suscríbete si encaja</h2>
+      <p>Los puntos se usan para conversar (1 punto, unos 1 minuto). Precios del App Store de EE. UU.</p>
+    </div>
+    <div class="plans reveal">
+      <div class="plan"><span class="plan-name">Gratis</span><div class="plan-price">US$0</div><div class="plan-year">Descarga y registro gratis</div><ul><li>5 puntos de prueba: unos 5 minutos de charla</li><li>Comprueba si os encaja antes de suscribirte</li><li>Inicia sesión con Apple o Google</li></ul></div>
+      <div class="plan feat"><span class="plan-name">Plus</span><div class="plan-price">US$19.99<small>/mes</small></div><div class="plan-year">o US$199.99 al año</div><ul><li>100 puntos al mes (unos 100 minutos)</li><li>Círculo familiar de hasta 4 personas, contigo</li><li>Recarga puntos cuando quieras</li></ul></div>
+      <div class="plan"><span class="plan-name">Pro</span><div class="plan-price">US$39.99<small>/mes</small></div><div class="plan-year">o US$399.99 al año</div><ul><li>200 puntos al mes (unos 200 minutos)</li><li>Círculo familiar de hasta 12 personas, contigo</li><li>Recarga puntos cuando quieras</li></ul></div>
+    </div>
+    <p class="plan-note reveal">Precios del App Store de EE. UU. En Canadá, Taiwán y Japón el App Store muestra precios locales; el precio de la app es el que pagas. Las suscripciones se renuevan a través del App Store y se pueden cancelar cuando quieras. Por ahora no está disponible en España.</p>
+  </div>
+</section>
+
 <!-- ═══ FamilyWellness AI ═══ -->
 <section id="tech">
   <div class="wrap">
@@ -497,30 +580,30 @@
       <span class="tbrand"><span class="d"></span>FamilyWellness AI</span>
       <h2>FamilyWellness AI: el acompañante de salud y cuidado de tu familia</h2>
       <p class="ttag">La inteligencia en tiempo real que hace que la compañía se siente de verdad.</p>
-      <p class="tintro">No es un asistente de uso general: es un sistema de cuidado donde memoria, percepción, interacción y seguridad trabajan juntas. Esto es lo que lleva dentro, y por lo que no se parece a otras IA.</p>
+      <p class="tintro">No es un asistente que responde a todo: memoria, percepción, conversación y seguridad trabajan juntas como una inteligencia de cuidado. Esto es lo que lleva dentro, y por lo que no se parece a otras IA.</p>
     </div>
 
     <div class="arch-wrap reveal">
-      <div class="arch-cap"><i></i><span>Arquitectura · cómo está construida</span><i></i></div>
+      <div class="arch-cap"><i></i><span>Cómo te recuerda, y por qué no se inventa las cosas</span><i></i></div>
 
       <div class="arch-modules">
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5l9 4.5 9-4.5"/></svg></span>
-          <span class="arch-tag">MEMORY · MEMORIA</span>
+          <span class="arch-tag">Memoria</span>
           <h4>Te recuerda</h4>
-          <p>Cada conversación se destila en cuatro capas de memoria —esencial, largo plazo, reciente y de hoy—, ordenadas por importancia, donde lo nuevo sustituye a lo viejo.</p>
+          <p>Cada charla se resume en puntos clave, en cuatro capas (esencial, largo plazo, reciente y hoy): nombres, familia, la rodilla que duele o el paseo favorito siguen ahí la próxima vez.</p>
         </div>
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.4"/><path d="M12 5v2M12 17v2M5 12h2M17 12h2M7.1 7.1l1.4 1.4M15.5 15.5l1.4 1.4M16.9 7.1l-1.4 1.4M8.5 15.5l-1.4 1.4"/></svg></span>
-          <span class="arch-tag">PERCEPTION · PERCEPCIÓN</span>
+          <span class="arch-tag">Percepción</span>
           <h4>Entiende el momento</h4>
-          <p>Cada mañana reúne por su cuenta el tiempo, la actualidad, las fechas señaladas y las novedades de la familia: prepara el contexto del día antes de que empiece la conversación.</p>
+          <p>Cada mañana prepara el tiempo, la calidad del aire, las citas y las fechas importantes del día, para que la conversación empiece en el sitio justo.</p>
         </div>
         <div class="arch-card">
           <span class="arch-ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="6.2"/><path d="M6.4 13.8c.7.8 1.6 1.2 2.6 1.2s1.9-.4 2.6-1.2"/><path d="M6.8 10h.01M11.2 10h.01"/><path d="M17 8.5a4.3 4.3 0 010 7"/><path d="M19.3 6.3a7.5 7.5 0 010 11.4"/></svg></span>
-          <span class="arch-tag">INTERACTION · INTERACCIÓN</span>
-          <h4>Cómo se relaciona contigo</h4>
-          <p>Voz en tiempo real que puedes interrumpir, una cara cuyos gestos y labios siguen a la voz al milisegundo, un motor de personajes que cambia carácter y voz, y una capa de seguridad capaz de vetar cualquier respuesta.</p>
+          <span class="arch-tag">Conversación</span>
+          <h4>Cómo habla contigo</h4>
+          <p>Voz en tiempo real que puedes interrumpir, una cara cuya boca sigue su voz, una personalidad y una voz propias para cada personaje, y un control de seguridad que frena respuestas inadecuadas.</p>
         </div>
       </div>
 
@@ -529,27 +612,16 @@
       <div class="arch-orch">
         <span class="arch-ic"><svg viewBox="0 0 24 24"><path d="M4 6h6M4 12h10M4 18h6"/><path d="M14 6l6 6-6 6"/></svg></span>
         <div class="arch-body">
-          <span class="arch-tag">ORCHESTRATION · ENTRE BASTIDORES</span>
-          <h4>Dirección y coordinación</h4>
-          <p>Todos los módulos se funden en tiempo real en una sola respuesta. El orden de prioridad es siempre seguridad, luego inmediatez, luego lo de fondo. El contexto se inyecta con mesura y nunca roba protagonismo.</p>
+          <span class="arch-tag">Entre bastidores</span>
+          <h4>Una sola respuesta</h4>
+          <p>En cuanto terminas de hablar, lo que recuerda, el contexto del día, su personalidad y las reglas de seguridad se unen en una sola respuesta. La seguridad siempre va primero.</p>
         </div>
-      </div>
-
-      <div class="arch-formula">
-        <span class="af-result">Respuesta</span>
-        <span class="af-eq">=</span>
-        <span class="af-term">Carácter</span><span class="af-plus">+</span>
-        <span class="af-term">Memoria</span><span class="af-plus">+</span>
-        <span class="af-term">Percepción</span><span class="af-plus">+</span>
-        <span class="af-term">Esta conversación</span><span class="af-plus">+</span>
-        <span class="af-term safe">Seguridad</span><span class="af-plus">+</span>
-        <span class="af-term">Expresión</span>
       </div>
 
       <div class="arch-pipeline">
         <span class="ap-step">Hablas tú</span><span class="ap-arrow">→</span>
-        <span class="ap-step">Se arma el contexto al vuelo</span><span class="ap-arrow">→</span>
-        <span class="ap-step">Responde con voz y cara sincronizadas</span><span class="ap-arrow">→</span>
+        <span class="ap-step">Contexto del día</span><span class="ap-arrow">→</span>
+        <span class="ap-step">Responde en voz alta</span><span class="ap-arrow">→</span>
         <span class="ap-step">Se ordena en su memoria</span><span class="ap-arrow">→</span>
         <span class="ap-step">La próxima vez, retoma</span>
       </div>
@@ -563,12 +635,12 @@
           <span class="cl-a">IA de uso general</span>
           <span class="cl-b"><i></i><span>Munea FamilyWellness AI</span></span>
         </div>
-        <div class="cmp-item"><span class="ci-cat">Naturaleza</span><p class="ci-a">Un asistente general que responde a todo</p><p class="ci-b">Un sistema de cuidado donde memoria, percepción, interacción, seguridad y carácter trabajan juntas</p></div>
-        <div class="cmp-item"><span class="ci-cat">Cara y voz</span><p class="ci-a">Una caja de texto</p><p class="ci-b">Cara expresiva y voz natural, que responde al momento</p></div>
+        <div class="cmp-item"><span class="ci-cat">Naturaleza</span><p class="ci-a">Un asistente general que responde a todo</p><p class="ci-b">Memoria, percepción, conversación, seguridad y personalidad trabajando juntas</p></div>
+        <div class="cmp-item"><span class="ci-cat">Cara y voz</span><p class="ci-a">Una caja donde escribir</p><p class="ci-b">Cara expresiva y voz natural, que responde al momento</p></div>
         <div class="cmp-item"><span class="ci-cat">Personaje</span><p class="ci-a">Un solo asistente</p><p class="ci-b">Un personaje con carácter propio: al cambiarlo, cambian la voz y el trato</p></div>
         <div class="cmp-item"><span class="ci-cat">El momento</span><p class="ci-a">Solo se entera si preguntas</p><p class="ci-b">Cada mañana prepara por su cuenta el contexto del día</p></div>
         <div class="cmp-item"><span class="ci-cat">Límites</span><p class="ci-a">Puede dar consejos médicos a la ligera</p><p class="ci-b">Nunca diagnostica; la medicación es solo un recordatorio; si no sabe, lo dice</p></div>
-        <div class="cmp-item"><span class="ci-cat">Para quién</span><p class="ci-a">Una herramienta de uso general</p><p class="ci-b">No es un sistema de cuidados de larga duración: está hecho para la salud física y emocional de toda la familia</p></div>
+        <div class="cmp-item"><span class="ci-cat">Para quién</span><p class="ci-a">Una herramienta de uso general</p><p class="ci-b">No es un sistema de cuidados de larga duración: es una acompañante de salud para el día a día de toda la familia</p></div>
       </div>
     </div>
 
@@ -600,7 +672,7 @@
       </details>
       <details class="faq-item">
         <summary><span class="fq"><b>Q4</b><span>¿Cuánto cuesta Munea?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
-        <p class="fa">La descarga es gratuita y al registrarte recibes 5 puntos de prueba (1 punto equivale a 1 minuto de conversación, aproximadamente). Hay dos planes de pago: Plus incluye 100 puntos al mes y un círculo familiar de salud de hasta 4 personas; Pro incluye 200 puntos al mes y hasta 12 personas. En Taiwán, Plus cuesta NT$599 al mes y Pro NT$1,199 al mes, y también hay planes anuales. El precio que ves en la app es el que pagas. Puedes comprar puntos extra cuando quieras, y las suscripciones se renuevan a través del App Store y se pueden cancelar en cualquier momento.</p>
+        <p class="fa">La descarga es gratuita y al registrarte recibes 5 puntos de prueba (1 punto equivale a 1 minuto de conversación, aproximadamente). Hay dos planes de pago: Plus incluye 100 puntos al mes y un círculo familiar de salud de hasta 4 personas; Pro incluye 200 puntos al mes y hasta 12 personas. En el App Store de EE. UU., Plus cuesta US$19.99 al mes y Pro US$39.99 al mes (anual: US$199.99 y US$399.99); en otros países se muestra el precio local. El precio que ves en la app es el que pagas. Puedes comprar puntos extra cuando quieras, y las suscripciones se renuevan a través del App Store y se pueden cancelar en cualquier momento.</p>
       </details>
       <details class="faq-item">
         <summary><span class="fq"><b>Q5</b><span>¿Lucía es una persona real?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
@@ -612,26 +684,41 @@
       </details>
       <details class="faq-item">
         <summary><span class="fq"><b>Q7</b><span>¿Cómo se une la familia?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
-        <p class="fa">Quien creó el círculo familiar de salud (el titular del círculo) toca Invitar a la familia en la pestaña Familia, obtiene un código de invitación y se lo envía a su familiar. El familiar descarga Munea, inicia sesión, toca Unirse al círculo familiar de salud en la pestaña Familia e introduce el código. Para invitar a la familia hace falta un plan de pago: hasta 4 personas con Plus y hasta 12 con Pro, incluido el titular.</p>
+        <p class="fa">Quien creó el círculo familiar de salud (el titular del círculo) toca Invitar a la familia en la pestaña Familia, obtiene un código de invitación y se lo envía a su familiar. El familiar descarga Munea, inicia sesión, toca Unirse al círculo familiar de salud en la pestaña Familia e introduce el código; después, el titular aprueba su entrada. Para invitar a la familia hace falta un plan de pago: hasta 4 personas con Plus y hasta 12 con Pro, incluido el titular.</p>
       </details>
       <details class="faq-item">
         <summary><span class="fq"><b>Q8</b><span>¿Puede Munea sustituir al médico?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
         <p class="fa">No. Munea no diagnostica, no receta ni da consejos de tratamiento, y no es un servicio de emergencias. Lo que hace es acompañar con la conversación, recordar la medicación y las revisiones y ayudarte a ver los cambios de salud del día a día. Ante cualquier problema de salud, consulta con un médico o farmacéutico.</p>
       </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q9</b><span>¿Y si mis padres no se manejan bien con el móvil?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">No hace falta escribir: con Munea basta con hablar. Los recordatorios de medicación y de citas aparecen solos a su hora, aunque la app esté cerrada. La primera vez conviene que estés a su lado para descargarla, iniciar sesión y fijar las horas de los recordatorios; después, solo tienen que abrir la app cuando quieran charlar.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q10</b><span>Si mi padre o mi madre se cae o se encuentra mal, ¿avisa Munea a la familia?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">No. Munea no detecta caídas ni es un servicio de emergencias, y no avisa a la familia si tu padre o tu madre no ha abierto la app. Es una app de compañía y recordatorios. Ante un malestar repentino o una emergencia, contacta directamente con los servicios de emergencia o médicos de tu zona.</p>
+      </details>
+      <details class="faq-item">
+        <summary><span class="fq"><b>Q11</b><span>¿Hay versión para Android? ¿En qué países está disponible?</span></span><span class="fx" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></summary>
+        <p class="fa">Por ahora solo para iPhone (iOS 15 o posterior). Se puede descargar en el App Store de Estados Unidos, Canadá, Taiwán y Japón; todavía no en España. La app está en español, inglés, japonés y chino tradicional.</p>
+      </details>
     </div>
   </div>
 </section>
+
+
 
 <!-- ═══ 收尾 CTA ═══ -->
 <section class="cta-band" id="download">
   <div class="wrap">
     <div class="cta-box reveal">
       <h2>Deja que Munea empiece<br>hoy mismo a recordarte.</h2>
-      <p>Descarga gratuita. Los planes y precios se ven dentro de la app. Por ahora solo está disponible en el App Store de Taiwán.</p>
-      <a class="btn btn-appstore" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener" aria-label="Consigue Munea en el App Store"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="as-t"><small>En el App Store</small><b>Descarga gratis</b></span></a>
+      <p>Descarga gratuita con 5 puntos de prueba (unos 5 minutos de charla). Solo para iPhone, en el App Store de EE. UU., Canadá, Taiwán y Japón.</p>
+      <a class="btn btn-appstore" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener" aria-label="Consigue Munea en el App Store"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="as-t"><small>En el App Store</small><b>Descarga gratis</b></span></a>
     </div>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
@@ -644,8 +731,9 @@
         <h4>Conoce Munea</h4>
         <a href="#personas">Para quién es</a>
         <a href="#features">Funciones</a>
-        <a href="#tech">La tecnología</a>
+        <a href="#pricing">Precios</a>
         <a href="#faq">Preguntas frecuentes</a>
+        
       </div>
       <div class="foot-col">
         <h4>Condiciones y contacto</h4>
@@ -653,7 +741,6 @@
         <a href="/legal/es/terms.html">Términos del servicio</a>
         <a href="/legal/es/privacy.html">Política de privacidad</a>
         <a href="https://munea.net/es/for-organizations">Empresas y centros de cuidado</a>
-        <a href="mailto:edwardt0303@gmail.com">edwardt0303@gmail.com</a>
       </div>
     </div>
     <p class="disc">Munea es un acompañante para hacer compañía y recordar cosas del día a día. No es un producto sanitario y no ofrece diagnóstico, tratamiento ni servicios médicos de urgencia. Ante cualquier duda de salud, consulta con tu médico. En una emergencia, ponte en contacto con los servicios de emergencia de tu zona.</p>
@@ -661,7 +748,7 @@
   </div>
 </footer>
 
-<script src="/warm.js?v=10"></script>
+<script src="/warm.js?v=11"></script>
 <script>
 /* ── 首頁自己的小動作（都吃系統的「減少動態」設定）── */
 (function(){
