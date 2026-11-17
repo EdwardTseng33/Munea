@@ -1,5 +1,16 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-17 蘇菲｜🎟️ 機構開通碼：App 端輸入視窗（Draft PR · call-path risk 低 · App E2E pending）
+
+- **為什麼**：機構發的紙卡印「點『設定』→『機構開通碼』」，後端（#697）與正式資料庫（#701）都好了，App 一直沒有地方輸入。要跟 1.0.72 一起出。
+- **做了**：設定頁「訂閱與點數」卡最下面那排小連結加第三顆「機構開通碼」；新視窗 `#seatCodeModal`（比照「加入全家健康圈」）：數字鍵盤、字放大、按下去變「開通中…」不能重複按；成功（已開通／已登記／等個人方案到期）鎖輸入框、按鈕變「完成」、重讀一次方案；失敗保留內容可改。沒登入走既有的「先登入」提示。使用者打什麼就送什麼（不濾字母，交給伺服器判定）。產品事件 `seat_code_redeem` 只帶 `{ result }` 或 `{ error }`，不帶開通碼。
+- **怎麼放**：行為全在新檔 `web/src/seat-code.js`；`web/src/app.js` 只加一個掛勾（`window.__muneaSeatCodeBridge`，把組網址、帶登入證與通行碼、登入把關、記事件、重讀方案借出去），**沒碰撥號／語音任何一行**。四語文案 21 鍵（`seatCode.*`）。
+- **call-path risk（低）**：動到 App／WebView 程式，但只加設定頁一個入口與獨立視窗。**App E2E pending**——要 1.0.72 真機才驗得到（登入 → 設定 → 機構開通碼 → 輸入 → 方案名稱更新，另外照例撥一通）；目前只有本機瀏覽器預檢，不算已驗證。
+- **測試**：新增 `node scripts/test-seat-code-ui.js`（入口與視窗、打 `/enterprise/redeem-code`、11 種失敗代碼、事件不帶開通碼、四語鍵齊全；12 種突變都會紅）。`npm run test:ui-contracts`、畫面清單、所有 i18n 測試全過。畫面數 39→40、全畫面證據重拍 480 張（PASS）。手機尺寸 390×844 四語各狀態都截圖看過。
+- **未做**：新測試還沒掛進 `npm run test:launch`（#694／#696 正在改 `package.json` 同一行，等它們合併後補一句 `node scripts/test-seat-code-ui.js`）。`web/index.html` 的快取版號沒升（1.0.72 改版號時一起）。真機沒驗。
+- **跟 #694／#696 重疊的檔**：`web/index.html`、`web/src/app.js`、四語 json——都是各加各的、位置錯開，但誰後合併誰要跟上 main；這個分支有全畫面證據綁存檔點，跟上 main 要用 merge、不要 rebase。
+- **檔**：`web/src/seat-code.js`（新）、`web/index.html`、`web/src/app.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-surface-manifest.json`、`web/src/i18n/app-surface-copy-manifest.json`、`scripts/test-seat-code-ui.js`（新）、`scripts/app-full-surface-i18n-browser-precheck.js`、`scripts/test-app-surface-manifest.js`、`scripts/test-i18n-visual-qa-worklist.js`、`scripts/test-i18n-visual-qa-evidence.js`、`docs/I18N-SURFACE-INVENTORY.json`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/`（480 張＋報告）、`docs/企業席次-後台管理與月結-需求單-2026-07-20.md`、本看板。
+
 ### 2026-11-17 蘇菲｜📞 語音線巡邏：看門狗每 30 分鐘真的接一次 Google，接不上就報（PR · 不碰 App 通話路徑）
 
 - **為什麼**：11/8–11/12 正式聊聊四天打不通（工具包自動升版、連線被拒），11/12 晚額度用完又停兩小時。兩次總機都是好的、巡邏燈全綠，都是 Edward 自己撥了才知道。11/16 語音主機已經有自我檢查門 `/selftest/live`（#695），但只有上線關卡在用，平常沒人打。
