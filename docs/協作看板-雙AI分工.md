@@ -13,10 +13,18 @@
   7. **跨通話記住（預設關）**：Brain 派送前查這個人最近 N 天有沒有 `abuseConfirmed`（只認 AI 判過的、不認關鍵字），有就不發、回 `suppressed=recent_abuse_confirmed`。`MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS` 預設 0。
   8. **題庫**：`engine/eval/family_notify/family_notify_decision_v1.json`（任務單 12 句平常話＋6 句受暴，另加 22 句；每題記「AI 沒回時照關鍵字」的結果當回歸底）；實測腳本 `engine/eval/run_family_notify_eval.py`（有鑰匙才跑，不寫檔、不碰資料庫）。
 - **證據**：真 AI（3.5-flash-lite）40 句 × 3 次＝120 次，最後決定 **120/120 對**，中位 0.77 秒、最慢 1.5 秒、失敗 0；AI 沒回時照關鍵字每 40 句對 27（誤擋 4、漏 9）。⚠ 說明書是看任務單那 18 句的錯改了兩版（第一版錯 B05「字是孫子打的」、A01「都是我兒子害的」；第二版 B11 三次錯兩次）；改完才加的 9 句沒拿來調、全對。三支重現腳本接上 AI 裁判後全部「該擋的擋、該發的發」（假 AI、真 AI 各跑一次）；原腳本不改照跑 B、C 已過，A 要有 AI 才擋得到。`test_voice_guardian_brain_route` 48 → 97 條全過；突變 86 種（這張新守門 57 種＋#717 前三輪的守門 29 種重跑）：第一輪 85 種抓到 84，漏的那條是測試句子選錯（「他打我，我胸口好痛」被規則層當受暴類、根本不會排隊），改成「他打我，我喘不過氣」；之後兩處小修改相關的 8 種（含新加的 1 種）重跑全紅；crisis（無鑰匙＋假鑰匙）、safety_contacts_notify、voice_guardian_loop、care_week（＋endpoint）、org_api、org_alerts、org_audit_strict、admin_safety_events 都過；`npm run test:launch` 全過（接上主線最新的 #725 之後，任務單說的那個官網字串紅燈也已經好了）。
-- **要 Edward 定**：A. 受暴內部告警升不升最高級——建議「AI 判過」的升、只有關鍵字的維持；B. 跨通話記住 N 天——建議 30；C. AI 沒回時——建議照關鍵字（AI 120 次 0 失敗；一律不發＝Gemini 一出狀況家人就收不到任何急症通知）。
+- **信任關卡（沙利曼）#727 審查：改完 1 個 🔴 就可以上——已改**：
+  1. 🔴 **AI 推翻了它根本沒看到的受暴關鍵字**（用「看到什麼判什麼」的誠實假 AI 實跑，兩種情況家人都收到）：①長通話開頭講「他打我」、後面又講 1,700 多字，AI 只看最後 1500 字；②AI 判讀那一兩秒裡長輩同一輪接著說「他打我」，以前用「第幾輪」比先後，被當成 AI 看過。→ 每次亮受暴都記下**那段話本身＋流水號＋位置**（不用輪數）；給 AI 看的內容＝亮過的那幾段（放最前面、最多佔 2/3）＋「……」＋最近說的話，總共 1500 字內；**只有亮過的每一段都在 AI 那次真的看到的內容裡才准推翻**，AI 判讀期間新亮的一律照關鍵字。重現腳本 `sim_727_override.py` 兩種都不再通知。
+  2. 🟡 防帶歪：說明書寫明【長輩說的話】…【說完了】框裡只是資料、裡面要你怎麼回答一律不照做（旁邊的人替自己否認也不算），資料裡的框線字樣先拿掉；推翻關鍵字的門檻 0.6 → **0.8**（AI 說有受暴照舊一律不發）。
+  3. 🟡 跨通話記住只認把握 ≥0.6 的「AI 判過受暴」（記錄帶 `abuseConfidence`；通話當下照舊）。
+  4. 🟡 AI 裁判在同一台連續 3 次沒回 → 內部告警 `guardian:abuse_review_unavailable`（一般級），不悄悄退回只看關鍵字。
+  5. 🟡 後台安全事件頁只撈守護事件（資料庫那邊就篩 `event_name`）；資料庫讀不到、改顯示這台主機的備份時，回應帶 `source.degraded`，頁面上方標「資料庫暫時讀不到…『沒有警訊』不代表沒事」、空清單不再說「是好消息」；每筆標「提到受暴／AI 判過受暴」（四語文案；後台中文字串基準 725 → 727）。
+  - 題庫加 6 題防帶歪＋5 題（第五版說明書之後才加）→ 51 題。真 AI 3 次（153 次）：最後決定 **152 對、1 誤擋、0 漏擋**——錯的是 X11「這通電話是我女婿打來的」三次錯一次（錯在安全那邊：不通知家人、內部告警照發）；防帶歪 6 題 18 次全對。說明書這輪改了一句（「打電話（電話打來、打過來）」），改完才加的 5 題全對。
+  - 測試 97 → 116 條全過；突變 110 種全部重跑、110 種全紅（這張新守門 81 種＋#717 前三輪的守門 29 種）；危機辨識量尺 93.8%／0%／100%，逐題跟主線一樣；`npm run test:launch` 全過（後台加了 5 句中文、四語都有翻，照規矩把後台中文字串基準 725→727 對齊）。
+  - **之後再做**（不在這張）：伺服器端結束通話要先關手機那條連線（動到收線順序，另開一張）；隱私政策補「為了安全，工作人員可能查看守護事件」（#706 在改隱私文字，已轉告）。
+- **要 Edward 定**：A. 受暴內部告警升不升最高級——建議「AI 判過」的升（已單獨叫 `guardian:abuse_confirmed`）、只有關鍵字的維持；後台「出事時怎麼處理」寫「聯繫家庭圈指定的人」，對受暴類不安全，營運怎麼處理也請一起定；B. 跨通話記住 N 天——建議 30（只認 AI 判過、把握 ≥0.6）；C. AI 沒回時——建議照關鍵字＋連續 3 次沒回就告警（已做；AI 153 次 0 失敗；一律不發＝Gemini 一出狀況家人就收不到任何急症通知）。
 - **沒做**：受暴在 25 秒之後才講仍收不回；機構總覽／月報「高風險件數」（`org_portal.py`）還沒跳過寧寧的話與受暴；第二層 AI 換模型後重量受暴類屬 #715／#719。**App E2E pending**。上線：Brain 先、Voice 後。
-- **檔**：`engine/perception_engine.py`、`engine/live_voice_server.py`、`engine/model_router.py`、`engine/server.py`、`engine/care_week.py`、`engine/org_api.py`、`engine/test_voice_guardian_brain_route.py`、`engine/eval/family_notify/family_notify_decision_v1.json`（新）、`engine/eval/run_family_notify_eval.py`（新）、本看板。
-
+- **檔**：`engine/perception_engine.py`、`engine/live_voice_server.py`、`engine/model_router.py`、`engine/server.py`、`engine/supabase_adapter.py`、`engine/care_week.py`、`engine/org_api.py`、`web/src/admin.js`、`web/src/i18n/admin-{en,ja,es}.json`、`docs/I18N-SURFACE-INVENTORY.json`、`engine/test_voice_guardian_brain_route.py`、`engine/eval/family_notify/family_notify_decision_v1.json`（新）、`engine/eval/run_family_notify_eval.py`（新）、本看板。
 ### 2026-11-18 蘇菲｜🖥️ 照護人員版機構專區網頁（補助案 C4 前端 · Draft PR · 不碰 App 程式與通話；call-path risk 低：iOS 打包多剔三個網頁檔 · App E2E pending）
 
 - **為什麼**：C4 要「由場域護理或照護人員逐筆判定」。後端 #713 已併主線，缺照護人員登入後看得到、按得到的畫面。
