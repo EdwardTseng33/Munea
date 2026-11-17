@@ -68,29 +68,36 @@ LAUNCH_PID=$!
 T0=$(date +%s)
 
 # --- timetable (seconds after launch). Scenario side: see scripts/ios-sim-scenario.js ---
-at 4;   shot 01-launch-4s
-at 8;   shot 01b-launch-8s
-at 12;  shot 02-consent-sheet            # first call ever: privacy notice
-at 22;  shot 03-call1-live               # call 1 connected (cold start)
-at 32;  shot 03b-call1-live-later
-at 46;  shot 04-call1-ended
-at 50;  to_background                    # between calls: 25 s away
-at 55;  shot 05-in-background-1
-at 75;  to_foreground
-F=75
-at $((F + 5));   shot 06a-topics-sheet   # asked once before an early call
-at $((F + 16));  shot 06-call2-live      # first call after coming back
-at $((F + 34));  shot 08-call3-live      # call right after the native audio pulse
-at $((F + 54));  shot 09-call4-live
-at $((F + 60));  to_background           # leave the screen in the middle of call 4 (12 s)
-at $((F + 65));  shot 10-in-background-2
-at $((F + 72));  to_foreground
-at $((F + 75));  shot 11-call4-after-return
-at $((F + 80));  shot 12-call4-after-return-later
-at $((F + 94));  shot 14-status
-at $((F + 104)); shot 15-settings
-at $((F + 115)); shot 16-seat-code
-at $((F + 126))
+# Two independent clocks, because on the cloud Mac a single screenshot can take many seconds
+# (run 4: one took 44 s and pushed every later step off schedule):
+#   control: the thumb. Only sends the App away and brings it back, at fixed times.
+#   camera:  screenshots. If one is slow, only later screenshots slip, never the thumb.
+(
+  at 60;  to_background      # between call 1 and call 2: 25 s away
+  at 85;  to_foreground
+  at 180; to_background      # in the middle of call 4: 16 s away (the App hangs up after 5 s)
+  at 196; to_foreground
+) > "$OUT/control.log" 2>&1 &
+CONTROL_PID=$!
+(
+  at 12;  shot 02-consent-sheet
+  at 24;  shot 03-call1-live
+  at 34;  shot 03b-call1-live-later
+  at 48;  shot 04-call1-ended
+  at 99;  shot 06a-topics-sheet
+  at 114; shot 06-call2-live
+  at 138; shot 08-call3-live
+  at 165; shot 09-call4-live
+  at 204; shot 11-call4-after-return
+  at 210; shot 12-call4-after-return-later
+  at 233; shot 14-status
+  at 249; shot 15-settings
+  at 264; shot 16-seat-code
+) > "$OUT/camera.log" 2>&1 &
+CAMERA_PID=$!
+at 285
+kill "$CONTROL_PID" "$CAMERA_PID" >/dev/null 2>&1 || true
+cat "$OUT/control.log" "$OUT/camera.log"
 
 kill "$LAUNCH_PID" >/dev/null 2>&1 || true
 

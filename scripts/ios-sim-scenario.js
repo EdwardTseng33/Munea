@@ -99,11 +99,11 @@
       try { await ac.close(); } catch (e) {}
     } catch (e) { log('CLOCK_PROBE_ERR', { tag: tag, m: String(e).slice(0, 200) }); }
   }
+  document.addEventListener('visibilitychange', function () { log('VISIBILITY', { v: document.visibilityState }); });
   function waitHiddenThenVisible(timeoutMs) {
     return new Promise(function (res) {
       var sawHidden = document.visibilityState === 'hidden', done = false;
       function h() {
-        log('VIS', { v: document.visibilityState });
         if (document.visibilityState === 'hidden') sawHidden = true;
         else if (sawHidden && !done) { done = true; document.removeEventListener('visibilitychange', h); res(true); }
       }
@@ -134,7 +134,7 @@
       // visible to a person, then go on the way a person would (Save with nothing picked starts the call).
       var topics = q('#interestsModal');
       if (topics && topics.classList.contains('show')) {
-        await sleep(2500);
+        await sleep(8000);
         var skip = q('#interestsSkip');
         var closeBtn = q('#interestsModal .mx-close, #interestsModal .auth-close');
         log(name + '_TOPICS_SHEET', {
@@ -201,7 +201,7 @@
     await sleep(2000);
     await nativeStatus('after_background');
     await clockProbe('after_background');
-    var c2 = await call('CALL2', 12000);
+    var c2 = await call('CALL2', 20000);
 
     try {
       var p = plugin();
@@ -210,7 +210,7 @@
     } catch (e) { log('NATIVE_REACTIVATE_ERR', { m: String(e).slice(0, 200) }); }
     await nativeStatus('after_reactivate');
     await clockProbe('after_reactivate');
-    var c3 = await call('CALL3', 8000);
+    var c3 = await call('CALL3', 14000);
 
     var r4 = await dial('CALL4', 45000);
     if (r4.connectedAt) await sleep(4000);
@@ -218,7 +218,7 @@
     var cyc2 = await waitHiddenThenVisible(240000);
     await sleep(2500);
     log('CALL4_AFTER_RETURN', Object.assign({ cycled: cyc2 }, snap()));
-    await sleep(7000);
+    await sleep(12000);
     log('CALL4_AFTER_RETURN_LATER', snap());
     await hangUp('CALL4');
 
@@ -226,13 +226,13 @@
 
     // Short tour so the other 1.0.72 screens get a screenshot each.
     await sleep(3000);
-    click('.tab-btn[data-view="status"]'); await sleep(5000); log('TOUR', { at: 'status' }); await sleep(6000);
-    click('.tab-btn[data-view="settings"]'); await sleep(3000); log('TOUR', { at: 'settings' }); await sleep(7000);
+    click('.tab-btn[data-view="status"]'); await sleep(5000); log('TOUR', { at: 'status' }); await sleep(12000);
+    click('.tab-btn[data-view="settings"]'); await sleep(3000); log('TOUR', { at: 'settings' }); await sleep(12000);
     var entry = q('#seatCodeEntry');
     if (entry) { try { entry.scrollIntoView({ block: 'center' }); } catch (e) {} entry.click(); }
     await sleep(2500);
     log('TOUR', { at: 'seat-code', modal: !!(q('#seatCodeModal') && q('#seatCodeModal').classList.contains('show')), entry: !!entry });
-    await sleep(9000);
+    await sleep(13000);
     log('TOUR_DONE', {});
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { main(); });
