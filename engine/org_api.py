@@ -112,6 +112,17 @@ def _is_missing_table_error(exc):
     return "pgrst205" in text or "could not find the table" in text or "does not exist" in text
 
 
+def _local_write_ok(exc):
+    """寫入失敗時，只有「雲端根本沒設定」或「表還沒建」才准退本機檔。
+    連不上（逾時、斷路器開著）不算：退本機檔會假成功——例如撤回同意寫進那台機器的暫存檔、雲端仍是同意，
+    機構照樣看得到（2026-11-18 #713 信任關卡）。"""
+    kind = getattr(exc, "error_kind", None)
+    if kind in ("missing_table", "configuration"):
+        return True
+    text = str(exc).lower()
+    return "pgrst205" in text or "could not find the table" in text
+
+
 def _read_json(path, fallback):
     try:
         with open(path, encoding="utf-8") as f:
@@ -284,7 +295,7 @@ def create_staff(item):
         if remote is not None:
             return normalize_staff(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api create_staff to Supabase failed; using local: %s", exc)
     record["id"] = record["id"] or str(uuid.uuid4())
@@ -309,7 +320,7 @@ def update_staff(staff_id, patch):
         if remote is not None:
             return normalize_staff(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api update_staff to Supabase failed; using local: %s", exc)
     with _JSON_LOCK:
@@ -357,7 +368,7 @@ def save_consent(item):
         if remote is not None:
             return normalize_consent(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api save_consent to Supabase failed; using local: %s", exc)
     with _JSON_LOCK:
@@ -954,7 +965,11 @@ def org_consent_set_response(identity, data=None):
         if not existing:
             return {"ok": True, "changed": False, "seat": _consent_view(seat, client, None)}
         # 撤回：先關、再留痕。沒留到痕也照樣關——寧可少一筆紀錄，不可關不掉。
-        record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
+        try:
+            record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
+        except Exception as exc:
+            LOGGER.error("org_api consent revoke not saved: %s", exc)
+            return {"ok": False, "error": "consent_not_saved", "seat": _consent_view(seat, client, existing)}
         _audit(audit_event)
     return {"ok": True, "changed": True, "seat": _consent_view(seat, client, record)}
 
