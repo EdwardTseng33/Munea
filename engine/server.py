@@ -5921,8 +5921,10 @@ def admin_safety_events_summary(data=None):
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
     # 跨全部帳號讀（2026-11-18 #717 第二張）：以前用 load_product_events＝只讀得到示範帳號那一戶（後台路徑不綁登入身分，
     # 帳號退回 demo），真實長輩的亮燈、受暴事件在這頁從來看不到。跟北極星看板同一個修法（見 load_all_accounts_product_events）。
+    source = {}
     events = load_all_accounts_product_events(limit=20000, since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                              fallback_on_error=True)
+                                              fallback_on_error=True, event_name="guardian_risk_evaluated",
+                                              source_out=source)
     # 2026-07-24 補：這頁原本沒接測試帳號排除。注意：不能借用 is_analytics_excluded_event，
     # 那支連 analyticsExcluded/developerMode 這類「不算進互動指標」的事件級旗標都會濾掉——
     # guardian_evaluate_response 對每一筆守護風險評估都固定寫 analyticsExcluded=True（避免
@@ -6014,6 +6016,9 @@ def admin_safety_events_summary(data=None):
         },
         "topCategories": top_categories,
         "recent": safety_events[:limit],
+        # 資料庫讀不到、改顯示這台主機上的備份檔時要標出來：備份可能少了真實長輩的警訊，「沒有警訊」不代表沒事（#727）
+        "source": {"events": "database" if source.get("provider") == "supabase" else "local_backup",
+                   "degraded": bool(source.get("degraded", True)), "reason": source.get("reason")},
         "privacy": {
             "surface": "admin_safety_event_review",
             "storesRawTranscriptByDefault": False,
@@ -6925,7 +6930,8 @@ def admin_bond_depth(data=None):
     }
 
 
-def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_error=False):
+def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_error=False, event_name=None,
+                                     source_out=None):
     """後台看板共用：跨『全部帳號』讀 product_events。
 
     ⚠ 別改回 load_product_events()：那支帶 account_id 過濾，而後台路徑本來就不綁登入身分
@@ -6934,12 +6940,15 @@ def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_er
     測試帳號被濾掉，結果永遠是 0，而真正的八百多筆真實紀錄從頭到尾沒進視野。
 
     帶 since_iso＝只看那段時間窗（北極星）；不帶＝從最早一筆全撈（成長與黏著要算第 0 天）。
+    帶 event_name＝只撈這一種事件（安全事件頁只要守護事件，不用每次撈兩萬筆各種事件再挑，#727）。
+    source_out（dict）：讀完會填 {"provider": "supabase"|"json", "degraded": bool, "reason": ...}，給頁面標「這是備份」。
     """
     limit = max(1, min(50000, int(limit or 20000)))
     backend = data_backend()
     fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_events = backend.load_admin_product_events(limit=limit, since_iso=since_iso)
+        remote_events = (backend.load_admin_product_events(limit=limit, since_iso=since_iso, event_name=event_name)
+                         if event_name else backend.load_admin_product_events(limit=limit, since_iso=since_iso))
         if remote_events is not None:
             normalized_remote = [normalize_product_event(e) for e in remote_events]
             record_admin_data_source(
@@ -6948,6 +6957,8 @@ def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_er
                 record_count=len(normalized_remote),
                 data_as_of=latest_record_timestamp(remote_events),
             )
+            if source_out is not None:
+                source_out.update({"provider": "supabase", "degraded": False, "reason": None})
             return normalized_remote
     except Exception as e:
         # 兩種性格，由呼叫端選：
@@ -6963,7 +6974,11 @@ def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_er
     if since_iso:
         # 退回本機檔案時也要守同一個時間窗，否則北極星在降級狀態下會偷偷把更早的資料算進來
         events = [e for e in events if str(e.get("eventTime") or "") >= str(since_iso)]
+    if event_name:
+        events = [e for e in events if e.get("eventName") == event_name]
     events = events[:limit]
+    if source_out is not None:
+        source_out.update({"provider": "json", "degraded": True, "reason": fallback_reason})
     record_admin_data_source(
         "product_events",
         "json",
@@ -10749,6 +10764,13 @@ def _guardian_call_id_ok(value):
     return 0 < len(value) <= 64 and all((ch.isascii() and ch.isalnum()) or ch in "-_" for ch in value)
 
 
+def _guardian_conf_of(ev):
+    try:
+        return float((ev.get("properties") or {}).get("abuseConfidence") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _guardian_abuse_lookback_days():
     """跨通話記住（#717 第二張）：Brain 派送前查這個人最近幾天有沒有 AI 判過的受暴（abuseConfirmed）。
     MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS，預設 0＝關（天數要 Edward 定）；亂填當 0、最多 365。"""
@@ -10758,9 +10780,12 @@ def _guardian_abuse_lookback_days():
         return 0
 
 
+GUARDIAN_ABUSE_MEMORY_MIN_CONF = 0.6   # 跨通話記住只認 AI 把握 ≥0.6 的「判過受暴」（#727 信任關卡；通話當下照舊一律不發）
+
+
 def _guardian_recent_abuse_confirmed(person_id, days):
-    """這個人最近 days 天有沒有 AI 判過受暴的通話亮燈（只認 abuseConfirmed——關鍵字旗標會把「他不會打我啦」也算進去）。
-    讀的是這位來電者自己帳號的事件（呼叫端已綁好身分）。讀不到就當沒有（記一筆），不擋急症通知。"""
+    """這個人最近 days 天有沒有 AI 判過受暴（把握 ≥0.6）的通話亮燈（只認 abuseConfirmed——關鍵字旗標會把「他不會打我啦」
+    也算進去）。讀的是這位來電者自己帳號的事件（呼叫端已綁好身分）。讀不到就當沒有（記一筆），不擋急症通知。"""
     if days <= 0 or not person_id:
         return False
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -10768,7 +10793,8 @@ def _guardian_recent_abuse_confirmed(person_id, days):
         for ev in load_product_events(since_iso=since, limit=2000) or []:
             if (isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"
                     and str(ev.get("personId") or "") == str(person_id)
-                    and (ev.get("properties") or {}).get("abuseConfirmed")):
+                    and (ev.get("properties") or {}).get("abuseConfirmed")
+                    and _guardian_conf_of(ev) >= GUARDIAN_ABUSE_MEMORY_MIN_CONF):
                 return True
     except Exception as e:  # noqa: BLE001
         log_fallback_exception("check recent abuse-confirmed guardian events", e)
@@ -10807,6 +10833,10 @@ def voice_guardian_event_response(data):
         }
         if abuse_confirmed:
             props["abuseConfirmed"] = True
+            try:
+                props["abuseConfidence"] = round(max(0.0, min(1.0, float(data.get("abuseConfidence") or 0))), 2)
+            except (TypeError, ValueError):
+                props["abuseConfidence"] = 0.0
         call_id = str(data.get("callId") or "").strip()
         if _guardian_call_id_ok(call_id):
             props["callId"] = call_id        # 同一通的記錄串起來：週摘要／機構讀取「整通一起跳過」

@@ -2763,7 +2763,7 @@ class SupabaseAdapter:
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows]
 
-    def load_admin_product_events(self, limit=20000, since_iso=None):
+    def load_admin_product_events(self, limit=20000, since_iso=None, event_name=None):
         """後台看板共用：不篩 account_id，service-role 全表查詢 product_events。
 
         兩種取法，差別在有沒有時間窗：
@@ -2773,7 +2773,7 @@ class SupabaseAdapter:
           最舊那端，不能把剛發生的事截掉。
 
         量體目前還小（表剛開不久），全撈划算；之後量體大了要再依時間分頁，
-        這裡先誠實留一個上限，別無限撈。"""
+        這裡先誠實留一個上限，別無限撈。帶 event_name＝只撈這一種事件。"""
         if not self.enabled():
             return None
         limit = max(1, min(50000, int(limit or 20000)))
@@ -2784,6 +2784,8 @@ class SupabaseAdapter:
         }
         if since_iso:
             query["event_time"] = f"gte.{since_iso}"
+        if event_name:
+            query["event_name"] = f"eq.{event_name}"     # 只撈這一種（例：安全事件頁只要守護事件，#727）
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows or []]
 

@@ -773,6 +773,14 @@ def _guardian_post_brain(cid, payload, attempts, brain_post=None, timeout=5):
     return None, last_err
 
 
+def _guardian_conf(value):
+    """AI 給的把握，整理成 0–1、兩位小數（看不懂當 0）。"""
+    try:
+        return round(max(0.0, min(1.0, float(value or 0))), 2)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _guardian_delivery_alert(cid, level, categories, reason, alert_fn=None):
     """高風險「沒記到、沒發到」要有人知道。用最高級告警（@channel＝「叫不到人」那一級，#717 複審），
     只帶等級、類別、原因，不帶任何 ID。這裡本來就在背景執行緒 → 就地送完：收線後 CPU 會被節流，另開小執行緒可能送不出去。"""
@@ -832,6 +840,7 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
                 payload["callId"] = str(call_id)     # 同一通的記錄串起來：週摘要／機構讀取「整通一起跳過」（#717 第二張）
             if risk.get("abuseConfirmed") and from_user:
                 payload["abuseConfirmed"] = True     # AI 裁判看過整通、判定有受暴（Brain 派送前查最近 N 天用）
+                payload["abuseConfidence"] = _guardian_conf(risk.get("abuseConfidence"))   # 跨通話記住只認 ≥0.6
             high = level in ("high", "critical")
             resp, last_err = _guardian_post_brain(cid, payload, 2 if high else 1, brain_post=brain_post,
                                                   timeout=brain_timeout or 5)  # 高風險送不出去重試一次
@@ -870,7 +879,8 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
                     "familyNotificationCandidate": bool(policy.get("familyNotificationCandidate")),
                     "protectionLine": policy.get("protectionLine"),
                     **({"callId": str(call_id)} if call_id else {}),
-                    **({"abuseConfirmed": True} if risk.get("abuseConfirmed") and from_user else {}),
+                    **({"abuseConfirmed": True, "abuseConfidence": _guardian_conf(risk.get("abuseConfidence"))}
+                       if risk.get("abuseConfirmed") and from_user else {}),
                 },
             })
         except Exception as e:
@@ -964,7 +974,11 @@ _GUARDIAN_LEVEL_RANK = {"high": 1, "critical": 2}
 # 2026-11-18 #717 第二張：通知家人前請 AI 看一次整通（AI 裁判，perception_engine.guardian_abuse_review）。
 GUARDIAN_CLOSE_WAIT_PENDING_S = 15.0   # 有等著決定的那則：收線等久一點——AI 裁判約 4 秒＋送 Brain 每次 3 秒、最多兩次
 GUARDIAN_CLOSE_BRAIN_TIMEOUT_S = 3.0   # 收線後送 Brain 每次最多等 3 秒（平常 5 秒）
-GUARDIAN_AI_OVERRIDE_MIN_CONF = 0.6    # AI 說「沒提到受暴」要有這麼確定，才推翻關鍵字（拿不準就照關鍵字、不通知）
+GUARDIAN_AI_OVERRIDE_MIN_CONF = 0.8    # AI 說「沒提到受暴」要有這麼確定，才推翻關鍵字（#727 信任關卡 0.6→0.8；拿不準就照關鍵字、不通知）
+GUARDIAN_PROTECTION_FLAGS_MAX = 200    # 一通最多記幾段亮過受暴的話（超過＝AI 不可能都看過 → 不准推翻）
+GUARDIAN_REVIEW_FLAGGED_SHARE = 2 / 3  # 給 AI 看的內容裡，亮過受暴的那幾段最多佔幾成（其餘給最近的話）
+GUARDIAN_AI_FAIL_ALERT_AFTER = 3       # AI 裁判在同一台連續幾次沒回，就發內部告警（一般級），不悄悄退回只看關鍵字
+_GUARDIAN_AI_FAILS = {"n": 0}          # 這台的連續失敗次數（成功一次就歸零）
 GUARDIAN_SEMANTIC_WAIT_S = 12.0        # 第二層 AI 自己有 10 秒逾時（Gemini 收的最短逾時）；這裡再兜一層底，不讓判讀任務卡住
 
 
@@ -991,9 +1005,62 @@ def _guardian_note_user_text(st, text):
     """長輩這通說過的話，照順序另外留一份給 AI 裁判（一輪一行、最多 3000 字）。守護腦的字幕窗 user_buf
     只留最後 200 字，長的一輪前半段會被擠掉——提到受暴的那句可能就在前半段。要在更新 user_buf 之前呼叫。"""
     said = st.get("guardian_said") or ""
+    add = str(text or "")
     if said and not (st.get("user_buf") or ""):      # user_buf 每輪講完會清空：清空後的第一段＝新的一輪
-        said += "\n"
-    st["guardian_said"] = (said + str(text or ""))[-3000:]
+        add = "\n" + add
+    st["guardian_said"] = (said + add)[-3000:]
+    st["guardian_said_total"] = int(st.get("guardian_said_total", 0)) + len(add)   # 這通到現在說了幾個字（位置用）
+
+
+def _guardian_note_protection_flag(cid, st, text, from_ai):
+    """記下「這段話亮了受暴」（關鍵字或第二層 AI）：存那段話本身＋流水號＋位置。給 AI 裁判看的內容一定放進這些話；
+    決定時，只有每一段都在 AI 那次真的看到的內容裡，才准推翻關鍵字（#727 信任關卡：不能用「第幾輪」比先後——
+    長通話開頭那句會被擠出 1500 字、AI 判讀那一兩秒裡接著講的話 AI 也沒看到）。"""
+    text = str(text or "").strip()[-200:]
+    seq = int(st.get("guardian_protection_flag_seq", 0)) + 1
+    st["guardian_protection_flag_seq"] = seq
+    flags = st.setdefault("guardian_protection_flags", [])
+    if not text:
+        st["guardian_protection_flags_overflow"] = True     # 不知道是哪段：AI 不可能確定看過 → 不准推翻
+        _diag(cid, "guardian.protection_flag_unknown", seq=seq)
+        return
+    if any(text in f["text"] for f in flags):
+        return                                              # 已經記過（同一段的較長版本）
+    flags[:] = [f for f in flags if f["text"] not in text]  # 同一段越講越長：留最長那份
+    flags.append({"seq": seq, "text": text, "pos": int(st.get("guardian_said_total", 0)), "ai": bool(from_ai)})
+    if len(flags) > GUARDIAN_PROTECTION_FLAGS_MAX:
+        del flags[:-GUARDIAN_PROTECTION_FLAGS_MAX]
+        st["guardian_protection_flags_overflow"] = True
+
+
+def _guardian_review_input(st):
+    """給 AI 裁判看的內容（一行一段）：這通亮過受暴的那幾段放最前面（最多佔 2/3）＋「……」＋最近說的話，
+    總共不超過 perception_engine.ABUSE_REVIEW_MAX_CHARS（約 1500 字）。亮過的那幾段就算早就被擠出最近 1500 字也放得進來；
+    放不下的＝AI 沒看到，決定時不准推翻。回 (lines, text)：text＝AI 這次真的看到的內容，決定時拿來核對。"""
+    budget = int(perception_engine.ABUSE_REVIEW_MAX_CHARS)
+    recent = "\n".join(s.strip() for s in _guardian_user_utterances(st) if s and s.strip())
+    flagged, used = [], 0
+    for f in reversed(st.get("guardian_protection_flags") or []):       # 從最新的往回放
+        t = f.get("text") or ""
+        if not t or any(t in x for x in flagged):
+            continue
+        if used + len(t) + 1 > int(budget * GUARDIAN_REVIEW_FLAGGED_SHARE):
+            break
+        flagged.insert(0, t)
+        used += len(t) + 1
+    head = flagged + (["……"] if flagged else [])
+    room = budget - sum(len(x) + 1 for x in head)
+    tail = recent[-room:] if room > 0 else ""
+    lines = head + [s for s in tail.split("\n") if s.strip()]
+    return lines, "\n".join(lines)
+
+
+def _guardian_unreviewed_flags(st):
+    """亮過受暴、但 AI 裁判那次沒看到的段落（不在它看到的內容裡——包括 AI 判讀那段時間才講的）；記不下的也算沒看到。"""
+    if st.get("guardian_protection_flags_overflow"):
+        return [{"seq": 0, "text": ""}]
+    seen = st.get("guardian_abuse_review_text") or ""
+    return [f for f in st.get("guardian_protection_flags") or [] if f.get("text") and f["text"] not in seen]
 
 
 def _guardian_user_utterances(st):
@@ -1010,7 +1077,7 @@ def _guardian_user_utterances(st):
     return out
 
 
-def _guardian_side_effects(cid, who, result, person_id, st, dedupe_key):
+def _guardian_side_effects(cid, who, result, person_id, st, dedupe_key, text=None):
     """記錄交給專用池、不等回應（安全導引不必等 Brain）；同一輪同一類只記一次——字幕每進一小段就重判一次整段，
     不去重的話同一句會被記好幾次、家人與機構看到的亮燈次數會灌水。後半句才提到受暴的，再補記一筆帶受暴標記。
     通知家人不在這裡發：先排隊（_guardian_queue_family_notify），等整段話講完、AI 裁判看過整通再決定。"""
@@ -1019,12 +1086,10 @@ def _guardian_side_effects(cid, who, result, person_id, st, dedupe_key):
     level = risk.get("level") or "none"
     from_user = who != "ai"
     protection = bool(risk.get("protectionEvent")) or bool(risk.get("protectionMentioned"))
-    turn = dedupe_key[0] if dedupe_key and isinstance(dedupe_key[0], int) else 0
-    if from_user:
-        st["guardian_last_user_turn"] = max(int(st.get("guardian_last_user_turn", 0)), turn)
     if from_user and protection:
-        # 整通記住：長輩提過受暴（關鍵字或第二層 AI）。到決定時間，AI 裁判沒回就照這個不通知家人（加害人可能就是家人）
-        st["guardian_protection_turn"] = max(int(st.get("guardian_protection_turn", -1)), turn)
+        # 整通記住：長輩提過受暴（關鍵字或第二層 AI）。到決定時間，AI 裁判沒回就照這個不通知家人（加害人可能就是家人）；
+        # 那段話本身也記下來：AI 裁判一定要看到它，才准推翻（text＝這次判讀的那段字幕）
+        _guardian_note_protection_flag(cid, st, text, risk.get("aiProtection"))
         if risk.get("aiProtection"):
             st["guardian_protection_ai_seen"] = True   # 第二層 AI 判的受暴：AI 裁判說沒有也不推翻
         if not st.get("guardian_protection_seen"):
@@ -1115,7 +1180,30 @@ async def _guardian_run_abuse_review(cid, st, said):
           result="unavailable" if verdict is None else ("abuse" if verdict["abuse"] else "clear"),
           conf=(verdict or {}).get("confidence", "-"), lines=len(said), err=err,
           ms=int((time.monotonic() - t0) * 1000))
+    if verdict is not None:
+        _GUARDIAN_AI_FAILS["n"] = 0
+    elif said:                                   # 有東西要判、AI 卻沒回：連續幾次就告警，不悄悄退回只看關鍵字
+        _GUARDIAN_AI_FAILS["n"] += 1
+        if _GUARDIAN_AI_FAILS["n"] >= GUARDIAN_AI_FAIL_ALERT_AFTER:
+            _guardian_ai_unavailable_alert(cid, st, _GUARDIAN_AI_FAILS["n"], err if err != "-" else "no_verdict")
     return verdict
+
+
+def _guardian_ai_unavailable_alert(cid, st, streak, err):
+    """AI 裁判在這台連續 GUARDIAN_AI_FAIL_ALERT_AFTER 次以上沒回：發一則內部告警（一般級；同一種 10 分鐘只送一次）。
+    只帶次數與錯誤種類，不帶 ID、不帶原句。在背景池送完，收線前會等它。"""
+    def job():
+        try:
+            guardian_notify.alert("voice", "guardian:abuse_review_unavailable",
+                                  "consecutive=%d err=%s" % (streak, err), critical=False, wait=True)
+        except Exception as e:  # noqa: BLE001
+            _diag(cid, "guardian.ai_alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+    _diag(cid, "guardian.abuse_review_unavailable", streak=streak)
+    fut = asyncio.get_running_loop().run_in_executor(_GUARDIAN_EVENT_EXECUTOR, job)
+    futures = st.setdefault("guardian_futures", [])
+    futures[:] = [f for f in futures if not f.done()]
+    futures.append(fut)
 
 
 async def _guardian_abuse_verdict(cid, st):
@@ -1123,9 +1211,9 @@ async def _guardian_abuse_verdict(cid, st):
     回 AI 的判定（dict），或 None（沒內容、沒 key、逾時、壞掉）。"""
     task = st.get("guardian_abuse_review_task")
     if task is None:
-        said = _guardian_user_utterances(st)
-        st["guardian_abuse_review_turn"] = int(st.get("guardian_last_user_turn", 0))
-        task = st["guardian_abuse_review_task"] = asyncio.ensure_future(_guardian_run_abuse_review(cid, st, said))
+        lines, text = _guardian_review_input(st)
+        st["guardian_abuse_review_text"] = text      # AI 這次真的看到的內容：決定時核對亮過受暴的每一段它看過沒有
+        task = st["guardian_abuse_review_task"] = asyncio.ensure_future(_guardian_run_abuse_review(cid, st, lines))
     try:
         return await asyncio.shield(task)
     except asyncio.CancelledError:
@@ -1136,25 +1224,26 @@ async def _guardian_abuse_verdict(cid, st):
 
 def _guardian_family_decision(st, verdict):
     """要不要通知家人：回 (發不發, 原因)。verdict＝AI 裁判的判定；None＝沒問到（逾時、壞掉、沒 key）。
-    AI 說有受暴 → 不發。AI 沒回、或 AI 看完之後才又亮受暴（它沒看到那句）→ 照旗標走（舊行為）。
-    第二層 AI 判過受暴 → 不發（兩個 AI 意見不同，保護長輩優先）。只有關鍵字亮過 → AI 夠確定沒有才發。"""
+    AI 說有受暴 → 不發。AI 沒回 → 照旗標走（舊行為）。第二層 AI 判過受暴 → 不發（兩個 AI 意見不同，保護長輩優先）。
+    只有關鍵字亮過 → 亮過的每一段 AI 都看過、而且夠確定沒有（≥0.8）才發；有一段它沒看到（太早被擠出去、
+    或 AI 判讀那段時間才講的）就照關鍵字不發。"""
     flagged = bool(st.get("guardian_protection_seen"))
     if st.get("guardian_abuse_confirmed") or (verdict is not None and verdict.get("abuse")):
         return False, "ai_abuse"
     if verdict is None:
         return (False, "protection_mentioned") if flagged else (True, "no_protection_flag")
-    if int(st.get("guardian_protection_turn", -1)) > int(st.get("guardian_abuse_review_turn", -1)):
-        return False, "protection_after_review"
     if st.get("guardian_protection_ai_seen"):
         return False, "semantic_abuse"
     if flagged:
+        if _guardian_unreviewed_flags(st):
+            return False, "protection_not_reviewed"
         if float(verdict.get("confidence") or 0) < GUARDIAN_AI_OVERRIDE_MIN_CONF:
             return False, "ai_unsure"
         return True, "ai_overrode_keywords"
     return True, "ai_clear"
 
 
-def _guardian_record_abuse_confirmed(cid, st, person_id):
+def _guardian_record_abuse_confirmed(cid, st, person_id, confidence=None):
     """AI 裁判判定這通有受暴：送 Brain 記一筆帶 abuseConfirmed 的受暴事件（只記、不通知家人；內部告警照發）。
     Brain 派送前查最近 N 天用（MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS）；週摘要與機構讀取會把整通跳過。一通只記一次。"""
     if st.get("guardian_abuse_confirmed"):
@@ -1165,7 +1254,7 @@ def _guardian_record_abuse_confirmed(cid, st, person_id):
         return
     result = {"risk": {"level": "high", "categories": ["protection_event"], "requiresAuditEvent": True,
                        "requiresHumanEscalation": True, "protectionEvent": True, "protectionMentioned": True,
-                       "abuseConfirmed": True},
+                       "abuseConfirmed": True, "abuseConfidence": confidence},
               "responsePolicy": {"familyNotificationCandidate": False, "protectionLine": "113"}}
     call_id, brain_timeout = _guardian_call_id(st), _guardian_brain_timeout(st)
 
@@ -1206,7 +1295,7 @@ async def _guardian_family_notify_later(cid, st):
                     st, max(0.0, perception_engine.GUARDIAN_AI_TIMEOUT_S - (time.monotonic() - asked_at)))
         send, reason = _guardian_family_decision(st, verdict)
         if verdict is not None and verdict.get("abuse"):
-            _guardian_record_abuse_confirmed(cid, st, pending["personId"])
+            _guardian_record_abuse_confirmed(cid, st, pending["personId"], verdict.get("confidence"))
         if not send:
             _diag(cid, "guardian.family_notify_suppressed", reason=reason, level=pending["level"])
             return
@@ -1234,7 +1323,7 @@ async def _guardian_confirm_abuse_on_close(cid, st):
     try:
         verdict = await _guardian_abuse_verdict(cid, st)
         if verdict is not None and verdict.get("abuse"):
-            _guardian_record_abuse_confirmed(cid, st, _guardian_person_id(st))
+            _guardian_record_abuse_confirmed(cid, st, _guardian_person_id(st), verdict.get("confidence"))
     except Exception as e:  # noqa: BLE001
         _diag(cid, "guardian.abuse_confirm_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
@@ -1302,7 +1391,7 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
         risk = (result or {}).get("risk") or {}
         level = risk.get("level") or "none"
         categories = tuple(risk.get("categories") or [])
-        _guardian_side_effects(cid, who, result, safety_person_id, st, (turn_id, who, level, categories))
+        _guardian_side_effects(cid, who, result, safety_person_id, st, (turn_id, who, level, categories), text=text)
         if level not in ("high", "critical"):
             # 第二層：第一層沒抓到硬危機的用戶句子 → 升級便宜 AI 判語意（只判用戶說的、背景跑不擋通話）。
             # 2026-10-28 閘全開後每句都送：上限從 5 次放到 80 次（長通話也蓋得到；每句約 NT$0.013，80 句 NT$1 封頂）
@@ -1332,7 +1421,8 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
                                            "protectionLine": "113" if is_protect else None},
                     }
                     _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
-                    _guardian_side_effects(cid, who, sem_result, safety_person_id, st, (turn_id, who, "semantic", scat))
+                    _guardian_side_effects(cid, who, sem_result, safety_person_id, st, (turn_id, who, "semantic", scat),
+                                           text=text)
                     key = (turn_id, "semantic", scat)
                     if key not in st["user_flagged"]:
                         st["user_flagged"].add(key)
