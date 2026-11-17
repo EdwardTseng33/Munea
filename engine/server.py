@@ -2527,6 +2527,8 @@ def care_week_response(data):
             if str(ev.get("personId") or "") != str(person_id):
                 continue
             props = ev.get("properties") or {}
+            if props.get("who") == "ai":
+                continue  # 寧寧自己講的話（例如「胸口痛要馬上打 119」這種安全提醒）不是長輩亮燈
             events.append({
                 "eventTime": ev.get("eventTime") or ev.get("createdAt"),
                 "riskLevel": props.get("riskLevel") or props.get("risk_level"),
@@ -10651,6 +10653,47 @@ def _voice_identity_scope(user_id):
     return token, identity.get("personId")
 
 
+GUARDIAN_EVENT_LEVELS = ("none", "low", "medium", "high", "critical")
+
+
+def voice_guardian_event_response(data):
+    """POST /voice/guardian-event（內部密語驗證後才會進來）：通話中守護腦亮燈。
+
+    為什麼要繞這一圈（2026-11-18 查到）：Voice 那台沒有雲端鑰匙、也認不出電話那頭是誰——
+    原本在 Voice 本機寫的亮燈紀錄只落在 Voice 容器的暫存檔，家人週摘要與機構提醒都看不到；
+    「通知緊急聯絡人」在 Voice 本機也查不到聯絡人，等於沒發。改成跟收線回寫同一個模子：
+    Brain 認人 → 記一筆 guardian_risk_evaluated（帶長輩的帳號與 personId）→ 是長輩自己說的才通知聯絡人。
+    認不出人就不記、不通知（不能記到預設的那位身上）。"""
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        level = str(data.get("level") or "none").strip().lower()
+        if level not in GUARDIAN_EVENT_LEVELS:
+            level = "none"
+        categories = [str(c)[:48] for c in (data.get("categories") or []) if c][:6]
+        who = "ai" if str(data.get("who") or "") == "ai" else "user"
+        family_candidate = bool(data.get("familyNotificationCandidate"))
+        props = {
+            "riskLevel": level, "categories": categories, "analyticsExcluded": True, "source": "live_voice",
+            "who": who, "protectionEvent": bool(data.get("protectionEvent")),
+            "familyNotificationCandidate": family_candidate,
+            "protectionLine": (str(data.get("protectionLine"))[:8] if data.get("protectionLine") else None),
+        }
+        if not person:
+            return {"ok": True, "identityResolved": False, "recorded": False, "dispatch": None}
+        recorded = False
+        if data.get("record", True):
+            append_product_event({"eventName": "guardian_risk_evaluated", "source": "live_voice", "properties": props})
+            recorded = True
+        dispatch = None
+        if who == "user" and family_candidate:
+            dispatch = dispatch_safety_alert(person, "guardian")
+        return {"ok": True, "identityResolved": True, "recorded": recorded, "dispatch": dispatch}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def voice_call_memory_response(data):
     """POST /voice/call-memory（內部密語驗證後才會進來）：
     Voice 掛斷時把整通字幕交給 Brain 代存——Brain 有 Supabase 鑰匙、認得用戶，
@@ -11028,7 +11071,7 @@ class H(BaseHTTPRequestHandler):
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
             if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context",
-                                "/voice/health-recommended"):
+                                "/voice/guardian-event", "/voice/health-recommended"):
                 _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
                 _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
                 if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
@@ -11040,6 +11083,7 @@ class H(BaseHTTPRequestHandler):
                     "/voice/call-recap": voice_call_recap_response,
                     "/voice/health-context": voice_health_context_response,
                     "/voice/health-recommended": voice_health_recommended_response,
+                    "/voice/guardian-event": voice_guardian_event_response,
                 }
                 self._json(_voice_internal[request_path](data))
                 return

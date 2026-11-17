@@ -548,6 +548,8 @@ def default_loaders():
             if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
                 continue
             props = ev.get("properties") or {}
+            if props.get("who") == "ai":
+                continue  # 寧寧自己講的話不是長輩亮燈（2026-11-18）
             out.append({
                 "accountId": ev.get("accountId") or ev.get("account_id"),
                 "personId": ev.get("personId") or ev.get("person_id"),

@@ -754,21 +754,46 @@ def guardian_scan_text(text):
         return None
 
 
-def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, person_id=None):
-    """side effect 段（會打 Supabase/Slack，一律在背景執行緒跑）：
-    一記一筆安全事件，沿用既有 audit/product event 機制（跟 /chat 文字線同一張表、同一個 admin 後台看得到），
-    多帶 protectionEvent／familyNotificationCandidate／protectionLine／who／source 幾個欄位，
-    方便未來做「真的推播家人」時直接查得到（現在還沒有主動推播家人的功能，這裡先把料記好）。
+def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, person_id=None, brain_post=None):
+    """side effect 段（會打 Brain/Slack，一律在背景執行緒跑）：
+    一記一筆安全事件（guardian_risk_evaluated），帶 protectionEvent／familyNotificationCandidate／protectionLine／who／source。
     二內部安全告警（Slack #沐寧-告警），只送等級/類別，不送逐字稿、不送個資。
-    record_fn / alert_fn 可注入假函式做測試（語音線模擬），預設用 server.append_product_event / notify.alert。
-    person_id 有帶且 familyNotificationCandidate 為真時，另外呼叫 server.dispatch_safety_alert
-    通知長輩設定的緊急聯絡人（2026-11-09 1.0.72）——best-effort、絕不拋例外回呼叫端。
+    三長輩自己說的、而且 familyNotificationCandidate 為真 → 通知長輩設定的緊急聯絡人（2026-11-09 1.0.72）。
+
+    2026-11-18 改：一和三改走 Brain（POST /voice/guardian-event，內部密語）。Voice 這台沒有雲端鑰匙、
+    認不出來電者——原本在本機寫的紀錄只落在 Voice 容器暫存檔（家人週摘要、機構提醒都看不到），
+    本機呼叫 dispatch_safety_alert 也查不到聯絡人（等於沒發）。跟收線回寫記憶同一條路：Brain 認人、Brain 記、Brain 發。
+    寧寧自己講的話（who="ai"，例如「胸口痛要馬上打 119」這種安全提醒）照記、標 who=ai，但絕不通知家人。
+    Brain 通道沒設（本機開發）或沒有來電者身分時，退回舊的本機寫法（只記、通知也只在本機）。
+    record_fn / alert_fn / brain_post 可注入假函式做測試。全程 best-effort、絕不拋例外回呼叫端。
     """
     risk = (result or {}).get("risk") or {}
     policy = (result or {}).get("responsePolicy") or {}
     level = risk.get("level") or "none"
     categories = risk.get("categories") or []
-    if risk.get("requiresAuditEvent"):
+    from_user = who != "ai"
+    notify_family = bool(policy.get("familyNotificationCandidate")) and from_user and bool(person_id)
+    brain_url, brain_secret = _brain_memory_config()
+    via_brain = record_fn is None and bool(person_id) and (brain_post is not None or bool(brain_url))
+    if via_brain and (risk.get("requiresAuditEvent") or notify_family):
+        try:
+            payload = {
+                "userId": str(person_id), "level": level, "categories": list(categories), "who": "ai" if not from_user else "user",
+                "protectionEvent": bool(risk.get("protectionEvent")),
+                "familyNotificationCandidate": bool(policy.get("familyNotificationCandidate")) and from_user,
+                "protectionLine": policy.get("protectionLine"), "record": bool(risk.get("requiresAuditEvent")),
+            }
+            if brain_post is not None:
+                resp = brain_post(payload)
+            else:
+                resp = post_internal(brain_url, brain_secret, "/voice/guardian-event", payload, timeout=5,
+                                     app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
+            _diag(cid, "guardian.brain_event", who=who, level=level,
+                  resolved=(resp or {}).get("identityResolved"), recorded=(resp or {}).get("recorded"),
+                  queued=((resp or {}).get("dispatch") or {}).get("queued"))
+        except Exception as e:
+            _diag(cid, "guardian.brain_event_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+    elif risk.get("requiresAuditEvent"):
         rec = record_fn or server.append_product_event
         try:
             rec({
@@ -800,7 +825,7 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
             )
         except Exception as e:
             _diag(cid, "guardian.alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
-    if policy.get("familyNotificationCandidate") and person_id:
+    if notify_family and not via_brain:
         try:
             server.dispatch_safety_alert(person_id, "guardian")
         except Exception as e:

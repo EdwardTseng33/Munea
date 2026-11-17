@@ -1,5 +1,17 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-18 蘇菲｜🚨 通話中守護腦亮燈「沒記進雲端、緊急聯絡人沒發出去」——改走 Brain（PR · call-path risk 中：只動亮燈後的背景記錄與通知，不碰收音／出聲）
+
+- **怎麼發現的**：做 C4 機構異常提醒時查正式庫，8 月以來 `guardian_risk_evaluated` 只有 9 筆、全部沒有 `who`／`source`——不是通話來的。往回追：`live_voice_server.guardian_record_and_alert` 直接在 Voice 本機呼叫 `server.append_product_event` 與 `server.dispatch_safety_alert`，但 **Voice 那台沒有雲端鑰匙**（正式機環境變數只有 `MUNEA_BRAIN_INTERNAL_URL`、`MUNEA_VOICE_BRAIN_SECRET`；`server.py` 的 `voice_health_context_response` 註解自己也寫了）。所以：
+  1. 通話中的亮燈紀錄只落在 Voice 容器暫存檔——家人 App 的週摘要「守護」段、機構週摘要與異常提醒都看不到。
+  2. 「通話中講出危險的話 → 通知長輩設定的緊急聯絡人」（11/9，1.0.72）在 Voice 本機查不到聯絡人，**等於沒發**。
+  3. 另一個洞：寧寧自己講的話（`who=ai`，例如「胸口痛要馬上打 119」這種安全提醒）也會被記成亮燈；如果第 2 點是通的，還會因為寧寧自己的話去通知家人。
+- **改法**：跟「收線回寫記憶」同一個模子。Voice 有來電者身分（`memory_scope`＝`voice-<user_id>`）且 Brain 通道設好時，改 POST `/voice/guardian-event`（內部密語門，跟 `/voice/call-memory` 同一道）；Brain 認人 → 記一筆帶長輩帳號與 personId 的 `guardian_risk_evaluated`（`source=live_voice`、`who`）→ **只有長輩本人說的、而且是通知候選**才 `dispatch_safety_alert`。認不出人就不記不發（不能記到預設那位身上）。Voice 送不出去只寫診斷、絕不拋例外；沒身分或通道沒設（本機開發）照舊在本機記。家人週摘要（`server.py`）與機構的守護事件讀取（`org_api.py`）都跳過 `who=ai`。
+- **測試**：新 `engine/test_voice_guardian_brain_route.py` 13 條（Voice 走 Brain 不在本機記發、寧寧的話不要求通知、沒身分退回本機、Brain 掛了不拋、真的打內部通道、Brain 端認不出人不記、寧寧的話不發、等級亂填當 none、路由在密語門後、兩處讀取跳過寧寧的話）；突變 9 種全紅。既有 `test_safety_contacts_notify`（11/9 的派送測試）、`test_voice_guardian_loop`、`test_voice_call_memory`、`test_voice_health_context`、`test_org_api` 都過；接口清冊 brain 114→115（`/voice/guardian-event` 列 internal／critical）。
+- **上線要注意**：要 **Brain 先上、Voice 後上**（Voice 先上會打到還沒有這支接口的 Brain，只是寫診斷、不影響通話）。上線後用一通真機通話講一句會亮燈的話驗：正式庫要多一筆 `source=live_voice` 的事件、緊急聯絡人手機要收到通知。**App E2E pending**（緊急聯絡人的設定畫面在 1.0.72）。
+- **沒做**：歷史上漏記的亮燈補不回來（Voice 容器暫存檔已隨重建消失）。
+- **檔**：`engine/live_voice_server.py`（只有 `guardian_record_and_alert`）、`engine/server.py`（新 `voice_guardian_event_response`＋內部路由兩行＋家人週摘要讀取一行）、`engine/org_api.py`（一行）、`engine/test_voice_guardian_brain_route.py`（新）、`docs/API-CONTRACT-INVENTORY.json`、`scripts/api_contract_inventory.py`、`scripts/test_api_contract_inventory.py`、本看板。
+
 ### 2026-11-17 蘇菲｜🚪「想聊的話題」那一頁會把人卡住打不出去——「先跳過」從沒顯示過、按叉叉關掉後下次又跳（PR · 動 App 撥號前的詢問頁，不動通話本身）
 
 - **怎麼發現的**：Edward 要我自己想辦法測 1.0.72。在雲端 Mac 開 iPhone 模擬器、裝 Build 544 的同一份程式，用腳本連打幾通。第一通（按完告知頁）2 秒接通；第二通按「開始通話」沒撥出去，截圖是這一頁。
