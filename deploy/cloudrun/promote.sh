@@ -222,3 +222,11 @@ if len(serving) != 1 or int(serving[0].get("percent") or 0) != 100 or serving[0]
 
 echo "✅ DONE · $SVC 正在服務 $TARGET_REVISION（v$EXPECTED_VERSION @ ${EXPECTED_COMMIT:0:12}）"
 echo "回滾：gcloud run services update-traffic $SVC --region $REGION --project $PROJECT --to-revisions $PREVIOUS_REVISION=100"
+
+# 2026-11-17：舊版本只要還掛著 tag，Cloud Run 就會替它留著「至少一台」待命機器、
+# 照樣計費。11/17 查帳時正式線有 4 台這樣白養的（一台從 8/10 養到現在）。
+# 上線成功後把比現役版本舊的那些 tag 拿掉：版本還在、上面那行回滾指令照樣能用，
+# 只是回滾後第一個請求要等冷啟動。收不乾淨只警告——這次上線已經成功了。
+echo "== 放掉舊版本白養的待命機器 =="
+"${PYTHON[@]}" deploy/cloudrun/release_stale_warm.py "$SVC" --project "$PROJECT" --region "$REGION" --apply \
+  || echo "⚠ 舊版本的待命機器沒收乾淨（不影響這次上線）；之後可手動跑：python deploy/cloudrun/release_stale_warm.py $SVC --apply"

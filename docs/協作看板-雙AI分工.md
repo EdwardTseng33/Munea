@@ -1,19 +1,15 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
-### 2026-11-16 Claude｜🎙️ 背景回來後下一通沒有麥克風——撥號前先量聲音時鐘＋分層救援（Draft PR · call-path risk：動到 App 通話路徑＋iOS 原生外掛 · App E2E pending）
+### 2026-11-17 蘇菲｜💸 每上線一次就多養一台待命機器——已收掉 4 台、上線工具改成自動收（PR · 不碰 App 通話路徑）
 
-- **病徵（11/13 真機，1.0.71+543）**：7 通有 2 通失敗、連續兩通，都在 App 從背景回到前景之後。App 自報 `voice_mic_uplink_stalled`：聲音引擎自稱 running、麥克風軌道 live，但引擎時鐘停在 0，一包聲音都沒送出；重建兩次一樣，約 18 秒後整通被收掉。把 App 整個關掉重開，下一通正常。#660（1.0.71 已含）的「重建一律換新引擎」沒有修好——新引擎的時鐘一樣不走。
-- **判斷**：卡住的是 iPhone 那一層的聲音工作階段，不是網頁這層的物件（依據與外部資料連結寫在 PR）。這是推論，**只有真機能證實**。
-- **做法**：① 向總機叫號**之前**先量引擎時鐘（最多看 300ms，正常通話只多等一格 50ms）；② 不走就由輕到重救，每層做完重新量：`web_suspend_resume`（暫停再恢復）→ `web_audio_session`（網頁指定收放音類型，手機不支援就跳過）→ `native_audio_session`（新原生外掛，外殼的聲音工作階段開一下再放手並通知）→ `web_rebuild`（停掉軌道、關掉舊引擎、重新要麥克風＋新引擎）；③ 全部沒用才不撥出去，顯示「聲音還沒準備好／請把沐寧整個關掉再重新打開…這次沒有扣點數」（四語），不佔席位、不扣點。
-- **診斷（下一次真機通話後從後台就看得出哪一層有效）**：`voice_audio_clock_stalled`、`voice_audio_clock_step`（每層一筆）、`voice_audio_clock_recovered`、`voice_audio_clock_unrecovered`；通話診斷多一個階段 `audio_clock_preflight`。只記狀態，不記聲音內容。
-- **跟原本想法不同的地方**：原生層**不在每次回到前景時自動做**——Apple 工程師明講外殼啟用自己的聲音工作階段會打斷網頁那邊的（講到一半的通話、使用者在聽的音樂都會被停掉）。回到前景只做不打斷聲音的事（系統把網頁麥克風標成靜音就打開）；真正的「開一下再放手」只在量到時鐘不走時才做，而且一定放手。
-- **順手修到的既有問題**：通話狀態卡（忙線／麥克風／登入失效…）的標題與按鈕會被四語自動套字改回「現在忙線中／取消排隊」（瀏覽器實測：麥克風受阻卡顯示成那兩句）。不修的話這次新增的卡也會顯示錯字，所以兩個出卡函式先把預設字標記拿掉。
-- **守門**：新增 `scripts/test-voice-audio-clock.js`（假時鐘跑順序＋把 app.js 真正的救援動作抽出來跑＋原始碼守門），已掛進 `test:launch`；變異測試 12 條全紅。
-- **沒驗到的**：iPhone 真機（唯一能重現的地方）；Swift 沒有編譯過（這台是 Windows，要等 Mac／雲端打包）；原生層到底有沒有用、是哪一層有用，都要等真機事件。
-- **真機怎麼驗**：打一通 → 通話中切到背景一兩分鐘 → 回來 → 再撥。看①有沒有接通、講話有沒有被聽到 ②後台有沒有 `voice_audio_clock_*` 事件、`recovered` 的 `layer` 是哪一層。
-- **檔**：`web/src/voice-audio-clock.js`（新）、`web/src/app.js`、`web/index.html`、`web/src/i18n/app-renderer-copy.js`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-binding-manifest.json`、`web/src/i18n/app-screen-manifest.json`、`ios/App/App/AudioSessionPlugin.swift`（新）、`ios/App/App/MuneaViewController.swift`、`ios/App/App.xcodeproj/project.pbxproj`、`scripts/test-voice-audio-clock.js`（新）、`scripts/test-app-i18n-renderer-copy.js`、`package.json`、本看板。**沒動 `engine/`。**
-- **同一張 PR 追加（第二個 commit）｜離開畫面被 App 收線要誠實記錄＋回來有說明**：畫面離開滿 5 秒 App 會自己收線，原本是「替使用者按一次通話鍵」，結束原因被記成 `user_ended`，跟使用者自己掛的分不出來，回來也沒有說明。改成 App 自己收線、原因記 `background_release`（`voice_session_completed`／`voice_call_diagnostic`／`call_control_released` 三處一致，送給總機的也是這個值——查過總機與資料庫對結束原因不設白名單、計費只看接通到收線的時間，**沒改後端**）；已接通的仍算「講完」、還在撥號的仍算「取消」，不會被算進失敗率。這種收線不累計「聊完次數」、不請評分。回到畫面出一次提示卡「剛剛離開了畫面，通話先結束了／想繼續聊，再按一次通話就好。」（四語）。另外回到前景且仍在通話時，強制再套一次「通話中螢幕不睡」。守門 `scripts/test-voice-background-release.js`（已掛 `test:launch`）；變異測試 11 條全紅。多動到的檔：`scripts/test-voice-background-release.js`（新）、`scripts/test-voice-call-state-machine.js`、`scripts/test-ui-contracts.js`。真機怎麼驗：通話中按電源鍵鎖螢幕（或切到別的 App）超過 5 秒 → 回來應看到那張卡、不會跳評分；後台那通的結束原因應是 `background_release`。
-- ⚠ **同檔提醒**：開著的 #693（蘋果健康）與 #692（活動四語）也改 `web/src/app.js`／`web/index.html`／四語檔，改的段落不同；誰後合併誰要從 `origin/main` 更新一次，`index.html` 的 `app.js?v=` 會撞，取較新的日期即可。
+- **為什麼**：11/17 看本月帳單，「待命機器」費用半個月漲兩倍多。正式部署會給新版本掛 tag 並設「至少一台待命」；切流量後舊版本的 tag 沒人拿，而 Cloud Run 只要版本還掛著 tag 就繼續替它開著那台、照樣計費。當天正式線有 **4 台白養**：大腦 00192／00194／00196、總機 00016（從 8/10 養到現在）。該有 2 顆 CPU／1.5G，實際 6 顆／5G。
+- **已做（雲端）**：拿掉那 4 個舊 tag（沒刪版本、沒動流量），待命回到 2 顆／1.5G，每月約省 NT$1,470。
+- **根治**：新增 `deploy/cloudrun/release_stale_warm.py`——找出「0% 流量、有設待命、而且比現役版本舊」的 tag 並拿掉；比現役版本新的候選版本（等真機驗收的 canary）一律不碰。`deploy/cloudrun/promote.sh` 上線成功後自動跑一次，收不乾淨只警告、不讓上線報失敗。總機是手動切流量，`scripts/cloud-run-deploy-gateway.ps1` 結尾加一句提醒。
+- **回滾不受影響**：回滾用的是版本名稱（`--to-revisions <名稱>=100`），版本都還在；只是回滾後第一個請求要等冷啟動。
+- **測試**：`python scripts/test_release_stale_warm.py` 8 案（照 11/17 實況、現役版本不動、較新的候選不動、沒設待命的不動、分流時取最舊的現役版本為界、看不懂現況就全不動），已掛進 `test:launch`。
+- **手動檢查**：`python deploy/cloudrun/release_stale_warm.py --all`（只看不動；加 `--apply` 才收）。
+- **檔**：`deploy/cloudrun/release_stale_warm.py`（新）、`deploy/cloudrun/promote.sh`、`scripts/cloud-run-deploy-gateway.ps1`、`scripts/test_release_stale_warm.py`（新）、`package.json`、本看板。
+
 
 ### 2026-11-17 蘇菲｜💸 雲端省錢四項＋總機看門狗改「定時叫醒」（PR · 不碰 App 通話路徑）
 
