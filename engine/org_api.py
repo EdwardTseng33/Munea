@@ -685,7 +685,11 @@ def _strip_anomalies(anomalies):
     for a in anomalies or []:
         # 家庭版的建議句是「看即時通知裡的原句與處理紀錄」——機構看不到原句，換成機構做得到的事。
         suggestion = ORG_GUARDIAN_SUGGESTION if a.get("type") == "guardian" else a.get("suggestion")
-        out.append({"type": a.get("type"), "when": a.get("when"), "fact": a.get("fact"), "suggestion": suggestion})
+        fact = a.get("fact")
+        if a.get("type") == "guardian" and isinstance(fact, str):
+            # 家庭版那句「即時通知已另外送出」講的是給家人的緊急聯絡人通知；機構沒有收到即時通知，不能這樣寫。
+            fact = fact.replace("；即時通知已另外送出，這裡是週彙整。", "。")
+        out.append({"type": a.get("type"), "when": a.get("when"), "fact": fact, "suggestion": suggestion})
     return out
 
 
