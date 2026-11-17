@@ -205,6 +205,18 @@
       webAudioSessionType: navigator.audioSession ? navigator.audioSession.type : null,
       ua: navigator.userAgent.slice(0, 120),
     });
+    // Test builds only: the development auto sign-in can be undone at start-up by a request that
+    // left before it (a stale "no session" answer arrives later and overwrites the state).
+    // Record it when it happens and sign in again, so the run still tests the calls.
+    var authApi = window.MuneaAuth;
+    var authStatus = function () { try { return (authApi.state() || {}).status; } catch (e) { return 'unknown'; } };
+    await sleep(1500);
+    var statusAtBoot = authStatus();
+    if (statusAtBoot !== 'signed-in' && authApi && typeof authApi.signInAsDeveloper === 'function') {
+      try { await authApi.signInAsDeveloper({ reason: 'sim_scenario_resign' }); } catch (e) {}
+      await sleep(800);
+    }
+    log('SIGN_IN', { atBoot: statusAtBoot, now: authStatus(), resigned: statusAtBoot !== 'signed-in' });
     await nativeStatus('boot');
     await clockProbe('boot');
 
