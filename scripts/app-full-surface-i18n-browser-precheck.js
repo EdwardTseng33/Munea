@@ -152,11 +152,32 @@ function sourceCommit() {
   }).trim();
 }
 
-function sourceChangedFiles() {
-  return execFileSync('git', ['status', '--short'], {
+// 分支壓成一筆合併（squash）之後，分支上的存檔點不在主線歷史裡，
+// 證據檢查「來源必須是 HEAD 的祖先」就會在主線上變紅（2026-11-17 #704 踩到）。
+// 所以來源記「從主線分出來的那一點」＋「這條分支改了哪些檔」；拍照當下的存檔點另記 sourceHeadCommit。
+function sourceBaseCommit(head) {
+  try {
+    const base = execFileSync('git', ['merge-base', head, 'origin/main'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return /^[0-9a-f]{40}$/u.test(base) ? base : head;
+  } catch (error) {
+    return head;
+  }
+}
+
+function sourceChangedFiles(base, head) {
+  const lines = (args) => execFileSync('git', args, {
     cwd: ROOT,
     encoding: 'utf8',
   }).trim().split(/\r?\n/).filter(Boolean);
+  const committed = base && head && base !== head
+    ? lines(['diff', '--name-status', base, head, '--', '.', ':!docs/qa'])
+      .map((line) => line.replace(/\t/gu, ' '))
+    : [];
+  return [...committed, ...lines(['status', '--short'])];
 }
 
 function sha256(filePath) {
@@ -682,13 +703,16 @@ async function main() {
     executablePath: chromeExecutable(),
     headless: true,
   });
+  const sourceHead = sourceCommit();
+  const sourceBase = sourceBaseCommit(sourceHead);
   const report = {
     schema: 'munea.app-full-surface-local-browser-precheck.v2',
     recordedAt: new Date().toISOString(),
     result: 'pending',
     releaseEvidence: false,
-    sourceBaseCommit: sourceCommit(),
-    sourceChangedFiles: sourceChangedFiles(),
+    sourceBaseCommit: sourceBase,
+    sourceHeadCommit: sourceHead,
+    sourceChangedFiles: sourceChangedFiles(sourceBase, sourceHead),
     scope: {
       states: SURFACE_MANIFEST.surfaces.map(({ state }) => state),
       locales: LOCALES.map(({ locale }) => locale),

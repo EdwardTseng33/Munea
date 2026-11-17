@@ -3,8 +3,26 @@
   "recordedAt": "2026-11-17T04:07:55.690Z",
   "result": "pass-local-precheck",
   "releaseEvidence": false,
-  "sourceBaseCommit": "c1066be948736e3eddde5dacaf7d15d31dde2878",
-  "sourceChangedFiles": [],
+  "sourceBaseCommit": "7b437fd0905de2b73a38f997b048a5f4919cbac6",
+  "sourceHeadCommit": "c1066be948736e3eddde5dacaf7d15d31dde2878",
+  "sourceChangedFiles": [
+    "M docs/I18N-SURFACE-INVENTORY.json",
+    "M scripts/app-full-surface-i18n-browser-precheck.js",
+    "M scripts/test-app-surface-manifest.js",
+    "M scripts/test-i18n-visual-qa-evidence.js",
+    "M scripts/test-i18n-visual-qa-worklist.js",
+    "A scripts/test-seat-code-ui.js",
+    "M web/index.html",
+    "M web/src/app.js",
+    "M web/src/i18n/app-surface-copy-manifest.json",
+    "M web/src/i18n/app-surface-manifest.json",
+    "M web/src/i18n/en.json",
+    "M web/src/i18n/es.json",
+    "M web/src/i18n/ja.json",
+    "M web/src/i18n/zh-TW.json",
+    "A web/src/seat-code.js",
+    "M web/src/styles.css"
+  ],
   "scope": {
     "states": [
       "screen:home",
