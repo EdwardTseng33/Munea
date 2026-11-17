@@ -99,4 +99,4 @@ related: iphone-medication-reminder-for-parents, parents-living-alone-7-things, 
 - [MyTherapy 官方網站](https://www.mytherapyapp.com/)
 - [Medisafe Medication Management（美國 App Store）](https://apps.apple.com/us/app/medisafe-medication-management/id573916946)
 - [Medisafe 官方網站](https://www.medisafeapp.com/)
-- [Track your medications in Health on iPhone（Apple 支援）](https://support.apple.com/guide/iphone/track-your-medications-iph811670c81/ios)
+- [Add and log medications with iPhone, iPad, and Apple Watch（Apple 支援）](https://support.apple.com/en-us/105064)
