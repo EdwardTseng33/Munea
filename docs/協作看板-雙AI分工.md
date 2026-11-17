@@ -13,6 +13,21 @@
 - **上線順序**：含這張的 App 版本上架前，後端要先帶上 #711（不然機構端還是舊行為，App 上寫的「只有次數」就不是事實）。
 - **跟開著的 PR 重疊的檔**：`web/index.html`、`web/src/app.js`、四語 json（#694／#696／#706）——都是各加各的、位置錯開；日文 `seatCode.*` 那七行是唯一改到既有行的地方。這個分支有全畫面證據，跟上 main 用 merge。
 - **檔**：`web/src/org-consent.js`（新）、`scripts/test-org-consent-ui.js`（新）、`web/index.html`、`web/src/app.js`、`web/src/seat-code.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-surface-manifest.json`、`web/src/i18n/app-surface-copy-manifest.json`、`scripts/app-full-surface-i18n-browser-precheck.js`、`scripts/test-app-surface-manifest.js`、`scripts/test-i18n-visual-qa-worklist.js`、`scripts/test-i18n-visual-qa-evidence.js`、`docs/I18N-SURFACE-INVENTORY.json`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/`（492 張＋報告）、本看板。
+### 2026-11-18 蘇菲｜🖥️ 照護人員版機構專區網頁（補助案 C4 前端 · Draft PR · 不碰 App 程式與通話；call-path risk 低：iOS 打包多剔三個網頁檔 · App E2E pending）
+
+- **為什麼**：C4 要「由場域護理或照護人員逐筆判定」。後端 #713 已併主線，缺照護人員登入後看得到、按得到的畫面。
+- **做了**（新頁 `web/org.html`＋`web/src/org.js`＋`web/src/org.css`；部署後網址是 admin.munea.net/org.html，免登入的 `org-portal.html` 不動）：
+  - 登入：跟 App 同一套 Google 登入，回跳到這一頁；沒開通的帳號顯示「請貴單位的沐寧聯絡窗口幫你開通」＋登出。
+  - 分頁只看 `/org/me` 的 capabilities：總覽（名額、使用狀況、守護次數；人數太少不顯示比例）、長輩（名單＋三個旗標；管理者／社工點開看本週關懷摘要，每看一次留紀錄）、提醒（四個數字＋準確率參考＋篩選＋逐筆判定）、紀錄（只有管理者）、月報。照服員只有總覽與名單、點不進摘要；企業窗口只有總覽與月報。
+  - 判定視窗：正確／誤報／觀察中＋兩個選填是否＋備註 200 字（提醒不要寫個資）；送不出去不關、不清空。「幾天沒聯絡才提醒」管理者可改、社工只看。
+  - 示範模式 `?demo=1&role=org_admin|case_manager|care_worker|esg`（`guest`／`none` 看登入頁與沒權限頁）：不打接口、不載登入元件，右上角「示範資料」。
+- **視覺關卡（女巫 84 分）三個 🔴 已改**：還沒判定的「判定」改實心主按鈕；說明字最小 14px、註腳最小 13px、灰字加深到 #4F5D58（各底色對比 ≥ 5.7:1）；內部用語照蘇菲拍板版換白話（守護腦亮燈→需要關心、留存→持續使用、掛心事→本人提到的煩惱…，判定三選一與準確率那行不動）。順手：名額代號與編號移到卡片最底、總覽重複的隱私說明拿掉、手機名單圖例收成一行可展開。
+- **後端兩件（蘇菲指定一起帶）**：`/org.html`、`/src/org.js`、`/src/org.css` 加安全標頭（不准被嵌框、不猜檔案類型、不帶來源網址；頁面的標頭政策只有 `frame-ancestors 'none'`，其他照頁面自己的 meta）；`capabilities_for` 補 `alerts`、`audit` 兩格（條件跟各接口放行一模一樣），前端直接用、拿掉自己換算的那段。
+- **加固（沙利曼／女巫第二輪）**：共用電腦登出一定清乾淨（登入只放這個分頁的 sessionStorage、鑰匙名跟 App 分開；登出請求失敗也自己清，用真的 Supabase 套件重現舊版會被前一位身分登入、新版不會）；第一次登入用 email 綁名額，要 email 已確認或用 Google／Apple 登入，不然回「請用受邀的 Google 帳號登入」；安全標頭比對改用跟讀檔一樣的正規化路徑；月報連結解析成網址比網域；示範標籤手機固定在角落、示範月報改按鈕；三個新檔不打包進 iOS App；判定鈕 40px、徽章 14px。
+- **測試**：新 `scripts/test-org-staff-portal.js` 29 項（用假畫面元件把 org.js 真的跑一遍；角色資料對照後端 capabilities_for）；突變 57 種全紅。後端 `test_org_alerts` 新增一條：四種角色的每一格 capabilities 跟實際打接口的結果一致（故意放寬兩格會紅）；`test_admin_security_headers` 補機構專區三個檔。無頭 Chrome 截圖 1280 寬 16 張＋390 寬 8 張，破框 0、橫向捲動 0、示範模式對外請求 0（字型除外）。正常模式實走：CSP 底下登入元件載得進來、Google 登入的回跳網址是這一頁（往 Supabase 的請求在瀏覽器端擋掉，沒碰登入服務）。
+- **還沒做／要確認**：① Supabase 後台 Redirect URLs 要有 `https://admin.munea.net/org.html`（沒有的話登入完會被送回 Site URL；從外面驗不出來）② 網頁版 Apple 登入沒做（Apple 網頁登入設定目前回 Invalid client id）③ 用真的機構人員帳號實走一次（要先開一個 org_staff）④ 測試沒掛進 package.json（要改既有檔）。
+- **檔**：`web/org.html`、`web/src/org.js`、`web/src/org.css`、`scripts/test-org-staff-portal.js`（皆新）、`engine/server.py`（安全標頭）、`engine/org_api.py`（capabilities 兩格、email 確認才綁）、`engine/test_admin_security_headers.py`、`engine/test_org_alerts.py`、`engine/test_org_api.py`、`scripts/ios-archive.sh`、`scripts/ios-export-app-store.sh`、`scripts/test-release-settings.js`、本看板。
+
 ### 2026-11-18 蘇菲｜🚨 通話中守護腦亮燈「沒記進雲端、緊急聯絡人沒發出去」——改走 Brain（PR · call-path risk 中：只動亮燈後的背景記錄與通知，不碰收音／出聲）
 
 - **怎麼發現的**：做 C4 機構異常提醒時查正式庫，8 月以來 `guardian_risk_evaluated` 只有 9 筆、全部沒有 `who`／`source`——不是通話來的。往回追：`live_voice_server.guardian_record_and_alert` 直接在 Voice 本機呼叫 `server.append_product_event` 與 `server.dispatch_safety_alert`，但 **Voice 那台沒有雲端鑰匙**（正式機環境變數只有 `MUNEA_BRAIN_INTERNAL_URL`、`MUNEA_VOICE_BRAIN_SECRET`；`server.py` 的 `voice_health_context_response` 註解自己也寫了）。所以：
