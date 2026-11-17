@@ -24,6 +24,7 @@ import re
 import care_week
 import enterprise_seats
 import org_api
+import supabase_adapter
 
 LOGGER = logging.getLogger("munea.org_alerts")
 
@@ -66,6 +67,11 @@ def _anchor(anomaly, week):
     if kind == "no_contact":
         return str((week.get("contact") or {}).get("lastCallDate") or "none")
     return str(anomaly.get("when") or "")
+
+
+def _account_key(account_id):
+    """帳號指紋：發出那一刻席次綁的是誰。之後席次換綁給別人，舊提醒不能掛到新的人名下。"""
+    return org_api.account_key(account_id)
 
 
 def alert_id(seat_id, kind, anchor):
@@ -223,7 +229,7 @@ def _suppressed(candidate, raised, today):
     return False
 
 
-def refresh_alerts(client, loaders=None, today=None):
+def refresh_alerts(client, loaders=None, today=None, channel="org_portal_inbox"):
     """算一次、把新出現的提醒「發出」（寫一筆 org_alert_raised）。回 (raised, marks, seats, persons, partial)。"""
     loaders = loaders or org_api.default_loaders()
     today_str = today or org_api._today()
@@ -233,13 +239,20 @@ def refresh_alerts(client, loaders=None, today=None):
     settings = client_settings(client["id"])
     seats, persons, candidates, partial = _candidate_alerts(client, loaders, today_str, {"noContactDays": settings["noContactDays"]})
     for cand in candidates:
-        if cand["alertId"] in raised or _suppressed(cand, raised, today_date):
+        prior = raised.get(cand["alertId"])
+        if (prior and prior.get("accountKey") in (None, _account_key(cand["accountId"]))) or _suppressed(cand, raised, today_date):
             continue
+        if prior:
+            # 同一個席次換了人、同一件事（例如都從沒通過話）：編號加上新指紋，當成新的一件
+            cand = {**cand, "alertId": alert_id(cand["seatId"], cand["type"], f"{cand['anchor']}|{_account_key(cand['accountId'])}")}
+            if cand["alertId"] in raised:
+                continue
         now = org_api._utc_now()
         details = {
             "clientId": client["id"], "alertId": cand["alertId"], "seatId": cand["seatId"], "siteLabel": cand["siteLabel"],
             "type": cand["type"], "anchor": cand["anchor"], "when": cand["when"], "fact": cand["fact"],
-            "suggestion": cand["suggestion"], "channel": "org_portal_inbox", "raisedAt": now, "actorType": "system",
+            "suggestion": cand["suggestion"], "channel": channel, "raisedAt": now, "actorType": "system",
+            "accountKey": _account_key(cand["accountId"]),
         }
         ok = org_api._audit({
             "eventType": EVENT_RAISED, "accountId": cand["accountId"], "targetTable": "enterprise_seats",
@@ -315,6 +328,8 @@ def org_alerts_response(auth, data=None, loaders=None, today=None):
         seat = visible.get(alert.get("seatId"))
         if not seat:
             continue  # 別的分點、或已經撤回同意的長輩：不列
+        if alert.get("accountKey") and alert["accountKey"] != _account_key(seat.get("accountId")):
+            continue  # 席次已經換給別人：前一位的提醒不掛到新的人名下
         alerts.append(_view(alert, marks, seat, persons.get(seat["accountId"]) or {}, staff_by_id))
     status_filter = str(data.get("status") or "").strip()
     if status_filter in MARK_RESULTS + ("unmarked",):
@@ -334,6 +349,21 @@ def org_alerts_response(auth, data=None, loaders=None, today=None):
         "privacy": {"statement": "只列已同意長輩的提醒；提醒內容是規則的固定句型，沒有對話原句。每一筆判定都會留下紀錄（誰、何時、判成什麼），不能刪改。"},
     }
     return org_api.assert_no_forbidden(payload)
+
+
+# 台灣電話：0 或 +886 開頭（含括號、橫線、空白），數字合計 8 碼以上。前後只看「不是數字／英文字」，
+# 中文緊貼也遮得到（\b 在中文旁邊不算邊界，11/18 複審實測漏遮「電話0227221234」）。日期不是 0 開頭，不會被誤遮。
+_PHONE_RE = re.compile(r"(?<![0-9A-Za-z])(?:\+886|\(0|0)[0-9()\-\s]{6,16}[0-9](?![0-9])")
+_TW_ID_RE = re.compile(r"(?<![0-9A-Za-z])[A-Za-z][12][0-9]{8}(?![0-9])")
+
+
+def _clean_remark(value):
+    """備註是照護人員自己打的字：去掉角括號、把電話與身分證號換成「〔已遮〕」、收成一行、最多 200 字。
+    （全名、病名擋不住——畫面上會提醒不要寫；這裡只擋格式明確的。）"""
+    text = re.sub(r"[<>]", "", str(value or ""))
+    text = _TW_ID_RE.sub("〔已遮〕", text)
+    text = _PHONE_RE.sub(lambda m: "〔已遮〕" if sum(ch.isdigit() for ch in m.group(0)) >= 8 else m.group(0), text)
+    return re.sub(r"\s+", " ", text).strip()[:REMARK_MAX]
 
 
 def _norm_yes_no(value):
@@ -360,7 +390,7 @@ def org_alert_mark_response(auth, data=None, loaders=None, today=None):
         return org_api._not_found()
     if result not in MARK_RESULTS:
         return {"ok": False, "error": "result_invalid", "allowed": list(MARK_RESULTS)}
-    remark = re.sub(r"\s+", " ", str(data.get("remark") or "")).strip()[:REMARK_MAX]
+    remark = _clean_remark(data.get("remark"))
     since_iso = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
     try:
         raised, marks = _load_events(client["id"], since_iso)
@@ -373,8 +403,8 @@ def org_alert_mark_response(auth, data=None, loaders=None, today=None):
     consented = org_api._only_consented(
         [s for s in enterprise_seats.list_seats(client_id=client["id"]) if s.get("status") in org_api.SEAT_STATUSES_VISIBLE], client)
     seat = next((s for s in _scope_seats(staff, consented) if s.get("id") == alert.get("seatId")), None)
-    if not seat:
-        return org_api._not_found()   # 別的分點、或已撤回同意：跟「不存在」同一句
+    if not seat or (alert.get("accountKey") and alert["accountKey"] != _account_key(seat.get("accountId"))):
+        return org_api._not_found()   # 別的分點、已撤回同意、或席次已換人：跟「不存在」同一句
     details = {
         "clientId": client["id"], "alertId": alert_key, "seatId": seat["id"], "type": alert.get("type"),
         "result": result, "isReal": _norm_yes_no(data.get("isReal")), "worthNotifying": _norm_yes_no(data.get("worthNotifying")),
@@ -403,6 +433,7 @@ AUDIT_ACTIONS = {
     "org_consent_granted": "長輩（或家人）打開了同意",
     "org_consent_revoked": "長輩（或家人）關掉了同意",
     EVENT_SETTINGS: "改了提醒設定",
+    "org_alerts_exported": "沐寧匯出了提醒與判定",
 }
 
 
@@ -438,10 +469,43 @@ def org_audit_response(auth, data=None):
 
 
 # ---------------------------------------------------------------------------
+# 營運端：把每一家照護機構的提醒算一次（給之後的排程呼叫；排程本身還沒設，要老闆點頭）
+# ---------------------------------------------------------------------------
+
+def admin_alerts_refresh_all_response(data=None, loaders=None, today=None):
+    """沒有人打開提醒匣的時候，提醒也該「發出」——之後由排程每天呼叫這支（萬能鑰匙）。
+    只算照護類、還在合約內的機構；一家失敗不擋其他家。回每家新發出幾筆。"""
+    data = data or {}
+    only = str(data.get("clientId") or "").strip()
+    if supabase_adapter._circuit_open():
+        return {"ok": False, "error": "cloud_unreachable", "count": 0, "clients": [], "newAlerts": 0}
+    if only and not enterprise_seats.get_client(only):
+        return {"ok": False, "error": "client_not_found", "count": 0, "clients": [], "newAlerts": 0}
+    results = []
+    for client in enterprise_seats.list_clients() or []:
+        if only and client.get("id") != only:
+            continue
+        if org_api._client_kind(client) != "care" or client.get("status") == "ended":
+            continue
+        try:
+            since_iso = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
+            before = set(_load_events(client["id"], since_iso)[0])
+            raised, _marks, _seats, _persons, partial = refresh_alerts(client, loaders, today, channel="scheduled_refresh")
+            # 有提醒寫不進紀錄、或守護腦事件讀不到：這家不算成功（排程要看得到失敗、會重試）
+            failed = bool({"alert_record", "safety"} & set(partial or [])) or supabase_adapter._circuit_open()
+            results.append({"clientId": client["id"], "ok": not failed, "newAlerts": len(set(raised) - before), "partial": partial})
+        except Exception as exc:
+            LOGGER.error("org_alerts refresh-all failed for %s: %s", client.get("id"), exc)
+            results.append({"clientId": client["id"], "ok": False, "error": "alerts_unavailable"})
+    return {"ok": all(r["ok"] for r in results), "count": len(results), "clients": results,
+            "newAlerts": sum(r.get("newAlerts", 0) for r in results)}
+
+
+# ---------------------------------------------------------------------------
 # 營運端：匯出逐筆判定（欄位順序對齊 C4 逐筆判定表）
 # ---------------------------------------------------------------------------
 
-EXPORT_COLUMNS = ["事件編號", "演練編號", "來源", "規則", "系統有沒有通知", "通知時間", "通知內容",
+EXPORT_COLUMNS = ["事件編號", "演練編號", "來源", "規則", "系統有沒有通知", "第一次出現在提醒匣的時間", "通知內容",
                   "事情是真的嗎", "值得通知嗎", "判定結果", "判定者", "職稱", "判定日期", "備註", "判定次數"]
 _YES_NO_LABEL = {"yes": "是", "no": "否", None: ""}
 _DRILL_ID_RE = re.compile(r"^[A-Z]\d{2}$")
@@ -476,12 +540,29 @@ def admin_alerts_export_response(data=None):
         judge = staff_by_id.get(last.get("staffId")) or {}
         rows.append({
             "事件編號": alert["alertId"], "演練編號": drill, "來源": "演練" if drill else "試辦",
-            "規則": alert.get("type"), "系統有沒有通知": "是", "通知時間": alert.get("raisedAt"),
+            "規則": alert.get("type"), "系統有沒有通知": "是", "第一次出現在提醒匣的時間": alert.get("raisedAt"),
             "通知內容": alert.get("fact"), "事情是真的嗎": _YES_NO_LABEL.get(last.get("isReal"), ""),
             "值得通知嗎": _YES_NO_LABEL.get(last.get("worthNotifying"), ""),
             "判定結果": RESULT_LABELS.get(last.get("result"), "") if last else "",
             "判定者": judge.get("displayName") or "", "職稱": ROLE_LABELS.get(last.get("role") or judge.get("role"), ""),
-            "判定日期": str(last.get("markedAt") or "")[:10], "備註": last.get("remark") or "", "判定次數": len(history),
+            "判定日期": str(last.get("markedAt") or "")[:10],
+            # 真人試辦那幾列的備註預設不帶出去（要帶得明講 includePilotRemarks），演練列照帶
+            "備註": (last.get("remark") or "") if (drill or data.get("includePilotRemarks")) else "",
+            "判定次數": len(history),
         })
+    rows = [{k: _cell(v) for k, v in row.items()} for row in rows]
+    # 沐寧代看機構資料要留紀錄（設計書 3.2）。寫不進去就不給——跟機構端讀週摘要同一條規矩。
+    if not org_api._audit({
+        "eventType": "org_alerts_exported", "targetTable": "enterprise_clients", "targetId": client["id"],
+        "details": {"clientId": client["id"], "actorType": "munea_operator", "rowCount": len(rows), "days": days},
+    }):
+        return {"ok": False, "error": "audit_unavailable"}
     return {"ok": True, "client": {"id": client["id"], "name": client.get("name") or ""}, "columns": EXPORT_COLUMNS,
             "count": len(rows), "rows": rows, "days": days}
+
+
+def _cell(value):
+    """轉成試算表時，= + - @ 開頭的字會被當成公式：前面加一個單引號。"""
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@"):
+        return "'" + value
+    return value

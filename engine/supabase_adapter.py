@@ -2705,6 +2705,30 @@ class SupabaseAdapter:
         )
         return [self.audit_row_to_event(row) for row in rows or []]
 
+    def append_org_audit_event(self, event, keep_account=False):
+        """機構端稽核專用：account_id 一律寫空值。
+        audit_events 的讀取規則讓「帳號成員讀得到自己帳號底下的紀錄」（001）——機構的判定、備註、
+        誰看過誰，都不能掛在長輩家或照護人員自己家的帳號底下，否則那家人用自己的登入就讀得到。
+        失敗一律往外丟（呼叫端據此判定「寫不進就不算數」）。"""
+        if not self.enabled():
+            return None
+        event = event or {}
+        target_id = event.get("targetId") or event.get("target_id")
+        actor = event.get("actorUserId") or event.get("actor_user_id")
+        account = event.get("accountId") or event.get("account_id")
+        row = {
+            "account_id": account if (keep_account and self._is_uuid(account)) else None,
+            "actor_user_id": actor if self._is_uuid(actor) else None,
+            "event_type": event.get("eventType") or event.get("event_type") or "unknown_event",
+            "target_table": event.get("targetTable") or event.get("target_table"),
+            "target_id": target_id if self._is_uuid(target_id) else None,
+            "details": event.get("details") or {},
+        }
+        rows = self._request("POST", "audit_events", query={"select": "*"}, payload=row, prefer="return=representation")
+        if not rows:
+            raise SupabaseRequestError("org audit insert returned no row", error_kind="write_failed")
+        return self.audit_row_to_event(rows[0])
+
     def load_org_audit_events(self, client_id, event_types, since_iso=None, limit=5000):
         """機構端稽核（異常提醒的發出／判定、讀取、同意）：照事件種類＋details.clientId 撈。
         給 org_alerts 用；不帶 account_id 過濾（一家機構跨很多帳號）。"""
