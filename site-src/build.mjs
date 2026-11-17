@@ -390,3 +390,25 @@ for (const l of LOCALES) for (const page of PAGES) {
     process.exitCode = 1;
   }
 }
+
+/* ── 保險絲：指南文章裡的站內連結必須指到真的有產生的頁面 ──
+ * 2026-11-18 第二輪評分抓到英文指南寫成 /guides/en/...（實際是 /en/guide/...），4 條全 404。 */
+{
+  const { existsSync: exists } = await import('node:fs');
+  const broken = [];
+  for (const l of LOCALES) {
+    for (const g of GUIDES[l.code]) {
+      for (const m of g.html.matchAll(/href="(\/[^"#?]*)/g)) {
+        const p = m[1].replace(/\/$/, '');
+        const target = join(OUT, p);
+        if (!(exists(join(target, 'index.html')) || exists(target) || exists(target + '.html'))) {
+          broken.push(`${l.code}/${g.slug} → ${m[1]}`);
+        }
+      }
+    }
+  }
+  if (broken.length) {
+    console.error(`✗ 指南裡有 ${broken.length} 條站內連結指到不存在的頁面：\n  ` + broken.join('\n  '));
+    process.exitCode = 1;
+  }
+}

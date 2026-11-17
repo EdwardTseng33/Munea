@@ -33,7 +33,7 @@ An app companion works on the phone your parent may already own. You trade the a
 
 ### Munea
 
-Munea is an iPhone app (iOS 15 or later). Your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. It keeps the highlights of past chats, such as a family member's name, rather than raw recordings, and users can view or delete them. It sends medication and appointment reminders, and family members can join a family circle that shows the health and mood updates your parent chooses to share. Munea is free to download with 5 trial points (about 1 minute of conversation each); Plus is US$19.99 per month and Pro is US$39.99 per month, and prices shown in the app are the final word. Inviting family needs a paid plan (Plus up to 4 people, Pro up to 12, including the person who creates the circle).
+Munea is an iPhone app (iOS 15 or later). Your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. It keeps the highlights of past chats, such as a family member's name, rather than raw recordings, and users can view or delete them. It sends medication and appointment reminders, and family members can join a family circle that shows the health and mood updates your parent chooses to share. Munea is free to download with 5 trial points (about 1 minute of conversation each); Plus is US$19.99 per month and Pro is US$39.99 per month, and prices shown in the app are the final word. Right now, creating or joining a family circle requires each member to have a Plus or Pro plan (Plus circles hold up to 4 people, Pro up to 12, including the creator).
 
 What Munea does not do: it has no fall detection, no emergency button, no location, and no camera or sensors; it does not phone your parent; and it will not tell you something is wrong if the app is not opened. It is not a medical device. It is available on the App Store in the US, Canada, Taiwan and Japan, and not yet in the UK or Australia. There is no Android version.
 
@@ -51,7 +51,7 @@ Other voice companion apps exist, and new ones appear often. Whichever one you c
 | Hardware needed | The ElliQ device, power and Wi-Fi | An iPhone (iOS 15 or later) | An iPhone (iOS 16.6 or later) |
 | How your parent talks to it | Voice | Voice, no typing | Video-based AI companions |
 | Reminders | Medication reminders | Medication and appointment reminders | Not stated on the listing we reviewed |
-| Family features | Caregiver app: video calls, photos, reminders, alerts, last-active view | Family circle showing what your parent chooses to share; invite needs a paid plan | Not stated on the listing we reviewed |
+| Family features | Caregiver app: video calls, photos, reminders, alerts, last-active view | Family circle showing what your parent chooses to share; each member needs a paid plan | Not stated on the listing we reviewed |
 | Price model | Lease with monthly fee; amount not published on the pages we opened | Free download with 5 trial points; Plus US$19.99 and Pro US$39.99 per month | Free download; plans US$14.99 to US$199.99 per month by minutes |
 | Emergency services | Not a medical device; refers members to their caregiver and contacts | No emergency button; not a medical device | Not a substitute for emergency services |
 | Availability | Regions not published | App Store in the US, Canada, Taiwan and Japan | Listed on the US App Store |
@@ -79,8 +79,8 @@ Neither is better in every home. Many families try one and learn what their pare
 1. **Ask your parent.** Show them a video or trial if possible. Their reaction matters more than any feature list.
 2. **Check the home.** A robot needs a good Wi-Fi connection and a spot to sit; an app needs a working phone.
 3. **Read the costs.** Ask for the full price, the minimum term, and how to cancel in writing.
-4. **Read the privacy policy.** Look at what is saved and who can see it. Our guide to [AI companions for seniors](/guides/en/ai-companion-for-seniors) lists questions to ask.
-5. **Keep people in the picture.** A companion should add to your calls and visits, not replace them. See [how to check in on a parent who lives alone](/guides/en/check-in-on-elderly-parent-living-alone).
+4. **Read the privacy policy.** Look at what is saved and who can see it. Our guide to [AI companions for seniors](/en/guide/ai-companion-for-seniors) lists questions to ask.
+5. **Keep people in the picture.** A companion should add to your calls and visits, not replace them. See [how to check in on a parent who lives alone](/en/guide/check-in-on-elderly-parent-living-alone).
 
 ## FAQ
 

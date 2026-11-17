@@ -2,6 +2,8 @@
 
 > Munea is an AI health companion app for iPhone (iOS 15 or later), made for the whole family, available on the App Store in Taiwan, the United States, Canada and Japan. Older parents talk with an AI companion by voice and get medication and check-up reminders; adult children who live far away join a family health circle to see how their parents are doing. Munea is a companion and reminder tool. It is not a medical device and not a long-term care system.
 
+Also known as: 沐寧, Munea App, 沐寧 App, Munea 沐寧 (all the same app).
+
 Brand line (Traditional Chinese original): 家人的健康，終於有人一直記得。 ("Finally, someone remembers your family's health.")
 
 ## Who it is for
@@ -21,7 +23,7 @@ Brand line (Traditional Chinese original): 家人的健康，終於有人一直�
 
 ## Pricing
 
-- Free to download. New accounts get 5 trial credits (1 credit is about 1 minute of conversation). The free plan covers the account owner only.
+- Free to download. New accounts get 5 trial credits (1 credit is about 1 minute of conversation). The free plan covers the account owner only; currently every member of a family health circle needs a Plus or Pro plan.
 - Plus: 100 credits per month, family health circle of up to 4 people (including the owner).
 - Pro: 200 credits per month, up to 12 people (including the owner).
 - App Store prices as of November 2026: Taiwan Plus NT$599/month (NT$5,750/year), Pro NT$1,199/month (NT$11,500/year); United States Plus US$19.99/month (US$199.99/year), Pro US$39.99/month (US$399.99/year); Japan Plus ¥3,500/month (¥30,000/year), Pro ¥6,000/month (¥60,000/year). The price shown in the app is what you pay.

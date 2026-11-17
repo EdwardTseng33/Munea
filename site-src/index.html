@@ -52,7 +52,7 @@
   .dev,.callphone{box-shadow:0 0 0 8px #2b2b27!important}
   .blob{display:none!important}
   .hero-media .glow,.hero-card .glow,.cta-box .glow,.cta-box .glow2{display:none!important}
-  .cta-box{background:var(--teal-d)!important}
+  .cta-box{background:var(--teal-btn)!important}
   .progress{background:var(--teal)!important}
   .pane{background:#edf5f1!important}
   .hero-media .frame{background:#e7f0eb!important}
@@ -176,7 +176,7 @@
   .hero-media .float-chip{padding:8px 12px;font-size:12.5px;border:1px solid var(--line);background:#fff;gap:8px}
   .hero-media .float-chip .ic{width:28px;height:28px;border-radius:9px}
   .hero-media .float-chip .ic svg{width:15px;height:15px}
-  .hero .avail{margin-top:14px;font-size:14px;color:var(--muted)}
+  .hero .avail{margin-top:14px;font-size:15px;color:#4A5651;font-weight:500}
 
   /* ══════════ 眼見為憑 ══════════ */
   #livedemo{padding:76px 0;background:var(--mint)}
@@ -274,6 +274,8 @@
   .plan li{display:flex;gap:9px;font-size:15px;color:var(--ink);line-height:1.6}
   .plan li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--teal);margin-top:.6em;flex-shrink:0}
   .plan-note{max-width:760px;margin:22px auto 0;text-align:center;color:var(--muted);font-size:14px;line-height:1.8}
+  .plan-privacy{max-width:760px;margin:14px auto 0;display:flex;gap:10px;align-items:flex-start;background:var(--mint);border-radius:16px;padding:14px 18px;color:var(--ink);font-size:14.5px;line-height:1.75}
+  .plan-privacy svg{width:18px;height:18px;flex-shrink:0;margin-top:4px;stroke:var(--teal-dd)}
   @media(max-width:880px){.steps,.plans{grid-template-columns:1fr}.step,.plan{padding:22px 20px}}
 
   /* ══════════ 指南入口 ══════════ */
@@ -562,6 +564,7 @@
       <div class="plan"><span class="plan-name">Pro</span><div class="plan-price">{{price.pro.price}}<small>{{price.perMonth}}</small></div><div class="plan-year">{{price.pro.year}}</div><ul><li>{{price.pro.li1}}</li><li>{{price.pro.li2}}</li><li>{{price.pro.li3}}</li></ul></div>
     </div>
     <p class="plan-note reveal">{{price.note}}</p>
+    <p class="plan-privacy reveal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg><span>{{price.privacy}}</span></p>
   </div>
 </section>
 

@@ -18,6 +18,7 @@ h1,h2,h3,.en{font-family:"Poppins","Noto Sans TC",sans-serif}
 .serif{font-family:"Noto Serif TC",serif}
 /* 日文頁：漢字與假名用同一套日文字型，不再混到系統字；英西頁：引言用拉丁襯線，不掉到 Times */
 html:lang(ja) body{font-family:"Noto Sans JP","Poppins",sans-serif}
+html:lang(en) body,html:lang(es) body{font-family:"Poppins","Noto Sans TC",sans-serif}
 html:lang(ja) h1,html:lang(ja) h2,html:lang(ja) h3{font-family:"Poppins","Noto Sans JP",sans-serif}
 html:lang(ja) .serif{font-family:"Noto Serif JP",serif;letter-spacing:.02em}
 html:lang(en) .serif,html:lang(es) .serif{font-family:"Noto Serif",Georgia,serif}
@@ -357,10 +358,10 @@ footer{background:#2b3733;color:#cfd8d5;padding:60px 0 30px}
 footer .logo{color:#fff;margin-bottom:14px}
 footer .logo-mark{filter:drop-shadow(0 3px 10px rgba(244,162,97,.4))}
 footer p.desc{font-size:14.5px;color:#9aa8a3;max-width:320px}
-.foot-col h4{font-family:"Poppins";font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#A9B6B1;margin-bottom:6px}
+.foot-col h4{font-family:"Poppins";font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#B4C0BC;margin-bottom:6px}
 .foot-col a{display:block;color:#cfd8d5;font-size:14.5px;padding:10px 0;min-height:44px;transition:.2s}
 .foot-col a:hover{color:var(--coral);transform:translateX(3px)}
-.foot-bottom{border-top:1px solid #3c4844;padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:#A9B6B1}
+.foot-bottom{border-top:1px solid #3c4844;padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:#B4C0BC}
 @media(max-width:760px){.foot-grid{grid-template-columns:1fr 1fr}}
 
 /* reveal */

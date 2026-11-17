@@ -79,7 +79,7 @@ Whichever you choose, ask these questions:
 4. Does it need a smartphone, Wi-Fi, a subscription?
 5. Is it described plainly as not being a medical or emergency service?
 
-For a closer look at one type, see [AI companions for seniors: what they can and can't do](/guides/en/ai-companion-for-seniors).
+For a closer look at one type, see [AI companions for seniors: what they can and can't do](/en/guide/ai-companion-for-seniors).
 
 ## When a tool is not enough
 
@@ -87,7 +87,7 @@ Apps and chats are for ordinary days. If your parent is at risk of falling, has 
 
 ## Where Munea fits, and what it doesn't do
 
-Munea is an iPhone app (iOS 15 or later) in which your parent talks with an AI character, Nina or Milo, by voice, and which can send medication and appointment reminders on their phone. A family circle lets you see the health and mood updates your parent chooses to share, and it needs a paid plan to invite family (US$19.99 per month for Plus, up to 4 people; US$39.99 per month for Pro, up to 12, as shown in the app). It does not offer fall detection, an emergency button, location sharing, cameras or sensors, and it won't call your parent or alert you if the app is not opened. It is on the App Store in the US, Canada, Taiwan and Japan, but not yet in the UK or Australia.
+Munea is an iPhone app (iOS 15 or later) in which your parent talks with an AI character, Nina or Milo, by voice, and which can send medication and appointment reminders on their phone. A family circle lets you see the health and mood updates your parent chooses to share, and right now every member of a family circle needs a Plus plan (US$19.99 per month, circles of up to 4) or a Pro plan (US$39.99 per month, up to 12), as shown in the app. It does not offer fall detection, an emergency button, location sharing, cameras or sensors, and it won't call your parent or alert you if the app is not opened. It is on the App Store in the US, Canada, Taiwan and Japan, but not yet in the UK or Australia.
 
 ## FAQ
 

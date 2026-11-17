@@ -79,7 +79,7 @@ Both can work. Neither is better in every home.
 | Portability | Stays home | Goes wherever the phone goes |
 | Good fit | A parent who is home most of the day and likes a device that is simply there | A parent who already uses a smartphone comfortably |
 
-If your parent doesn't use a smartphone confidently, a dedicated device may be less stressful. If they already text and take photos, an app may feel natural. For a side-by-side look at one robot and the phone-app route, see our [ElliQ alternatives guide](/guides/en/elliq-alternatives).
+If your parent doesn't use a smartphone confidently, a dedicated device may be less stressful. If they already text and take photos, an app may feel natural. For a side-by-side look at one robot and the phone-app route, see our [ElliQ alternatives guide](/en/guide/elliq-alternatives).
 
 ## How families can stay involved
 
@@ -92,7 +92,7 @@ A companion works best as one piece of a wider routine.
 - **Have a human backup.** Keep a neighbor, friend or local service on your contact list. In the US, the [Eldercare Locator](https://eldercare.acl.gov) (1-800-677-1116) connects families to local services. In the UK, the Age UK Advice Line is 0800 678 1602, free to call from 8am to 7pm every day of the year.
 - **Review after a few weeks.** If it isn't helping, stop. There is no prize for sticking with it.
 
-For more ideas on keeping in touch without hovering, read [how to check in on an elderly parent who lives alone](/guides/en/check-in-on-elderly-parent-living-alone).
+For more ideas on keeping in touch without hovering, read [how to check in on an elderly parent who lives alone](/en/guide/check-in-on-elderly-parent-living-alone).
 
 ## Where Munea fits
 
