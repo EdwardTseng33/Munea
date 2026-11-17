@@ -11387,17 +11387,35 @@ function init() {
       syncPush('familyBook', book.slice(0, FAMILY_BOOK_MAX));
     } catch (e) {}
   }
+  // 活動結束那句首頁動態的共用零件（2026-11-15）。
+  //
+  // 以前這幾句是寫死的中文，英日西的首頁會冒出「「Family walking challenge」結束了，
+  // 收進家庭記錄簿」。現在句子走四語文案表；粗體在這裡包（文案表不准放 HTML），
+  // 活動名、人名、選項是使用者自己打的字，進 innerHTML 前先消毒。
+  // 注意：存進 munea.familyFeed2 的是「當下語言排好的整句」，之後換語言、舊的那幾則不會跟著變。
+  function actEndFeedValues(a, extra) {
+    return Object.assign({
+      title: muneaEscapeHtml((a && a.title) || muneaT('activity.defaultTitle', '活動')),
+      book: '<b>' + muneaT('feed.familyBook', '家庭記錄簿') + '</b>',
+    }, extra || {});
+  }
+  function actFeedBold(text) { return '<b>' + muneaEscapeHtml(text) + '</b>'; }
   // 活動結束時，依種類公布結果進記錄簿（不再只是「結束了」）
   function announceActEnd(a) {
     try {
       if (a.kind === 'quiz' && a.answers && Object.keys(a.answers).length) {
         const top = Object.entries(a.answers).sort((x, y) => y[1] - x[1])[0];
-        pushFamilyFeed('「' + a.title + '」結算了——<b>' + top[0] + '</b> 答對最多（' + top[1] + ' 題），收進<b>家庭記錄簿</b>');
+        // 「你」是存庫代號：自己答對最多時換成當下語言的「你」，句子也走第二人稱那條
+        // （日文不能寫「あなたさん」、西文動詞要跟著變）。
+        const values = actEndFeedValues(a, { name: actFeedBold(actDisplayName(top[0])), n: top[1] });
+        pushFamilyFeed(top[0] === '你'
+          ? muneaT('feed.quizEndedSelf', '「{title}」結算了——{name} 答對最多（{n} 題），收進{book}', values)
+          : muneaT('feed.quizEnded', '「{title}」結算了——{name} 答對最多（{n} 題），收進{book}', values));
         recordInFamilyBook(a, muneaT('book.quizWinner', '{name} 答對最多（{n} 題）', { name: top[0], n: top[1] }), Object.keys(a.answers));
       } else if (a.kind === 'vote' && a.votes && Object.keys(a.votes).length) {
         const tally = {}; Object.values(a.votes).forEach(o => tally[o] = (tally[o] || 0) + 1);
         const win = Object.entries(tally).sort((x, y) => y[1] - x[1])[0];
-        pushFamilyFeed('「' + a.title + '」投票結束——<b>' + win[0] + '</b> 最多票，收進<b>家庭記錄簿</b>');
+        pushFamilyFeed(muneaT('feed.voteEnded', '「{title}」投票結束——{option} 最多票，收進{book}', actEndFeedValues(a, { option: actFeedBold(win[0]) })));
         recordInFamilyBook(a, muneaT('book.voteWinner', '{name} 最多票', { name: win[0] }), Object.keys(a.votes));
       } else if (a.kind === 'draw' && a.picks && Object.keys(a.picks).length) {
         // 新玩法：大家早就各自抽完了，到期只是把結果收攏進記錄簿，不再重抽一次
@@ -11438,13 +11456,17 @@ function init() {
         recordInFamilyBook(a, muneaT('book.drawNobody', '沒有人抽'), []);
       } else if (a.kind === 'event' && a.rsvp) {
         const going = Object.entries(a.rsvp).filter(([, v]) => v === 'go').map(([n]) => n);
-        pushFamilyFeed('「' + a.title + '」結束了' + (going.length ? '（' + going.join('、') + ' 有去）' : '') + '，收進<b>家庭記錄簿</b>');
+        pushFamilyFeed(going.length
+          ? muneaT('feed.eventEndedWent', '「{title}」結束了（{names} 有去），收進{book}', actEndFeedValues(a, {
+            names: going.map(n => muneaEscapeHtml(actDisplayName(n))).join(muneaListSeparator()),
+          }))
+          : muneaT('feed.actEnded', '「{title}」結束了，收進{book}', actEndFeedValues(a)));
         recordInFamilyBook(a, going.length ? muneaT('book.eventWent', '{names} 有去', { names: going.join(muneaListSeparator()) }) : muneaT('book.eventEnded', '結束了'), going);
       } else {
-        pushFamilyFeed('「' + a.title + '」結束了，收進<b>家庭記錄簿</b>');
+        pushFamilyFeed(muneaT('feed.actEnded', '「{title}」結束了，收進{book}', actEndFeedValues(a)));
         recordInFamilyBook(a, muneaT('book.eventEnded', '結束了'), a.names || []);
       }
-    } catch (e) { pushFamilyFeed('「' + (a.title || '活動') + '」結束了，收進<b>家庭記錄簿</b>'); }
+    } catch (e) { pushFamilyFeed(muneaT('feed.actEnded', '「{title}」結束了，收進{book}', actEndFeedValues(a))); }
   }
   // 空狀態 #actEmpty＝唯一插入錨點（示範卡 7/15 拆掉後，頁上可能一張卡都沒有）
   function updateActEmpty() {
