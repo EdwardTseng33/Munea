@@ -83,7 +83,7 @@ shot 04-call1-ended
 to_background                             # between call 1 and call 2
 after 20
 to_foreground                             # returns once the App is in front again
-after 7;  shot 06a-topics-sheet           # asked once before an early call (stays up 8 s)
+after 2;  shot 06a-topics-sheet           # asked once before an early call (stays up 16 s)
 after 14; shot 06-call2-live              # first call after coming back
 after 24; shot 08-call3-live              # call right after the native audio pulse
 after 26; shot 09-call4-live              # call 4 is up and waiting to be left
@@ -94,7 +94,7 @@ after 1;  shot 11-call4-after-return      # the notice card
 after 5;  shot 12-call4-after-return-later
 after 22; shot 14-status
 after 17; shot 15-settings
-after 18; shot 16-seat-code
+after 14; shot 16-seat-code
 after 14
 
 kill "$LAUNCH_PID" >/dev/null 2>&1 || true

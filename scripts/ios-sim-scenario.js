@@ -134,7 +134,7 @@
       // visible to a person, then go on the way a person would (Save with nothing picked starts the call).
       var topics = q('#interestsModal');
       if (topics && topics.classList.contains('show')) {
-        await sleep(8000);
+        await sleep(16000);
         var skip = q('#interestsSkip');
         var closeBtn = q('#interestsModal .mx-close, #interestsModal .auth-close');
         log(name + '_TOPICS_SHEET', {
@@ -218,7 +218,7 @@
     var cyc2 = await waitHiddenThenVisible(240000);
     await sleep(2500);
     log('CALL4_AFTER_RETURN', Object.assign({ cycled: cyc2 }, snap()));
-    await sleep(12000);
+    await sleep(20000);
     log('CALL4_AFTER_RETURN_LATER', snap());
     await hangUp('CALL4');
 
