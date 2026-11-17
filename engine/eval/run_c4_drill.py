@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""補助案 C4 情境演練「預檢」（離線、不碰資料庫、不連正式機）。
+"""機構端異常提醒：情境演練「預檢」（離線、不碰資料庫、不連正式機）。
 
-做什麼：把 40 筆情境演練（engine/eval/c4_drill/scenarios_v1.json）各自當成一位測試長輩，
+做什麼：把一份情境演練劇本（JSON，--scenarios 指定；劇本放在私有的驗收資料夾、不進公開程式庫）裡的每一筆
+各自當成一位測試長輩，
 在暫存的本機資料裡開好「演練機構＋席次＋同意＋管理者」，餵進跟正式機同一份程式
 （engine/org_alerts.py 的提醒匣、engine/care_week.py 的三條規則、engine/model_router.py 的守護腦），
 看系統會不會發提醒、發哪一種，跟劇本的預期逐筆對照。
 
-這是「正式演練之前先跑一遍」：正式演練（116/1）要在正式機用測試帳號真的灌資料、讓場域護理人員逐筆判定；
-這裡只回答「程式行為跟劇本預期一不一致」，不算進 C4 的 50 筆。
+這是「正式演練之前先跑一遍」：正式演練要在正式機用測試帳號真的灌資料、讓場域護理人員逐筆判定；
+這裡只回答「程式行為跟劇本預期一不一致」，不是正式判定紀錄。
 
 跑法：
-    python engine/eval/run_c4_drill.py                      # 守護腦只跑規則層（不連網）
-    python engine/eval/run_c4_drill.py --with-ai-review     # 再加第二層 AI（正式線真路徑，需要 GEMINI_API_KEY）
-    python engine/eval/run_c4_drill.py --out-md 報告.md
+    python engine/eval/run_c4_drill.py --scenarios <劇本.json>                      # 守護腦只跑規則層（不連網）
+    python engine/eval/run_c4_drill.py --scenarios <劇本.json> --with-ai-review     # 再加第二層 AI（正式線真路徑，需要 GEMINI_API_KEY）
+    python engine/eval/run_c4_drill.py --scenarios <劇本.json> --out-md 報告.md
+
+劇本格式：{"version", "source", "scenarios": [{"id", "rule", "expectNotify", "expectTypes", "mood": [[幾天前, 等級]],
+"calls": [幾天前], "baselineAvg", "noContactDays", "sentences": [[幾天前, "一句話"]], "note"}]}
 """
 import argparse
 import datetime as _dt
@@ -184,11 +188,11 @@ def render_md(rows, with_ai, source):
     fn = sum(1 for r in rows if r["expectNotify"] and not r["notified"])
     tn = sum(1 for r in rows if not r["expectNotify"] and not r["notified"])
     lines = [
-        "# C4 情境演練預檢（離線）",
+        "# 機構端異常提醒：情境演練預檢（離線）",
         "",
         f"- 產出：{_dt.datetime.now().strftime('%Y-%m-%d %H:%M')}；守護腦：{'規則層＋第二層 AI（正式線真路徑）' if with_ai else '只跑規則層（不連網）'}",
         f"- 劇本：{source}",
-        "- 這是正式演練前的程式行為預檢，**不算進 C4 的 50 筆**；正式演練要在正式機用測試帳號灌資料、由場域護理人員逐筆判定。",
+        "- 這是正式演練前的程式行為預檢，**不是正式判定紀錄**；正式演練要在正式機用測試帳號灌資料、由場域護理人員逐筆判定。",
         "",
         f"**結果：{ok}／{len(rows)} 筆跟劇本預期一致**｜該通知且有發 {tp}、不該通知也沒發 {tn}、多發 {fp}、漏報 {fn}",
         "",
@@ -212,7 +216,7 @@ def render_md(rows, with_ai, source):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scenarios", default=os.path.join(HERE, "c4_drill", "scenarios_v1.json"))
+    ap.add_argument("--scenarios", required=True, help="劇本 JSON 路徑（放在私有的驗收資料夾，不進公開程式庫）")
     ap.add_argument("--with-ai-review", action="store_true")
     ap.add_argument("--out-json")
     ap.add_argument("--out-md")

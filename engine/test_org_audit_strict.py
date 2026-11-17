@@ -35,7 +35,8 @@ class FakeAdapter:
     def enabled(self):
         return True
 
-    def append_org_audit_event(self, event):
+    def append_org_audit_event(self, event, keep_account=False):
+        self.keep_flags = getattr(self, "keep_flags", []) + [(event.get("eventType"), keep_account)]
         if self.fail:
             raise supabase_adapter.SupabaseRequestError("timed out", error_kind="unreachable")
         row = {"id": str(len(self.rows)), "account_id": None, "actor_user_id": event.get("actorUserId"),
@@ -84,6 +85,32 @@ class StrictWriterTests(unittest.TestCase):
         with patch.object(server.supabase_adapter, "make_adapter", side_effect=make):
             server._org_audit_backend()
         self.assertEqual(calls, [None])
+
+    def test_consent_records_stay_with_the_family_everything_else_does_not(self):
+        fake = FakeAdapter()
+        with patch.object(server, "_org_audit_backend", return_value=fake):
+            for kind in ("org_consent_granted", "org_consent_revoked", "org_alert_marked", "org_care_week_read", "org_alerts_exported"):
+                server.append_org_audit_event_strict({"eventType": kind, "accountId": "22222222-2222-2222-2222-222222222222", "details": {}})
+        self.assertEqual(dict(fake.keep_flags), {"org_consent_granted": True, "org_consent_revoked": True, "org_alert_marked": False,
+                                                 "org_care_week_read": False, "org_alerts_exported": False})
+
+    def test_adapter_keeps_account_only_when_asked(self):
+        adapter = supabase_adapter.SupabaseAdapter.__new__(supabase_adapter.SupabaseAdapter)
+        captured = []
+        adapter.enabled = lambda: True
+        adapter._request = lambda method, table, query=None, payload=None, prefer=None: captured.append(payload) or [{"id": "1", **payload}]
+        acc = "3f2b8c1e-4d5a-4b6c-8d7e-9f0a1b2c3d4e"   # 合格的帳號編號（變體位要 8／9／a／b）
+        adapter.append_org_audit_event({"eventType": "org_consent_granted", "accountId": acc}, keep_account=True)
+        adapter.append_org_audit_event({"eventType": "org_alert_marked", "accountId": acc})
+        self.assertEqual([c["account_id"] for c in captured], [acc, None])
+
+    def test_cloud_expected_but_not_enabled_refuses_local_fallback(self):
+        class Off:
+            def enabled(self):
+                return False
+        with patch.object(server, "_org_audit_backend", return_value=Off()),                 patch.dict(os.environ, {"MUNEA_DATABASE_PROVIDER": "supabase"}):
+            with self.assertRaises(RuntimeError):
+                server.append_org_audit_event_strict({"eventType": "org_alert_marked", "details": {"clientId": "c"}})
 
     def test_org_sink_is_the_strict_writer(self):
         src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()
@@ -148,11 +175,52 @@ class NoFakeSuccessOnWritesTests(W.Base):
 
     def test_only_missing_setup_may_fall_back_locally(self):
         self.assertTrue(org_api._local_write_ok(supabase_adapter.SupabaseRequestError("x", error_kind="missing_table")))
-        self.assertTrue(org_api._local_write_ok(supabase_adapter.SupabaseRequestError("x", error_kind="configuration")))
+        # 401（鑰匙錯）回來的是 configuration：不准退本機（11/18 複審）
+        self.assertFalse(org_api._local_write_ok(supabase_adapter.SupabaseRequestError("x", error_kind="configuration")))
         self.assertFalse(org_api._local_write_ok(supabase_adapter.SupabaseRequestError("x", error_kind="unreachable")))
 
 
 class RemarkAndExportHygieneTests(W.Base):
+    def test_remark_masks_numbers_glued_to_chinese_and_common_landline_formats(self):
+        for raw in ("王伯伯A123456789", "電話0227221234", "請打 02-2722-1234", "(02)27221234 找她", "手機0912345678", "+886912345678"):
+            cleaned = org_alerts._clean_remark(raw)
+            self.assertIn("〔已遮〕", cleaned, raw)
+        kept = org_alerts._clean_remark("11/18 打電話，2026-11-18 再追蹤，血壓 135／85")
+        self.assertNotIn("〔已遮〕", kept)                          # 日期與血壓數字不是電話，不遮
+        short = org_alerts._clean_remark("藥袋編號 0123-456，下次回診帶")
+        self.assertIn("0123-456", short)                           # 0 開頭但不到 8 碼：不是電話，不遮
+
+    def test_pilot_remarks_are_left_out_of_the_export_by_default(self):
+        audit = self.audit
+        def load(client_id, since_iso, types):
+            out = []
+            for i, e in enumerate(audit):
+                if e.get("eventType") in types:
+                    d = e.get("details") or {}
+                    out.append({"eventType": e["eventType"], "details": d,
+                                "createdAt": f"{d.get('raisedAt') or d.get('markedAt') or ''}#{i:06d}"})
+            return out
+        org_alerts.set_event_loader(load)
+        try:
+            loaders = fake_loaders()                                   # 沒有通話 → A1、A2 都會亮沒聯絡
+            seats = json.load(open(os.environ["MUNEA_ENTERPRISE_SEATS_PATH"], encoding="utf-8"))
+            for s in seats:
+                if s["id"] == SEAT_A1:
+                    s["memberName"] = "M01"                             # A1＝演練、A2＝真人試辦
+            W.write("MUNEA_ENTERPRISE_SEATS_PATH", seats)
+            alerts = org_alerts.org_alerts_response(auth(ADMIN_A), {}, loaders=loaders)["alerts"]
+            for a in alerts:
+                org_alerts.org_alert_mark_response(auth(ADMIN_A), {"alertId": a["alertId"], "result": "correct",
+                                                                   "remark": "演練備註" if a["seatId"] == SEAT_A1 else "試辦備註"}, loaders=loaders)
+            default = org_alerts.admin_alerts_export_response({"clientId": ORG_A})
+            by_source = {r["來源"]: r for r in default["rows"]}
+            self.assertEqual(by_source["演練"]["備註"], "演練備註")
+            self.assertEqual(by_source["試辦"]["備註"], "")             # 真人試辦的備註預設不帶出去
+            opted = org_alerts.admin_alerts_export_response({"clientId": ORG_A, "includePilotRemarks": True})
+            self.assertEqual({r["來源"]: r for r in opted["rows"]}["試辦"]["備註"], "試辦備註")
+        finally:
+            org_alerts.set_event_loader(None)
+
     def test_remark_masks_phone_and_id_and_strips_brackets(self):
         cleaned = org_alerts._clean_remark("<b>家屬</b> 0912-345-678 打過，身分證 A123456789，市話 02-23651098")
         self.assertNotIn("0912", cleaned)

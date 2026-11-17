@@ -26,6 +26,7 @@
 稽核寫不進去時 L2 讀取**不給**（audit_unavailable）——可問責優先於可用。
 """
 import datetime as _dt
+import hashlib
 import json
 import logging
 import os
@@ -117,7 +118,7 @@ def _local_write_ok(exc):
     連不上（逾時、斷路器開著）不算：退本機檔會假成功——例如撤回同意寫進那台機器的暫存檔、雲端仍是同意，
     機構照樣看得到（2026-11-18 #713 信任關卡）。"""
     kind = getattr(exc, "error_kind", None)
-    if kind in ("missing_table", "configuration"):
+    if kind == "missing_table":
         return True
     text = str(exc).lower()
     return "pgrst205" in text or "could not find the table" in text
@@ -155,6 +156,11 @@ def _write_json(path, data):
 
 def _lower(value):
     return str(value or "").strip().lower()
+
+
+def account_key(account_id):
+    """帳號指紋：紀錄當下席次綁的是誰（不可逆）。席次之後換給別人，用它分得出是哪一位的事。"""
+    return hashlib.sha1(f"munea-org-alert|{account_id}".encode("utf-8")).hexdigest()[:16]
 
 
 def _seat_code(seat_id):
@@ -853,6 +859,7 @@ def org_elder_care_week_response(auth, data=None, loaders=None):
         "eventType": "org_care_week_read", "actorUserId": staff.get("authUserId"), "accountId": account_id,
         "targetTable": "enterprise_seats", "targetId": seat_id,
         "details": {"actorType": "org_staff", "staffId": staff["id"], "role": staff["role"], "clientId": client["id"],
+                    "seatId": seat_id, "accountKey": account_key(account_id),
                     "siteLabel": seat.get("siteLabel"), "periodStart": start.isoformat(), "periodEnd": end.isoformat()},
     })
     if not audited:
@@ -960,11 +967,15 @@ def org_consent_set_response(identity, data=None):
         if not _audit(audit_event):
             LOGGER.error("org_api consent grant refused: audit write failed (seat %s)", _seat_code(seat_id))
             return {"ok": False, "error": "consent_not_recorded", "seat": _consent_view(seat, client, existing)}
-        record = save_consent({
-            **(existing or {}), "enterpriseClientId": client["id"], "seatId": seat_id, "accountId": account_id,
-            "status": "granted", "grantedByAuthUserId": identity.get("authUserId"), "grantedByRole": by_role,
-            "grantedAt": now, "revokedAt": None, "revokedByAuthUserId": None, "note": str(data.get("note") or "")[:200] or None,
-        })
+        try:
+            record = save_consent({
+                **(existing or {}), "enterpriseClientId": client["id"], "seatId": seat_id, "accountId": account_id,
+                "status": "granted", "grantedByAuthUserId": identity.get("authUserId"), "grantedByRole": by_role,
+                "grantedAt": now, "revokedAt": None, "revokedByAuthUserId": None, "note": str(data.get("note") or "")[:200] or None,
+            })
+        except Exception as exc:
+            LOGGER.error("org_api consent grant not saved: %s", exc)
+            return {"ok": False, "error": "consent_not_saved", "seat": _consent_view(seat, client, existing)}
     else:
         if not existing:
             return {"ok": True, "changed": False, "seat": _consent_view(seat, client, None)}

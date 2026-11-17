@@ -321,10 +321,10 @@ class RefreshAllTests(AlertsBase):
 
     def test_one_client_failing_does_not_stop_others(self):
         real = org_alerts.refresh_alerts
-        def flaky(client, loaders=None, today=None):
+        def flaky(client, loaders=None, today=None, **kw):
             if client["id"] == ORG_A:
                 raise RuntimeError("down")
-            return real(client, loaders, today)
+            return real(client, loaders, today, **kw)
         with patch.object(org_alerts, "refresh_alerts", side_effect=flaky):
             out = org_alerts.admin_alerts_refresh_all_response({}, loaders=self.loaders)
         self.assertFalse(out["ok"])

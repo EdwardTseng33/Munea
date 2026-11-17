@@ -7686,6 +7686,11 @@ def append_audit_event(event=None):
 org_api.set_audit_sink(append_audit_event)
 
 
+# 同意／撤回是家人自己按的：這兩種留在家人自己的帳號底下（他「下載我的資料」要看得到自己按過什麼）。
+# 其餘機構端紀錄（判定、備註、誰看過誰、人員啟用、設定、匯出）帳號欄一律空值。
+ORG_FAMILY_OWNED_EVENTS = ("org_consent_granted", "org_consent_revoked")
+
+
 def _org_audit_backend():
     """機構端稽核用的雲端連線：刻意不綁這次請求的登入身分（測試可換掉這一支）。"""
     return supabase_adapter.make_adapter(identity=None)
@@ -7701,7 +7706,11 @@ def append_org_audit_event_strict(event=None):
     normalized = normalize_audit_event(event)
     backend = _org_audit_backend()
     if backend.enabled():
-        return normalize_audit_event(backend.append_org_audit_event(normalized))
+        keep = normalized.get("eventType") in ORG_FAMILY_OWNED_EVENTS
+        return normalize_audit_event(backend.append_org_audit_event(normalized, keep_account=keep))
+    if str(os.environ.get("MUNEA_DATABASE_PROVIDER") or "").strip().lower() == "supabase":
+        # 設定說要用雲端、雲端卻沒啟用（例如有人把示範帳號那兩個環境變數清掉）：不准無聲退回本機檔
+        raise RuntimeError("org audit requires the cloud database but it is not enabled")
     store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
     events = [normalize_audit_event(e) for e in store.get("events", [])]
     events.insert(0, {**normalized, "accountId": None})
@@ -11241,7 +11250,7 @@ class H(BaseHTTPRequestHandler):
                 if not ok:
                     self._json_error(403, code, "Admin token is required")
                 else:
-                    self._json(org_alerts.admin_alerts_refresh_all_response(data))
+                    self._json_scheduler(org_alerts.admin_alerts_refresh_all_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":

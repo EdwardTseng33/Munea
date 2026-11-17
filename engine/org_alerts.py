@@ -24,6 +24,7 @@ import re
 import care_week
 import enterprise_seats
 import org_api
+import supabase_adapter
 
 LOGGER = logging.getLogger("munea.org_alerts")
 
@@ -70,7 +71,7 @@ def _anchor(anomaly, week):
 
 def _account_key(account_id):
     """帳號指紋：發出那一刻席次綁的是誰。之後席次換綁給別人，舊提醒不能掛到新的人名下。"""
-    return hashlib.sha1(f"munea-org-alert|{account_id}".encode("utf-8")).hexdigest()[:16]
+    return org_api.account_key(account_id)
 
 
 def alert_id(seat_id, kind, anchor):
@@ -228,7 +229,7 @@ def _suppressed(candidate, raised, today):
     return False
 
 
-def refresh_alerts(client, loaders=None, today=None):
+def refresh_alerts(client, loaders=None, today=None, channel="org_portal_inbox"):
     """算一次、把新出現的提醒「發出」（寫一筆 org_alert_raised）。回 (raised, marks, seats, persons, partial)。"""
     loaders = loaders or org_api.default_loaders()
     today_str = today or org_api._today()
@@ -250,7 +251,7 @@ def refresh_alerts(client, loaders=None, today=None):
         details = {
             "clientId": client["id"], "alertId": cand["alertId"], "seatId": cand["seatId"], "siteLabel": cand["siteLabel"],
             "type": cand["type"], "anchor": cand["anchor"], "when": cand["when"], "fact": cand["fact"],
-            "suggestion": cand["suggestion"], "channel": "org_portal_inbox", "raisedAt": now, "actorType": "system",
+            "suggestion": cand["suggestion"], "channel": channel, "raisedAt": now, "actorType": "system",
             "accountKey": _account_key(cand["accountId"]),
         }
         ok = org_api._audit({
@@ -350,8 +351,10 @@ def org_alerts_response(auth, data=None, loaders=None, today=None):
     return org_api.assert_no_forbidden(payload)
 
 
-_PHONE_RE = re.compile(r"(?:\+?886[-\s]?|0)9\d{2}[-\s]?\d{3}[-\s]?\d{3}|\b0\d{1,2}[-\s]?\d{6,8}\b")
-_TW_ID_RE = re.compile(r"\b[A-Za-z][12]\d{8}\b")
+# 台灣電話：0 或 +886 開頭（含括號、橫線、空白），數字合計 8 碼以上。前後只看「不是數字／英文字」，
+# 中文緊貼也遮得到（\b 在中文旁邊不算邊界，11/18 複審實測漏遮「電話0227221234」）。日期不是 0 開頭，不會被誤遮。
+_PHONE_RE = re.compile(r"(?<![0-9A-Za-z])(?:\+886|\(0|0)[0-9()\-\s]{6,16}[0-9](?![0-9])")
+_TW_ID_RE = re.compile(r"(?<![0-9A-Za-z])[A-Za-z][12][0-9]{8}(?![0-9])")
 
 
 def _clean_remark(value):
@@ -359,7 +362,7 @@ def _clean_remark(value):
     （全名、病名擋不住——畫面上會提醒不要寫；這裡只擋格式明確的。）"""
     text = re.sub(r"[<>]", "", str(value or ""))
     text = _TW_ID_RE.sub("〔已遮〕", text)
-    text = _PHONE_RE.sub("〔已遮〕", text)
+    text = _PHONE_RE.sub(lambda m: "〔已遮〕" if sum(ch.isdigit() for ch in m.group(0)) >= 8 else m.group(0), text)
     return re.sub(r"\s+", " ", text).strip()[:REMARK_MAX]
 
 
@@ -430,6 +433,7 @@ AUDIT_ACTIONS = {
     "org_consent_granted": "長輩（或家人）打開了同意",
     "org_consent_revoked": "長輩（或家人）關掉了同意",
     EVENT_SETTINGS: "改了提醒設定",
+    "org_alerts_exported": "沐寧匯出了提醒與判定",
 }
 
 
@@ -473,6 +477,10 @@ def admin_alerts_refresh_all_response(data=None, loaders=None, today=None):
     只算照護類、還在合約內的機構；一家失敗不擋其他家。回每家新發出幾筆。"""
     data = data or {}
     only = str(data.get("clientId") or "").strip()
+    if supabase_adapter._circuit_open():
+        return {"ok": False, "error": "cloud_unreachable", "count": 0, "clients": [], "newAlerts": 0}
+    if only and not enterprise_seats.get_client(only):
+        return {"ok": False, "error": "client_not_found", "count": 0, "clients": [], "newAlerts": 0}
     results = []
     for client in enterprise_seats.list_clients() or []:
         if only and client.get("id") != only:
@@ -482,8 +490,10 @@ def admin_alerts_refresh_all_response(data=None, loaders=None, today=None):
         try:
             since_iso = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
             before = set(_load_events(client["id"], since_iso)[0])
-            raised, _marks, _seats, _persons, partial = refresh_alerts(client, loaders, today)
-            results.append({"clientId": client["id"], "ok": True, "newAlerts": len(set(raised) - before), "partial": partial})
+            raised, _marks, _seats, _persons, partial = refresh_alerts(client, loaders, today, channel="scheduled_refresh")
+            # 有提醒寫不進紀錄、或守護腦事件讀不到：這家不算成功（排程要看得到失敗、會重試）
+            failed = bool({"alert_record", "safety"} & set(partial or [])) or supabase_adapter._circuit_open()
+            results.append({"clientId": client["id"], "ok": not failed, "newAlerts": len(set(raised) - before), "partial": partial})
         except Exception as exc:
             LOGGER.error("org_alerts refresh-all failed for %s: %s", client.get("id"), exc)
             results.append({"clientId": client["id"], "ok": False, "error": "alerts_unavailable"})
@@ -535,7 +545,10 @@ def admin_alerts_export_response(data=None):
             "值得通知嗎": _YES_NO_LABEL.get(last.get("worthNotifying"), ""),
             "判定結果": RESULT_LABELS.get(last.get("result"), "") if last else "",
             "判定者": judge.get("displayName") or "", "職稱": ROLE_LABELS.get(last.get("role") or judge.get("role"), ""),
-            "判定日期": str(last.get("markedAt") or "")[:10], "備註": last.get("remark") or "", "判定次數": len(history),
+            "判定日期": str(last.get("markedAt") or "")[:10],
+            # 真人試辦那幾列的備註預設不帶出去（要帶得明講 includePilotRemarks），演練列照帶
+            "備註": (last.get("remark") or "") if (drill or data.get("includePilotRemarks")) else "",
+            "判定次數": len(history),
         })
     rows = [{k: _cell(v) for k, v in row.items()} for row in rows]
     # 沐寧代看機構資料要留紀錄（設計書 3.2）。寫不進去就不給——跟機構端讀週摘要同一條規矩。
