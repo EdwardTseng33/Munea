@@ -14,9 +14,13 @@ from supabase_adapter import SupabaseAdapter
 # 上線前檢查（npm run test:launch 列的是這支）才會一併跑到。
 from test_account_delete_export_family_state import (  # noqa: E402,F401
     CircleOwnerDeletesAccountTests,
+    ConcurrentWriteTests,
+    FailureHandlingTests,
     FakeDatabaseSelfCheck,
+    IdentityFormatTests,
     MemberDeletesAccountTests,
     MemberExportsDataTests,
+    RosterShapeTests,
 )
 
 

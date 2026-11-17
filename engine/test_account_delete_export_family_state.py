@@ -26,7 +26,7 @@ import uuid
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from supabase_adapter import SupabaseAdapter, SupabaseRequestError
+from supabase_adapter import FamilyStateCleanupError, SupabaseAdapter, SupabaseRequestError
 
 SQL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "supabase", "sql")
 
@@ -89,6 +89,7 @@ class FakeSupabase:
         self.fks = parse_foreign_keys()
         self.log = []
         self.fail_on = None   # (method, table) → 模擬那一步失敗
+        self.hooks = []       # hook(phase, method, table, query, payload)；phase＝"before"／"after"
         self._clock = 0
 
     def seed(self, table, *rows):
@@ -140,10 +141,25 @@ class FakeSupabase:
                 else:
                     raise AssertionError(f"{child_table}.{column} 擋住刪除 {table}")
 
+    def other_device_writes(self, group_id, key, value):
+        """模擬另一位家人的手機把整份 value 寫上來（資料庫的觸發器會跟著更新 updated_at）。不記進 log。"""
+        for row in self.tables["family_state_entries"]:
+            if row["family_group_id"] == group_id and row["state_key"] == key:
+                row["value"] = copy.deepcopy(value)
+                row["updated_at"] = self._tick()
+
     def request(self, method, table, query=None, payload=None, prefer=None):
         self.log.append((method, table, dict(query or {}), copy.deepcopy(payload)))
         if self.fail_on == (method, table):
             raise RuntimeError(f"simulated failure: {method} {table}")
+        for hook in list(self.hooks):
+            hook("before", method, table, dict(query or {}), copy.deepcopy(payload))
+        result = self._apply(method, table, query, payload)
+        for hook in list(self.hooks):
+            hook("after", method, table, dict(query or {}), copy.deepcopy(payload))
+        return result
+
+    def _apply(self, method, table, query, payload):
         store = self.tables.setdefault(table, [])
         if method == "GET":
             found = [copy.deepcopy(r) for r in store if self._matches(r, query)]
@@ -375,6 +391,7 @@ class MemberDeletesAccountTests(unittest.TestCase):
             self.assertEqual(set(payload), {"value"})
             self.assertIn(query["id"][3:], touched_ids)
             self.assertTrue(query["id"].startswith("eq."))
+            self.assertTrue(query["updated_at"].startswith("eq.2026-"))   # 寫回一定帶「我讀到的那一版」
 
     def test_entry_holding_only_this_person_is_emptied_not_broken(self):
         """別人家人圈裡某個條目只剩 B 一格：清成空的，其他條目照舊。"""
@@ -417,7 +434,9 @@ class MemberDeletesAccountTests(unittest.TestCase):
         self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1)
         self.assertEqual(adapter.deleted_auth_users, [])
         self.assertEqual([w for w in db.writes() if w[0] == "DELETE"], [])
-        self.assertEqual(db.rows("audit_events"), [])
+        # 留痕只有一筆「清理失敗」，沒有「已確認刪除」。
+        self.assertEqual([a["event_type"] for a in db.rows("audit_events")],
+                         ["account_deletion_family_state_cleanup_failed"])
 
     def test_read_failure_also_stops_before_the_account_is_deleted(self):
         """連「他待過哪些家人圈、裡面有什麼」都讀不到：一樣停下來，不在看不見的情況下刪帳號。"""
@@ -428,7 +447,10 @@ class MemberDeletesAccountTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 adapter.delete_scoped_account(AUTH_B)
             self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1, table)
-            self.assertEqual(db.writes(), [], table)
+            # 除了一筆「清理失敗」的留痕，什麼都沒寫。
+            self.assertEqual([(m, t) for m, t, _q, _p in db.writes()], [("POST", "audit_events")], table)
+            self.assertEqual(db.rows("audit_events")[0]["details"],
+                             {"familyStateCellsRemoved": 0, "errorKind": "RuntimeError"}, table)
 
     def test_environment_without_the_table_can_still_delete(self):
         """舊環境還沒有 family_state_entries 這張表：沒有任何一格可清，刪帳號照常。"""
@@ -446,15 +468,308 @@ class MemberDeletesAccountTests(unittest.TestCase):
         self.assertTrue(result["accountDeleted"])
         self.assertEqual(result["familyStateCellsRemoved"], 0)
         self.assertEqual(db.rows("accounts", id=ACCOUNT_B), [])
+        # 沒清就放行要留痕，不能無聲放行。
+        self.assertEqual(result["familyStateCleanupSkipped"], "missing_table")
+        self.assertEqual(db.rows("audit_events")[0]["details"]["familyStateCleanupSkipped"], "missing_table")
 
     def test_audit_record_counts_cells_without_naming_people(self):
         db = build_db(with_circle_c=True)
         result = self.delete_b(db)
         self.assertEqual(result["familyStateCellsRemoved"], 5)   # A 圈 3 格＋C 圈 2 格
+        self.assertIsNone(result["familyStateCleanupSkipped"])
         audit = db.rows("audit_events")[0]
         self.assertEqual(audit["details"]["familyStateCellsRemoved"], 5)
+        self.assertNotIn("familyStateCleanupSkipped", audit["details"])
         self.assertNotIn(PERSON_A, json.dumps(audit, ensure_ascii=False))
         self.assertNotIn(PERSON_C, json.dumps(audit, ensure_ascii=False))
+
+
+class ConcurrentWriteTests(unittest.TestCase):
+    """別的家人的手機剛好也在寫同一列：不拿舊內容蓋掉人家的新值；清完被寫回來要抓得到。"""
+
+    A_NEW_VITALS = vitals_cell("圈主阿明", "A-NEW-STEPS-9999", 64)
+
+    @staticmethod
+    def is_vitals_cleanup_write(method, table, payload):
+        """我們對 A 家人圈健康數字那一列的寫回（value 是物件、A 那格是一整份健康數字）。"""
+        value = (payload or {}).get("value")
+        return (method == "PATCH" and table == "family_state_entries"
+                and isinstance(value, dict) and isinstance(value.get(PERSON_A), dict))
+
+    @staticmethod
+    def is_roster_cleanup_write(method, table, payload):
+        return method == "PATCH" and table == "family_state_entries" and isinstance((payload or {}).get("value"), list)
+
+    def vitals_patches(self, db):
+        vitals_id = db.rows("family_state_entries", family_group_id=GROUP_A, state_key="vitals")[0]["id"]
+        return [w for w in db.writes("family_state_entries") if w[2]["id"] == f"eq.{vitals_id}"]
+
+    def test_newer_value_written_by_another_member_is_not_overwritten(self):
+        """我們先讀、A 的手機寫了新數字、我們才要寫回：寫不進去 → 重讀重算 → A 的新數字還在、B 那格沒了。"""
+        db = build_db()
+        fired = []
+
+        def a_syncs_just_before_our_write(phase, method, table, query, payload):
+            if phase == "before" and not fired and self.is_vitals_cleanup_write(method, table, payload):
+                fired.append(True)
+                db.other_device_writes(GROUP_A, "vitals", {PERSON_A: self.A_NEW_VITALS, PERSON_B: B_VITALS})
+
+        db.hooks.append(a_syncs_just_before_our_write)
+        result = adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(fired, [True])
+        self.assertEqual(state_value(db, GROUP_A, "vitals"), {PERSON_A: self.A_NEW_VITALS})
+        self.assertEqual(len(self.vitals_patches(db)), 2)        # 第一次寫不進去、重讀後第二次才寫進去
+        self.assertEqual(result["familyStateCellsRemoved"], 3)   # 沒寫進去的那次不算
+        self.assertEqual(db.rows("accounts", id=ACCOUNT_B), [])
+
+    def test_cell_written_back_after_cleanup_is_caught_by_recheck(self):
+        """A 的手機在我們清之前就讀了舊內容、等我們清完才整份寫回（B 被寫回來）：複查抓到、再清一輪。"""
+        db = build_db()
+        stale = {PERSON_A: A_VITALS, PERSON_B: B_VITALS}
+        fired = []
+
+        def a_writes_stale_copy_right_after_our_write(phase, method, table, query, payload):
+            if phase == "after" and not fired and self.is_vitals_cleanup_write(method, table, payload):
+                fired.append(True)
+                db.other_device_writes(GROUP_A, "vitals", stale)
+
+        db.hooks.append(a_writes_stale_copy_right_after_our_write)
+        result = adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(fired, [True])
+        self.assertEqual(state_value(db, GROUP_A, "vitals"), {PERSON_A: A_VITALS})
+        self.assertEqual(result["familyStateCellsRemoved"], 4)   # 3 格＋被寫回來重清的 1 次
+        self.assertEqual(db.rows("accounts", id=ACCOUNT_B), [])
+
+    def test_roster_written_back_after_cleanup_is_caught_by_recheck(self):
+        """圈主手機本機名單還有 B、整份上傳：名單那筆被寫回來，一樣要抓到。"""
+        db = build_db()
+        fired = []
+
+        def a_uploads_old_roster(phase, method, table, query, payload):
+            if phase == "after" and not fired and self.is_roster_cleanup_write(method, table, payload):
+                fired.append(True)
+                db.other_device_writes(GROUP_A, "circle", [A_ROSTER, B_ROSTER, GRANDPA_ROSTER])
+
+        db.hooks.append(a_uploads_old_roster)
+        adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(fired, [True])
+        self.assertEqual(state_value(db, GROUP_A, "circle"), [A_ROSTER, GRANDPA_ROSTER])
+
+    def test_keeps_coming_back_stops_the_deletion(self):
+        """每清一次就被寫回來一次：清兩輪還複查得到他 → 停下來、帳號不刪、留一筆失敗紀錄。"""
+        db = build_db()
+        stale = {PERSON_A: A_VITALS, PERSON_B: B_VITALS}
+
+        def always_written_back(phase, method, table, query, payload):
+            if phase == "after" and self.is_vitals_cleanup_write(method, table, payload):
+                db.other_device_writes(GROUP_A, "vitals", stale)
+
+        db.hooks.append(always_written_back)
+        adapter = adapter_for(db, "B")
+        with self.assertRaises(FamilyStateCleanupError) as caught:
+            adapter.delete_scoped_account(AUTH_B)
+        self.assertEqual(caught.exception.error_kind, "still_present")
+        self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1)
+        self.assertEqual(adapter.deleted_auth_users, [])
+        self.assertEqual(len(self.vitals_patches(db)), 2)        # 只清兩輪，不無限重試
+        audits = db.rows("audit_events")
+        self.assertEqual([a["event_type"] for a in audits], ["account_deletion_family_state_cleanup_failed"])
+        self.assertEqual(audits[0]["details"], {"familyStateCellsRemoved": 4, "errorKind": "still_present"})
+
+    def test_row_that_never_stops_changing_gives_up_after_three_writes(self):
+        """同一列一直有人搶在前面寫：試三次都寫不進去 → 停下來、帳號不刪，而且從頭到尾沒蓋掉人家的內容。"""
+        db = build_db()
+        counter = []
+
+        def someone_always_writes_first(phase, method, table, query, payload):
+            if phase == "before" and self.is_vitals_cleanup_write(method, table, payload):
+                counter.append(True)
+                newest = vitals_cell("圈主阿明", f"A-NEW-STEPS-{len(counter)}", 64)
+                db.other_device_writes(GROUP_A, "vitals", {PERSON_A: newest, PERSON_B: B_VITALS})
+
+        db.hooks.append(someone_always_writes_first)
+        adapter = adapter_for(db, "B")
+        with self.assertRaises(FamilyStateCleanupError) as caught:
+            adapter.delete_scoped_account(AUTH_B)
+        self.assertEqual(caught.exception.error_kind, "version_conflict")
+        self.assertEqual(len(counter), 3)
+        self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1)
+        self.assertEqual(state_value(db, GROUP_A, "vitals")[PERSON_A]["steps"], "A-NEW-STEPS-3")   # 人家最後寫的還在
+
+    def test_row_deleted_while_cleaning_is_not_an_error(self):
+        """要寫回時那一列已經不在了（例如圈主同時刪帳號）：沒有東西可清，照常往下。"""
+        db = build_db()
+
+        def owner_row_disappears(phase, method, table, query, payload):
+            if phase == "before" and self.is_vitals_cleanup_write(method, table, payload):
+                db.tables["family_state_entries"] = [
+                    r for r in db.tables["family_state_entries"]
+                    if not (r["family_group_id"] == GROUP_A and r["state_key"] == "vitals")]
+
+        db.hooks.append(owner_row_disappears)
+        result = adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertTrue(result["accountDeleted"])
+        self.assertEqual(result["familyStateCellsRemoved"], 2)
+
+
+class FailureHandlingTests(unittest.TestCase):
+    """清到一半失敗：留痕、不夾個資、重按一次會清乾淨。"""
+
+    def fail_on_nth_cleanup_write(self, db, nth, error):
+        seen = []
+
+        def hook(phase, method, table, query, payload):
+            if phase == "before" and method == "PATCH" and table == "family_state_entries":
+                seen.append(True)
+                if len(seen) == nth:
+                    raise error
+
+        db.hooks.append(hook)
+        return hook
+
+    def test_partial_failure_then_retry_cleans_everything(self):
+        """第 1 列清掉、第 2 列失敗 → 帳號還在、留痕記 1 格；重按一次 → 剩下 2 格清掉、帳號刪除。"""
+        db = build_db()
+        hook = self.fail_on_nth_cleanup_write(db, 2, RuntimeError("boom"))
+        adapter = adapter_for(db, "B")
+        with self.assertRaises(FamilyStateCleanupError) as caught:
+            adapter.delete_scoped_account(AUTH_B)
+        self.assertEqual(caught.exception.cells_removed, 1)
+        self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1)
+        self.assertEqual(db.rows("audit_events")[0]["details"], {"familyStateCellsRemoved": 1, "errorKind": "RuntimeError"})
+        left = [key for key in ("vitals", "safetyContacts", "circle")
+                if SupabaseAdapter._split_person_from_family_state(key, state_value(db, GROUP_A, key), PERSON_B)[0]]
+        self.assertEqual(len(left), 2)   # 真的只清掉了一列
+
+        db.hooks.remove(hook)
+        result = adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertTrue(result["accountDeleted"])
+        self.assertEqual(result["familyStateCellsRemoved"], 2)   # 第一次已經清掉的那格不重複算
+        self.assertEqual(state_value(db, GROUP_A, "vitals"), {PERSON_A: A_VITALS})
+        self.assertEqual(state_value(db, GROUP_A, "safetyContacts"), {PERSON_A: [PERSON_B]})
+        self.assertEqual(state_value(db, GROUP_A, "circle"), [A_ROSTER, GRANDPA_ROSTER])
+        self.assertEqual([a["event_type"] for a in db.rows("audit_events")],
+                         ["account_deletion_family_state_cleanup_failed", "account_deletion_confirmed"])
+        self.assertEqual(db.rows("audit_events")[1]["details"]["familyStateCellsRemoved"], 2)
+
+    def test_error_and_trail_never_carry_database_error_details(self):
+        """資料庫回的錯誤細節可能夾整列健康數字（Failing row contains …）：往上丟的錯誤、留痕都不可以帶。"""
+        leaky = SupabaseRequestError(
+            "Supabase PATCH family_state_entries failed: 400 Failing row contains "
+            "(圈主阿明, A-ONLY-STEPS-4321, 被邀請的小芳, B-STEPS-8765)",
+            error_kind="http_error", status_code=400, error_code="23514",
+        )
+        for where in ("write", "read"):
+            db = build_db()
+            if where == "write":
+                self.fail_on_nth_cleanup_write(db, 1, leaky)
+            else:
+                def hook(phase, method, table, query, payload, _leaky=leaky):
+                    if phase == "before" and method == "GET" and table == "family_state_entries":
+                        raise _leaky
+                db.hooks.append(hook)
+            with self.assertRaises(RuntimeError) as caught:
+                adapter_for(db, "B").delete_scoped_account(AUTH_B)
+            error = caught.exception
+            self.assertEqual(str(error), "account_deletion_family_state_cleanup_failed", where)
+            self.assertEqual(error.args, ("account_deletion_family_state_cleanup_failed",), where)
+            self.assertIsNone(error.__cause__, where)
+            self.assertTrue(error.__suppress_context__, where)     # 追蹤紀錄也不會把底層錯誤印出來
+            audit = json.dumps(db.rows("audit_events"), ensure_ascii=False)
+            for marker in ("圈主阿明", "A-ONLY-STEPS-4321", "被邀請的小芳", "B-STEPS-8765", "Failing row"):
+                self.assertNotIn(marker, audit, where)
+            self.assertEqual(db.rows("audit_events")[0]["details"],
+                             {"familyStateCellsRemoved": 0, "errorKind": "http_error"}, where)
+
+    def test_trail_write_failure_does_not_hide_the_cleanup_failure(self):
+        db = build_db()
+        self.fail_on_nth_cleanup_write(db, 1, RuntimeError("boom"))
+        db.fail_on = ("POST", "audit_events")
+        with self.assertRaises(FamilyStateCleanupError):
+            adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1)
+
+    def test_row_without_version_is_not_written_blind(self):
+        """讀到的列沒有 updated_at（不該發生）：不做沒有版本比對的寫入，停下來。"""
+        db = build_db()
+        for row in db.tables["family_state_entries"]:
+            row["updated_at"] = None
+        with self.assertRaises(FamilyStateCleanupError) as caught:
+            adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(caught.exception.error_kind, "row_unidentified")
+        self.assertEqual(db.writes("family_state_entries"), [])
+
+
+class IdentityFormatTests(unittest.TestCase):
+    """本人編號格式不合法：刪帳號這條路要停（跟匯出一致），而且一個查詢都不送。"""
+
+    def bad_identity(self):
+        return {"accountId": ACCOUNT_B, "personId": "b1111111' or person_id=neq.x", "familyGroupId": GROUP_A, "authUserId": AUTH_B}
+
+    def test_cleanup_refuses_malformed_person_id_before_any_query(self):
+        db = build_db()
+        adapter = FakeBackedAdapter(db, self.bad_identity())
+        with self.assertRaisesRegex(PermissionError, "account_deletion_identity_mismatch"):
+            adapter._remove_own_cells_from_other_family_circles()
+        self.assertEqual(db.log, [])
+
+    def test_deletion_stops_on_malformed_person_id(self):
+        db = build_db()
+        adapter = FakeBackedAdapter(db, self.bad_identity())
+        with self.assertRaises((PermissionError, RuntimeError)):
+            adapter.delete_scoped_account(AUTH_B)
+        self.assertEqual(db.writes(), [])
+        self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1)
+
+    def test_deletion_stops_even_if_the_outer_gate_is_ever_loosened(self):
+        """現在最外層的 enabled() 已經會擋；假設哪天它放寬了，清理這一步自己還是要擋。"""
+        db = build_db()
+
+        class LooseGateAdapter(FakeBackedAdapter):
+            def enabled(self):
+                return True
+
+        adapter = LooseGateAdapter(db, self.bad_identity())
+        with self.assertRaisesRegex(PermissionError, "account_deletion_identity_mismatch"):
+            adapter.delete_scoped_account(AUTH_B)
+        self.assertEqual(db.writes(), [])
+        self.assertEqual(len(db.rows("accounts", id=ACCOUNT_B)), 1)
+
+
+class RosterShapeTests(unittest.TestCase):
+    """名單那一筆的各種長相。"""
+
+    ID_ONLY_ROSTER = {"name": "被邀請的小芳", "id": PERSON_B, "relationship": "女兒"}   # 只有 id、沒有 personId
+
+    def set_roster(self, db, roster):
+        for row in db.tables["family_state_entries"]:
+            if row["family_group_id"] == GROUP_A and row["state_key"] == "circle":
+                row["value"] = copy.deepcopy(roster)
+
+    def test_roster_entry_with_only_id_is_removed_and_exported(self):
+        db = build_db()
+        self.set_roster(db, [A_ROSTER, self.ID_ONLY_ROSTER, GRANDPA_ROSTER])
+        package = adapter_for(db, "B").export_scoped_personal_data()
+        exported = [e["value"] for e in package["personalData"]["familyStateEntries"]
+                    if e["familyGroupId"] == GROUP_A and e["stateKey"] == "circle"]
+        self.assertEqual(exported, [[self.ID_ONLY_ROSTER]])
+        adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(state_value(db, GROUP_A, "circle"), [A_ROSTER, GRANDPA_ROSTER])
+
+    def test_duplicate_roster_entries_are_all_removed(self):
+        db = build_db()
+        self.set_roster(db, [B_ROSTER, A_ROSTER, self.ID_ONLY_ROSTER, GRANDPA_ROSTER])
+        result = adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(state_value(db, GROUP_A, "circle"), [A_ROSTER, GRANDPA_ROSTER])
+        self.assertEqual(result["familyStateCellsRemoved"], 3)   # 同一列兩筆算一格
+
+    def test_same_name_without_person_id_is_not_touched(self):
+        """同名但沒帶編號的那筆不比名字、不動——可能是別人。"""
+        db = build_db()
+        same_name = {"name": "被邀請的小芳", "relationship": "表妹"}
+        self.set_roster(db, [A_ROSTER, B_ROSTER, same_name])
+        adapter_for(db, "B").delete_scoped_account(AUTH_B)
+        self.assertEqual(state_value(db, GROUP_A, "circle"), [A_ROSTER, same_name])
 
 
 class CircleOwnerDeletesAccountTests(unittest.TestCase):

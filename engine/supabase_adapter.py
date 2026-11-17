@@ -59,6 +59,19 @@ class SupabaseRequestError(RuntimeError):
         self.error_code = error_code
 
 
+class FamilyStateCleanupError(RuntimeError):
+    """刪帳號前清「留在別人家人圈裡的那幾格」沒清乾淨。
+
+    訊息一律是固定字串、不串接底層錯誤：資料庫回的錯誤細節可能夾整列內容
+    （整家人的健康數字），而這個例外會一路走到告警頻道。要分辨原因看 error_kind
+    （固定詞彙：連線類別、version_conflict、still_present、row_unidentified、例外類別名）。"""
+
+    def __init__(self, error_kind, cells_removed=0):
+        super().__init__("account_deletion_family_state_cleanup_failed")
+        self.error_kind = str(error_kind or "unknown")
+        self.cells_removed = int(cells_removed or 0)
+
+
 def _circuit_open():
     return time.time() < _CIRCUIT["open_until"]
 
@@ -171,7 +184,16 @@ class SupabaseAdapter:
 
         # 先清「留在別人家人圈裡、屬於自己的那幾格」，清不乾淨就整個停下來（帳號還在、可以再按一次）。
         # 放在刪帳號之前：帳號一刪，成員資格跟著連動刪，就再也查不到他待過哪幾個家人圈。
-        family_state_cells_removed = self._remove_own_cells_from_other_family_circles()
+        try:
+            family_state_cleanup = self._remove_own_cells_from_other_family_circles()
+        except FamilyStateCleanupError as exc:
+            self._record_family_state_cleanup_failure(auth_user_id, exc)
+            raise
+        family_state_cells_removed = family_state_cleanup["cellsRemoved"]
+        family_state_details = {"familyStateCellsRemoved": family_state_cells_removed}
+        if family_state_cleanup["skipped"]:
+            # 沒清就放行的情況（這個環境沒有那張表）要留痕，不能無聲放行。
+            family_state_details["familyStateCleanupSkipped"] = family_state_cleanup["skipped"]
 
         receipt_hash = hashlib.sha256(f"{self.account_id}:{auth_user_id}".encode("utf-8")).hexdigest()
         self._request(
@@ -188,7 +210,7 @@ class SupabaseAdapter:
                     "receiptHash": receipt_hash,
                     "scope": "account_and_cascading_personal_data",
                     # 只記清了幾格，不記是哪個家人圈、哪些人。
-                    "familyStateCellsRemoved": family_state_cells_removed,
+                    **family_state_details,
                 },
             },
             prefer="return=minimal",
@@ -219,6 +241,7 @@ class SupabaseAdapter:
             "receiptHash": receipt_hash,
             "authCleanupError": auth_error,
             "familyStateCellsRemoved": family_state_cells_removed,
+            "familyStateCleanupSkipped": family_state_cleanup["skipped"],
         }
 
     # family_state_entries 裡「按人分格」的鑰匙。整列掛在家人圈建立者的帳號底下，
@@ -245,20 +268,42 @@ class SupabaseAdapter:
                 return True, mine, [member for member in value if not is_mine(member)]
         return False, None, value
 
+    FAMILY_STATE_ROW_SELECT = "id,account_id,family_group_id,state_key,value,updated_at"
+    # 同一列寫回最多試幾次（每次都要「這一列還是我讀到的那一版」才寫得進去）。
+    FAMILY_STATE_CLEANUP_WRITE_ATTEMPTS = 3
+    # 最多清幾輪。每一輪清完都重讀複查；最後一輪清完還複查到本人就停下來、不刪帳號。
+    FAMILY_STATE_CLEANUP_ROUNDS = 2
+
     def _family_state_query_for_groups(self, family_group_ids):
         keys = ",".join(self.FAMILY_STATE_PERSON_KEYED + (self.FAMILY_STATE_ROSTER_KEY,))
         return {
             "family_group_id": f"in.({','.join(family_group_ids)})",
             "state_key": f"in.({keys})",
-            "select": "id,account_id,family_group_id,state_key,value",
+            "select": self.FAMILY_STATE_ROW_SELECT,
         }
 
     def _remove_own_cells_from_other_family_circles(self):
-        """刪帳號前：把本人留在「別人帳號的家人圈」裡的那幾格拿掉，回傳清了幾格。
+        """刪帳號前：把本人留在「別人帳號的家人圈」裡的那幾格拿掉。
 
-        只改有他那一格的那幾列的 value，一次一列、用列編號指定；不刪整列、不碰其他人的格子。
+        回 {"cellsRemoved": 清掉幾格（被別人寫回來又重清的也算一次）, "skipped": None 或沒清就放行的原因}。
+        只改有他那一格的那幾列的 value，一次一列；不刪整列、不碰其他人的格子。
         自己帳號底下的家人圈不處理——那整個會跟著帳號連動刪，維持原本的行為。
-        任何一步失敗就丟例外，呼叫端不會往下刪帳號。"""
+        沒清乾淨一律丟 FamilyStateCleanupError（固定訊息、不夾底層錯誤細節），呼叫端不會往下刪帳號。"""
+        if not self._is_uuid(self.person_id):
+            raise PermissionError("account_deletion_identity_mismatch")
+        progress = {"cellsRemoved": 0, "skipped": None}
+        try:
+            self._run_family_state_cleanup(progress)
+        except FamilyStateCleanupError as exc:
+            exc.cells_removed = progress["cellsRemoved"]
+            raise
+        except SupabaseRequestError as exc:
+            raise FamilyStateCleanupError(exc.error_kind, progress["cellsRemoved"]) from None
+        except Exception as exc:
+            raise FamilyStateCleanupError(type(exc).__name__, progress["cellsRemoved"]) from None
+        return progress
+
+    def _run_family_state_cleanup(self, progress):
         memberships = self._select(
             "family_memberships",
             {"person_id": f"eq.{self.person_id}", "select": "family_group_id"},
@@ -268,36 +313,82 @@ class SupabaseAdapter:
             if self._is_uuid(row.get("family_group_id") or "")
         })
         if not group_ids:
-            return 0
-        try:
-            entries = self._select("family_state_entries", self._family_state_query_for_groups(group_ids)) or []
-        except SupabaseRequestError as exc:
-            if exc.error_kind == "missing_table":
-                return 0  # 這個環境還沒有這張表＝沒有任何一格可清，不擋刪帳號
-            raise
-        removed = 0
-        for row in entries:
-            if row.get("account_id") == self.account_id:
-                continue
+            return
+        query = self._family_state_query_for_groups(group_ids)
+        for round_index in range(self.FAMILY_STATE_CLEANUP_ROUNDS + 1):
+            try:
+                entries = self._select("family_state_entries", query) or []
+            except SupabaseRequestError as exc:
+                if exc.error_kind == "missing_table" and round_index == 0:
+                    # 這個環境沒有這張表＝沒有任何一格可清，不擋刪帳號；但要留痕（呼叫端寫進稽核紀錄）。
+                    progress["skipped"] = "missing_table"
+                    return
+                raise
+            pending = [
+                row for row in entries
+                if row.get("account_id") != self.account_id
+                and self._split_person_from_family_state(row.get("state_key"), row.get("value"), self.person_id)[0]
+            ]
+            if not pending:
+                return  # 複查通過：三把鑰匙裡都沒有本人了
+            if round_index == self.FAMILY_STATE_CLEANUP_ROUNDS:
+                # 清了又被寫回來、清了又被寫回來：不在「還看得到他」的情況下刪帳號。
+                raise FamilyStateCleanupError("still_present")
+            for row in pending:
+                if self._remove_person_from_family_state_row(row):
+                    progress["cellsRemoved"] += 1
+
+    def _remove_person_from_family_state_row(self, row):
+        """把本人那一格從這一列拿掉。回 True＝拿掉了；False＝這一列已經沒有他（或整列不在了）。
+
+        寫回的條件帶上讀到的 updated_at（007 的觸發器每次修改都會更新它）：
+        讀完之後別人改過這一列，就寫不進去——重讀、重算、再寫，不拿舊內容蓋掉別人剛寫的新值。"""
+        for _attempt in range(self.FAMILY_STATE_CLEANUP_WRITE_ATTEMPTS):
             found, _mine, rest = self._split_person_from_family_state(
                 row.get("state_key"), row.get("value"), self.person_id,
             )
             if not found:
-                continue
+                return False
             row_id = row.get("id")
-            if not self._is_uuid(row_id or ""):
-                raise RuntimeError("family_state_cleanup_row_unidentified")
+            version = row.get("updated_at")
+            if not self._is_uuid(row_id or "") or not version:
+                raise FamilyStateCleanupError("row_unidentified")
             patched = self._request(
                 "PATCH",
                 "family_state_entries",
-                query={"id": f"eq.{row_id}", "select": "id"},
+                query={"id": f"eq.{row_id}", "updated_at": f"eq.{version}", "select": "id"},
                 payload={"value": rest},
                 prefer="return=representation",
             )
-            if not patched:
-                raise RuntimeError("family_state_cleanup_incomplete")
-            removed += 1
-        return removed
+            if patched:
+                return True
+            row = self._first("family_state_entries", {"id": f"eq.{row_id}", "select": self.FAMILY_STATE_ROW_SELECT})
+            if not row:
+                return False
+        raise FamilyStateCleanupError("version_conflict")
+
+    def _record_family_state_cleanup_failure(self, auth_user_id, error):
+        """清理失敗留痕：只記已清格數與錯誤類別，不記內容、不記是哪個家人圈。留痕本身失敗不蓋掉原本的失敗。"""
+        try:
+            self._request(
+                "POST",
+                "audit_events",
+                query={"select": "id"},
+                payload={
+                    "account_id": self.account_id,
+                    "actor_user_id": auth_user_id,
+                    "event_type": "account_deletion_family_state_cleanup_failed",
+                    "target_table": "accounts",
+                    "target_id": self.account_id,
+                    "details": {
+                        "familyStateCellsRemoved": error.cells_removed,
+                        "errorKind": error.error_kind,
+                    },
+                },
+                prefer="return=minimal",
+            )
+        except Exception:
+            pass
 
     def export_scoped_personal_data(self):
         """Build a portable export for only the authenticated person's data."""
