@@ -10763,7 +10763,7 @@ def tts_b64(text, char=DEFAULT_CHAR, locale=None):
         localization.speech_language_code(locale),
     )
     if not pcm:
-        log_fallback_exception("generate TTS audio", RuntimeError("all_tts_models_failed"))
+        log_fallback_exception(f"generate TTS audio with {', '.join(gemini_models.TTS_MODELS)}", RuntimeError("all_tts_models_failed"))
         return ""
     buf = io.BytesIO()
     with wave.open(buf, "wb") as w:

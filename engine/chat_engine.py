@@ -417,7 +417,7 @@ def speak(char, text, fn):
     c = CHARS[char]
     pcm = gemini_models.synthesize_pcm(client, text, c["voice"], c.get("style") or "", "cmn-TW")
     if not pcm:
-        _log_fallback_exception("generate TTS audio", RuntimeError("all_tts_models_failed"))
+        _log_fallback_exception(f"generate TTS audio with {', '.join(gemini_models.TTS_MODELS)}", RuntimeError("all_tts_models_failed"))
         return False
     with wave.open(fn, "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
