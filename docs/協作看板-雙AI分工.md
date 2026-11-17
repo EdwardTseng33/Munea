@@ -1,5 +1,16 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-17 蘇菲｜💸 每上線一次就多養一台待命機器——已收掉 4 台、上線工具改成自動收（PR · 不碰 App 通話路徑）
+
+- **為什麼**：11/17 看本月帳單，「待命機器」費用半個月漲兩倍多。正式部署會給新版本掛 tag 並設「至少一台待命」；切流量後舊版本的 tag 沒人拿，而 Cloud Run 只要版本還掛著 tag 就繼續替它開著那台、照樣計費。當天正式線有 **4 台白養**：大腦 00192／00194／00196、總機 00016（從 8/10 養到現在）。該有 2 顆 CPU／1.5G，實際 6 顆／5G。
+- **已做（雲端）**：拿掉那 4 個舊 tag（沒刪版本、沒動流量），待命回到 2 顆／1.5G，每月約省 NT$1,470。
+- **根治**：新增 `deploy/cloudrun/release_stale_warm.py`——找出「0% 流量、有設待命、而且比現役版本舊」的 tag 並拿掉；比現役版本新的候選版本（等真機驗收的 canary）一律不碰。`deploy/cloudrun/promote.sh` 上線成功後自動跑一次，收不乾淨只警告、不讓上線報失敗。總機是手動切流量，`scripts/cloud-run-deploy-gateway.ps1` 結尾加一句提醒。
+- **回滾不受影響**：回滾用的是版本名稱（`--to-revisions <名稱>=100`），版本都還在；只是回滾後第一個請求要等冷啟動。
+- **測試**：`python scripts/test_release_stale_warm.py` 8 案（照 11/17 實況、現役版本不動、較新的候選不動、沒設待命的不動、分流時取最舊的現役版本為界、看不懂現況就全不動），已掛進 `test:launch`。
+- **手動檢查**：`python deploy/cloudrun/release_stale_warm.py --all`（只看不動；加 `--apply` 才收）。
+- **檔**：`deploy/cloudrun/release_stale_warm.py`（新）、`deploy/cloudrun/promote.sh`、`scripts/cloud-run-deploy-gateway.ps1`、`scripts/test_release_stale_warm.py`（新）、`package.json`、本看板。
+
+
 ### 2026-11-17 蘇菲｜💸 雲端省錢四項＋總機看門狗改「定時叫醒」（PR · 不碰 App 通話路徑）
 
 - **為什麼**：Edward 11/17 問「還有哪裡可省」，拍板四項都做。查帳時發現看門狗（munea-gateway-monitor）11/5 被拿掉「至少一台」之後，常駐迴圈就沒有機器可跑——**警報靜靜停了 12 天**，錢沒在燒、但也沒人在看。
