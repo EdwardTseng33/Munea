@@ -8,9 +8,10 @@
   - `/org/alert/mark`：判定「正確／誤報／觀察中」＋選填「事情是真的嗎」「值得通知嗎」（是／否）＋備註 200 字，寫一筆 `org_alert_marked`。**只能新增、不能改舊的**，最後一筆為準；寫不進紀錄就回 `mark_not_recorded`、不算數。
   - `/org/audit`：自家紀錄（誰看了誰的週摘要、判定了什麼、同意開關），只給機構管理者。
   - `/admin/enterprise/alerts/export`：營運端匯出逐筆判定，欄位順序對齊 C4 逐筆判定表；演練編號取自席次名冊稱呼（只認 `M01` 這種格式，真名不會被當成演練編號）。
+  - `/org/settings`、`/org/settings/save`：機構自訂「幾天沒聯絡才提醒」（1–30 天，預設 3；只有機構管理者能改；每次改都留一筆、最後一筆為準）。提醒匣、名單、週摘要都照這個天數算（C4 演練 C05／C06／C10 要用）。
   - **不開新資料表**：發出與判定都寫進既有的 `audit_events`（本來就只能新增、刪不掉），用 `details->>clientId` 撈；省一次正式資料庫變更。設計書寫的 `org_alert_marks` 專用表等量大了再搬。
 - **三條鐵線**：只看自家（從登入身分推機構）；撤回同意後那位的舊提醒一起從清單消失、也判不到；提醒內容只有規則的固定句型，沒有原句（送出前過禁用鍵檢查，備註欄叫 `remark` 因為 `notes` 是禁用鍵）。
-- **測試**：新 `engine/test_org_alerts.py` 18 條；突變 13 種（重算重發、低潮重發、沒同意也算、撤回照列、照服員有匣、社工看別分點、沒留痕也算、結果不檢查、備註不截、別家判得到、讀紀錄不比對機構、紀錄頁誰都看、真名當演練編號）全紅。`test_org_api`、`test_org_portal*`、`test_care_week*`、`test_enterprise_seat_codes`、後台路徑護欄都過；接口清冊 141→145（brain 114→118）。
+- **測試**：新 `engine/test_org_alerts.py` 23 條；突變 17 種（含設定不看機構、設定不檢查範圍、社工能改設定、提醒不套設定）（重算重發、低潮重發、沒同意也算、撤回照列、照服員有匣、社工看別分點、沒留痕也算、結果不檢查、備註不截、別家判得到、讀紀錄不比對機構、紀錄頁誰都看、真名當演練編號）全紅。`test_org_api`、`test_org_portal*`、`test_care_week*`、`test_enterprise_seat_codes`、後台路徑護欄都過；接口清冊 141→147（brain 114→120）。
 - **還沒做**：① 照護人員網頁（登入、名單、週摘要、提醒匣＋判定按鈕、紀錄頁）——下一張 ② Email／推播（現在是「機構專區提醒匣」這一個通道；要寄信得先選寄信服務，是新的帳號與費用，等 Edward）③ 情境演練灌資料的小工具 ④ 規則行為：「連續 3 天」是連續 3 個有紀錄的日子（C4 演練 M08 會測），沒改。
 - **檔**：`engine/org_alerts.py`（新）、`engine/test_org_alerts.py`（新）、`engine/server.py`（路由＋讀紀錄函式＋一個 import）、`engine/supabase_adapter.py`（`load_org_audit_events`）、`docs/API-CONTRACT-INVENTORY.json`、`scripts/api_contract_inventory.py`、`scripts/test_api_contract_inventory.py`、本看板。
 

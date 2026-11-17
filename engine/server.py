@@ -11181,6 +11181,10 @@ class H(BaseHTTPRequestHandler):
                 self._json(org_alerts.org_alert_mark_response(auth_gate.get("auth"), data))
             elif self.path == "/org/audit":
                 self._json(org_alerts.org_audit_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/settings":
+                self._json(org_alerts.org_settings_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/settings/save":
+                self._json(org_alerts.org_settings_save_response(auth_gate.get("auth"), data))
             # App 端（家庭成員）：機構照護模式同意——只認已驗證的帳號身分，席次必須綁在自己帳號上。
             elif self.path == "/org-consent":
                 self._json(org_api.org_consent_status_response(REQUEST_DATA_IDENTITY.get(), data))

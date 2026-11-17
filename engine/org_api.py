@@ -705,6 +705,16 @@ def org_summary_response(auth, data=None):
     return assert_no_forbidden({"ok": True, **summary}, org_portal.FORBIDDEN_KEYS | {"email", "phone"})
 
 
+def _client_alert_settings(client):
+    """機構自訂的「幾天沒聯絡才提醒」（org_alerts 存在稽核紀錄裡）；讀不到就用規則預設。"""
+    try:
+        import org_alerts  # 晚一點才載：org_alerts 本身 import 這支
+        return {"noContactDays": org_alerts.client_settings(client["id"])["noContactDays"]}
+    except Exception as exc:
+        LOGGER.warning("org_api client settings unavailable; using defaults: %s", exc)
+        return {}
+
+
 def org_elders_response(auth, data=None, loaders=None):
     """L1：已同意長輩的名單＋三個旗標。沒同意的根本不在清單裡。"""
     data = data or {}
@@ -731,7 +741,7 @@ def org_elders_response(auth, data=None, loaders=None):
     except Exception as exc:
         LOGGER.warning("org_api guardian events failed: %s", exc)
         events, partial = [], partial + ["safety"]
-    settings = {}
+    settings = _client_alert_settings(client)
     try:
         if data.get("noContactDays") is not None:
             settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))
@@ -796,7 +806,7 @@ def org_elder_care_week_response(auth, data=None, loaders=None):
         days = max(1, min(31, int(data.get("days") or care_week.DEFAULT_DAYS)))
     except (TypeError, ValueError):
         days = care_week.DEFAULT_DAYS
-    settings = {}
+    settings = _client_alert_settings(client)
     try:
         if data.get("noContactDays") is not None:
             settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))

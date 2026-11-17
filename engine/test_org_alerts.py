@@ -46,9 +46,15 @@ class AlertsBase(W.Base):
         super().tearDown()
 
     def _load(self, client_id, since_iso, types):
-        return [{"eventType": e["eventType"], "details": e.get("details") or {},
-                 "createdAt": (e.get("details") or {}).get("raisedAt") or (e.get("details") or {}).get("markedAt")}
-                for e in self.audit if e.get("eventType") in types]
+        out = []
+        for i, e in enumerate(self.audit):
+            if e.get("eventType") not in types:
+                continue
+            d = e.get("details") or {}
+            # 本機測試沒有資料庫時間：用寫入順序當時間（後寫的比較新）
+            stamp = d.get("raisedAt") or d.get("markedAt") or d.get("savedAt") or ""
+            out.append({"eventType": e["eventType"], "details": d, "createdAt": f"{stamp}#{i:06d}"})
+        return out
 
     def raised_events(self):
         return [e for e in self.audit if e["eventType"] == org_alerts.EVENT_RAISED]
@@ -234,10 +240,55 @@ class AuditAndExportTests(AlertsBase):
         self.assertEqual(org_alerts.admin_alerts_export_response({"clientId": "nope"})["error"], "client_not_found")
 
 
+class SettingsTests(AlertsBase):
+    """機構自訂「幾天沒聯絡才提醒」（C4 演練 C05／C06／C10 要用）。"""
+
+    def setUp(self):
+        super().setUp()
+        # A1：4 天前最後一通、心情正常 → 預設 3 天會亮「沒聯絡」，設成 5 天就不該亮
+        self.loaders = fake_loaders(signals={PER_A1: [sig(PER_A1, 4, 4, "平常")]}, summaries={PER_A1: [call(PER_A1, 4)]})
+
+    def kinds_for_a1(self):
+        return {a["type"] for a in self.alerts()["alerts"] if a["seatId"] == SEAT_A1}
+
+    def test_default_is_three_days(self):
+        self.assertEqual(org_alerts.client_settings(ORG_A)["noContactDays"], 3)
+        self.assertIn("no_contact", self.kinds_for_a1())
+
+    def test_admin_can_raise_threshold_and_it_changes_alerts(self):
+        out = org_alerts.org_settings_save_response(auth(ADMIN_A), {"noContactDays": 5})
+        self.assertTrue(out["ok"], out)
+        self.assertEqual(org_alerts.client_settings(ORG_A)["noContactDays"], 5)
+        self.assertNotIn("no_contact", self.kinds_for_a1())
+        self.assertEqual(org_alerts.org_settings_response(auth(CASE_A))["settings"]["noContactDays"], 5)
+        elders = org_api.org_elders_response(auth(ADMIN_A), loaders=self.loaders)
+        a1 = next(e for e in elders["elders"] if e["seatId"] == SEAT_A1)
+        self.assertNotIn("no_contact", a1["anomalyTypes"])          # 名單也照機構設定
+        saved = [e for e in self.audit if e["eventType"] == org_alerts.EVENT_SETTINGS]
+        self.assertEqual((saved[-1]["actorUserId"], saved[-1]["details"]["noContactDays"]), (ADMIN_A, 5))
+
+    def test_latest_setting_wins_and_range_is_enforced(self):
+        org_alerts.org_settings_save_response(auth(ADMIN_A), {"noContactDays": 5})
+        org_alerts.org_settings_save_response(auth(ADMIN_A), {"noContactDays": 1})
+        self.assertEqual(org_alerts.client_settings(ORG_A)["noContactDays"], 1)
+        for bad in (0, 31, "abc", None):
+            self.assertEqual(org_alerts.org_settings_save_response(auth(ADMIN_A), {"noContactDays": bad})["error"], "no_contact_days_invalid")
+
+    def test_only_org_admin_can_change(self):
+        self.assertEqual(org_alerts.org_settings_save_response(auth(CASE_A), {"noContactDays": 5}), {"ok": False, "error": "not_found"})
+        self.assertEqual(org_alerts.org_settings_save_response(auth(HR_ESG), {"noContactDays": 5}), {"ok": False, "error": "not_found"})
+        self.assertEqual(org_alerts.org_settings_response(auth(WORKER_A)), {"ok": False, "error": "not_found"})
+
+    def test_other_org_setting_never_applies(self):
+        self.audit.append({"eventType": org_alerts.EVENT_SETTINGS, "details": {"clientId": W.ORG_B, "noContactDays": 30,
+                                                                              "savedAt": "2099-01-01T00:00:00Z"}})
+        self.assertEqual(org_alerts.client_settings(ORG_A)["noContactDays"], 3)
+
+
 class ServerWiringTests(unittest.TestCase):
     def test_routes_and_loader_are_wired(self):
         src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()
-        for path in ("/org/alerts", "/org/alert/mark", "/org/audit", "/admin/enterprise/alerts/export"):
+        for path in ("/org/alerts", "/org/alert/mark", "/org/audit", "/org/settings", "/org/settings/save", "/admin/enterprise/alerts/export"):
             self.assertIn(f'self.path == "{path}"', src)
         self.assertIn("org_alerts.set_event_loader(load_org_audit_events)", src)
         self.assertIn('"/admin/enterprise/alerts/export",', src)

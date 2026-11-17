@@ -29,6 +29,9 @@ LOGGER = logging.getLogger("munea.org_alerts")
 
 EVENT_RAISED = "org_alert_raised"
 EVENT_MARKED = "org_alert_marked"
+EVENT_SETTINGS = "org_settings_saved"
+NO_CONTACT_DAYS_DEFAULT = care_week.NO_CONTACT_DAYS_DEFAULT
+SETTINGS_LOOKBACK_DAYS = 3650
 ALERT_TYPES = ("mood_drop", "no_contact", "guardian")
 TYPE_LABELS = {"mood_drop": "心情下降", "no_contact": "沒聯絡", "guardian": "守護腦亮燈"}
 MARK_RESULTS = ("correct", "false_alarm", "watching")          # 正確／誤報／觀察中
@@ -98,11 +101,75 @@ def _load_events(client_id, since_iso):
 
 
 # ---------------------------------------------------------------------------
+# 機構自己的設定（目前只有「幾天沒聯絡才提醒」）：也是只能新增的紀錄，最後一筆為準
+# ---------------------------------------------------------------------------
+
+def client_settings(client_id):
+    """回 {"noContactDays": n, "updatedAt": …}。讀不到就用預設，不擋提醒。"""
+    out = {"noContactDays": NO_CONTACT_DAYS_DEFAULT, "updatedAt": None}
+    if EVENT_LOADER is None:
+        return out
+    since_iso = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=SETTINGS_LOOKBACK_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
+    try:
+        rows = EVENT_LOADER(client_id, since_iso, (EVENT_SETTINGS,)) or []
+    except Exception as exc:
+        LOGGER.warning("org_alerts settings load failed; using defaults: %s", exc)
+        return out
+    latest = None
+    for ev in rows:
+        details = ev.get("details") or {}
+        if ev.get("eventType") != EVENT_SETTINGS or str(details.get("clientId") or "") != str(client_id):
+            continue
+        stamp = str(ev.get("createdAt") or details.get("savedAt") or "")
+        if latest is None or stamp >= latest[0]:
+            latest = (stamp, details)
+    if latest:
+        try:
+            out["noContactDays"] = max(1, min(30, int(latest[1].get("noContactDays"))))
+            out["updatedAt"] = latest[0] or None
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def org_settings_response(auth, data=None):
+    """`/org/settings`：讀目前設定（看得到提醒匣的人都能讀）。"""
+    staff, client = org_api._staff_and_client(auth)
+    if not staff or not org_api.capabilities_for(staff, client)["careWeek"]:
+        return org_api._not_found()
+    settings = client_settings(client["id"])
+    return org_api.assert_no_forbidden({"ok": True, "settings": settings, "canEdit": staff.get("role") == "org_admin",
+                                        "limits": {"noContactDays": [1, 30]}})
+
+
+def org_settings_save_response(auth, data=None):
+    """`/org/settings/save`：只有機構管理者能改；每次改都留一筆（誰、何時、改成幾天）。"""
+    data = data or {}
+    staff, client = org_api._staff_and_client(auth)
+    if not staff or staff.get("role") != "org_admin" or org_api._client_kind(client) == "esg":
+        return org_api._not_found()
+    try:
+        days = int(data.get("noContactDays"))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "no_contact_days_invalid", "allowed": [1, 30]}
+    if not 1 <= days <= 30:
+        return {"ok": False, "error": "no_contact_days_invalid", "allowed": [1, 30]}
+    ok = org_api._audit({
+        "eventType": EVENT_SETTINGS, "actorUserId": staff.get("authUserId"), "targetTable": "enterprise_clients",
+        "targetId": client["id"], "details": {"clientId": client["id"], "noContactDays": days, "staffId": staff["id"],
+                                             "role": staff["role"], "actorType": "org_staff", "savedAt": org_api._utc_now()},
+    })
+    if not ok:
+        return {"ok": False, "error": "settings_not_recorded"}
+    return org_api.assert_no_forbidden({"ok": True, "settings": {"noContactDays": days, "updatedAt": org_api._utc_now()}})
+
+
+# ---------------------------------------------------------------------------
 # 算出現在該有的提醒，第一次算到的「發出」
 # ---------------------------------------------------------------------------
 
-def _candidate_alerts(client, loaders, today):
-    """整家（不分分點）現在仍同意的席次，各自算一週、跑三條規則。"""
+def _candidate_alerts(client, loaders, today, settings=None):
+    """整家（不分分點）現在仍同意的席次，各自算一週、跑三條規則。settings＝機構自訂（沒聯絡天數）。"""
     seats = org_api._only_consented(
         [s for s in enterprise_seats.list_seats(client_id=client["id"]) if s.get("status") in org_api.SEAT_STATUSES_VISIBLE],
         client,
@@ -131,7 +198,7 @@ def _candidate_alerts(client, loaders, today):
         ev_for = [e for e in events if str(e.get("personId") or "") == str(person_id) or
                   (not e.get("personId") and str(e.get("accountId") or "") == str(account_id))]
         week = org_api._build_week(person_id, account_id, loaders, ev_for, today, org_api.L1_DAYS)
-        for anomaly in org_api._strip_anomalies(care_week.detect_anomalies(week, {})):
+        for anomaly in org_api._strip_anomalies(care_week.detect_anomalies(week, settings or {})):
             kind = anomaly.get("type")
             if kind not in ALERT_TYPES:
                 continue
@@ -163,7 +230,8 @@ def refresh_alerts(client, loaders=None, today=None):
     _start, today_date = care_week.period_bounds(1, today_str)
     since_iso = (today_date - _dt.timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
     raised, marks = _load_events(client["id"], since_iso)
-    seats, persons, candidates, partial = _candidate_alerts(client, loaders, today_str)
+    settings = client_settings(client["id"])
+    seats, persons, candidates, partial = _candidate_alerts(client, loaders, today_str, {"noContactDays": settings["noContactDays"]})
     for cand in candidates:
         if cand["alertId"] in raised or _suppressed(cand, raised, today_date):
             continue
@@ -334,6 +402,7 @@ AUDIT_ACTIONS = {
     "org_staff_activated": "第一次登入",
     "org_consent_granted": "長輩（或家人）打開了同意",
     "org_consent_revoked": "長輩（或家人）關掉了同意",
+    EVENT_SETTINGS: "改了提醒設定",
 }
 
 

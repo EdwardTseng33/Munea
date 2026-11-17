@@ -331,6 +331,8 @@ def _tests(route: Route) -> list[str]:
         "/org/alerts": ["engine/test_org_alerts.py"],
         "/org/alert/mark": ["engine/test_org_alerts.py"],
         "/org/audit": ["engine/test_org_alerts.py"],
+        "/org/settings": ["engine/test_org_alerts.py"],
+        "/org/settings/save": ["engine/test_org_alerts.py"],
         "/org-consent": ["engine/test_org_api.py"],
         "/org-consent/set": ["engine/test_org_api.py"],
         "/enterprise/portal/summary": [
