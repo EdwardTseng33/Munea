@@ -49,8 +49,25 @@ const WITH_TC =
   'family=Poppins:wght@400;500;600;700' +
   '&family=Noto+Sans+TC:wght@400;700' +
   '&family=Noto+Serif+TC:wght@600';
-const fontLink = (families) =>
-  `<link href="https://fonts.googleapis.com/css2?${families}&display=swap" rel="stylesheet">`;
+/* 2026-11-18：字型改成「不擋第一次畫面」。
+ * 原本字型樣式表是同步載入，慢網路（Slow 4G＋手機 CPU 慢 4 倍）下中文首頁要 4.7 秒才畫出第一個字；
+ * 拿掉這個阻擋，同條件 2.3 秒。做法：
+ *   - Poppins（品牌字 Munea、英文標題）：swap——到了就換上，拉丁字寬差異小；
+ *   - 中日文字型與襯線：optional——第一次來訪若沒在極短時間內到，就整頁用系統字型（iPhone 是蘋方），
+ *     不中途換字、不會整段跳動；第二次來訪已在快取，直接用品牌字型。 */
+const fontLink = (families) => {
+  const parts = families.split('&');
+  const latin = parts.filter((p) => p.startsWith('family=Poppins'));
+  const rest = parts.filter((p) => !p.startsWith('family=Poppins'));
+  const urls = [
+    `https://fonts.googleapis.com/css2?${latin.join('&')}&display=swap`,
+    ...(rest.length ? [`https://fonts.googleapis.com/css2?${rest.join('&')}&display=optional`] : []),
+  ];
+  return (
+    urls.map((u) => `<link rel="preload" as="style" href="${u}" onload="this.onload=null;this.rel='stylesheet'">`).join('\n') +
+    `\n<noscript>${urls.map((u) => `<link rel="stylesheet" href="${u}">`).join('')}</noscript>`
+  );
+};
 
 /** 語系設定：dir = 產出的資料夾（中文放根目錄）  */
 const LOCALES = [

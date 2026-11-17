@@ -5,7 +5,7 @@
   --coral:#F4A261; --coral-d:#E08B45; --coral-soft:#FBE7D2;
   --ink:#33403D; --muted:#5B6B66; --line:#E7E0D6;
   /* 2026-11-18 對比度：品牌青 #3AA8A0 留給圖示、底線、裝飾；按鈕底與小字一律用加深階（白字 5.1:1、奶油底小字 5.8:1） */
-  --teal-btn:#277A73; --coral-text:#B5602A;
+  --teal-btn:#277A73; --coral-text:#9A4F1E;
   --shadow:0 22px 50px -26px rgba(46,138,131,.34);
   --shadow-sm:0 10px 28px -18px rgba(46,138,131,.30);
   --shadow-lg:0 40px 80px -40px rgba(46,138,131,.42);
@@ -55,8 +55,8 @@ nav{display:flex;align-items:center;justify-content:space-between;height:76px}
 .logo-word{white-space:nowrap}
 @media(max-width:400px){html:not(:lang(zh-Hant)) .logo-zh{display:none}}
 .navlinks{display:flex;gap:30px;align-items:center}
-.navlinks a{font-size:15px;font-weight:500;color:var(--muted);transition:.2s;position:relative}
-.navlinks a:not(.nav-cta)::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;background:var(--coral);border-radius:2px;transition:width .25s}
+.navlinks a{font-size:15px;font-weight:500;color:var(--muted);transition:.2s;position:relative;padding:10px 0;display:inline-block}
+.navlinks a:not(.nav-cta)::after{content:"";position:absolute;left:0;bottom:4px;width:0;height:2px;background:var(--coral);border-radius:2px;transition:width .25s}
 .navlinks a:not(.nav-cta):hover{color:var(--ink)}
 .navlinks a:not(.nav-cta):hover::after{width:100%}
 .navlinks a.active{color:var(--teal-d)}

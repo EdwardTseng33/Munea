@@ -96,7 +96,7 @@ For more ideas on keeping in touch without hovering, read [how to check in on an
 
 ## Where Munea fits
 
-Munea is an iPhone app (iOS 15 or later) where your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. Munea doesn't keep raw recordings; it keeps the highlights of past chats, which users can view or delete, and it sends medication and appointment reminders. It does not diagnose, has no fall detection, emergency button or location sharing, and will not phone your parent or alert you if the app is not opened. It is on the App Store in the US, Canada, Taiwan and Japan, and is not currently available in the UK or Australia.
+Munea is an iPhone app (iOS 15 or later) where your parent talks by voice with an AI character, Nina or Milo, who says plainly that it is an AI; there is no typing. Munea doesn't store raw recordings separately; it keeps only the highlights of past chats, which users can view or delete, and it sends medication and appointment reminders. It does not diagnose, has no fall detection, emergency button or location sharing, and will not phone your parent or alert you if the app is not opened. It is on the App Store in the US, Canada, Taiwan and Japan, and is not currently available in the UK or Australia.
 
 ## FAQ
 
