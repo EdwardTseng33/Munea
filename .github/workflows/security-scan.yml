@@ -44,6 +44,18 @@ jobs:
           (cd "$RUNNER_TEMP" && grep " $tarball\$" checksums.txt | sha256sum -c -)
           tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP" gitleaks
           "$RUNNER_TEMP/gitleaks" version
+      - name: 自我檢查：放一把當場產生的假鑰匙，確認掃得到（掃不到＝這關壞了）
+        run: |
+          set -euo pipefail
+          canary="$RUNNER_TEMP/canary"
+          mkdir -p "$canary"
+          # 假的雲端存取金鑰：每次當場亂數產生、只放在這台臨時機器上，不會進程式庫
+          echo "aws_access_key_id = AKIA$(tr -dc 'A-Z2-7' </dev/urandom | head -c 16)" > "$canary/settings.py"
+          if "$RUNNER_TEMP/gitleaks" dir "$canary" --no-banner --redact --exit-code 1 >/dev/null 2>&1; then
+            echo "::error::gitleaks 沒有抓到故意放的假鑰匙——掃描設定壞了"
+            exit 1
+          fi
+          echo "自我檢查通過：假鑰匙有被抓到"
       - name: 掃這次新增的內容（掃到就擋）
         if: github.event_name == 'pull_request' || github.event_name == 'push'
         env:
