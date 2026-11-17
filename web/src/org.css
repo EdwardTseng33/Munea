@@ -163,7 +163,8 @@ p { text-wrap: pretty; }
   padding: 24px 16px;
   position: relative;
 }
-.screen-badge { position: absolute; top: 16px; right: 16px; }
+/* 「示範資料」固定在角落，往下捲也看得到；判定視窗打開時被遮罩蓋住（z-index 低於遮罩的 50） */
+.screen-badge { position: fixed; top: 16px; right: 16px; z-index: 40; }
 .screen-card {
   width: 100%;
   max-width: 420px;
@@ -190,6 +191,7 @@ p { text-wrap: pretty; }
   font-size: 14px;
   text-align: left;
 }
+.screen-msg.info { background: var(--mint); }
 
 /* ── 上方列＋分頁 ── */
 .topbar {
@@ -548,7 +550,7 @@ button.elder-row[aria-pressed="true"] { background: var(--mint); }
   align-items: center;
   padding: 1px 10px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.7;
   white-space: nowrap;
@@ -565,7 +567,7 @@ button.elder-row[aria-pressed="true"] { background: var(--mint); }
   margin-left: auto;
   padding: 1px 12px;
   border-radius: var(--r-pill);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.7;
   white-space: nowrap;
@@ -580,7 +582,7 @@ button.elder-row[aria-pressed="true"] { background: var(--mint); }
 .alert-sugg { font-size: 14px; color: var(--ink-2); margin: 0; }
 .alert-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 16px; }
 .alert-meta { font-size: 13px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
-.alert-foot .btn { margin-left: auto; }
+.alert-foot .btn { margin-left: auto; min-height: 40px; }
 .history { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
 .history h3 { font-size: 14px; margin: 0 0 6px; }
 .history ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -802,7 +804,8 @@ button.elder-row[aria-pressed="true"] { background: var(--mint); }
   .filters { gap: 6px; }
   .chip { padding: 0 12px; }
   .status-pill { margin-left: 0; }
-  .alert-foot .btn { margin-left: 0; width: 100%; }
+  .alert-foot .btn { margin-left: 0; width: 100%; min-height: 44px; }
+  .topbar .demo-badge { position: fixed; top: 12px; right: 16px; z-index: 40; box-shadow: var(--shadow); }
   .modal-backdrop { padding: 12px; align-items: flex-end; }
   .modal { padding: 20px 16px; max-height: calc(100vh - 24px); }
   .result-group { gap: 6px; }

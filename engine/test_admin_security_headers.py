@@ -81,6 +81,17 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", 
     org_meta = fh.read()
 require("org portal page still carries its own meta CSP", 'http-equiv="Content-Security-Policy"' in org_meta)
 require("org portal meta CSP does not rely on frame-ancestors (ignored in meta)", "frame-ancestors" not in org_meta)
+# 拿得到同一個檔的寫法（結尾斜線、雙斜線、繞一圈的路徑），標頭也要一樣（#722 信任關卡）
+for raw in ("/org.html/", "//org.html", "/src/../org.html", "/./org.html?demo=1"):
+    variant = response_headers(raw, "text/html; charset=utf-8")
+    require(f"{raw} gets the org portal headers",
+            variant.get("X-Frame-Options") == "DENY" and variant.get("Content-Security-Policy") == "frame-ancestors 'none'")
+admin_variant = response_headers("/admin.html/", "text/html; charset=utf-8")
+require("/admin.html/ still gets the admin CSP",
+        "frame-ancestors 'none'" in admin_variant.get("Content-Security-Policy", "") and admin_variant.get("X-Frame-Options") == "DENY")
+require("/src/org.js/ disables MIME sniffing", response_headers("/src/org.js/", "application/javascript; charset=utf-8").get("X-Content-Type-Options") == "nosniff")
+require("header path normalizes like file serving", server.normalized_request_path("/src/../org.html") == "/org.html"
+        and server.normalized_request_path("//org.html") == "/org.html" and server.normalized_request_path("/") == "/")
 link_portal = response_headers("/org-portal.html", "text/html; charset=utf-8")
 require("link-based org portal is unchanged", "Content-Security-Policy" not in link_portal and "X-Frame-Options" not in link_portal)
 

@@ -401,10 +401,38 @@ def granted_seat_ids(client_id):
 # 身分：登入證 → org_staff
 # ---------------------------------------------------------------------------
 
-def resolve_staff(auth):
-    """auth = server 驗完的 {authUserId, email}。回 staff 或 None（None 一律當 not_found）。
+EMAIL_VERIFIED_PROVIDERS = ("google", "apple")
 
-    第一次登入：auth_user_id 還沒綁，用邀請 email 對上後綁起來、狀態 invited → active。
+
+def email_binding_allowed(auth):
+    """第一次登入用 email 對邀請名單之前，先確定這個 email 真的是他本人的（2026-11-18 · #722 信任關卡）。
+
+    Supabase 目前開著「註冊要收信確認」（mailer_autoconfirm=false），搶先用社工的 email 註冊這招現在不成立；
+    但設定哪天被關掉，別人就能先註冊、搶走名額。所以程式這裡再擋一道，只認：
+      · email 已確認（server 從 Supabase 使用者資料的 email_confirmed_at 算出 emailVerified＝True；
+        後台建、email_confirm=true 的測試帳號也是這種），或
+      · 用 Google／Apple 登入（email 由他們驗過）。
+    """
+    auth = auth or {}
+    if auth.get("emailVerified") is True:
+        return True
+    return str(auth.get("provider") or "").strip().lower() in EMAIL_VERIFIED_PROVIDERS
+
+
+def unverified_invite_match(auth):
+    """email 在邀請名單上、還沒綁人，但這次登入的 email 沒確認——給 /org/me 講「請用受邀的帳號登入」。"""
+    auth = auth or {}
+    email = _lower(auth.get("email"))
+    if not email or not str(auth.get("authUserId") or "").strip() or email_binding_allowed(auth):
+        return False
+    return any(c["status"] == "invited" and not c.get("authUserId") for c in list_staff(email=email))
+
+
+def resolve_staff(auth):
+    """auth = server 驗完的 {authUserId, email, provider, emailVerified}。回 staff 或 None（None 一律當 not_found）。
+
+    第一次登入：auth_user_id 還沒綁，用邀請 email 對上後綁起來、狀態 invited → active；
+    只有 email 確認過的登入才准這樣對（email_binding_allowed）。
     停用的人就算 email 對得上也不給（disabled 是硬停）。
     """
     auth = auth or {}
@@ -419,7 +447,7 @@ def resolve_staff(auth):
             break
         if cand["status"] == "disabled":
             return None
-    if staff is None and email:
+    if staff is None and email and email_binding_allowed(auth):
         for cand in list_staff(email=email):
             if cand["status"] == "disabled":
                 return None
@@ -717,6 +745,10 @@ def _strip_anomalies(anomalies):
 def org_me_response(auth, data=None):
     staff, client = _staff_and_client(auth)
     if not staff:
+        # 唯一不回 not_found 的情況：email 在邀請名單上、但這次登入的 email 沒確認。講清楚要換哪個帳號登入，
+        # 不然本人會以為沒被開通。其他接口照舊一律 not_found。
+        if unverified_invite_match(auth):
+            return {"ok": False, "error": "email_unverified"}
         return _not_found()
     return {"ok": True, "staff": _public_staff(staff), "org": _public_org(client), "capabilities": capabilities_for(staff, client)}
 

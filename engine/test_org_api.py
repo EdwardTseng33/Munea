@@ -179,13 +179,42 @@ class IdentityTests(Base):
 
     def test_first_login_binds_invited_email_and_audits(self):
         new_uid = str(uuid.uuid4())
-        me = org_api.org_me_response(auth(new_uid, email="Invited@A.org"))
+        me = org_api.org_me_response({**auth(new_uid, email="Invited@A.org"), "provider": "google"})
         self.assertTrue(me["ok"], me)
         self.assertEqual(me["staff"]["displayName"], "A 新人")
         bound = org_api.list_staff(auth_user_id=new_uid)
         self.assertEqual(len(bound), 1)
         self.assertEqual(bound[0]["status"], "active")
         self.assertIn("org_staff_activated", [e["eventType"] for e in self.audit])
+
+    def test_first_login_needs_a_verified_email(self):
+        """搶註冊防線（#722 信任關卡）：email 沒確認的登入，就算 email 一樣也不能對到邀請名單。"""
+        new_uid = str(uuid.uuid4())
+        login = {**auth(new_uid, email="invited@a.org"), "provider": "email", "emailVerified": False}
+        self.assertEqual(org_api.org_me_response(login), {"ok": False, "error": "email_unverified"})
+        self.assertEqual(org_api.list_staff(auth_user_id=new_uid), [])
+        self.assertEqual(org_api.list_staff(email="invited@a.org")[0]["status"], "invited")
+        self.assertNotIn("org_staff_activated", [e["eventType"] for e in self.audit])
+        self.assertEqual(org_api.org_summary_response(login), {"ok": False, "error": "not_found"})
+
+    def test_admin_created_confirmed_email_account_can_bind(self):
+        """e2e 用的測試帳號是後台建、email_confirm=true（provider＝email、email 已確認）：要能綁。"""
+        new_uid = str(uuid.uuid4())
+        me = org_api.org_me_response({**auth(new_uid, email="invited@a.org"), "provider": "email", "emailVerified": True})
+        self.assertTrue(me["ok"], me)
+        self.assertEqual(org_api.list_staff(auth_user_id=new_uid)[0]["status"], "active")
+
+    def test_only_confirmed_email_or_google_apple_counts(self):
+        for provider in ("google", "apple", "Google"):
+            self.assertTrue(org_api.email_binding_allowed({"provider": provider}))
+        self.assertFalse(org_api.email_binding_allowed({"provider": "email"}))
+        self.assertFalse(org_api.email_binding_allowed({"provider": "email", "emailVerified": "true"}))  # 只認布林 True
+        self.assertFalse(org_api.email_binding_allowed({}))
+
+    def test_unverified_login_without_an_invite_is_plain_not_found(self):
+        stranger = str(uuid.uuid4())
+        login = {**auth(stranger, email="nobody@example.org"), "provider": "email"}
+        self.assertEqual(org_api.org_me_response(login), {"ok": False, "error": "not_found"})
 
     def test_disabled_staff_is_refused_even_with_matching_email(self):
         gone = org_api.list_staff(email="gone@a.org")[0]
@@ -562,6 +591,14 @@ class ServerWiringTests(unittest.TestCase):
         self.assertIn('or request_path.startswith("/org/")),', src)
         for path in ("/org/me", "/org/summary", "/org/elders", "/org/elder/care-week", "/org/reports", "/org-consent", "/org-consent/set"):
             self.assertIn(f'self.path == "{path}"', src)
+
+    def test_org_requests_carry_email_verified_from_the_supabase_user(self):
+        s = self.server
+        self.assertTrue(s.auth_email_verified({"ok": True, "user": {"email_confirmed_at": "2026-11-01T00:00:00Z"}}))
+        self.assertFalse(s.auth_email_verified({"ok": True, "user": {"email_confirmed_at": None, "confirmed_at": "2026-11-01T00:00:00Z"}}))
+        self.assertFalse(s.auth_email_verified({"ok": True, "developerMode": True}))
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()
+        self.assertIn('auth_gate["auth"]["emailVerified"] = auth_email_verified(family_auth)', src)
 
     def test_audit_sink_is_wired_to_server_audit_events(self):
         # 2026-11-18：機構端稽核走嚴格寫入口（帳號欄空值、不綁請求身分、寫不進就丟錯）

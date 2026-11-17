@@ -291,12 +291,20 @@ function backend(role, opts = {}) {
   };
 }
 
+class FakeStorage {
+  constructor(seed) { this.map = new Map(Object.entries(seed || {})); }
+  getItem(k) { return this.map.has(k) ? this.map.get(k) : null; }
+  setItem(k, v) { this.map.set(k, String(v)); }
+  removeItem(k) { this.map.delete(k); }
+}
+
 function jsonResponse(data, status = 200) {
   return { status, ok: status >= 200 && status < 300, json: async () => data };
 }
 
 // ───────────────────────── 把 org.js 放進假世界跑 ─────────────────────────
-async function boot(url, { respond = null, token = 'test-token', src = ORG_JS, signInResult = { ok: true }, recover = null } = {}) {
+async function boot(url, { respond = null, token = 'test-token', src = ORG_JS, signInResult = { ok: true }, recover = null,
+  signOutResult = { ok: true }, session = {}, local = {} } = {}) {
   const doc = new FakeDocument();
   const app = doc.createElement('div');
   app.setAttribute('id', 'app');
@@ -312,7 +320,8 @@ async function boot(url, { respond = null, token = 'test-token', src = ORG_JS, s
   };
   const calls = [];
   const authCalls = [];
-  const win = { document: doc, location, history, console, setTimeout, clearTimeout, URLSearchParams, URL, AbortController, innerWidth: 1280 };
+  const win = { document: doc, location, history, console, setTimeout, clearTimeout, URLSearchParams, URL, AbortController, innerWidth: 1280,
+    sessionStorage: new FakeStorage(session), localStorage: new FakeStorage(local) };
   win.window = win;
   let nextFetch = null; // 測試可以指定下一次 fetch 怎麼回（例如網路斷掉）
   win.fetch = async (p, init) => {
@@ -329,7 +338,7 @@ async function boot(url, { respond = null, token = 'test-token', src = ORG_JS, s
     getAccessToken: async () => token,
     recoverRejectedSession: async () => { authCalls.push('recover'); return recover; },
     signInWithProvider: async provider => { authCalls.push('signIn:' + provider); return signInResult; },
-    signOut: async () => { authCalls.push('signOut'); return { ok: true }; },
+    signOut: async () => { authCalls.push('signOut'); return signOutResult; },
     state: () => ({ email: 'staff@example.org', status: token ? 'signed-in' : 'guest' }),
   };
   doc.onScript = node => {
@@ -377,6 +386,17 @@ const pathsOf = calls => calls.map(c => c.path);
     for (const bad of [/\.innerHTML\b/, /\.outerHTML\b/, /insertAdjacentHTML/, /document\.write/, /\beval\(/, /new Function\(/]) {
       assert.doesNotMatch(ORG_JS, bad, 'org.js 出現 ' + bad);
     }
+  });
+
+  await check('桌機判定鈕至少 36px、狀態徽章字至少 13px；手機的「示範資料」固定在角落', () => {
+    const rule = sel => { const m = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}').exec(ORG_CSS); return m ? m[1] : ''; };
+    const px = (block, prop) => { const m = new RegExp('(?:^|;|\\s)' + prop + ':\\s*([\\d.]+)px').exec(block); return m ? Number(m[1]) : 0; };
+    assert.ok(px(rule('.alert-foot .btn'), 'min-height') >= 36, '判定鈕太矮');
+    assert.ok(px(rule('.btn-sm'), 'min-height') >= 36);
+    assert.ok(px(rule('.status-pill'), 'font-size') >= 13, '狀態徽章字太小');
+    assert.ok(px(rule('.type-tag'), 'font-size') >= 13);
+    assert.match(rule('.topbar .demo-badge'), /position:\s*fixed/, '手機往下捲要看得到「示範資料」');
+    assert.match(rule('.screen-badge'), /position:\s*fixed/);
   });
 
   await check('薄門碼跟 App 同一把；品牌色照規範', () => {
@@ -427,6 +447,7 @@ const pathsOf = calls => calls.map(c => c.path);
         }
       }
       assert.deepEqual(pathsOf(w.calls), [], role + ' 示範模式打了網路');
+      assert.equal(all(w.doc.body, el => el.tagName === 'A').length, 0, role + ' 示範模式不該有真連結');
       assert.deepEqual(w.doc.scripts, [], role + ' 示範模式載了登入元件');
       assert.deepEqual(w.doc.htmlWrites, []);
     }
@@ -698,6 +719,50 @@ const pathsOf = calls => calls.map(c => c.path);
     assert.ok(text(w.doc.body).includes('這個網址目前不能使用機構專區'));
   });
 
+  await check('共用電腦：登入放在這個分頁、用自己的鑰匙名；登出請求失敗也把這台電腦的登入資料清掉', async () => {
+    const seeded = { 'munea-org-auth': '{"access_token":"前一位的"}', 'munea-org-auth-code-verifier': 'v', 'sb-other-auth-token': 'App 的' };
+    const w = await boot('https://admin.munea.net/org.html', {
+      respond: backend('org_admin'), signOutResult: { ok: false, error: { message: 'Failed to fetch' } }, session: seeded, local: { 'munea-org-auth': '舊的' },
+    });
+    const cfg = w.win.MUNEA_SUPABASE_CONFIG;
+    assert.equal(cfg.authOptions.storageKey, 'munea-org-auth', '要用自己的鑰匙名，跟同網域的 App 分開');
+    assert.equal(cfg.authOptions.storage, w.win.sessionStorage, '登入要放 sessionStorage（關瀏覽器就登出）');
+    await click(buttonsNamed(w.doc.body, '登出')[0]);
+    assert.ok(w.authCalls.includes('signOut'), '要先叫 Supabase 登出');
+    for (const key of ['munea-org-auth', 'munea-org-auth-code-verifier']) {
+      assert.equal(w.win.sessionStorage.getItem(key), null, '登出失敗沒清掉 ' + key);
+    }
+    assert.equal(w.win.localStorage.getItem('munea-org-auth'), null, '舊的 localStorage 也要清');
+    assert.equal(w.win.sessionStorage.getItem('sb-other-auth-token'), 'App 的', '不能清到別的鑰匙');
+    assert.ok(text(w.doc.body).includes('這台電腦已經登出了。剛才連不上沐寧'), '登出請求失敗要講白話');
+    assert.equal(buttonsNamed(w.doc.body, '用 Google 帳號登入').length, 1);
+
+    const ok = await boot('https://admin.munea.net/org.html', { respond: backend('org_admin'), session: { 'munea-org-auth': 'x' } });
+    await click(buttonsNamed(ok.doc.body, '登出')[0]);
+    assert.equal(ok.win.sessionStorage.getItem('munea-org-auth'), null);
+    assert.ok(!text(ok.doc.body).includes('剛才連不上沐寧'), '登出成功不用跳提醒');
+  });
+
+  await check('email 沒確認的登入：請他用受邀的 Google 帳號登入，可以登出換帳號', async () => {
+    const w = await boot('https://admin.munea.net/org.html', { respond: backend('org_admin', { override: p => (p === '/org/me' ? { ok: false, error: 'email_unverified' } : undefined) }) });
+    assert.ok(text(w.doc.body).includes('請用受邀的 Google 帳號登入'));
+    assert.ok(text(w.doc.body).includes('目前登入：staff@example.org'));
+    await click(buttonsNamed(w.doc.body, '登出')[0]);
+    assert.ok(w.authCalls.includes('signOut'));
+  });
+
+  await check('月報連結只連回自己網域：斜線夾 tab、兩條斜線、別的網域、javascript: 都擋掉', async () => {
+    for (const bad of ['/\t/evil.example', '/\n/evil.example', '//evil.example', '/\\evil.example', 'https://evil.example/enterprise/portal/report', 'javascript:alert(1)//']) {
+      const respond = backend('org_admin', { override: p => (p === '/org/reports' ? { ...reportsRes(), downloadPath: bad } : undefined) });
+      const w = await boot('https://admin.munea.net/org.html#reports', { respond });
+      const links = all(w.doc.body, el => el.tagName === 'A');
+      assert.equal(links.length, 1);
+      const href = links[0].getAttribute('href');
+      assert.ok(new URL(href).origin === 'https://admin.munea.net', JSON.stringify(bad) + ' 連到別的網域：' + href);
+      assert.ok(href.startsWith('https://admin.munea.net/enterprise/portal/report?t='), JSON.stringify(bad) + ' 沒換回預設路徑：' + href);
+    }
+  });
+
   await check('沒有機構權限：顯示要找誰開通＋登出鈕；登出後回登入頁', async () => {
     const w = await boot('https://admin.munea.net/org.html', { respond: backend('org_admin', { override: p => (p === '/org/me' ? { ok: false, error: 'not_found' } : undefined) }) });
     assert.ok(text(w.doc.body).includes('這個 Google 帳號還沒有機構專區的權限。請貴單位的沐寧聯絡窗口幫你開通。'));
@@ -749,7 +814,7 @@ const pathsOf = calls => calls.map(c => c.path);
     for (const el of w.doc.created) {
       for (const [k, v] of Object.entries(el.attributes)) {
         assert.ok(!/^on/i.test(k), '長出事件屬性 ' + k);
-        if (k === 'href') assert.ok(v.startsWith('/enterprise/portal/report?t='), '連結不是月報：' + v);
+        if (k === 'href') assert.ok(v.startsWith('https://admin.munea.net/enterprise/portal/report?t='), '連結不是自己網域的月報：' + v);
       }
     }
   });

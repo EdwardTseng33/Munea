@@ -50,7 +50,10 @@ for relative_path in \
   "admin.html" \
   "flashhead-live-test.html" \
   "src/admin.js" \
-  "src/admin.css"   "flashhead"; do
+  "src/admin.css" \
+  "org.html" \
+  "src/org.js" \
+  "src/org.css"   "flashhead"; do
   rm -rf "$ROOT/ios/App/App/public/$relative_path"
 done
 
@@ -58,7 +61,10 @@ for relative_path in \
   "admin.html" \
   "flashhead-live-test.html" \
   "src/admin.js" \
-  "src/admin.css"   "flashhead"; do
+  "src/admin.css" \
+  "org.html" \
+  "src/org.js" \
+  "src/org.css"   "flashhead"; do
   if [ -e "$ROOT/ios/App/App/public/$relative_path" ]; then
     echo "FAIL non-App web tool remained in the iOS bundle: $relative_path"
     exit 1

@@ -58,7 +58,7 @@
   // ───────────────────────── 模式 ─────────────────────────
   const query = new URLSearchParams(W.location.search || '');
   const DEMO = query.get('demo') === '1';
-  const DEMO_ROLES = ['org_admin', 'case_manager', 'care_worker', 'esg', 'guest', 'none'];
+  const DEMO_ROLES = ['org_admin', 'case_manager', 'care_worker', 'esg', 'guest', 'none', 'unverified'];
   const DEMO_START = DEMO_ROLES.indexOf(query.get('role')) >= 0 ? query.get('role') : 'org_admin';
   const DEMO_FAIL = DEMO ? String(query.get('fail') || '') : '';
   let demoRole = DEMO_START;
@@ -345,10 +345,30 @@
   // ───────────────────────── 登入（跟 App 同一套 Supabase Google 登入） ─────────────────────────
   function pageUrl() { return W.location.origin + W.location.pathname; }
 
+  // 照護據點多半是共用電腦（#722 信任關卡）：登入只放在這個分頁的 sessionStorage（關掉瀏覽器就登出），
+  // 而且用自己的鑰匙名，跟同網域 App 的登入分開。auth.js 會把 cfg.authOptions 交給 Supabase。
+  const AUTH_STORAGE_KEY = 'munea-org-auth';
+  function sessionStore() { try { return W.sessionStorage || null; } catch (e) { return null; } }
+  function localStore() { try { return W.localStorage || null; } catch (e) { return null; } }
+
   // auth-config.js 的回跳網址預設是 App 首頁；機構專區要回到這一頁。
-  function pinRedirect() {
+  function pinAuthConfig() {
     const cfg = W.MUNEA_SUPABASE_CONFIG;
-    if (cfg) cfg.redirectTo = pageUrl();
+    if (!cfg) return;
+    cfg.redirectTo = pageUrl();
+    const store = sessionStore();
+    cfg.authOptions = Object.assign({}, cfg.authOptions || {}, { storageKey: AUTH_STORAGE_KEY }, store ? { storage: store } : {});
+  }
+
+  // Supabase 套件（auth-js 2.65）登出請求失敗時直接返回、不清本機——下一個人重新整理就用前一個人的身分進去。
+  // 所以登出不管成不成功，這台電腦上的登入資料一律自己清掉。
+  function forgetLocalLogin() {
+    [sessionStore(), localStore()].forEach(function (store) {
+      if (!store) return;
+      [AUTH_STORAGE_KEY, AUTH_STORAGE_KEY + '-code-verifier', AUTH_STORAGE_KEY + '-user'].forEach(function (key) {
+        try { store.removeItem(key); } catch (e) { /* 清不掉就換下一個 */ }
+      });
+    });
   }
 
   function loadScript(src) {
@@ -378,7 +398,7 @@
     async load() {
       if (!this.loaded) {
         await loadScript('src/auth-config.js');
-        pinRedirect();
+        pinAuthConfig();
         await loadScript('src/auth.js');
         this.loaded = true;
       }
@@ -402,13 +422,13 @@
 
   async function signIn(btn, msg) {
     if (DEMO) {
-      demoRole = DEMO_START === 'guest' || DEMO_START === 'none' ? 'org_admin' : DEMO_START;
+      demoRole = ['guest', 'none', 'unverified'].indexOf(DEMO_START) >= 0 ? 'org_admin' : DEMO_START;
       return enter();
     }
     btn.disabled = true;
     btn.textContent = '正在前往 Google…';
     msg.hidden = true;
-    pinRedirect();
+    pinAuthConfig();
     let res = null;
     try { res = W.MuneaAuth ? await W.MuneaAuth.signInWithProvider('google') : null; } catch (e) { res = null; }
     if (res && res.ok) return; // 瀏覽器接著會跳去 Google，登入完回到這一頁
@@ -427,8 +447,13 @@
       demoRole = 'guest';
       return renderLogin();
     }
-    try { if (W.MuneaAuth) await W.MuneaAuth.signOut(); } catch (e) { /* 本機登入狀態清不掉也照樣回登入頁 */ }
-    renderLogin();
+    let signedOut = false;
+    try {
+      const res = W.MuneaAuth ? await W.MuneaAuth.signOut() : null;
+      signedOut = !!(res && res.ok);
+    } catch (e) { signedOut = false; }
+    forgetLocalLogin();
+    renderLogin(signedOut ? '' : 'signout_offline');
   }
 
   // ───────────────────────── 進門前的畫面 ─────────────────────────
@@ -446,7 +471,7 @@
     screen([lockup(), h('p', { class: 'screen-loading', text: '讀取中…' })]);
   }
 
-  function renderLogin() {
+  function renderLogin(notice) {
     S.me = null;
     const btn = h('button', { type: 'button', class: 'btn btn-primary btn-block' }, '用 Google 帳號登入');
     const msg = h('p', { class: 'screen-msg', role: 'alert', hidden: true });
@@ -458,7 +483,12 @@
       h('p', { class: 'screen-hint', text: '只有機構邀請過的帳號才能進來' }),
       msg,
     ]);
-    if (S.authError) {
+    if (notice === 'signout_offline') {
+      msg.textContent = glue('這台電腦已經登出了。剛才連不上沐寧，如果之後打開還看到前一位的資料，請把瀏覽器整個關掉。');
+      msg.className = 'screen-msg info';
+      msg.setAttribute('role', 'status');
+      msg.hidden = false;
+    } else if (S.authError) {
       msg.textContent = '登入沒有完成，請再試一次。';
       msg.hidden = false;
       S.authError = '';
@@ -476,6 +506,20 @@
       lockup(),
       h('h1', { class: 'screen-title', text: '還沒有機構專區的權限' }),
       h('p', { class: 'screen-text', text: '這個 Google 帳號還沒有機構專區的權限。請貴單位的沐寧聯絡窗口幫你開通。' }),
+      email ? h('p', { class: 'screen-hint', text: '目前登入：' + email }) : null,
+      out,
+    ]);
+  }
+
+  // 後端（org_api.email_binding_allowed）：email 還沒確認的登入，不能用 email 對到邀請名單
+  function renderEmailUnverified() {
+    const email = DEMO ? 'staff@example.org' : auth.email();
+    const out = h('button', { type: 'button', class: 'btn btn-secondary btn-block' }, '登出');
+    out.addEventListener('click', signOut);
+    screen([
+      lockup(),
+      h('h1', { class: 'screen-title', text: '請用受邀的 Google 帳號登入' }),
+      h('p', { class: 'screen-text', text: '這個帳號的 email 還沒確認過，不能用來開通機構專區。請先登出，再用貴單位邀請的那個 Google 帳號登入。' }),
       email ? h('p', { class: 'screen-hint', text: '目前登入：' + email }) : null,
       out,
     ]);
@@ -515,6 +559,7 @@
     const me = await call(API.me, {});
     if (!me.ok) {
       if (me.error === 'not_found') return renderNoAccess();
+      if (me.error === 'email_unverified') return renderEmailUnverified();
       if (me.error === 'auth_required') return renderLogin();
       return renderFatal(me.error, enter);
     }
@@ -1340,9 +1385,15 @@
   }
 
   // ───────────────────────── 月報 ─────────────────────────
+  // 開啟憑證會放在網址上，只准連回自己網域：用瀏覽器同一套規則解析（tab、換行、反斜線都算進去）再比網域，
+  // 不是自己網域就用預設路徑（#722 信任關卡：舊的「斜線開頭」檢查擋不住 "/\t/evil.example"）。
   function reportHref(res, id) {
-    const path = typeof res.downloadPath === 'string' && /^\/[^/\\]/.test(res.downloadPath) ? res.downloadPath : REPORT_PATH;
-    return path + '?t=' + encodeURIComponent(res.downloadToken) + '&id=' + encodeURIComponent(id);
+    let path = REPORT_PATH;
+    try {
+      const url = new URL(String(res.downloadPath || REPORT_PATH), W.location.origin);
+      if (url.origin === W.location.origin) path = url.pathname;
+    } catch (e) { path = REPORT_PATH; }
+    return W.location.origin + path + '?t=' + encodeURIComponent(res.downloadToken) + '&id=' + encodeURIComponent(id);
   }
 
   function pageReports(main, seq) {
@@ -1361,8 +1412,12 @@
       list.forEach(function (item) {
         let action;
         if (item.available && res.downloadToken) {
-          action = h('a', { class: 'btn btn-secondary btn-sm', href: reportHref(res, item.id), target: '_blank', rel: 'noopener noreferrer' }, '開啟月報');
-          if (DEMO) action.addEventListener('click', function (ev) { ev.preventDefault(); toast('示範模式沒有月報檔案可以開。'); });
+          if (DEMO) {
+            action = h('button', { type: 'button', class: 'btn btn-secondary btn-sm' }, '開啟月報');
+            action.addEventListener('click', function () { toast('示範模式沒有月報檔案可以開。'); });
+          } else {
+            action = h('a', { class: 'btn btn-secondary btn-sm', href: reportHref(res, item.id), target: '_blank', rel: 'noopener noreferrer' }, '開啟月報');
+          }
         } else {
           action = h('span', { class: 'pill', text: item.available ? '暫時打不開' : '尚未產生' });
         }
@@ -1385,6 +1440,7 @@
   function demoCall(path, body) {
     if (!demoState) demoState = buildDemo();
     if (DEMO_FAIL === 'network') return { ok: false, error: 'network' };
+    if (demoRole === 'unverified') return { ok: false, error: 'email_unverified' };
     if (demoRole === 'guest' || demoRole === 'none') return { ok: false, error: 'not_found' };
     return demoState.handle(demoRole, path, body || {});
   }
