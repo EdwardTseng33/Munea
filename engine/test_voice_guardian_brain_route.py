@@ -77,6 +77,16 @@ class VoiceSideTests(unittest.TestCase):
         self.assertEqual((self.posted[0]["who"], self.posted[0]["familyNotificationCandidate"]), ("ai", False))
         self.assertEqual(self.local_dispatch, [])
 
+    def test_ai_speech_raises_no_internal_alert(self):
+        alerts = []
+        self.voice.guardian_record_and_alert("ai", 1, _risk("high", "medical_emergency_signal", True),
+                                             alert_fn=lambda *a, **k: alerts.append(a), person_id="auth-user-1", brain_post=self._post)
+        self.assertEqual(len(self.posted), 1)                             # 照記
+        self.assertEqual(alerts, [])                                      # 不洗告警頻道
+        self.voice.guardian_record_and_alert("user", 1, _risk("high", "medical_emergency_signal", True),
+                                             alert_fn=lambda *a, **k: alerts.append(a), person_id="auth-user-1", brain_post=self._post)
+        self.assertEqual([a[1] for a in alerts], ["guardian:medical_emergency_signal"])   # 長輩說的照發
+
     def test_ai_speech_never_dispatches_on_the_local_path_either(self):
         self.voice.guardian_record_and_alert("ai", 1, _risk("critical", "self_harm_crisis", True),
                                              record_fn=lambda *a, **k: None, alert_fn=lambda *a, **k: None, person_id="elder-1")
@@ -332,6 +342,28 @@ class AiSpeechNotCountedTests(unittest.TestCase):
         with patch.object(org_api.org_portal, "load_cohort_activity", return_value=fake):
             events = org_api.default_loaders()["guardianEvents"](["a1"], "2026-11-10T00:00:00Z")
         self.assertEqual([e["categories"] for e in events], [["self_harm_crisis"]])
+
+    def test_abuse_mentions_never_reach_family_or_institution_views(self):
+        import org_api
+        props = {"riskLevel": "high", "categories": ["medical_emergency_signal"], "who": "user"}
+        fake = {"productEvents": [
+            {"eventName": "guardian_risk_evaluated", "accountId": "a1", "personId": "p1", "eventTime": "2026-11-17T10:00:00Z",
+             "properties": {**props, "protectionMentioned": True}},
+            {"eventName": "guardian_risk_evaluated", "accountId": "a1", "personId": "p1", "eventTime": "2026-11-17T10:05:00Z",
+             "properties": {**props, "categories": ["protection_event"], "protectionEvent": True}},
+            {"eventName": "guardian_risk_evaluated", "accountId": "a1", "personId": "p1", "eventTime": "2026-11-17T11:00:00Z",
+             "properties": {**props}},
+        ]}
+        with patch.object(org_api.org_portal, "load_cohort_activity", return_value=fake):
+            events = org_api.default_loaders()["guardianEvents"](["a1"], "2026-11-10T00:00:00Z")
+        self.assertEqual([e["eventTime"] for e in events], ["2026-11-17T11:00:00Z"])     # 機構端只剩沒提到受暴的那筆
+        for p, expected in (({**props, "protectionMentioned": True}, True), ({**props, "protectionEvent": True}, True),
+                            ({**props, "categories": "protection_event"}, True), (props, False)):
+            self.assertEqual(server._guardian_mentions_abuse(p), expected, p)
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()
+        block = src[src.index('for ev in load_product_events(since_iso=since_iso, limit=2000) or []:'):]
+        block = block[:block.index("except Exception as e:")]
+        self.assertIn("if _guardian_mentions_abuse(props):", block)                 # 家人週摘要也跳過
 
     def test_family_care_week_skips_ai_speech(self):
         src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()

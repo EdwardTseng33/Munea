@@ -864,7 +864,8 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
             })
         except Exception as e:
             _diag(cid, "guardian.record_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
-    if risk.get("requiresHumanEscalation"):
+    # 寧寧自己講的安全提醒（「胸痛要馬上打 119」）照記、但不發內部告警：告警網址掛上正式機後，這類會把 #沐寧-告警 洗版（#717 第三輪）
+    if risk.get("requiresHumanEscalation") and from_user:
         al = alert_fn or guardian_notify.alert
         try:
             al(

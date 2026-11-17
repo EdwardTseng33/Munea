@@ -2534,6 +2534,8 @@ def care_week_response(data):
             props = ev.get("properties") or {}
             if props.get("who") == "ai":
                 continue  # 寧寧自己講的話（例如「胸口痛要馬上打 119」這種安全提醒）不是長輩亮燈
+            if _guardian_mentions_abuse(props):
+                continue  # 提到受暴受剝削：加害人可能就是家人，不進家人週摘要（#717；內部告警照發、由營運處理）
             events.append({
                 "eventTime": ev.get("eventTime") or ev.get("createdAt"),
                 "riskLevel": props.get("riskLevel") or props.get("risk_level"),
@@ -10723,6 +10725,16 @@ def _voice_identity_scope(user_id):
 
 
 GUARDIAN_EVENT_LEVELS = ("none", "low", "medium", "high", "critical")
+
+
+def _guardian_mentions_abuse(props):
+    """這筆通話亮燈有沒有提到受暴受剝削（記錄時標的 protectionEvent／protectionMentioned，或類別是 protection_event）。
+    有的話不進家人週摘要、也不進機構畫面：加害人可能就是家人；機構的建議句是「聯絡本人或家屬」，對受暴不安全。"""
+    props = props or {}
+    categories = props.get("categories") or []
+    if isinstance(categories, str):
+        categories = [categories]
+    return bool(props.get("protectionEvent") or props.get("protectionMentioned") or "protection_event" in categories)
 
 
 def voice_guardian_event_response(data):
