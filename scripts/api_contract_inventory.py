@@ -207,7 +207,7 @@ def _criticality(route: Route) -> str:
         "/auth-status", "/credits/balance", "/credits/consume", "/credits/grant",
         "/entitlements", "/privacy-export", "/subscription-event",
         "/voice/call-memory", "/voice/call-recap", "/voice/health-context",
-        "/voice/health-recommended", "/voice/reply-context",
+        "/voice/health-recommended", "/voice/reply-context", "/voice/guardian-event",
     }
     if route.surface == "gateway" and route.path.startswith(("/v1/calls", "/v1/internal/calls", "/v1/internal/reap")):
         return "critical"
@@ -347,6 +347,7 @@ def _tests(route: Route) -> list[str]:
         "/voice/call-memory": ["engine/test_voice_call_memory.py", "scripts/test_voice_chain_probe.py"],
         "/voice/call-recap": ["engine/test_voice_call_memory.py", "scripts/test_voice_chain_probe.py"],
         "/voice/health-context": ["engine/test_voice_health_context.py", "scripts/test_voice_chain_probe.py"],
+        "/voice/guardian-event": ["engine/test_voice_guardian_brain_route.py", "engine/test_safety_contacts_notify.py"],
         "/voice/health-recommended": ["engine/test_health_followup.py"],
         "/voice/reply-context": ["engine/test_voice_reply_context.py"],
     }

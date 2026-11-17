@@ -269,15 +269,18 @@ def detect_anomalies(week, settings=None):
             fact = "這段期間沒有任何通話紀錄（設定：%d 天提醒）。" % n_days
         out.append({"type": "no_contact", "when": week["period"]["end"], "fact": fact, "suggestion": "確認一下人在不在、電話通不通。"})
 
-    # guardian：這週亮過 high／critical
+    # guardian：這週通話中提到需要馬上關心的事（high／critical）。
+    # 2026-11-18（#717）改寫：①不再寫「即時通知已另外送出」——寧寧自己的話、提到受暴、沒設緊急聯絡人都不會通知，
+    # 這句不一定是真的；②不寫英文等級、不寫「守護腦」這種內部用語；③建議不再叫人「看即時通知裡的原句」——通知裡本來就沒有原句。
     s = week["safety"]
     if s["highOrCritical"]:
-        levels = "、".join("%s×%d" % (k, v) for k, v in sorted(s["counts"].items()) if k in HIGH_LEVELS)
+        names = {"critical": "緊急", "crisis": "緊急", "high": "高風險"}
+        levels = "、".join("%s %d 次" % (names.get(k, k), v) for k, v in sorted(s["counts"].items()) if k in HIGH_LEVELS)
         out.append({
             "type": "guardian",
             "when": s["items"][-1]["time"] if s["items"] else week["period"]["end"],
-            "fact": "守護腦這週亮了 %d 次高風險燈（%s）；即時通知已另外送出，這裡是週彙整。" % (s["highOrCritical"], levels),
-            "suggestion": "看即時通知裡的原句與處理紀錄。",
+            "fact": "這週通話中有 %d 次提到需要馬上關心的事（%s）。" % (s["highOrCritical"], levels),
+            "suggestion": "打個電話，關心一下現在好不好。",
         })
     return out
 

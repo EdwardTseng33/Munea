@@ -565,6 +565,15 @@ def default_loaders():
             if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
                 continue
             props = ev.get("properties") or {}
+            if props.get("who") == "ai":
+                continue  # 寧寧自己講的話不是長輩亮燈（2026-11-18）
+            cats = props.get("categories") or []
+            if isinstance(cats, str):
+                cats = [cats]
+            if props.get("protectionEvent") or props.get("protectionMentioned") or "protection_event" in cats:
+                # 提到受暴受剝削先不放進機構畫面：機構的建議句是「聯絡本人或家屬」，對受暴不安全（加害人可能就是家人）。
+                # 要不要另開一條給社工的處理方式，是政策決定；在那之前，內部告警照發、由營運處理（#717）。
+                continue
             out.append({
                 "accountId": ev.get("accountId") or ev.get("account_id"),
                 "personId": ev.get("personId") or ev.get("person_id"),
@@ -689,13 +698,9 @@ ORG_GUARDIAN_SUGGESTION = "聯絡本人或家屬確認狀況。機構端看不�
 def _strip_anomalies(anomalies):
     out = []
     for a in anomalies or []:
-        # 家庭版的建議句是「看即時通知裡的原句與處理紀錄」——機構看不到原句，換成機構做得到的事。
+        # 家庭版的建議句是給家人的（「打個電話關心一下」）——換成機構做得到、也該做的事。
         suggestion = ORG_GUARDIAN_SUGGESTION if a.get("type") == "guardian" else a.get("suggestion")
-        fact = a.get("fact")
-        if a.get("type") == "guardian" and isinstance(fact, str):
-            # 家庭版那句「即時通知已另外送出」講的是給家人的緊急聯絡人通知；機構沒有收到即時通知，不能這樣寫。
-            fact = fact.replace("；即時通知已另外送出，這裡是週彙整。", "。")
-        out.append({"type": a.get("type"), "when": a.get("when"), "fact": fact, "suggestion": suggestion})
+        out.append({"type": a.get("type"), "when": a.get("when"), "fact": a.get("fact"), "suggestion": suggestion})
     return out
 
 

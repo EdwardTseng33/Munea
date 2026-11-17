@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<!-- ⚠ 這是「指南文章」版型。文章本體在 site-src/guides/<語系>/<slug>.md，跑 `npm run site:build` 產生。 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to Set Up Medication Reminders on a Parent's iPhone｜Munea Guides</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;600&display=optional" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;600&display=optional"></noscript>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/assets/paining-logo.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="description" content="Use the Medications feature in the Health app (iOS 16 or later) or a repeating alarm in Reminders. Here are the steps, plus fixes when alerts go quiet.">
+<link rel="canonical" href="https://munea.net/en/guide/iphone-medication-reminders-for-a-parent">
+
+<meta name="theme-color" content="#277A73">
+<meta name="apple-itunes-app" content="app-id=6788658125">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Munea 沐寧">
+<meta property="og:title" content="How to Set Up Medication Reminders on a Parent's iPhone">
+<meta property="og:description" content="Use the Medications feature in the Health app (iOS 16 or later) or a repeating alarm in Reminders. Here are the steps, plus fixes when alerts go quiet.">
+<meta property="og:url" content="https://munea.net/en/guide/iphone-medication-reminders-for-a-parent">
+<meta property="og:image" content="https://munea.net/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-11-18">
+<meta property="article:modified_time" content="2026-11-18">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How to Set Up Medication Reminders on a Parent's iPhone">
+<meta name="twitter:description" content="Use the Medications feature in the Health app (iOS 16 or later) or a repeating alarm in Reminders. Here are the steps, plus fixes when alerts go quiet.">
+<meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://munea.net/#organization","name":"沐寧 Munea","url":"https://munea.net/","logo":"https://munea.net/assets/paining-logo.png"},{"@type":"Article","@id":"https://munea.net/en/guide/iphone-medication-reminders-for-a-parent#article","headline":"How to Set Up Medication Reminders on a Parent's iPhone","description":"Use the Medications feature in the Health app (iOS 16 or later) or a repeating alarm in Reminders. Here are the steps, plus fixes when alerts go quiet.","inLanguage":"en","datePublished":"2026-11-18","dateModified":"2026-11-18","author":{"@type":"Organization","name":"The Munea team","url":"https://munea.net/"},"publisher":{"@id":"https://munea.net/#organization"},"mainEntityOfPage":"https://munea.net/en/guide/iphone-medication-reminders-for-a-parent","image":"https://munea.net/assets/og-image.jpg"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Munea home","item":"https://munea.net/en"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://munea.net/en/guide"},{"@type":"ListItem","position":3,"name":"How to Set Up Medication Reminders on a Parent's iPhone","item":"https://munea.net/en/guide/iphone-medication-reminders-for-a-parent"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I set medication reminders on an iPhone?","acceptedAnswer":{"@type":"Answer","text":"Open the Health app, tap Browse, tap Medications, add the medication and set a schedule. This needs iOS 16 or later. As an alternative, the Reminders app lets you create a reminder that repeats daily."}},{"@type":"Question","name":"Why aren't my parent's medication reminders going off?","acceptedAnswer":{"@type":"Answer","text":"The most common reasons are low volume, notifications switched off for the app, a Focus or Do Not Disturb setting that silences alerts, a Sleep Focus still active in the morning, a muted phone, or a dead battery. Work through those one at a time and test again."}},{"@type":"Question","name":"Can the iPhone remind again if a dose is missed?","acceptedAnswer":{"@type":"Answer","text":"Yes, on iOS 17 or later. The Medications feature can send a follow-up reminder if the dose has not been logged 30 minutes after the scheduled time. Phones on iOS 16 only send the scheduled reminder."}}]}]}</script>
+<link rel="stylesheet" href="/warm.css?v=11">
+<link rel="stylesheet" href="/guide.css?v=1">
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="progress"></div>
+
+<header>
+  <nav class="wrap">
+    <a class="logo" href="https://munea.net/en" aria-label="Munea">
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </a>
+    <div class="nav-cluster">
+      <div class="navlinks">
+        <a href="https://munea.net/en#features">Features</a>
+        <a href="https://munea.net/en#pricing">Pricing</a>
+        <a href="https://munea.net/en#faq">FAQ</a>
+        <a href="https://munea.net/en/guide">Guides</a>
+        <a class="nav-cta" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener">Free download</a>
+      </div>
+      <div class="lang-switch" data-open="false">
+        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換語言 / Switch language">
+          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+          <span class="lang-current">EN</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" aria-label="切換語言 / Switch language">
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="zh-Hant" href="https://munea.net/"><span class="tick"></span>中文<span class="sub">繁中</span></a>
+          <a class="lang-opt is-active" role="option" aria-selected="true" hreflang="en" href="https://munea.net/en"><span class="tick"></span>English<span class="sub">EN</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="ja" href="https://munea.net/ja"><span class="tick"></span>日本語<span class="sub">日本語</span></a>
+          <a class="lang-opt" role="option" aria-selected="false" hreflang="es" href="https://munea.net/es"><span class="tick"></span>Español<span class="sub">ES</span></a>
+        </div>
+      </div>
+      <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33403D" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </nav>
+</header>
+
+<main id="main" class="g-main">
+  <article class="g-article">
+    <nav class="g-crumb" aria-label="Breadcrumb"><a href="https://munea.net/en">Munea home</a><span aria-hidden="true">›</span><a href="https://munea.net/en/guide">Guides</a></nav>
+    <h1>How to Set Up Medication Reminders on a Parent's iPhone</h1>
+    <p class="g-meta"><span>The Munea team</span><span aria-hidden="true">·</span><span>Updated <time datetime="2026-11-18">November 18, 2026</time></span><span aria-hidden="true">·</span><span>7-minute read</span></p>
+    <nav class="g-toc" aria-label="In this guide"><b>In this guide</b><ol><li><a href="#s1">Before you start</a></li><li><a href="#s2">Option A: The Medications feature in the Health app</a></li><li><a href="#s3">Option B: The Reminders app with a daily repeat</a></li><li><a href="#s4">The test that matters</a></li><li><a href="#s5">Common snags and how to fix them</a></li><li><a href="#s6">When a phone reminder isn't enough</a></li><li><a href="#s7">Where Munea fits, and what it doesn't do</a></li></ol></nav>
+    <div class="g-body">
+<p>You can set up medication reminders on your parent's iPhone with the Medications feature in the built-in Health app, which needs iOS 16 or later, or with a daily repeating alert in the Reminders app. Both are free and already on the phone. Set it up together, with the phone in your hands, so you can test the alert before you leave. Only the doctor or pharmacist should decide what is taken and when. Everything here is about reminding, not about doses.</p>
+<h2 id="s1">Before you start</h2>
+<ul><li>Ask your parent first. A reminder that arrives as a surprise can feel like being managed.</li><li>Get the current medication list from the prescription labels, the doctor or the pharmacy. Don't copy it from memory.</li><li>Check the iOS version in the phone's Settings app (the software version is listed in the general settings, and the exact path can vary). If it is older than iOS 16, use the Reminders app instead (Option B below).</li><li>Plug the phone in and have it nearby. You will test the alert at the end.</li></ul>
+<h2 id="s2">Option A: The Medications feature in the Health app</h2>
+<p>This is the closest thing to a purpose-built pill reminder, and it is part of iOS 16 and later.</p>
+<ol><li>Open the <strong>Health</strong> app.</li><li>Tap <strong>Browse</strong>.</li><li>Tap <strong>Medications</strong>.</li><li>Choose the option to add a medication, then enter the medication name and the details the screen asks for.</li><li>Set the <strong>schedule</strong>: the time or times of day the medication is taken.</li><li>Save, and repeat for each medication.</li></ol>
+<p>Menu wording can differ a little between iOS versions, and Apple has added new schedule types in newer versions, so what you see may not match this list exactly. If a screen looks different, go by the closest option and check Apple's support page listed at the bottom.</p>
+<h3>What you get with a schedule</h3>
+<p>Once a schedule is set, the iPhone sends a notification at that time asking your parent to log the dose. There are two extras that depend on the iOS version:</p>
+<ul><li><strong>Follow-up reminders</strong> (iOS 17 or later): if the dose has not been logged 30 minutes after its scheduled time, the phone reminds again.</li><li><strong>Critical Alerts</strong> (iOS 17 or later): an extra alert option for medications. Where to switch it on depends on the iOS version, so follow Apple's support page below.</li></ul>
+<p>If the phone is on iOS 16, the basic scheduled reminder works, but these two are not available.</p>
+<h2 id="s3">Option B: The Reminders app with a daily repeat</h2>
+<p>If the phone can't run iOS 16, or your parent already uses Reminders for shopping lists, this is the simpler route.</p>
+<ol><li>Open the <strong>Reminders</strong> app.</li><li>Add a new reminder with a clear title, such as &quot;Morning pills with breakfast&quot;. Avoid writing medication names on a screen that others can see if privacy is a worry.</li><li>Set the date and time.</li><li>Set it to <strong>repeat daily</strong>.</li><li>If the medication is taken more than once a day, create one reminder per time.</li></ol>
+<p>The trade-off: Reminders will alert at the time, but it doesn't know whether the dose was taken. It simply reminds. That is often enough for a parent who is organized and only needs a nudge.</p>
+<h2 id="s4">The test that matters</h2>
+<p>Don't leave until you have done this together:</p>
+<ol><li>Set a reminder for two minutes from now.</li><li>Lock the phone and put it where your parent usually keeps it.</li><li>Ask them to walk to another room. Can they hear it?</li><li>Ask them to tap to log or dismiss it. Is that easy for them?</li><li>Try again with the phone face down, and with the phone in a pocket or bag.</li></ol>
+<h2 id="s5">Common snags and how to fix them</h2>
+<p>If a parent says &quot;it never rang&quot;, one of these is usually the cause.</p>
+<h3>The volume is too low</h3>
+<p>Raise the ringer and alert volume in the phone's sound settings, or with the volume buttons. Test it in the room your parent sits in most. Hearing aids and a TV playing in the background change what is audible.</p>
+<h3>Notifications are turned off</h3>
+<p>In the Settings app, open the notification settings, find the Health app (or Reminders), and make sure it is allowed to send notifications. Wording and layout differ between iOS versions, so look for the options that let the app alert, show on the lock screen and play a sound.</p>
+<h3>A Focus mode or Do Not Disturb is on</h3>
+<p>Focus modes, including Do Not Disturb, can silence notifications from apps. Open Control Center (the quick-settings panel) and check whether a Focus is switched on. If your parent likes quiet in the evening, either allow the Health or Reminders app within that Focus or turn the Focus off.</p>
+<h3>Sleep Focus quiets the morning pill</h3>
+<p>A Sleep Focus can run on a schedule and may still be on at wake-up time. If a morning reminder is missed, check whether the Sleep Focus end time is earlier than the first reminder.</p>
+<h3>The ring/silent switch, or the lack of one</h3>
+<p>Older iPhones have a small ring/silent switch on the side. iPhone 15 Pro and later models do not. If your parent has one of those, make sure the phone is not in silent mode, because a silenced phone may stay quiet; where that setting lives depends on the model and iOS version, so check it together on the phone.</p>
+<h3>The battery is low or the phone is off</h3>
+<p>A phone that has died can't ring. Agree on a charging habit, such as plugging it in by the bed every night, and ask a neighbor or a visitor to check that the phone is charged when they stop by.</p>
+<h2 id="s6">When a phone reminder isn't enough</h2>
+<p>Reminders only help if your parent notices them. If doses are still being missed, talk with their doctor or pharmacist about options such as a pill organizer or a simpler schedule. For a comparison of apps and what to look for, see <a href="/en/guide/medication-reminder-apps-for-seniors">medication reminder apps for seniors</a>.</p>
+<h2 id="s7">Where Munea fits, and what it doesn't do</h2>
+<p>Munea is an iPhone app (iOS 15 or later) in which your parent talks by voice with an AI character, and you can set medication and appointment reminders that arrive as phone notifications at the time you choose, even when the app is not open. It only reminds. It does not evaluate or adjust medication, it is not a medical device, and it will not tell you if a dose is missed. It is on the App Store in the US and Canada, and not currently available in the UK or Australia.</p>
+<h2 id="s8">FAQ</h2>
+<h3>How do I set medication reminders on an iPhone?</h3>
+<p>Open the Health app, tap Browse, tap Medications, add the medication and set a schedule. This needs iOS 16 or later. As an alternative, the Reminders app lets you create a reminder that repeats daily.</p>
+<h3>Why aren't my parent's medication reminders going off?</h3>
+<p>The most common reasons are low volume, notifications switched off for the app, a Focus or Do Not Disturb setting that silences alerts, a Sleep Focus still active in the morning, a muted phone, or a dead battery. Work through those one at a time and test again.</p>
+<h3>Can the iPhone remind again if a dose is missed?</h3>
+<p>Yes, on iOS 17 or later. The Medications feature can send a follow-up reminder if the dose has not been logged 30 minutes after the scheduled time. Phones on iOS 16 only send the scheduled reminder.</p>
+<h2 id="s9">Sources</h2>
+<ul><li><a href="https://support.apple.com/en-ca/105064" target="_blank" rel="noopener">Apple Support: Add and log medications with iPhone, iPad, and Apple Watch</a></li></ul>
+    </div>
+
+    <aside class="g-cta" aria-label="Download Munea">
+      <div class="g-cta-txt">
+        <b>Let Munea keep your parents company and remind them about meds</b>
+        <p>Free on iPhone with 5 trial credits (about 5 minutes of talk). Munea is not a medical device and not an emergency service.</p>
+      </div>
+      <a class="btn btn-appstore" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener" aria-label="Get Munea on the App Store"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="as-t"><small>On the App Store</small><b>Free download</b></span></a>
+    </aside>
+
+    <p class="g-disc">This guide is general information, not medical advice. For health or medication questions, ask a doctor or pharmacist. Details reflect public information as of the updated date.</p>
+  </article>
+
+  <section class="g-related" aria-label="Keep reading"><h2>Keep reading</h2><div class="g-list">
+        <a class="g-card" href="https://munea.net/en/guide/medication-reminder-apps-for-seniors"><b>Medication Reminder Apps for Seniors: What to Look For</b><span>The best medication reminder app for a senior is one they will actually use. Check text size, alert volume, missed-dose handling and who is told.</span><small>8-minute read</small></a>
+        <a class="g-card" href="https://munea.net/en/guide/caring-for-aging-parents-from-a-distance"><b>Caring for Aging Parents From a Distance: A 10-Point Checklist</b><span>Caring for elderly parents from a distance comes down to ten habits: local contacts, a call rhythm, shared records and a plan for you. Start here.</span><small>8-minute read</small></a>
+</div></section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30" loading="lazy"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
+        <p class="desc">Munea — the AI health companion that remembers. A face that moves and a voice that remembers, keeping you and your family close. Not a long-term care system: everyday companionship and family care.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Meet Munea</h4>
+        <a href="https://munea.net/en">Home</a>
+        <a href="https://munea.net/en/guide">Guides</a>
+        <a href="https://munea.net/en#pricing">Pricing</a>
+        <a href="https://munea.net/en#faq">FAQ</a>
+      </div>
+      <div class="foot-col">
+        <h4>Terms &amp; contact</h4>
+        <a href="/legal/en/support.html">Support</a>
+        <a href="/legal/en/terms.html">Terms of Service</a>
+        <a href="/legal/en/privacy.html">Privacy Policy</a>
+        <a href="https://munea.net/en/for-organizations">For businesses &amp; care providers</a>
+      </div>
+    </div>
+    <p class="disc">Munea is a companion for company and daily reminders. It is not a medical device and does not provide diagnosis, treatment, or emergency medical services. For health concerns, consult a doctor. In an emergency, contact your local emergency services.</p>
+    <div class="foot-bottom"><span>© 2026 Munea 沐寧 · Cared for, always.</span></div>
+  </div>
+</footer>
+<script src="/warm.js?v=11"></script>
+</body>
+</html>
