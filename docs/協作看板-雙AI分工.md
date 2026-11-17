@@ -13,6 +13,14 @@
 - **上線順序**：含這張的 App 版本上架前，後端要先帶上 #711（不然機構端還是舊行為，App 上寫的「只有次數」就不是事實）。
 - **跟開著的 PR 重疊的檔**：`web/index.html`、`web/src/app.js`、四語 json（#694／#696／#706）——都是各加各的、位置錯開；日文 `seatCode.*` 那七行是唯一改到既有行的地方。這個分支有全畫面證據，跟上 main 用 merge。
 - **檔**：`web/src/org-consent.js`（新）、`scripts/test-org-consent-ui.js`（新）、`web/index.html`、`web/src/app.js`、`web/src/seat-code.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-surface-manifest.json`、`web/src/i18n/app-surface-copy-manifest.json`、`scripts/app-full-surface-i18n-browser-precheck.js`、`scripts/test-app-surface-manifest.js`、`scripts/test-i18n-visual-qa-worklist.js`、`scripts/test-i18n-visual-qa-evidence.js`、`docs/I18N-SURFACE-INVENTORY.json`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/`（492 張＋報告）、本看板。
+### 2026-11-17 蘇菲｜🚪「想聊的話題」那一頁會把人卡住打不出去——「先跳過」從沒顯示過、按叉叉關掉後下次又跳（PR · 動 App 撥號前的詢問頁，不動通話本身）
+
+- **怎麼發現的**：Edward 要我自己想辦法測 1.0.72。在雲端 Mac 開 iPhone 模擬器、裝 Build 544 的同一份程式，用腳本連打幾通。第一通（按完告知頁）2 秒接通；第二通按「開始通話」沒撥出去，截圖是這一頁。
+- **病因（7/8 這頁上線時就有，不是 1.0.72 弄壞的）**：① 樣式表把「先跳過，直接開始聊」預設成不顯示，程式要顯示時卻寫空字串＝交還樣式表＝永遠看不到；② 「只問這一次」的記號只在 `closeInterests()` 裡記，但右上角叉叉、往下拉關掉都不經過它，所以關掉後下一次按通話又跳出來。唯一出路是按「存起來」。
+- **改法**：`web/src/app.js` 的 `__muneaOpenInterests`——顯示時明講 `block`；從通話打開的當下就記「問過了」。共 2 行程式＋註解，不動 `index.html`、樣式表、四語檔。
+- **測試**：新 `scripts/test-topics-sheet-skip.js`（把 app.js 那段抽出來用假畫面跑：從通話打開／從設定頁打開／手機不給存），掛進 `test:ui-contracts`。故意改壞三種（顯示改回空字串、拿掉記號、設定頁也顯示跳過）都會紅。
+- **還沒做**：沒在真機或模擬器重跑這個修正後的版本（1.0.72／544 測試版裡還是舊行為）。
+- **檔**：`web/src/app.js`、`scripts/test-topics-sheet-skip.js`、`scripts/test-ui-contracts.js`（一行）、本看板。
 
 ### 2026-11-17 蘇菲｜🔒 機構端週摘要：掛心事只給「類別＋次數」＋同意的三個洞（只動後端 `engine/org_api.py`，不碰 App、不碰通話路徑）
 

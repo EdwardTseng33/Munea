@@ -12781,7 +12781,12 @@ function init() {
   window.__muneaOpenInterests = function (fromCall) {
     _intSel = loadInterests(); _intFromCall = !!fromCall;
     renderInterestPicks();
-    const skip = $('#interestsSkip'); if (skip) skip.style.display = fromCall ? '' : 'none';
+    // 2026-11-17：樣式表把這顆連結預設成不顯示，這裡以前寫空字串＝交還樣式表＝永遠看不到。
+    // 要它出現就得明講 block。（iPhone 模擬器實跑抓到：按通話跳出這頁，卻沒有「先跳過」可按。）
+    const skip = $('#interestsSkip'); if (skip) skip.style.display = fromCall ? 'block' : 'none';
+    // 「只問這一次」要在問的當下就記：按叉叉、往下拉、點旁邊關掉都不會經過 closeInterests，
+    // 以前沒記到，下一次按通話又跳出來、怎麼關都打不出去。
+    if (fromCall) { try { localStorage.setItem('munea.interestsAsked', '1'); } catch (e2) {} }
     $('#interestsModal').classList.add('show');
   };
   function closeInterests(startAfter) {
