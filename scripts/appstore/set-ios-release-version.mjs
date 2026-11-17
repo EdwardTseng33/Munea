@@ -6,6 +6,10 @@
 //   1. package.json          version
 //   2. package-lock.json     version（根層）＋ packages[""].version
 //   3. web/src/version.js    current（＋在沒有這個版號的 changelog 記錄時補一筆最小項目）
+//      ⚠ changelog 的 title／items 會原樣顯示在 App「版本更新」畫面給用戶看：
+//        這裡只准寫入給用戶看的更新說明（--whats-new-file 的 whatsNew），
+//        「這筆是自動建立的、合併前請人工補」這類內部作業的話只能寫成註解。
+//        （2026-11-17：以前把那句話寫進 items，1.0.70／1.0.71 的用戶都看到了。）
 //   4. ios/App/App.xcodeproj/project.pbxproj  MARKETING_VERSION（全部出現處）
 //                                              CURRENT_PROJECT_VERSION（全部出現處）
 //
@@ -20,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const DEFAULT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function argValue(name, fallback) {
   const idx = process.argv.indexOf(name);
@@ -31,6 +35,8 @@ const VERSION = argValue('--version');
 const BUILD = argValue('--build');
 const WHATS_NEW_FILE = argValue('--whats-new-file');
 const DRY_RUN = process.argv.includes('--dry-run');
+// --root 只給守門測試用（在暫存資料夾裡跑，不碰真的版號檔）；平常不帶＝本程式庫根目錄。
+const ROOT = path.resolve(argValue('--root', DEFAULT_ROOT));
 
 if (!VERSION || !/^\d+\.\d+\.\d+$/.test(VERSION)) {
   console.error('FAIL --version is required and must look like 1.0.70');
@@ -84,9 +90,13 @@ function writeText(relativePath, content) {
   }
   source = source.replace(currentPattern, `current: '${VERSION}'`);
 
-  const alreadyRecorded = new RegExp(`version\s*:\s*['"]${VERSION.replace(/\./g, '\.')}['"]`).test(source);
+  // 2026-11-17 修：這條判斷以前寫在樣板字串裡、反斜線沒寫成兩條（空白與句點的跳脫被吃掉），
+  // 冒號後面有空格就永遠對不上＝每跑一次就再補一筆，1.0.71 因此在「版本更新」畫面重複出現兩次。
+  const versionPattern = VERSION.replace(/\./g, '\\.');
+  const alreadyRecorded = new RegExp(`version\\s*:\\s*['"]${versionPattern}['"]`).test(source);
   if (!alreadyRecorded) {
-    let whatsNewTitle = `iOS ${VERSION} (Build ${BUILD}) 發布流程自動建立的最小紀錄`;
+    // 沒給更新說明就留空白標題（畫面只顯示版號與日期），不把內部作業的話當標題給用戶看。
+    let whatsNewTitle = '';
     if (WHATS_NEW_FILE) {
       try {
         const meta = JSON.parse(readText(WHATS_NEW_FILE));
@@ -101,9 +111,8 @@ function writeText(relativePath, content) {
       + `      version: '${VERSION}',\n`
       + `      date: '${today}',\n`
       + `      title: ${titleLiteral},\n`
-      + `      items: [\n`
-      + `        '本筆由 iOS 發布流程自動建立以保持版號一致；完整更新內容請於合併前人工補上。',\n`
-      + `      ],\n`
+      + `      // 發布流程自動建立；要補細項請寫給用戶看的白話，內部備註只能留在註解。\n`
+      + `      items: [],\n`
       + `    },\n`;
     const changelogMarker = /changelog\s*:\s*\[\n/;
     if (!changelogMarker.test(source)) {

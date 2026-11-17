@@ -206,7 +206,7 @@ setTimeout(function () {
       <span class="obs-ava" style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;overflow:hidden;flex-shrink:0;background:var(--mint2)"><img class="ava-img" src="avatars/ningning-face.webp" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"></span>
       <div style="flex:1">
         <div class="serif obs-heading" id="obsHeading"></div>
-        <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700" data-i18n="status.dataReviewed">剛剛幫你看過數據</span></div>
+        <div id="obsReviewed" style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700" data-i18n="status.dataReviewed">剛剛幫你看過數據</span></div>
       </div>
       <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff" data-i18n="common.today">今天</span>
     </div>
@@ -554,7 +554,7 @@ setTimeout(function () {
       <div class="set-list">
         <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main"><span data-i18n="settings.appleHealth">Apple 健康</span><small data-i18n="settings.appleHealthSubtitle">步數・心率・睡眠</small></span><span class="sr-on" id="healthSettingsState"><span class="d"></span><span id="healthSettingsStateLabel" data-i18n="health.notConnected">未連接</span></span></div>
         <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings"></b> ›</span></div>
-        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒您</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
+        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒你</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
 
         <div class="set-row" id="visitSummaryRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="sr-main"><span data-i18n="settings.visitSummary">就診摘要</span><small data-i18n="settings.visitSummarySubtitle">帶去給醫生看的一頁整理</small></span><span class="sr-arrow"><b id="visitSummaryPeriodLabel"></b> ›</span></div>
         <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
@@ -1361,7 +1361,7 @@ setTimeout(function () {
   </nav>
 
 </div>
-  <script src="src/version.js?v=20261110-v1071"></script>
+  <script src="src/version.js?v=20261117-v1071"></script>
   <script src="src/i18n.js?v=20260729-four-locale2"></script>
   <script src="src/i18n/app-renderer-copy.js?v=20261116-audioclock1"></script>
   <script src="src/i18n/purchase-flow.js?v=20260730-four-locale1"></script>
@@ -1371,7 +1371,7 @@ setTimeout(function () {
   <script src="src/auth.js?v=20261110-v1071"></script>
   <script src="src/health.js?v=20261115-health5"></script>
   <script src="src/store.js?v=20260730-store3-retry"></script>
-  <script src="src/notify.js?v=20261109-askincontext"></script>
+  <script src="src/notify.js?v=20261117-appkey"></script>
   <script src="src/medication.js?v=20260730-med2"></script>
   <script>
   window.muneaUiT = function(key, fallback, values) {
@@ -1503,10 +1503,19 @@ setTimeout(function () {
 
   // ===== 後端帳本（點的寫進去、聊聊記的讀回來，同一本）=====
   var _logTimer=null,_logMood=null;
-  function postLog(i){ _logMood=i; if(_logTimer) clearTimeout(_logTimer); _logTimer=setTimeout(function(){ var mi=_logMood; var body={mood:MOODS[mi].k,moodKey:mi,level:LEVELS[mi],moodColor:{colorKey:'orb'+mi,bg:MOODS[mi].c,fg:'#fff'}}; try{ if(typeof window.__muneaPostMood==='function') window.__muneaPostMood(body); else fetch('/wellbeing/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(function(){}); }catch(e){} },2500); }
+  // 心情的雲端讀寫一律走 app.js 那條（帶通行碼＋登入證）。這段比 app.js（模組）早執行，
+  // 以前等不到就自己裸打 /wellbeing/*：沒通行碼、沒登入證，正式環境只會被擋。改成等 app.js 就緒再送。
+  function viaApp(name,body){
+    if(typeof window[name]==='function') return Promise.resolve(window[name](body));
+    return new Promise(function(resolve){
+      var go=function(){ resolve(typeof window[name]==='function' ? window[name](body) : null); };
+      if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go,{once:true}); else setTimeout(go,0);
+    });
+  }
+  function postLog(i){ _logMood=i; if(_logTimer) clearTimeout(_logTimer); _logTimer=setTimeout(function(){ var mi=_logMood; var body={mood:MOODS[mi].k,moodKey:mi,level:LEVELS[mi],moodColor:{colorKey:'orb'+mi,bg:MOODS[mi].c,fg:'#fff'}}; try{ viaApp('__muneaPostMood',body); }catch(e){} },2500); }
   function pull(){
     var localSelf=load().filter(function(x){return x.src==='self' && Date.now()-x.t<300000;});
-    var request=(typeof window.__muneaPullMood==='function')?window.__muneaPullMood({limit:400}):fetch('/wellbeing/recent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:400})}).then(function(r){return r.json();});
+    var request=viaApp('__muneaPullMood',{limit:400});
     return Promise.resolve(request).then(function(j){
         if(!j||!j.signals) return;
         var server=j.signals.map(function(sg){ var i=normMoodKey(sg.moodKey); if(i==null) i=normMoodKey(sg.mood); var t=sg.createdAt?Date.parse(sg.createdAt):Date.now(); return {t:t,i:i,src:(sg.source==='self-report')?'self':'obs'}; }).filter(function(x){return !isNaN(x.t)&&x.i!=null;});
@@ -1603,6 +1612,10 @@ window.MMDEV = function(){
 
   // 沒有真觀察可寫的時候，這句話由狀態決定——三種情況講三種話，不可以互相沿用。
   // （只讀到一部分卻還說「讀不到資料」也是假的，一樣不行。）
+  // 「剛剛幫你看過數據」這行小字只有真的讀到健康資料才出現（2026-11-17）：
+  // 以前它寫死在畫面上，沒接裝置時上面說「剛剛幫你看過數據」、下面說「還沒接上健康裝置」，自相矛盾。
+  var reviewed=document.getElementById('obsReviewed');
+  if(reviewed) reviewed.style.display = (anyOk || window.__muneaObsReal) ? 'flex' : 'none';
   var obs=document.getElementById('obsText');
   if(obs && !window.__muneaObsReal) obs.textContent = off
     ? window.muneaUiT('status.healthDeviceEmpty','還沒接上健康裝置。接上 Apple 健康，或先記個心情、跟我聊聊，我就開始幫你看著了。')
