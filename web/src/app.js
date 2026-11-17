@@ -9608,8 +9608,9 @@ function init() {
     box.innerHTML = members.map(m => {
       const action = m.self
         ? `<span class="fc-you">${muneaT('familyCircle.you', '本人')}</span>`
-        : `<button type="button" class="fc-remove" data-name="${m.name}">${muneaT('familyCircle.remove', '移除')}</button>`;
-      return '<div class="rl"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + m.init + '</span><b>' + m.name + '</b>' + action + '</div>';
+        : `<button type="button" class="fc-remove" data-name="${muneaEscapeHtml(m.name)}">${muneaT('familyCircle.remove', '移除')}</button>`;
+      // 2026-11-18：名字是家人自己取的、從雲端同步來的——不跳脫就能把程式碼塞進別人的畫面（資安預檢 D3）
+      return '<div class="rl"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + muneaEscapeHtml(m.init) + '</span><b>' + muneaEscapeHtml(m.name) + '</b>' + action + '</div>';
     }).join('');
     if (typeof window.__muneaApplyUserAvatar === 'function') window.__muneaApplyUserAvatar();
     // 「退出這個健康圈」只在圈裡真的還有別人時才給（Edward 2026-07-30）：
@@ -10113,7 +10114,7 @@ function init() {
       const allBtn = fs.querySelector('[data-person="all"]');
       const invBtn = fs.querySelector('[data-person="invite"]');
       fs.innerHTML = (allBtn ? allBtn.outerHTML : '') + mem.map(m =>
-        '<button class="fam-switch-item" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + muneaSafeTint(m.tint, m.name) + '"><span class="fs-av"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + famInit(m) + '</span></span><span class="fs-name">' + m.name + '</span></button>'
+        '<button class="fam-switch-item" data-person="' + muneaEscapeHtml(m.name) + '" data-rel="家人" data-init="' + muneaEscapeHtml(famInit(m)) + '" data-tint="' + muneaSafeTint(m.tint, m.name) + '"><span class="fs-av"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + muneaEscapeHtml(famInit(m)) + '</span></span><span class="fs-name">' + muneaEscapeHtml(m.name) + '</span></button>'
       ).join('') + (invBtn ? invBtn.outerHTML : '');
     }
     const hl = $('#healthList');
@@ -10140,9 +10141,9 @@ function init() {
       const txt = rv
         ? muneaT('family.status.updatedAt', '數據更新於 {day}', { day: familyDay })
         : muneaT('family.status.waiting', '等他加入連上，就看得到狀態');
-      return '<div class="health-row" data-person="' + m.name + '" data-rel="家人" data-init="' + famInit(m) + '" data-tint="' + muneaSafeTint(m.tint, m.name) + '">' +
-        '<span class="hr-av"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + famInit(m) + '</span></span>' +
-        '<div class="hr-info"><div class="hr-name">' + m.name + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
+      return '<div class="health-row" data-person="' + muneaEscapeHtml(m.name) + '" data-rel="家人" data-init="' + muneaEscapeHtml(famInit(m)) + '" data-tint="' + muneaSafeTint(m.tint, m.name) + '">' +
+        '<span class="hr-av"><span class="init-ava ' + muneaSafeTint(m.tint, m.name) + '">' + muneaEscapeHtml(famInit(m)) + '</span></span>' +
+        '<div class="hr-info"><div class="hr-name">' + muneaEscapeHtml(m.name) + '</div><div class="hr-state">' + pill + txt + '</div></div>' +
         '<div class="hr-status ' + st.cls + '"><span class="hr-dot"></span><span class="hr-slabel">' + st.label + '</span></div></div>';
     }).join('') : '<div class="fam-empty">' + muneaT('familyCircle.emptyRosterTitle', '圈裡還沒有家人') + '<br>' + muneaT('familyCircle.emptyRosterBody', '點上面「邀請」把家人拉進來，就看得到大家的狀態') + '</div>';
     // 空的時候讓掉白卡外觀，改用跟上面「還沒有進行中的活動」同一套虛線框（Edward 2026-07-29）
