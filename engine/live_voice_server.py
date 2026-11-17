@@ -754,21 +754,98 @@ def guardian_scan_text(text):
         return None
 
 
-def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, person_id=None):
-    """side effect 段（會打 Supabase/Slack，一律在背景執行緒跑）：
-    一記一筆安全事件，沿用既有 audit/product event 機制（跟 /chat 文字線同一張表、同一個 admin 後台看得到），
-    多帶 protectionEvent／familyNotificationCandidate／protectionLine／who／source 幾個欄位，
-    方便未來做「真的推播家人」時直接查得到（現在還沒有主動推播家人的功能，這裡先把料記好）。
+def _guardian_post_brain(cid, payload, attempts, brain_post=None):
+    """送一筆給 Brain（POST /voice/guardian-event，內部密語）。送不出去最多再試 attempts-1 次。
+    回 (回應, 最後一次的錯誤)；有回應時錯誤是 None。"""
+    brain_url, brain_secret = _brain_memory_config()
+    last_err = None
+    for attempt in range(attempts):
+        try:
+            if brain_post is not None:
+                resp = brain_post(payload)
+            else:
+                resp = post_internal(brain_url, brain_secret, "/voice/guardian-event", payload, timeout=5,
+                                     app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
+            return (resp or {}), None
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            _diag(cid, "guardian.brain_event_err", attempt=attempt + 1, err="%s:%s" % (type(e).__name__, str(e)[:60]))
+    return None, last_err
+
+
+def _guardian_delivery_alert(cid, level, categories, reason, alert_fn=None):
+    """高風險「沒記到、沒發到」要有人知道。用最高級告警（@channel＝「叫不到人」那一級，#717 複審），
+    只帶等級、類別、原因，不帶任何 ID。這裡本來就在背景執行緒 → 就地送完：收線後 CPU 會被節流，另開小執行緒可能送不出去。"""
+    try:
+        (alert_fn or guardian_notify.alert)(
+            "voice", "guardian:delivery_failed",
+            "level=%s categories=%s reason=%s" % (level, ",".join(categories) or "-", reason),
+            critical=True, wait=True)
+    except Exception as e:  # noqa: BLE001
+        _diag(cid, "guardian.delivery_alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+
+def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, person_id=None, brain_post=None,
+                              defer_family=False):
+    """side effect 段（會打 Brain/Slack，一律在背景執行緒跑）：
+    一記一筆安全事件（guardian_risk_evaluated），帶 protectionEvent／familyNotificationCandidate／protectionLine／who／source。
     二內部安全告警（Slack #沐寧-告警），只送等級/類別，不送逐字稿、不送個資。
-    record_fn / alert_fn 可注入假函式做測試（語音線模擬），預設用 server.append_product_event / notify.alert。
-    person_id 有帶且 familyNotificationCandidate 為真時，另外呼叫 server.dispatch_safety_alert
-    通知長輩設定的緊急聯絡人（2026-11-09 1.0.72）——best-effort、絕不拋例外回呼叫端。
+    三長輩自己說的、而且 familyNotificationCandidate 為真 → 通知長輩設定的緊急聯絡人（2026-11-09 1.0.72）。
+
+    2026-11-18 改：一和三改走 Brain（POST /voice/guardian-event，內部密語）。Voice 這台沒有雲端鑰匙、
+    認不出來電者——原本在本機寫的紀錄只落在 Voice 容器暫存檔（家人週摘要、機構提醒都看不到），
+    本機呼叫 dispatch_safety_alert 也查不到聯絡人（等於沒發）。跟收線回寫記憶同一條路：Brain 認人、Brain 記、Brain 發。
+    寧寧自己講的話（who="ai"，例如「胸口痛要馬上打 119」這種安全提醒）照記、標 who=ai，但絕不通知家人。
+    Brain 通道沒設（本機開發）或沒有來電者身分時，退回舊的本機寫法（只記、通知也只在本機）。
+
+    2026-11-18 複審改：defer_family=True（通話中一律這樣叫）時這裡只記錄、請 Brain 先別通知家人（notify=False）。
+    字幕一小段一小段進來，長輩常先講症狀、再講原因（「胸口好痛，喘不過氣……因為他打我」）；前半句就發，
+    後半句提到受暴就收不回來。通知改由 _guardian_family_notify_later 等一下、確定這通沒提到受暴才發（guardian_family_notify）。
+    record_fn / alert_fn / brain_post 可注入假函式做測試。全程 best-effort、絕不拋例外回呼叫端。
     """
     risk = (result or {}).get("risk") or {}
     policy = (result or {}).get("responsePolicy") or {}
     level = risk.get("level") or "none"
     categories = risk.get("categories") or []
-    if risk.get("requiresAuditEvent"):
+    from_user = who != "ai"
+    protection = bool(risk.get("protectionEvent")) or bool(risk.get("protectionMentioned"))
+    # 受暴受剝削：加害人可能就是家人——就算這句被標成急症或想不開，也一律不通知家庭圈（#717 信任關卡）
+    family_candidate = bool(policy.get("familyNotificationCandidate")) and from_user and not protection
+    notify_family = family_candidate and bool(person_id)
+    notify_now = notify_family and not defer_family
+    brain_url, _brain_secret = _brain_memory_config()
+    via_brain = record_fn is None and bool(person_id) and (brain_post is not None or bool(brain_url))
+    if via_brain and (risk.get("requiresAuditEvent") or notify_now):
+        try:
+            payload = {
+                "userId": str(person_id), "level": level, "categories": list(categories), "who": "ai" if not from_user else "user",
+                "protectionEvent": bool(risk.get("protectionEvent")),
+                "protectionMentioned": bool(risk.get("protectionMentioned")),
+                "familyNotificationCandidate": family_candidate,
+                "protectionLine": policy.get("protectionLine"), "record": bool(risk.get("requiresAuditEvent")),
+                "notify": not defer_family,          # 通話中先別發：等整段話講完再決定（guardian_family_notify）
+            }
+            high = level in ("high", "critical")
+            resp, last_err = _guardian_post_brain(cid, payload, 2 if high else 1, brain_post=brain_post)  # 高風險送不出去重試一次
+            if resp is not None:
+                _diag(cid, "guardian.brain_event", who=who, level=level,
+                      resolved=resp.get("identityResolved"), recorded=resp.get("recorded"),
+                      queued=(resp.get("dispatch") or {}).get("queued"))
+            # 高風險「沒記到、沒發到、沒人知道」要有人知道：內部告警只帶等級、類別、原因，不帶任何 ID
+            if high:
+                reason = None
+                if last_err is not None:
+                    reason = "brain_unreachable"
+                elif not (resp or {}).get("identityResolved"):
+                    reason = "caller_not_resolved"
+                elif notify_now and ((resp or {}).get("dispatch") or {}).get("contactCount") and \
+                        not ((resp or {}).get("dispatch") or {}).get("queued"):
+                    reason = "contacts_not_queued"
+                if reason:
+                    _guardian_delivery_alert(cid, level, categories, reason, alert_fn)
+        except Exception as e:
+            _diag(cid, "guardian.brain_event_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+    elif risk.get("requiresAuditEvent"):
         rec = record_fn or server.append_product_event
         try:
             rec({
@@ -787,7 +864,8 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
             })
         except Exception as e:
             _diag(cid, "guardian.record_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
-    if risk.get("requiresHumanEscalation"):
+    # 寧寧自己講的安全提醒（「胸痛要馬上打 119」）照記、但不發內部告警：告警網址掛上正式機後，這類會把 #沐寧-告警 洗版（#717 第三輪）
+    if risk.get("requiresHumanEscalation") and from_user:
         al = alert_fn or guardian_notify.alert
         try:
             al(
@@ -797,14 +875,47 @@ def guardian_record_and_alert(who, cid, result, record_fn=None, alert_fn=None, p
                     level, who, ",".join(categories) or "-",
                     risk.get("protectionEvent"), policy.get("familyNotificationCandidate"),
                 ),
+                wait=True,
             )
         except Exception as e:
             _diag(cid, "guardian.alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
-    if policy.get("familyNotificationCandidate") and person_id:
+    if notify_now and not via_brain:
         try:
             server.dispatch_safety_alert(person_id, "guardian")
         except Exception as e:
             _diag(cid, "guardian.safety_alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+
+def guardian_family_notify(cid, person_id, level, categories, alert_fn=None, brain_post=None):
+    """等完、確定這通沒提到受暴之後，請 Brain 通知長輩設定的緊急聯絡人（只發通知、不再記一筆；記錄當下就送過了）。
+    送不出去重試一次；最後沒發到 → 最高級內部告警（不帶任何 ID）。回 True＝這通算通知過了，之後不再發。"""
+    categories = [str(c) for c in (categories or [])]
+    brain_url, _brain_secret = _brain_memory_config()
+    if brain_post is None and not brain_url:
+        try:
+            server.dispatch_safety_alert(person_id, "guardian")      # 本機開發：沒有 Brain 通道
+            return True
+        except Exception as e:  # noqa: BLE001
+            _diag(cid, "guardian.safety_alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+            return False
+    payload = {"userId": str(person_id), "level": level, "categories": categories, "who": "user",
+               "protectionEvent": False, "protectionMentioned": False, "familyNotificationCandidate": True,
+               "record": False, "notify": True}
+    resp, last_err = _guardian_post_brain(cid, payload, 2, brain_post=brain_post)
+    dispatch = (resp or {}).get("dispatch") or {}
+    reason = None
+    if last_err is not None:
+        reason = "brain_unreachable"
+    elif not (resp or {}).get("identityResolved"):
+        reason = "caller_not_resolved"
+    elif dispatch.get("contactCount") and not dispatch.get("queued"):
+        reason = "contacts_not_queued"
+    _diag(cid, "guardian.family_notify", level=level, queued=dispatch.get("queued"),
+          contacts=dispatch.get("contactCount"), reason=reason or "-")
+    if reason:
+        _guardian_delivery_alert(cid, level, categories, reason, alert_fn)
+        return False
+    return True
 
 
 def _guardian_begin_real_user_turn(st):
@@ -828,6 +939,139 @@ def _guardian_begin_real_user_turn(st):
 GUARDIAN_SEMANTIC_CALL_CAP = int(os.environ.get("MUNEA_GUARDIAN_SEMANTIC_CAP", "80") or 80)
 
 
+# 通知家人前先等一下（2026-11-18 #717 複審）：字幕一小段一小段進來，長輩常先講症狀、再講原因。
+# 等 25 秒（電話先掛斷就立刻決定）；這通裡長輩只要提過受暴，就不通知家人。推播本來一分鐘才發一批，晚這幾秒不影響。
+GUARDIAN_FAMILY_HOLD_S = float(os.environ.get("MUNEA_GUARDIAN_FAMILY_HOLD_S", "25") or 25)
+GUARDIAN_CLOSE_GRACE_S = 3.0     # 收線時還在判的最後幾句，給 3 秒判完
+GUARDIAN_CLOSE_WAIT_S = 10.0     # 收線前，送 Brain 的工作最多等 10 秒（handler 還沒返回、CPU 還在，送得出去）
+_GUARDIAN_LEVEL_RANK = {"high": 1, "critical": 2}
+
+
+def _guardian_side_effects(cid, who, result, person_id, st, dedupe_key):
+    """記錄交給專用池、不等回應（安全導引不必等 Brain）；同一輪同一類只記一次——字幕每進一小段就重判一次整段，
+    不去重的話同一句會被記好幾次、家人與機構看到的亮燈次數會灌水。後半句才提到受暴的，再補記一筆帶受暴標記。
+    通知家人不在這裡發：先排隊（_guardian_queue_family_notify），等整段話講完再決定。"""
+    risk = (result or {}).get("risk") or {}
+    policy = (result or {}).get("responsePolicy") or {}
+    level = risk.get("level") or "none"
+    from_user = who != "ai"
+    protection = bool(risk.get("protectionEvent")) or bool(risk.get("protectionMentioned"))
+    if from_user and protection and not st.get("guardian_protection_seen"):
+        st["guardian_protection_seen"] = True        # 整通記住：長輩提過受暴，這通就不通知家人（加害人可能就是家人）
+        _diag(cid, "guardian.protection_seen", level=level)
+    if (from_user and person_id and not protection and level in ("high", "critical")
+            and policy.get("familyNotificationCandidate")):
+        _guardian_queue_family_notify(cid, st, person_id, level, risk.get("categories") or [])
+    if not (risk.get("requiresAuditEvent") or risk.get("requiresHumanEscalation")):
+        return                                         # 沒東西要記、要報
+    key = tuple(dedupe_key) + (protection,)
+    sent = st.setdefault("guardian_sent", set())
+    if key in sent:
+        return
+    sent.add(key)
+
+    def job():
+        guardian_record_and_alert(who, cid, result, person_id=person_id, defer_family=True)
+
+    try:
+        fut = asyncio.get_running_loop().run_in_executor(_GUARDIAN_EVENT_EXECUTOR, job)
+    except RuntimeError:  # 沒有事件迴圈（測試直接呼叫）：就地做
+        job()
+        return
+    futures = st.setdefault("guardian_futures", [])
+    futures[:] = [f for f in futures if not f.done()]
+    futures.append(fut)
+
+
+def _guardian_queue_family_notify(cid, st, person_id, level, categories):
+    """排隊一則「通知家人」：同一通裡已經在等的就合併（取比較嚴重的等級、類別聯集）；通知過了或提過受暴就不排。"""
+    if st.get("guardian_family_notified"):
+        return
+    if st.get("guardian_protection_seen"):
+        _diag(cid, "guardian.family_notify_suppressed", reason="protection_mentioned", level=level)
+        return
+    pending = st.get("guardian_family_pending")
+    if pending:
+        if _GUARDIAN_LEVEL_RANK.get(level, 0) > _GUARDIAN_LEVEL_RANK.get(pending["level"], 0):
+            pending["level"] = level
+        for c in categories:
+            if c not in pending["categories"]:
+                pending["categories"].append(c)
+        return
+    st["guardian_family_pending"] = {"personId": person_id, "level": level, "categories": list(categories)}
+    _diag(cid, "guardian.family_notify_held", level=level, hold_s=GUARDIAN_FAMILY_HOLD_S)
+    try:
+        st["guardian_family_task"] = asyncio.get_running_loop().create_task(_guardian_family_notify_later(cid, st))
+    except RuntimeError:  # 沒有事件迴圈（測試直接呼叫）：留著，由收線收尾決定
+        pass
+
+
+async def _guardian_wait_inflight(st, timeout):
+    """還在判的字幕（守護腦第一層＋第二層 AI）等它們判完，最多 timeout 秒——提到受暴的往往就是最後那句。"""
+    me = asyncio.current_task()
+    tasks = [t for t in list(st.get("guardian_watch_tasks") or ()) if not t.done() and t is not me]
+    if tasks:
+        await asyncio.wait(tasks, timeout=timeout)
+
+
+async def _guardian_family_notify_later(cid, st):
+    """等 GUARDIAN_FAMILY_HOLD_S 秒（電話掛斷就提早醒）→ 還在判的那幾句判完 → 這通提過受暴就不發，否則請 Brain 通知。"""
+    try:
+        closed = st.get("guardian_call_closed")
+        if closed is None:
+            closed = st["guardian_call_closed"] = asyncio.Event()
+        try:
+            await asyncio.wait_for(closed.wait(), timeout=GUARDIAN_FAMILY_HOLD_S)
+        except asyncio.TimeoutError:
+            pass
+        await _guardian_wait_inflight(st, GUARDIAN_CLOSE_GRACE_S)
+        pending = st.pop("guardian_family_pending", None)
+        if not pending:
+            return
+        if st.get("guardian_protection_seen"):
+            _diag(cid, "guardian.family_notify_suppressed", reason="protection_mentioned", level=pending["level"])
+            return
+        ok = await asyncio.get_running_loop().run_in_executor(
+            _GUARDIAN_EVENT_EXECUTOR,
+            lambda: guardian_family_notify(cid, pending["personId"], pending["level"], pending["categories"]))
+        if ok:
+            st["guardian_family_notified"] = True
+    except Exception as e:  # noqa: BLE001
+        _diag(cid, "guardian.family_notify_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+
+def _spawn_guardian_watch(st, coro):
+    """開一個守護腦判讀任務：照舊放進 bg_tasks（收線會收掉），另外記一份，收線前才知道要等哪些判完。"""
+    task = asyncio.create_task(coro)
+    st["bg_tasks"].append(task)
+    watching = st.setdefault("guardian_watch_tasks", set())
+    watching.add(task)
+    task.add_done_callback(watching.discard)
+    return task
+
+
+async def _guardian_drain_on_close(cid, st):
+    """收線收尾（#717 複審）：Voice 的雲端主機沒開 CPU 常駐，handler 一返回 CPU 就被節流，背景工作可能卡死——
+    跟通話記憶同一招，返回前把守護腦的事做完：①還在判的最後幾句給 3 秒判完；②等著通知家人的那則立刻決定
+    （不必等滿 25 秒）；③送 Brain 的記錄與通知最多等 10 秒。絕不拋例外。"""
+    try:
+        closed = st.get("guardian_call_closed")
+        if closed is None:
+            closed = st["guardian_call_closed"] = asyncio.Event()
+        closed.set()
+        await _guardian_wait_inflight(st, GUARDIAN_CLOSE_GRACE_S)
+        waits = [f for f in st.get("guardian_futures") or [] if not f.done()]
+        task = st.get("guardian_family_task")
+        if task is not None and not task.done():
+            waits.append(task)
+        if waits:
+            _done, still = await asyncio.wait(waits, timeout=GUARDIAN_CLOSE_WAIT_S)
+            if still:
+                _diag(cid, "guardian.close_wait_timeout", pending=len(still))
+    except Exception as e:  # noqa: BLE001
+        _diag(cid, "guardian.close_drain_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
+
+
 async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=None):
     """背景任務：非同步跑守護腦判讀 + 記錄/告警 +（high/critical）排隊安全導引。絕不擋音訊管線。"""
     try:
@@ -846,7 +1090,7 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
         risk = (result or {}).get("risk") or {}
         level = risk.get("level") or "none"
         categories = tuple(risk.get("categories") or [])
-        await asyncio.to_thread(guardian_record_and_alert, who, cid, result, person_id=safety_person_id)
+        _guardian_side_effects(cid, who, result, safety_person_id, st, (turn_id, who, level, categories))
         if level not in ("high", "critical"):
             # 第二層：第一層沒抓到硬危機的用戶句子 → 升級便宜 AI 判語意（只判用戶說的、背景跑不擋通話）。
             # 2026-10-28 閘全開後每句都送：上限從 5 次放到 80 次（長通話也蓋得到；每句約 NT$0.013，80 句 NT$1 封頂）
@@ -859,15 +1103,17 @@ async def guardian_watch(cid, who, text, st, session, turn_id=None, allow_cue=No
                                     "protection": "protection_event", "mental_state": "mental_state_abnormal"}
                     scat = _sem_cat_map.get(sem.get("category"), sem.get("category") or "semantic")
                     is_protect = scat == "protection_event"
+                    # 第二層 AI 判成急症或想不開的句子，只要提到受暴就一樣不通知家人（#717 信任關卡）
+                    mentions_protection = is_protect or bool(server.model_router.guardian_mentions_protection(text))
                     sem_result = {
                         "risk": {"level": sem["level"], "categories": [scat],
                                  "requiresAuditEvent": True, "requiresHumanEscalation": True,
-                                 "protectionEvent": is_protect},
-                        "responsePolicy": {"familyNotificationCandidate": (not is_protect),
+                                 "protectionEvent": is_protect, "protectionMentioned": mentions_protection},
+                        "responsePolicy": {"familyNotificationCandidate": not mentions_protection,
                                            "protectionLine": "113" if is_protect else None},
                     }
                     _diag(cid, "guardian.semantic_hit", who=who, level=sem["level"], cat=scat, conf=sem.get("confidence"))
-                    await asyncio.to_thread(guardian_record_and_alert, who, cid, sem_result, person_id=safety_person_id)
+                    _guardian_side_effects(cid, who, sem_result, safety_person_id, st, (turn_id, who, "semantic", scat))
                     key = (turn_id, "semantic", scat)
                     if key not in st["user_flagged"]:
                         st["user_flagged"].add(key)
@@ -2011,6 +2257,9 @@ _CALL_MEMORY_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=4, thread_name_prefix="call-memory")
 _VOICE_CUE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
     max_workers=2, thread_name_prefix="voice-cue")
+# 守護腦亮燈送 Brain（記錄＋通知緊急聯絡人）專用池：不佔接通／換線的共用池，也不讓安全導引等 Brain 回應。
+_GUARDIAN_EVENT_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4, thread_name_prefix="guardian-event")
 
 
 def _brain_memory_config():
@@ -3900,11 +4149,11 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
                                 st["turn_ai_text"] = ((st.get("turn_ai_text") or "") + caption_text)[-800:]
-                                st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                                _spawn_guardian_watch(st, guardian_watch(
                                     cid, "ai", st["ai_buf"], st, session,
                                     turn_id=st.get("guardian_real_turn_id", 0),
                                     allow_cue=not st.get("guardian_internal_followup_active"),
-                                )))
+                                ))
                         it = getattr(sc, "input_transcription", None)
                         if it and getattr(it, "text", None):
                             user_text = localization.reconcile_context_transcription(
@@ -3914,10 +4163,10 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             )
                             await ws.send(json.dumps({"type": "caption", "who": "user", "text": user_text}))
                             st["user_buf"] = (st["user_buf"] + user_text)[-200:]
-                            st["bg_tasks"].append(asyncio.create_task(guardian_watch(
+                            _spawn_guardian_watch(st, guardian_watch(
                                 cid, "user", st["user_buf"], st, session,
                                 turn_id=st.get("guardian_real_turn_id", 0), allow_cue=True,
-                            )))
+                            ))
                             health_watch_user_text(cid, st)  # B2 衛教：同一份字幕順手比對題庫（同步、零模型呼叫）
                         if getattr(sc, "interrupted", False) and not st.get("language_block"):
                             st["playout_head"] = 0.0   # 模型端插話：App 收到 interrupted 也會清播放
@@ -4555,6 +4804,8 @@ async def handle(ws):
                     _diag(cid, "node.control_release_err", err=f"{type(exc).__name__}:{str(exc)[:80]}")
         if _key_idx is not None:
             _release_client(_key_idx)   # 這通結束，把這把鑰匙的空位放回去給下一通
+        # 守護腦收尾（#717 複審）：最後幾句判完、等著通知家人的那則立刻決定、送 Brain 的工作做完，才收掉背景任務
+        await _guardian_drain_on_close(cid, st)
         for t in st.get("bg_tasks", []):
             if not t.done():
                 t.cancel()

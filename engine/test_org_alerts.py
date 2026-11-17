@@ -108,7 +108,7 @@ class RaiseOnceTests(AlertsBase):
         guardian_alert = next(a for a in out["alerts"] if a["type"] == "guardian")
         self.assertIn("看不到通話原句", guardian_alert["suggestion"])
         self.assertNotIn("即時通知已另外送出", guardian_alert["fact"])   # 機構沒收到即時通知，不能這樣寫
-        self.assertTrue(guardian_alert["fact"].startswith("守護腦這週亮了"))
+        self.assertTrue(guardian_alert["fact"].startswith("這週通話中有"))
 
 
 class WhoSeesWhatTests(AlertsBase):

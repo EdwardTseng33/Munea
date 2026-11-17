@@ -2532,6 +2532,10 @@ def care_week_response(data):
             if str(ev.get("personId") or "") != str(person_id):
                 continue
             props = ev.get("properties") or {}
+            if props.get("who") == "ai":
+                continue  # 寧寧自己講的話（例如「胸口痛要馬上打 119」這種安全提醒）不是長輩亮燈
+            if _guardian_mentions_abuse(props):
+                continue  # 提到受暴受剝削：加害人可能就是家人，不進家人週摘要（#717；內部告警照發、由營運處理）
             events.append({
                 "eventTime": ev.get("eventTime") or ev.get("createdAt"),
                 "riskLevel": props.get("riskLevel") or props.get("risk_level"),
@@ -4875,8 +4879,12 @@ def normalize_product_event(data=None):
     data = data or {}
     store = load_app_profile_store()
     account_id = data.get("accountId") or data.get("account_id") or store.get("account", {}).get("id") or "local-demo-account"
-    person_id = data.get("personId") or data.get("person_id") or store.get("primaryCareRecipientId")
-    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or store.get("familyGroup", {}).get("id")
+    # explicitScope：呼叫端已經明講是誰（例如通話亮燈由 Brain 認人後寫入）——沒有家庭圈就是沒有，
+    # 不拿那份全程序共用、不分人的設定快取補上，免得記到別人的家庭圈（#717 複審）。
+    explicit_scope = bool(data.get("explicitScope"))
+    person_id = data.get("personId") or data.get("person_id") or (None if explicit_scope else store.get("primaryCareRecipientId"))
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or (
+        None if explicit_scope else store.get("familyGroup", {}).get("id"))
     event_time = parse_iso_datetime(data.get("eventTime") or data.get("event_time"))
     event_name = str(data.get("eventName") or data.get("event_name") or "unknown_event").strip()[:80] or "unknown_event"
     properties = data.get("properties") if isinstance(data.get("properties"), dict) else {}
@@ -10716,6 +10724,68 @@ def _voice_identity_scope(user_id):
     return token, identity.get("personId")
 
 
+GUARDIAN_EVENT_LEVELS = ("none", "low", "medium", "high", "critical")
+
+
+def _guardian_mentions_abuse(props):
+    """這筆通話亮燈有沒有提到受暴受剝削（記錄時標的 protectionEvent／protectionMentioned，或類別是 protection_event）。
+    有的話不進家人週摘要、也不進機構畫面：加害人可能就是家人；機構的建議句是「聯絡本人或家屬」，對受暴不安全。"""
+    props = props or {}
+    categories = props.get("categories") or []
+    if isinstance(categories, str):
+        categories = [categories]
+    return bool(props.get("protectionEvent") or props.get("protectionMentioned") or "protection_event" in categories)
+
+
+def voice_guardian_event_response(data):
+    """POST /voice/guardian-event（內部密語驗證後才會進來）：通話中守護腦亮燈。
+
+    為什麼要繞這一圈（2026-11-18 查到）：Voice 那台沒有雲端鑰匙、也認不出電話那頭是誰——
+    原本在 Voice 本機寫的亮燈紀錄只落在 Voice 容器的暫存檔，家人週摘要與機構提醒都看不到；
+    「通知緊急聯絡人」在 Voice 本機也查不到聯絡人，等於沒發。改成跟收線回寫同一個模子：
+    Brain 認人 → 記一筆 guardian_risk_evaluated（帶長輩的帳號與 personId）→ 是長輩自己說的才通知聯絡人。
+    認不出人就不記、不通知（不能記到預設的那位身上）。"""
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        level = str(data.get("level") or "none").strip().lower()
+        if level not in GUARDIAN_EVENT_LEVELS:
+            level = "none"
+        categories = [str(c)[:48] for c in (data.get("categories") or []) if c][:6]
+        who = "ai" if str(data.get("who") or "") == "ai" else "user"
+        family_candidate = bool(data.get("familyNotificationCandidate"))
+        # notify=False：Voice 通話中先只記錄，等整段話講完、確定沒提到受暴才另外送一筆 record=False／notify=True 來發（#717 複審）。
+        # 舊版 Voice 不帶這欄＝照舊當場通知。
+        notify_now = bool(data.get("notify", True))
+        protection = bool(data.get("protectionEvent")) or bool(data.get("protectionMentioned")) or "protection_event" in categories
+        props = {
+            "riskLevel": level, "categories": categories, "analyticsExcluded": True, "source": "live_voice",
+            "who": who, "protectionEvent": bool(data.get("protectionEvent")), "protectionMentioned": protection,
+            "familyNotificationCandidate": family_candidate and not protection,
+            "protectionLine": (str(data.get("protectionLine"))[:8] if data.get("protectionLine") else None),
+        }
+        if not person:
+            return {"ok": True, "identityResolved": False, "recorded": False, "dispatch": None}
+        group = _current_family_group_id()
+        recorded = False
+        if data.get("record", True):
+            try:
+                # personId／familyGroupId 一定明講：不帶的話會被一份全程序共用、不分人的快取補上，記到別人身上（#717 信任關卡）
+                append_product_event({"eventName": "guardian_risk_evaluated", "source": "live_voice", "properties": props,
+                                      "personId": person, "familyGroupId": group, "explicitScope": True})
+                recorded = True
+            except Exception as e:  # 記錄出錯不能連通知一起沒了
+                log_fallback_exception("record voice guardian event", e)
+        dispatch = None
+        # 只有長輩本人說的、high／critical、通知候選、而且沒提到受暴，才通知緊急聯絡人（Brain 這邊再鎖一次）
+        if notify_now and who == "user" and family_candidate and not protection and level in ("high", "critical"):
+            dispatch = dispatch_safety_alert(person, "guardian", family_group_id=group)
+        return {"ok": True, "identityResolved": True, "recorded": recorded, "dispatch": dispatch}
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def voice_call_memory_response(data):
     """POST /voice/call-memory（內部密語驗證後才會進來）：
     Voice 掛斷時把整通字幕交給 Brain 代存——Brain 有 Supabase 鑰匙、認得用戶，
@@ -11093,7 +11163,7 @@ class H(BaseHTTPRequestHandler):
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
             if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context",
-                                "/voice/health-recommended"):
+                                "/voice/guardian-event", "/voice/health-recommended"):
                 _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
                 _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
                 if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
@@ -11105,6 +11175,7 @@ class H(BaseHTTPRequestHandler):
                     "/voice/call-recap": voice_call_recap_response,
                     "/voice/health-context": voice_health_context_response,
                     "/voice/health-recommended": voice_health_recommended_response,
+                    "/voice/guardian-event": voice_guardian_event_response,
                 }
                 self._json(_voice_internal[request_path](data))
                 return
