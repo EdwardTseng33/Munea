@@ -5960,6 +5960,8 @@ def admin_safety_events_summary(data=None):
             "protectionMentioned": _guardian_mentions_abuse(props),
             "abuseConfirmed": bool(props.get("abuseConfirmed")),
             "who": props.get("who"),
+            # 處理方式：受暴類不要聯絡家人或家庭圈的人（加害人可能就是家人）——後台照這欄顯示那一筆的步驟（#727 複審）
+            "handling": "abuse" if _guardian_mentions_abuse(props) else "standard",
         })
     summaries = load_conversation_summaries(limit=500, include_deleted=False)
     for summary in summaries:
@@ -5980,6 +5982,7 @@ def admin_safety_events_summary(data=None):
             "eventTime": summary.get("createdAt"),
             "requiresHumanEscalation": False,
             "analyticsExcluded": False,
+            "handling": "standard",
         })
     if level_filter:
         safety_events = [event for event in safety_events if event.get("riskLevel") == level_filter]

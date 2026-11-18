@@ -270,7 +270,12 @@
     "下面是這台主機上的備份，可能少了真實長輩的警訊——「沒有警訊」不代表沒事。": "Se muestra la copia local de este servidor; pueden faltar alertas reales: “sin alertas” no significa que todo esté bien.",
     "備份裡沒有安全警訊——資料庫讀不到，不代表沒事。": "No hay alertas de seguridad en la copia de respaldo; la base de datos no está disponible, así que no significa que todo esté bien.",
     "AI 判過受暴": "Maltrato confirmado por IA",
-    "提到受暴": "Menciona maltrato"
+    "提到受暴": "Menciona maltrato",
+    "先確認本人安全": "Primero confirma que la persona está a salvo",
+    "不要聯絡家人或家庭圈的人": "No contactes a la familia ni al círculo de cuidado",
+    "必要時協助撥 113 保護專線或轉社工": "Si hace falta, ayuda a llamar a la línea de protección 113 o deriva a un trabajador social",
+    "標了受暴的那幾筆不照這個步驟": "Los elementos marcados como maltrato no siguen estos pasos",
+    "——加害人可能就是家人，照那一筆寫的處理。": "— el agresor podría ser un familiar; sigue los pasos indicados en ese elemento."
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Últimos {0} días" },
