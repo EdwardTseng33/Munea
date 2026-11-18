@@ -270,7 +270,12 @@
     "下面是這台主機上的備份，可能少了真實長輩的警訊——「沒有警訊」不代表沒事。": "Showing this server's local backup, which may be missing real alerts — “no alerts” does not mean everyone is fine.",
     "備份裡沒有安全警訊——資料庫讀不到，不代表沒事。": "No safety alerts in the backup — the database is unavailable, so this does not mean everyone is fine.",
     "AI 判過受暴": "AI-confirmed abuse",
-    "提到受暴": "Mentions abuse"
+    "提到受暴": "Mentions abuse",
+    "先確認本人安全": "First confirm the person is safe",
+    "不要聯絡家人或家庭圈的人": "Do not contact family or care-circle members",
+    "必要時協助撥 113 保護專線或轉社工": "If needed, help them call the 113 protection hotline or refer to a social worker",
+    "標了受暴的那幾筆不照這個步驟": "Items marked as abuse do not follow these steps",
+    "——加害人可能就是家人，照那一筆寫的處理。": "— the abuser may be a family member; follow the steps shown on that item."
   },
   "patterns": [
     { "source": "近 {0} 天", "target": "Past {0} days" },

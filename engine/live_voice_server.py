@@ -978,6 +978,7 @@ GUARDIAN_AI_OVERRIDE_MIN_CONF = 0.8    # AI 說「沒提到受暴」要有這麼
 GUARDIAN_PROTECTION_FLAGS_MAX = 200    # 一通最多記幾段亮過受暴的話（超過＝AI 不可能都看過 → 不准推翻）
 GUARDIAN_REVIEW_FLAGGED_SHARE = 2 / 3  # 給 AI 看的內容裡，亮過受暴的那幾段最多佔幾成（其餘給最近的話）
 GUARDIAN_AI_FAIL_ALERT_AFTER = 3       # AI 裁判在同一台連續幾次沒回，就發內部告警（一般級），不悄悄退回只看關鍵字
+GUARDIAN_LATE_WORDS_WAIT_S = 4.0       # AI 看完那份之後長輩又講的話：最多再等幾秒讓它們判完（第二層 AI 要 1–10 秒）
 _GUARDIAN_AI_FAILS = {"n": 0}          # 這台的連續失敗次數（成功一次就歸零）
 GUARDIAN_SEMANTIC_WAIT_S = 12.0        # 第二層 AI 自己有 10 秒逾時（Gemini 收的最短逾時）；這裡再兜一層底，不讓判讀任務卡住
 
@@ -1213,6 +1214,7 @@ async def _guardian_abuse_verdict(cid, st):
     if task is None:
         lines, text = _guardian_review_input(st)
         st["guardian_abuse_review_text"] = text      # AI 這次真的看到的內容：決定時核對亮過受暴的每一段它看過沒有
+        st["guardian_abuse_review_pos"] = int(st.get("guardian_said_total", 0))   # AI 看到長輩說到哪裡為止
         task = st["guardian_abuse_review_task"] = asyncio.ensure_future(_guardian_run_abuse_review(cid, st, lines))
     try:
         return await asyncio.shield(task)
@@ -1220,6 +1222,20 @@ async def _guardian_abuse_verdict(cid, st):
         raise
     except Exception:  # noqa: BLE001
         return None
+
+
+def _guardian_said_after_review(st):
+    """AI 裁判看的那份內容之後，長輩又講了話嗎（只有通話中等滿 25 秒那一刻會發生；掛斷時 AI 看的就是最後的話）。"""
+    return int(st.get("guardian_said_total", 0)) > int(st.get("guardian_abuse_review_pos", 0))
+
+
+async def _guardian_wait_judged(st, timeout):
+    """等這時還在判的字幕（守護腦第一層＋第二層 AI）判完，最多 timeout 秒。回 True＝都判完了。"""
+    me = asyncio.current_task()
+    tasks = [t for t in list(st.get("guardian_watch_tasks") or ()) if not t.done() and t is not me]
+    if tasks:
+        await asyncio.wait(tasks, timeout=timeout)
+    return all(t.done() for t in tasks)
 
 
 def _guardian_family_decision(st, verdict):
@@ -1285,6 +1301,7 @@ async def _guardian_family_notify_later(cid, st):
         if not pending:
             return
         verdict = None
+        late_unjudged = False
         if not st.get("guardian_abuse_confirmed"):        # 同一通 AI 已判過有受暴：不用再問，下面直接不發
             asked_at = time.monotonic()
             verdict = await _guardian_abuse_verdict(cid, st)
@@ -1293,7 +1310,13 @@ async def _guardian_family_notify_later(cid, st):
                 # （收線時：寬限 3 秒＋這段＋送 Brain 每次 3 秒，15 秒內做得完）
                 await _guardian_wait_inflight(
                     st, max(0.0, perception_engine.GUARDIAN_AI_TIMEOUT_S - (time.monotonic() - asked_at)))
+            if (verdict is None or not verdict.get("abuse")) and _guardian_said_after_review(st):
+                # AI 判讀那一兩秒裡長輩又講了話（#727 複審的窄縫）：關鍵字沒收的受暴說法只有第二層 AI 抓得到、要 1–10 秒。
+                # 等那些話判完（最多 4 秒）；判出受暴，下面照旗標不發；還沒判完也不發。掛斷時 AI 看的就是最後的話，不會走到這裡。
+                late_unjudged = not await _guardian_wait_judged(st, GUARDIAN_LATE_WORDS_WAIT_S)
         send, reason = _guardian_family_decision(st, verdict)
+        if send and late_unjudged:
+            send, reason = False, "late_words_unjudged"
         if verdict is not None and verdict.get("abuse"):
             _guardian_record_abuse_confirmed(cid, st, pending["personId"], verdict.get("confidence"))
         if not send:
