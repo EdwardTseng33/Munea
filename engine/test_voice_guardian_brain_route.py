@@ -1841,7 +1841,7 @@ class LateWordsAfterReviewTests(_VoiceFlowBase):
         self.assertEqual(self.notices, [])
 
     def test_late_harmless_words_judged_in_time_still_notify(self):
-        self._second_layer(0.3)
+        self._second_layer(1.0)                                           # AI 回來時（約 0.7 秒）還在判 → 要真的等它判完
         self._call_with_late_words("今天天氣很好")
         self.assertEqual(len(self.notices), 1)
 
