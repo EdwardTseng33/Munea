@@ -156,6 +156,17 @@ def guardian_mentions_abuse(props):
                 or "protection_event" in categories)
 
 
+def guardian_abuse_call_ids(events):
+    """這批通話亮燈事件裡，哪幾通（properties.callId）有任何一筆提到受暴、或 AI 判過受暴。
+    家人週摘要、機構讀取、後台安全事件頁共用同一套「整通一起判」（沒有 callId 的舊紀錄不在裡面，照舊逐筆判）。"""
+    out = set()
+    for ev in events or []:
+        props = ev.get("properties") if isinstance(ev, dict) else None
+        if isinstance(props, dict) and props.get("callId") and guardian_mentions_abuse(props):
+            out.add(str(props.get("callId")))
+    return out
+
+
 def guardian_events_shareable(events):
     """通話亮燈事件裡，哪些可以給家人週摘要、機構畫面看（server.care_week_response 與 org_api 共用）：
     ①寧寧自己講的話（who=ai）不算長輩亮燈；②提到受暴受剝削的不給——加害人可能就是家人；
@@ -166,8 +177,7 @@ def guardian_events_shareable(events):
         p = ev.get("properties") if isinstance(ev, dict) else None
         return p if isinstance(p, dict) else {}
 
-    abuse_calls = {str(props_of(ev).get("callId")) for ev in events or []
-                   if props_of(ev).get("callId") and guardian_mentions_abuse(props_of(ev))}
+    abuse_calls = guardian_abuse_call_ids(events)
     out = []
     for ev in events or []:
         props = props_of(ev)

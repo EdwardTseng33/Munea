@@ -623,7 +623,7 @@
   }
 
   // 受暴類（提到受暴／AI 判過受暴）：後端給 handling="abuse"；舊回應沒有這欄就看兩個旗標
-  function isAbuseEvent(e){ return !!(e&&(e.handling==="abuse"||e.abuseConfirmed||e.protectionMentioned)); }
+  function isAbuseEvent(e){ return !!(e&&(e.handling==="abuse"||e.abuseConfirmed||e.protectionMentioned||(e.categories||[]).indexOf("protection_event")>-1)); }
   // 受暴類那一筆的處理步驟：加害人可能就是家人——不照一般步驟聯絡家庭圈（#727 複審）
   const ABUSE_STEPS_HTML='<div class="step-row abuse-steps"><span class="step"><i>1</i>先確認本人安全</span><span class="step"><i>2</i>不要聯絡家人或家庭圈的人</span><span class="step"><i>3</i>必要時協助撥 113 保護專線或轉社工</span><span class="step"><i>4</i>結案回填</span></div>';
 
