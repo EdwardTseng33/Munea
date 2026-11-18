@@ -1798,11 +1798,25 @@ class LateWordsAfterReviewTests(_VoiceFlowBase):
             time.sleep(0.5)
             return out
         self.voice.perception_engine.guardian_abuse_review = slow_honest
-        self._late = self.voice.GUARDIAN_LATE_WORDS_WAIT_S
+        self._saved = (self.voice.GUARDIAN_SEMANTIC_WAIT_S, self.voice.guardian_scan_text, self.voice.guardian_notify.alert)
+        self.alerts = []
+        self.voice.guardian_notify.alert = lambda *a, **k: self.alerts.append((a, k))
+        self.voice._GUARDIAN_LATE_UNJUDGED["n"] = 0
 
     def tearDown(self):
-        self.voice.GUARDIAN_LATE_WORDS_WAIT_S = self._late
+        (self.voice.GUARDIAN_SEMANTIC_WAIT_S, self.voice.guardian_scan_text, self.voice.guardian_notify.alert) = self._saved
+        self.voice._GUARDIAN_LATE_UNJUDGED["n"] = 0
         super().tearDown()
+
+    def _stuck_rule_layer(self, text, delay):
+        """這一句連第一層都卡住（例：執行緒池塞滿）：等到第二層判讀的上限也判不完。"""
+        real = self._saved[1]
+
+        def scan(t):
+            if t == text:
+                time.sleep(delay)
+            return real(t)
+        self.voice.guardian_scan_text = scan
 
     def _second_layer(self, delay):
         def review(text, *a, **k):
@@ -1835,10 +1849,34 @@ class LateWordsAfterReviewTests(_VoiceFlowBase):
         self.assertEqual(self.notices, [])
 
     def test_late_words_still_being_judged_block(self):
-        self.voice.GUARDIAN_LATE_WORDS_WAIT_S = 0.3
-        self._second_layer(2.0)                                           # 平常話，但第二層 AI 2 秒才判完
+        self.voice.GUARDIAN_SEMANTIC_WAIT_S = 0.3                         # 等的上限＝第二層判讀的上限
+        self._second_layer(0.0)
+        self._stuck_rule_layer("今天天氣很好", 2.0)                       # 平常話，但 2 秒才判完 → 等到上限還沒判完
         self._call_with_late_words("今天天氣很好")
         self.assertEqual(self.notices, [])
+
+    def test_waits_as_long_as_the_second_layer_itself_not_four_seconds(self):
+        """#728 複審：不要 4 秒就放棄——等的上限就是第二層判讀本身的上限（12 秒），判完沒事照發。"""
+        self.assertEqual(self.voice.GUARDIAN_SEMANTIC_WAIT_S, 12.0)
+        self._second_layer(2.0)                                           # AI 回來後還要 1.5 秒以上才判完
+        self._call_with_late_words("今天天氣很好", settle=3.0)
+        self.assertEqual(len(self.notices), 1)
+
+    def test_three_unjudged_in_a_row_raise_one_ordinary_alert_and_judged_resets(self):
+        self.voice.GUARDIAN_SEMANTIC_WAIT_S = 0.3
+        self._second_layer(0.0)
+        self._stuck_rule_layer("今天天氣很好", 1.0)
+        for _ in range(2):
+            self._call_with_late_words("今天天氣很好", settle=1.2)
+        self.assertEqual(self.alerts, [])
+        self._call_with_late_words("今天天氣很好", settle=1.2)
+        late = [a for a in self.alerts if a[0][1] == "guardian:late_words_unjudged"]
+        self.assertEqual(len(late), 1)
+        self.assertFalse(late[0][1].get("critical"))                     # 一般級
+        self.assertIn("consecutive=3", late[0][0][2])
+        self.voice.guardian_scan_text = self._saved[1]
+        self._call_with_late_words("明天要去公園", settle=1.2)            # 判完一次就歸零
+        self.assertEqual(self.voice._GUARDIAN_LATE_UNJUDGED["n"], 0)
 
     def test_late_harmless_words_judged_in_time_still_notify(self):
         self._second_layer(1.0)                                           # AI 回來時（約 0.7 秒）還在判 → 要真的等它判完
@@ -1882,13 +1920,16 @@ class SafetyHandlingFieldTests(unittest.TestCase):
         events = [ev("mentioned", protectionMentioned=True), ev("confirmed", abuseConfirmed=True, abuseConfidence=0.9),
                   ev("category", categories=["protection_event"]), ev("plain")]
         summary = {"id": "sum", "personId": "p", "safetyRelevant": True, "memoryTags": ["fall"], "createdAt": _iso_minutes_ago(3)}
+        # 需要留意的對話摘要：標籤裡有受暴類也套受暴的處理步驟（#728 複審）
+        abuse_summary = {"id": "sum-abuse", "personId": "p", "safetyRelevant": True, "memoryTags": ["family", "protection_event"],
+                         "createdAt": _iso_minutes_ago(2)}
         with patch.object(server, "load_all_accounts_product_events", return_value=events), \
-                patch.object(server, "load_conversation_summaries", return_value=[summary]), \
+                patch.object(server, "load_conversation_summaries", return_value=[summary, abuse_summary]), \
                 patch.object(server, "analytics_excluded_id_set", return_value=set()):
             out = server.admin_safety_events_summary({"days": 30, "limit": 50})
         handling = {e["id"]: e["handling"] for e in out["recent"]}
         self.assertEqual(handling, {"mentioned": "abuse", "confirmed": "abuse", "category": "abuse", "plain": "standard",
-                                    "sum": "standard"})
+                                    "sum": "standard", "sum-abuse": "abuse"})
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

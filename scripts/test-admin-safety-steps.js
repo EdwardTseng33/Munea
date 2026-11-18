@@ -74,6 +74,13 @@ const base = { riskLevel: "high", categories: ["medical_emergency_signal"], pers
   }
 }
 
+// 二之二、需要留意的對話摘要：標籤裡有受暴類（protection_event）也套受暴的步驟（#728 複審）
+{
+  const [row] = rows(render({ totals: {}, recent: [{ ...base, source: "conversation_summary", riskLevel: "review",
+    categories: ["family", "protection_event"] }] }));
+  assert(row.includes(ABUSE_STEP), "摘要標籤裡有受暴類也要套受暴步驟");
+}
+
 // 三、清單裡沒有受暴類：不出現例外那句，也不出現受暴類步驟
 {
   const html = render({ totals: {}, recent: [{ ...base, handling: "standard" }] });

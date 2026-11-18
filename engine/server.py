@@ -5982,7 +5982,8 @@ def admin_safety_events_summary(data=None):
             "eventTime": summary.get("createdAt"),
             "requiresHumanEscalation": False,
             "analyticsExcluded": False,
-            "handling": "standard",
+            # 摘要的標籤裡有受暴類（protection_event）也套受暴的處理步驟（#728 複審）
+            "handling": "abuse" if _guardian_mentions_abuse({"categories": tags}) else "standard",
         })
     if level_filter:
         safety_events = [event for event in safety_events if event.get("riskLevel") == level_filter]

@@ -978,8 +978,8 @@ GUARDIAN_AI_OVERRIDE_MIN_CONF = 0.8    # AI 說「沒提到受暴」要有這麼
 GUARDIAN_PROTECTION_FLAGS_MAX = 200    # 一通最多記幾段亮過受暴的話（超過＝AI 不可能都看過 → 不准推翻）
 GUARDIAN_REVIEW_FLAGGED_SHARE = 2 / 3  # 給 AI 看的內容裡，亮過受暴的那幾段最多佔幾成（其餘給最近的話）
 GUARDIAN_AI_FAIL_ALERT_AFTER = 3       # AI 裁判在同一台連續幾次沒回，就發內部告警（一般級），不悄悄退回只看關鍵字
-GUARDIAN_LATE_WORDS_WAIT_S = 4.0       # AI 看完那份之後長輩又講的話：最多再等幾秒讓它們判完（第二層 AI 要 1–10 秒）
 _GUARDIAN_AI_FAILS = {"n": 0}          # 這台的連續失敗次數（成功一次就歸零）
+_GUARDIAN_LATE_UNJUDGED = {"n": 0}     # 這台「AI 讀完後長輩又說的話等到上限還沒判完、只好不發」的連續次數（判完一次就歸零）
 GUARDIAN_SEMANTIC_WAIT_S = 12.0        # 第二層 AI 自己有 10 秒逾時（Gemini 收的最短逾時）；這裡再兜一層底，不讓判讀任務卡住
 
 
@@ -1190,17 +1190,29 @@ async def _guardian_run_abuse_review(cid, st, said):
     return verdict
 
 
-def _guardian_ai_unavailable_alert(cid, st, streak, err):
+def _guardian_count_late_unjudged(cid, st, unjudged):
+    """「長輩後來說的話等到上限還沒判完、只好不發」計次：同一台連續 GUARDIAN_AI_FAIL_ALERT_AFTER 次就發一般級內部告警
+    （跟 AI 裁判連續沒回同一招），不要只留一行診斷。判完一次就歸零。"""
+    if not unjudged:
+        _GUARDIAN_LATE_UNJUDGED["n"] = 0
+        return
+    _GUARDIAN_LATE_UNJUDGED["n"] += 1
+    _diag(cid, "guardian.late_words_unjudged", streak=_GUARDIAN_LATE_UNJUDGED["n"])
+    if _GUARDIAN_LATE_UNJUDGED["n"] >= GUARDIAN_AI_FAIL_ALERT_AFTER:
+        _guardian_ai_unavailable_alert(cid, st, _GUARDIAN_LATE_UNJUDGED["n"], "late_words_unjudged",
+                                       where="guardian:late_words_unjudged")
+
+
+def _guardian_ai_unavailable_alert(cid, st, streak, err, where="guardian:abuse_review_unavailable"):
     """AI 裁判在這台連續 GUARDIAN_AI_FAIL_ALERT_AFTER 次以上沒回：發一則內部告警（一般級；同一種 10 分鐘只送一次）。
     只帶次數與錯誤種類，不帶 ID、不帶原句。在背景池送完，收線前會等它。"""
     def job():
         try:
-            guardian_notify.alert("voice", "guardian:abuse_review_unavailable",
-                                  "consecutive=%d err=%s" % (streak, err), critical=False, wait=True)
+            guardian_notify.alert("voice", where, "consecutive=%d err=%s" % (streak, err), critical=False, wait=True)
         except Exception as e:  # noqa: BLE001
             _diag(cid, "guardian.ai_alert_err", err="%s:%s" % (type(e).__name__, str(e)[:60]))
 
-    _diag(cid, "guardian.abuse_review_unavailable", streak=streak)
+    _diag(cid, "guardian.internal_alert", where=where, streak=streak)
     fut = asyncio.get_running_loop().run_in_executor(_GUARDIAN_EVENT_EXECUTOR, job)
     futures = st.setdefault("guardian_futures", [])
     futures[:] = [f for f in futures if not f.done()]
@@ -1312,8 +1324,11 @@ async def _guardian_family_notify_later(cid, st):
                     st, max(0.0, perception_engine.GUARDIAN_AI_TIMEOUT_S - (time.monotonic() - asked_at)))
             if (verdict is None or not verdict.get("abuse")) and _guardian_said_after_review(st):
                 # AI 判讀那一兩秒裡長輩又講了話（#727 複審的窄縫）：關鍵字沒收的受暴說法只有第二層 AI 抓得到、要 1–10 秒。
-                # 等那些話判完（最多 4 秒）；判出受暴，下面照旗標不發；還沒判完也不發。掛斷時 AI 看的就是最後的話，不會走到這裡。
-                late_unjudged = not await _guardian_wait_judged(st, GUARDIAN_LATE_WORDS_WAIT_S)
+                # 等那些話判完——上限就是第二層判讀本身的上限（GUARDIAN_SEMANTIC_WAIT_S，#728 複審：不要 4 秒就放棄；
+                # 通話中沒有 CPU 壓力，推播本來每分鐘才發一批）。判出受暴，下面照旗標不發；等到上限還沒判完也不發、計次告警。
+                # 掛斷時 AI 看的就是最後的話，不會走到這裡。
+                late_unjudged = not await _guardian_wait_judged(st, GUARDIAN_SEMANTIC_WAIT_S)
+                _guardian_count_late_unjudged(cid, st, late_unjudged)
         send, reason = _guardian_family_decision(st, verdict)
         if send and late_unjudged:
             send, reason = False, "late_words_unjudged"
