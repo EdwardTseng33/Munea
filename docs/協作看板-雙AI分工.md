@@ -13,6 +13,14 @@
 - **上線順序**：含這張的 App 版本上架前，後端要先帶上 #711（不然機構端還是舊行為，App 上寫的「只有次數」就不是事實）。
 - **跟開著的 PR 重疊的檔**：`web/index.html`、`web/src/app.js`、四語 json（#694／#696／#706）——都是各加各的、位置錯開；日文 `seatCode.*` 那七行是唯一改到既有行的地方。這個分支有全畫面證據，跟上 main 用 merge。
 - **檔**：`web/src/org-consent.js`（新）、`scripts/test-org-consent-ui.js`（新）、`web/index.html`、`web/src/app.js`、`web/src/seat-code.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-surface-manifest.json`、`web/src/i18n/app-surface-copy-manifest.json`、`scripts/app-full-surface-i18n-browser-precheck.js`、`scripts/test-app-surface-manifest.js`、`scripts/test-i18n-visual-qa-worklist.js`、`scripts/test-i18n-visual-qa-evidence.js`、`docs/I18N-SURFACE-INVENTORY.json`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/`（492 張＋報告）、本看板。
+### 2026-11-18 蘇菲｜🛡️ #728 複審：AI 讀完後長輩又說的話等到第二層的上限、沒判完計次告警、受暴類摘要也套受暴步驟（Draft PR #729 · call-path risk 中：只動亮燈後的背景決定與後台畫面）
+
+- **為什麼**：#728 已合併（6e394f7e）。沙利曼複審留下：🟡「AI 讀完之後長輩又說的話」只等 4 秒就放棄，第二層判讀本身最多要 12 秒；🟡 等不到而擋下只留一行診斷；🟢 後台從對話摘要來的列，標籤有受暴類時步驟還是「聯繫家庭圈指定的人」。
+- **改法**：等的上限改用同一個常數 `GUARDIAN_SEMANTIC_WAIT_S`（約 12 秒）；等到上限還沒判完而擋下 → 同一台連續 3 次發一般級內部告警 `guardian:late_words_unjudged`，判完一次歸零；對話摘要標籤有 `protection_event` → 後端 `handling=abuse`、前端也看類別，套受暴的四個步驟。
+- **證據**：`sim_727_v3_residual.py` 四種都不通知；`test_voice_guardian_brain_route` 121 → 123 條全過；前端測試補摘要列；突變 128 種全部重跑、128 種全紅；`npm run test:launch` 全過；危機辨識量尺 93.8%／0%／100% 不變。**App E2E pending**。
+- **信任關卡 #729 有條件通過，補了三件**：🔴 後台安全事件頁用通話編號整通一起判受暴（同一套 `care_week.guardian_abuse_call_ids`，舊資料逐筆判）；🟡 等的中間掛斷 → 從掛斷起最多再等 5 秒（`GUARDIAN_CLOSE_LATE_WAIT_S`），送 Brain 與告警在收線上限內做得完、上限不拉長；🟢 摘要標籤提到受暴就標 `protection_event` 並排第一。測試 123 → 127 條、突變 134 種全紅、量尺不變、`npm run test:launch` 全過。
+- **檔**：`engine/live_voice_server.py`、`engine/server.py`、`engine/care_week.py`、`web/src/admin.js`、`engine/test_voice_guardian_brain_route.py`、`scripts/test-admin-safety-steps.js`、本看板。
+
 ### 2026-11-18 蘇菲｜🛡️ #727 複審剩下的兩個 🟡：後台受暴類那一筆不叫營運聯絡家人＋AI 判讀那一兩秒裡又說的話要等判完（Draft PR #728 · call-path risk 中：只動亮燈後的背景決定與後台畫面，不碰收音／出聲）
 
 - **為什麼**：#727 已合併上線（8d9121db）。沙利曼複審留下兩件：① 後台安全事件頁處理步驟固定寫「2 聯繫家庭圈指定的人」，旁邊卻列著標「提到受暴／AI 判過受暴」的事件——營運照步驟做就會打給可能就是加害人的家人；② 通話中等滿 25 秒那一刻，AI 讀的是當下的內容，它讀的那一兩秒裡長輩又說了關鍵字沒收的受暴說法（只有第二層 AI 抓得到、要 1–10 秒）→ 那句還沒判完就決定了 → 照發。

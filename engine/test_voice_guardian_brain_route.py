@@ -1798,11 +1798,25 @@ class LateWordsAfterReviewTests(_VoiceFlowBase):
             time.sleep(0.5)
             return out
         self.voice.perception_engine.guardian_abuse_review = slow_honest
-        self._late = self.voice.GUARDIAN_LATE_WORDS_WAIT_S
+        self._saved = (self.voice.GUARDIAN_SEMANTIC_WAIT_S, self.voice.guardian_scan_text, self.voice.guardian_notify.alert)
+        self.alerts = []
+        self.voice.guardian_notify.alert = lambda *a, **k: self.alerts.append((a, k))
+        self.voice._GUARDIAN_LATE_UNJUDGED["n"] = 0
 
     def tearDown(self):
-        self.voice.GUARDIAN_LATE_WORDS_WAIT_S = self._late
+        (self.voice.GUARDIAN_SEMANTIC_WAIT_S, self.voice.guardian_scan_text, self.voice.guardian_notify.alert) = self._saved
+        self.voice._GUARDIAN_LATE_UNJUDGED["n"] = 0
         super().tearDown()
+
+    def _stuck_rule_layer(self, text, delay):
+        """這一句連第一層都卡住（例：執行緒池塞滿）：等到第二層判讀的上限也判不完。"""
+        real = self._saved[1]
+
+        def scan(t):
+            if t == text:
+                time.sleep(delay)
+            return real(t)
+        self.voice.guardian_scan_text = scan
 
     def _second_layer(self, delay):
         def review(text, *a, **k):
@@ -1835,15 +1849,71 @@ class LateWordsAfterReviewTests(_VoiceFlowBase):
         self.assertEqual(self.notices, [])
 
     def test_late_words_still_being_judged_block(self):
-        self.voice.GUARDIAN_LATE_WORDS_WAIT_S = 0.3
-        self._second_layer(2.0)                                           # 平常話，但第二層 AI 2 秒才判完
+        self.voice.GUARDIAN_SEMANTIC_WAIT_S = 0.3                         # 等的上限＝第二層判讀的上限
+        self._second_layer(0.0)
+        self._stuck_rule_layer("今天天氣很好", 2.0)                       # 平常話，但 2 秒才判完 → 等到上限還沒判完
         self._call_with_late_words("今天天氣很好")
         self.assertEqual(self.notices, [])
+
+    def test_waits_as_long_as_the_second_layer_itself_not_four_seconds(self):
+        """#728 複審：不要 4 秒就放棄——等的上限就是第二層判讀本身的上限（12 秒），判完沒事照發。"""
+        self.assertEqual(self.voice.GUARDIAN_SEMANTIC_WAIT_S, 12.0)
+        self._second_layer(2.0)                                           # AI 回來後還要 1.5 秒以上才判完
+        self._call_with_late_words("今天天氣很好", settle=3.0)
+        self.assertEqual(len(self.notices), 1)
+
+    def test_three_unjudged_in_a_row_raise_one_ordinary_alert_and_judged_resets(self):
+        self.voice.GUARDIAN_SEMANTIC_WAIT_S = 0.3
+        self._second_layer(0.0)
+        self._stuck_rule_layer("今天天氣很好", 1.0)
+        for _ in range(2):
+            self._call_with_late_words("今天天氣很好", settle=1.2)
+        self.assertEqual(self.alerts, [])
+        self._call_with_late_words("今天天氣很好", settle=1.2)
+        late = [a for a in self.alerts if a[0][1] == "guardian:late_words_unjudged"]
+        self.assertEqual(len(late), 1)
+        self.assertFalse(late[0][1].get("critical"))                     # 一般級
+        self.assertIn("consecutive=3", late[0][0][2])
+        self.voice.guardian_scan_text = self._saved[1]
+        self._call_with_late_words("明天要去公園", settle=1.2)            # 判完一次就歸零
+        self.assertEqual(self.voice._GUARDIAN_LATE_UNJUDGED["n"], 0)
 
     def test_late_harmless_words_judged_in_time_still_notify(self):
         self._second_layer(1.0)                                           # AI 回來時（約 0.7 秒）還在判 → 要真的等它判完
         self._call_with_late_words("今天天氣很好")
         self.assertEqual(len(self.notices), 1)
+
+    def test_hangup_during_the_wait_shrinks_it_and_the_alert_still_goes_out(self):
+        """#729：通話中開始等長輩後來說的話判完（上限 12 秒），等的中間掛斷了——從掛斷起最多再等
+        GUARDIAN_CLOSE_LATE_WAIT_S，後面的告警才送得出去；收線上限不拉長。"""
+        v = self.voice
+        saved = (v.GUARDIAN_CLOSE_GRACE_S, v.GUARDIAN_CLOSE_LATE_WAIT_S)
+        v.GUARDIAN_CLOSE_GRACE_S, v.GUARDIAN_CLOSE_LATE_WAIT_S = 0.2, 0.5
+        self._second_layer(0.0)
+        self._stuck_rule_layer("今天天氣很好", 8.0)                       # 這句 8 秒才判得完
+        v._GUARDIAN_LATE_UNJUDGED["n"] = 2                                # 再一次就到 3 次 → 要發告警
+        try:
+            async def run():
+                st = self._state()
+                await self._say(st, ["我胸口好痛喘不過氣"], turn_id=1)
+                self._end_turn(st)
+                await asyncio.sleep(0.3)                                  # 0.2 秒到 → AI 開始讀（0.5 秒）
+                v._guardian_note_user_text(st, "今天天氣很好")
+                st["user_buf"] = "今天天氣很好"
+                v._spawn_guardian_watch(st, v.guardian_watch(1, "user", "今天天氣很好", st, None, turn_id=2,
+                                                             allow_cue=True))
+                await asyncio.sleep(0.8)                                  # AI 回來了、開始等那句判完
+                t0 = time.monotonic()
+                await v._guardian_drain_on_close(1, st)                  # 這時掛斷
+                return time.monotonic() - t0, list(self.alerts)
+            took, alerts_at_return = asyncio.run(run())
+        finally:
+            v.GUARDIAN_CLOSE_GRACE_S, v.GUARDIAN_CLOSE_LATE_WAIT_S = saved
+        self.assertLess(took, 2.5)                                        # 沒有等滿 8 秒（或 12 秒）
+        self.assertLessEqual(saved[1], 6.0)                               # 正式值留得出送 Brain 兩次＋告警的時間（3＋15 秒內）
+        self.assertEqual(self.notices, [])                                # 沒判完：照規則不發
+        late = [a for a in alerts_at_return if a[0][1] == "guardian:late_words_unjudged"]
+        self.assertEqual(len(late), 1)                                    # 告警在收線返回前就送出了
 
     def test_hangup_decision_is_quick(self):
         v = self.voice
@@ -1871,6 +1941,48 @@ class LateWordsAfterReviewTests(_VoiceFlowBase):
         self.assertLess(sent_at[0] - t0, 1.5)                             # 掛斷那次不等還在判的那句（2 秒）
 
 
+class SafetyHandlingWholeCallTests(unittest.TestCase):
+    """#729：後台安全事件頁也整通一起判——同一通只要有一筆提到受暴（或 AI 判過），那通每一筆都照受暴處理；
+    沒有 callId 的舊紀錄照舊逐筆判。跟家人週摘要、機構讀取同一套（care_week.guardian_abuse_call_ids）。"""
+
+    def test_first_half_of_an_abuse_call_also_gets_abuse_handling(self):
+        def ev(i, minutes, **props):
+            return {"id": i, "accountId": "acct", "personId": "p", "eventName": "guardian_risk_evaluated",
+                    "eventTime": _iso_minutes_ago(minutes),
+                    "properties": {"riskLevel": "high", "categories": ["medical_emergency_signal"], "who": "user", **props}}
+        events = [ev("a1", 30, callId="vc-A"), ev("a2", 29, callId="vc-A", protectionMentioned=True),
+                  ev("b1", 20, callId="vc-B"), ev("c1", 15, callId="vc-C"),
+                  ev("c2", 14, callId="vc-C", abuseConfirmed=True, abuseConfidence=0.9, categories=["protection_event"]),
+                  ev("old", 10), ev("old-abuse", 9, protectionMentioned=True)]
+        with patch.object(server, "load_all_accounts_product_events", return_value=events), \
+                patch.object(server, "load_conversation_summaries", return_value=[]), \
+                patch.object(server, "analytics_excluded_id_set", return_value=set()):
+            out = server.admin_safety_events_summary({"days": 30, "limit": 50})
+        handling = {e["id"]: e["handling"] for e in out["recent"]}
+        self.assertEqual(handling, {"a1": "abuse", "a2": "abuse", "b1": "standard", "c1": "abuse", "c2": "abuse",
+                                    "old": "standard", "old-abuse": "abuse"})
+
+
+class SummaryTagsAbuseFirstTests(unittest.TestCase):
+    """#729：對話摘要標籤——守護腦每句只標一個類別（受暴＋急症只會標成急症）；只要提到受暴就標 protection_event、排第一，
+    最多 8 個的截斷不會把它截掉。"""
+
+    def test_abuse_tag_is_added_first_and_survives_truncation(self):
+        context = {"perception": {"domains": [{"domain": "d%d" % i} for i in range(10)]},
+                   "guardian": {"risk": {"categories": ["medical_emergency_signal"], "protectionMentioned": True}}}
+        tags = server._summary_tags_from_context(context, "")
+        self.assertEqual(tags[0], "protection_event")
+        self.assertLessEqual(len(tags), 8)
+        self.assertIn("medical_emergency_signal", server._summary_tags_from_context(
+            {"guardian": {"risk": {"categories": ["medical_emergency_signal"], "protectionMentioned": True}}}, ""))
+        context["guardian"]["risk"] = {"categories": ["protection_event"], "protectionEvent": True}
+        self.assertEqual(server._summary_tags_from_context(context, "")[0], "protection_event")
+
+    def test_no_abuse_no_tag(self):
+        tags = server._summary_tags_from_context({"guardian": {"risk": {"categories": ["medical_emergency_signal"]}}}, "")
+        self.assertNotIn("protection_event", tags)
+
+
 class SafetyHandlingFieldTests(unittest.TestCase):
     """後台安全事件：每筆帶處理方式——受暴類（提到受暴／AI 判過受暴／受暴類別）是 abuse，其餘 standard。"""
 
@@ -1882,13 +1994,16 @@ class SafetyHandlingFieldTests(unittest.TestCase):
         events = [ev("mentioned", protectionMentioned=True), ev("confirmed", abuseConfirmed=True, abuseConfidence=0.9),
                   ev("category", categories=["protection_event"]), ev("plain")]
         summary = {"id": "sum", "personId": "p", "safetyRelevant": True, "memoryTags": ["fall"], "createdAt": _iso_minutes_ago(3)}
+        # 需要留意的對話摘要：標籤裡有受暴類也套受暴的處理步驟（#728 複審）
+        abuse_summary = {"id": "sum-abuse", "personId": "p", "safetyRelevant": True, "memoryTags": ["family", "protection_event"],
+                         "createdAt": _iso_minutes_ago(2)}
         with patch.object(server, "load_all_accounts_product_events", return_value=events), \
-                patch.object(server, "load_conversation_summaries", return_value=[summary]), \
+                patch.object(server, "load_conversation_summaries", return_value=[summary, abuse_summary]), \
                 patch.object(server, "analytics_excluded_id_set", return_value=set()):
             out = server.admin_safety_events_summary({"days": 30, "limit": 50})
         handling = {e["id"]: e["handling"] for e in out["recent"]}
         self.assertEqual(handling, {"mentioned": "abuse", "confirmed": "abuse", "category": "abuse", "plain": "standard",
-                                    "sum": "standard"})
+                                    "sum": "standard", "sum-abuse": "abuse"})
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
