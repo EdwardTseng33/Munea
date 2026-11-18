@@ -980,6 +980,9 @@ GUARDIAN_REVIEW_FLAGGED_SHARE = 2 / 3  # 給 AI 看的內容裡，亮過受暴�
 GUARDIAN_AI_FAIL_ALERT_AFTER = 3       # AI 裁判在同一台連續幾次沒回，就發內部告警（一般級），不悄悄退回只看關鍵字
 _GUARDIAN_AI_FAILS = {"n": 0}          # 這台的連續失敗次數（成功一次就歸零）
 _GUARDIAN_LATE_UNJUDGED = {"n": 0}     # 這台「AI 讀完後長輩又說的話等到上限還沒判完、只好不發」的連續次數（判完一次就歸零）
+# 收線之後「等長輩後來說的話判完」最多再等幾秒：收線上限是寬限 3＋15 秒，後面還要送 Brain（每次 3 秒、最多兩次）
+# 和「沒通知到」告警（最多 6 秒）——5＋6＋6＝17 秒，做得完。不拉長收線上限（#729 信任關卡）。
+GUARDIAN_CLOSE_LATE_WAIT_S = 5.0
 GUARDIAN_SEMANTIC_WAIT_S = 12.0        # 第二層 AI 自己有 10 秒逾時（Gemini 收的最短逾時）；這裡再兜一層底，不讓判讀任務卡住
 
 
@@ -1242,12 +1245,37 @@ def _guardian_said_after_review(st):
 
 
 async def _guardian_wait_judged(st, timeout):
-    """等這時還在判的字幕（守護腦第一層＋第二層 AI）判完，最多 timeout 秒。回 True＝都判完了。"""
+    """等這時還在判的字幕（守護腦第一層＋第二層 AI）判完，最多 timeout 秒。回 True＝都判完了。
+    等的中間電話掛了：從掛斷那一刻起最多再等 GUARDIAN_CLOSE_LATE_WAIT_S，後面的送出與告警才做得完（#729）。"""
     me = asyncio.current_task()
     tasks = [t for t in list(st.get("guardian_watch_tasks") or ()) if not t.done() and t is not me]
-    if tasks:
-        await asyncio.wait(tasks, timeout=timeout)
-    return all(t.done() for t in tasks)
+    if not tasks:
+        return True
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    closed = st.get("guardian_call_closed")
+    if closed is None:
+        closed = st["guardian_call_closed"] = asyncio.Event()
+    close_deadline = None
+    while True:
+        pending = [t for t in tasks if not t.done()]
+        if not pending:
+            return True
+        if closed.is_set() and close_deadline is None:
+            close_deadline = loop.time() + GUARDIAN_CLOSE_LATE_WAIT_S
+        left = deadline - loop.time() if close_deadline is None else min(deadline, close_deadline) - loop.time()
+        if left <= 0:
+            return False
+        waiters = set(pending)
+        hangup = None
+        if close_deadline is None:
+            hangup = asyncio.ensure_future(closed.wait())
+            waiters.add(hangup)
+        try:
+            await asyncio.wait(waiters, timeout=left, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            if hangup is not None and not hangup.done():
+                hangup.cancel()
 
 
 def _guardian_family_decision(st, verdict):

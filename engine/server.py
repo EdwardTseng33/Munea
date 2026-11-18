@@ -3623,6 +3623,10 @@ def _summary_tags_from_context(context, text=""):
     for category in risk.get("categories") or []:
         if category and category not in tags:
             tags.append(category)
+    # 守護腦每句只標一個類別、先中先贏：「受暴＋急症」只會標成急症。只要提到受暴，就一定標 protection_event，
+    # 而且排第一——後台靠這個標籤套受暴的處理步驟，最多 8 個的截斷不能把它截掉（#729 信任關卡）
+    if risk.get("protectionEvent") or risk.get("protectionMentioned") or "protection_event" in tags:
+        tags = ["protection_event"] + [t for t in tags if t != "protection_event"]
     lower = str(text or "").lower()
     keyword_tags = [
         ("family", ["daughter", "son", "family", "mom", "dad", "女兒", "兒子", "家人"]),
@@ -5934,10 +5938,15 @@ def admin_safety_events_summary(data=None):
     excluded_ids = analytics_excluded_id_set()
     events = [event for event in events if not is_admin_row_excluded(event, excluded_ids)]
     safety_events = []
+    # 同一通只要有一筆提到受暴（或 AI 判過受暴），那通每一筆都照受暴處理——前半句「胸口好痛」那筆單看沒帶受暴標記，
+    # 以前會照一般步驟叫營運聯絡家庭圈（#729 信任關卡）。跟家人週摘要、機構讀取同一套規則；沒有 callId 的舊紀錄照舊逐筆判。
+    abuse_calls = care_week.guardian_abuse_call_ids(
+        [e for e in events if e.get("eventName") == "guardian_risk_evaluated"])
     for event in events:
         if event.get("eventName") != "guardian_risk_evaluated":
             continue
         props = event.get("properties") or {}
+        abuse = _guardian_mentions_abuse(props) or (bool(props.get("callId")) and str(props.get("callId")) in abuse_calls)
         categories = props.get("categories") or []
         if isinstance(categories, str):
             categories = [categories]
@@ -5961,7 +5970,7 @@ def admin_safety_events_summary(data=None):
             "abuseConfirmed": bool(props.get("abuseConfirmed")),
             "who": props.get("who"),
             # 處理方式：受暴類不要聯絡家人或家庭圈的人（加害人可能就是家人）——後台照這欄顯示那一筆的步驟（#727 複審）
-            "handling": "abuse" if _guardian_mentions_abuse(props) else "standard",
+            "handling": "abuse" if abuse else "standard",
         })
     summaries = load_conversation_summaries(limit=500, include_deleted=False)
     for summary in summaries:
