@@ -8619,7 +8619,8 @@ const MOOD_ZH2KEY = {
 };
 async function loadMoodWeekReal() {
   try {
-    const r = await fetch(brainURL('/wellbeing/trend'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days: 7 }) });
+    // 2026-11-17：這支以前只帶 Content-Type、沒帶通行碼也沒帶登入證，正式環境每次都被後端薄門擋（403）。
+    const r = await fetch(brainURL('/wellbeing/trend'), { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ days: 7 }) });
     if (!r.ok) return null;
     const d = await r.json();
     const daily = d.daily || [];
