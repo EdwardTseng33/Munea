@@ -4597,8 +4597,15 @@ class SupabaseAdapter:
         actor_user_id = event.get("actorUserId") or event.get("actor_user_id")
         if not self._is_uuid(actor_user_id):
             actor_user_id = None
+        # 2026-11-21：沒有帳號的系統事件（蘋果伺服器通知被拒、後台補點數…）在 server.normalize_audit_event
+        # 會被填成 "local-demo-account"，資料庫的帳號欄只收 uuid → 400 22P02、整筆退本機暫存檔、雲端沒存到。
+        # 不是 uuid 的帳號值一律當「沒給」：走原本的預設（請求身分的帳號／服務帳號）；連預設都不是 uuid 才寫空值。
+        account_id = event.get("accountId") or event.get("account_id")
+        account_id = self.payload_account_id(account_id if self._is_uuid(account_id) else None)
+        if not self._is_uuid(account_id):
+            account_id = None
         return {
-            "account_id": self.payload_account_id(event.get("accountId") or event.get("account_id")),
+            "account_id": account_id,
             "actor_user_id": actor_user_id,
             "event_type": event.get("eventType") or event.get("event_type") or "unknown_event",
             "target_table": event.get("targetTable") or event.get("target_table"),
@@ -5404,7 +5411,8 @@ class SupabaseAdapter:
 
     @staticmethod
     def _is_uuid(value):
-        return bool(value and UUID_RE.match(value))
+        # 非字串（數字、dict）直接不是 uuid，別讓 re.match 丟 TypeError
+        return bool(isinstance(value, str) and value and UUID_RE.match(value))
 
 
 def make_adapter(env=None, identity=None):
