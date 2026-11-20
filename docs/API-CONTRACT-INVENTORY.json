@@ -1073,6 +1073,20 @@
     {
       "surface": "brain",
       "method": "POST",
+      "path": "/family/membership",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_family_membership.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
       "path": "/family/state",
       "auth": "user",
       "criticality": "high",
