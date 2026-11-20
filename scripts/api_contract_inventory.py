@@ -319,6 +319,7 @@ def _tests(route: Route) -> list[str]:
     mapping = {
         "/account-bootstrap": ["scripts/auth-gate-smoke.ps1", "scripts/test-native-auth.js"],
         "/account-deletion": ["engine/test_privacy_export.py"],
+        "/family/membership": ["engine/test_family_membership.py"],
         "/apple/notifications": ["engine/test_apple_store.py"],
         "/apple/transaction": ["engine/test_apple_store.py", "scripts/test-store-verification.js"],
         "/auth-status": ["scripts/auth-gate-smoke.ps1"],

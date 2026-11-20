@@ -630,7 +630,7 @@ def bind_request_data_identity(auth_gate, allow_missing=False):
     return REQUEST_DATA_IDENTITY.set(identity)
 
 
-SCOPE_EXEMPT_PATHS = PUBLIC_POST_PATHS | ADMIN_POST_PATHS | PRIVILEGED_BILLING_POST_PATHS | {"/family/invitations", "/family-relays"}
+SCOPE_EXEMPT_PATHS = PUBLIC_POST_PATHS | ADMIN_POST_PATHS | PRIVILEGED_BILLING_POST_PATHS | {"/family/invitations", "/family/membership", "/family-relays"}
 ACCOUNT_SCOPE_KEYS = {"accountid"}
 FAMILY_SCOPE_KEYS = {"familygroupid"}
 PERSON_SCOPE_KEYS = {
@@ -1634,6 +1634,69 @@ def _mask_account_tail(value, keep=4):
     if len(value) <= keep:
         return value
     return "*" * (len(value) - keep) + value[-keep:]
+
+
+def family_membership_response(data, actor=None):
+    """退出別人的健康圈／圈主把家人移出去——在伺服器上真的撤銷「看得到」（2026-11-18）。
+
+    以前 App 的「移除」只改自己畫面上的名單，「退出」連請求都沒送；伺服器決定誰看得到誰
+    的是 family_memberships，那張表沒動，被移除或退出的人照樣讀得到全家的健康數字、心情、
+    吃藥，下次同步還會把人加回畫面（補助案 B4 查核，11/18）。誰能做什麼一律在這裡判斷：
+      leave ：只能退出「別人建立的圈」，刪的是自己那一筆；自己建立的圈不能退（請一一移除家人）。
+      remove：只有圈主（建立這個圈的帳號）能把別人移出去；不能移除自己。
+    要動的圈一律用登入身分推出來的「目前所在的圈」，不收 App 送來的圈代號。"""
+    data = data or {}
+    action = str(data.get("action") or "").lower()
+    backend, actor_error = family_actor_backend(actor)
+    if actor_error:
+        return {"ok": False, "error": actor_error}
+    group_id = str(backend.family_group_id or "")
+    if not group_id:
+        return {"ok": False, "error": "family_group_missing"}
+    try:
+        owner_account = backend.family_group_owner_account_unscoped(group_id)
+    except Exception as e:
+        log_fallback_exception("load family group owner", e)
+        return {"ok": False, "error": "family_membership_unavailable"}
+    if not owner_account:
+        return {"ok": False, "error": "family_group_missing"}
+    is_owner = owner_account == backend.account_id
+
+    if action == "leave":
+        if is_owner:
+            return {"ok": False, "error": "owner_cannot_leave"}
+        try:
+            removed = backend.delete_family_membership_unscoped(group_id, backend.person_id)
+            own_group = backend.own_family_group_id_unscoped() if removed else None
+        except Exception as e:
+            log_fallback_exception("leave family group", e)
+            return {"ok": False, "error": "family_membership_unavailable"}
+        if not removed:
+            return {"ok": False, "error": "membership_not_found"}
+        return {"ok": True, "left": group_id, "familyGroupId": own_group or ""}
+
+    if action == "remove":
+        if not is_owner:
+            return {"ok": False, "error": "family_owner_required"}
+        target = str(data.get("targetPersonId") or data.get("target_person_id") or "")
+        try:
+            target_ok = bool(uuid.UUID(target))
+        except (ValueError, TypeError, AttributeError):
+            target_ok = False
+        if not target_ok:
+            return {"ok": False, "error": "target_required"}
+        if target == str(backend.person_id or ""):
+            return {"ok": False, "error": "cannot_remove_self"}
+        try:
+            removed = backend.delete_family_membership_unscoped(group_id, target)
+        except Exception as e:
+            log_fallback_exception("remove family member", e)
+            return {"ok": False, "error": "family_membership_unavailable"}
+        if not removed:
+            return {"ok": False, "error": "membership_not_found"}
+        return {"ok": True, "removed": target}
+
+    return {"ok": False, "error": "unsupported_action"}
 
 
 def family_invitations_response(data, client_ip=None, actor=None):
@@ -11658,7 +11721,7 @@ class H(BaseHTTPRequestHandler):
             # A join code is never an authentication credential.
             # 機構端專區 /org/*（2026-10-29）同理：機構人員的身分就是登入證本身（org_staff 對照），
             # 本機／示範模式也不能放行沒登入的人——沒身分＝不知道他是哪家的人。
-            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings", "/enterprise/redeem-code") or request_path.startswith("/org/"):
+            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings", "/enterprise/redeem-code", "/family/membership") or request_path.startswith("/org/"):
                 family_auth = verify_auth_context(self.headers)
                 if not family_auth.get("ok"):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
@@ -11800,6 +11863,8 @@ class H(BaseHTTPRequestHandler):
                     self._json_scheduler(org_alerts.admin_alerts_refresh_all_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
+            elif self.path == "/family/membership":
+                self._json(family_membership_response(data, actor=auth_gate.get("auth")))
             elif self.path == "/family/invitations":
                 _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 self._json(family_invitations_response(data, client_ip=_cip, actor=auth_gate.get("auth")))
