@@ -37,9 +37,11 @@ import enterprise_seats
 import enterprise_billing
 import org_portal
 import org_api
+import org_alerts
 import model_router
 import notify
 import apple_store
+import credit_allowance
 import notification_service
 import apns_service
 from google.genai import types
@@ -61,6 +63,8 @@ PERSON_PROFILE_PATH = os.environ.get("MUNEA_PERSON_PROFILE_PATH") or os.path.joi
 APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
 CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(HERE, "credits_store.json")
+# JSON 後備模式（沒有 Supabase）才用：其他帳號的錢包與家人圈連結，讓家人圈共用分鐘在本機也跑得到。
+FAMILY_CREDIT_SHARE_PATH = os.environ.get("MUNEA_FAMILY_CREDIT_SHARE_PATH") or os.path.join(HERE, "family_credit_share_store.json")
 FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.path.join(HERE, "family_state_store.json")
 FAMILY_ACTIVITIES_PATH = os.environ.get("MUNEA_FAMILY_ACTIVITIES_PATH") or os.path.join(HERE, "family_activities.json")
 FAMILY_INVITATIONS_PATH = os.environ.get("MUNEA_FAMILY_INVITATIONS_PATH") or os.path.join(HERE, "family_invitations.json")
@@ -500,6 +504,10 @@ ADMIN_POST_PATHS = {
     # 機構端專區第 2 段（2026-10-29）：幫機構開人員帳號、看各席次同意狀態。處理端再驗一次管理鑰匙。
     "/admin/enterprise/staff/invite",
     "/admin/enterprise/consent/status",
+    # 第 3 段（2026-11-18 · C4）：匯出機構的異常提醒與逐筆判定，對齊 C4 逐筆判定表。
+    "/admin/enterprise/alerts/export",
+    # 給之後的排程：把每一家照護機構的提醒算一次（沒人打開提醒匣也照樣發出）。
+    "/admin/enterprise/alerts/refresh",
 }
 PRIVILEGED_BILLING_POST_PATHS = {"/subscription-event", "/credits/grant", "/credits/consume"}
 
@@ -535,6 +543,14 @@ def require_verified_auth(headers=None, path="", data=None):
             "auth": public_auth_context(auth_context),
         }
     return {"ok": True, "required": True, "auth": public_auth_context(auth_context)}
+
+
+def auth_email_verified(auth_context):
+    """登入身分的 email 確認過沒（Supabase 使用者資料的 email_confirmed_at）。
+    只給 /org/* 用：機構人員第一次登入要用 email 對邀請名單（org_api.email_binding_allowed）。
+    開發用假證沒有這份資料，一律當沒確認。"""
+    user = (auth_context or {}).get("user")
+    return bool(isinstance(user, dict) and user.get("email_confirmed_at"))
 
 
 def public_auth_context(auth_context):
@@ -1034,19 +1050,21 @@ def family_state_response(data):
     group = str(data.get("familyGroupId") or data.get("family_group_id") or "shared")
     group_uuid = group if _looks_like_uuid(group) else None
     use_supabase = bool(group_uuid) or group == "shared"
-    # A former subscriber must never retain read access merely because an
-    # asynchronous membership cleanup has not run yet.  Their own free circle
-    # remains usable; only a cross-account circle is denied.
+    # 別的帳號的圈：要有「現在還有效的 family_memberships」才進得來。
+    # 7/14 原本用「自己是免費就擋」，但 7/31 起免費也能被邀進別人的圈（用圈主的名額），
+    # 那條會把免費爸媽擋在子女的圈外（2026-11-20 改）。要防的情況不變：訂閱過期的人，
+    # reconcile_billing_expiry 會刪掉他的外部 membership → 沒有 membership 就擋。
+    # 自己的圈不受影響。
     if group_uuid:
         try:
             backend = data_backend()
             if backend.enabled():
                 family_account_id = backend.family_group_account_id(group_uuid)
-                billing = load_billing_store()
-                if family_account_id and family_account_id != backend.account_id and billing.get("activePlan") == "free":
+                if family_account_id and family_account_id != backend.account_id \
+                        and not backend.account_in_family_group(group_uuid):
                     return {"ok": False, "error": "family_access_expired"}
         except Exception as e:
-            log_fallback_exception("check expired cross-family access", e)
+            log_fallback_exception("check cross-family membership access", e)
     if action == "save":
         key = data.get("key")
         if key not in FAMILY_STATE_KEYS:
@@ -2522,11 +2540,12 @@ def care_week_response(data):
     try:
         start, _end = care_week.period_bounds(days, today or None)
         since_iso = (start - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
-        for ev in load_product_events(since_iso=since_iso, limit=2000) or []:
-            if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
-                continue
-            if str(ev.get("personId") or "") != str(person_id):
-                continue
+        mine = [ev for ev in load_product_events(since_iso=since_iso, limit=2000) or []
+                if isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"
+                and str(ev.get("personId") or "") == str(person_id)]
+        # 寧寧自己講的話不算；提到受暴受剝削的不進家人週摘要（加害人可能就是家人；內部告警照發、由營運處理）——
+        # 同一通只要有一筆提到受暴，那通每一筆都不進（#717 第二張；規則在 care_week.guardian_events_shareable）
+        for ev in care_week.guardian_events_shareable(mine):
             props = ev.get("properties") or {}
             events.append({
                 "eventTime": ev.get("eventTime") or ev.get("createdAt"),
@@ -3610,6 +3629,10 @@ def _summary_tags_from_context(context, text=""):
     for category in risk.get("categories") or []:
         if category and category not in tags:
             tags.append(category)
+    # 守護腦每句只標一個類別、先中先贏：「受暴＋急症」只會標成急症。只要提到受暴，就一定標 protection_event，
+    # 而且排第一——後台靠這個標籤套受暴的處理步驟，最多 8 個的截斷不能把它截掉（#729 信任關卡）
+    if risk.get("protectionEvent") or risk.get("protectionMentioned") or "protection_event" in tags:
+        tags = ["protection_event"] + [t for t in tags if t != "protection_event"]
     lower = str(text or "").lower()
     keyword_tags = [
         ("family", ["daughter", "son", "family", "mom", "dad", "女兒", "兒子", "家人"]),
@@ -4870,8 +4893,12 @@ def normalize_product_event(data=None):
     data = data or {}
     store = load_app_profile_store()
     account_id = data.get("accountId") or data.get("account_id") or store.get("account", {}).get("id") or "local-demo-account"
-    person_id = data.get("personId") or data.get("person_id") or store.get("primaryCareRecipientId")
-    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or store.get("familyGroup", {}).get("id")
+    # explicitScope：呼叫端已經明講是誰（例如通話亮燈由 Brain 認人後寫入）——沒有家庭圈就是沒有，
+    # 不拿那份全程序共用、不分人的設定快取補上，免得記到別人的家庭圈（#717 複審）。
+    explicit_scope = bool(data.get("explicitScope"))
+    person_id = data.get("personId") or data.get("person_id") or (None if explicit_scope else store.get("primaryCareRecipientId"))
+    family_group_id = data.get("familyGroupId") or data.get("family_group_id") or (
+        None if explicit_scope else store.get("familyGroup", {}).get("id"))
     event_time = parse_iso_datetime(data.get("eventTime") or data.get("event_time"))
     event_name = str(data.get("eventName") or data.get("event_name") or "unknown_event").strip()[:80] or "unknown_event"
     properties = data.get("properties") if isinstance(data.get("properties"), dict) else {}
@@ -5901,7 +5928,12 @@ def admin_safety_events_summary(data=None):
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=days - 1)
     since_day = datetime(since.year, since.month, since.day, tzinfo=timezone.utc)
-    events = load_product_events(since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"), limit=2000)
+    # 跨全部帳號讀（2026-11-18 #717 第二張）：以前用 load_product_events＝只讀得到示範帳號那一戶（後台路徑不綁登入身分，
+    # 帳號退回 demo），真實長輩的亮燈、受暴事件在這頁從來看不到。跟北極星看板同一個修法（見 load_all_accounts_product_events）。
+    source = {}
+    events = load_all_accounts_product_events(limit=20000, since_iso=since_day.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                              fallback_on_error=True, event_name="guardian_risk_evaluated",
+                                              source_out=source)
     # 2026-07-24 補：這頁原本沒接測試帳號排除。注意：不能借用 is_analytics_excluded_event，
     # 那支連 analyticsExcluded/developerMode 這類「不算進互動指標」的事件級旗標都會濾掉——
     # guardian_evaluate_response 對每一筆守護風險評估都固定寫 analyticsExcluded=True（避免
@@ -5911,10 +5943,15 @@ def admin_safety_events_summary(data=None):
     excluded_ids = analytics_excluded_id_set()
     events = [event for event in events if not is_admin_row_excluded(event, excluded_ids)]
     safety_events = []
+    # 同一通只要有一筆提到受暴（或 AI 判過受暴），那通每一筆都照受暴處理——前半句「胸口好痛」那筆單看沒帶受暴標記，
+    # 以前會照一般步驟叫營運聯絡家庭圈（#729 信任關卡）。跟家人週摘要、機構讀取同一套規則；沒有 callId 的舊紀錄照舊逐筆判。
+    abuse_calls = care_week.guardian_abuse_call_ids(
+        [e for e in events if e.get("eventName") == "guardian_risk_evaluated"])
     for event in events:
         if event.get("eventName") != "guardian_risk_evaluated":
             continue
         props = event.get("properties") or {}
+        abuse = _guardian_mentions_abuse(props) or (bool(props.get("callId")) and str(props.get("callId")) in abuse_calls)
         categories = props.get("categories") or []
         if isinstance(categories, str):
             categories = [categories]
@@ -5933,6 +5970,12 @@ def admin_safety_events_summary(data=None):
             "eventTime": event.get("eventTime") or event.get("createdAt"),
             "requiresHumanEscalation": risk_level in {"high", "crisis"},
             "analyticsExcluded": bool(props.get("analyticsExcluded")),
+            # 受暴類要有人接（#717 第二張）：家人週摘要、機構畫面都不給，只有這頁與內部告警看得到
+            "protectionMentioned": _guardian_mentions_abuse(props),
+            "abuseConfirmed": bool(props.get("abuseConfirmed")),
+            "who": props.get("who"),
+            # 處理方式：受暴類不要聯絡家人或家庭圈的人（加害人可能就是家人）——後台照這欄顯示那一筆的步驟（#727 複審）
+            "handling": "abuse" if abuse else "standard",
         })
     summaries = load_conversation_summaries(limit=500, include_deleted=False)
     for summary in summaries:
@@ -5953,6 +5996,8 @@ def admin_safety_events_summary(data=None):
             "eventTime": summary.get("createdAt"),
             "requiresHumanEscalation": False,
             "analyticsExcluded": False,
+            # 摘要的標籤裡有受暴類（protection_event）也套受暴的處理步驟（#728 複審）
+            "handling": "abuse" if _guardian_mentions_abuse({"categories": tags}) else "standard",
         })
     if level_filter:
         safety_events = [event for event in safety_events if event.get("riskLevel") == level_filter]
@@ -5989,6 +6034,9 @@ def admin_safety_events_summary(data=None):
         },
         "topCategories": top_categories,
         "recent": safety_events[:limit],
+        # 資料庫讀不到、改顯示這台主機上的備份檔時要標出來：備份可能少了真實長輩的警訊，「沒有警訊」不代表沒事（#727）
+        "source": {"events": "database" if source.get("provider") == "supabase" else "local_backup",
+                   "degraded": bool(source.get("degraded", True)), "reason": source.get("reason")},
         "privacy": {
             "surface": "admin_safety_event_review",
             "storesRawTranscriptByDefault": False,
@@ -6900,7 +6948,8 @@ def admin_bond_depth(data=None):
     }
 
 
-def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_error=False):
+def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_error=False, event_name=None,
+                                     source_out=None):
     """後台看板共用：跨『全部帳號』讀 product_events。
 
     ⚠ 別改回 load_product_events()：那支帶 account_id 過濾，而後台路徑本來就不綁登入身分
@@ -6909,12 +6958,15 @@ def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_er
     測試帳號被濾掉，結果永遠是 0，而真正的八百多筆真實紀錄從頭到尾沒進視野。
 
     帶 since_iso＝只看那段時間窗（北極星）；不帶＝從最早一筆全撈（成長與黏著要算第 0 天）。
+    帶 event_name＝只撈這一種事件（安全事件頁只要守護事件，不用每次撈兩萬筆各種事件再挑，#727）。
+    source_out（dict）：讀完會填 {"provider": "supabase"|"json", "degraded": bool, "reason": ...}，給頁面標「這是備份」。
     """
     limit = max(1, min(50000, int(limit or 20000)))
     backend = data_backend()
     fallback_reason = "primary_disabled" if not backend.enabled() else "primary_unavailable"
     try:
-        remote_events = backend.load_admin_product_events(limit=limit, since_iso=since_iso)
+        remote_events = (backend.load_admin_product_events(limit=limit, since_iso=since_iso, event_name=event_name)
+                         if event_name else backend.load_admin_product_events(limit=limit, since_iso=since_iso))
         if remote_events is not None:
             normalized_remote = [normalize_product_event(e) for e in remote_events]
             record_admin_data_source(
@@ -6923,6 +6975,8 @@ def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_er
                 record_count=len(normalized_remote),
                 data_as_of=latest_record_timestamp(remote_events),
             )
+            if source_out is not None:
+                source_out.update({"provider": "supabase", "degraded": False, "reason": None})
             return normalized_remote
     except Exception as e:
         # 兩種性格，由呼叫端選：
@@ -6938,7 +6992,11 @@ def load_all_accounts_product_events(limit=20000, since_iso=None, fallback_on_er
     if since_iso:
         # 退回本機檔案時也要守同一個時間窗，否則北極星在降級狀態下會偷偷把更早的資料算進來
         events = [e for e in events if str(e.get("eventTime") or "") >= str(since_iso)]
+    if event_name:
+        events = [e for e in events if e.get("eventName") == event_name]
     events = events[:limit]
+    if source_out is not None:
+        source_out.update({"provider": "json", "degraded": True, "reason": fallback_reason})
     record_admin_data_source(
         "product_events",
         "json",
@@ -7675,9 +7733,69 @@ def append_audit_event(event=None):
     return normalized
 
 
-# 機構端專區的稽核（誰看過誰的週摘要、同意開關、開人員）第 2 段先寫進同一張 audit_events；
-# 第 3 段搬專用表時只要換這一行的目的地。
+# 機構端專區的稽核（誰看過誰的週摘要、同意開關、開人員、異常提醒的發出與判定）寫進同一張 audit_events，
+# 但走專用的嚴格寫入口（帳號欄空值、不綁請求身分、寫不進就丟錯）。sink 的定義在下面，這裡先占位，
+# 定義完立刻換上（見 append_org_audit_event_strict 之後那一行）。
 org_api.set_audit_sink(append_audit_event)
+
+
+# 同意／撤回是家人自己按的：這兩種留在家人自己的帳號底下（他「下載我的資料」要看得到自己按過什麼）。
+# 其餘機構端紀錄（判定、備註、誰看過誰、人員啟用、設定、匯出）帳號欄一律空值。
+ORG_FAMILY_OWNED_EVENTS = ("org_consent_granted", "org_consent_revoked")
+
+
+def _org_audit_backend():
+    """機構端稽核用的雲端連線：刻意不綁這次請求的登入身分（測試可換掉這一支）。"""
+    return supabase_adapter.make_adapter(identity=None)
+
+
+def append_org_audit_event_strict(event=None):
+    """機構端稽核專用寫入口（2026-11-18 · #713 信任關卡）。三件事跟一般的 append_audit_event 不同：
+    ① 帳號欄一律空值：家人用自己的登入讀得到自己帳號底下的稽核紀錄（001 的讀取規則），
+       機構的判定與備註、誰看過誰的週摘要都不能掛在任何家庭帳號底下。
+    ② 不綁這次請求的登入身分：照護人員如果也用同一個帳號開過 App，請求會被綁成他自己家。
+    ③ 雲端開著卻寫失敗就往外丟——不退本機暫存檔假裝成功（Cloud Run 每台機器的暫存檔各自獨立、重建就消失），
+       「寫不進就不算數」才真的成立。雲端沒開（本機開發、測試）才寫本機稽核本子。"""
+    normalized = normalize_audit_event(event)
+    backend = _org_audit_backend()
+    if backend.enabled():
+        keep = normalized.get("eventType") in ORG_FAMILY_OWNED_EVENTS
+        return normalize_audit_event(backend.append_org_audit_event(normalized, keep_account=keep))
+    if str(os.environ.get("MUNEA_DATABASE_PROVIDER") or "").strip().lower() == "supabase":
+        # 設定說要用雲端、雲端卻沒啟用（例如有人把示範帳號那兩個環境變數清掉）：不准無聲退回本機檔
+        raise RuntimeError("org audit requires the cloud database but it is not enabled")
+    store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
+    events = [normalize_audit_event(e) for e in store.get("events", [])]
+    events.insert(0, {**normalized, "accountId": None})
+    write_json_file(AUDIT_EVENTS_STORE_PATH, {"schemaVersion": 1, "events": events[:1000], "updatedAt": utc_now()})
+    return normalized
+
+
+def load_org_audit_events(client_id, since_iso, event_types):
+    """機構端異常提醒匣（org_alerts）讀「發出／判定」等紀錄：雲端優先；雲端開著卻讀失敗就往外丟（整頁顯示暫時無法使用），
+    雲端沒開才讀本機稽核本子。不綁這次請求的登入身分。"""
+    types = tuple(event_types or ())
+    backend = _org_audit_backend()
+    try:
+        remote = backend.load_org_audit_events(client_id, types, since_iso=since_iso)
+        if remote is not None:
+            return [normalize_audit_event(e) for e in remote]
+    except Exception as e:
+        if backend.enabled():
+            raise
+        log_fallback_exception("load org audit events from Supabase", e)
+    store = read_json_file(AUDIT_EVENTS_STORE_PATH, default_audit_events_store())
+    rows = [normalize_audit_event(e) for e in (store.get("events", []) if isinstance(store, dict) else [])]
+    return [
+        e for e in rows
+        if e.get("eventType") in types
+        and str((e.get("details") or {}).get("clientId") or "") == str(client_id)
+        and str(e.get("createdAt") or "") >= str(since_iso or "")
+    ]
+
+
+org_alerts.set_event_loader(load_org_audit_events)
+org_api.set_audit_sink(append_org_audit_event_strict)
 
 
 def admin_audit_events_summary(data=None):
@@ -8262,7 +8380,11 @@ def default_billing_store():
             "familyDashboard": True,
             "routineReminders": True,
             "realtimeAvatar": True,
-            "signupTrialCredits": 5,
+            # 2026-11-20：一次性 5 點改成「前 7 天每天 10 分鐘、之後每週 10 分鐘」（credit_allowance.py）。
+            "signupTrialCredits": 0,
+            "freeTrialDays": credit_allowance.DEFAULT_SETTINGS["trialDays"],
+            "freeTrialDailyMinutes": credit_allowance.DEFAULT_SETTINGS["trialDailyMinutes"],
+            "freeWeeklyMinutes": credit_allowance.DEFAULT_SETTINGS["weeklyMinutes"],
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
             # Edward 2026-07-31：免費也給 1 位家人（本人＋1＝2）。原本免費＝只有自己、
@@ -8363,7 +8485,7 @@ def credit_wallet_is_available(wallet, now=None):
 def normalize_credit_wallet(data=None, wallet_type="purchased", period=None):
     data = data or {}
     wallet_type = data.get("type") or data.get("walletType") or data.get("wallet_type") or wallet_type
-    wallet_type = wallet_type if wallet_type in ("included_monthly", "purchased") else "purchased"
+    wallet_type = wallet_type if wallet_type in ("included_monthly", "purchased", credit_allowance.FREE_WALLET_TYPE) else "purchased"
     if wallet_type == "included_monthly":
         period = data.get("period") or period or time.strftime("%Y-%m")
     else:
@@ -8376,6 +8498,7 @@ def normalize_credit_wallet(data=None, wallet_type="purchased", period=None):
         "balance": normalize_credit_amount(data.get("balance")),
         "expiresAt": data.get("expiresAt") or data.get("expires_at"),
         "status": str(data.get("status") or "active"),
+        **({"metadata": data["metadata"]} if isinstance(data.get("metadata"), dict) and data.get("metadata") else {}),
     }
 
 
@@ -8450,10 +8573,12 @@ def credit_wallet_summary(store):
     wallets = store.get("wallets") or []
     included = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "included_monthly" and credit_wallet_is_available(w))
     purchased = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "purchased" and credit_wallet_is_available(w))
+    free = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == credit_allowance.FREE_WALLET_TYPE and credit_wallet_is_available(w))
     return {
         "includedMonthly": round(included, 4),
         "purchased": round(purchased, 4),
-        "total": round(included + purchased, 4),
+        "freeAllowance": round(free, 4),
+        "total": round(included + purchased + free, 4),
         "currencyCode": store.get("currencyCode") or "MUNEA_CREDIT",
     }
 
@@ -8563,7 +8688,7 @@ def credit_idempotency_response(store, key):
     return None
 
 
-def append_credit_transaction(store, *, transaction_type, wallet, amount, source, reason, idempotency_key, feature=None, provider=None, provider_transaction_id=None):
+def append_credit_transaction(store, *, transaction_type, wallet, amount, source, reason, idempotency_key, feature=None, provider=None, provider_transaction_id=None, person_id=None):
     tx = {
         "id": f"credit_tx_{int(time.time() * 1000)}_{len(store.get('transactions', [])) + 1}",
         "type": transaction_type,
@@ -8579,6 +8704,9 @@ def append_credit_transaction(store, *, transaction_type, wallet, amount, source
         "idempotencyKey": str(idempotency_key or tx_fallback_idempotency_key(transaction_type, wallet, amount))[:160],
         "createdAt": utc_now(),
     }
+    if person_id:
+        # 誰用的分鐘：扣圈主錢包時記來電者，圈主才算得出每個人用了幾分鐘。
+        tx["personId"] = str(person_id)[:80]
     store.setdefault("transactions", []).append(tx)
     store.setdefault("ledger", []).append({
         "id": f"credit_ledger_{int(time.time() * 1000)}_{len(store.get('ledger', [])) + 1}",
@@ -8597,14 +8725,278 @@ def tx_fallback_idempotency_key(transaction_type, wallet, amount):
     return f"local-{transaction_type}-{wallet.get('id')}-{amount}-{int(time.time() * 1000)}"
 
 
+def billing_paid_plan(billing, now=None):
+    """這個帳號現在有沒有有效的付費方案（plus／pro）；沒有回 None。跟資料庫 munea_account_paid_plan 同義。"""
+    billing = normalize_billing_store(billing or {})
+    plan = str(billing.get("activePlan") or "free").lower()
+    if plan not in credit_allowance.PAID_PLANS or subscription_expiry_reason(billing, now=now):
+        return None
+    return plan
+
+
+def json_credit_share_state():
+    raw = read_json_file(FAMILY_CREDIT_SHARE_PATH, {})
+    raw = raw if isinstance(raw, dict) else {}
+    accounts = raw.get("accounts") if isinstance(raw.get("accounts"), dict) else {}
+    memberships = [m for m in raw.get("memberships") or [] if isinstance(m, dict)]
+    return {"accounts": accounts, "memberships": memberships}
+
+
+def save_json_credit_share_account(account_id, credits):
+    state = json_credit_share_state()
+    entry = dict(state["accounts"].get(account_id) or {})
+    entry["credits"] = normalize_credits_store(credits)
+    state["accounts"][account_id] = entry
+    write_json_file(FAMILY_CREDIT_SHARE_PATH, state)
+    return entry["credits"]
+
+
+def json_other_credit_stores(state, account_id):
+    return [
+        normalize_credits_store(entry.get("credits"))
+        for other_id, entry in (state.get("accounts") or {}).items()
+        if other_id != account_id and isinstance(entry, dict) and isinstance(entry.get("credits"), dict)
+    ]
+
+
+def json_family_share_context(state, *, account_id, person_id=None, paid_plan=None, family_group_id=None):
+    """JSON 後備的「誰是圈主」：跟資料庫 munea_family_share_owner 同一套判斷。
+
+    圈主＝建圈的帳號（memberships 的 ownerAccountId）；成員＝掛在別人圈裡的帳號。
+    自己有付費方案＝圈主角色（不被別人涵蓋）；掛好幾個圈取最新加入的那一個。
+    """
+    memberships = state.get("memberships") or []
+    if paid_plan:
+        group = next((m.get("familyGroupId") for m in memberships
+                      if m.get("ownerAccountId") == account_id and m.get("familyGroupId")), None)
+        return {"role": "owner", "plan": paid_plan, "ownerAccountId": account_id,
+                "familyGroupId": group or family_group_id, "personId": person_id, "ownerPersonId": person_id}
+    links = [
+        m for m in memberships
+        if m.get("memberAccountId") == account_id and m.get("ownerAccountId") and m.get("ownerAccountId") != account_id
+        and (not person_id or not m.get("personId") or m.get("personId") == person_id)
+    ]
+    links.sort(key=lambda m: str(m.get("createdAt") or ""), reverse=True)
+    for link in links[:1]:
+        owner_id = link.get("ownerAccountId")
+        owner = (state.get("accounts") or {}).get(owner_id) or {}
+        plan = billing_paid_plan(owner.get("billing") or {})
+        if plan:
+            return {"role": "member", "plan": plan, "ownerAccountId": owner_id,
+                    "familyGroupId": link.get("familyGroupId"), "personId": link.get("personId") or person_id,
+                    "ownerPersonId": owner.get("personId")}
+    return None
+
+
+def ensure_free_allowance_in_store(store, *, account_id, created_at, paid_plan=None, now=None, other_stores=()):
+    """補建這個週期的免費錢包（JSON 後備；資料庫那邊是 munea_ensure_free_allowance）。回 (window, 有沒有新建)。"""
+    if paid_plan:
+        return None, False
+    now = now or datetime.now(timezone.utc)
+    used = credit_allowance.free_used_in_month([store, *list(other_stores or [])], now)
+    window = credit_allowance.allowance_window(created_at, now, credit_allowance.settings_from_env(), used)
+    if window["amount"] <= 0 or credit_allowance.find_free_wallet(store, window["period"]):
+        return window, False
+    wallet = credit_allowance.free_wallet_for(window)
+    store.setdefault("wallets", []).append(wallet)
+    append_credit_transaction(
+        store,
+        transaction_type="grant",
+        wallet=wallet,
+        amount=window["amount"],
+        source="promo",
+        reason=f"free_allowance_{window['mode']}",
+        idempotency_key=f"free-allowance:{account_id}:{window['period']}",
+        provider="munea_free_allowance",
+    )
+    return window, True
+
+
+def included_month_info(store, now):
+    """月額度錢包現況：剩多少、這期發了多少、哪天到期、這期從哪天開始。沒有錢包全回 None。"""
+    wallets = []
+    for wallet in (store or {}).get("wallets") or []:
+        if wallet.get("type") != "included_monthly" or wallet.get("status") != "active":
+            continue
+        expires = credit_allowance.parse_time(wallet.get("expiresAt"))
+        if expires is not None and expires <= now:
+            continue
+        if expires is None and float(wallet.get("balance") or 0) <= 0:
+            continue
+        wallets.append(wallet)
+    if not wallets:
+        return {"remaining": None, "grant": None, "expiresAt": None, "periodStart": None}
+    ids = {w.get("id") for w in wallets}
+    grant = sum(float(tx.get("amount") or 0) for tx in (store or {}).get("transactions") or []
+                if tx.get("type") == "grant" and tx.get("walletId") in ids)
+    expires = [credit_allowance.parse_time(w.get("expiresAt")) for w in wallets if w.get("expiresAt")]
+    period_start = None
+    for wallet in wallets:
+        period = str(wallet.get("period") or "")
+        if "/" in period:
+            period_start = credit_allowance.parse_time(period.split("/", 1)[0])
+            if period_start:
+                break
+    return {
+        "remaining": round(sum(float(w.get("balance") or 0) for w in wallets), 4),
+        "grant": round(grant, 4) or None,
+        "expiresAt": min(expires) if expires else None,
+        "periodStart": period_start,
+    }
+
+
+def family_share_raw(ctx, owner_store, now):
+    info = included_month_info(owner_store, now)
+    since = info["periodStart"] or credit_allowance.month_start(now)
+    usage = credit_allowance.usage_rows((owner_store or {}).get("transactions"), since, owner_person_id=ctx.get("ownerPersonId"))
+    expires = info["expiresAt"]
+    return {
+        "role": ctx.get("role"),
+        "plan": ctx.get("plan"),
+        "familyGroupId": ctx.get("familyGroupId"),
+        "viewerPersonId": ctx.get("personId"),
+        "monthGrant": info["grant"] or credit_allowance.PLAN_MONTHLY_MINUTES.get(ctx.get("plan")),
+        "monthRemaining": info["remaining"],
+        "renewsAt": expires.astimezone(credit_allowance.TAIPEI).date().isoformat() if expires else None,
+        "usage": [{"personId": person, "minutes": minutes} for person, minutes in usage.items()],
+    }
+
+
+def public_family_share(raw, names=None):
+    """App 要的 familyShare（照前端約定的欄位名）。圈主看整個圈、成員只看自己那列。"""
+    if not isinstance(raw, dict) or not raw.get("role"):
+        return None
+    usage = {}
+    for row in raw.get("usage") or []:
+        if isinstance(row, dict):
+            person = str(row.get("personId") or "")
+            usage[person] = usage.get(person, 0.0) + float(row.get("minutes") or 0)
+    remaining = raw.get("monthRemaining")
+    grant = raw.get("monthGrant")
+    return {
+        "shared": True,
+        "role": "owner" if raw.get("role") == "owner" else "member",
+        "plan": raw.get("plan"),
+        "monthGrant": credit_allowance.as_number(grant) if grant is not None else None,
+        "monthRemaining": credit_allowance.as_number(remaining) if remaining is not None else None,
+        "renewsAt": raw.get("renewsAt"),
+        "usageByPerson": credit_allowance.visible_usage(
+            usage, role=raw.get("role"), viewer_person_id=raw.get("viewerPersonId"), names=names or {}
+        ),
+    }
+
+
+def json_circle_names(family_group_id):
+    if not family_group_id:
+        return {}
+    state = _family_state_json_all().get(str(family_group_id)) or {}
+    return credit_allowance.circle_names((state.get("circle") or {}).get("value"))
+
+
+def json_credit_share_status(data=None, now=None):
+    """JSON 後備的 /credits/balance 狀態；回 (自己的帳本, 狀態)。狀態格式跟 munea_credit_share_status 一樣。"""
+    data = data or {}
+    now = now or datetime.now(timezone.utc)
+    profile = load_app_profile_store()
+    account = profile.get("account") or {}
+    account_id = str(account.get("id") or "local-demo-account")
+    person_id = str(data.get("personId") or data.get("person_id") or profile.get("primaryCareRecipientId") or "") or None
+    paid = billing_paid_plan(load_billing_store(), now=now)
+    state = json_credit_share_state()
+    store = load_credits_store()
+    window, changed = ensure_free_allowance_in_store(
+        store, account_id=account_id, created_at=account.get("createdAt"), paid_plan=paid, now=now,
+        other_stores=json_other_credit_stores(state, account_id),
+    )
+    if changed:
+        store = save_credits_store(store)
+    ctx = json_family_share_context(state, account_id=account_id, person_id=person_id, paid_plan=paid,
+                                    family_group_id=(profile.get("familyGroup") or {}).get("id"))
+    raw_share, shared_spendable = None, 0
+    if ctx:
+        owner_store = store if ctx["role"] == "owner" else normalize_credits_store(
+            ((state["accounts"].get(ctx["ownerAccountId"]) or {}).get("credits")) or {}
+        )
+        raw_share = family_share_raw(ctx, owner_store, now)
+        if ctx["role"] == "member":
+            shared_spendable = credit_allowance.spendable(owner_store, now, exclude_free=True)
+    own_expires = included_month_info(store, now)["expiresAt"] if paid else None
+    return store, {
+        "allowance": credit_allowance.allowance_block(
+            window, store, now, paid_plan=paid, plan_resets_at=credit_allowance.iso_z(own_expires) if own_expires else None
+        ),
+        "familyShare": raw_share,
+        "sharedSpendable": shared_spendable,
+        "names": json_circle_names((raw_share or {}).get("familyGroupId")),
+    }
+
+
+def ensure_owner_monthly_allowance(share):
+    """成員查餘額時，圈主這期的月額度錢包若還沒建（圈主還沒開 App），先替圈主補建（冪等）。"""
+    owner_id = (share or {}).get("ownerAccountId")
+    if not owner_id:
+        return False
+    token = REQUEST_DATA_IDENTITY.set({
+        "accountId": owner_id,
+        "personId": share.get("ownerPersonId") or "",
+        "familyGroupId": share.get("familyGroupId") or "",
+    })
+    try:
+        return bool(ensure_current_monthly_allowance())
+    except Exception as e:
+        log_fallback_exception("ensure family owner monthly allowance", e)
+        return False
+    finally:
+        REQUEST_DATA_IDENTITY.reset(token)
+
+
+def supabase_credit_share_status(backend):
+    """Supabase 的 /credits/balance 狀態（munea_credit_share_status，034）。034 還沒套用時回 None。"""
+    try:
+        status = backend.load_credit_share_status()
+    except Exception as e:
+        log_fallback_exception("load credit share status from Supabase", e)
+        return None
+    if not isinstance(status, dict):
+        return None
+    share = status.get("familyShare") if isinstance(status.get("familyShare"), dict) else None
+    if share and share.get("role") == "member" and share.get("monthRemaining") is None:
+        if ensure_owner_monthly_allowance(share):
+            try:
+                status = backend.load_credit_share_status() or status
+            except Exception as e:
+                log_fallback_exception("reload credit share status from Supabase", e)
+        share = status.get("familyShare") if isinstance(status.get("familyShare"), dict) else None
+    names = {}
+    if share and share.get("familyGroupId"):
+        try:
+            names = credit_allowance.circle_names(backend.load_family_circle_unscoped(share.get("familyGroupId")))
+        except Exception as e:
+            log_fallback_exception("load family circle names for shared minutes", e)
+    return {**status, "names": names}
+
+
 def credits_balance_response(data=None):
     ensure_current_monthly_allowance()
-    store = load_credits_store()
+    backend = data_backend()
+    if backend.enabled():
+        status = supabase_credit_share_status(backend)
+        store = load_credits_store()
+    else:
+        store, status = json_credit_share_status(data)
+    status = status or {}
+    summary = credit_wallet_summary(store)
+    shared = float(status.get("sharedSpendable") or 0)
+    if shared > 0:
+        # 被家人圈共用涵蓋的成員：能用的分鐘＝自己的＋圈主的（App 用 total 判斷能不能撥）。
+        summary = {**summary, "familyShared": round(shared, 4), "total": round(summary["total"] + shared, 4)}
     return {
         "ok": True,
-        "walletSummary": credit_wallet_summary(store),
+        "walletSummary": summary,
         "wallets": store.get("wallets", []),
         "recentTransactions": list(store.get("transactions", []))[-20:],
+        "allowance": status.get("allowance") or None,
+        "familyShare": public_family_share(status.get("familyShare"), status.get("names")),
         "backend": data_backend_status(),
     }
 
@@ -8762,38 +9154,55 @@ def credits_refund_reversal_response(data):
 
 
 def ensure_free_signup_trial(account_id):
-    """Grant one account-bound Voice+Avatar trial: 5 credits = about 5 minutes.
+    """開機／註冊時補建這個週期的免費額度（2026-11-20 起取代一次性 5 點）。
 
-    The account id is part of the idempotency key, so bootstrap retries, a new
-    phone, or reinstalling the App cannot mint the trial a second time.
+    前 7 天每天 10 分鐘、之後每週 10 分鐘（credit_allowance.py；資料庫是 034 的
+    munea_ensure_free_allowance）。名字沿用，account-bootstrap 不用改。冪等：一個週期一個錢包。
+    舊的一次性 5 點錢包不動，有餘額照用。
     """
     account_id = str(account_id or "").strip()
     if not account_id:
         return {"ok": False, "error": {"code": "account_id_required"}}
     backend = data_backend()
     if backend.enabled():
-        result = backend.grant_free_signup_trial()
+        try:
+            result = backend.ensure_free_allowance() or {}
+        except Exception as e:
+            # 034 還沒套用到資料庫時退回舊的註冊送點；034 套用後同一支函式也會改成新規則。
+            log_fallback_exception("ensure free allowance via Supabase", e)
+            result = backend.grant_free_signup_trial() or {}
+        credits = float(result.get("credits") or 0)
         return {
             "ok": bool(result.get("ok")),
-            "credits": int(result.get("credits") or 5),
-            "minutesApprox": 5,
+            "mode": result.get("mode") or "free_signup_trial",
+            "period": result.get("period"),
+            "credits": credit_allowance.as_number(credits),
+            "minutesApprox": credit_allowance.as_number(credits),
             "idempotentReplay": bool(result.get("idempotentReplay")),
             "walletSummary": {"total": float(result.get("balance") or 0)},
         }
-    result = credits_grant_response({
-        "amount": 5,
-        "walletType": "purchased",
-        "source": "promo",
-        "reason": "free_signup_voice_avatar_trial",
-        "provider": "munea_signup",
-        "idempotencyKey": f"free-signup-trial:{account_id}",
-    })
+    store = load_credits_store()
+    if billing_paid_plan(load_billing_store()):
+        return {"ok": True, "mode": "plan", "period": None, "credits": 0, "minutesApprox": 0,
+                "idempotentReplay": True, "walletSummary": credit_wallet_summary(store)}
+    profile = load_app_profile_store()
+    account = profile.get("account") or {}
+    created_at = account.get("createdAt") if str(account.get("id") or "") == account_id else None
+    window, created = ensure_free_allowance_in_store(
+        store, account_id=account_id, created_at=created_at,
+        other_stores=json_other_credit_stores(json_credit_share_state(), account_id),
+    )
+    if created:
+        store = save_credits_store(store)
+    amount = credit_allowance.as_number(window["amount"]) if window else 0
     return {
-        "ok": bool(result.get("ok")),
-        "credits": 5,
-        "minutesApprox": 5,
-        "idempotentReplay": bool(result.get("idempotentReplay")),
-        "walletSummary": result.get("walletSummary"),
+        "ok": True,
+        "mode": (window or {}).get("mode"),
+        "period": (window or {}).get("period"),
+        "credits": amount,
+        "minutesApprox": amount,
+        "idempotentReplay": not created,
+        "walletSummary": credit_wallet_summary(store),
     }
 
 
@@ -8807,8 +9216,48 @@ def credits_consume_response(data):
     replay = credit_idempotency_response(store, idempotency_key)
     if replay:
         return replay
-    summary = credit_wallet_summary(store)
-    if summary["total"] < amount:
+    now = datetime.now(timezone.utc)
+    caller_account_id = str(store.get("accountId") or "self")
+    person_id = str(data.get("personId") or data.get("person_id") or "") or None
+    owner_ctx, owner_store, free_created = None, None, False
+    if not data_backend().enabled():
+        # JSON 後備：跟資料庫 munea_call_consume_credit（034）同一套順序——
+        # 自己的免費額度 → 圈主的錢包（被家人圈共用涵蓋時）→ 自己其他錢包。
+        profile = load_app_profile_store()
+        account = profile.get("account") or {}
+        caller_account_id = str(account.get("id") or caller_account_id)
+        person_id = person_id or profile.get("primaryCareRecipientId")
+        state = json_credit_share_state()
+        paid = billing_paid_plan(load_billing_store(), now=now)
+        _window, free_created = ensure_free_allowance_in_store(
+            store, account_id=caller_account_id, created_at=account.get("createdAt"), paid_plan=paid, now=now,
+            other_stores=json_other_credit_stores(state, caller_account_id),
+        )
+        owner_ctx = json_family_share_context(state, account_id=caller_account_id, person_id=person_id, paid_plan=paid,
+                                              family_group_id=(profile.get("familyGroup") or {}).get("id"))
+        if owner_ctx and owner_ctx.get("role") == "member":
+            owner_store = normalize_credits_store(((state["accounts"].get(owner_ctx["ownerAccountId"]) or {}).get("credits")) or {})
+            replay = credit_idempotency_response(owner_store, idempotency_key)
+            if replay:
+                return replay
+        else:
+            owner_ctx = None
+
+    def summary_with_share():
+        summary = credit_wallet_summary(store)
+        shared = credit_allowance.spendable(owner_store, now, exclude_free=True) if owner_store is not None else 0
+        if shared > 0:
+            summary = {**summary, "familyShared": shared, "total": round(summary["total"] + shared, 4)}
+        return summary
+
+    plan = credit_allowance.plan_spend(
+        store, amount, now, owner_store=owner_store, caller_account_id=caller_account_id,
+        owner_account_id=(owner_ctx or {}).get("ownerAccountId"),
+    )
+    if plan is None:
+        if free_created:
+            store = save_credits_store(store)
+        summary = summary_with_share()
         return {
             "ok": False,
             "error": {"code": "insufficient_credits"},
@@ -8816,23 +9265,13 @@ def credits_consume_response(data):
             "shortfall": round(amount - summary["total"], 4),
             "fallbackMode": data.get("fallbackMode") or "2d-viseme",
         }
-    remaining = amount
-    consumed = []
-    available_wallets = [w for w in store.get("wallets") or [] if credit_wallet_is_available(w)]
-    available_wallets.sort(key=lambda w: (0 if w.get("type") == "included_monthly" else 1, w.get("expiresAt") or "9999", w.get("id") or ""))
-    for wallet in available_wallets:
-        available = float(wallet.get("balance") or 0)
-        if available <= 0:
-            continue
-        take = min(available, remaining)
-        wallet["balance"] = round(available - take, 4)
-        remaining = round(remaining - take, 4)
-        consumed.append((wallet, take))
-        if remaining <= 0:
-            break
-    transactions = [
-        append_credit_transaction(
-            store,
+    transactions = []
+    owner_touched = False
+    for idx, (target, wallet, take) in enumerate(plan):
+        wallet["balance"] = round(float(wallet.get("balance") or 0) - take, 4)
+        owner_touched = owner_touched or target is owner_store
+        transactions.append(append_credit_transaction(
+            target,
             transaction_type="consume",
             wallet=wallet,
             amount=take,
@@ -8840,11 +9279,12 @@ def credits_consume_response(data):
             reason=data.get("reason") or "credit_consume",
             idempotency_key=(idempotency_key + f":{idx}") if idempotency_key else None,
             feature=data.get("feature"),
-        )
-        for idx, (wallet, take) in enumerate(consumed)
-    ]
+            person_id=person_id,
+        ))
     store = save_credits_store(store)
-    return {"ok": True, "transactions": transactions, "walletSummary": credit_wallet_summary(store), "credits": store}
+    if owner_touched and owner_ctx:
+        owner_store = save_json_credit_share_account(owner_ctx["ownerAccountId"], owner_store)
+    return {"ok": True, "transactions": transactions, "walletSummary": summary_with_share(), "credits": store}
 
 
 def normalize_billing_store(data=None):
@@ -8974,6 +9414,8 @@ def entitlements_response(data):
         "billing": store,
         "entitlements": store["entitlements"],
         "subscription": store["subscription"],
+        # 前端靠這個決定能不能寫「爸媽不用另外付費」：後端已支援家人圈共用分鐘（034）。
+        "capabilities": {"familySharedMinutes": True},
     }
 
 
@@ -10650,6 +11092,123 @@ def _voice_identity_scope(user_id):
     return token, identity.get("personId")
 
 
+GUARDIAN_EVENT_LEVELS = ("none", "low", "medium", "high", "critical")
+
+
+# 這筆通話亮燈有沒有提到受暴受剝削：有的話不進家人週摘要、也不進機構畫面（加害人可能就是家人；機構的建議句是
+# 「聯絡本人或家屬」，對受暴不安全）。規則寫在 care_week（機構讀取 org_api 也用同一份）。
+_guardian_mentions_abuse = care_week.guardian_mentions_abuse
+
+
+def _guardian_call_id_ok(value):
+    """Voice 帶來的通話編號只收英數、-、_，最長 64 字（存進 properties，不讓奇怪的字串混進資料庫）。"""
+    return 0 < len(value) <= 64 and all((ch.isascii() and ch.isalnum()) or ch in "-_" for ch in value)
+
+
+def _guardian_conf_of(ev):
+    try:
+        return float((ev.get("properties") or {}).get("abuseConfidence") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _guardian_abuse_lookback_days():
+    """跨通話記住（#717 第二張）：Brain 派送前查這個人最近幾天有沒有 AI 判過的受暴（abuseConfirmed）。
+    MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS，預設 0＝關（天數要 Edward 定）；亂填當 0、最多 365。"""
+    try:
+        return max(0, min(365, int(os.environ.get("MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS", "0") or 0)))
+    except (TypeError, ValueError):
+        return 0
+
+
+GUARDIAN_ABUSE_MEMORY_MIN_CONF = 0.6   # 跨通話記住只認 AI 把握 ≥0.6 的「判過受暴」（#727 信任關卡；通話當下照舊一律不發）
+
+
+def _guardian_recent_abuse_confirmed(person_id, days):
+    """這個人最近 days 天有沒有 AI 判過受暴（把握 ≥0.6）的通話亮燈（只認 abuseConfirmed——關鍵字旗標會把「他不會打我啦」
+    也算進去）。讀的是這位來電者自己帳號的事件（呼叫端已綁好身分）。讀不到就當沒有（記一筆），不擋急症通知。"""
+    if days <= 0 or not person_id:
+        return False
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        for ev in load_product_events(since_iso=since, limit=2000) or []:
+            if (isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"
+                    and str(ev.get("personId") or "") == str(person_id)
+                    and (ev.get("properties") or {}).get("abuseConfirmed")
+                    and _guardian_conf_of(ev) >= GUARDIAN_ABUSE_MEMORY_MIN_CONF):
+                return True
+    except Exception as e:  # noqa: BLE001
+        log_fallback_exception("check recent abuse-confirmed guardian events", e)
+    return False
+
+
+def voice_guardian_event_response(data):
+    """POST /voice/guardian-event（內部密語驗證後才會進來）：通話中守護腦亮燈。
+
+    為什麼要繞這一圈（2026-11-18 查到）：Voice 那台沒有雲端鑰匙、也認不出電話那頭是誰——
+    原本在 Voice 本機寫的亮燈紀錄只落在 Voice 容器的暫存檔，家人週摘要與機構提醒都看不到；
+    「通知緊急聯絡人」在 Voice 本機也查不到聯絡人，等於沒發。改成跟收線回寫同一個模子：
+    Brain 認人 → 記一筆 guardian_risk_evaluated（帶長輩的帳號與 personId）→ 是長輩自己說的才通知聯絡人。
+    認不出人就不記、不通知（不能記到預設的那位身上）。"""
+    data = data or {}
+    scope_token, person = _voice_identity_scope(str(data.get("userId") or "").strip())
+    try:
+        level = str(data.get("level") or "none").strip().lower()
+        if level not in GUARDIAN_EVENT_LEVELS:
+            level = "none"
+        categories = [str(c)[:48] for c in (data.get("categories") or []) if c][:6]
+        who = "ai" if str(data.get("who") or "") == "ai" else "user"
+        family_candidate = bool(data.get("familyNotificationCandidate"))
+        # notify=False：Voice 通話中先只記錄，等整段話講完、確定沒提到受暴才另外送一筆 record=False／notify=True 來發（#717 複審）。
+        # 舊版 Voice 不帶這欄＝照舊當場通知。
+        notify_now = bool(data.get("notify", True))
+        # abuseConfirmed＝Voice 的 AI 裁判看過整通、判定有受暴（#717 第二張）；只認長輩本人說的
+        abuse_confirmed = bool(data.get("abuseConfirmed")) and who == "user"
+        protection = (bool(data.get("protectionEvent")) or bool(data.get("protectionMentioned"))
+                      or "protection_event" in categories or abuse_confirmed)
+        props = {
+            "riskLevel": level, "categories": categories, "analyticsExcluded": True, "source": "live_voice",
+            "who": who, "protectionEvent": bool(data.get("protectionEvent")), "protectionMentioned": protection,
+            "familyNotificationCandidate": family_candidate and not protection,
+            "protectionLine": (str(data.get("protectionLine"))[:8] if data.get("protectionLine") else None),
+        }
+        if abuse_confirmed:
+            props["abuseConfirmed"] = True
+            try:
+                props["abuseConfidence"] = round(max(0.0, min(1.0, float(data.get("abuseConfidence") or 0))), 2)
+            except (TypeError, ValueError):
+                props["abuseConfidence"] = 0.0
+        call_id = str(data.get("callId") or "").strip()
+        if _guardian_call_id_ok(call_id):
+            props["callId"] = call_id        # 同一通的記錄串起來：週摘要／機構讀取「整通一起跳過」
+        if not person:
+            return {"ok": True, "identityResolved": False, "recorded": False, "dispatch": None}
+        group = _current_family_group_id()
+        recorded = False
+        if data.get("record", True):
+            try:
+                # personId／familyGroupId 一定明講：不帶的話會被一份全程序共用、不分人的快取補上，記到別人身上（#717 信任關卡）
+                append_product_event({"eventName": "guardian_risk_evaluated", "source": "live_voice", "properties": props,
+                                      "personId": person, "familyGroupId": group, "explicitScope": True})
+                recorded = True
+            except Exception as e:  # 記錄出錯不能連通知一起沒了
+                log_fallback_exception("record voice guardian event", e)
+        dispatch, suppressed = None, None
+        # 只有長輩本人說的、high／critical、通知候選、而且沒提到受暴，才通知緊急聯絡人（Brain 這邊再鎖一次）
+        if notify_now and who == "user" and family_candidate and not protection and level in ("high", "critical"):
+            if _guardian_recent_abuse_confirmed(person, _guardian_abuse_lookback_days()):
+                suppressed = "recent_abuse_confirmed"   # 這個人最近 N 天 AI 判過受暴：這次也不通知家人（預設關）
+            else:
+                dispatch = dispatch_safety_alert(person, "guardian", family_group_id=group)
+        out = {"ok": True, "identityResolved": True, "recorded": recorded, "dispatch": dispatch}
+        if suppressed:
+            out["suppressed"] = suppressed
+        return out
+    finally:
+        if scope_token is not None:
+            REQUEST_DATA_IDENTITY.reset(scope_token)
+
+
 def voice_call_memory_response(data):
     """POST /voice/call-memory（內部密語驗證後才會進來）：
     Voice 掛斷時把整通字幕交給 Brain 代存——Brain 有 Supabase 鑰匙、認得用戶，
@@ -10875,8 +11434,28 @@ def static_cache_control(path):
     return "no-cache, must-revalidate"
 
 
+# 機構專區（照護人員版，2026-11-18）：org.html 自己在 <meta> 帶了內容安全政策（只放行自己網域、jsDelivr 上的
+# Supabase SDK、Supabase 登入、Google 字型）。frame-ancestors 寫在 meta 裡瀏覽器不認，只能靠回應標頭——
+# 所以給這一頁的標頭政策只有這一條，不跟 meta 那份打架（兩份同時生效、各管各的）。
+ORG_PORTAL_SURFACE = {"/org.html", "/src/org.js", "/src/org.css"}
+ORG_PORTAL_CONTENT_SECURITY_POLICY = "frame-ancestors 'none'"
+
+
+def normalized_request_path(path):
+    """跟 do_GET 讀檔用同一套正規化：/org.html/、//org.html、/src/../org.html 都拿得到 org.html，標頭也要一樣。"""
+    clean = str(path or "").split("?", 1)[0].split("#", 1)[0]
+    if clean in ("", "/"):
+        return "/"
+    return "/" + posixpath.normpath(clean).lstrip("/")
+
+
 def admin_security_headers(path, content_type=""):
-    clean_path = str(path or "").split("?", 1)[0].split("#", 1)[0]
+    clean_path = normalized_request_path(path)
+    if clean_path in ORG_PORTAL_SURFACE:
+        headers = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer"}
+        if clean_path == "/org.html":
+            headers["Content-Security-Policy"] = ORG_PORTAL_CONTENT_SECURITY_POLICY
+        return headers
     is_admin_surface = (
         clean_path in {"/admin", "/admin.html", "/src/admin.js", "/src/admin.css", "/src/version.js"}
         or clean_path.startswith("/admin/")
@@ -11026,7 +11605,7 @@ class H(BaseHTTPRequestHandler):
             # 改用共用內部密語驗證（同家人傳話簽章密語的做法），身分由 call token
             # 的已驗證 user_id 在 Brain 端解析。密語沒設＝通道關閉，一律 403。
             if request_path in ("/voice/call-memory", "/voice/call-recap", "/voice/health-context",
-                                "/voice/health-recommended"):
+                                "/voice/guardian-event", "/voice/health-recommended"):
                 _voice_secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
                 _supplied = (self.headers.get("Authorization") or "").replace("Bearer ", "", 1).strip()
                 if not _voice_secret or not _supplied or not hmac.compare_digest(_supplied, _voice_secret):
@@ -11038,6 +11617,7 @@ class H(BaseHTTPRequestHandler):
                     "/voice/call-recap": voice_call_recap_response,
                     "/voice/health-context": voice_health_context_response,
                     "/voice/health-recommended": voice_health_recommended_response,
+                    "/voice/guardian-event": voice_guardian_event_response,
                 }
                 self._json(_voice_internal[request_path](data))
                 return
@@ -11053,6 +11633,9 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
                     return
                 auth_gate = {"ok": True, "required": True, "auth": public_auth_context(family_auth)}
+                if request_path.startswith("/org/"):
+                    # 機構人員第一次登入用 email 對邀請名單：只有 email 確認過才准對（#722 信任關卡）
+                    auth_gate["auth"]["emailVerified"] = auth_email_verified(family_auth)
             if not auth_gate.get("ok"):
                 self._json_error(401, auth_gate.get("code") or "auth_required", "Verified account token is required")
                 return
@@ -11144,6 +11727,17 @@ class H(BaseHTTPRequestHandler):
                 self._json(org_api.org_elder_care_week_response(auth_gate.get("auth"), data))
             elif self.path == "/org/reports":
                 self._json(org_api.org_reports_response(auth_gate.get("auth"), data))
+            # 第 3 段（2026-11-18 · 補助案 C4）：異常提醒匣、逐筆判定、自家紀錄。
+            elif self.path == "/org/alerts":
+                self._json(org_alerts.org_alerts_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/alert/mark":
+                self._json(org_alerts.org_alert_mark_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/audit":
+                self._json(org_alerts.org_audit_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/settings":
+                self._json(org_alerts.org_settings_response(auth_gate.get("auth"), data))
+            elif self.path == "/org/settings/save":
+                self._json(org_alerts.org_settings_save_response(auth_gate.get("auth"), data))
             # App 端（家庭成員）：機構照護模式同意——只認已驗證的帳號身分，席次必須綁在自己帳號上。
             elif self.path == "/org-consent":
                 self._json(org_api.org_consent_status_response(REQUEST_DATA_IDENTITY.get(), data))
@@ -11161,6 +11755,18 @@ class H(BaseHTTPRequestHandler):
                     self._json_error(403, code, "Admin token is required")
                 else:
                     self._json(org_api.admin_org_consent_status_response(data))
+            elif self.path == "/admin/enterprise/alerts/export":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json(org_alerts.admin_alerts_export_response(data))
+            elif self.path == "/admin/enterprise/alerts/refresh":
+                ok, code = admin_authorized(self.headers)
+                if not ok:
+                    self._json_error(403, code, "Admin token is required")
+                else:
+                    self._json_scheduler(org_alerts.admin_alerts_refresh_all_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
             elif self.path == "/family/invitations":

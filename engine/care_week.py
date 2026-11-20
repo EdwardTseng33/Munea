@@ -145,6 +145,50 @@ def summarize_contact(summaries, start, end, today=None):
     }
 
 
+def guardian_mentions_abuse(props):
+    """這筆通話亮燈有沒有提到受暴受剝削：記錄時標的 protectionEvent／protectionMentioned、類別是 protection_event，
+    或 AI 裁判看過整通判定有受暴（abuseConfirmed，#717 第二張）。"""
+    props = props or {}
+    categories = props.get("categories") or []
+    if isinstance(categories, str):
+        categories = [categories]
+    return bool(props.get("protectionEvent") or props.get("protectionMentioned") or props.get("abuseConfirmed")
+                or "protection_event" in categories)
+
+
+def guardian_abuse_call_ids(events):
+    """這批通話亮燈事件裡，哪幾通（properties.callId）有任何一筆提到受暴、或 AI 判過受暴。
+    家人週摘要、機構讀取、後台安全事件頁共用同一套「整通一起判」（沒有 callId 的舊紀錄不在裡面，照舊逐筆判）。"""
+    out = set()
+    for ev in events or []:
+        props = ev.get("properties") if isinstance(ev, dict) else None
+        if isinstance(props, dict) and props.get("callId") and guardian_mentions_abuse(props):
+            out.add(str(props.get("callId")))
+    return out
+
+
+def guardian_events_shareable(events):
+    """通話亮燈事件裡，哪些可以給家人週摘要、機構畫面看（server.care_week_response 與 org_api 共用）：
+    ①寧寧自己講的話（who=ai）不算長輩亮燈；②提到受暴受剝削的不給——加害人可能就是家人；
+    ③同一通（properties.callId）只要有一筆提到受暴、或 AI 判過受暴，那一通的每一筆都不給（#717 第二張）：
+      長輩先講「胸口好痛」、後講「是他打的」，前半句那筆單看沒提到受暴，以前會照樣出現在週摘要。
+    沒有 callId 的舊紀錄照舊逐筆判。回傳原事件（照原順序）。"""
+    def props_of(ev):
+        p = ev.get("properties") if isinstance(ev, dict) else None
+        return p if isinstance(p, dict) else {}
+
+    abuse_calls = guardian_abuse_call_ids(events)
+    out = []
+    for ev in events or []:
+        props = props_of(ev)
+        if not isinstance(ev, dict) or props.get("who") == "ai" or guardian_mentions_abuse(props):
+            continue
+        if props.get("callId") and str(props.get("callId")) in abuse_calls:
+            continue
+        out.append(ev)
+    return out
+
+
 def summarize_safety(events, start, end):
     """守護腦：這週亮過幾次燈、哪一級、哪一類。不放原句（那是即時通知的事，週摘要只放次數與類別）。"""
     items = []
@@ -202,6 +246,18 @@ def build_person_week(person, signals=None, summaries=None, safety_events=None, 
     }
 
 
+def _low_streak_fact(days, low_level):
+    """連續低落那句話要跟日期對得上（2026-11-18）：規則算的是「連續幾個有紀錄的日子」，
+    中間沒通話的日子會被跳過。日子真的一天接一天才說「連續 N 天」；中間有空檔就說「連續 N 次有紀錄」，
+    不然照護人員看到「連續 3 天」配上 11/12、11/15、11/18，會以為系統算錯。"""
+    parsed = [_parse_date(d) for d in days]
+    consecutive = all(a and b and (b - a).days == 1 for a, b in zip(parsed, parsed[1:]))
+    listed = "、".join(days)
+    if consecutive:
+        return "心情連續 %d 天在 %d 級以下（%s）。" % (len(days), low_level, listed)
+    return "心情連續 %d 次有紀錄都在 %d 級以下（%s，中間幾天沒有紀錄）。" % (len(days), low_level, listed)
+
+
 def detect_anomalies(week, settings=None):
     """三條規則、每條附「為什麼亮」。settings: {noContactDays, lowMoodLevel, lowMoodStreak, moodDropLevels}."""
     settings = settings or {}
@@ -223,7 +279,7 @@ def detect_anomalies(week, settings=None):
                 out.append({
                     "type": "mood_drop",
                     "when": x["date"],
-                    "fact": "心情連續 %d 天在 %d 級以下（%s）。" % (streak, int(low_level), "、".join(streak_days[-streak:])),
+                    "fact": _low_streak_fact(streak_days[-streak:], int(low_level)),
                     "lastSaid": x["said"],
                     "suggestion": "打個電話問候；這是觀察，不是判定。",
                 })
@@ -257,15 +313,18 @@ def detect_anomalies(week, settings=None):
             fact = "這段期間沒有任何通話紀錄（設定：%d 天提醒）。" % n_days
         out.append({"type": "no_contact", "when": week["period"]["end"], "fact": fact, "suggestion": "確認一下人在不在、電話通不通。"})
 
-    # guardian：這週亮過 high／critical
+    # guardian：這週通話中提到需要馬上關心的事（high／critical）。
+    # 2026-11-18（#717）改寫：①不再寫「即時通知已另外送出」——寧寧自己的話、提到受暴、沒設緊急聯絡人都不會通知，
+    # 這句不一定是真的；②不寫英文等級、不寫「守護腦」這種內部用語；③建議不再叫人「看即時通知裡的原句」——通知裡本來就沒有原句。
     s = week["safety"]
     if s["highOrCritical"]:
-        levels = "、".join("%s×%d" % (k, v) for k, v in sorted(s["counts"].items()) if k in HIGH_LEVELS)
+        names = {"critical": "緊急", "crisis": "緊急", "high": "高風險"}
+        levels = "、".join("%s %d 次" % (names.get(k, k), v) for k, v in sorted(s["counts"].items()) if k in HIGH_LEVELS)
         out.append({
             "type": "guardian",
             "when": s["items"][-1]["time"] if s["items"] else week["period"]["end"],
-            "fact": "守護腦這週亮了 %d 次高風險燈（%s）；即時通知已另外送出，這裡是週彙整。" % (s["highOrCritical"], levels),
-            "suggestion": "看即時通知裡的原句與處理紀錄。",
+            "fact": "這週通話中有 %d 次提到需要馬上關心的事（%s）。" % (s["highOrCritical"], levels),
+            "suggestion": "打個電話，關心一下現在好不好。",
         })
     return out
 

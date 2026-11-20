@@ -29,16 +29,15 @@
 <meta name="twitter:title" content="{{org.ogTitle}}">
 <meta name="twitter:description" content="{{org.ogDescription}}">
 <meta name="twitter:image" content="{{meta.ogImage}}">
-<link rel="stylesheet" href="/warm.css?v=10">
+<link rel="stylesheet" href="/warm.css?v=11">
 <style>
   /* ── Edward 拍板：扁平化，不要陰影與漸層（跟首頁同一套覆寫）── */
   :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
   *{box-shadow:none!important}
   .blob{display:none!important}
   .cta-box .glow,.cta-box .glow2{display:none!important}
-  .cta-box{background:var(--teal-d)!important}
+  .cta-box{background:var(--teal-btn)!important}
   .progress{background:var(--teal)!important}
-  .hero h1 .hl::after{background:#F6D8BC!important}
   h2,h3{text-wrap:balance}
   p,li{text-wrap:pretty}
 
@@ -51,8 +50,8 @@
   .org-hero{padding:72px 0 64px}
   .org-hero .hero-grid{grid-template-columns:1.15fr .85fr}
   .org-hero h1{font-size:clamp(30px,4.4vw,50px)}
-  .org-hero .btn-teal{background:var(--teal-dd);color:#fff}
-  .org-hero .btn-teal:hover{background:#1D5A55;transform:translateY(-3px)}
+  .org-hero .btn-teal{background:var(--teal-btn);color:#fff}
+  .org-hero .btn-teal:hover{background:var(--teal-dd);transform:translateY(-3px)}
   .org-hero .btn svg{width:18px;height:18px}
   .org-shot{display:grid;place-items:center;background:#e9f2ed;border-radius:30px;padding:30px}
   .org-shot .dev{width:min(240px,70%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27!important}
@@ -80,19 +79,22 @@
   .org-how .sec-head{margin-bottom:28px}
   .org-steps{list-style:none;max-width:760px;margin:0 auto;display:grid;gap:12px;counter-reset:s}
   .org-steps li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;font-size:16px;color:var(--ink);line-height:1.75}
-  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--coral-soft);color:var(--coral-d);font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
+  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--teal-btn);color:#fff;font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
 
   /* ── 收尾：去 B2B 網站 ── */
   .org-final .btn-b2b{background:#fff;color:var(--teal-dd);position:relative}
   .org-final .btn-b2b:hover{background:#f4f0e8;transform:translateY(-3px)}
-  .org-note{max-width:720px;margin:6px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8;padding:0 8px}
+  .org-note{max-width:720px;margin:16px auto 0;text-align:center;font-size:13.5px;color:var(--muted);line-height:1.8;padding:0 8px}
 
   /* 頁尾 */
   .foot-disc{max-width:720px;margin:26px auto 0;font-size:12.5px;color:#8a9893;line-height:1.85}
   .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
+  .skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
+  .skip:focus{top:12px}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">{{a11y.skip}}</a>
 <div class="progress"></div>
 
 <header>
@@ -120,6 +122,7 @@
   </nav>
 </header>
 
+<main id="main">
 <!-- ═══ 主視覺 ═══ -->
 <section class="hero org-hero">
   <div class="wrap hero-grid">
@@ -196,6 +199,7 @@
     <p class="org-note">{{org.note}}</p>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
@@ -208,7 +212,7 @@
         <h4>{{foot.meetTitle}}</h4>
         <a href="{{meta.home}}#personas">{{foot.linkPersonas}}</a>
         <a href="{{meta.home}}#features">{{foot.linkFeatures}}</a>
-        <a href="{{meta.home}}#tech">{{foot.linkTech}}</a>
+        <a href="{{meta.home}}#pricing">{{nav.pricing}}</a>
         <a href="{{meta.home}}#faq">{{foot.linkFaq}}</a>
       </div>
       <div class="foot-col">
@@ -225,6 +229,6 @@
   </div>
 </footer>
 
-<script src="/warm.js?v=10"></script>
+<script src="/warm.js?v=11"></script>
 </body>
 </html>
