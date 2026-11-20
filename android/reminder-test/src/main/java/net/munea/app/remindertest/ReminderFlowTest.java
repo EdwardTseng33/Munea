@@ -42,7 +42,7 @@ public class ReminderFlowTest {
     }
 
     private static long extractLong(String json, String key) {
-\s\s\s\s\s\s\s\sMatcher\sm\s=\sPattern.compile("\""\s+\skey\s+\s"\"\s*:\s*(\\d+)").matcher(json);
+        Matcher m = Pattern.compile("\"" + key + "\"\\s*:\\s*(\\d+)").matcher(json);
         return m.find() ? Long.parseLong(m.group(1)) : -1;
     }
 

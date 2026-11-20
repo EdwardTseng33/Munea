@@ -71,7 +71,7 @@ final class QaKit {
         String b64 = Base64.encodeToString(jsBody.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
         String out = sh("am broadcast -n " + PKG + "/net.munea.app.debugbridge.DebugEvalReceiver"
                 + " -a net.munea.app.debug.EVAL --es js64 " + b64 + " --ei timeout " + timeoutSec);
-\s\s\s\s\s\s\s\sMatcher\sm\s=\sPattern.compile("data=\"(.*)\"\s*$",\sPattern.DOTALL\s|\sPattern.MULTILINE).matcher(out);
+        Matcher m = Pattern.compile("data=\"(.*)\"\\s*$", Pattern.DOTALL | Pattern.MULTILINE).matcher(out);
         if (!m.find()) return "ERR:no-data " + out.replace('\n', ' ');
         String raw = m.group(1);
         try {
@@ -84,7 +84,7 @@ final class QaKit {
 
     String pidOfApp() {
         String out = sh("pidof " + PKG).trim();
-\s\s\s\s\s\s\s\sreturn\sout.isEmpty()\s?\s""\s:\sout.split("\s+")[0];
+        return out.isEmpty() ? "" : out.split("\\s+")[0];
     }
 
     /** 等 App 的網頁殼起來、提醒橋接在（最多 sec 秒）。 */
