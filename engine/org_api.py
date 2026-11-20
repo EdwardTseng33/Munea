@@ -26,6 +26,7 @@
 稽核寫不進去時 L2 讀取**不給**（audit_unavailable）——可問責優先於可用。
 """
 import datetime as _dt
+import hashlib
 import json
 import logging
 import os
@@ -112,6 +113,17 @@ def _is_missing_table_error(exc):
     return "pgrst205" in text or "could not find the table" in text or "does not exist" in text
 
 
+def _local_write_ok(exc):
+    """寫入失敗時，只有「雲端根本沒設定」或「表還沒建」才准退本機檔。
+    連不上（逾時、斷路器開著）不算：退本機檔會假成功——例如撤回同意寫進那台機器的暫存檔、雲端仍是同意，
+    機構照樣看得到（2026-11-18 #713 信任關卡）。"""
+    kind = getattr(exc, "error_kind", None)
+    if kind == "missing_table":
+        return True
+    text = str(exc).lower()
+    return "pgrst205" in text or "could not find the table" in text
+
+
 def _read_json(path, fallback):
     try:
         with open(path, encoding="utf-8") as f:
@@ -144,6 +156,11 @@ def _write_json(path, data):
 
 def _lower(value):
     return str(value or "").strip().lower()
+
+
+def account_key(account_id):
+    """帳號指紋：紀錄當下席次綁的是誰（不可逆）。席次之後換給別人，用它分得出是哪一位的事。"""
+    return hashlib.sha1(f"munea-org-alert|{account_id}".encode("utf-8")).hexdigest()[:16]
 
 
 def _seat_code(seat_id):
@@ -210,14 +227,16 @@ def normalize_staff(item=None):
 
 def normalize_consent(item=None):
     item = item or {}
-    status = item.get("status") or "granted"
+    # 2026-11-17：沒有狀態或看不懂的狀態，一律當「沒同意」。原本預設成 granted——
+    # 資料壞掉或欄位漏傳時，機構就會看到沒同意的人，方向反了。
+    status = item.get("status") or "revoked"
     by_role = item.get("grantedByRole") or item.get("granted_by_role") or "family"
     return {
         "id": item.get("id") or "",
         "enterpriseClientId": item.get("enterpriseClientId") or item.get("enterprise_client_id") or "",
         "seatId": item.get("seatId") or item.get("seat_id") or "",
         "accountId": item.get("accountId") or item.get("account_id") or "",
-        "status": status if status in CONSENT_STATUSES else "granted",
+        "status": status if status in CONSENT_STATUSES else "revoked",
         "scope": item.get("scope") or "care_week",
         "grantedByAuthUserId": item.get("grantedByAuthUserId") or item.get("granted_by_auth_user_id"),
         "grantedByRole": by_role if by_role in GRANTED_BY_ROLES else "family",
@@ -282,7 +301,7 @@ def create_staff(item):
         if remote is not None:
             return normalize_staff(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api create_staff to Supabase failed; using local: %s", exc)
     record["id"] = record["id"] or str(uuid.uuid4())
@@ -307,7 +326,7 @@ def update_staff(staff_id, patch):
         if remote is not None:
             return normalize_staff(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api update_staff to Supabase failed; using local: %s", exc)
     with _JSON_LOCK:
@@ -355,7 +374,7 @@ def save_consent(item):
         if remote is not None:
             return normalize_consent(remote)
     except Exception as exc:
-        if backend.enabled() and not _is_missing_table_error(exc):
+        if backend.enabled() and not _local_write_ok(exc):
             raise
         LOGGER.warning("org_api save_consent to Supabase failed; using local: %s", exc)
     with _JSON_LOCK:
@@ -382,10 +401,42 @@ def granted_seat_ids(client_id):
 # 身分：登入證 → org_staff
 # ---------------------------------------------------------------------------
 
-def resolve_staff(auth):
-    """auth = server 驗完的 {authUserId, email}。回 staff 或 None（None 一律當 not_found）。
+EMAIL_VERIFIED_PROVIDERS = ("google", "apple")
 
-    第一次登入：auth_user_id 還沒綁，用邀請 email 對上後綁起來、狀態 invited → active。
+
+def email_binding_allowed(auth):
+    """第一次登入用 email 對邀請名單之前，先確定這個 email 真的是他本人的（2026-11-18 · #722 信任關卡）。
+
+    只認：
+      · email 已確認（server 從 Supabase 使用者資料的 email_confirmed_at 算出 emailVerified＝True；
+        後台建、email_confirm=true 的測試帳號也是這種），或
+      · 用 Google／Apple 登入（email 由他們驗過）。
+
+    ⚠ 這一道**靠 Supabase 開著「註冊要收信確認」才成立**（2026-11-18 查：mailer_autoconfirm=false）。
+    哪天把自動確認打開，註冊當下就會自動填上 email_confirmed_at，用 Google 登入的人也能把 email 改成別人的——
+    這裡就擋不住了。所以那個設定必須保持開著；更牢的做法（改看 Google／Apple 那筆身分自己的 email，
+    或每天巡檢公開設定、一變就告警）列在之後再做。
+    """
+    auth = auth or {}
+    if auth.get("emailVerified") is True:
+        return True
+    return str(auth.get("provider") or "").strip().lower() in EMAIL_VERIFIED_PROVIDERS
+
+
+def unverified_invite_match(auth):
+    """email 在邀請名單上、還沒綁人，但這次登入的 email 沒確認——給 /org/me 講「請用受邀的帳號登入」。"""
+    auth = auth or {}
+    email = _lower(auth.get("email"))
+    if not email or not str(auth.get("authUserId") or "").strip() or email_binding_allowed(auth):
+        return False
+    return any(c["status"] == "invited" and not c.get("authUserId") for c in list_staff(email=email))
+
+
+def resolve_staff(auth):
+    """auth = server 驗完的 {authUserId, email, provider, emailVerified}。回 staff 或 None（None 一律當 not_found）。
+
+    第一次登入：auth_user_id 還沒綁，用邀請 email 對上後綁起來、狀態 invited → active；
+    只有 email 確認過的登入才准這樣對（email_binding_allowed）。
     停用的人就算 email 對得上也不給（disabled 是硬停）。
     """
     auth = auth or {}
@@ -400,7 +451,7 @@ def resolve_staff(auth):
             break
         if cand["status"] == "disabled":
             return None
-    if staff is None and email:
+    if staff is None and email and email_binding_allowed(auth):
         for cand in list_staff(email=email):
             if cand["status"] == "disabled":
                 return None
@@ -427,14 +478,20 @@ def _client_kind(client):
 
 
 def capabilities_for(staff, client):
-    """角色 × 客戶類型 → 做得到什麼（第 2.3 節矩陣，第 2 段只開讀的部分）。"""
+    """角色 × 客戶類型 → 做得到什麼（第 2.3 節矩陣）。機構專區網頁只看這幾格決定分頁，不自己另算。"""
     role = (staff or {}).get("role") or "case_manager"
     esg = _client_kind(client) == "esg"
     site_scoped = role != "org_admin"
+    care_week = (not esg) and role in ("org_admin", "case_manager")
     return {
         "summary": True,
         "elders": (not esg) and role in ("org_admin", "case_manager", "care_worker"),
-        "careWeek": (not esg) and role in ("org_admin", "case_manager"),
+        "careWeek": care_week,
+        # 第 3 段（2026-11-18）：條件跟 engine/org_alerts.py 的放行一模一樣——
+        # alerts＝/org/alerts、/org/alert/mark、/org/settings（都看 careWeek）；
+        # audit＝/org/audit（機構管理者、而且不是企業客戶）。test_org_alerts 把四種角色的每一格跟實際打接口的結果對過。
+        "alerts": care_week,
+        "audit": (not esg) and role == "org_admin",
         "reports": role in ("org_admin", "case_manager"),
         "siteScoped": site_scoped,
         "siteLabel": (staff or {}).get("siteLabel") if site_scoped else None,
@@ -452,12 +509,20 @@ def _visible_seats(staff, client):
     return seats
 
 
+def _only_consented(seats, client):
+    """從席次裡挑出「現在綁的這個人自己同意過」的。
+    同意是人給的：席次之後換綁到別的帳號，舊同意不能讓新的人被看到（或被算進已同意人數），
+    所以除了席次有同意，還要同意當時的帳號＝席次現在的帳號。"""
+    granted_by = {c["seatId"]: str(c.get("accountId") or "")
+                  for c in list_consents(client_id=client["id"], status="granted") if c.get("seatId")}
+    return [s for s in seats if s.get("accountId") and granted_by.get(s.get("id")) == str(s.get("accountId"))]
+
+
 def _consented_seats(staff, client):
     """鐵線 2：只拿已同意的席次。這裡是 inner join，不是撈出來再遮。"""
     if _client_kind(client) == "esg":
         return []
-    granted = granted_seat_ids(client["id"])
-    return [s for s in _visible_seats(staff, client) if s.get("id") in granted and s.get("accountId")]
+    return _only_consented(_visible_seats(staff, client), client)
 
 
 def _staff_and_client(auth):
@@ -534,9 +599,12 @@ def default_loaders():
     def guardian_events(account_ids, since_iso):
         activity = org_portal.load_cohort_activity(account_ids, since_iso, since_iso[:10], backend=backend)
         out = []
-        for ev in activity.get("productEvents") or []:
-            if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
-                continue
+        guardian = [ev for ev in activity.get("productEvents") or []
+                    if isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"]
+        # 寧寧自己講的話不算；提到受暴受剝削的先不放進機構畫面：機構的建議句是「聯絡本人或家屬」，對受暴不安全
+        # （加害人可能就是家人）——同一通只要有一筆提到受暴，那通每一筆都不放（#717 第二張）。要不要另開一條給社工的
+        # 處理方式，是政策決定；在那之前，內部告警照發、由營運處理。規則在 care_week.guardian_events_shareable。
+        for ev in care_week.guardian_events_shareable(guardian):
             props = ev.get("properties") or {}
             out.append({
                 "accountId": ev.get("accountId") or ev.get("account_id"),
@@ -577,6 +645,48 @@ def _build_week(person_id, account_id, loaders, events_for_person, today, days):
     return week
 
 
+# 機構端只拿「哪一類、幾次」，不拿短語本身（2026-11-17）。
+# 來源是心情訊號的 concerns——AI 從聊天摘出的短語，定義是「身體不適／想念／煩惱／火氣的事」，
+# 「想念過世的先生」「跟兒子吵架」這類也會在裡面。設計書 4.3 核准給機構的是「症狀類別」，
+# 所以這裡把短語歸到固定幾類再數次數；歸不進身體類的一律算「心情或生活上的掛心事」，只露次數。
+# 順序有意義：一句話命中多類時取最前面那一類。
+SPOKEN_CATEGORY_RULES = (
+    ("appetite", "吃不下", ("吃不下", "不想吃", "沒胃口", "胃口", "食慾")),
+    ("sleep", "睡不好", ("睡不", "失眠", "睡眠", "半夜醒", "早醒", "淺眠")),
+    ("body", "身體不舒服", (
+        "痛", "痠", "酸", "暈", "咳", "喘", "悶", "麻", "腫", "燒", "癢", "吐", "瀉", "拉肚子", "便秘",
+        "血壓", "血糖", "心悸", "不舒服", "沒力", "無力", "跌", "摔", "感冒", "發炎", "抽筋", "耳鳴", "頻尿",
+    )),
+)
+SPOKEN_CATEGORY_OTHER = ("other", "心情或生活上的掛心事")
+# 這些說法裡有「痛、酸、麻、悶、燒、跌、吐」，但講的不是身體。比對前先拿掉，
+# 免得機構為了不存在的身體問題打電話。拿不準的一律落到「心情或生活上的掛心事」（只露次數）。
+SPOKEN_NOT_BODY_PHRASES = (
+    "添麻煩", "麻煩", "心酸", "辛酸", "酸言", "心痛", "痛心", "痛苦", "頭痛的事", "悶悶不樂", "鬱悶", "煩悶", "心悶",
+    "燒香", "燒錢", "燒金", "吐苦水", "吐槽", "下跌", "跌價", "股票跌", "跌停", "大跌", "麻將",
+)
+
+
+def _spoken_categories(items):
+    """把掛心事短語歸類計數。回 [{key, label, count}]，只含次數大於 0 的類別；不回任何短語。"""
+    counts = {}
+    for item in items or []:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        key = SPOKEN_CATEGORY_OTHER[0]
+        probe = text
+        for phrase in SPOKEN_NOT_BODY_PHRASES:
+            probe = probe.replace(phrase, "")
+        for rule_key, _label, words in SPOKEN_CATEGORY_RULES:
+            if any(word in probe for word in words):
+                key = rule_key
+                break
+        counts[key] = counts.get(key, 0) + 1
+    order = [(k, label) for k, label, _ in SPOKEN_CATEGORY_RULES] + [SPOKEN_CATEGORY_OTHER]
+    return [{"key": k, "label": label, "count": counts[k]} for k, label in order if counts.get(k)]
+
+
 def _strip_week_for_org(week):
     """L2 給機構的版本：留趨勢與類別、拿掉原句與正文（設計書 4.3「不回什麼」）。"""
     mood = week.get("mood") or {}
@@ -599,12 +709,13 @@ def _strip_week_for_org(week):
             "empty": mood.get("empty"),
         },
         "spokenHealth": {
-            "source": "本人口述的症狀類別（由記憶層萃取的短語；不是原句、不是臨床事實）",
-            "categories": list((week.get("spokenHealth") or {}).get("items") or [])[:10],
+            "source": "本人口述的掛心事，只給類別與次數（不含原句與短語；由記憶層歸類、不是臨床事實）",
+            "categories": _spoken_categories((week.get("spokenHealth") or {}).get("items")),
             "empty": (week.get("spokenHealth") or {}).get("empty", True),
         },
         "safety": {
-            "source": safety.get("source"), "counts": safety.get("counts") or {},
+            "source": safety.get("source"),
+            "counts": {k: v for k, v in (safety.get("counts") or {}).items() if k in ORG_RISK_LEVELS},
             "highOrCritical": safety.get("highOrCritical") or 0, "empty": safety.get("empty", True),
         },
         "honesty": week.get("honesty"),
@@ -612,9 +723,17 @@ def _strip_week_for_org(week):
     }
 
 
+ORG_RISK_LEVELS = ("low", "medium", "high", "critical", "crisis")
+ORG_GUARDIAN_SUGGESTION = "聯絡本人或家屬確認狀況。機構端看不到通話原句。"
+
+
 def _strip_anomalies(anomalies):
-    return [{"type": a.get("type"), "when": a.get("when"), "fact": a.get("fact"), "suggestion": a.get("suggestion")}
-            for a in anomalies or []]
+    out = []
+    for a in anomalies or []:
+        # 家庭版的建議句是給家人的（「打個電話關心一下」）——換成機構做得到、也該做的事。
+        suggestion = ORG_GUARDIAN_SUGGESTION if a.get("type") == "guardian" else a.get("suggestion")
+        out.append({"type": a.get("type"), "when": a.get("when"), "fact": a.get("fact"), "suggestion": suggestion})
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -624,6 +743,10 @@ def _strip_anomalies(anomalies):
 def org_me_response(auth, data=None):
     staff, client = _staff_and_client(auth)
     if not staff:
+        # 唯一不回 not_found 的情況：email 在邀請名單上、但這次登入的 email 沒確認。講清楚要換哪個帳號登入，
+        # 不然本人會以為沒被開通。其他接口照舊一律 not_found。
+        if unverified_invite_match(auth):
+            return {"ok": False, "error": "email_unverified"}
         return _not_found()
     return {"ok": True, "staff": _public_staff(staff), "org": _public_org(client), "capabilities": capabilities_for(staff, client)}
 
@@ -640,8 +763,18 @@ def org_summary_response(auth, data=None):
         LOGGER.warning("org_api summary build failed: %s", exc.code)
         return _not_found()
     summary["scope"] = {"siteLabel": caps["siteLabel"], "siteScoped": caps["siteScoped"]}
-    summary["consent"] = {"grantedSeats": len([s for s in seats if s.get("id") in granted_seat_ids(client["id"])])} if caps["elders"] else None
+    summary["consent"] = {"grantedSeats": len(_only_consented(seats, client))} if caps["elders"] else None
     return assert_no_forbidden({"ok": True, **summary}, org_portal.FORBIDDEN_KEYS | {"email", "phone"})
+
+
+def _client_alert_settings(client):
+    """機構自訂的「幾天沒聯絡才提醒」（org_alerts 存在稽核紀錄裡）；讀不到就用規則預設。"""
+    try:
+        import org_alerts  # 晚一點才載：org_alerts 本身 import 這支
+        return {"noContactDays": org_alerts.client_settings(client["id"])["noContactDays"]}
+    except Exception as exc:
+        LOGGER.warning("org_api client settings unavailable; using defaults: %s", exc)
+        return {}
 
 
 def org_elders_response(auth, data=None, loaders=None):
@@ -670,7 +803,7 @@ def org_elders_response(auth, data=None, loaders=None):
     except Exception as exc:
         LOGGER.warning("org_api guardian events failed: %s", exc)
         events, partial = [], partial + ["safety"]
-    settings = {}
+    settings = _client_alert_settings(client)
     try:
         if data.get("noContactDays") is not None:
             settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))
@@ -735,7 +868,7 @@ def org_elder_care_week_response(auth, data=None, loaders=None):
         days = max(1, min(31, int(data.get("days") or care_week.DEFAULT_DAYS)))
     except (TypeError, ValueError):
         days = care_week.DEFAULT_DAYS
-    settings = {}
+    settings = _client_alert_settings(client)
     try:
         if data.get("noContactDays") is not None:
             settings["noContactDays"] = max(1, min(30, int(data.get("noContactDays"))))
@@ -767,6 +900,7 @@ def org_elder_care_week_response(auth, data=None, loaders=None):
         "eventType": "org_care_week_read", "actorUserId": staff.get("authUserId"), "accountId": account_id,
         "targetTable": "enterprise_seats", "targetId": seat_id,
         "details": {"actorType": "org_staff", "staffId": staff["id"], "role": staff["role"], "clientId": client["id"],
+                    "seatId": seat_id, "accountKey": account_key(account_id),
                     "siteLabel": seat.get("siteLabel"), "periodStart": start.isoformat(), "periodEnd": end.isoformat()},
     })
     if not audited:
@@ -813,8 +947,8 @@ def _consent_view(seat, client, consent):
             "grantedAt": (consent or {}).get("grantedAt"), "revokedAt": (consent or {}).get("revokedAt"),
             "grantedByRole": (consent or {}).get("grantedByRole") if consent else None,
         },
-        "whatOrgSees": ["整家彙總", "名單與三個旗標（今天沒互動／心情低落／守護亮燈）", "週關懷摘要（通話次數、心情走勢、症狀類別、亮燈次數）"],
-        "whatOrgNeverSees": ["對話內容", "心情與口述的原句", "用藥明細", "家人帶話"],
+        "whatOrgSees": ["整家彙總", "名單（稱呼）與三個旗標（今天沒互動／心情低落／守護亮燈）", "週關懷摘要（通話次數、心情走勢、掛心事的類別與次數、亮燈次數）"],
+        "whatOrgNeverSees": ["對話內容", "心情與口述的原句或短語", "用藥明細", "家人帶話"],
     }
 
 
@@ -854,25 +988,45 @@ def org_consent_set_response(identity, data=None):
         granted = granted.strip().lower() in ("1", "true", "yes", "on")
     if granted is None:
         return {"ok": False, "error": "granted_required"}
+    # 企業（ESG）永遠只看匿名總數，同意開關對它沒有作用——收下來等於騙使用者「打開了會怎樣」。
+    # 關掉（撤回）一律放行：撤回不該被任何條件擋。
+    if granted and _client_kind(client) == "esg":
+        return {"ok": False, "error": "consent_not_applicable"}
     by_role = "self" if identity.get("personId") and str(data.get("asRole") or "") == "self" else "family"
     existing = next(iter(list_consents(seat_id=seat_id)), None)
     now = _utc_now()
+    audit_event = {
+        "eventType": "org_consent_granted" if granted else "org_consent_revoked",
+        "actorUserId": identity.get("authUserId"), "accountId": account_id,
+        "targetTable": "org_care_consents", "targetId": (existing or {}).get("id") or seat_id,
+        "details": {"actorType": "family" if by_role == "family" else "self", "clientId": client["id"], "seatId": seat_id},
+    }
     if granted:
-        record = save_consent({
-            **(existing or {}), "enterpriseClientId": client["id"], "seatId": seat_id, "accountId": account_id,
-            "status": "granted", "grantedByAuthUserId": identity.get("authUserId"), "grantedByRole": by_role,
-            "grantedAt": now, "revokedAt": None, "revokedByAuthUserId": None, "note": str(data.get("note") or "")[:200] or None,
-        })
+        # 順序是「先留痕、再生效」。反過來（先存同意、留痕失敗再退回）在資料庫整個掛掉時會兩邊一起失敗：
+        # 退回那一步也寫不進去，同意就停在「已同意」而且沒有任何紀錄。
+        # 先留痕的話，最壞只是多一筆「有同意的紀錄、實際沒生效」——失敗的方向是安全的。
+        if not _audit(audit_event):
+            LOGGER.error("org_api consent grant refused: audit write failed (seat %s)", _seat_code(seat_id))
+            return {"ok": False, "error": "consent_not_recorded", "seat": _consent_view(seat, client, existing)}
+        try:
+            record = save_consent({
+                **(existing or {}), "enterpriseClientId": client["id"], "seatId": seat_id, "accountId": account_id,
+                "status": "granted", "grantedByAuthUserId": identity.get("authUserId"), "grantedByRole": by_role,
+                "grantedAt": now, "revokedAt": None, "revokedByAuthUserId": None, "note": str(data.get("note") or "")[:200] or None,
+            })
+        except Exception as exc:
+            LOGGER.error("org_api consent grant not saved: %s", exc)
+            return {"ok": False, "error": "consent_not_saved", "seat": _consent_view(seat, client, existing)}
     else:
         if not existing:
             return {"ok": True, "changed": False, "seat": _consent_view(seat, client, None)}
-        record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
-    _audit({
-        "eventType": "org_consent_granted" if granted else "org_consent_revoked",
-        "actorUserId": identity.get("authUserId"), "accountId": account_id,
-        "targetTable": "org_care_consents", "targetId": record.get("id"),
-        "details": {"actorType": "family" if by_role == "family" else "self", "clientId": client["id"], "seatId": seat_id},
-    })
+        # 撤回：先關、再留痕。沒留到痕也照樣關——寧可少一筆紀錄，不可關不掉。
+        try:
+            record = save_consent({**existing, "status": "revoked", "revokedAt": now, "revokedByAuthUserId": identity.get("authUserId")})
+        except Exception as exc:
+            LOGGER.error("org_api consent revoke not saved: %s", exc)
+            return {"ok": False, "error": "consent_not_saved", "seat": _consent_view(seat, client, existing)}
+        _audit(audit_event)
     return {"ok": True, "changed": True, "seat": _consent_view(seat, client, record)}
 
 

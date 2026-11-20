@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!-- 找不到頁面時，主機會回這一頁、狀態碼 404。2026-11-18 起取代主機預設的英文開發者訊息。
+     語言依網址開頭（/en、/ja、/es）切換；沒有 JS 時顯示中文＋一行英文。 -->
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>找不到這一頁｜沐寧 Munea</title>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/assets/paining-logo.png" type="image/png">
+<link rel="stylesheet" href="/warm.css?v=11">
+<style>
+  .nf{min-height:100vh;display:grid;place-items:center;padding:40px 20px;background:var(--cream)}
+  .nf-card{max-width:520px;width:100%;text-align:center;background:#fff;border:1px solid var(--line);border-radius:28px;padding:44px 28px}
+  .nf-card img{width:56px;height:56px;margin-bottom:18px}
+  .nf-card h1{font-size:clamp(24px,5vw,32px);line-height:1.35;margin-bottom:10px}
+  .nf-card p{color:var(--muted);font-size:16px;line-height:1.8;margin-bottom:26px}
+  .nf-links{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+  .nf-links a{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:100px;font-weight:700;font-size:15px}
+  .nf-home{background:var(--teal-btn);color:#fff}
+  .nf-home:hover{background:var(--teal-dd)}
+  .nf-alt{border:1.5px solid var(--mint-2);color:var(--teal-dd);background:#fff}
+  .nf-alt:hover{border-color:var(--teal);background:var(--mint)}
+  .nf-en{margin-top:22px;font-size:14px;color:var(--muted)}
+  .nf-en a{color:var(--teal-dd);text-decoration:underline;display:inline-flex;align-items:center;min-height:44px;padding:0 4px}
+</style>
+</head>
+<body>
+<main class="nf">
+  <div class="nf-card">
+    <img src="/assets/paining-logo.png" alt="Munea 沐寧" width="56" height="56">
+    <h1 id="t">找不到這一頁</h1>
+    <p id="d">網址可能打錯了，或這一頁已經搬家。可以回首頁看看，或從照顧指南找你要的內容。</p>
+    <div class="nf-links">
+      <a class="nf-home" id="h" href="/">回沐寧首頁</a>
+      <a class="nf-alt" id="g" href="/guide">照顧指南</a>
+    </div>
+    <p class="nf-en" id="en">Page not found. <a href="/en">Go to the English site</a></p>
+  </div>
+</main>
+<script>
+(function () {
+  var copy = {
+    en: { lang: 'en', title: 'Page not found | Munea', t: 'We can’t find this page', d: 'The link may be mistyped, or the page has moved. Try the home page or our guides.', h: ['/en', 'Go to Munea home'], g: ['/en/guide', 'Guides'] },
+    ja: { lang: 'ja', title: 'ページが見つかりません｜Munea', t: 'ページが見つかりません', d: 'URLが間違っているか、ページが移動した可能性があります。トップページかガイドからお探しください。', h: ['/ja', 'Muneaトップへ'], g: ['/ja/guide', 'ガイド'] },
+    es: { lang: 'es', title: 'Página no encontrada | Munea', t: 'No encontramos esta página', d: 'Puede que el enlace esté mal escrito o que la página se haya movido. Vuelve al inicio.', h: ['/es', 'Ir al inicio de Munea'], g: null }
+  };
+  var m = location.pathname.match(/^\/(en|ja|es)(\/|$)/);
+  if (!m) return;
+  var c = copy[m[1]];
+  document.documentElement.lang = c.lang;
+  document.title = c.title;
+  document.getElementById('t').textContent = c.t;
+  document.getElementById('d').textContent = c.d;
+  var h = document.getElementById('h'); h.href = c.h[0]; h.textContent = c.h[1];
+  var g = document.getElementById('g');
+  if (c.g) { g.href = c.g[0]; g.textContent = c.g[1]; } else { g.remove(); }
+  document.getElementById('en').remove();
+})();
+</script>
+</body>
+</html>

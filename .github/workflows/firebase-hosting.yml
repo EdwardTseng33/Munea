@@ -69,7 +69,8 @@ jobs:
           import os
           import urllib.request
 
-          webhook = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+          # 存進 GitHub 的網址開頭帶了看不見的 BOM（Windows 存檔常見）；str.strip() 去不掉，urlopen 會報 unknown url type
+          webhook = os.environ.get("SLACK_WEBHOOK_URL", "").replace("\ufeff", "").strip()
           if not webhook:
               raise SystemExit("MUNEA_SLACK_ALERT_WEBHOOK is not configured")
           request = urllib.request.Request(

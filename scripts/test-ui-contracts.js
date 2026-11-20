@@ -629,22 +629,23 @@ assert(/#subPlans \.credit-rules \.cr-row[^']*#subPoints \.credit-rules \.cr-row
 // ③ 文案：三條規則各自要講到不遞延／不過期／先扣月點
 assertCatalogSays('subscription.monthlyCreditsBody', { 'zh-TW': /不會累積|不留到下/, en: /do not roll over/i }, '每月方案點數必須說明不會留到下一期');
 assertCatalogSays('subscription.purchasedCreditsBody', { 'zh-TW': /不會到期/, en: /do not expire/i }, '加購點數必須說明不會過期');
-assertCatalogSays('subscription.deductionOrderBody', { 'zh-TW': /每月點數[\s\S]*加購點數/, en: /before purchased credits/i }, '扣點順序必須說明先扣月點數、再扣加購');
+// 2026-11-20：畫面上「點數」一律改講「分鐘」（1 點＝1 分鐘，Edward 核可付費頁設計稿），守的意思不變：先扣每月的、再扣加買的。
+assertCatalogSays('subscription.deductionOrderBody', { 'zh-TW': /每月(?:點數|的分鐘)[\s\S]*加(?:購點數|買的分鐘)/, en: /before purchased (?:credits|minutes)/i }, '扣點順序必須說明先扣每月的、再扣加買的');
 // 每張付費方案卡的點數那一行都要講清楚「這個方案每月給幾點」。
 // 原本寫死 .length === 2，方案一增減就會誤紅；改成從畫面上真的有幾張方案卡推出來。
 const planCards = [...plansPane.matchAll(/<button class="ppk[^"]*" data-t="([a-z]+)" type="button">([\s\S]*?)<\/button>/g)]
   .map(([, plan, body]) => ({ plan, body }));
 assert(planCards.length >= 2, '付費方案卡片必須留在畫面上（至少 Plus 與 Pro）');
-const creditsStated = planCards.filter(({ body }) => /\d+\s*(?:voice-companion\s*)?credits/i.test(body.match(/<li>([\s\S]*?)<\/li>/)?.[1] || ''));
+const creditsStated = planCards.filter(({ body }) => /\d+\s*(?:voice-companion\s*)?(?:credits|minutes)/i.test(body.match(/<li[^>]*>([\s\S]*?)<\/li>/)?.[1] || ''));
 assert(
   creditsStated.length === planCards.length,
   `每張付費方案卡的第一行都要寫明每月給幾點：方案 ${planCards.length} 張、寫到的 ${creditsStated.length} 張`,
 );
-assert(app.includes("'subscription.monthlyVoiceCredits'"), '方案卡的點數那行必須由 subscription.monthlyVoiceCredits 餵');
+assert(app.includes("'subscription.planMonthlyMinutes'"), '方案卡的分鐘那行必須由 subscription.planMonthlyMinutes 餵');
 // 「當月點數不遞延」的揭露改成只守上面那排規則（subscription.monthlyCreditsBody，見前面那條）。
 // 原本卡片這一行也要再講一次，同一個畫面上同一句話講兩遍——Edward 2026-08-01：
 // 「上面已經有寫了，不用一直重複」。揭露沒有變少（規則那排仍被守著），只是不重複、也不會折行。
-assertCatalogSays('subscription.monthlyVoiceCredits', { 'zh-TW': /\{credits\} 點/, en: /\{credits\} voice-companion credits/i }, '方案卡的每月點數必須寫明點數，且由文案表帶入數字');
+assertCatalogSays('subscription.planMonthlyMinutes', { 'zh-TW': /\{minutes\} 分鐘/, en: /\{minutes\} minutes/i }, '方案卡必須寫明每月幾分鐘，且由文案表帶入數字');
 
 // 同一段字不可以印兩次：元素底下已經有 data-i18n 的子節點時，
 // 補字的小工具必須直接放棄，否則外語版會出現「Report a problemReport a problem」。
@@ -735,7 +736,7 @@ assert(renderSubUiBody.includes("seg.style.display = cur === 'free' ? 'none' : '
 assert(renderSubUiBody.includes("unlock.style.display = cur === 'free' ? '' : 'none'"), 'Free members must be told when points purchasing unlocks');
 // 2026-07-30 改寫：這句已經搬進文案表（subscription.unlockCredits），HTML 裡只剩英文底稿。
 assert(/id="pointsUnlockNotice"[\s\S]{0,200}?data-i18n="subscription\.unlockCredits"/.test(html), '免費會員必須看得到「訂閱之後才能加購點數」的說明，且由文案表餵');
-assertCatalogSays('subscription.unlockCredits', { 'zh-TW': [/訂閱/, /點數/], en: /credit/i }, '免費會員必須被告知加購點數要先訂閱');
+assertCatalogSays('subscription.unlockCredits', { 'zh-TW': [/訂閱/, /分鐘/], en: /minute/i }, '免費會員必須被告知加買分鐘要先訂閱');
 assert(renderSubUiBody.includes("if (cur === 'free') showSubPane('plans')"), 'Free members must be forced onto the subscription pane');
 assert(/dataset\.pane === 'points' && circlePlan\(\) === 'free'\) return;/.test(app), 'Clicking the points tab must be blocked for free members as a second guard');
 assert(app.includes('function showSubPane'), 'Pane switching must go through one function so the free guard cannot be bypassed');
@@ -951,6 +952,7 @@ require('./test-purchase-flow-localizations.js');
 require('./test-purchase-flow-view-model.js');
 require('./test-app-screen-localizations.js');
 require('./test-app-binding-runtime.js');
+require('./test-topics-sheet-skip.js');
 require('./test-app-i18n-binding-manifest.js');
 require('./test-app-surface-manifest.js');
 require('./test-app-surface-copy-manifest.js');
