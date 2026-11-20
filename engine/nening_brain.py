@@ -12,6 +12,8 @@ import os, sys, wave
 from google import genai
 from google.genai import types
 
+import gemini_models
+
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
     sys.exit("需要 GEMINI_API_KEY 環境變數")
@@ -49,12 +51,12 @@ def nening_reply(history):
     """寧寧的腦：自動重試＋備援模型（扛 503 過載等暫時性錯誤）。"""
     last = ""
     for attempt in range(4):
-        for model in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        for model in gemini_models.TEXT_MODELS:
             try:
                 resp = client.models.generate_content(
                     model=model, contents=history,
                     config=types.GenerateContentConfig(
-                        system_instruction=NENING_PERSONA + PROFILE_CTX, temperature=0.85),
+                        system_instruction=NENING_PERSONA + PROFILE_CTX),
                 )
                 return resp.text.strip()
             except Exception as e:
@@ -63,21 +65,14 @@ def nening_reply(history):
     return f"(寧寧暫時連不上腦、稍後再試 — {last})"
 
 def speak(text, fn, voice="Leda"):
-    for m in ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"]:
-        try:
-            r = client.models.generate_content(
-                model=m, contents=text,
-                config=types.GenerateContentConfig(
-                    response_modalities=["AUDIO"],
-                    speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)))))
-            pcm = r.candidates[0].content.parts[0].inline_data.data
-            with wave.open(fn, "wb") as w:
-                w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
-            return True
-        except Exception as e:
-            print("  (tts 重試:", str(e)[:55], ")")
-    return False
+    # 2026-11-18：預覽 TTS 12/18 停用，改 3.8（gemini_models.synthesize_pcm）
+    pcm = gemini_models.synthesize_pcm(client, text, voice)
+    if not pcm:
+        print("  (tts 失敗：所有 TTS 模型都沒有回聲音)")
+        return False
+    with wave.open(fn, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    return True
 
 # demo 對話（驗交互＋個性＋醫療界線；之後換成麥克風即時）
 demo = [
