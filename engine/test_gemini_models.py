@@ -27,8 +27,6 @@ RETIRED = (
     "gemini-2.0-flash", "gemini-flash-latest",
     "gemini-2.5-flash-preview-tts", "gemini-3.1-flash-tts-preview",
 )
-# 另一個工作階段正在換代並重量守護腦（A4），併入主線後把這一行拿掉
-PENDING_ELSEWHERE = {"perception_engine.py"}
 
 
 def _wav_bytes(rate=24000, channels=1, width=2, frames=b"\x01\x00\x02\x00\x03\x00"):
@@ -105,7 +103,7 @@ def _code_lines(path):
 class RetiredModelGuardTests(unittest.TestCase):
     def _engine_files(self):
         for name in sorted(os.listdir(HERE)):
-            if name.endswith(".py") and not name.startswith("test_") and name not in PENDING_ELSEWHERE:
+            if name.endswith(".py") and not name.startswith("test_"):
                 yield name, os.path.join(HERE, name)
 
     def test_no_retired_model_names_in_live_code(self):
