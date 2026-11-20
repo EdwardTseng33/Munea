@@ -673,7 +673,9 @@ assert(/\.credit-rules\s*\{[^}]*font-size/s.test(css) || css.includes('.cr-row {
 // 資料匯出說明（2026-07-30 改寫）：這段已經是 data-i18n="data.description" 的翻譯節點，
 // index.html 裡那句中文只是還沒換掉的底稿，跟 zh-TW.json 的正本已經對不起來（正本沒有「立即」兩字）。
 assert(/data-i18n="data\.description"/.test(html), '資料匯出說明必須由文案表餵，才會跟著 App 語言換');
-assertCatalogSays('data.description', { 'zh-TW': [/JSON/, /登入/], en: [/JSON/, /sign(ing)? in/i] }, '資料匯出說明必須講清楚登入後可建立自己的 JSON 資料副本');
+// 2026-11-17 改寫：長輩看不懂「JSON」，改成「下載一份你的資料」；同時必須老實講這一份目前不含健康紀錄和吃藥清單
+// （匯出清單沒有 family_state_entries；功能補上以後再把這句和這條守門一起拿掉）。
+assertCatalogSays('data.description', { 'zh-TW': [/下載一份/, /登入/, /不含健康紀錄/], en: [/download a copy/i, /sign(ing)? in/i, /doesn’t yet include health records/i] }, '資料匯出說明必須講清楚登入後可下載一份自己的資料，以及這一份目前不含健康紀錄');
 assert(app.includes('result.exportPackage') && app.includes('navigator.canShare') && app.includes('a.download = filename'), 'Data export must share or download the generated JSON package');
 
 assert(html.includes('src/medication.js'), 'App shell must load the shared medication occurrence service');
