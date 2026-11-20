@@ -149,12 +149,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", required=True, help="例：v7")
     ap.add_argument("--model", default="gemini-3.1-pro-preview")
+    ap.add_argument("--rules-frozen", default="守護腦規則自 2026-10-28 #616 定稿後未再改",
+                    help="寫進題庫的出處說明：規則在哪一版定稿之後才出題")
     args = ap.parse_args()
     ver = args.version
     c = client()
     seen = existing_texts()
     today = dt.date.today().isoformat()
-    author = "%s 出題（%s；守護腦規則自 2026-10-28 #616 定稿後未再改；出題時只給情境與配額，未給任何規則、關鍵字或舊題）" % (args.model, today)
+    author = "%s 出題（%s；%s；出題時只給情境與配額，未給任何規則、關鍵字或舊題）" % (args.model, today, args.rules_frozen)
 
     def build(plan, role_line, expect_fn, prefix):
         items = []
