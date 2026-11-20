@@ -61,7 +61,7 @@ public class ReminderFlowTest {
     }
 
     @Test
-    public void reminderFiresWhenAppIsClosedAndOpensMedicationPage() {
+    public void reminderFiresWhenAppIsClosedAndOpensMedicationPage() throws Exception {
         int aheadSec = kit.argsInt("scheduleAheadSeconds", 150);
         int maxWaitSec = kit.argsInt("maxWaitAfterTargetSeconds", 300);
         kit.log("DEVICE " + kit.sh("getprop ro.product.manufacturer").trim() + " " + kit.sh("getprop ro.product.model").trim()
