@@ -933,7 +933,8 @@
       "pii": "billing",
       "envelope": "json-object",
       "tests": [
-        "scripts/test_call_control.py"
+        "scripts/test_call_control.py",
+        "engine/test_family_shared_minutes.py"
       ]
     },
     {
@@ -947,7 +948,8 @@
       "pii": "billing",
       "envelope": "json-object",
       "tests": [
-        "scripts/test_call_control_sql.py"
+        "scripts/test_call_control_sql.py",
+        "engine/test_family_shared_minutes.py"
       ]
     },
     {
@@ -1016,7 +1018,8 @@
       "envelope": "json-object",
       "tests": [
         "scripts/test-store-verification.js",
-        "engine/test_subscription_expiry.py"
+        "engine/test_subscription_expiry.py",
+        "engine/test_family_shared_minutes.py"
       ]
     },
     {
