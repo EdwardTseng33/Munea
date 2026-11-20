@@ -179,13 +179,42 @@ class IdentityTests(Base):
 
     def test_first_login_binds_invited_email_and_audits(self):
         new_uid = str(uuid.uuid4())
-        me = org_api.org_me_response(auth(new_uid, email="Invited@A.org"))
+        me = org_api.org_me_response({**auth(new_uid, email="Invited@A.org"), "provider": "google"})
         self.assertTrue(me["ok"], me)
         self.assertEqual(me["staff"]["displayName"], "A 新人")
         bound = org_api.list_staff(auth_user_id=new_uid)
         self.assertEqual(len(bound), 1)
         self.assertEqual(bound[0]["status"], "active")
         self.assertIn("org_staff_activated", [e["eventType"] for e in self.audit])
+
+    def test_first_login_needs_a_verified_email(self):
+        """搶註冊防線（#722 信任關卡）：email 沒確認的登入，就算 email 一樣也不能對到邀請名單。"""
+        new_uid = str(uuid.uuid4())
+        login = {**auth(new_uid, email="invited@a.org"), "provider": "email", "emailVerified": False}
+        self.assertEqual(org_api.org_me_response(login), {"ok": False, "error": "email_unverified"})
+        self.assertEqual(org_api.list_staff(auth_user_id=new_uid), [])
+        self.assertEqual(org_api.list_staff(email="invited@a.org")[0]["status"], "invited")
+        self.assertNotIn("org_staff_activated", [e["eventType"] for e in self.audit])
+        self.assertEqual(org_api.org_summary_response(login), {"ok": False, "error": "not_found"})
+
+    def test_admin_created_confirmed_email_account_can_bind(self):
+        """e2e 用的測試帳號是後台建、email_confirm=true（provider＝email、email 已確認）：要能綁。"""
+        new_uid = str(uuid.uuid4())
+        me = org_api.org_me_response({**auth(new_uid, email="invited@a.org"), "provider": "email", "emailVerified": True})
+        self.assertTrue(me["ok"], me)
+        self.assertEqual(org_api.list_staff(auth_user_id=new_uid)[0]["status"], "active")
+
+    def test_only_confirmed_email_or_google_apple_counts(self):
+        for provider in ("google", "apple", "Google"):
+            self.assertTrue(org_api.email_binding_allowed({"provider": provider}))
+        self.assertFalse(org_api.email_binding_allowed({"provider": "email"}))
+        self.assertFalse(org_api.email_binding_allowed({"provider": "email", "emailVerified": "true"}))  # 只認布林 True
+        self.assertFalse(org_api.email_binding_allowed({}))
+
+    def test_unverified_login_without_an_invite_is_plain_not_found(self):
+        stranger = str(uuid.uuid4())
+        login = {**auth(stranger, email="nobody@example.org"), "provider": "email"}
+        self.assertEqual(org_api.org_me_response(login), {"ok": False, "error": "not_found"})
 
     def test_disabled_staff_is_refused_even_with_matching_email(self):
         gone = org_api.list_staff(email="gone@a.org")[0]
@@ -278,7 +307,13 @@ class PrivacyTests(Base):
         self.assertNotIn("孫子來看他", text)
         self.assertEqual(out["week"]["contact"]["calls"], 2)
         self.assertEqual(out["week"]["safety"]["highOrCritical"], 1)
-        self.assertIn("膝蓋痠", out["week"]["spokenHealth"]["categories"])
+        cats = out["week"]["spokenHealth"]["categories"]
+        self.assertEqual(cats, [{"key": "sleep", "label": "睡不好", "count": 1}, {"key": "body", "label": "身體不舒服", "count": 1}])
+        for phrase in ("膝蓋痠", "睡不好的事", "很累", "沒力氣"):
+            self.assertNotIn(phrase, text, phrase)
+        guardian_note = next(a for a in out["anomalies"] if a["type"] == "guardian")
+        self.assertNotIn("原句與處理紀錄", guardian_note["suggestion"])
+        self.assertIn("看不到通話原句", guardian_note["suggestion"])
         # 最後一通是昨天、沒到 3 天門檻，所以不該亮 no_contact
         self.assertEqual({a["type"] for a in out["anomalies"]}, {"mood_drop", "guardian"})
         self.assertEqual(out["label"], "阿嬤")
@@ -298,6 +333,167 @@ class PrivacyTests(Base):
     def test_forbidden_key_in_payload_raises_instead_of_leaking(self):
         with self.assertRaises(org_api.OrgPrivacyError):
             org_api.assert_no_forbidden({"ok": True, "elders": [{"label": "x", "email": "a@b"}]})
+
+
+class SpokenCategoryTests(unittest.TestCase):
+    """機構端的掛心事只給「哪一類、幾次」（2026-11-17）。"""
+
+    def test_private_matters_only_show_as_a_count(self):
+        cats = org_api._spoken_categories(["想念過世的先生", "跟兒子吵架", "膝蓋痠", "晚上睡不著", "沒胃口", ""])
+        self.assertEqual(cats, [
+            {"key": "appetite", "label": "吃不下", "count": 1},
+            {"key": "sleep", "label": "睡不好", "count": 1},
+            {"key": "body", "label": "身體不舒服", "count": 1},
+            {"key": "other", "label": "心情或生活上的掛心事", "count": 2},
+        ])
+        flat = json.dumps(cats, ensure_ascii=False)
+        for private in ("先生", "兒子", "吵架", "膝蓋", "想念"):
+            self.assertNotIn(private, flat, private)
+
+    def test_output_only_uses_fixed_labels(self):
+        allowed = {label for _k, label, _w in org_api.SPOKEN_CATEGORY_RULES} | {org_api.SPOKEN_CATEGORY_OTHER[1]}
+        cats = org_api._spoken_categories(["血壓高高的", "隔壁太吵", "擔心錢不夠", "頭暈", "半夜醒來三次"])
+        self.assertTrue(cats)
+        for c in cats:
+            self.assertEqual(set(c), {"key", "label", "count"})
+            self.assertIn(c["label"], allowed)
+            self.assertIsInstance(c["count"], int)
+
+    def test_feelings_that_sound_like_symptoms_are_not_counted_as_body(self):
+        cats = org_api._spoken_categories(["怕給孩子添麻煩", "想到就心酸", "想到他就心痛", "整天悶悶不樂", "要去廟裡燒香", "股票跌很多", "找人吐苦水"])
+        self.assertEqual(cats, [{"key": "other", "label": "心情或生活上的掛心事", "count": 7}])
+        real = org_api._spoken_categories(["胸悶", "膝蓋痛", "手麻", "昨天跌倒", "一直吐"])
+        self.assertEqual(real, [{"key": "body", "label": "身體不舒服", "count": 5}])
+
+    def test_empty_stays_empty(self):
+        self.assertEqual(org_api._spoken_categories([]), [])
+        self.assertEqual(org_api._spoken_categories(None), [])
+
+
+class ConsentSafetyTests(Base):
+    def test_missing_or_unknown_status_means_not_consented(self):
+        self.assertEqual(org_api.normalize_consent({"seatId": SEAT_A3})["status"], "revoked")
+        self.assertEqual(org_api.normalize_consent({"seatId": SEAT_A3, "status": "whatever"})["status"], "revoked")
+        self.assertEqual(org_api.normalize_consent({"seatId": SEAT_A3, "status": "granted"})["status"], "granted")
+
+    def test_broken_consent_row_does_not_expose_the_elder(self):
+        rows = json.load(open(os.environ["MUNEA_ORG_CONSENTS_PATH"], encoding="utf-8"))
+        rows.append({"id": str(uuid.uuid4()), "enterpriseClientId": ORG_A, "seatId": SEAT_A3, "accountId": ACC_A3})
+        write("MUNEA_ORG_CONSENTS_PATH", rows)
+        out = org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())
+        self.assertNotIn(SEAT_A3, {e["seatId"] for e in out["elders"]})
+
+    def _add_esg_seat(self):
+        seat_id, account_id = str(uuid.uuid4()), str(uuid.uuid4())
+        seats = json.load(open(os.environ["MUNEA_ENTERPRISE_SEATS_PATH"], encoding="utf-8"))
+        seats.append({"id": seat_id, "enterpriseClientId": ORG_ESG, "inviteEmail": "e1@example.org", "accountId": account_id,
+                      "status": "active", "createdAt": "2026-10-05T00:00:00Z"})
+        write("MUNEA_ENTERPRISE_SEATS_PATH", seats)
+        return seat_id, {"accountId": account_id, "authUserId": str(uuid.uuid4())}
+
+    def test_company_seat_cannot_be_switched_on_but_can_always_be_switched_off(self):
+        seat_id, ident = self._add_esg_seat()
+        self.assertEqual(org_api.org_consent_set_response(ident, {"seatId": seat_id, "granted": True}),
+                         {"ok": False, "error": "consent_not_applicable"})
+        self.assertEqual(org_api.list_consents(seat_id=seat_id), [])
+        off = org_api.org_consent_set_response(ident, {"seatId": seat_id, "granted": False})
+        self.assertTrue(off["ok"])
+
+    def test_grant_without_audit_trail_never_takes_effect(self):
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A3, "granted": True})
+        self.assertFalse(out["ok"])
+        self.assertEqual(out["error"], "consent_not_recorded")
+        self.assertEqual(out["seat"]["consent"]["status"], "none")
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A3), [])
+        org_api.set_audit_sink(self.audit.append)
+        self.assertNotIn(SEAT_A3, {e["seatId"] for e in org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())["elders"]})
+
+    def test_when_audit_and_storage_are_both_down_consent_is_never_written(self):
+        """資料庫整個掛掉：稽核寫不進去、同意表也寫不進去。同意不能停在「已同意」。"""
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        with patch.object(org_api, "save_consent", side_effect=RuntimeError("consent store down")) as save:
+            out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A3, "granted": True})
+        self.assertEqual(out["error"], "consent_not_recorded")
+        save.assert_not_called()
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A3), [])
+
+    def test_already_granted_stays_granted_when_audit_is_down(self):
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A1, "personId": PER_A1, "authUserId": str(uuid.uuid4())}
+        out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A1, "granted": True})
+        self.assertEqual(out["error"], "consent_not_recorded")
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A1)[0]["status"], "granted")
+
+    def test_grant_audit_is_written_before_the_consent(self):
+        order = []
+        org_api.set_audit_sink(lambda e: order.append("audit"))
+        real_save = org_api.save_consent
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        with patch.object(org_api, "save_consent", side_effect=lambda item: (order.append("save"), real_save(item))[1]):
+            out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A3, "granted": True})
+        self.assertTrue(out["ok"])
+        self.assertEqual(order, ["audit", "save"])
+
+    def test_consent_does_not_carry_over_when_the_seat_changes_hands(self):
+        seats = json.load(open(os.environ["MUNEA_ENTERPRISE_SEATS_PATH"], encoding="utf-8"))
+        for s in seats:
+            if s["id"] == SEAT_A1:
+                s["accountId"] = str(uuid.uuid4())   # 後台把這個席次換綁給另一個人
+        write("MUNEA_ENTERPRISE_SEATS_PATH", seats)
+        out = org_api.org_elders_response(auth(ADMIN_A), loaders=fake_loaders())
+        self.assertNotIn(SEAT_A1, {e["seatId"] for e in out["elders"]})
+        # 「已同意人數」也不能把換了人的席次算進去：原本 A1、A2 兩位，現在只剩 A2
+        self.assertEqual(org_api.org_summary_response(auth(ADMIN_A))["consent"]["grantedSeats"], 1)
+
+    def test_revoke_still_works_when_audit_is_down(self):
+        def boom(_event):
+            raise RuntimeError("audit store down")
+        org_api.set_audit_sink(boom)
+        ident = {"accountId": ACC_A1, "personId": PER_A1, "authUserId": str(uuid.uuid4())}
+        out = org_api.org_consent_set_response(ident, {"seatId": SEAT_A1, "granted": False})
+        self.assertTrue(out["ok"])
+        self.assertEqual(org_api.list_consents(seat_id=SEAT_A1)[0]["status"], "revoked")
+
+    def test_what_org_sees_text_matches_what_is_sent(self):
+        ident = {"accountId": ACC_A3, "personId": PER_A3, "authUserId": str(uuid.uuid4())}
+        view = org_api.org_consent_status_response(ident)["seats"][0]
+        self.assertIn("類別與次數", "".join(view["whatOrgSees"]))
+        self.assertNotIn("症狀類別", "".join(view["whatOrgSees"]))
+        self.assertIn("短語", "".join(view["whatOrgNeverSees"]))
+
+
+class PoisonPillTests(Base):
+    """把一個獨特字串塞進每一個可能夾帶文字的地方，機構端整份回應都不能出現它。"""
+
+    PILL = "毒餌字串XQ7"
+
+    def test_no_free_text_reaches_the_org(self):
+        s1 = sig(PER_A1, 3, 1, self.PILL + "原句", [self.PILL + "掛心事", "膝蓋痠"])
+        s1["chatObs"] = self.PILL + "聊天觀察"
+        s1["positives"] = [self.PILL + "開心事"]
+        s2 = sig(PER_A1, 2, 1, self.PILL + "又一句", [self.PILL + "睡不好"])
+        s3 = sig(PER_A1, 1, 1, self.PILL, [])
+        g = guardian(ACC_A1, PER_A1, 2, "high")
+        g.setdefault("properties", {})["categories"] = [self.PILL + "類別"]
+        fake_level = guardian(ACC_A1, PER_A1, 1, self.PILL + "等級")
+        loaders = fake_loaders(signals={PER_A1: [s1, s2, s3]}, summaries={PER_A1: [call(PER_A1, 3)]}, events=[g, fake_level])
+        week = org_api.org_elder_care_week_response(auth(CASE_A), {"seatId": SEAT_A1}, loaders=loaders)
+        elders = org_api.org_elders_response(auth(ADMIN_A), loaders=loaders)
+        self.assertTrue(week["ok"] and elders["ok"])
+        for name, payload in (("care-week", week), ("elders", elders)):
+            self.assertNotIn(self.PILL, json.dumps(payload, ensure_ascii=False), name)
+        # 塞進去的短語有被算進次數（證明不是整段沒讀到）
+        cats = {c["key"]: c["count"] for c in week["week"]["spokenHealth"]["categories"]}
+        self.assertEqual(cats, {"sleep": 1, "body": 1, "other": 1})
 
 
 class AuditTests(Base):
@@ -396,8 +592,17 @@ class ServerWiringTests(unittest.TestCase):
         for path in ("/org/me", "/org/summary", "/org/elders", "/org/elder/care-week", "/org/reports", "/org-consent", "/org-consent/set"):
             self.assertIn(f'self.path == "{path}"', src)
 
+    def test_org_requests_carry_email_verified_from_the_supabase_user(self):
+        s = self.server
+        self.assertTrue(s.auth_email_verified({"ok": True, "user": {"email_confirmed_at": "2026-11-01T00:00:00Z"}}))
+        self.assertFalse(s.auth_email_verified({"ok": True, "user": {"email_confirmed_at": None, "confirmed_at": "2026-11-01T00:00:00Z"}}))
+        self.assertFalse(s.auth_email_verified({"ok": True, "developerMode": True}))
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()
+        self.assertIn('auth_gate["auth"]["emailVerified"] = auth_email_verified(family_auth)', src)
+
     def test_audit_sink_is_wired_to_server_audit_events(self):
-        self.assertIs(self.server.org_api.AUDIT_SINK, self.server.append_audit_event)
+        # 2026-11-18：機構端稽核走嚴格寫入口（帳號欄空值、不綁請求身分、寫不進就丟錯）
+        self.assertIs(self.server.org_api.AUDIT_SINK, self.server.append_org_audit_event_strict)
 
 
 if __name__ == "__main__":

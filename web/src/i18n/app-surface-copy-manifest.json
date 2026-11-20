@@ -85,7 +85,8 @@
       "state": "chat:idle",
       "keyPrefixes": [
         "accessibility.",
-        "credits."
+        "credits.",
+        "callEnd."
       ],
       "requiredKeys": [
         "voice.call.start",
@@ -365,6 +366,23 @@
         "join.title",
         "join.join",
         "join.invalid"
+      ]
+    },
+    {
+      "state": "modal:seat-code",
+      "keyPrefixes": [
+        "seatCode."
+      ],
+      "requiredKeys": [
+        "seatCode.entry",
+        "seatCode.title",
+        "seatCode.body",
+        "seatCode.submit",
+        "seatCode.activated",
+        "seatCode.registered",
+        "seatCode.waiting",
+        "seatCode.errorSignIn",
+        "seatCode.errorNetwork"
       ]
     },
     {

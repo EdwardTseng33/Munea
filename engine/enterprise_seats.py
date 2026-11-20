@@ -22,6 +22,7 @@ import io
 import json
 import logging
 import os
+import secrets
 import threading
 import time
 import uuid
@@ -49,6 +50,17 @@ CLIENT_STATUSES = ("active", "expiring", "ended")
 SEAT_STATUSES = ("pending", "waiting", "active", "grace", "released")
 VALID_RELEASE_REASONS = ("contract_end", "removed_by_client", "converted_to_personal")
 GRACE_PERIOD_DAYS = 30
+
+# 033 開通碼（2026-11-17）：8 位純數字。選純數字是因為輸入的人是長輩——手機會跳數字鍵盤，
+# 不用切英文、不會把 0 看成 O。空間 1 億組；猜中的風險靠「要先登入＋猜錯幾次就鎖」擋
+#（見 server.py 的 seat_code_rate_limited），不靠把碼做長。
+REDEEM_CODE_LENGTH = 8
+MEMBER_NAME_MAX = 40
+MEMBER_PHONE_MAX = 20
+CODE_SEATS_MAX_PER_CALL = 500
+# 這些狀態的席次算「這個帳號手上已經有一席」：同一個帳號不能同時佔兩席（不然一個人輸兩組碼
+# 就吃掉機構兩個名額）。released 是歷史，不算。
+SEAT_HOLDING_STATUSES = ("pending", "waiting", "active", "grace")
 
 # 需求單 5A：waiting＝已比對到帳號、但該帳號個人已購買的等級 > 企業方案等級，暫不授予。
 # active <-> waiting 雙向：綁定時可能一開始就判定 waiting；授予時若發現個人已到期，
@@ -210,6 +222,11 @@ def normalize_seat(item=None):
         "releasedReason": item.get("releasedReason") or item.get("released_reason"),
         # 030（2026-10-29）：分點標籤（Q6 A）。空＝這家沒分分點。
         "siteLabel": (str(item.get("siteLabel") or item.get("site_label") or "").strip()[:80] or None),
+        # 033（2026-11-17）：開通碼＋機構名冊上的稱呼／手機（認人用，不當登入識別）。
+        "redeemCode": (str(item.get("redeemCode") or item.get("redeem_code") or "").strip() or None),
+        "memberName": (str(item.get("memberName") or item.get("member_name") or "").strip()[:MEMBER_NAME_MAX] or None),
+        "memberPhone": (str(item.get("memberPhone") or item.get("member_phone") or "").strip()[:MEMBER_PHONE_MAX] or None),
+        "redeemedAt": item.get("redeemedAt") or item.get("redeemed_at"),
         "notes": item.get("notes"),
         "createdAt": item.get("createdAt") or item.get("created_at"),
         "updatedAt": item.get("updatedAt") or item.get("updated_at"),
@@ -429,6 +446,7 @@ _SEAT_PATCH_FIELD_MAP = {
     "graceUntil": "grace_until",
     "releasedAt": "released_at",
     "releasedReason": "released_reason",
+    "redeemedAt": "redeemed_at",
     "notes": "notes",
 }
 
@@ -1018,14 +1036,287 @@ def build_seat_export_csv(client_id=None, status=None):
     seats = list_seats(client_id=client_id, status=status)
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["email", "status", "account_id", "activated_at", "waiting_until", "grace_until", "released_at", "note"])
+    writer.writerow(["email", "status", "account_id", "activated_at", "waiting_until", "grace_until", "released_at", "note",
+                     "member_name", "member_phone", "redeem_code", "redeemed_at"])
     for s in seats:
         writer.writerow([
             s.get("inviteEmail", ""), s.get("status", ""), s.get("accountId") or "",
             s.get("activatedAt") or "", s.get("waitingUntil") or "", s.get("graceUntil") or "",
             s.get("releasedAt") or "", s.get("notes") or "",
+            s.get("memberName") or "", s.get("memberPhone") or "",
+            format_redeem_code(s.get("redeemCode")), s.get("redeemedAt") or "",
         ])
     return buf.getvalue()
+
+
+# ---- 開通碼（033 · 2026-11-17）----
+#
+# 為什麼不靠 email：正式庫 14 個帳號裡 6 個是蘋果隱藏信箱，機構名單上的真信箱對不上；
+# 手機號碼一筆都沒有。開通碼讓「這席是誰的」由持碼的人登入後自己認領。
+#
+# 不變的鐵律：錢沒到、帳號不開。輸入開通碼只做「綁定」（席次 pending -> active、記下帳號），
+# 會員資格仍然走 grant_enterprise_membership()——機構還沒入帳就只會是「已登記、等開通」。
+
+_FULLWIDTH_DIGITS = {ord("０") + i: ord("0") + i for i in range(10)}
+_CODE_SEAT_LOCK = threading.RLock()
+
+
+def normalize_redeem_code(value):
+    """把使用者輸入的開通碼整理成 8 位半形數字；整理不出來回空字串。
+    收：半形／全形數字（長輩的輸入法常跳全形）、中間夾的空白與橫線（卡片上印 1234-5678）。
+    不收：任何英文字母或其他符號混在裡面——那不是打錯分隔符號，是打錯碼，直接判格式不對，
+    不要好心地把字母濾掉後拿剩下的數字去比對。"""
+    text = str(value or "").translate(_FULLWIDTH_DIGITS)
+    for sep in (" ", "　", "-", "－", "—", "–"):
+        text = text.replace(sep, "")
+    if len(text) != REDEEM_CODE_LENGTH or not text.isdigit() or not text.isascii():
+        return ""
+    return text
+
+
+def format_redeem_code(code):
+    """給人看的寫法：1234-5678。沒有碼回空字串。"""
+    code = str(code or "")
+    if len(code) != REDEEM_CODE_LENGTH:
+        return code
+    return code[:4] + "-" + code[4:]
+
+
+def generate_redeem_code():
+    return "".join(str(secrets.randbelow(10)) for _ in range(REDEEM_CODE_LENGTH))
+
+
+def clean_member_phone(value):
+    """機構名冊上的手機：只留數字與開頭的 +，其餘（空白、橫線、括號）拿掉。認人用、不驗證。"""
+    text = str(value or "").strip()
+    plus = text.startswith("+")
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return None
+    return (("+" if plus else "") + digits)[:MEMBER_PHONE_MAX]
+
+
+def find_seat_by_redeem_code(code):
+    code = normalize_redeem_code(code)
+    if not code:
+        return None
+    backend = _backend()
+    try:
+        remote = backend.get_enterprise_seat_by_redeem_code(code)
+        if remote is not None:
+            return remote
+        if backend.enabled():
+            return None
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback("find enterprise seat by redeem code", exc)
+    items = _read_json_file(SEATS_PATH, [])
+    if not isinstance(items, list):
+        return None
+    for item in items:
+        if str(item.get("redeemCode") or "") == code:
+            return normalize_seat(item)
+    return None
+
+
+def _create_code_seat(client_id, name=None, phone=None, note=None):
+    """建一席帶開通碼的 pending 席次。碼撞到（唯一索引擋下或本機已存在）就換一組重試。"""
+    last_error = None
+    for _ in range(6):
+        code = generate_redeem_code()
+        if find_seat_by_redeem_code(code):
+            continue
+        seat = normalize_seat({
+            "enterpriseClientId": client_id, "status": "pending", "redeemCode": code,
+            "memberName": name, "memberPhone": phone, "notes": note,
+        })
+        backend = _backend()
+        try:
+            remote = backend.create_enterprise_seat(seat)
+            if remote is not None:
+                write_seat_event({"id": remote["id"], "status": None}, "pending", actor="system",
+                                 reason="seat_created_with_redeem_code", metadata={"source": "redeem_code"})
+                return remote
+        except Exception as exc:
+            if backend.enabled() and not _is_missing_table_error(exc):
+                # 最可能是剛好撞到唯一索引；換一組再試，試完還不行才把錯誤丟出去
+                #（例如 033 還沒套用：invite_email 仍是 not null，每一次都會失敗）。
+                last_error = exc
+                continue
+            _log_fallback("create enterprise code seat in Supabase", exc)
+        with _CODE_SEAT_LOCK:
+            items = _read_json_file(SEATS_PATH, [])
+            if not isinstance(items, list):
+                items = []
+            now = _utc_now()
+            record = {**seat, "id": str(uuid.uuid4()), "createdAt": now, "updatedAt": now}
+            items.append(record)
+            _write_json_file(SEATS_PATH, items)
+        write_seat_event({"id": record["id"], "status": None}, "pending", actor="system",
+                         reason="seat_created_with_redeem_code", metadata={"source": "redeem_code"})
+        return record
+    if last_error is not None:
+        raise last_error
+    raise ValueError("redeem_code_generation_failed")
+
+
+def create_code_seats(client_id, rows=None, count=None, confirm_over_quota=False):
+    """後台「產生開通碼」：幫一家機構開一批帶開通碼的待開通席次。
+    rows：機構給的名冊，每筆 {name, phone, note}（都選填，認人用）；
+    count：不給名冊、只要 N 組空白的碼（之後發給誰由機構自己記）。兩個擇一，rows 優先。
+    超過合約席次上限時預設整批不建（回 over_quota 讓畫面二次確認），confirm_over_quota=True 才照建。"""
+    client = get_client(client_id)
+    if not client:
+        raise ValueError("enterprise_client_not_found")
+    if str(client.get("status") or "") == "ended":
+        raise ValueError("enterprise_client_ended")
+    entries = []
+    if isinstance(rows, list) and rows:
+        for raw in rows:
+            raw = raw or {}
+            name = str(raw.get("name") or raw.get("姓名") or raw.get("稱呼") or "").strip()[:MEMBER_NAME_MAX] or None
+            phone = clean_member_phone(raw.get("phone") or raw.get("手機") or raw.get("電話"))
+            note = str(raw.get("note") or raw.get("備註") or "").strip()[:200] or None
+            entries.append({"name": name, "phone": phone, "note": note})
+    else:
+        try:
+            wanted = int(count or 0)
+        except (TypeError, ValueError):
+            wanted = 0
+        entries = [{"name": None, "phone": None, "note": None} for _ in range(max(0, wanted))]
+    if not entries:
+        raise ValueError("code_seat_rows_required")
+    if len(entries) > CODE_SEATS_MAX_PER_CALL:
+        raise ValueError("code_seat_batch_too_large")
+
+    existing = list_seats(client_id=client_id)
+    occupied = len([s for s in existing if s["status"] != "released"])
+    quota = int(client.get("seatQuota") or 0)
+    over_by = max(0, occupied + len(entries) - quota) if quota else 0
+    if over_by and not confirm_over_quota:
+        return {"created": [], "overQuota": {"quota": quota, "occupied": occupied,
+                                             "requested": len(entries), "overBy": over_by},
+                "summary": {"createdCount": 0, "failedCount": 0}}
+
+    created, failed = [], []
+    for entry in entries:
+        try:
+            created.append(_create_code_seat(client_id, entry["name"], entry["phone"], entry["note"]))
+        except Exception as exc:
+            failed.append({**entry, "error": str(exc)})
+    return {"created": created, "failed": failed,
+            "summary": {"createdCount": len(created), "failedCount": len(failed)}}
+
+
+def _claim_seat_for_account(seat, account_id):
+    """把還沒人認領的席次綁到帳號。成功回更新後的席次；被別人搶先回 None。"""
+    now = _utc_now()
+    backend = _backend()
+    try:
+        claimed = backend.claim_enterprise_seat(seat["id"], account_id, now)
+        if claimed is not False:
+            return claimed
+    except Exception as exc:
+        if backend.enabled() and not _is_missing_table_error(exc):
+            raise
+        _log_fallback(f"claim enterprise seat {seat['id']} in Supabase", exc)
+    with _CODE_SEAT_LOCK:
+        items = _read_json_file(SEATS_PATH, [])
+        if not isinstance(items, list):
+            items = []
+        for idx, item in enumerate(items):
+            if item.get("id") != seat["id"]:
+                continue
+            if item.get("accountId") or (item.get("status") or "pending") != "pending":
+                return None
+            item = {**item, "accountId": account_id, "status": "active",
+                    "activatedAt": now, "redeemedAt": now, "updatedAt": now}
+            items[idx] = item
+            _write_json_file(SEATS_PATH, items)
+            return normalize_seat(item)
+    return None
+
+
+def _client_contract_over(client, today=None):
+    if str(client.get("status") or "") == "ended":
+        return True
+    contract_end = client.get("contractEnd") or client.get("contract_end")
+    if not contract_end:
+        return False
+    try:
+        end_date = datetime.strptime(str(contract_end)[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return False
+    return end_date < (today or datetime.now(timezone.utc).date())
+
+
+def _seat_grant_state(seat, client):
+    """這席現在對使用者來說是什麼狀態（給 App 顯示用）。"""
+    if seat.get("status") == "waiting":
+        return "waiting"
+    if seat.get("status") in ("active", "grace") and _find_active_ledger_by_grant_ref(seat["id"]):
+        return "activated"
+    return "registered"
+
+
+def redeem_seat_code(code, account_id, actor="member"):
+    """使用者登入後輸入開通碼。回 {result, seat, client}；result 四種：
+      activated   席次綁好、會員資格也開了
+      registered  席次綁好，但機構還沒入帳——入帳後由後台批次授予生效（錢沒到、帳號不開）
+      waiting     席次綁好，但他自己買的方案比機構給的高，等個人訂閱到期自動接手（需求單 5A）
+    同一個帳號重複輸入自己已經用過的碼＝回目前狀態，不算錯（alreadyYours=True）。
+
+    擋下的情況丟 ValueError：
+      invalid_code_format   不是 8 位數字
+      code_not_found        沒有這組碼
+      code_already_used     已經被別的帳號用掉
+      code_expired          席次已釋出，或這家機構合約已結束
+      already_has_seat      這個帳號手上已經有另一席
+    """
+    normalized = normalize_redeem_code(code)
+    if not normalized:
+        raise ValueError("invalid_code_format")
+    if not account_id or not _is_uuid(account_id):
+        raise ValueError("valid_account_id_required_to_activate_seat")
+    seat = find_seat_by_redeem_code(normalized)
+    if not seat:
+        raise ValueError("code_not_found")
+    client = get_client(seat["enterpriseClientId"])
+    if not client:
+        raise ValueError("code_not_found")
+
+    if seat.get("accountId"):
+        if seat["accountId"] != account_id:
+            raise ValueError("code_already_used")
+        if seat.get("status") == "released":
+            raise ValueError("code_expired")
+        return {"result": _seat_grant_state(seat, client), "seat": seat, "client": client, "alreadyYours": True}
+    if seat.get("status") != "pending" or _client_contract_over(client):
+        raise ValueError("code_expired")
+
+    held = [s for s in list_seats(account_id=account_id)
+            if s.get("accountId") == account_id and s["status"] in SEAT_HOLDING_STATUSES and s["id"] != seat["id"]]
+    if held:
+        raise ValueError("already_has_seat")
+
+    claimed = _claim_seat_for_account(seat, account_id)
+    if not claimed:
+        raise ValueError("code_already_used")
+    write_seat_event(seat, "active", actor, "redeem_code_claimed",
+                     metadata={"patch": {"accountId": account_id}, "source": "redeem_code"})
+
+    try:
+        granted = grant_enterprise_membership(claimed["id"], actor=actor, reason="redeem_code_grant")
+    except ValueError as exc:
+        # enterprise_invoice_not_paid 是預期內：機構還沒入帳。其他 ValueError 一樣不讓綁定白做——
+        # 席次已經是他的，會員資格留給後台之後補授予；原因記在紀錄裡給人查。
+        if str(exc) != "enterprise_invoice_not_paid":
+            LOGGER.warning("redeem code bound but grant failed for seat %s: %s", claimed["id"], exc)
+        return {"result": "registered", "seat": claimed, "client": client, "grantBlockedBy": str(exc)}
+    if granted.get("waiting"):
+        return {"result": "waiting", "seat": granted.get("seat") or claimed, "client": client}
+    return {"result": "activated", "seat": granted.get("seat") or claimed, "client": client}
 
 
 def _categorize_import_rows(client, rows):

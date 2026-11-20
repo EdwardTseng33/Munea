@@ -269,6 +269,11 @@ class EveryShippedVoiceStyleBookTest(unittest.TestCase):
                           f"{locale}：少了「不准連續兩輪反問」的硬規矩")
 
 
+_CLOCK_LINE = re.compile(
+    r"（現在時間：\d{4}-\d{2}-\d{2}（星期.）\S+ \d{2}:\d{2}。時段語氣：[^）]*）")
+_CLOCK_LINE_FIXED = "（現在時間：2026-11-17（星期二）傍晚 17:57。時段語氣：可以關心晚餐、今天過得如何。）"
+
+
 class VoicePromptBudgetTest(unittest.TestCase):
     """提示預算與搜尋模式互斥契約。
 
@@ -338,6 +343,14 @@ class VoicePromptBudgetTest(unittest.TestCase):
         for key in _ISOLATED:
             os.environ[key] = os.path.join(
                 tempfile.gettempdir(), f"munea-prompt-budget-{key.lower()}.json")
+            # 2026-11-17：上面說「指到不存在的暫存檔」，但檔名是固定的、暫存資料夾不會自己清。
+            # 這支跑完後 server 的資料檔路徑還留在這些暫存檔上，同一輪後面的測試就把
+            # 「今天空氣品質普通」寫了進去；下一次再跑，說明書多 101 字、三個上限全紅
+            # （11/16–11/17 主線紅燈的真因，說明書本身一個字都沒變）。所以每次量之前先刪掉。
+            try:
+                os.remove(os.environ[key])
+            except FileNotFoundError:
+                pass
         try:
             # server.py 的資料檔路徑是**模組載入時**就決定的（PERSON_PROFILE_PATH = 環境變數 or 預設）。
             # 只重載 live_voice_server 不夠——只要同一輪測試裡有別支先載過 server，
@@ -345,9 +358,20 @@ class VoicePromptBudgetTest(unittest.TestCase):
             # 於是這支單獨跑是綠的、跟別支一起跑就紅（2026-08-13 查了半天的那個怪象）。
             import server
             importlib.reload(server)
+            # 2026-11-17：組說明書時發現「今天還沒有簡報」，會開一條背景線去網路上抓真天氣、
+            # 寫進簡報檔（server._maybe_refresh_briefing_bg）。抓回來的時間不一定，
+            # 同一輪後面幾次量就可能多出一句「空氣品質普通」。量字數不該連網路，這裡關掉。
+            server._maybe_refresh_briefing_bg = lambda *args, **kwargs: None
             import live_voice_server
             module = importlib.reload(live_voice_server)
-            return module.system_instruction(**kwargs)
+            prompt = module.system_instruction(**kwargs)
+            # 2026-11-17：時段問候那一行會跟著「現在幾點」變長變短（早上／傍晚／深夜差 6 字），
+            # 上限只剩 1～4 字的空間，於是半夜跑就紅、白天跑就綠。那一行是時鐘、不是規則，
+            # 量之前換成固定的一句。格式改了這裡會直接報錯，不會靜靜量錯。
+            prompt, replaced = _CLOCK_LINE.subn(_CLOCK_LINE_FIXED, prompt)
+            if replaced != 1:
+                raise AssertionError(f"說明書裡的時段問候行應該剛好一行，實際 {replaced} 行")
+            return prompt
         finally:
             for key, old in env_backup.items():
                 if old is None:
@@ -355,9 +379,13 @@ class VoicePromptBudgetTest(unittest.TestCase):
                 else:
                     os.environ[key] = old
 
+    # 2026-11-13：三個上限各放寬 60 字（16900→16960、18700→18760、17200→17260）。
+    # 原因①：改之前今天就已經超 1～4 字（提示詞裡的日期字串長度會隨日子變），這個測試本來就在邊緣；
+    # 原因②：加了一句「請他改口的話同一通最多說一次」（考卷 S33，3.8 連說三次同一句），
+    #        同段順手收短後淨增 43 字。之後要再加規則，請先在同一段刪字，不要再動上限。
     def test_prompt_budget_for_current_production_shape(self):
         prompt = self._render(True)
-        self.assertLessEqual(self._content_len(prompt), 16900)
+        self.assertLessEqual(self._content_len(prompt), 16960)
         self.assertEqual(1, prompt.count("[即時通話互動契約]"))
         self.assertEqual(1, prompt.count("[即時資訊｜內建搜尋]"))
         self.assertNotIn("[即時資訊｜無搜尋]", prompt)
@@ -372,7 +400,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
             user="阿明",
             name="寧寧",
         )
-        self.assertLessEqual(self._content_len(prompt), 18700)
+        self.assertLessEqual(self._content_len(prompt), 18760)
         for hard_rule in (
             "絕對不准用查到的網路內容回答",
             "只有工具回覆 status=ok 才能說設好了",
@@ -382,7 +410,7 @@ class VoicePromptBudgetTest(unittest.TestCase):
 
     def test_no_search_mode_is_explicit_and_non_conflicting(self):
         prompt = self._render(False)
-        self.assertLessEqual(self._content_len(prompt), 17200)
+        self.assertLessEqual(self._content_len(prompt), 17260)
         self.assertEqual(1, prompt.count("[即時資訊｜無搜尋]"))
         self.assertNotIn("[即時資訊｜內建搜尋]", prompt)
         self.assertIn("你沒有辦法上網查東西", prompt)

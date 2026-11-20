@@ -602,24 +602,6 @@
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
-      "id": "b39-family-1e4edf86",
-      "path": "web/src/app.js",
-      "text": "</b> 最多票，收進<b>家庭記錄簿</b>",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-family-0a41e1bf",
-      "path": "web/src/app.js",
-      "text": "</b> 答對最多（",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
       "id": "b39-family-2072dc45",
       "path": "web/src/app.js",
       "text": "</b>今天把該做的都完成了，給他一個讚",
@@ -689,42 +671,6 @@
       "kind": "string",
       "expectedOccurrences": 1,
       "reasonCode": "zh-intent-matcher",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-family-b588d210",
-      "path": "web/src/app.js",
-      "text": "」投票結束——<b>",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-family-40b34321",
-      "path": "web/src/app.js",
-      "text": "」結束了",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-family-faf8c268",
-      "path": "web/src/app.js",
-      "text": "」結束了，收進<b>家庭記錄簿</b>",
-      "kind": "string",
-      "expectedOccurrences": 2,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-family-7c8b7102",
-      "path": "web/src/app.js",
-      "text": "」結算了——<b>",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
@@ -840,7 +786,7 @@
       "path": "web/src/app.js",
       "text": "你",
       "kind": "string",
-      "expectedOccurrences": 24,
+      "expectedOccurrences": 25,
       "reasonCode": "legacy-storage-identity",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
@@ -1286,15 +1232,6 @@
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
-      "id": "b39-family-16a84033",
-      "path": "web/src/app.js",
-      "text": "有去）",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
       "id": "b39-family-e43ade30",
       "path": "web/src/app.js",
       "text": "有看著",
@@ -1355,15 +1292,6 @@
       "kind": "string",
       "expectedOccurrences": 1,
       "reasonCode": "legacy-storage-identity",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-family-72d8d891",
-      "path": "web/src/app.js",
-      "text": "活動",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
@@ -1610,15 +1538,6 @@
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {
-      "id": "b39-family-a63f8144",
-      "path": "web/src/app.js",
-      "text": "題），收進<b>家庭記錄簿</b>",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
       "id": "b39-family-f9016981",
       "path": "web/src/app.js",
       "text": "題，等大家玩完看排名",
@@ -1679,15 +1598,6 @@
       "kind": "string",
       "expectedOccurrences": 1,
       "reasonCode": "zh-intent-matcher",
-      "evidence": "scripts/test-i18n-deferred-buckets.js"
-    },
-    {
-      "id": "b39-family-c4d58f08",
-      "path": "web/src/app.js",
-      "text": "，收進<b>家庭記錄簿</b>",
-      "kind": "string",
-      "expectedOccurrences": 1,
-      "reasonCode": "family-feed-recipient-locale",
       "evidence": "scripts/test-i18n-deferred-buckets.js"
     },
     {

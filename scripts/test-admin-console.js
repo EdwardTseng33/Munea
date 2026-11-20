@@ -99,3 +99,4 @@ for (const token of [":focus-visible", '.page[aria-busy="true"]', ".ops-notice.e
 
 console.log(`Admin console contract OK (${consolePaths.length} endpoint(s))`);
 require("./test-admin-localizations.js");
+require("./test-admin-safety-steps.js");   // 受暴類那一筆的處理步驟（#727 複審）

@@ -31,6 +31,13 @@ gcloud_run() { "${GCLOUD[@]}" "$@"; }
 resolve_gcloud
 
 WHAT="${1:-}"
+# 語音模型（2026-11-13）：第二個參數可選 31｜38，不給＝31（現役）。
+# 3.1 最早 2026-11-17 被 Google 關閉，換 3.8 用這個參數明確切，不靠環境變數夾帶。
+VOICE_ENGINE="${2:-31}"
+case "$VOICE_ENGINE" in
+  31|38) ;;
+  *) echo "⛔ 語音模型參數只能是 31 或 38"; exit 1 ;;
+esac
 case "$WHAT" in
   brain) SVC="munea-brain" ;;
   voice) SVC="munea-voice" ;;
@@ -101,13 +108,16 @@ RELEASE_VERSION=$(node -p "require(process.argv[1]).version" "$TMP/package.json"
 echo "   source: ${RELEASE_COMMIT:0:12} · v${RELEASE_VERSION} · $(git log -1 --format=%s "$RELEASE_COMMIT")"
 
 TAG="prod-$(date +%m%d-%H%M%S)-${RELEASE_COMMIT:0:7}"
+# 2026-11-18（#717 複審）：正式 brain／voice 掛上 #沐寧-告警 的接訊息網址（munea-slack-alert-webhook）。
+#   兩台本來就用 compute 預設帳號、那把密鑰早就准它讀，不用改權限；沒掛之前程式裡的告警全是空包彈
+#   （通話中「緊急聯絡人沒通知到」也是）。測試機（canary-deploy.sh）刻意不掛，免得驗收打的假事件洗版。
 VERIFY_LOCALE_MODE=""
 
 if [ "$WHAT" = "brain" ]; then
   echo "== 部署 ${SVC}（正式管家腦・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
-    --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest,MUNEA_ADMIN_API_TOKEN=munea-admin-token-staging:latest,MUNEA_ADMIN_PASSWORD=munea-admin-password:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest,MUNEA_APNS_PRIVATE_KEY=munea-apns-private-key:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest" \
+    --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,SUPABASE_SERVICE_ROLE_KEY=munea-supabase-service-staging:latest,MUNEA_ADMIN_API_TOKEN=munea-admin-token-staging:latest,MUNEA_ADMIN_PASSWORD=munea-admin-password:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest,MUNEA_APNS_PRIVATE_KEY=munea-apns-private-key:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_SLACK_ALERT_WEBHOOK=munea-slack-alert-webhook:latest" \
     --update-env-vars "^|^MUNEA_APP_KEY=$KEY|MUNEA_APNS_KEY_ID=59QVAHNMZP|MUNEA_APNS_TEAM_ID=V77L5245MR|MUNEA_DATABASE_PROVIDER=supabase|MUNEA_ENV_NAME=production|MUNEA_RELEASE_VERSION=$RELEASE_VERSION|MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT|MUNEA_REQUIRE_AUTH=1|MUNEA_ENABLE_DEV_AUTH_BYPASS=false|MUNEA_ADMIN_EMAIL=edwardt0303@gmail.com|MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app|SUPABASE_URL=https://fespbkdwafueyonppzwq.supabase.co|SUPABASE_PUBLISHABLE_KEY=sb_publishable_fP-PoA531waoIOmxl8tsWg_kCeZQD0e|MUNEA_SUPABASE_ACCOUNT_ID=11111111-1111-4111-8111-111111111111|MUNEA_SUPABASE_PERSON_ID=22222222-2222-4222-8222-222222222222|MUNEA_SUPABASE_FAMILY_GROUP_ID=33333333-3333-4333-8333-333333333333" \
     --memory 1Gi --min-instances 1 --max-instances 2 --concurrency 40 --allow-unauthenticated --quiet
   # ↑ 2026-10-26 Edward 拍板：正式大腦常駐一台（約 US$7–10／月）。沒人用就睡著＝後台登入要等 5–15 秒、
@@ -117,9 +127,9 @@ else
   echo "== 部署 ${SVC}（正式語音橋・--no-traffic + --tag=${TAG}，不影響目前正式流量）=="
   gcloud_run run deploy "$SVC" --source "$TMP" --clear-base-image --region "$REGION" --project "$PROJECT" \
     --no-traffic --tag "$TAG" \
-    --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest" \
+    --update-secrets "GEMINI_API_KEY=munea-gemini-key-staging:latest,MUNEA_GATEWAY_ADMIN_KEY=munea-gateway-admin-key:latest,MUNEA_CALL_TOKEN_SECRET=munea-call-token-secret:latest,MUNEA_VOICE_BRAIN_SECRET=munea-voice-brain-secret:latest,MUNEA_SLACK_ALERT_WEBHOOK=munea-slack-alert-webhook:latest" \
     --remove-env-vars "MUNEA_VOICE_SILENCE_MS,MUNEA_VOICE_EXPLICIT_TURN_TAIL_MS,MUNEA_VERTEX_LOCATION,MUNEA_VOICE_MODEL_OVERRIDE" \
-    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=production,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=1,MUNEA_CALL_PROTOCOL_REQUIRED=3,MUNEA_VOICE_FACE_DIRECT=1,MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=1,MUNEA_VOICE_ENGINE=31,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-491603544409.asia-east1.run.app" \
+    --update-env-vars "MUNEA_SERVICE=voice,MUNEA_APP_KEY=$KEY,MUNEA_ENV_NAME=production,MUNEA_RELEASE_VERSION=$RELEASE_VERSION,MUNEA_RELEASE_COMMIT=$RELEASE_COMMIT,MUNEA_CALL_CONTROL_URL=https://munea-call-control-fiu65jd4da-de.a.run.app,MUNEA_CALL_CONTROL_REQUIRED=1,MUNEA_CALL_PROTOCOL_REQUIRED=3,MUNEA_VOICE_FACE_DIRECT=1,MUNEA_VOICE_ALLOW_LEGACY_LOCALE_CONTEXT=1,MUNEA_VOICE_ENGINE=$VOICE_ENGINE,MUNEA_VOICE_SHARD_ID=gemini-live-asia-east1-01,MUNEA_BRAIN_INTERNAL_URL=https://munea-brain-491603544409.asia-east1.run.app" \
     --timeout 3600 --session-affinity --memory 1Gi --min-instances 0 --max-instances 2 --concurrency 20 \
     --allow-unauthenticated --quiet
 fi

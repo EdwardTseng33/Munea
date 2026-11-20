@@ -134,6 +134,27 @@ class SupabaseAdapter:
             {"id": f"eq.{family_group_id}", "account_id": f"eq.{self.account_id}", "select": "id"},
         ))
 
+    def account_in_family_group(self, family_group_id):
+        """這個帳號（任何一個沒刪掉的 person）現在還掛在這個家人圈嗎——有效的 family_memberships。
+
+        跨帳號讀家人圈的門檻：被邀進別人圈的人（免費也可以，7/31 起）靠這一列進門；
+        訂閱過期時 reconcile_billing_expiry 會刪掉外部 membership，刪了就進不來。
+        """
+        if not self.enabled() or not self._is_uuid(family_group_id or "") or not self._is_uuid(self.account_id or ""):
+            return False
+        people = self._select("persons", {
+            "account_id": f"eq.{self.account_id}", "deleted_at": "is.null", "select": "id",
+        }) or []
+        person_ids = [p.get("id") for p in people if self._is_uuid(p.get("id") or "")]
+        if not person_ids:
+            return False
+        return bool(self._first("family_memberships", {
+            "family_group_id": f"eq.{family_group_id}",
+            "person_id": f"in.({','.join(person_ids)})",
+            "select": "id",
+            "limit": "1",
+        }))
+
     def is_account_owner(self):
         """Whether the authenticated, request-scoped user owns this account."""
         if not self.request_scoped or not self._is_uuid(self.auth_user_id):
@@ -1355,6 +1376,30 @@ class SupabaseAdapter:
         row = self._first("enterprise_seats", {"id": f"eq.{seat_id}", "select": "*"})
         return self.enterprise_seat_row_to_item(row) if row else None
 
+    def get_enterprise_seat_by_redeem_code(self, code):
+        """033：用開通碼找席次。碼是全表唯一，最多一筆。"""
+        if not self.enabled() or not code:
+            return None
+        row = self._first("enterprise_seats", {"redeem_code": f"eq.{code}", "select": "*"})
+        return self.enterprise_seat_row_to_item(row) if row else None
+
+    def claim_enterprise_seat(self, seat_id, account_id, now_iso):
+        """033：把一席「還沒人認領」的席次綁到帳號——條件寫在同一個 PATCH 裡
+        （account_id 是 null 且 status 還是 pending），兩個人同時輸入同一組碼時，
+        資料庫只會讓其中一個成功；另一個拿到空結果（回 None）。
+        回 False 代表後端沒啟用（呼叫端退本機備援）。"""
+        if not self.enabled():
+            return False
+        if not self._is_uuid(seat_id or "") or not self._is_uuid(account_id or ""):
+            return None
+        rows = self._request(
+            "PATCH", "enterprise_seats",
+            query={"id": f"eq.{seat_id}", "account_id": "is.null", "status": "eq.pending", "select": "*"},
+            payload={"account_id": account_id, "status": "active", "activated_at": now_iso, "redeemed_at": now_iso},
+            prefer="return=representation",
+        )
+        return self.enterprise_seat_row_to_item(rows[0]) if rows else None
+
     def create_enterprise_seat(self, seat):
         if not self.enabled():
             return None
@@ -1377,7 +1422,9 @@ class SupabaseAdapter:
         seat = seat or {}
         row = {
             "enterprise_client_id": seat.get("enterpriseClientId") or seat.get("enterprise_client_id"),
-            "invite_email": str(seat.get("inviteEmail") or seat.get("invite_email") or "").strip().lower(),
+            # 033（2026-11-17）：開通碼席次沒有 email，要送 null 不是空字串——空字串會撞
+            # 「同公司 email 不可重複」的唯一索引（第二席起就寫不進去）。
+            "invite_email": (str(seat.get("inviteEmail") or seat.get("invite_email") or "").strip().lower() or None),
             "account_id": seat.get("accountId") or seat.get("account_id"),
             "status": seat.get("status") or "pending",
             "activated_at": seat.get("activatedAt") or seat.get("activated_at"),
@@ -1392,6 +1439,13 @@ class SupabaseAdapter:
         site_label = seat.get("siteLabel") or seat.get("site_label")
         if site_label:
             row["site_label"] = str(site_label).strip()[:80]
+        # 033：開通碼與機構名冊上的稱呼／手機。同 030 的做法——033 未套用前只在真的有值時才送，
+        # 舊的 email 席次不受影響。
+        for item_key, column in (("redeemCode", "redeem_code"), ("memberName", "member_name"),
+                                 ("memberPhone", "member_phone"), ("redeemedAt", "redeemed_at")):
+            value = seat.get(item_key) or seat.get(column)
+            if value:
+                row[column] = value
         return row
 
     @staticmethod
@@ -1410,6 +1464,10 @@ class SupabaseAdapter:
             "releasedAt": row.get("released_at"),
             "releasedReason": row.get("released_reason"),
             "siteLabel": row.get("site_label"),
+            "redeemCode": row.get("redeem_code"),
+            "memberName": row.get("member_name"),
+            "memberPhone": row.get("member_phone"),
+            "redeemedAt": row.get("redeemed_at"),
             "notes": row.get("notes"),
             "createdAt": row.get("created_at"),
             "updatedAt": row.get("updated_at"),
@@ -2406,6 +2464,31 @@ class SupabaseAdapter:
         )
         return result or {}
 
+    def ensure_free_allowance(self):
+        """補建這個週期的免費額度錢包（034 munea_ensure_free_allowance；冪等）。"""
+        result = self._request(
+            "POST",
+            "rpc/munea_ensure_free_allowance",
+            payload={"p_account_id": self.account_id},
+        )
+        return result or {}
+
+    def load_credit_share_status(self):
+        """免費額度＋家人圈共用分鐘的狀態（034 munea_credit_share_status）。
+
+        成員只拿得到自己那一列用量；名字不在這裡（由後端從家人圈顯示名補）。
+        """
+        if not self.enabled():
+            return None
+        return self._request(
+            "POST",
+            "rpc/munea_credit_share_status",
+            payload={
+                "p_account_id": self.account_id,
+                "p_person_id": self.person_id if self._is_uuid(self.person_id) else None,
+            },
+        )
+
     def save_credits_store(self, store):
         if not self.enabled():
             return None
@@ -2668,6 +2751,50 @@ class SupabaseAdapter:
         )
         return [self.audit_row_to_event(row) for row in rows or []]
 
+    def append_org_audit_event(self, event, keep_account=False):
+        """機構端稽核專用：account_id 一律寫空值。
+        audit_events 的讀取規則讓「帳號成員讀得到自己帳號底下的紀錄」（001）——機構的判定、備註、
+        誰看過誰，都不能掛在長輩家或照護人員自己家的帳號底下，否則那家人用自己的登入就讀得到。
+        失敗一律往外丟（呼叫端據此判定「寫不進就不算數」）。"""
+        if not self.enabled():
+            return None
+        event = event or {}
+        target_id = event.get("targetId") or event.get("target_id")
+        actor = event.get("actorUserId") or event.get("actor_user_id")
+        account = event.get("accountId") or event.get("account_id")
+        row = {
+            "account_id": account if (keep_account and self._is_uuid(account)) else None,
+            "actor_user_id": actor if self._is_uuid(actor) else None,
+            "event_type": event.get("eventType") or event.get("event_type") or "unknown_event",
+            "target_table": event.get("targetTable") or event.get("target_table"),
+            "target_id": target_id if self._is_uuid(target_id) else None,
+            "details": event.get("details") or {},
+        }
+        rows = self._request("POST", "audit_events", query={"select": "*"}, payload=row, prefer="return=representation")
+        if not rows:
+            raise SupabaseRequestError("org audit insert returned no row", error_kind="write_failed")
+        return self.audit_row_to_event(rows[0])
+
+    def load_org_audit_events(self, client_id, event_types, since_iso=None, limit=5000):
+        """機構端稽核（異常提醒的發出／判定、讀取、同意）：照事件種類＋details.clientId 撈。
+        給 org_alerts 用；不帶 account_id 過濾（一家機構跨很多帳號）。"""
+        if not self.enabled():
+            return None
+        types = [str(t) for t in (event_types or []) if t]
+        if not client_id or not types:
+            return []
+        query = {
+            "select": "*",
+            "event_type": "in.(" + ",".join(types) + ")",
+            "details->>clientId": f"eq.{client_id}",
+            "order": "created_at.asc",
+            "limit": str(max(1, min(20000, int(limit or 5000)))),
+        }
+        if since_iso:
+            query["created_at"] = f"gte.{since_iso}"
+        rows = self._request("GET", "audit_events", query=query)
+        return [self.audit_row_to_event(row) for row in rows or []]
+
     def load_product_events(self, since_iso=None, limit=500):
         if not self.enabled():
             return None
@@ -2682,7 +2809,7 @@ class SupabaseAdapter:
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows]
 
-    def load_admin_product_events(self, limit=20000, since_iso=None):
+    def load_admin_product_events(self, limit=20000, since_iso=None, event_name=None):
         """後台看板共用：不篩 account_id，service-role 全表查詢 product_events。
 
         兩種取法，差別在有沒有時間窗：
@@ -2692,7 +2819,7 @@ class SupabaseAdapter:
           最舊那端，不能把剛發生的事截掉。
 
         量體目前還小（表剛開不久），全撈划算；之後量體大了要再依時間分頁，
-        這裡先誠實留一個上限，別無限撈。"""
+        這裡先誠實留一個上限，別無限撈。帶 event_name＝只撈這一種事件。"""
         if not self.enabled():
             return None
         limit = max(1, min(50000, int(limit or 20000)))
@@ -2703,6 +2830,8 @@ class SupabaseAdapter:
         }
         if since_iso:
             query["event_time"] = f"gte.{since_iso}"
+        if event_name:
+            query["event_name"] = f"eq.{event_name}"     # 只撈這一種（例：安全事件頁只要守護事件，#727）
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows or []]
 
@@ -4276,7 +4405,9 @@ class SupabaseAdapter:
     def credit_wallet_to_row(self, wallet):
         wallet = wallet or {}
         wallet_type = wallet.get("type") or wallet.get("walletType") or wallet.get("wallet_type") or "purchased"
-        if wallet_type not in {"included_monthly", "purchased"}:
+        # free_allowance＝免費額度錢包（034）。不認得就降成 purchased 的話，存檔時會在 purchased
+        # 底下多建一個同餘額的錢包（等於憑空多送點數），所以這裡一定要認得它。
+        if wallet_type not in {"included_monthly", "purchased", "free_allowance"}:
             wallet_type = "purchased"
         return {
             "account_id": self.account_id,

@@ -9,6 +9,7 @@ import math
 import os
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -38,7 +39,18 @@ DEFAULT_CLOCK_SKEW_THRESHOLD_SECONDS = 90.0
 # Healthy/ready workers are never touched; a retired worker can always be
 # re-registered. Non-positive disables the behavior.
 DEFAULT_AUTO_RETIRE_SECONDS = 1800.0
+# 手機自己畫臉的虛擬座位（與 call_control_store.ON_DEVICE_FACE_WORKER_ID 同值）。
+ON_DEVICE_FACE_WORKER_ID = "on-device-face"
 UTILIZATION_THRESHOLD = 0.80
+# 2026-11-17：語音線巡邏——真的接一次 Google。
+# 11/8–11/12 正式聊聊四天打不通（工具包自動升版、連線被拒），11/12 晚額度用完又停兩小時，
+# 兩次總機都是好的、所有巡邏燈全綠，都是 Edward 自己撥了才知道。
+# 語音主機有一個自我檢查門 /selftest/live?mode=light（不帶說明書、幾乎不花錢）：
+# 用它自己的鑰匙、自己的模型開一條真的連線，等到第一包聲音才算過。
+# 每 30 分鐘打一次；失敗下一輪馬上再打，連兩次都失敗才報（單次網路抖動不吵人）。
+DEFAULT_VOICE_SELFTEST_INTERVAL_SECONDS = 1800.0
+DEFAULT_VOICE_SELFTEST_TIMEOUT_SECONDS = 30.0
+VOICE_SELFTEST_ALERT_AFTER_FAILURES = 2
 
 
 class MonitorConfigError(ValueError):
@@ -99,6 +111,9 @@ class PollResult:
     # (STATUS 125 defense line 2); empty dict means "not probed", not
     # "clocks are fine" -- evaluate_alerts() never alerts on an empty dict.
     worker_clock_checks: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    # 語音線巡邏的最新結果（VoiceSelftestProbe.check()）。None＝沒設定或還沒打過，
+    # evaluate_alerts() 對 None 不報——「沒巡」不等於「壞了」，也不等於「沒事」。
+    voice_selftest: Mapping[str, object] | None = None
 
 
 def parse_prometheus_metrics(body: str) -> dict[str, float]:
@@ -306,6 +321,91 @@ def _timestamp(value: object) -> float | None:
     return parsed.timestamp()
 
 
+class VoiceSelftestProbe:
+    """定時真的接一次 Google 即時語音；兩次檢查之間沿用上一次的結果。
+
+    成功後隔 interval 才再打；失敗則下一輪馬上重打，連續失敗次數記在結果裡，
+    由 evaluate_alerts() 決定要不要報。狀態只放記憶體：主機冷啟動後第一輪會立刻打一次。
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        key: str,
+        interval_seconds: float = DEFAULT_VOICE_SELFTEST_INTERVAL_SECONDS,
+        timeout_seconds: float = DEFAULT_VOICE_SELFTEST_TIMEOUT_SECONDS,
+        opener: Callable[..., object] = urllib.request.urlopen,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
+        if not base_url.strip():
+            raise MonitorConfigError("MUNEA_VOICE_SELFTEST_URL is required for the voice patrol")
+        if not key.strip():
+            raise MonitorConfigError("MUNEA_APP_KEY is required for the voice patrol")
+        self.url = base_url.rstrip("/") + "/selftest/live?mode=light"
+        self.key = key.strip()
+        self.interval_seconds = interval_seconds
+        self.timeout_seconds = timeout_seconds
+        self.opener = opener
+        self.clock = clock
+        self._last: dict[str, object] | None = None
+        self._next_due = 0.0
+        self._failures = 0
+
+    def _run(self) -> dict[str, object]:
+        request = urllib.request.Request(
+            self.url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "munea-gateway-monitor/1",
+                "X-Munea-Selftest-Key": self.key,
+            },
+            method="GET",
+        )
+        outcome: dict[str, object] = {"ok": False}
+        try:
+            try:
+                response = self.opener(request, timeout=self.timeout_seconds)
+            except urllib.error.HTTPError as exc:
+                # 檢查沒過時語音主機回 503 並附上原因；404＝鑰匙不對或這一版沒有這個門。
+                response = exc
+            with response:
+                status = getattr(response, "status", None) or response.getcode()
+                body = response.read()
+            outcome["http_status"] = status
+            try:
+                payload = json.loads(body.decode("utf-8")) if body else {}
+            except ValueError:
+                payload = {}
+            if isinstance(payload, dict):
+                for name in ("model", "sdk", "error", "detail", "first_audio_ms", "total_ms"):
+                    if payload.get(name) not in (None, ""):
+                        outcome[name] = payload[name]
+                outcome["ok"] = status == 200 and payload.get("ok") is True
+            if not outcome["ok"] and "error" not in outcome:
+                outcome["error"] = "selftest_door_missing_or_key_rejected" if status == 404 else f"HTTP {status}"
+        except Exception as exc:
+            outcome["error"] = type(exc).__name__
+            outcome["detail"] = str(exc)[:200]
+        return outcome
+
+    def check(self) -> dict[str, object]:
+        now = self.clock()
+        if self._last is not None and now < self._next_due:
+            return dict(self._last, fresh=False)
+        outcome = self._run()
+        if outcome["ok"]:
+            self._failures = 0
+            self._next_due = now + self.interval_seconds
+        else:
+            self._failures += 1
+            self._next_due = 0.0  # 失敗就下一輪馬上再確認，不等半小時
+        outcome["consecutive_failures"] = self._failures
+        outcome["checked_at"] = now
+        self._last = outcome
+        return dict(outcome, fresh=True)
+
+
 def evaluate_alerts(
     result: PollResult,
     *,
@@ -399,7 +499,16 @@ def evaluate_alerts(
                 ))
             heartbeat_value = worker.get("last_heartbeat_at")
             heartbeat = _timestamp(heartbeat_value)
-            if status not in terminal_statuses and heartbeat_value not in (None, "") and heartbeat is not None:
+            # 2026-11-17：臉改在手機上畫之後，名冊裡的 on-device-face 是一個「虛擬座位」，
+            # 沒有任何機器會替它回報心跳。把它當成失聯的臉機＝每次冷啟動都發一則假警報。
+            provider = str(worker.get("provider") or worker.get("kind") or "").lower()
+            heartbeatless = worker_id == ON_DEVICE_FACE_WORKER_ID or provider == "on-device"
+            if (
+                not heartbeatless
+                and status not in terminal_statuses
+                and heartbeat_value not in (None, "")
+                and heartbeat is not None
+            ):
                 age = max(0.0, current - heartbeat)
                 if age > stale_heartbeat_seconds:
                     alerts.append(Alert(
@@ -428,6 +537,21 @@ def evaluate_alerts(
                 {"時鐘差(秒)": skew, "警戒線(秒)": clock_skew_threshold_seconds},
             ))
 
+    voice = result.voice_selftest
+    if isinstance(voice, Mapping) and voice.get("ok") is not True:
+        failures = _number(voice.get("consecutive_failures")) or 0
+        if failures >= VOICE_SELFTEST_ALERT_AFTER_FAILURES:
+            fields: dict[str, object] = {"連續失敗次數": int(failures)}
+            for label, name in (("原因", "error"), ("細節", "detail"), ("模型", "model"), ("工具包版本", "sdk")):
+                if voice.get(name) not in (None, ""):
+                    fields[label] = voice[name]
+            alerts.append(Alert(
+                "voice_live_selftest_failed",
+                "critical",
+                "語音線接不上 Google 的即時語音——聊聊撥得通，但寧寧不會出聲",
+                fields,
+            ))
+
     return alerts
 
 
@@ -442,9 +566,11 @@ class GatewayMonitor:
         auto_retire_seconds: float = DEFAULT_AUTO_RETIRE_SECONDS,
         clock: Callable[[], float] = time.time,
         lifecycle_state_path: str | os.PathLike[str] | None = None,
+        voice_selftest: "VoiceSelftestProbe | None" = None,
     ) -> None:
         self.client = client
         self.notifier = notifier
+        self.voice_selftest = voice_selftest
         self.stale_heartbeat_seconds = stale_heartbeat_seconds
         self.clock_skew_threshold_seconds = clock_skew_threshold_seconds
         self.auto_retire_seconds = auto_retire_seconds
@@ -482,6 +608,17 @@ class GatewayMonitor:
 
     def run_once(self) -> dict[str, object]:
         result = self.client.poll()
+        voice_check: dict[str, object] | None = None
+        if self.voice_selftest is not None:
+            voice_check = self.voice_selftest.check()
+            result = PollResult(
+                health=result.health,
+                metrics=result.metrics,
+                health_error=result.health_error,
+                metrics_error=result.metrics_error,
+                worker_clock_checks=result.worker_clock_checks,
+                voice_selftest=voice_check,
+            )
         alerts = evaluate_alerts(
             result,
             now=self.clock(),
@@ -539,6 +676,7 @@ class GatewayMonitor:
         self._save_lifecycle_state()
         return {
             "alert_keys": [alert.key for alert in alerts],
+            "voice_selftest": voice_check,
             "active_alert_keys": sorted(next_active),
             "auto_retire_errors": auto_retire_errors,
             "auto_retired": auto_retired,
@@ -661,6 +799,21 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         timeout_seconds=timeout,
         worker_health_key=worker_health_key,
     )
+    voice_url = os.environ.get("MUNEA_VOICE_SELFTEST_URL", "").strip()
+    voice_probe: VoiceSelftestProbe | None = None
+    if voice_url:
+        # 沒設網址＝不巡語音線（跟以前完全一樣）；設了網址卻沒鑰匙＝設定錯，直接講。
+        voice_probe = VoiceSelftestProbe(
+            voice_url,
+            key=worker_health_key,
+            interval_seconds=_positive_float(
+                "MUNEA_VOICE_SELFTEST_INTERVAL_SECONDS",
+                os.environ.get(
+                    "MUNEA_VOICE_SELFTEST_INTERVAL_SECONDS",
+                    str(DEFAULT_VOICE_SELFTEST_INTERVAL_SECONDS),
+                ),
+            ),
+        )
     notifier: AlertNotifier
     if notify:
         notifier = SlackNotifier(
@@ -678,6 +831,7 @@ def build_monitor_from_env() -> tuple[GatewayMonitor, float]:
         clock_skew_threshold_seconds=clock_skew_threshold,
         auto_retire_seconds=auto_retire_seconds,
         lifecycle_state_path=lifecycle_path or None,
+        voice_selftest=voice_probe,
     ), interval
 
 

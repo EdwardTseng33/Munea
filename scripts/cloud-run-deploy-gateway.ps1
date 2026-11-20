@@ -137,3 +137,4 @@ Write-Host "The durable health gate must report ok=true before traffic promotion
 if ($StrictLocaleContext) {
   Write-Host "Strict LocaleContext is enabled on this 0% canary. Traffic promotion is prohibited until exact-build App E2E passes." -ForegroundColor Yellow
 }
+Write-Host "After traffic moves to the new revision, release the idle min-instance the old tagged revision keeps alive: python deploy/cloudrun/release_stale_warm.py $Service --apply" -ForegroundColor Yellow

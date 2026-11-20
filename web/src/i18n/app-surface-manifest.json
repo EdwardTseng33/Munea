@@ -257,6 +257,15 @@
       "localizationStatus": "integrated"
     },
     {
+      "state": "modal:seat-code",
+      "kind": "modal",
+      "source": "web/index.html",
+      "anchorId": "seatCodeModal",
+      "captureMode": "dom-anchor",
+      "coverageGroup": "purchase",
+      "localizationStatus": "integrated"
+    },
+    {
       "state": "modal:top-up",
       "kind": "modal",
       "source": "web/index.html",

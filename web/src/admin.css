@@ -813,3 +813,8 @@ tr.tr-overdue { background: var(--danger-soft); }
   .stat-tiles { grid-template-columns: 1fr; }
   .kpi-row { grid-template-columns: 1fr; }
 }
+
+/* 開通碼（2026-11-17）：數字等寬、字距拉開，唸給長輩聽或抄寫時不容易看錯 */
+.ent-code{font-variant-numeric:tabular-nums;letter-spacing:.06em;font-weight:600}
+.ent-code-gen>summary{cursor:pointer}
+.ent-code-gen textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line,#d9e2df);border-radius:8px}
