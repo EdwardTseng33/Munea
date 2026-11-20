@@ -84,7 +84,7 @@ function writeText(relativePath, content) {
   }
   source = source.replace(currentPattern, `current: '${VERSION}'`);
 
-  const alreadyRecorded = new RegExp(`version\s*:\s*['"]${VERSION.replace(/\./g, '\.')}['"]`).test(source);
+  const alreadyRecorded = new RegExp(String.raw`version\s*:\s*['"]` + VERSION.replace(/\./g, '\\.') + String.raw`['"]`).test(source);
   if (!alreadyRecorded) {
     let whatsNewTitle = `iOS ${VERSION} (Build ${BUILD}) 發布流程自動建立的最小紀錄`;
     if (WHATS_NEW_FILE) {

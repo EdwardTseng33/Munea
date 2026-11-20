@@ -382,6 +382,40 @@ def build_briefing(region=None, coords=None):
 _GENAI = None
 
 
+# 2026-11-18 換代：gemini-2.5-flash 2026-12-01 停用（官方停用頁 ai.google.dev/gemini-api/docs/deprecations：
+# 之後的請求自動轉到 gemini-3.5-flash-lite，而且 3.x 起 temperature／top_p／top_k 被忽略、下一代會直接回 400）。
+# 這支的三處呼叫（心情觀察、守護腦第二層、本週話題）改成可設定的模型名稱；預設值是換代量測選定的
+# （守護腦換代前後的三項指標見 engine/eval/results/guardian-model-migration-20261118.md）。
+_DEFAULT_GUARDIAN_MODEL = "gemini-3.5-flash-lite"
+_DEFAULT_PERCEPTION_MODEL = "gemini-3.5-flash-lite"
+
+
+def guardian_model():
+    """守護腦第二層用的模型（MUNEA_GUARDIAN_MODEL 可蓋；量尺 run_guardian_metrics 也讀這裡）。"""
+    return (os.environ.get("MUNEA_GUARDIAN_MODEL") or "").strip() or _DEFAULT_GUARDIAN_MODEL
+
+
+def guardian_thinking():
+    """守護腦第二層的思考程度（minimal／low／medium／high；空＝模型預設）。2.x 模型不送。"""
+    return (os.environ.get("MUNEA_GUARDIAN_THINKING") or "").strip().lower()
+
+
+def perception_model():
+    """心情觀察、本週話題用的模型（MUNEA_PERCEPTION_MODEL 可蓋）。"""
+    return (os.environ.get("MUNEA_PERCEPTION_MODEL") or "").strip() or _DEFAULT_PERCEPTION_MODEL
+
+
+def _gen_config(gtypes, model, temperature=None, thinking=None, **kw):
+    """組 GenerateContentConfig：只有 2.x 模型才送 temperature（3.x 起被忽略、之後會回 400）；
+    3.x 的思考程度用 thinking_level（取代舊的 thinking_budget）。"""
+    legacy = model.startswith("gemini-2.")
+    if legacy and temperature is not None:
+        kw["temperature"] = temperature
+    if thinking and not legacy:
+        kw["thinking_config"] = gtypes.ThinkingConfig(thinking_level=thinking.upper())
+    return gtypes.GenerateContentConfig(**kw)
+
+
 def _genai_client():
     global _GENAI
     if _GENAI is None:
@@ -426,11 +460,12 @@ def analyze_conversation_mood(history):
         return None
     from google.genai import types as gtypes
     try:
+        model = perception_model()
         r = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=model,
             contents=[gtypes.Content(role="user", parts=[gtypes.Part(text="長輩這輪說的話：\n" + user_text)])],
-            config=gtypes.GenerateContentConfig(
-                system_instruction=_MOOD_SYS, temperature=0.2, response_mime_type="application/json"),
+            config=_gen_config(gtypes, model, temperature=0.2,
+                               system_instruction=_MOOD_SYS, response_mime_type="application/json"),
         )
         m = json.loads(r.text)
     except Exception:
@@ -478,8 +513,26 @@ _GUARDIAN_SEMANTIC_SYS = """你是沐寧的安全判讀助手（陪伴用、非�
 規則：這是「判讀有沒有值得關心的訊號」不是診斷；寧可保守、拿不準就 none 或 low、confidence 給低；只有明確拐彎透露 high/critical 訊號才給高，且 confidence 要對得起判斷。"""
 
 
+# 呼叫次數與失敗次數（量尺用來確認「沒抓到」不是因為呼叫失敗；失敗時這支回 None、不影響規則層）
+GUARDIAN_REVIEW_STATS = {"calls": 0, "errors": 0, "retries": 0, "lastError": ""}
+
+# 回答格式釘死（2026-11-18 換代實測：3.5-flash-lite 只靠 response_mime_type 時約 1.5% 回來的 JSON 是壞的——
+# 多一個逗號、怪的跳脫字元——壞掉就等於這句沒覆核到。給格式＋壞掉重問一次。）
+_GUARDIAN_SEMANTIC_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "level": {"type": "string", "enum": ["none", "low", "high", "critical"]},
+        "category": {"type": "string",
+                     "enum": ["self_harm", "medical_emergency", "protection", "mental_state", "distress", "none"]},
+        "confidence": {"type": "number"},
+        "reason": {"type": "string"},
+    },
+    "required": ["level", "category", "confidence", "reason"],
+}
+
+
 def guardian_semantic_review(text, recent=None, forced=False):
-    """守護腦第二層：拐彎危機語意判讀（Gemini Flash）。只在第一層規則沒抓到硬危機、但命中軟訊號時才呼叫
+    """守護腦第二層：拐彎危機語意判讀（Gemini Flash 系列，模型見 guardian_model()）。只在第一層規則沒抓到硬危機、但命中軟訊號時才呼叫
     （見 model_router 的 responsePolicy.softSignalForReview）。
     回 {level, category, confidence, reason, source} 或 None——沒訊號／沒 key／失敗都回 None，絕不影響第一層規則層。"""
     if not text or not text.strip():
@@ -489,16 +542,32 @@ def guardian_semantic_review(text, recent=None, forced=False):
         return None
     from google.genai import types as gtypes
     prompt = text if not recent else ("最近幾句：\n" + "\n".join(str(r) for r in recent[-4:]) + "\n\n最新一句：" + text)
-    try:
-        r = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[gtypes.Content(role="user", parts=[gtypes.Part(text=prompt)])],
-            config=gtypes.GenerateContentConfig(
-                system_instruction=_GUARDIAN_SEMANTIC_SYS, temperature=0.1, response_mime_type="application/json"),
-        )
-        d = json.loads(r.text)
-    except Exception:
-        return None
+    model = guardian_model()
+    config = _gen_config(gtypes, model, temperature=0.1, thinking=guardian_thinking(),
+                         system_instruction=_GUARDIAN_SEMANTIC_SYS, response_mime_type="application/json",
+                         response_json_schema=_GUARDIAN_SEMANTIC_SCHEMA)
+    d = None
+    for attempt in range(2):
+        try:
+            r = client.models.generate_content(
+                model=model,
+                contents=[gtypes.Content(role="user", parts=[gtypes.Part(text=prompt)])],
+                config=config,
+            )
+            GUARDIAN_REVIEW_STATS["calls"] += 1
+            d = json.loads(r.text)
+            break
+        except ValueError as e:   # JSON 壞掉（JSONDecodeError 是 ValueError）→ 重問一次
+            GUARDIAN_REVIEW_STATS["lastError"] = ("%s: %s" % (type(e).__name__, e))[:200]
+            if attempt == 0:
+                GUARDIAN_REVIEW_STATS["retries"] += 1
+                continue
+            GUARDIAN_REVIEW_STATS["errors"] += 1
+            return None
+        except Exception as e:  # noqa: BLE001  網路／額度／模型錯誤：不重試（背景執行緒，不能卡住）
+            GUARDIAN_REVIEW_STATS["errors"] += 1
+            GUARDIAN_REVIEW_STATS["lastError"] = ("%s: %s" % (type(e).__name__, e))[:200]
+            return None
     if not isinstance(d, dict):
         return None
     level = d.get("level")
@@ -712,12 +781,13 @@ def fetch_weekly_topics(count=3):
         return []
     from google.genai import types as gtypes
     try:
+        model = perception_model()
         r = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=model,
             contents=f"請找最近適合台灣長輩聊天的話題，最多 {count} 則、類型盡量不同。",
-            config=gtypes.GenerateContentConfig(
-                system_instruction=_TOPICS_SYS, temperature=0.3,
-                tools=[gtypes.Tool(google_search=gtypes.GoogleSearch())]),
+            config=_gen_config(gtypes, model, temperature=0.3,
+                               system_instruction=_TOPICS_SYS,
+                               tools=[gtypes.Tool(google_search=gtypes.GoogleSearch())]),
         )
         text = r.text or ""
         start, end = text.find("{"), text.rfind("}")
