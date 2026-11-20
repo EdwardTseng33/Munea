@@ -11,7 +11,7 @@
     "Voice /chat-test must fail closed in managed cloud environments and requires MUNEA_ENABLE_CHAT_TEST=1 elsewhere."
   ],
   "routeCounts": {
-    "brain": 114,
+    "brain": 122,
     "gateway": 23,
     "voice": 4
   },
@@ -203,6 +203,34 @@
       "surface": "brain",
       "method": "POST",
       "path": "/admin/daily-briefing",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/alerts/export",
+      "auth": "operator",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "scripts/admin-smoke.ps1"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/admin/enterprise/alerts/refresh",
       "auth": "operator",
       "criticality": "high",
       "idempotency": "operation-defined",
@@ -905,7 +933,8 @@
       "pii": "billing",
       "envelope": "json-object",
       "tests": [
-        "scripts/test_call_control.py"
+        "scripts/test_call_control.py",
+        "engine/test_family_shared_minutes.py"
       ]
     },
     {
@@ -919,7 +948,8 @@
       "pii": "billing",
       "envelope": "json-object",
       "tests": [
-        "scripts/test_call_control_sql.py"
+        "scripts/test_call_control_sql.py",
+        "engine/test_family_shared_minutes.py"
       ]
     },
     {
@@ -988,7 +1018,8 @@
       "envelope": "json-object",
       "tests": [
         "scripts/test-store-verification.js",
-        "engine/test_subscription_expiry.py"
+        "engine/test_subscription_expiry.py",
+        "engine/test_family_shared_minutes.py"
       ]
     },
     {
@@ -1038,6 +1069,20 @@
       "pii": "account",
       "envelope": "json-object",
       "tests": []
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/family/membership",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_family_membership.py"
+      ]
     },
     {
       "surface": "brain",
@@ -1178,6 +1223,48 @@
     {
       "surface": "brain",
       "method": "POST",
+      "path": "/org/alert/mark",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_alerts.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/alerts",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "health",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_alerts.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/audit",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_alerts.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
       "path": "/org/elder/care-week",
       "auth": "user",
       "criticality": "high",
@@ -1229,6 +1316,34 @@
       "envelope": "json-object",
       "tests": [
         "engine/test_org_api.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/settings",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_alerts.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/org/settings/save",
+      "auth": "user",
+      "criticality": "high",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "account",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_org_alerts.py"
       ]
     },
     {
@@ -1470,6 +1585,21 @@
       "tests": [
         "engine/test_voice_call_memory.py",
         "scripts/test_voice_chain_probe.py"
+      ]
+    },
+    {
+      "surface": "brain",
+      "method": "POST",
+      "path": "/voice/guardian-event",
+      "auth": "internal",
+      "criticality": "critical",
+      "idempotency": "operation-defined",
+      "rateLimit": "none",
+      "pii": "conversation",
+      "envelope": "json-object",
+      "tests": [
+        "engine/test_voice_guardian_brain_route.py",
+        "engine/test_safety_contacts_notify.py"
       ]
     },
     {

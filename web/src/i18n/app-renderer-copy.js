@@ -237,6 +237,13 @@
       if (currentPlan === selectedPlan) {
         return t('subscription.currentPlanCta', { plan: selectedLabel });
       }
+      // 還沒訂閱的人：「訂閱 Plus・（價格）／月」（2026-11-20 設計稿），不是「升級」
+      if (currentPlan === 'free') {
+        return t('subscription.subscribeTo', {
+          plan: selectedLabel,
+          price: String(value.price || '').trim(),
+        });
+      }
       return t(
         PLAN_RANK[selectedPlan] > PLAN_RANK[currentPlan]
           ? 'subscription.upgradeTo'

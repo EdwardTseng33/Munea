@@ -207,7 +207,7 @@ def _criticality(route: Route) -> str:
         "/auth-status", "/credits/balance", "/credits/consume", "/credits/grant",
         "/entitlements", "/privacy-export", "/subscription-event",
         "/voice/call-memory", "/voice/call-recap", "/voice/health-context",
-        "/voice/health-recommended",
+        "/voice/health-recommended", "/voice/guardian-event",
     }
     if route.surface == "gateway" and route.path.startswith(("/v1/calls", "/v1/internal/calls", "/v1/internal/reap")):
         return "critical"
@@ -269,7 +269,7 @@ def _pii(route: Route) -> str:
         return "aggregate-only"
     if route.surface == "brain" and path == "/org/summary":
         return "aggregate-only"
-    if route.surface == "brain" and path in {"/org/elders", "/org/elder/care-week"}:
+    if route.surface == "brain" and path in {"/org/elders", "/org/elder/care-week", "/org/alerts", "/org/alert/mark"}:
         # Consented elders only; org_api.assert_no_forbidden strips sentences, summaries and identifiers.
         return "health"
     if any(token in path for token in ("credits", "subscription", "apple/transaction", "entitlements")):
@@ -316,11 +316,12 @@ def _tests(route: Route) -> list[str]:
     mapping = {
         "/account-bootstrap": ["scripts/auth-gate-smoke.ps1", "scripts/test-native-auth.js"],
         "/account-deletion": ["engine/test_privacy_export.py"],
+        "/family/membership": ["engine/test_family_membership.py"],
         "/apple/notifications": ["engine/test_apple_store.py"],
         "/apple/transaction": ["engine/test_apple_store.py", "scripts/test-store-verification.js"],
         "/auth-status": ["scripts/auth-gate-smoke.ps1"],
-        "/credits/balance": ["scripts/test_call_control.py"],
-        "/credits/consume": ["scripts/test_call_control_sql.py"],
+        "/credits/balance": ["scripts/test_call_control.py", "engine/test_family_shared_minutes.py"],
+        "/credits/consume": ["scripts/test_call_control_sql.py", "engine/test_family_shared_minutes.py"],
         "/credits/grant": ["scripts/test_call_control_sql.py"],
         "/enterprise/portal/report": ["engine/test_org_portal_monthly.py"],
         "/org/me": ["engine/test_org_api.py"],
@@ -328,17 +329,23 @@ def _tests(route: Route) -> list[str]:
         "/org/elders": ["engine/test_org_api.py"],
         "/org/elder/care-week": ["engine/test_org_api.py"],
         "/org/reports": ["engine/test_org_api.py"],
+        "/org/alerts": ["engine/test_org_alerts.py"],
+        "/org/alert/mark": ["engine/test_org_alerts.py"],
+        "/org/audit": ["engine/test_org_alerts.py"],
+        "/org/settings": ["engine/test_org_alerts.py"],
+        "/org/settings/save": ["engine/test_org_alerts.py"],
         "/org-consent": ["engine/test_org_api.py"],
         "/org-consent/set": ["engine/test_org_api.py"],
         "/enterprise/portal/summary": [
             "engine/test_org_portal.py", "engine/test_org_portal_endpoints.py", "engine/test_org_portal_monthly.py",
         ],
-        "/entitlements": ["scripts/test-store-verification.js", "engine/test_subscription_expiry.py"],
+        "/entitlements": ["scripts/test-store-verification.js", "engine/test_subscription_expiry.py", "engine/test_family_shared_minutes.py"],
         "/privacy-export": ["engine/test_privacy_export.py"],
         "/subscription-event": ["engine/test_subscription_expiry.py", "scripts/test-store-verification.js"],
         "/voice/call-memory": ["engine/test_voice_call_memory.py", "scripts/test_voice_chain_probe.py"],
         "/voice/call-recap": ["engine/test_voice_call_memory.py", "scripts/test_voice_chain_probe.py"],
         "/voice/health-context": ["engine/test_voice_health_context.py", "scripts/test_voice_chain_probe.py"],
+        "/voice/guardian-event": ["engine/test_voice_guardian_brain_route.py", "engine/test_safety_contacts_notify.py"],
         "/voice/health-recommended": ["engine/test_health_followup.py"],
     }
     return mapping.get(path, [])

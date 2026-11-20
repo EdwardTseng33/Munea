@@ -68,8 +68,31 @@ async function main() {
     "google-site-verification: googleaa0c51d3d9781eb5.html",
   );
 
+  // 2026-11-18 指南：列表頁與文章都要真的回 200、語系正確
+  for (const [pathname, lang] of [
+    ["/guide", "zh-Hant-TW"],
+    ["/guide/topics-to-talk-with-elderly-parents", "zh-Hant-TW"],
+    ["/en/guide", "en"],
+    ["/en/guide/ai-companion-for-seniors", "en"],
+    ["/ja/guide", "ja"],
+    ["/ja/guide/mimamori-app-guide", "ja"],
+  ]) {
+    const response = await request(pathname);
+    assert.equal(response.status, 200, `${pathname} must return 200`);
+    assert.match(await response.text(), new RegExp(`<html\\s+lang="${lang}"`), `${pathname} must serve lang=${lang}`);
+  }
+
+  // 舊定位頁（取藥櫃／藥師把關）下架：舊網址永久轉到機構頁，不留死連結
+  for (const pathname of ["/solutions.html", "/solutions"]) {
+    const response = await request(pathname);
+    assert.equal(response.status, 301, `${pathname} must permanently redirect`);
+    assert.equal(response.headers.get("location"), "/for-organizations");
+  }
+
   const missing = await request("/this-page-must-not-exist-munea");
   assert.equal(missing.status, 404, "Unknown paths must not become false 200 responses");
+  // 找不到頁面要是沐寧自己的頁（有回首頁的路），不是主機預設的英文開發者訊息
+  assert.match(await missing.text(), /沐寧/, "404 must be the branded Munea page");
 
   console.log("[ok] Firebase Hosting routes passed");
 }

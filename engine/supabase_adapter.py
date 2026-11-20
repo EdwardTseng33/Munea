@@ -134,6 +134,27 @@ class SupabaseAdapter:
             {"id": f"eq.{family_group_id}", "account_id": f"eq.{self.account_id}", "select": "id"},
         ))
 
+    def account_in_family_group(self, family_group_id):
+        """這個帳號（任何一個沒刪掉的 person）現在還掛在這個家人圈嗎——有效的 family_memberships。
+
+        跨帳號讀家人圈的門檻：被邀進別人圈的人（免費也可以，7/31 起）靠這一列進門；
+        訂閱過期時 reconcile_billing_expiry 會刪掉外部 membership，刪了就進不來。
+        """
+        if not self.enabled() or not self._is_uuid(family_group_id or "") or not self._is_uuid(self.account_id or ""):
+            return False
+        people = self._select("persons", {
+            "account_id": f"eq.{self.account_id}", "deleted_at": "is.null", "select": "id",
+        }) or []
+        person_ids = [p.get("id") for p in people if self._is_uuid(p.get("id") or "")]
+        if not person_ids:
+            return False
+        return bool(self._first("family_memberships", {
+            "family_group_id": f"eq.{family_group_id}",
+            "person_id": f"in.({','.join(person_ids)})",
+            "select": "id",
+            "limit": "1",
+        }))
+
     def is_account_owner(self):
         """Whether the authenticated, request-scoped user owns this account."""
         if not self.request_scoped or not self._is_uuid(self.auth_user_id):
@@ -2443,6 +2464,31 @@ class SupabaseAdapter:
         )
         return result or {}
 
+    def ensure_free_allowance(self):
+        """補建這個週期的免費額度錢包（034 munea_ensure_free_allowance；冪等）。"""
+        result = self._request(
+            "POST",
+            "rpc/munea_ensure_free_allowance",
+            payload={"p_account_id": self.account_id},
+        )
+        return result or {}
+
+    def load_credit_share_status(self):
+        """免費額度＋家人圈共用分鐘的狀態（034 munea_credit_share_status）。
+
+        成員只拿得到自己那一列用量；名字不在這裡（由後端從家人圈顯示名補）。
+        """
+        if not self.enabled():
+            return None
+        return self._request(
+            "POST",
+            "rpc/munea_credit_share_status",
+            payload={
+                "p_account_id": self.account_id,
+                "p_person_id": self.person_id if self._is_uuid(self.person_id) else None,
+            },
+        )
+
     def save_credits_store(self, store):
         if not self.enabled():
             return None
@@ -2705,6 +2751,50 @@ class SupabaseAdapter:
         )
         return [self.audit_row_to_event(row) for row in rows or []]
 
+    def append_org_audit_event(self, event, keep_account=False):
+        """機構端稽核專用：account_id 一律寫空值。
+        audit_events 的讀取規則讓「帳號成員讀得到自己帳號底下的紀錄」（001）——機構的判定、備註、
+        誰看過誰，都不能掛在長輩家或照護人員自己家的帳號底下，否則那家人用自己的登入就讀得到。
+        失敗一律往外丟（呼叫端據此判定「寫不進就不算數」）。"""
+        if not self.enabled():
+            return None
+        event = event or {}
+        target_id = event.get("targetId") or event.get("target_id")
+        actor = event.get("actorUserId") or event.get("actor_user_id")
+        account = event.get("accountId") or event.get("account_id")
+        row = {
+            "account_id": account if (keep_account and self._is_uuid(account)) else None,
+            "actor_user_id": actor if self._is_uuid(actor) else None,
+            "event_type": event.get("eventType") or event.get("event_type") or "unknown_event",
+            "target_table": event.get("targetTable") or event.get("target_table"),
+            "target_id": target_id if self._is_uuid(target_id) else None,
+            "details": event.get("details") or {},
+        }
+        rows = self._request("POST", "audit_events", query={"select": "*"}, payload=row, prefer="return=representation")
+        if not rows:
+            raise SupabaseRequestError("org audit insert returned no row", error_kind="write_failed")
+        return self.audit_row_to_event(rows[0])
+
+    def load_org_audit_events(self, client_id, event_types, since_iso=None, limit=5000):
+        """機構端稽核（異常提醒的發出／判定、讀取、同意）：照事件種類＋details.clientId 撈。
+        給 org_alerts 用；不帶 account_id 過濾（一家機構跨很多帳號）。"""
+        if not self.enabled():
+            return None
+        types = [str(t) for t in (event_types or []) if t]
+        if not client_id or not types:
+            return []
+        query = {
+            "select": "*",
+            "event_type": "in.(" + ",".join(types) + ")",
+            "details->>clientId": f"eq.{client_id}",
+            "order": "created_at.asc",
+            "limit": str(max(1, min(20000, int(limit or 5000)))),
+        }
+        if since_iso:
+            query["created_at"] = f"gte.{since_iso}"
+        rows = self._request("GET", "audit_events", query=query)
+        return [self.audit_row_to_event(row) for row in rows or []]
+
     def load_product_events(self, since_iso=None, limit=500):
         if not self.enabled():
             return None
@@ -2719,7 +2809,7 @@ class SupabaseAdapter:
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows]
 
-    def load_admin_product_events(self, limit=20000, since_iso=None):
+    def load_admin_product_events(self, limit=20000, since_iso=None, event_name=None):
         """後台看板共用：不篩 account_id，service-role 全表查詢 product_events。
 
         兩種取法，差別在有沒有時間窗：
@@ -2729,7 +2819,7 @@ class SupabaseAdapter:
           最舊那端，不能把剛發生的事截掉。
 
         量體目前還小（表剛開不久），全撈划算；之後量體大了要再依時間分頁，
-        這裡先誠實留一個上限，別無限撈。"""
+        這裡先誠實留一個上限，別無限撈。帶 event_name＝只撈這一種事件。"""
         if not self.enabled():
             return None
         limit = max(1, min(50000, int(limit or 20000)))
@@ -2740,6 +2830,8 @@ class SupabaseAdapter:
         }
         if since_iso:
             query["event_time"] = f"gte.{since_iso}"
+        if event_name:
+            query["event_name"] = f"eq.{event_name}"     # 只撈這一種（例：安全事件頁只要守護事件，#727）
         rows = self._select("product_events", query)
         return [self.product_event_row_to_event(row) for row in rows or []]
 
@@ -3108,6 +3200,41 @@ class SupabaseAdapter:
             "limit": "100",
         })
         return len(rows or [])
+
+    def family_group_owner_account_unscoped(self, family_group_id):
+        """建立這個圈的帳號（family_groups.account_id）。找不到回 None。"""
+        if not self.enabled() or not self._is_uuid(family_group_id or ""):
+            return None
+        group = self._first("family_groups", {"id": f"eq.{family_group_id}", "select": "account_id"}) or {}
+        account_id = group.get("account_id")
+        return account_id if self._is_uuid(account_id or "") else None
+
+    def delete_family_membership_unscoped(self, family_group_id, person_id):
+        """刪掉「某人在某個圈」的成員關係（只刪這一對）。回刪了幾筆。
+
+        誰能刪誰由呼叫端（server.family_membership_response）判斷；這裡只做資料動作。
+        伺服器決定誰看得到誰的健康紀錄，看的就是這張表——刪掉才是真的「不再看得到」。"""
+        if not self.enabled() or not self._is_uuid(family_group_id or "") or not self._is_uuid(person_id or ""):
+            return 0
+        rows = self._request(
+            "DELETE",
+            "family_memberships",
+            query={
+                "family_group_id": f"eq.{family_group_id}",
+                "person_id": f"eq.{person_id}",
+                "select": "id",
+            },
+            prefer="return=representation",
+        )
+        return len(rows or [])
+
+    def own_family_group_id_unscoped(self):
+        """這個帳號自己建立的圈（退出別人的圈之後回到這裡）。"""
+        if not self.enabled():
+            return None
+        group = self._first("family_groups", {"account_id": f"eq.{self.account_id}", "select": "id", "limit": "1"}) or {}
+        group_id = group.get("id")
+        return group_id if self._is_uuid(group_id or "") else None
 
     def add_family_member_after_invitation_unscoped(self, family_group_id, person_id):
         """Attach the authenticated invitee to the inviter's group exactly once."""
@@ -4313,7 +4440,9 @@ class SupabaseAdapter:
     def credit_wallet_to_row(self, wallet):
         wallet = wallet or {}
         wallet_type = wallet.get("type") or wallet.get("walletType") or wallet.get("wallet_type") or "purchased"
-        if wallet_type not in {"included_monthly", "purchased"}:
+        # free_allowance＝免費額度錢包（034）。不認得就降成 purchased 的話，存檔時會在 purchased
+        # 底下多建一個同餘額的錢包（等於憑空多送點數），所以這裡一定要認得它。
+        if wallet_type not in {"included_monthly", "purchased", "free_allowance"}:
             wallet_type = "purchased"
         return {
             "account_id": self.account_id,

@@ -167,22 +167,22 @@ const policyPatterns = {
   'zh-TW': {
     monthly: /不會累積/,
     purchased: /不會到期/,
-    trial: /一次 5 分鐘/,
+    trial: /前 7 天每天可以聊 10 分鐘/,
   },
   en: {
     monthly: /do not roll over/i,
     purchased: /do not expire/i,
-    trial: /one 5-minute trial/i,
+    trial: /10 minutes a day for the first 7 days/i,
   },
   ja: {
     monthly: /繰り越されません/,
     purchased: /有効期限はありません/,
-    trial: /1回限り5分間/,
+    trial: /最初の7日間は毎日10分/,
   },
   es: {
     monthly: /no se acumulan/i,
     purchased: /no caducan/i,
-    trial: /única prueba de 5 minutos/i,
+    trial: /10 minutos al día durante los primeros 7 días/i,
   },
 };
 

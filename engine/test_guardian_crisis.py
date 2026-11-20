@@ -202,7 +202,7 @@ def run_voice_line_simulation():
         calls["record"] += 1
         return payload
 
-    def fake_alert(kind, where, detail):
+    def fake_alert(kind, where, detail, **kw):  # 正式的 notify.alert 還收 critical／wait
         time.sleep(0.03)
         calls["alert"] += 1
 

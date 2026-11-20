@@ -1143,6 +1143,33 @@ _MEDICAL_RE += [_re.compile(p) for p in (
 _GUARDIAN_REVIEW_ALL = _os.environ.get("MUNEA_GUARDIAN_REVIEW_ALL", "1").strip() != "0"
 
 
+# 只用來「擋住通知家人」、不改分級與類別的受暴說法（不影響危機辨識的召回／誤報量測）。
+# 2026-11-18 #717 第二張：這裡只是線索——到要通知家人那一刻，AI 會看整通再決定（live_voice_server 的 AI 裁判），
+# AI 沒回才照這裡走。所以寧可窄一點：誤擋一句平常話，整通都不會通知家人。
+_PROTECTION_MENTION_ONLY_RE = [_re.compile(p) for p in (
+    r"把我的?錢.{0,6}(拿走|拿去|騙走|搶走|偷走)",
+    r"錢.{0,4}被.{0,6}(拿走|拿去|騙走|搶走|偷)",
+    # 家人和「打我」中間不能有否定字（「我兒子從來不會打我」不算）；「罵我」拿掉（「我女兒罵我都不吃藥」是關心）
+    r"(兒子|女兒|媳婦|女婿|孫子|孫女|老公|老婆|先生|太太|家人)[^不沒未別]{0,4}(打我|揍我|推我|鎖我|不給我吃)",
+    # 2026-11-18 #717 複審：「我兒子一直對我動手」；「動手術」不算
+    r"對我(動手|動粗)(?!術)",
+    # 「是我兒子打的」只認子句開頭：前面緊貼別的東西（「電話是我兒子打的」「字是我孫子打的」）不算，
+    # 後面緊貼東西（「是我兒子打的電話」）也不算。以前是整段裡有電話／119／救護車就整條失效——
+    # 「是我兒子打的，我要叫救護車」反而認不出來（#717 第二張）
+    r"(?:^|[，,。.！!？?、；;：:\s])是?我?的?(兒子|女兒|媳婦|女婿|孫子|孫女|老公|老婆|先生|太太|家人|看護|外勞)(打|揍|踢)的"
+    r"(?!(電話|手機|字|針|蛋|結|毛衣|球|牌|麻將|招呼|疫苗|line|視訊|簡訊|訊息))",
+)]
+
+
+def guardian_mentions_protection(text):
+    """這句話有沒有提到受暴、被遺棄、被剝削（不管它最後被標成哪一類）。給第二層 AI 那條路用：
+    AI 判成急症或想不開的句子，只要提到受暴就一樣不通知家人。"""
+    try:
+        return bool(guardian_evaluate_response({"text": str(text or ""), "effort": "quick"})["risk"].get("protectionMentioned"))
+    except Exception:
+        return False
+
+
 def guardian_evaluate_response(data):
     text = text_from_payload(data)
     categories = []
@@ -1268,6 +1295,12 @@ def guardian_evaluate_response(data):
             level = "low"
             action = "supportive_check_in"
 
+    # 2026-11-18（#717 信任關卡）：每句只標一個類別、先中先贏，受暴只在沒中自殺／急症時才標得出來。
+    # 「他打我，我胸口好痛」「被家暴好想死」會被標成急症／想不開 → 本來會通知家人，而家人可能就是加害人。
+    # 所以另外獨立看一次：句子裡只要提到受暴受剝削，就一律不自動通知家庭圈（類別與分級照舊）。
+    protection_mentioned = (protection_event or _guardian_find(protection_terms, _PROTECTION_RE, scrubbed) is not None
+                            or any(p.search(scrubbed) for p in _PROTECTION_MENTION_ONLY_RE))
+
     # 第一層沒抓到硬危機、但話裡有拐彎苗頭 → 標記給第二層 AI 判語意（見 perception_engine.guardian_semantic_review）
     # 講別人的急症／想不開也走這條：不中斷通話，但讓 AI 看前後文決定要不要關心
     keyword_gated = about_someone_else or _guardian_soft_signal(scrubbed, soft_signal_terms) or _guardian_soft_signal(lowered, ())
@@ -1287,6 +1320,7 @@ def guardian_evaluate_response(data):
             "categories": categories,
             "action": action,
             "protectionEvent": protection_event,
+            "protectionMentioned": protection_mentioned,
             "requiresHumanEscalation": level in {"high", "critical"},
             "requiresAuditEvent": level in {"medium", "high", "critical"},
         },
@@ -1294,7 +1328,7 @@ def guardian_evaluate_response(data):
             "notMedicalDiagnosis": True,
             "reflexCanContinue": level not in {"high", "critical"},
             # 保護事件加害人可能是家人 → 不自動通知家庭圈，改走 113／可信任第三人
-            "familyNotificationCandidate": level in {"high", "critical"} and not protection_event,
+            "familyNotificationCandidate": level in {"high", "critical"} and not protection_mentioned,
             "doNotReinforceDelusion": "mental_state_abnormal" in categories,
             "protectionLine": "113" if protection_event else None,
             "softSignalForReview": soft_signal_for_review,

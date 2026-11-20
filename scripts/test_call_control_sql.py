@@ -10,11 +10,17 @@ SQL = SQL_PATH.read_text(encoding="utf-8")
 NORMALIZED_SQL = re.sub(r"\s+", "", SQL.lower())
 
 
-def function_body(name: str) -> str:
+# 034 用 create or replace 換掉了 munea_call_request／munea_call_consume_credit 的內容
+#（家人圈共用分鐘＋免費額度）。資料庫實際跑的是 034 的版本，原子性守門兩份都要查。
+SHARED_SQL_PATH = ROOT / "supabase" / "sql" / "034_family_shared_minutes_daily_free.sql"
+SHARED_SQL = SHARED_SQL_PATH.read_text(encoding="utf-8")
+
+
+def function_body(name: str, sql: str = SQL) -> str:
     match = re.search(
         rf"create\s+or\s+replace\s+function\s+public\.{name}\s*\(.*?"
         rf"\)\s+returns\s+.*?\bas\s+\$\$(.*?)\$\$;",
-        SQL,
+        sql,
         flags=re.IGNORECASE | re.DOTALL,
     )
     assert match, f"missing function body: {name}"
@@ -64,6 +70,48 @@ def test_credit_reservation_is_atomic_with_consumption() -> None:
     )
 
 
+def test_034_shared_minutes_keeps_reservation_atomic() -> None:
+    request = function_body("munea_call_request", SHARED_SQL)
+    consume = function_body("munea_call_consume_credit", SHARED_SQL)
+
+    assert_in_order(
+        request,
+        "hashtextextended(v_account_id::text, 724338221)",
+        "perform public.munea_ensure_free_allowance(v_account_id)",
+        "v_share := public.munea_family_share_owner(v_account_id, p_person_id)",
+        "hashtextextended(v_owner::text, 724338221)",
+        "from public.credit_wallets w",
+        "for update",
+        "select coalesce(sum(w.balance),0) into v_available",
+        "select coalesce(sum(amount),0) into v_holds",
+        "if v_available - v_holds < 1",
+        "insert into public.call_credit_holds",
+    )
+    assert_in_order(
+        consume,
+        "hashtextextended(p_account_id::text, 724338221)",
+        "perform public.munea_ensure_free_allowance(p_account_id)",
+        "hashtextextended(v_owner::text, 724338221)",
+        "from public.credit_wallets w",
+        "for update",
+        "select coalesce(sum(w.balance), 0) into v_available",
+        "select coalesce(sum(amount), 0) into v_holds",
+        "and call_id <> p_call_id",
+        "if v_available - v_holds < 1",
+        "update public.credit_wallets",
+    )
+    # 扣點順序：自己的免費額度 → 圈主 → 自己其他錢包；圈主的免費額度不分出去。
+    assert_in_order(
+        consume,
+        "when w.account_id = p_account_id and w.wallet_type = 'free_allowance' then 0",
+        "when v_owner is not null and w.account_id = v_owner then 1",
+        "else 2",
+    )
+    assert "w.account_id = v_owner and w.wallet_type <> 'free_allowance'" in consume
+    # 交易記在錢包所屬帳號上、person_id 永遠是來電者。
+    assert "v_wallet.account_id, v_person, v_wallet.id, 'consume'" in consume
+
+
 def test_reaper_bills_before_releasing_capacity() -> None:
     reaper = function_body("munea_call_reap_expired")
     assert "ceil(greatest(0, extract(epoch from (now() - v_row.active_at))) / 60.0)" in reaper
@@ -100,6 +148,7 @@ def main() -> None:
     tests = [
         test_release_signature_matches_definition,
         test_credit_reservation_is_atomic_with_consumption,
+        test_034_shared_minutes_keeps_reservation_atomic,
         test_reaper_bills_before_releasing_capacity,
         test_final_release_bills_before_releasing_capacity,
     ]
