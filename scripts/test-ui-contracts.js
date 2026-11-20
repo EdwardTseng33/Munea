@@ -949,6 +949,7 @@ require('./test-purchase-flow-localizations.js');
 require('./test-purchase-flow-view-model.js');
 require('./test-app-screen-localizations.js');
 require('./test-app-binding-runtime.js');
+require('./test-topics-sheet-skip.js');
 require('./test-app-i18n-binding-manifest.js');
 require('./test-app-surface-manifest.js');
 require('./test-app-surface-copy-manifest.js');

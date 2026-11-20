@@ -128,19 +128,28 @@ for (const locale of ['en', 'ja', 'es']) {
   );
 }
 
-const verifiedAppStoreUrl = 'https://apps.apple.com/tw/app/id6788658125';
+// 2026-11-18: Munea is live in the TW, US, CA and JP storefronts (iTunes lookup).
+// The country-neutral URL lets each iPhone open its own storefront (Safari on
+// iOS redirects it to itms-appss://apps.apple.com/app/id6788658125); a /tw/ link
+// would pin US/CA/JP accounts to the Taiwan storefront.
+const verifiedAppStoreUrl = 'https://apps.apple.com/app/id6788658125';
 assert.equal(
   config.appStoreUrl,
   verifiedAppStoreUrl,
-  'The public site must keep the verified Taiwan App Store URL for Munea',
+  'The public site must keep the verified country-neutral App Store URL for Munea',
 );
 for (const item of locales) {
   const html = fs.readFileSync(path.join(SITE_OUTPUT, item.output), 'utf8');
   const appStoreLinks = [
     ...html.matchAll(
-      /<a\b[^>]*href=["']https:\/\/apps\.apple\.com\/tw\/app\/id6788658125["'][^>]*>/gi,
+      /<a\b[^>]*href=["']https:\/\/apps\.apple\.com\/app\/id6788658125["'][^>]*>/gi,
     ),
   ];
+  assert.doesNotMatch(
+    html,
+    /apps\.apple\.com\/[a-z]{2}\/app\//i,
+    `${item.output} must not pin visitors to one country's App Store`,
+  );
   assert.equal(
     appStoreLinks.length,
     3,
