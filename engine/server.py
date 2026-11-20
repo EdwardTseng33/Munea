@@ -1049,19 +1049,21 @@ def family_state_response(data):
     group = str(data.get("familyGroupId") or data.get("family_group_id") or "shared")
     group_uuid = group if _looks_like_uuid(group) else None
     use_supabase = bool(group_uuid) or group == "shared"
-    # A former subscriber must never retain read access merely because an
-    # asynchronous membership cleanup has not run yet.  Their own free circle
-    # remains usable; only a cross-account circle is denied.
+    # 別的帳號的圈：要有「現在還有效的 family_memberships」才進得來。
+    # 7/14 原本用「自己是免費就擋」，但 7/31 起免費也能被邀進別人的圈（用圈主的名額），
+    # 那條會把免費爸媽擋在子女的圈外（2026-11-20 改）。要防的情況不變：訂閱過期的人，
+    # reconcile_billing_expiry 會刪掉他的外部 membership → 沒有 membership 就擋。
+    # 自己的圈不受影響。
     if group_uuid:
         try:
             backend = data_backend()
             if backend.enabled():
                 family_account_id = backend.family_group_account_id(group_uuid)
-                billing = load_billing_store()
-                if family_account_id and family_account_id != backend.account_id and billing.get("activePlan") == "free":
+                if family_account_id and family_account_id != backend.account_id \
+                        and not backend.account_in_family_group(group_uuid):
                     return {"ok": False, "error": "family_access_expired"}
         except Exception as e:
-            log_fallback_exception("check expired cross-family access", e)
+            log_fallback_exception("check cross-family membership access", e)
     if action == "save":
         key = data.get("key")
         if key not in FAMILY_STATE_KEYS:

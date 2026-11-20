@@ -134,6 +134,27 @@ class SupabaseAdapter:
             {"id": f"eq.{family_group_id}", "account_id": f"eq.{self.account_id}", "select": "id"},
         ))
 
+    def account_in_family_group(self, family_group_id):
+        """這個帳號（任何一個沒刪掉的 person）現在還掛在這個家人圈嗎——有效的 family_memberships。
+
+        跨帳號讀家人圈的門檻：被邀進別人圈的人（免費也可以，7/31 起）靠這一列進門；
+        訂閱過期時 reconcile_billing_expiry 會刪掉外部 membership，刪了就進不來。
+        """
+        if not self.enabled() or not self._is_uuid(family_group_id or "") or not self._is_uuid(self.account_id or ""):
+            return False
+        people = self._select("persons", {
+            "account_id": f"eq.{self.account_id}", "deleted_at": "is.null", "select": "id",
+        }) or []
+        person_ids = [p.get("id") for p in people if self._is_uuid(p.get("id") or "")]
+        if not person_ids:
+            return False
+        return bool(self._first("family_memberships", {
+            "family_group_id": f"eq.{family_group_id}",
+            "person_id": f"in.({','.join(person_ids)})",
+            "select": "id",
+            "limit": "1",
+        }))
+
     def is_account_owner(self):
         """Whether the authenticated, request-scoped user owns this account."""
         if not self.request_scoped or not self._is_uuid(self.auth_user_id):
