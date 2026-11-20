@@ -67,12 +67,13 @@ class LookupModelChainDefaultOrderTests(unittest.TestCase):
         for name in ("MUNEA_LOOKUP_MODEL", "MUNEA_LOOKUP_PER_MODEL_SECONDS"):
             os.environ.pop(name, None)
 
-    def test_default_primary_is_gemini_2_5_flash(self):
-        """2026-07-25 反悔：2.5-flash 當主力，3.1-flash-lite 退回備援。"""
+    def test_default_primary_is_gemini_3_5_flash_lite(self):
+        """2026-07-25 反悔：2.5-flash 當主力，3.1-flash-lite 退回備援。
+        2026-11-18：2.5-flash 12/1 停用，主力換 3.5-flash-lite（官方指定接替），備援不變。"""
         default = os.environ.get(
-            "MUNEA_LOOKUP_MODEL", "gemini-2.5-flash,gemini-3.1-flash-lite")
+            "MUNEA_LOOKUP_MODEL", "gemini-3.5-flash-lite,gemini-3.1-flash-lite")
         models = [m.strip() for m in default.split(",") if m.strip()]
-        self.assertEqual(models[0], "gemini-2.5-flash")
+        self.assertEqual(models[0], "gemini-3.5-flash-lite")
         self.assertIn("gemini-3.1-flash-lite", models[1:])
 
     def test_source_wires_default_model_order(self):
@@ -81,8 +82,10 @@ class LookupModelChainDefaultOrderTests(unittest.TestCase):
         src_path = os.path.join(os.path.dirname(__file__), "live_voice_server.py")
         with open(src_path, encoding="utf-8") as f:
             src = f.read()
-        self.assertIn('"MUNEA_LOOKUP_MODEL", "gemini-2.5-flash,gemini-3.1-flash-lite"', src)
-        self.assertIn("thinking_config=types.ThinkingConfig(thinking_budget=0)", src)
+        self.assertIn('"MUNEA_LOOKUP_MODEL", "gemini-3.5-flash-lite,gemini-3.1-flash-lite"', src)
+        # 3.5-flash-lite 帶 thinking_budget 會回 400（11/18 實測），一律用 thinking_level
+        self.assertIn('thinking_config=types.ThinkingConfig(thinking_level="minimal")', src)
+        self.assertNotIn("thinking_budget=0)", src)
 
 
 class LookupModelChainBehaviorTests(unittest.IsolatedAsyncioTestCase):
@@ -113,13 +116,17 @@ class LookupModelChainBehaviorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([c["model"] for c in client.aio.models.calls], ["model-a", "model-b"])
 
     async def test_every_model_call_disables_thinking(self):
-        """thinking_budget=0 是這次修法的關鍵——沒有這個，2.5-flash 會慢回 8-11 秒。"""
+        """關掉「思考」是這次修法的關鍵——沒有這個，2.5-flash 會慢回 8-11 秒。
+        2026-11-18：主力換 3.5-flash-lite，它帶 thinking_budget 會回 400（實測），
+        改成 thinking_level="minimal"（3.1-flash-lite 也吃），而且不可以再帶 thinking_budget。"""
         client = _FakeClient({"model-a": _fake_grounded_response()})
         await voice.search_current_information(client, "今天天氣如何", None)
         cfg = client.aio.models.calls[0]["config"]
         self.assertIsInstance(cfg, types.GenerateContentConfig)
         self.assertIsNotNone(cfg.thinking_config)
-        self.assertEqual(cfg.thinking_config.thinking_budget, 0)
+        self.assertEqual(str(getattr(cfg.thinking_config.thinking_level, "value", cfg.thinking_config.thinking_level)).lower(), "minimal")
+        self.assertIsNone(cfg.thinking_config.thinking_budget)
+        self.assertIsNone(cfg.temperature)
 
     async def test_lookup_material_uses_requested_response_locale(self):
         client = _FakeClient({"model-a": _fake_grounded_response()})
