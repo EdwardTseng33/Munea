@@ -3224,3 +3224,138 @@ html:lang(ja) {
   .boot-splash.is-leaving { animation: none; opacity: 0; visibility: hidden; }
   .onb-track { scroll-behavior: auto; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   付費頁／加買分鐘／設定方案卡／通話結束卡（2026-11-20 Edward 看過設計稿說「可以」）
+   設計稿：.tmp/design-review-1120/提案/P1～P6（P5 家人頁先不改）。
+   長輩可讀性底線：內文 ≥17px、副字 ≥15px、點得到的東西 ≥48px 高。
+   主按鈕顏色照舊用 --btn-green（7/30 拍板），白字 3.16:1 只過「大字」標準，所以主按鈕字一律 19px／700。
+   全部放在檔尾、用 id 範圍限定，蓋過上面舊樣式，不動舊規則本身。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── P1 付費頁 ── */
+#planModal .sub-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 6px; background: var(--cream); }
+#planModal .sub-top .sub-x { position: static; flex: none; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: #fff; }
+#planModal .sub-top .sub-x .ic { width: 22px; height: 22px; color: var(--ink); }
+#planModal .sub-status { display: inline-flex; align-items: center; min-height: 36px; background: var(--mint); color: var(--teal-dd); font-weight: 700; font-size: 15px;
+  line-height: 1.35; border-radius: 999px; padding: 6px 13px; text-align: right; }
+#planModal .sub-status[hidden] { display: none; }
+#planModal .sub-body { display: flex; flex-direction: column; gap: 14px; padding: 4px 20px calc(28px + env(safe-area-inset-bottom)); }
+#planModal .sub-h { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--ink); line-height: 1.3; margin: 2px 0 0; }
+#planModal .sub-lede { font-size: 17px; color: var(--ink-2); line-height: 1.6; margin: 0; }
+#planModal .sub-lede:lang(zh), #planModal .sub-lede:lang(ja) { text-wrap: balance; }
+#planModal .sub-lede[hidden] { display: none; }
+#planModal .sub-seg { margin-bottom: 0; }
+#planModal .sseg-btn { min-height: 44px; font-size: 16px; }
+#subPlans { display: flex; flex-direction: column; gap: 14px; }
+#planModal .sub-cycle { display: grid; grid-template-columns: 1fr 1fr; background: var(--mint); border-radius: 14px; padding: 4px; margin: 0; }
+#planModal .scyc-thumb { display: none; }
+#planModal .scyc-btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; border-radius: 11px; padding: 0 8px;
+  font-size: 17px; font-weight: 700; color: var(--teal-dd); }
+#planModal .scyc-btn.on { background: #fff; box-shadow: var(--shadow-sm); color: var(--ink); }
+#planModal .scyc-badge, #planModal .scyc-btn.on .scyc-badge { font-size: 15px; font-weight: 700; background: var(--gold-soft); color: #6A4F0F; border-radius: 999px; padding: 2px 8px; margin-left: 0; }
+#planModal .plan-pick { gap: 14px; margin: 6px 0 0; }
+#planModal .ppk, #planModal .ppk.pro { background: #fff; border: 1.5px solid #9AA39F; border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+#planModal .ppk.sel, #planModal .ppk.sel.pro { background: #fff; border: 2.5px solid var(--btn-green); padding: 15px 17px; box-shadow: 0 8px 20px -12px rgba(41,127,121,.6); }
+#planModal .ppk-tag { position: absolute; top: -14px; left: 16px; background: var(--teal-dd); color: #fff; font-size: 16px; font-weight: 700; border-radius: 999px; padding: 3px 11px; line-height: 1.4; }
+#planModal .ppk-radio { right: 16px; top: 18px; width: 26px; height: 26px; border: 2.5px solid #7D8783; background: #fff; box-shadow: none; }
+#planModal .ppk.sel .ppk-radio, #planModal .ppk.sel.pro .ppk-radio { border: 7px solid var(--btn-green); background: #fff; box-shadow: none; }
+#planModal .ppk-top, #planModal .ppk.pro .ppk-top { margin: 0; padding-right: 36px; align-items: baseline; }
+#planModal .ppk-name { font-size: 22px; font-weight: 700; }
+#planModal .ppk-price, #planModal .ppk.sel .ppk-price, #planModal .ppk.sel.pro .ppk-price { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); }
+#planModal .ppk-price small { font-size: 15px; font-weight: 600; color: var(--muted); }
+#planModal .ppk-save { font-size: 15px; font-weight: 700; color: #6A4F0F; margin: 0; }
+#planModal .ppk-feats { gap: 4px; }
+#planModal .ppk-feats li { padding-left: 0; word-break: normal; }
+#planModal .ppk-feats li::before { display: none; }
+#planModal .ppk-min { font-size: 17px; font-weight: 700; color: var(--teal-dd); line-height: 1.5; }
+#planModal .ppk-min span { font-weight: 500; color: var(--ink-2); }
+#planModal .ppk-ln { font-size: 15.5px; color: var(--ink-2); line-height: 1.5; }
+#planModal .sub-fam { display: flex; gap: 10px; align-items: flex-start; background: var(--mint); border-radius: 16px; padding: 12px 14px;
+  font-size: 15.5px; color: var(--teal-dd); line-height: 1.55; }
+#planModal .sub-fam .ic { flex: none; width: 22px; height: 22px; stroke: var(--teal-dd); stroke-width: 2; fill: none; margin-top: 1px; }
+#planModal .sub-cta { min-height: 56px; border-radius: 16px; font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: .01em;
+  box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+#planModal .sub-cta:disabled { box-shadow: none; }
+.sub-more { border-top: 1px solid var(--line); }
+.sub-more > summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 52px; cursor: pointer;
+  list-style: none; font-size: 16.5px; color: var(--ink-2); }
+.sub-more > summary::-webkit-details-marker { display: none; }
+.sub-more-chev { flex: none; font-size: 22px; line-height: 1; color: var(--muted); transition: transform .2s; }
+.sub-more[open] .sub-more-chev { transform: rotate(90deg); }
+.sub-more .sub-intro { font-size: 15.5px; color: var(--ink-2); margin: 2px 0 10px; }
+.sub-more .credit-rules { margin: 0 0 6px; }
+.sub-more .credit-rules .cr-row b, .sub-more .credit-rules .cr-note { font-size: 15.5px; }
+#planModal .sub-legal { font-size: 15px; color: #5C564E; line-height: 1.6; margin: 0; text-align: left; }
+#planModal .sub-legal a { color: var(--teal-dd); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ── P2 加買分鐘（單張與付費頁裡的分頁同一套）── */
+#topUpModal .tu-sheet { display: flex; flex-direction: column; gap: 14px; }
+#topUpModal .tu-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+#topUpModal .tu-head h2 { font-family: var(--serif); font-size: 24px; font-weight: 600; margin: 0; color: var(--ink); }
+.tu-x { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; cursor: pointer; }
+.tu-x .ic { width: 22px; height: 22px; color: var(--ink); }
+.tu-left { display: flex; justify-content: space-between; align-items: center; gap: 4px 10px; flex-wrap: wrap; background: var(--coral-soft); color: #8A4A12;
+  border-radius: 14px; padding: 12px 14px; font-size: 15.5px; font-weight: 700; line-height: 1.45; }
+.tu-left[hidden], .tu-left span[hidden] { display: none; }
+.tu-note { font-size: 17px; color: var(--ink-2); margin: 0; line-height: 1.6; }
+.tu-note:lang(zh), .tu-note:lang(ja) { text-wrap: balance; }
+#subPoints { display: flex; flex-direction: column; gap: 14px; }
+#topUpModal .tu-grid, #subPoints .tu-grid { gap: 12px; }
+#topUpModal .tu-card, #subPoints .tu-card { background: #fff; border: 1.5px solid #9AA39F; border-radius: 18px; padding: 16px 8px; min-height: 96px; gap: 4px; justify-content: center; }
+#topUpModal .tu-card.on, #subPoints .tu-card.on { border: 2.5px solid var(--btn-green); background: #F2FAF8; padding: 15px 7px; }
+#topUpModal .tu-card b, #subPoints .tu-card b { font-size: 22px; font-weight: 700; color: var(--ink); }
+#topUpModal .tu-card .tu-price, #subPoints .tu-card .tu-price { font-size: 17px; font-weight: 700; color: var(--ink-2); margin: 0; }
+#topUpModal .tu-buy, #subPoints #tuBuyBtn2 { margin: 0 !important; min-height: 56px; border-radius: 16px; font-family: var(--display); font-weight: 700; font-size: 19px;
+  box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+#topUpModal .tu-buy:disabled, #subPoints #tuBuyBtn2:disabled { box-shadow: none; font-size: 17px; }
+
+/* ── P3／P4 設定頁方案卡 ── */
+#planCard:not([data-mode="legacy"]) { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+#planCard[data-mode="legacy"] .pc-modern, #planCard[data-mode="legacy"] .pc-dayrow, #planCard[data-mode="legacy"] .pc-share, #planCard[data-mode="legacy"] .pc-free,
+#planCard:not([data-mode="legacy"]) .pc-legacy,
+#planCard:not([data-mode="trial"]) .pc-dayrow,
+#planCard:not([data-mode="share"]) .pc-share,
+#planCard[data-mode="share"] .pc-free { display: none !important; }
+#planCard .pc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+#planCard .pc-head-meta { flex: none; color: var(--muted); font-weight: 600; }
+#planCard .pc-big { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+#planCard .pc-big small { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink-2); }
+#planCard .pc-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+#planCard .pc-days i { height: 12px; border-radius: 999px; background: var(--mint-2); }
+#planCard .pc-days i.done { background: var(--btn-green); }
+#planCard .pc-days i.now { background: #fff; box-shadow: inset 0 0 0 2.5px var(--btn-green); }
+#planCard .pc-daylbl { display: flex; justify-content: space-between; font-size: 15px; color: var(--muted); margin-top: -4px; }
+#planCard .pc-note, #planCard .pc-usage-note { font-size: 15px; color: var(--muted); line-height: 1.6; margin: 0; }
+#planCard .pc-usage-note { margin-top: -6px; }
+#planCard .pc-bar { height: 12px; border-radius: 999px; background: var(--mint-2); overflow: hidden; display: flex; }
+#planCard .pc-bar i { display: block; height: 100%; }
+#planCard .pc-who { display: grid; gap: 8px; }
+#planCard .pc-who div { display: flex; align-items: center; gap: 10px; font-size: 17px; color: var(--ink); min-height: 28px; }
+#planCard .pc-who em { flex: none; width: 12px; height: 12px; border-radius: 50%; }
+#planCard .pc-who b { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+#planCard .pc-who span { margin-left: auto; flex: none; font-family: var(--display); font-weight: 600; color: var(--ink-2); font-size: 16px; }
+#planCard:not([data-mode="legacy"]) .plan-actions { margin: 2px 0 0; }
+#planCard[data-mode="trial"] #managePlanBtn, #planCard[data-mode="weekly"] #managePlanBtn, #planCard[data-mode="share"] #topUpBtn {
+  flex: 1 1 auto; width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff;
+  font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+#planCard[data-mode="trial"] #topUpBtn, #planCard[data-mode="weekly"] #topUpBtn, #planCard[data-mode="share"] #managePlanBtn { display: none !important; }
+#planCard:not([data-mode="legacy"]) .plan-links { gap: 0 18px; margin-top: 0; }
+#planCard:not([data-mode="legacy"]) .plan-link { min-height: 48px; padding: 0 6px; background: none; color: var(--teal-dd); font-size: 16px; font-weight: 600; opacity: 1; }
+#planCard[data-mode="legacy"] #planChangeBtn,
+#planCard[data-mode="trial"] #planChangeBtn, #planCard[data-mode="trial"] #planCancelBtn,
+#planCard[data-mode="weekly"] #planChangeBtn, #planCard[data-mode="weekly"] #planCancelBtn,
+#planCard[data-mode="share"] #seatCodeEntry,
+#planCard[data-mode="share"][data-role="member"] #planChangeBtn, #planCard[data-mode="share"][data-role="member"] #planCancelBtn { display: none !important; }
+
+/* ── P6 通話結束卡：蓋在人物下半部、通話鍵上方，不擋眼睛 ── */
+.call-end-card { position: absolute; left: 16px; right: 16px; bottom: calc(186px + env(safe-area-inset-bottom)); z-index: 9;
+  background: rgba(255,255,255,.96); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 16px 40px -18px rgba(0,0,0,.35); }
+.call-end-card[hidden] { display: none; }
+.call-end-card .ce-today { font-size: 15.5px; color: var(--muted); }
+.call-end-card .ce-next { font-size: 21px; font-weight: 700; color: var(--ink); line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+html:lang(en) .call-end-card .ce-next, html:lang(es) .call-end-card .ce-next { word-break: normal; }
+.call-end-card .ce-ok { width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff; cursor: pointer;
+  font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }

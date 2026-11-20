@@ -490,20 +490,34 @@ setTimeout(function () {
         </div>
       </div>
 
-      <h2 class="set-section" data-i18n="settings.section.billing">訂閱與點數</h2>
-      <div class="plan-card">
-        <div class="plan-title-row">
+      <h2 class="set-section" data-i18n="settings.section.billing">方案與分鐘</h2>
+      <!-- 方案卡四種樣子（2026-11-20 Edward 看過設計稿說「可以」）：data-mode 由 app.js renderPlanCard() 決定。
+           legacy＝後端還沒給 allowance／familyShare 時的舊排法（只把「點數」改講「分鐘」）；
+           trial＝免費體驗前 7 天（每天的分鐘＋7 格天數）；weekly＝第 8 天起每週的分鐘；
+           share＝家人圈一起用同一份月分鐘（誰用了多少）。卡上的字全由程式填，所以不掛 data-i18n。 -->
+      <div class="plan-card" id="planCard" data-mode="legacy">
+        <div class="plan-title-row pc-legacy">
           <span class="plan-name" id="setPlanName"></span>
           <span class="plan-payer" style="margin:0" data-i18n="settings.mySubscription">我的訂閱</span>
         </div>
-        <p class="plan-renewal" id="setPlanRenewalDate" hidden aria-live="polite"></p>
-        <div class="plan-divider"></div>
-        <div class="pts-label"><b id="ptsLeft">240</b><span class="pts-used"><i id="setPlanGrant" style="font-style:normal">200</i><i id="ptsUsed" style="font-style:normal">160</i></span></div>
-        <div class="pts-bar"><i id="ptsBar" style="width:40%"></i></div>
-        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="settings.lowPtsStrip">點數快用完了——用完聊天會先停，到這裡加值就能繼續</span></div>
-        <div class="pts-note" data-i18n="settings.ptsNote">點數用來聊天；用完會先停，補一下就能繼續</div>
+        <p class="plan-renewal pc-legacy" id="setPlanRenewalDate" hidden aria-live="polite"></p>
+        <div class="plan-divider pc-legacy"></div>
+        <div class="pts-label pc-legacy"><b id="ptsLeft">240</b><span class="pts-used"><i id="setPlanGrant" style="font-style:normal">200</i><i id="ptsUsed" style="font-style:normal">160</i></span></div>
+        <div class="pts-bar pc-legacy"><i id="ptsBar" style="width:40%"></i></div>
+        <div class="pc-head pc-modern"><span class="pc-head-title" id="pcHeadTitle"></span><span class="pc-head-meta" id="pcHeadMeta"></span></div>
+        <div class="pc-big pc-modern" id="pcBig" aria-live="polite"></div>
+        <div class="pc-days pc-dayrow" id="pcDays" aria-hidden="true"></div>
+        <div class="pc-daylbl pc-dayrow" aria-hidden="true"><span id="pcDayFirst"></span><span id="pcDayToday"></span><span id="pcDayLast"></span></div>
+        <p class="pc-usage-note pc-share" id="pcUsageNote"></p>
+        <div class="pc-bar pc-share" id="pcBar" aria-hidden="true"></div>
+        <div class="pc-who pc-share" id="pcWho"></div>
+        <p class="pc-note pc-free" id="pcNote"></p>
+        <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="settings.lowPtsStrip">分鐘快用完了——用完聊天會先停，到這裡加買就能繼續</span></div>
+        <div class="pts-note pc-legacy" data-i18n="settings.ptsNote">分鐘用來聊天；用完會先停，加買就能繼續</div>
         <div class="plan-actions">
-          <button class="plan-btn ghost" id="managePlanBtn" data-i18n="settings.managePlanButton">訂閱方案</button>
+          <!-- 不掛 data-i18n（2026-11-20）：字依方案由 renderPlanState 決定（免費＝「看方案」、付費＝「訂閱方案」），
+               掛了翻譯鍵，巡邏的翻譯層會把它蓋回固定那一句。 -->
+          <button class="plan-btn ghost" id="managePlanBtn" type="button"></button>
           <button class="plan-btn" id="topUpBtn" data-i18n="legacyUi.topUpTitle">加值點數</button>
         </div>
         <!-- 「管理訂閱／恢復購買」從訂閱方案頁搬來這裡（Edward 2026-07-31）。
@@ -512,6 +526,8 @@ setTimeout(function () {
              刻意不學 Duolingo 收到設定最底——正式庫至今零筆成功的蘋果交易，購買流程還沒被證明過，
              萬一有人付了錢權益沒進來，這顆是他唯一能自救的按鍵，得找得到。 -->
         <div class="plan-links">
+          <!-- 「換方案」只在家人圈一起用（share）時出現：主按鈕變成「加買分鐘」，換方案退到連結列 -->
+          <button class="plan-link" id="planChangeBtn" type="button" data-i18n="settings.changePlan">換方案</button>
           <button class="plan-link" id="planCancelBtn" type="button" data-i18n="purchase.manageSubscription">管理訂閱</button>
           <button class="plan-link" id="restoreBtn" type="button" data-i18n="purchase.restore">恢復購買</button>
           <!-- 機構發的紙卡上印「點『設定』→『機構開通碼』」，這顆的字要跟卡片對得上（2026-11-17）。 -->
@@ -638,6 +654,14 @@ setTimeout(function () {
       </div>
     </div>
     <!-- 人物畫面上的招呼字泡（faceIdleHi）2026-07-16 Edward 拿掉：畫面保持乾淨、只留字幕與控制列 -->
+    <!-- 通話結束卡（2026-11-20 Edward 核可設計稿 P6）：正常講完回到聊聊畫面時，蓋在人物下半部（不擋眼睛），
+         只講「今天聊了幾分鐘＋下次還能聊多少」。刻意不放寧寧說的話——那是我們保證不了她會做的事。
+         字全由 app.js showCallEndCard() 填。 -->
+    <div class="call-end-card" id="callEndCard" hidden role="status" aria-live="polite">
+      <div class="ce-today" id="callEndToday"></div>
+      <div class="ce-next" id="callEndNext"></div>
+      <button class="ce-ok" id="callEndOk" type="button"></button>
+    </div>
 
     <!-- 底部單列：字幕開關｜麥克風開關｜通話（同一顆：綠=開始、紅=結束） -->
     <div class="face-bar">
@@ -1065,122 +1089,129 @@ setTimeout(function () {
     </div>
   </div>
 
+  <!-- 加買分鐘（2026-11-20 Edward 核可設計稿 P2）：1 點＝1 分鐘，畫面上一律講「分鐘」。
+       有月額度時先講「這個月只剩幾分鐘、哪天再給」；說明只留一句「買了不會過期、方案的分鐘用完才會用到」。 -->
   <div class="modal-mask" id="topUpModal">
-    <div class="modal">
+    <div class="modal tu-sheet">
       <div class="modal-grab"></div>
-      <button class="auth-close" id="topUpClose" type="button" aria-label="Close credit top-up" data-i18n-aria-label="purchase.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <h2 data-i18n="purchase.topUpTitle">Buy call credits</h2>
-      <p class="modal-sub" data-i18n="subscription.creditsUsageIntro">Conversations use credits. Add more credits to keep talking when they run out.</p>
-      <div class="tu-grid">
-        <button class="tu-card" data-p="100"><b>100 credits</b><span class="tu-price">—</span><small class="tu-min">About 100 minutes</small></button>
-        <button class="tu-card on" data-p="300"><b>300 credits</b><span class="tu-price">—</span><small class="tu-min">About 300 minutes</small></button>
-        <button class="tu-card" data-p="600"><b>600 credits</b><span class="tu-price">—</span><small class="tu-min">About 600 minutes</small></button>
-        <button class="tu-card" data-p="1000"><b>1,000 credits</b><span class="tu-price">—</span><small class="tu-min">About 1,000 minutes</small></button>
+      <div class="tu-head">
+        <h2 data-i18n="purchase.topUpTitle">Buy call minutes</h2>
+        <button class="tu-x" id="topUpClose" type="button" aria-label="Close" data-i18n-aria-label="purchase.close"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
-      <button class="modal-btn" id="tuBuyBtn" style="margin-top:14px" data-i18n="purchase.selectPack">Choose a credit pack</button>
-      <p class="modal-sub" style="margin-top:10px"><span data-i18n="subscription.purchasedCreditsBody">Purchased credits do not expire.</span> <span data-i18n="subscription.deductionOrderBody">Monthly credits are used before purchased credits.</span></p>
+      <div class="tu-left" id="topUpLeft" hidden><span class="tu-left-now"></span><span class="tu-left-next"></span></div>
+      <p class="tu-note" data-i18n="purchase.topUpNote">Purchased minutes never expire. They are used only after your plan's minutes run out.</p>
+      <div class="tu-grid">
+        <button class="tu-card" data-p="100" type="button"><b>100 minutes</b><span class="tu-price">—</span></button>
+        <button class="tu-card on" data-p="300" type="button"><b>300 minutes</b><span class="tu-price">—</span></button>
+        <button class="tu-card" data-p="600" type="button"><b>600 minutes</b><span class="tu-price">—</span></button>
+        <button class="tu-card" data-p="1000" type="button"><b>1,000 minutes</b><span class="tu-price">—</span></button>
+      </div>
+      <button class="modal-btn tu-buy" id="tuBuyBtn" type="button">Choose a minute pack</button>
     </div>
   </div>
 
+  <!-- 付費頁（2026-11-20 Edward 核可設計稿 P1）：拿掉大插圖與四項功能列；計費規則收進最下面
+       「分鐘怎麼算、用完怎麼辦 ›」，點開才看得到（規則本身一字不少，蘋果要看的自動續訂說明與條款連結照舊在最下面）。 -->
   <div class="reader-page sub-page" id="planModal">
-    <!-- 全幅照片 hero -->
-    <div class="sub-hero">
-      <button class="sub-x" id="planClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <img class="sub-hero-art" src="illustrations/sub-hero-family.png" alt="" width="800" height="379" />
-      <div class="sub-hero-cap"><div class="sub-hero-title" data-i18n="subscription.title">Upgrade Munea</div><div class="sub-hero-sub" data-i18n="subscription.tagline">More complete care for every day your family shares</div></div>
+    <div class="sub-top">
+      <button class="sub-x" id="planClose" type="button" aria-label="Close" data-i18n-aria-label="accessibility.close"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <span class="sub-status" id="planTrialChip" hidden></span>
     </div>
     <div class="sub-body">
-      <!-- 分段 tab（狀態頁風格）-->
+      <h1 class="sub-h" data-i18n="subscription.headline">Someone for Mom and Dad to talk to every day</h1>
+      <!-- 這句講的是「家人圈共用分鐘」，後端還沒開 familySharedMinutes 之前講了就是不實——由 app.js 決定要不要露出 -->
+      <p class="sub-lede" id="planSharedLede" hidden></p>
+      <!-- 分段 tab（已訂閱的人才看得到：方案／加買分鐘）-->
       <div class="sub-seg" id="subSeg">
         <div class="sseg-thumb" id="ssegThumb"></div>
         <button class="sseg-btn on" data-pane="plans" type="button" data-i18n="subscription.plansTab">Subscription plans</button>
-        <button class="sseg-btn" data-pane="points" type="button" data-i18n="subscription.creditsTab">Buy credits</button>
+        <button class="sseg-btn" data-pane="points" type="button" data-i18n="subscription.creditsTab">Buy minutes</button>
       </div>
-      <p class="sub-intro" id="pointsUnlockNotice"><b data-i18n="subscription.unlockCredits">Subscribe to Plus or Pro to buy credit packs.</b></p>
       <!-- 訂閱方案 -->
       <div id="subPlans">
-        <p class="sub-intro">Munea provides everyday companionship and reminders for free. <b>Paid plans add more complete care:</b></p>
-        <div class="sub-value">
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg></span><div class="sv-txt"><b>Natural voice companionship</b><small>Talk naturally in a familiar language without learning complicated controls.</small></div></div>
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span><div class="sv-txt"><b>Everyday care</b><small>Companion reminders, daily records, and family updates.</small></div></div>
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><div class="sv-txt"><b>Family care circle</b><small>Helps family members stay informed and connected.</small></div></div>
-          <div class="sv-row"><span class="sv-ic"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.5 2 2 2 4M18 2H6v7a6 6 0 0 0 12 0z"/></svg></span><div class="sv-txt"><b>Continuing companion memory</b><small>Keeps track of important people, routines, and family context.</small></div></div>
-        </div>
-        <div class="sub-sec-label" data-i18n="subscription.choosePlan">Choose a plan</div>
         <div class="sub-cycle" id="subCycle">
           <div class="scyc-thumb" id="scycThumb"></div>
           <button class="scyc-btn on" data-cyc="month" type="button">Monthly</button>
           <button class="scyc-btn" data-cyc="year" type="button">Yearly <em class="scyc-badge">Save 20%</em></button>
         </div>
-        <div class="credit-rules" aria-label="點數使用規則" data-i18n-aria-label="subscription.creditRulesTitle">
-          <div class="cr-row">
-            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
-            <b>Subscription credits</b><i></i><span class="cr-note">Issued again each billing period</span>
-          </div>
-          <div class="cr-row">
-            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
-            <b>Purchased credits</b><i></i><span class="cr-note">They do not expire</span>
-          </div>
-          <div class="cr-row">
-            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 3-4"/></svg></span>
-            <b>Credit order</b><i></i><span class="cr-note">Monthly credits are used first</span>
-          </div>
-        </div>
         <div class="plan-pick" id="planPick">
-          <button class="ppk pro sel" data-t="pro" type="button">
-            <span class="ppk-tag" data-i18n="subscription.mostPopular">Most popular</span>
-            <span class="ppk-radio"></span>
-            <div class="ppk-top"><span class="ppk-name">Pro</span><span class="ppk-price" id="pricePro">—<small>/month</small></span></div>
-            <span class="ppk-save" id="savePro" style="display:none"></span>
-            <div class="ppk-who">For more frequent companionship and advanced video interaction</div>
-            <ul class="ppk-feats">
-              <li>200 voice-companion credits each month</li>
-              <li>Full 7-day and 30-day health trends</li>
-              <li>Up to 12 people in the family care circle</li>
-            </ul>
-          </button>
-          <button class="ppk" data-t="plus" type="button">
+          <button class="ppk plus sel" data-t="plus" type="button">
+            <span class="ppk-tag" data-i18n="subscription.mostPopular">Recommended</span>
             <span class="ppk-radio"></span>
             <div class="ppk-top"><span class="ppk-name">Plus</span><span class="ppk-price" id="pricePlus">—<small>/month</small></span></div>
             <span class="ppk-save" id="savePlus" style="display:none"></span>
-            <div class="ppk-who">For everyday voice companionship and essential family care</div>
             <ul class="ppk-feats">
-              <li>100 voice-companion credits each month</li>
-              <li>Full 7-day and 30-day health trends</li>
-              <li>Up to 4 people in the family care circle</li>
+              <li class="ppk-min">100 minutes a month<span> · about 3 a day</span></li>
+              <li class="ppk-ln">Up to 4 people in your family circle</li>
+            </ul>
+          </button>
+          <button class="ppk pro" data-t="pro" type="button">
+            <span class="ppk-radio"></span>
+            <div class="ppk-top"><span class="ppk-name">Pro</span><span class="ppk-price" id="pricePro">—<small>/month</small></span></div>
+            <span class="ppk-save" id="savePro" style="display:none"></span>
+            <ul class="ppk-feats">
+              <li class="ppk-min">200 minutes a month<span> · about 7 a day</span></li>
+              <li class="ppk-ln">Up to 12 people in your family circle</li>
             </ul>
           </button>
         </div>
-        <button class="sub-cta" id="subCta" type="button">Upgrade to Pro</button>
-        <!-- 「管理訂閱／恢復購買」已搬到設定頁的「我的訂閱」卡（Edward 2026-07-31）：
-             這一頁只留一條路——選方案 → 升級。想改或想救回舊訂閱的人會去設定找，不該在這裡分心。 -->
-        <p class="sub-legal">Subscriptions renew automatically through your Apple Account. Manage or cancel in iPhone Settings; access continues through the current billing period. Purchased credits do not expire. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
-        <span id="planHeroName" hidden></span><span id="planHeroPts" hidden></span><span id="planHeroMeta" hidden></span>
-      </div>
-      <!-- 點數購買 -->
-      <div id="subPoints" style="display:none">
-        <p class="sub-fine" style="margin:4px 0 12px" data-i18n="subscription.creditsUsageIntro">Conversations use credits. Add more credits to keep talking when they run out.</p>
-        <div class="tu-grid">
-          <button class="tu-card" data-p="100" type="button"><b>100 credits</b><span class="tu-price">TWD 790</span><small class="tu-min">About 100 minutes</small></button>
-          <button class="tu-card on" data-p="300" type="button"><b>300 credits</b><span class="tu-price">TWD 2,190</span><small class="tu-min">About 300 minutes</small></button>
-          <button class="tu-card" data-p="600" type="button"><b>600 credits</b><span class="tu-price">TWD 4,190</span><small class="tu-min">About 600 minutes</small></button>
-          <button class="tu-card" data-p="1000" type="button"><b>1,000 credits</b><span class="tu-price">TWD 6,490</span><small class="tu-min">About 1,000 minutes</small></button>
+        <!-- 薄荷底這行：「爸媽不用另外付費」只在後端 capabilities.familySharedMinutes === true 時才露出（app.js） -->
+        <div class="sub-fam" id="planFamilyNote">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+          <span id="planFamilyNoteText">Both plans include 7-day and 30-day health trends.</span>
         </div>
-        <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">Buy 300 credits · TWD 2,190</button>
-        <div class="credit-rules points-rules" aria-label="加購點數使用規則" data-i18n-aria-label="subscription.topUpCreditRulesTitle">
+        <button class="sub-cta" id="subCta" type="button">Subscribe to Plus</button>
+        <!-- 「管理訂閱／恢復購買」已搬到設定頁的「我的訂閱」卡（Edward 2026-07-31）：
+             這一頁只留一條路——選方案 → 訂閱。想改或想救回舊訂閱的人會去設定找，不該在這裡分心。 -->
+        <details class="sub-more">
+          <summary><span data-i18n="subscription.minutesHelp">How minutes work and what happens when they run out</span><span class="sub-more-chev" aria-hidden="true">›</span></summary>
+          <p class="sub-intro" id="pointsUnlockNotice"><b data-i18n="subscription.unlockCredits">Subscribe to Plus or Pro to buy extra minutes.</b></p>
+          <div class="credit-rules" aria-label="Minute rules" data-i18n-aria-label="subscription.creditRulesTitle">
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
-            <b>Subscription credits</b><i></i><span class="cr-note">Issued again each billing period</span>
+            <b>Monthly plan minutes</b><i></i><span class="cr-note">Issued again each billing period</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
-            <b>Purchased credits</b><i></i><span class="cr-note">They do not expire</span>
+            <b>Purchased minutes</b><i></i><span class="cr-note">They do not expire</span>
           </div>
           <div class="cr-row">
             <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 3-4"/></svg></span>
-            <b>Credit order</b><i></i><span class="cr-note">Monthly credits are used first</span>
+            <b>Minute order</b><i></i><span class="cr-note">Monthly minutes are used first</span>
           </div>
         </div>
+        </details>
+        <p class="sub-legal">Renews automatically through your Apple Account. Cancel anytime in iPhone Settings; you keep access until the end of the current period. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
+        <span id="planHeroName" hidden></span><span id="planHeroPts" hidden></span><span id="planHeroMeta" hidden></span>
+      </div>
+      <!-- 付費頁裡的「加買分鐘」分頁：跟加買分鐘那張單一樣的排法（P2 一併統一） -->
+      <div id="subPoints" style="display:none">
+        <div class="tu-left" id="topUpLeft2" hidden><span class="tu-left-now"></span><span class="tu-left-next"></span></div>
+        <p class="tu-note" data-i18n="purchase.topUpNote">Purchased minutes never expire. They are used only after your plan's minutes run out.</p>
+        <div class="tu-grid">
+          <button class="tu-card" data-p="100" type="button"><b>100 minutes</b><span class="tu-price">—</span></button>
+          <button class="tu-card on" data-p="300" type="button"><b>300 minutes</b><span class="tu-price">—</span></button>
+          <button class="tu-card" data-p="600" type="button"><b>600 minutes</b><span class="tu-price">—</span></button>
+          <button class="tu-card" data-p="1000" type="button"><b>1,000 minutes</b><span class="tu-price">—</span></button>
+        </div>
+        <button class="sub-cta" id="tuBuyBtn2" type="button" style="margin-top:14px">Buy 300 minutes</button>
+        <details class="sub-more">
+          <summary><span data-i18n="subscription.minutesHelp">How minutes work and what happens when they run out</span><span class="sub-more-chev" aria-hidden="true">›</span></summary>
+        <div class="credit-rules points-rules" aria-label="Minute rules" data-i18n-aria-label="subscription.topUpCreditRulesTitle">
+          <div class="cr-row">
+            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg></span>
+            <b>Monthly plan minutes</b><i></i><span class="cr-note">Issued again each billing period</span>
+          </div>
+          <div class="cr-row">
+            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v5c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 11v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></svg></span>
+            <b>Purchased minutes</b><i></i><span class="cr-note">They do not expire</span>
+          </div>
+          <div class="cr-row">
+            <span class="cr-ic" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><path d="m16 16 2 2 3-4"/></svg></span>
+            <b>Minute order</b><i></i><span class="cr-note">Monthly minutes are used first</span>
+          </div>
+        </div>
+        </details>
       </div>
     </div>
     <div class="plan-confirm-bar" id="planConfirm" style="display:none">
