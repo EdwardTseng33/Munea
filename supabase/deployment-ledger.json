@@ -267,8 +267,11 @@
         {
           "filename": "034_family_shared_minutes_daily_free.sql",
           "sha256": "c72fc095f3e91e08105ee2e8732e9cdaa909ef2bac9b50f11e0e79d12a7a5f14",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+          "status": "verified",
+          "evidenceRef": "docs/supabase/evidence/2026-11-20-tokyo-034.json",
+          "verifiedAt": "2026-11-20T20:08:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "c0aa297369f22695c7ee82f70c33e98ed629a687"
         }
       ],
       "rollback": {

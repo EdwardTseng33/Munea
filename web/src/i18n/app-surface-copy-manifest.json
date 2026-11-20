@@ -85,7 +85,8 @@
       "state": "chat:idle",
       "keyPrefixes": [
         "accessibility.",
-        "credits."
+        "credits.",
+        "callEnd."
       ],
       "requiredKeys": [
         "voice.call.start",
