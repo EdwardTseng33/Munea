@@ -15,6 +15,7 @@ on:
       - "android/reminder-test/**"
       - "android/app/src/debug/**"
       - "android/settings.gradle"
+      - "scripts/android-reminder-instrument-emulator.sh"
 
 concurrency:
   group: android-reminder-testlab-${{ github.ref }}
