@@ -74,8 +74,9 @@ def _probe():
     """最小成本的一次確認：只要她吐得出任何一個字就算活著。"""
     try:
         import chat_engine as eng
+        import gemini_models
         r = eng.client.models.generate_content(
-            model="gemini-2.5-flash", contents="回一個字：好")
+            model=gemini_models.TEXT_MODEL, contents="回一個字：好")
         if (getattr(r, "text", "") or "").strip():
             record_success()
             return True

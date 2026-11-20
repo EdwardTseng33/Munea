@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """LLM 當評審：給一題（使用者說的話 + 準則清單 + 寧寧的回覆），
-用便宜模型（預設 gemini-2.5-flash）逐條判 pass/fail + 一句理由。
+用便宜模型（預設 gemini-3.5-flash-lite；2.5-flash 2026-12-01 停用）逐條判 pass/fail + 一句理由。
 
 不做 1-10 分玄學評分——每條準則獨立判定，總分 = 通過準則數 / 準則數，
 題目整體 PASS 的定義＝該題全部準則都 pass（見 run_eval.py 的彙整規則）。
@@ -23,7 +23,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-JUDGE_MODEL = os.environ.get("MUNEA_EVAL_JUDGE_MODEL", "gemini-2.5-flash")
+JUDGE_MODEL = os.environ.get("MUNEA_EVAL_JUDGE_MODEL", "gemini-3.5-flash-lite")
 
 JUDGE_SYSTEM = (
     "你是嚴格但公正的評審，負責檢查一個叫『寧寧』的AI健康陪伴角色，"
@@ -97,7 +97,7 @@ def judge(user_line, reply, criteria, api_key=None, known_facts=None, locale=Non
     client = genai.Client(api_key=api_key)
     prompt = build_prompt(user_line, reply, criteria, known_facts=known_facts)
     last_err = ""
-    for model in (JUDGE_MODEL, "gemini-flash-latest"):
+    for model in (JUDGE_MODEL, "gemini-3.1-flash-lite"):
         try:
             r = client.models.generate_content(
                 model=model, contents=prompt,

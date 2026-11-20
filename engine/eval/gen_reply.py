@@ -20,7 +20,7 @@ python 行程，先設好 env、再 import，天生乾淨隔離，也跟這個 r
     只要 case 裡有 "history" 這個 key（即使是空陣列）就會走新模式。
 
 輸出（stdout，一行 JSON）：
-  {"ok": true, "reply": "...", "modelUsed": "gemini-2.5-flash"}
+  {"ok": true, "reply": "...", "modelUsed": "gemini-3.5-flash-lite"}
   {"ok": false, "error": "..."}
 """
 import json
@@ -136,7 +136,7 @@ def main():
             return
         print(json.dumps({
             "ok": True, "reply": (reply or "").strip(),
-            "modelUsed": "server.reply_conv (production text-line, gemini-2.5-flash 主/自動降級)",
+            "modelUsed": "server.reply_conv (production text-line, gemini-3.5-flash-lite 主/自動降級)",
             "systemContext": _injected_system_facts(context),
         }, ensure_ascii=False))
         return
@@ -168,7 +168,7 @@ def main():
 
     client = genai.Client(api_key=api_key)
     last_err = ""
-    for model in ("gemini-2.5-flash", "gemini-flash-latest"):
+    for model in ("gemini-3.5-flash-lite", "gemini-3.1-flash-lite"):
         try:
             r = client.models.generate_content(
                 model=model,
