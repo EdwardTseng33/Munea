@@ -3,8 +3,18 @@
    健康照護可用性：大字、高對比、少元素 */
 
 :root {
-  /* 字級規範 v1（UIUX 定案）：頁大標 serif 30 / 區塊標 20 / 卡標 17 / 內文 17 / 說明 15 / 註記 13——不再任意生字級 */
-  --fs-page: 24px; --fs-section: 18px; --fs-card: 16px; --fs-body: 16px; --fs-sub: 14px; --fs-note: 12.5px;
+  /* ── 字體規範（全 App 正本 · 2026-11-20 Edward 拍板「標題類用粗體」；品牌正本 7/21：App 主要字體＝Noto Sans TC，
+       Noto Serif TC 只用在報告／簡報大標，不進 App 介面）──────────────────────────────
+     | 用在哪                                         | 字體                | 字級／字重          |
+     | 頁面大標題（午安、設定、全家健康圈、方案頁大標…）   | Noto Sans TC 粗體   | 26px / 700          |
+     | 區段標題、卡片標題、彈窗／浮層標題                 | Noto Sans TC 粗體   | 20px / 700          |
+     | 內文                                           | Noto Sans TC        | 17px / 400          |
+     | 副字、說明                                      | Noto Sans TC        | 15px / 400          |
+     | 按鈕字                                         | Noto Sans TC 粗體   | 19px / 700 以上     |
+     | 數字、英文                                      | Poppins（--display） | 跟所在層級同字級，600–700 |
+     標題一律 var(--sans)＋700；App 介面不准再用 var(--serif)（只留給報告類輸出）。
+     （舊「字級規範 v1：頁大標 serif 30…」已被推翻。） */
+  --fs-page: 26px; --fs-section: 20px; --fs-card: 16px; --fs-body: 17px; --fs-sub: 14px; --fs-note: 12.5px;
   --fs-action-primary: 16px;
   --fw-title: 700; --fw-em: 600; --fw-body: 400; --fw-action-primary: 800;
   /* Edward 2026-07-30 定色重申（違者退回）：主企業色＝薄荷綠不是深綠；橘＝Logo 上的那個橘。
@@ -39,7 +49,7 @@
   --shadow-lg: 0 10px 24px -12px rgba(31,60,52,.15);
   --sans: "Noto Sans TC", -apple-system, "PingFang TC", sans-serif;
   --display: "Poppins", "Noto Sans TC", sans-serif;
-  --serif: "Noto Serif TC", Georgia, serif;
+  --serif: "Noto Serif TC", Georgia, serif;   /* 只給報告／簡報類輸出用，App 介面不用（見上方字體規範） */
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; min-height: 100%; }
@@ -91,7 +101,7 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 .sec-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 26px 0 13px; }
 .sec-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--teal-dd); margin-bottom: 3px; }
 .sec-head h2 { font-size: 20px; font-weight: 800; color: var(--ink); }
-#home .sec-head h2 { font-family: var(--serif); font-size: 18px; font-weight: 900; }
+#home .sec-head h2 { font-family: var(--sans); font-size: 20px; font-weight: 700; }
 .sec-head .more { font-size: 15px; color: var(--teal); font-weight: 600; align-self: flex-end; }
 
 /* ============ 首頁 ============ */
@@ -109,7 +119,7 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 
 .greeting-wrap { position: relative; margin: 4px 0 16px; }
 .greeting-kicker { font-family: var(--sans); font-size: 12.5px; font-weight: 700; letter-spacing: .12em; color: var(--teal-dd); text-transform: uppercase; margin-bottom: 2px; }
-.greeting-big { font-family: var(--serif); max-width: 310px; font-size: 27px; font-weight: 900; color: var(--ink); letter-spacing: 0; line-height: 1.16; }
+.greeting-big { font-family: var(--sans); max-width: 310px; font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: 0; line-height: 1.16; }
 
 /* 安心存摺 條（升級：獎章圓 + 進度感） */
 .wallet-strip { display: flex; align-items: center; gap: 13px; background: var(--mint); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 26px; box-shadow: var(--shadow-sm); }
@@ -132,7 +142,7 @@ button, input, select, textarea, optgroup { font-family: inherit; }
 /* 「寧寧幫你留意」這行小標改暖橘（Edward 2026-07-31）——卡片內容已經有綠色圖示，
    小標再用綠就整張卡同一個調子；橘色小標配綠圖示，冷暖各站一邊才有層次。 */
 .bc-eyebrow { display: inline-flex; align-items: center; color: var(--coral-text); font-size: 13px; font-weight: 600; letter-spacing: .03em; margin-bottom: 7px; }
-.bc-name { font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; line-height: 1.1; position: relative; z-index: 1; }
+.bc-name { font-family: var(--sans); font-weight: 700; font-size: 20px; color: var(--ink); margin-bottom: 2px; display: flex; align-items: center; gap: 8px; line-height: 1.1; position: relative; z-index: 1; }
 .bc-name .bc-tag { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--teal-dd); background: var(--mint); padding: 3px 9px; border-radius: 999px; }
 .bc-status { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 15px; font-weight: 700; margin-bottom: 12px; }
 .bc-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 0 rgba(58,168,160,.5); animation: live 1.8s infinite; }
@@ -229,7 +239,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .page-head { margin: 6px 0 16px; }
 #family .page-head { margin-bottom: 16px; }
 .page-kicker { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--teal-dd); margin-bottom: 4px; }
-.page-title { font-family: var(--serif); font-size: 28px; font-weight: 800; color: var(--ink); }
+.page-title { font-family: var(--sans); font-size: 26px; font-weight: 700; color: var(--ink); }
 .page-sub { font-size: 15px; color: var(--muted); margin-top: 4px; }
 .stat-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; margin-bottom: 16px; }
 .stat-tile { background: #FFF; border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; box-shadow: var(--shadow-sm); box-sizing: border-box; min-height: 88px; text-align: left; position: relative;
@@ -597,7 +607,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 .ad-del.ad-hide.arm { background: #EFEDE8; color: var(--ink); border-color: transparent; }
 .quest-card .qc-kicker { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--teal-dd); margin-bottom: 6px; }
 .quest-card .qc-kicker .ic { width: 16px; height: 16px; }
-.quest-card .qc-goal { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
+.quest-card .qc-goal { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
 .quest-card .qc-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; position: relative; }
 .quest-card .qc-members { display: flex; }
 .quest-card .qc-mem { width: 36px; height: 36px; border-radius: 50%; border: 2.5px solid var(--teal-d); overflow: hidden; margin-left: -10px; background: #cdd; }
@@ -714,7 +724,7 @@ html[lang="es"] .task-time { max-width: 78px; font-size: 12.5px; }
 @keyframes slideup { from { transform: translateY(100%) } to { transform: none } }
 .modal-grab { position: sticky; top: 0; z-index: 5; display: block; width: calc(100% + 40px); height: 28px; margin: 0 -20px 12px; background: var(--cream); border-radius: 26px 26px 0 0; }
 .modal-grab::after { content: ""; position: absolute; left: 50%; top: 12px; transform: translateX(-50%); width: 40px; height: 5px; border-radius: 999px; background: var(--line); }
-.modal h2 { font-family: var(--display); font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.modal h2 { font-family: var(--display); font-size: 20px; font-weight: 700; margin-bottom: 4px; }
 .modal .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
 .auth-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .auth-close { width: 38px; height: 38px; border-radius: 13px; border: 1px solid var(--line); background: #fff; color: var(--muted); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
@@ -1202,7 +1212,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .hr-mood.m-upset { color: #6E4488; }
 
 /* ===== 記錄簿 · 故事書時間軸 ===== */
-.book-month { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--teal-dd); margin: 4px 0 10px 4px; }
+.book-month { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--teal-dd); margin: 4px 0 10px 4px; }
 .book-timeline { position: relative; padding-left: 18px; }
 .book-timeline::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 2px; background: var(--line); border-radius: 2px; }
 .book-timeline .book-entry { position: relative; }
@@ -1287,7 +1297,7 @@ button, .task-item, .health-row, .fam-switch-item, .stat-tile, .react-btn,
 .mc-face .ic { width: 30px; height: 30px; color: #C25716; }
 .mc-dot { position: absolute; right: -1px; top: -1px; width: 13px; height: 13px; border-radius: 50%; background: #6E4488; border: 2.5px solid #FFF; display: none; }
 .mc-face.mixed .mc-dot { display: block; }
-.mc-title { font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--ink); }
+.mc-title { font-family: var(--sans); font-size: 17px; font-weight: 700; color: var(--ink); }
 .mc-sub { font-size: 14.5px; color: var(--muted); margin-top: 2px; }
 .mc-obs { font-size: 15px; color: var(--ink); margin: 12px 0 8px; line-height: 1.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mc-obs span { color: var(--muted); margin-right: 2px; }
@@ -1453,7 +1463,7 @@ html:lang(ja) .med-chips.fit-row .mchip { font-size: 13px; letter-spacing: -.2px
 
 /* 走路挑戰卡：大數字 + 乾淨進度條 + 每人貢獻 */
 .qc-hero { display: flex; align-items: baseline; gap: 7px; margin: 12px 0 12px; }
-.qc-hero b { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--ink); }
+.qc-hero b { font-family: var(--display); font-size: 28px; font-weight: 700; color: var(--ink); }
 .qc-hero .qc-unit { font-size: 15px; font-weight: 600; color: var(--muted); }
 .qc-hero .qc-badge { margin-left: auto; align-self: center; font-size: 15px; font-weight: 700; color: var(--teal-dd); background: var(--mint); border-radius: 100px; padding: 5px 13px; }
 /* 活動狀態籤走品牌橘（2026-08-01）：整頁都是薄荷綠，狀態籤跟按鍵、進度條同色，
@@ -1504,12 +1514,12 @@ html:lang(ja) .med-chips.fit-row .mchip { font-size: 13px; letter-spacing: -.2px
 .visit-datefield input[type="date"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: 0; background: none; cursor: pointer; }
 
 /* 機智問答作答 */
-.quiz-q { font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.5; margin: 6px 0 14px; min-height: 30px; }
+.quiz-q { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.5; margin: 6px 0 14px; min-height: 30px; }
 .quiz-opts { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
 .quiz-opt { width: 100%; text-align: left; border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; padding: 14px 16px; font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink); cursor: pointer; }
 .quiz-opt.good { border-color: var(--teal-d); background: var(--mint); }
 .quiz-opt.bad { opacity: .45; }
-.quiz-score { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--teal-dd); text-align: center; margin: 14px 0 6px; }
+.quiz-score { font-family: var(--display); font-size: 28px; font-weight: 700; color: var(--teal-dd); text-align: center; margin: 14px 0 6px; }
 
 /* 聊聊頁：提示視窗放在通話按鈕上方（不蓋住按鈕） */
 body:has(#chat.active) .toast { bottom: calc(236px + env(safe-area-inset-bottom)); }
@@ -2214,7 +2224,7 @@ body:not(.debug) .ai-dev-panel { display: none !important; }
 .sub-x .ic { width: 20px; height: 20px; color: var(--ink); }
 /* 照片字幕帶：柔順漸層淡入（照片視覺用漸層＝常規，不是卡片；避免生硬橫切線）*/
 .sub-hero-cap { position: relative; color: var(--ink); padding: 0 24px; }
-.sub-hero-title { font-family: var(--serif); font-size: 25px; font-weight: 900; line-height: 1.2; letter-spacing: .5px; }
+.sub-hero-title { font-family: var(--sans); font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: .5px; }
 .sub-hero-sub { font-size: 13.5px; margin-top: 6px; color: var(--muted); }
 /* 整頁一起捲：原本頂部區塊釘死不動、只有這塊自己捲（Edward 2026-07-14：要能被滑走）*/
 .sub-page { overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -2536,11 +2546,12 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 /* MUNEA-STATUS-PORT-CSS */
 /* ===== 狀態頁 V1-Status 設計檔移植（Edward 7/7 · 完全比照 handoff · scope #status 不污染別頁） ===== */
 #status { --mint2: var(--mint-2); --ink2: var(--ink-2); }
-#status .serif { font-family: var(--serif); }
+/* 狀態頁的 .serif 標題（class 名沿用，字體已依 2026-11-20 字體規範改成黑體粗體；行內的 900 一併壓成 700） */
+#status .serif { font-family: var(--sans); font-weight: 700 !important; }
 /* 狀態頁的標題原本自己一套（27px/900、位置也比別頁高 14px），四頁看起來不齊。
  * 2026-08-01 Edward 問「每個頁面都有統一了嗎」——查出來就是這一頁沒有。
  * 改成跟 .page-title 同一組規格（24px/800、上下留白一致）。 */
-#status .h1 { font-size: 24px; font-weight: 800; letter-spacing: 0; line-height: 1.2;
+#status .h1 { font-size: 26px; font-weight: 700; letter-spacing: 0; line-height: 1.2;
   min-height: 44px; display: flex; align-items: center; margin: 6px 0 16px; }
 /* 2026-08-01 二修：上次補的 8px 補反了——我量的是「框」的位置（四頁都一樣），
  * 但真正看得到的是「字形」的位置，那個差 8px。Edward 一眼看出來、我的量測法沒有。
@@ -2548,7 +2559,7 @@ textarea.chal-input { resize: none; line-height: 1.7; }
 #status .card, #family .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; }
 #status .row, #family .row { display: flex; align-items: center; }
 #status .chip, #family .chip { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }  /* 7/9 Edward：家人頁標籤與狀態頁同規範（原只掛 #status、家人頁變螢光方塊） */
-#status .mnum, #family .mnum { font-family: var(--serif); font-weight: 900; line-height: 1; }
+#status .mnum, #family .mnum { font-family: var(--display); font-weight: 700; line-height: 1; }
 #status .moodface { border: none; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: transform .15s; }
 #status .moodface:hover { transform: translateY(-2px); }
 #status .moodface .fring { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; transition: box-shadow .18s; }
@@ -2618,7 +2629,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .med-lightbox.show { display: flex; }
 .mlb-card { text-align: center; }
 .mlb-card img { width: min(300px,74vw); height: min(300px,74vw); object-fit: cover; border-radius: 22px; box-shadow: 0 22px 54px -12px rgba(0,0,0,.5); }
-.mlb-name { color: #fff; font-family: var(--serif); font-weight: 900; font-size: 20px; margin-top: 16px; }
+.mlb-name { color: #fff; font-family: var(--sans); font-weight: 700; font-size: 20px; margin-top: 16px; }
 .mlb-close { margin-top: 14px; border: none; background: rgba(255,255,255,.18); color: #fff; font-weight: 700; font-size: 15px; padding: 11px 30px; border-radius: 999px; cursor: pointer; }
 
 /* 照片上傳「處理中」狀態（Edward 7/7） */
@@ -2630,7 +2641,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .fc-top { display: flex; align-items: center; gap: 12px; background: var(--mint); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin: 4px 0 14px; }
 .fc-recip-av { flex: 0 0 44px; width: 44px; height: 44px; font-size: 18px; }
 .fc-recip-info { flex: 1; min-width: 0; }
-.fc-recip-info b { display: block; font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); }
+.fc-recip-info b { display: block; font-family: var(--sans); font-weight: 700; font-size: 16px; color: var(--ink); }
 .fc-recip-info span { font-size: 12.5px; color: var(--muted); }
 .fc-count { flex-shrink: 0; font-size: 12px; font-weight: 800; color: var(--teal-dd); background: #fff; border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 .rl-wrap .rl { position: relative; }
@@ -2666,7 +2677,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
 .sv-ic svg { width: 21px; height: 21px; fill: none; stroke: var(--teal-dd); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sv-txt b { display: block; font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .sv-txt small { display: block; font-size: 14px; color: var(--muted); line-height: 1.55; margin-top: 2px; }
-.sub-sec-label { font-family: var(--serif); font-weight: 900; font-size: 16px; color: var(--ink); margin: 4px 2px 12px; }
+.sub-sec-label { font-family: var(--sans); font-weight: 700; font-size: 16px; color: var(--ink); margin: 4px 2px 12px; }
 .ppk-who { font-size: 12.5px; color: var(--muted); margin: 3px 0 12px; }
 .ppk.sel.pro .ppk-who { color: #8A6410; }
 
@@ -2843,7 +2854,7 @@ input.ms-time:focus { outline: none; color: var(--teal-dd); }
  * 換個語言標題就變大變小，看起來像兩個產品。
  * 24px 是「四語每一頁都放得下一行」的最大值（量過首頁／家人／設定／裝置四頁）。
  * 西班牙文的家人頁原本是 Círculo de salud familiar，太長，一併收短成 Salud familiar。 */
-.page-title, .greeting-big { font-size: 24px; }
+.page-title, .greeting-big { font-size: 26px; }   /* 字體規範：頁面大標 26／700 */
 html:lang(en) .greeting-big, html:lang(es) .greeting-big { max-width: none; }
 
 /* 通話控制鈕：英文與西班牙文只留圖示，不放字（Edward 2026-08-01 拍板）。
@@ -2939,7 +2950,7 @@ html:lang(en) .sub-legal, html:lang(es) .sub-legal {
 
 /* 寧寧觀察卡的標題：原本寫在行內（font-size:15.5px），行內樣式贏過所有選擇器，
  * 外語就沒辦法覆寫、「Ningning's observations」只能折成兩行。改成 class 才調得動。 */
-.obs-heading { font-size: 15.5px; font-weight: 900; }
+.obs-heading { font-size: 15.5px; font-weight: 700; }
 html:lang(en) .obs-heading, html:lang(es) .obs-heading { font-size: 14.5px; white-space: nowrap; }
 
 /* 月繳／年繳切換：西班牙文的「Anual + Ahorra un 20%」擠成三行。
@@ -3017,7 +3028,7 @@ html:lang(en) .chal-type, html:lang(es) .chal-type, html:lang(ja) .chal-type {
 html:lang(ja) {
   --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", -apple-system, sans-serif;
   --display: "Poppins", "Hiragino Sans", "Noto Sans JP", sans-serif;
-  --serif: "Hiragino Mincho ProN", "Noto Serif JP", Georgia, serif;
+  --serif: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;   /* App 不用明朝體（2026-11-20 字體規範） */
 }
 
 /* 標題的位置四頁一致（Edward 2026-08-01：「位置也要一致」）。
@@ -3224,3 +3235,138 @@ html:lang(ja) {
   .boot-splash.is-leaving { animation: none; opacity: 0; visibility: hidden; }
   .onb-track { scroll-behavior: auto; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   付費頁／加買分鐘／設定方案卡／通話結束卡（2026-11-20 Edward 看過設計稿說「可以」）
+   設計稿：.tmp/design-review-1120/提案/P1～P6（P5 家人頁先不改）。
+   長輩可讀性底線：內文 ≥17px、副字 ≥15px、點得到的東西 ≥48px 高。
+   主按鈕顏色照舊用 --btn-green（7/30 拍板），白字 3.16:1 只過「大字」標準，所以主按鈕字一律 19px／700。
+   全部放在檔尾、用 id 範圍限定，蓋過上面舊樣式，不動舊規則本身。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── P1 付費頁 ── */
+#planModal .sub-top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 20px 6px; background: var(--cream); }
+#planModal .sub-top .sub-x { position: static; flex: none; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: #fff; }
+#planModal .sub-top .sub-x .ic { width: 22px; height: 22px; color: var(--ink); }
+#planModal .sub-status { display: inline-flex; align-items: center; min-height: 36px; background: var(--mint); color: var(--teal-dd); font-weight: 700; font-size: 15px;
+  line-height: 1.35; border-radius: 999px; padding: 6px 13px; text-align: right; }
+#planModal .sub-status[hidden] { display: none; }
+#planModal .sub-body { display: flex; flex-direction: column; gap: 14px; padding: 4px 20px calc(28px + env(safe-area-inset-bottom)); }
+#planModal .sub-h { font-family: var(--sans); font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.3; margin: 2px 0 0; }
+#planModal .sub-lede { font-size: 17px; color: var(--ink-2); line-height: 1.6; margin: 0; }
+#planModal .sub-lede:lang(zh), #planModal .sub-lede:lang(ja) { text-wrap: balance; }
+#planModal .sub-lede[hidden] { display: none; }
+#planModal .sub-seg { margin-bottom: 0; }
+#planModal .sseg-btn { min-height: 44px; font-size: 16px; }
+#subPlans { display: flex; flex-direction: column; gap: 14px; }
+#planModal .sub-cycle { display: grid; grid-template-columns: 1fr 1fr; background: var(--mint); border-radius: 14px; padding: 4px; margin: 0; }
+#planModal .scyc-thumb { display: none; }
+#planModal .scyc-btn { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; border-radius: 11px; padding: 0 8px;
+  font-size: 17px; font-weight: 700; color: var(--teal-dd); }
+#planModal .scyc-btn.on { background: #fff; box-shadow: var(--shadow-sm); color: var(--ink); }
+#planModal .scyc-badge, #planModal .scyc-btn.on .scyc-badge { font-size: 15px; font-weight: 700; background: var(--gold-soft); color: #6A4F0F; border-radius: 999px; padding: 2px 8px; margin-left: 0; }
+#planModal .plan-pick { gap: 14px; margin: 6px 0 0; }
+#planModal .ppk, #planModal .ppk.pro { background: #fff; border: 1.5px solid #9AA39F; border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+#planModal .ppk.sel, #planModal .ppk.sel.pro { background: #fff; border: 2.5px solid var(--btn-green); padding: 15px 17px; box-shadow: 0 8px 20px -12px rgba(41,127,121,.6); }
+#planModal .ppk-tag { position: absolute; top: -14px; left: 16px; background: var(--teal-dd); color: #fff; font-size: 16px; font-weight: 700; border-radius: 999px; padding: 3px 11px; line-height: 1.4; }
+#planModal .ppk-radio { right: 16px; top: 18px; width: 26px; height: 26px; border: 2.5px solid #7D8783; background: #fff; box-shadow: none; }
+#planModal .ppk.sel .ppk-radio, #planModal .ppk.sel.pro .ppk-radio { border: 7px solid var(--btn-green); background: #fff; box-shadow: none; }
+#planModal .ppk-top, #planModal .ppk.pro .ppk-top { margin: 0; padding-right: 36px; align-items: baseline; }
+#planModal .ppk-name { font-size: 22px; font-weight: 700; }
+#planModal .ppk-price, #planModal .ppk.sel .ppk-price, #planModal .ppk.sel.pro .ppk-price { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--ink); }
+#planModal .ppk-price small { font-size: 15px; font-weight: 600; color: var(--muted); }
+#planModal .ppk-save { font-size: 15px; font-weight: 700; color: #6A4F0F; margin: 0; }
+#planModal .ppk-feats { gap: 4px; }
+#planModal .ppk-feats li { padding-left: 0; word-break: normal; }
+#planModal .ppk-feats li::before { display: none; }
+#planModal .ppk-min { font-size: 17px; font-weight: 700; color: var(--teal-dd); line-height: 1.5; }
+#planModal .ppk-min span { font-weight: 500; color: var(--ink-2); }
+#planModal .ppk-ln { font-size: 15.5px; color: var(--ink-2); line-height: 1.5; }
+#planModal .sub-fam { display: flex; gap: 10px; align-items: flex-start; background: var(--mint); border-radius: 16px; padding: 12px 14px;
+  font-size: 15.5px; color: var(--teal-dd); line-height: 1.55; }
+#planModal .sub-fam .ic { flex: none; width: 22px; height: 22px; stroke: var(--teal-dd); stroke-width: 2; fill: none; margin-top: 1px; }
+#planModal .sub-cta { min-height: 56px; border-radius: 16px; font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: .01em;
+  box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+#planModal .sub-cta:disabled { box-shadow: none; }
+.sub-more { border-top: 1px solid var(--line); }
+.sub-more > summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 52px; cursor: pointer;
+  list-style: none; font-size: 16.5px; color: var(--ink-2); }
+.sub-more > summary::-webkit-details-marker { display: none; }
+.sub-more-chev { flex: none; font-size: 22px; line-height: 1; color: var(--muted); transition: transform .2s; }
+.sub-more[open] .sub-more-chev { transform: rotate(90deg); }
+.sub-more .sub-intro { font-size: 15.5px; color: var(--ink-2); margin: 2px 0 10px; }
+.sub-more .credit-rules { margin: 0 0 6px; }
+.sub-more .credit-rules .cr-row b, .sub-more .credit-rules .cr-note { font-size: 15.5px; }
+#planModal .sub-legal { font-size: 15px; color: #5C564E; line-height: 1.6; margin: 0; text-align: left; }
+#planModal .sub-legal a { color: var(--teal-dd); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ── P2 加買分鐘（單張與付費頁裡的分頁同一套）── */
+#topUpModal .tu-sheet { display: flex; flex-direction: column; gap: 14px; }
+#topUpModal .tu-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+#topUpModal .tu-head h2 { font-family: var(--sans); font-size: 20px; font-weight: 700; margin: 0; color: var(--ink); }
+.tu-x { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; cursor: pointer; }
+.tu-x .ic { width: 22px; height: 22px; color: var(--ink); }
+.tu-left { display: flex; justify-content: space-between; align-items: center; gap: 4px 10px; flex-wrap: wrap; background: var(--coral-soft); color: #8A4A12;
+  border-radius: 14px; padding: 12px 14px; font-size: 15.5px; font-weight: 700; line-height: 1.45; }
+.tu-left[hidden], .tu-left span[hidden] { display: none; }
+.tu-note { font-size: 17px; color: var(--ink-2); margin: 0; line-height: 1.6; }
+.tu-note:lang(zh), .tu-note:lang(ja) { text-wrap: pretty; }
+#subPoints { display: flex; flex-direction: column; gap: 14px; }
+#topUpModal .tu-grid, #subPoints .tu-grid { gap: 12px; }
+#topUpModal .tu-card, #subPoints .tu-card { background: #fff; border: 1.5px solid #9AA39F; border-radius: 18px; padding: 16px 8px; min-height: 96px; gap: 4px; justify-content: center; }
+#topUpModal .tu-card.on, #subPoints .tu-card.on { border: 2.5px solid var(--btn-green); background: #F2FAF8; padding: 15px 7px; }
+#topUpModal .tu-card b, #subPoints .tu-card b { font-size: 22px; font-weight: 700; color: var(--ink); }
+#topUpModal .tu-card .tu-price, #subPoints .tu-card .tu-price { font-size: 17px; font-weight: 700; color: var(--ink-2); margin: 0; }
+#topUpModal .tu-buy, #subPoints #tuBuyBtn2 { margin: 0 !important; min-height: 56px; border-radius: 16px; font-family: var(--display); font-weight: 700; font-size: 19px;
+  box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+#topUpModal .tu-buy:disabled, #subPoints #tuBuyBtn2:disabled { box-shadow: none; font-size: 17px; }
+
+/* ── P3／P4 設定頁方案卡 ── */
+#planCard:not([data-mode="legacy"]) { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+#planCard[data-mode="legacy"] .pc-modern, #planCard[data-mode="legacy"] .pc-dayrow, #planCard[data-mode="legacy"] .pc-share, #planCard[data-mode="legacy"] .pc-free,
+#planCard:not([data-mode="legacy"]) .pc-legacy,
+#planCard:not([data-mode="trial"]) .pc-dayrow,
+#planCard:not([data-mode="share"]) .pc-share,
+#planCard[data-mode="share"] .pc-free { display: none !important; }
+#planCard .pc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+#planCard .pc-head-meta { flex: none; color: var(--muted); font-weight: 600; }
+#planCard .pc-big { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+#planCard .pc-big small { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink-2); }
+#planCard .pc-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+#planCard .pc-days i { height: 12px; border-radius: 999px; background: var(--mint-2); }
+#planCard .pc-days i.done { background: var(--btn-green); }
+#planCard .pc-days i.now { background: #fff; box-shadow: inset 0 0 0 2.5px var(--btn-green); }
+#planCard .pc-daylbl { display: flex; justify-content: space-between; font-size: 15px; color: var(--muted); margin-top: -4px; }
+#planCard .pc-note, #planCard .pc-usage-note { font-size: 15px; color: var(--muted); line-height: 1.6; margin: 0; }
+#planCard .pc-usage-note { margin-top: -6px; }
+#planCard .pc-bar { height: 12px; border-radius: 999px; background: var(--mint-2); overflow: hidden; display: flex; }
+#planCard .pc-bar i { display: block; height: 100%; }
+#planCard .pc-who { display: grid; gap: 8px; }
+#planCard .pc-who div { display: flex; align-items: center; gap: 10px; font-size: 17px; color: var(--ink); min-height: 28px; }
+#planCard .pc-who em { flex: none; width: 12px; height: 12px; border-radius: 50%; }
+#planCard .pc-who b { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+#planCard .pc-who span { margin-left: auto; flex: none; font-family: var(--display); font-weight: 600; color: var(--ink-2); font-size: 16px; }
+#planCard:not([data-mode="legacy"]) .plan-actions { margin: 2px 0 0; }
+#planCard[data-mode="trial"] #managePlanBtn, #planCard[data-mode="weekly"] #managePlanBtn, #planCard[data-mode="share"] #topUpBtn {
+  flex: 1 1 auto; width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff;
+  font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+#planCard[data-mode="trial"] #topUpBtn, #planCard[data-mode="weekly"] #topUpBtn, #planCard[data-mode="share"] #managePlanBtn { display: none !important; }
+#planCard:not([data-mode="legacy"]) .plan-links { gap: 0 18px; margin-top: 0; }
+#planCard:not([data-mode="legacy"]) .plan-link { min-height: 48px; padding: 0 6px; background: none; color: var(--teal-dd); font-size: 16px; font-weight: 600; opacity: 1; }
+#planCard[data-mode="legacy"] #planChangeBtn,
+#planCard[data-mode="trial"] #planChangeBtn, #planCard[data-mode="trial"] #planCancelBtn,
+#planCard[data-mode="weekly"] #planChangeBtn, #planCard[data-mode="weekly"] #planCancelBtn,
+#planCard[data-mode="share"] #seatCodeEntry,
+#planCard[data-mode="share"][data-role="member"] #planChangeBtn, #planCard[data-mode="share"][data-role="member"] #planCancelBtn { display: none !important; }
+
+/* ── P6 通話結束卡：蓋在人物下半部、通話鍵上方，不擋眼睛 ── */
+.call-end-card { position: absolute; left: 16px; right: 16px; bottom: calc(186px + env(safe-area-inset-bottom)); z-index: 9;
+  background: rgba(255,255,255,.96); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 16px 40px -18px rgba(0,0,0,.35); }
+.call-end-card[hidden] { display: none; }
+.call-end-card .ce-today { font-size: 15.5px; color: var(--muted); }
+.call-end-card .ce-next { font-size: 21px; font-weight: 700; color: var(--ink); line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+html:lang(en) .call-end-card .ce-next, html:lang(es) .call-end-card .ce-next { word-break: normal; }
+.call-end-card .ce-ok { width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff; cursor: pointer;
+  font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }

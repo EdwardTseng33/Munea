@@ -2286,10 +2286,32 @@ server.save_billing_store = original_save
 
 with tempfile.TemporaryDirectory() as d:
     original_credits_path = server.CREDITS_STORE_PATH
+    original_share_path = server.FAMILY_CREDIT_SHARE_PATH
+    original_profile = server.load_app_profile_store
+    original_billing_load = server.load_billing_store
     server.CREDITS_STORE_PATH = str(Path(d) / "credits_store.json")
+    server.FAMILY_CREDIT_SHARE_PATH = str(Path(d) / "family_credit_share_store.json")
+    # Since 2026-11-20 a free account is never at 0: days 1-7 get 10 minutes per Taipei day, then 10 per week.
+    # Pin a free account created today, outside any family circle, so the balance is exactly the rule's grant.
+    # (Keep this block ASCII-only: Windows PowerShell 5 reads this file without a BOM.)
+    server.load_app_profile_store = lambda: {
+        "account": {"id": "smoke-free-account", "createdAt": server.utc_now()},
+        "primaryCareRecipientId": "smoke-free-person",
+        "familyGroup": {"id": "smoke-free-family"},
+    }
+    server.load_billing_store = lambda: server.default_billing_store()
     balance = server.credits_balance_response({})
     assert balance["ok"] is True
-    assert balance["walletSummary"]["total"] == 0
+    assert balance["allowance"]["mode"] == "free_daily"
+    assert balance["allowance"]["trialDay"] == 1
+    assert balance["allowance"]["todayGrant"] == 10
+    assert balance["familyShare"] is None
+    assert balance["walletSummary"]["freeAllowance"] == 10
+    assert balance["walletSummary"]["includedMonthly"] == 0
+    assert balance["walletSummary"]["purchased"] == 0
+    assert balance["walletSummary"]["total"] == 10
+    replay_balance = server.credits_balance_response({})
+    assert replay_balance["walletSummary"]["total"] == 10, "same day must not grant twice"
 
     grant_included = server.credits_grant_response({
         "amount": 10,
@@ -2309,7 +2331,7 @@ with tempfile.TemporaryDirectory() as d:
         "idempotencyKey": "smoke-grant-purchased-1",
     })
     assert grant_purchased["ok"] is True
-    assert grant_purchased["walletSummary"]["total"] == 15
+    assert grant_purchased["walletSummary"]["total"] == 25
     replay = server.credits_grant_response({
         "amount": 5,
         "walletType": "purchased",
@@ -2318,7 +2340,7 @@ with tempfile.TemporaryDirectory() as d:
     })
     assert replay["ok"] is True
     assert replay["idempotentReplay"] is True
-    assert replay["walletSummary"]["total"] == 15
+    assert replay["walletSummary"]["total"] == 25
 
     consume = server.credits_consume_response({
         "amount": 12,
@@ -2327,8 +2349,10 @@ with tempfile.TemporaryDirectory() as d:
         "idempotencyKey": "smoke-consume-avatar-1",
     })
     assert consume["ok"] is True
-    assert consume["walletSummary"]["includedMonthly"] == 0
-    assert consume["walletSummary"]["purchased"] == 3
+    # Spend order: today's free allowance -> monthly allowance -> purchased. 12 = free 10 + monthly 2.
+    assert consume["walletSummary"]["freeAllowance"] == 0
+    assert consume["walletSummary"]["includedMonthly"] == 8
+    assert consume["walletSummary"]["purchased"] == 5
     consume_replay = server.credits_consume_response({
         "amount": 12,
         "feature": "premium_avatar",
@@ -2336,7 +2360,8 @@ with tempfile.TemporaryDirectory() as d:
     })
     assert consume_replay["ok"] is True
     assert consume_replay["idempotentReplay"] is True
-    assert consume_replay["walletSummary"]["purchased"] == 3
+    assert consume_replay["walletSummary"]["includedMonthly"] == 8
+    assert consume_replay["walletSummary"]["purchased"] == 5
 
     insufficient = server.credits_consume_response({
         "amount": 99,
@@ -2348,6 +2373,9 @@ with tempfile.TemporaryDirectory() as d:
     assert insufficient["error"]["code"] == "insufficient_credits"
     assert insufficient["fallbackMode"] == "2d-viseme"
     server.CREDITS_STORE_PATH = original_credits_path
+    server.FAMILY_CREDIT_SHARE_PATH = original_share_path
+    server.load_app_profile_store = original_profile
+    server.load_billing_store = original_billing_load
 print("billing plan", normalized["activePlan"])
 '@
 Pass "Billing entitlements and avatar session gates normalize correctly"
