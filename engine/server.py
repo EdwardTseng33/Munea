@@ -23,6 +23,7 @@ from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
 import ai_health
+import gemini_models
 import cloud_resync
 import clinic_visits
 import health_followup
@@ -3652,7 +3653,7 @@ def _summary_tags_from_context(context, text=""):
 # 下一通就退回只知道「多久前聊過」。AI 失敗也回空字串，不影響收線。
 INTERNAL_AUDIT_SUMMARY_PREFIX = "Post-turn companion review"
 # 11/5 實測：gemini-2.5-flash-lite 對新用戶已下架（404）；3.5-flash-lite 約 1.2 秒、2.5-flash 約 3.8 秒。
-CALL_RECAP_MODELS = ("gemini-3.5-flash-lite", "gemini-2.5-flash")
+CALL_RECAP_MODELS = gemini_models.TEXT_MODELS  # 11/18：2.5-flash 12/1 停用，備援改 3.1-flash-lite
 # 中文 60 字以內；英文同樣意思要 150 字元上下，上限放 200（太長的就不收）。
 CALL_RECAP_MAX_CHARS = 200
 CALL_RECAP_BUDGET_S = float(os.environ.get("MUNEA_CALL_RECAP_BUDGET_S", "4"))
@@ -3714,7 +3715,6 @@ def ai_call_recap_summary(history):
                 model=model,
                 contents=instruction,
                 config=types.GenerateContentConfig(
-                    temperature=0.2,
                     response_mime_type="application/json",
                 ),
             )
@@ -10527,11 +10527,11 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     if not contents:
         return localization.opening_message(context.get("locale"))
     for _ in range(4):
-        for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        for m in gemini_models.TEXT_MODELS:
             try:
                 r = eng.client.models.generate_content(
                     model=m, contents=contents,
-                    config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
+                    config=types.GenerateContentConfig(system_instruction=base))
                 # 2026-07-25（卡西法・三修③）：出口前防禦性清洗，剝掉模型偶爾漏出的
                 # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
                 # has_briefing：今天到底有沒有備到天氣。沒有卻講「氣象報告說」＝
@@ -10649,13 +10649,12 @@ def quiz_questions_response(data):
     place = str(data.get("place") or "").strip()[:40]
 
     instruction = quiz_question_instruction(locale, interests, place, count)
-    for model in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+    for model in gemini_models.TEXT_MODELS:
         try:
             r = eng.client.models.generate_content(
                 model=model,
                 contents=instruction,
                 config=types.GenerateContentConfig(
-                    temperature=0.9,
                     response_mime_type="application/json",
                 ),
             )
@@ -11312,24 +11311,23 @@ def voice_health_context_response(data):
 
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
+    # 2026-11-18：2.5／3.1 預覽 TTS 12/18 停用，改 3.8。3.8 會把接在句子前面的語氣說明照念
+    # （實測一句 3 秒的話變 25 秒），語氣改放 speech_metadata（見 gemini_models.synthesize_pcm）。
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
-    content = (c["style"] or "") + localization.speech_text(text, locale)
-    for m in ("gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"):
-        try:
-            r = eng.client.models.generate_content(
-                model=m, contents=content,
-                config=types.GenerateContentConfig(
-                    response_modalities=["AUDIO"],
-                    speech_config=types.SpeechConfig(language_code=localization.speech_language_code(locale), voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=c["voice"])))))
-            pcm = r.candidates[0].content.parts[0].inline_data.data
-            buf = io.BytesIO()
-            with wave.open(buf, "wb") as w:
-                w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
-            return base64.b64encode(buf.getvalue()).decode()
-        except Exception as e:
-            log_fallback_exception(f"generate TTS audio with {m}", e)
-    return ""
+    pcm = gemini_models.synthesize_pcm(
+        eng.client,
+        localization.speech_text(text, locale),
+        c["voice"],
+        c.get("style") or "",
+        localization.speech_language_code(locale),
+    )
+    if not pcm:
+        log_fallback_exception(f"generate TTS audio with {', '.join(gemini_models.TTS_MODELS)}", RuntimeError("all_tts_models_failed"))
+        return ""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    return base64.b64encode(buf.getvalue()).decode()
 
 
 def decode_voice_note(data):
