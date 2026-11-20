@@ -1,0 +1,89 @@
+name: Android Reminder Test Lab APKs
+
+# 2026-11-20 補助案 B2「5 款以上實機」：只出兩個 APK（App 本體 debug 包＋測試包）當 artifact，
+# 給本機用 gcloud 送 Firebase Test Lab（Google 服務帳號、任何鑰匙都不放進 GitHub）。
+# 送真機前先在免費的 GitHub 模擬器上把同一支測試跑通（emulator job），避免浪費實體機分鐘。
+# 測試包裡沒有任何帳密；之後要登入的測試用 gcloud --environment-variables 傳參數。
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "claude/android-local-notifications-20261120"
+    paths:
+      - ".github/workflows/android-reminder-testlab-apks.yml"
+      - "android/reminder-test/**"
+      - "android/app/src/debug/**"
+      - "android/settings.gradle"
+
+concurrency:
+  group: android-reminder-testlab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 建置 App＋測試包
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npx cap sync android
+      - run: chmod +x android/gradlew
+      - name: Build app + reminder test APKs
+        working-directory: android
+        run: ./gradlew :app:assembleDebug :reminder-test:assembleDebug --no-daemon
+      - name: List outputs
+        run: find android/app/build/outputs android/reminder-test/build/outputs -name '*.apk' -exec ls -l {} \;
+      - uses: actions/upload-artifact@v4
+        with:
+          name: testlab-apks
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/reminder-test/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  emulator:
+    name: 免費模擬器先跑通同一支測試
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: testlab-apks
+          path: ./apks
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run instrumentation on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash scripts/android-reminder-instrument-emulator.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reminder-instrument-emulator
+          path: emulator-out/
+          if-no-files-found: warn
+          retention-days: 14
