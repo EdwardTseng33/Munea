@@ -60,7 +60,7 @@ final class QaKit {
         Log.i(TAG, line);
         String stamped = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date()) + " " + line;
         String b64 = Base64.encodeToString((stamped + "\n").getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
-        sh("sh -c 'echo " + b64 + " | base64 -d >> " + OUT_DIR + "/result.txt'");
+        sh("echo " + b64 + " | base64 -d >> " + OUT_DIR + "/result.txt");
     }
 
     /**

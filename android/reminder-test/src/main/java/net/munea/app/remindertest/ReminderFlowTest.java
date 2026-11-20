@@ -87,7 +87,7 @@ public class ReminderFlowTest {
         // 3. App 說明卡
         String card = kit.evalJs("localStorage.removeItem('munea.notification.askInContext.medication'); MuneaNotify.askInContext('medication'); await new Promise(function(r){setTimeout(r,1500)}); return !!document.querySelector('#pushAskModal.show')", 15);
         kit.shot("02-ask-card");
-        UiObject2 accept = kit.device.wait(Until.findObject(By.text(Pattern.compile("(?s).*(開通知|turn on|Turn on|オン|activar|Activar).*"))), 6000);
+        UiObject2 accept = kit.device.wait(Until.findObject(By.text(Pattern.compile("^(好，開通知|Yes, turn on|はい、オンにする|Sí, activar)$"))), 6000);
         boolean accepted;
         if (accept != null) { accept.click(); accepted = true; }
         else accepted = "true".equals(kit.evalJs("var b=document.getElementById('pushAskAccept'); if(!b) return false; b.click(); return true", 10));
