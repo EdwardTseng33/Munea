@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 在模擬器上跑 android/reminder-test 的 ReminderFlowTest（跟送 Firebase Test Lab 的是同一組 APK）。
 set -uo pipefail
-APP="$(ls apks/**/app-debug.apk apks/app-debug.apk 2>/dev/null | head -1)"
+APP="$(find apks -name app-debug.apk | head -1)"
 TEST="$(find apks -name '*reminder-test*.apk' | head -1)"
 echo "app=$APP test=$TEST"
 mkdir -p emulator-out
