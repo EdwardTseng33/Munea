@@ -199,10 +199,19 @@ adb shell input keyevent KEYCODE_HOME
 sleep 2
 adb shell am kill "$PKG"
 sleep 3
+# 第二輪 CI：am kill 在模擬器上沒收掉（App 還在跑），App 只是「在背景」不算「關著」。
+# 改用 App 自己的身分把行程結束（debug 包才能 run-as）——等同系統回收記憶體把它清掉，
+# 一樣不是 force-stop，鬧鐘不會被清。
+APP_PID="$(adb shell pidof "$PKG" 2>/dev/null | tr -d '\r')"
+if [ -n "$APP_PID" ]; then
+  adb shell run-as "$PKG" kill -9 $APP_PID >/dev/null 2>&1 || true
+  sleep 3
+fi
 if [ -z "$(adb shell pidof "$PKG" 2>/dev/null | tr -d '\r')" ]; then
-  record "關掉 App" "App 行程不在了（am kill，等同滑掉／被系統回收）" "成功" "-"
+  record "關掉 App" "App 行程不在了（等同滑掉／被系統回收；不是強制停止）" "成功：pidof 查不到 App" "-"
 else
-  record "關掉 App" "App 行程不在了" "還在跑（am kill 沒收掉），照樣往下等" "-"
+  record "關掉 App" "App 行程不在了" "還在跑（收不掉），這一輪只證明得了「在背景」" "-"
+  OVERALL_OK=0
 fi
 shot "04-home-app-closed"
 
