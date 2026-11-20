@@ -245,7 +245,8 @@ const notifications = appWebView.files.find(
   (file) => file.path === 'web/src/notify.js',
 );
 // 2026-11-09：64 → 72＋場景化通知邀請（askInContext）八句新文案，全部走 t('key', '...') 直接綁鍵。
-assert.equal(notifications.boundHanCandidates, 72);
+// 2026-11-20：72 → 76＋Android 版「通知被關掉」的四句（手機設定、不是 iPhone 設定），同樣直接綁鍵。
+assert.equal(notifications.boundHanCandidates, 76);
 assert.equal(notifications.reviewedNonUserFacingHanCandidates, 9);
 assert.equal(notifications.unboundHanCandidates, 0);
 assert.deepEqual(notifications.reviewFailures, []);

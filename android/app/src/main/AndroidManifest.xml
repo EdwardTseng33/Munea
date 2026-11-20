@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -55,4 +56,20 @@
          Android 的錄音授權對話框，不會略過使用者同意。 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- 2026-11-20（補助案 B2「提醒」流程）：吃藥／看診提醒改用官方 @capacitor/local-notifications，
+         App 關著也會響。
+         · POST_NOTIFICATIONS：Android 13 以上要使用者同意才能跳通知。只在使用者「開通知」時才問
+           （設定頁通知中心的總開關、或剛設定好用藥／看診提醒時的說明卡），不在一打開 App 就問。
+         · RECEIVE_BOOT_COMPLETED：重開機後把還沒響的提醒排回去（外掛自帶的開機接收器要用）。
+         外掛本身也宣告了這兩個，這裡再寫一次是讓看這份檔的人知道 App 要了哪些權限。 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- 精準鬧鐘（SCHEDULE_EXACT_ALARM）外掛預設會帶進來，這裡刻意拿掉：
+         ① 沒有它，提醒走「省電模式也會叫醒手機、但系統可以晚幾分鐘」的鬧鐘，吃藥／看診提醒夠用；
+         ② 有它而沒被允許時，外掛會把使用者帶去「鬧鐘與提醒」系統設定頁，長輩會卡住；
+         ③ Android 14 起新裝的 App 預設不給這個權限，Google Play 也只建議鬧鐘／行事曆類核心功能用。
+         排程時每則都帶 isExactNotification:false（web/src/notify-android.js）。 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
 </manifest>
