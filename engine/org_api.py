@@ -401,10 +401,42 @@ def granted_seat_ids(client_id):
 # 身分：登入證 → org_staff
 # ---------------------------------------------------------------------------
 
-def resolve_staff(auth):
-    """auth = server 驗完的 {authUserId, email}。回 staff 或 None（None 一律當 not_found）。
+EMAIL_VERIFIED_PROVIDERS = ("google", "apple")
 
-    第一次登入：auth_user_id 還沒綁，用邀請 email 對上後綁起來、狀態 invited → active。
+
+def email_binding_allowed(auth):
+    """第一次登入用 email 對邀請名單之前，先確定這個 email 真的是他本人的（2026-11-18 · #722 信任關卡）。
+
+    只認：
+      · email 已確認（server 從 Supabase 使用者資料的 email_confirmed_at 算出 emailVerified＝True；
+        後台建、email_confirm=true 的測試帳號也是這種），或
+      · 用 Google／Apple 登入（email 由他們驗過）。
+
+    ⚠ 這一道**靠 Supabase 開著「註冊要收信確認」才成立**（2026-11-18 查：mailer_autoconfirm=false）。
+    哪天把自動確認打開，註冊當下就會自動填上 email_confirmed_at，用 Google 登入的人也能把 email 改成別人的——
+    這裡就擋不住了。所以那個設定必須保持開著；更牢的做法（改看 Google／Apple 那筆身分自己的 email，
+    或每天巡檢公開設定、一變就告警）列在之後再做。
+    """
+    auth = auth or {}
+    if auth.get("emailVerified") is True:
+        return True
+    return str(auth.get("provider") or "").strip().lower() in EMAIL_VERIFIED_PROVIDERS
+
+
+def unverified_invite_match(auth):
+    """email 在邀請名單上、還沒綁人，但這次登入的 email 沒確認——給 /org/me 講「請用受邀的帳號登入」。"""
+    auth = auth or {}
+    email = _lower(auth.get("email"))
+    if not email or not str(auth.get("authUserId") or "").strip() or email_binding_allowed(auth):
+        return False
+    return any(c["status"] == "invited" and not c.get("authUserId") for c in list_staff(email=email))
+
+
+def resolve_staff(auth):
+    """auth = server 驗完的 {authUserId, email, provider, emailVerified}。回 staff 或 None（None 一律當 not_found）。
+
+    第一次登入：auth_user_id 還沒綁，用邀請 email 對上後綁起來、狀態 invited → active；
+    只有 email 確認過的登入才准這樣對（email_binding_allowed）。
     停用的人就算 email 對得上也不給（disabled 是硬停）。
     """
     auth = auth or {}
@@ -419,7 +451,7 @@ def resolve_staff(auth):
             break
         if cand["status"] == "disabled":
             return None
-    if staff is None and email:
+    if staff is None and email and email_binding_allowed(auth):
         for cand in list_staff(email=email):
             if cand["status"] == "disabled":
                 return None
@@ -446,14 +478,20 @@ def _client_kind(client):
 
 
 def capabilities_for(staff, client):
-    """角色 × 客戶類型 → 做得到什麼（第 2.3 節矩陣，第 2 段只開讀的部分）。"""
+    """角色 × 客戶類型 → 做得到什麼（第 2.3 節矩陣）。機構專區網頁只看這幾格決定分頁，不自己另算。"""
     role = (staff or {}).get("role") or "case_manager"
     esg = _client_kind(client) == "esg"
     site_scoped = role != "org_admin"
+    care_week = (not esg) and role in ("org_admin", "case_manager")
     return {
         "summary": True,
         "elders": (not esg) and role in ("org_admin", "case_manager", "care_worker"),
-        "careWeek": (not esg) and role in ("org_admin", "case_manager"),
+        "careWeek": care_week,
+        # 第 3 段（2026-11-18）：條件跟 engine/org_alerts.py 的放行一模一樣——
+        # alerts＝/org/alerts、/org/alert/mark、/org/settings（都看 careWeek）；
+        # audit＝/org/audit（機構管理者、而且不是企業客戶）。test_org_alerts 把四種角色的每一格跟實際打接口的結果對過。
+        "alerts": care_week,
+        "audit": (not esg) and role == "org_admin",
         "reports": role in ("org_admin", "case_manager"),
         "siteScoped": site_scoped,
         "siteLabel": (staff or {}).get("siteLabel") if site_scoped else None,
@@ -561,19 +599,13 @@ def default_loaders():
     def guardian_events(account_ids, since_iso):
         activity = org_portal.load_cohort_activity(account_ids, since_iso, since_iso[:10], backend=backend)
         out = []
-        for ev in activity.get("productEvents") or []:
-            if not isinstance(ev, dict) or ev.get("eventName") != "guardian_risk_evaluated":
-                continue
+        guardian = [ev for ev in activity.get("productEvents") or []
+                    if isinstance(ev, dict) and ev.get("eventName") == "guardian_risk_evaluated"]
+        # 寧寧自己講的話不算；提到受暴受剝削的先不放進機構畫面：機構的建議句是「聯絡本人或家屬」，對受暴不安全
+        # （加害人可能就是家人）——同一通只要有一筆提到受暴，那通每一筆都不放（#717 第二張）。要不要另開一條給社工的
+        # 處理方式，是政策決定；在那之前，內部告警照發、由營運處理。規則在 care_week.guardian_events_shareable。
+        for ev in care_week.guardian_events_shareable(guardian):
             props = ev.get("properties") or {}
-            if props.get("who") == "ai":
-                continue  # 寧寧自己講的話不是長輩亮燈（2026-11-18）
-            cats = props.get("categories") or []
-            if isinstance(cats, str):
-                cats = [cats]
-            if props.get("protectionEvent") or props.get("protectionMentioned") or "protection_event" in cats:
-                # 提到受暴受剝削先不放進機構畫面：機構的建議句是「聯絡本人或家屬」，對受暴不安全（加害人可能就是家人）。
-                # 要不要另開一條給社工的處理方式，是政策決定；在那之前，內部告警照發、由營運處理（#717）。
-                continue
             out.append({
                 "accountId": ev.get("accountId") or ev.get("account_id"),
                 "personId": ev.get("personId") or ev.get("person_id"),
@@ -711,6 +743,10 @@ def _strip_anomalies(anomalies):
 def org_me_response(auth, data=None):
     staff, client = _staff_and_client(auth)
     if not staff:
+        # 唯一不回 not_found 的情況：email 在邀請名單上、但這次登入的 email 沒確認。講清楚要換哪個帳號登入，
+        # 不然本人會以為沒被開通。其他接口照舊一律 not_found。
+        if unverified_invite_match(auth):
+            return {"ok": False, "error": "email_unverified"}
         return _not_found()
     return {"ok": True, "staff": _public_staff(staff), "org": _public_org(client), "capabilities": capabilities_for(staff, client)}
 

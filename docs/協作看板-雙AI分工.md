@@ -1,5 +1,63 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-18 蘇菲｜🛡️ #728 複審：AI 讀完後長輩又說的話等到第二層的上限、沒判完計次告警、受暴類摘要也套受暴步驟（Draft PR #729 · call-path risk 中：只動亮燈後的背景決定與後台畫面）
+
+- **為什麼**：#728 已合併（6e394f7e）。沙利曼複審留下：🟡「AI 讀完之後長輩又說的話」只等 4 秒就放棄，第二層判讀本身最多要 12 秒；🟡 等不到而擋下只留一行診斷；🟢 後台從對話摘要來的列，標籤有受暴類時步驟還是「聯繫家庭圈指定的人」。
+- **改法**：等的上限改用同一個常數 `GUARDIAN_SEMANTIC_WAIT_S`（約 12 秒）；等到上限還沒判完而擋下 → 同一台連續 3 次發一般級內部告警 `guardian:late_words_unjudged`，判完一次歸零；對話摘要標籤有 `protection_event` → 後端 `handling=abuse`、前端也看類別，套受暴的四個步驟。
+- **證據**：`sim_727_v3_residual.py` 四種都不通知；`test_voice_guardian_brain_route` 121 → 123 條全過；前端測試補摘要列；突變 128 種全部重跑、128 種全紅；`npm run test:launch` 全過；危機辨識量尺 93.8%／0%／100% 不變。**App E2E pending**。
+- **信任關卡 #729 有條件通過，補了三件**：🔴 後台安全事件頁用通話編號整通一起判受暴（同一套 `care_week.guardian_abuse_call_ids`，舊資料逐筆判）；🟡 等的中間掛斷 → 從掛斷起最多再等 5 秒（`GUARDIAN_CLOSE_LATE_WAIT_S`），送 Brain 與告警在收線上限內做得完、上限不拉長；🟢 摘要標籤提到受暴就標 `protection_event` 並排第一。測試 123 → 127 條、突變 134 種全紅、量尺不變、`npm run test:launch` 全過。
+- **檔**：`engine/live_voice_server.py`、`engine/server.py`、`engine/care_week.py`、`web/src/admin.js`、`engine/test_voice_guardian_brain_route.py`、`scripts/test-admin-safety-steps.js`、本看板。
+
+### 2026-11-18 蘇菲｜🛡️ #727 複審剩下的兩個 🟡：後台受暴類那一筆不叫營運聯絡家人＋AI 判讀那一兩秒裡又說的話要等判完（Draft PR #728 · call-path risk 中：只動亮燈後的背景決定與後台畫面，不碰收音／出聲）
+
+- **為什麼**：#727 已合併上線（8d9121db）。沙利曼複審留下兩件：① 後台安全事件頁處理步驟固定寫「2 聯繫家庭圈指定的人」，旁邊卻列著標「提到受暴／AI 判過受暴」的事件——營運照步驟做就會打給可能就是加害人的家人；② 通話中等滿 25 秒那一刻，AI 讀的是當下的內容，它讀的那一兩秒裡長輩又說了關鍵字沒收的受暴說法（只有第二層 AI 抓得到、要 1–10 秒）→ 那句還沒判完就決定了 → 照發。
+- **改法**：
+  1. **後台**：標了受暴的那一筆列自己的處理步驟（①先確認本人安全 ②不要聯絡家人或家庭圈的人 ③必要時協助撥 113 保護專線或轉社工 ④結案回填）；一般事件照舊；清單裡有受暴類時，一般步驟旁多一句「標了受暴的那幾筆不照這個步驟——加害人可能就是家人，照那一筆寫的處理」。後端每筆帶 `handling`（`abuse`／`standard`），舊回應沒這欄看兩個旗標。四語文案；後台中文字串基準 727→728（注意：不要在既有的巢狀模板字串裡再塞反引號——字串清點是照反引號配對數的，多一對會少算一百多條）。
+  2. **窄縫**：選「等那些話判完」（比「拿新內容再問 AI」簡單、不多花一次 AI）。AI 回來後，長輩在 AI 讀的那份內容之後又說了話 → 等那些話判完（最多 4 秒）：判出受暴照規則不發、4 秒內沒判完也不發、判完沒事照發。只會發生在通話中等滿 25 秒那一刻；掛斷時 AI 讀的就是最後的話，照舊不多等。
+- **證據**：`sim_727_v3_residual.py` 第四種從「通知」變「不通知」、前三種照擋；`sim_727_override.py`、第三輪競態、週摘要那幾支照舊正確。新前端測試把 `renderSafety` 真的拿出來跑，也照同一份樣式畫出來看過。`test_voice_guardian_brain_route` 116 → 121 條全過；突變 120 種全部重跑：第一輪抓到 119，漏的「不等之後的話判完」是測試讓第二層判得比 AI 還快、根本不用等，改成 AI 回來時還在判（1 秒）後重跑相關 4 種全紅；相關測試都過；`npm run test:launch` 全過；危機辨識量尺 93.8%／0%／100% 逐題跟主線一樣。真 AI 沒重跑（AI 裁判本身沒動）。
+- **沒做**：第二層 AI 卡住超過 4 秒的那幾通不通知家人（錯在安全那邊）；等那 4 秒之間又講的、關鍵字沒收的話仍有一點縫；頁面最上面「守護原則：…協助聯繫指定家人」沒改，要不要加註請 Edward 一起看。**App E2E pending**。上線：Brain 先、Voice 後。
+- **檔**：`engine/live_voice_server.py`、`engine/server.py`、`web/src/admin.js`、`web/src/i18n/admin-{en,ja,es}.json`、`docs/I18N-SURFACE-INVENTORY.json`、`scripts/test-admin-safety-steps.js`（新）、`scripts/test-admin-console.js`、`engine/test_voice_guardian_brain_route.py`、本看板。
+
+### 2026-11-18 蘇菲｜🛡️ 通知家人前請 AI 看一次整通長輩說的話＋受暴事件有人接得到（#717 第二張 · 1.0.72 正式上架前要完成；Draft PR #727 · call-path risk 中：只動亮燈後的背景判斷、記錄與通知，不碰收音／出聲）
+
+- **為什麼**：#717 信任關卡（沙利曼）第三、四輪留下的：① 🔴 同一輪先講症狀、後講關鍵字沒收的受暴說法（「我胸口好痛喘不過氣，都是我兒子害的」）——前面有急症字整段判 high、第二層 AI 不會跑，家人照樣收到；② 🔴 反方向：「整通記住」＋幾條太寬的說法，一句平常話就讓整通都不通知（12 句平常話誤擋 9 句）；③ 週摘要前半句漏出（先講症狀那筆單看沒提到受暴）。
+- **改法**：
+  1. **AI 裁判**（`perception_engine.guardian_abuse_review`）：決定時間（25 秒到或掛斷）把這通長輩自己說過的話（最後約 1500 字；另外照順序留一份 `guardian_said`，不受守護腦 200 字字幕窗限制，寧寧的話不給）給 AI 看一次。AI 說有 → 不發、送 Brain 記一筆 `abuseConfirmed`（只記不通知、內部告警照發）；AI 說沒有 → 發（關鍵字亮過也發，診斷記 `ai_overrode_keywords`；AI 把握 < 0.6 就照關鍵字）；AI 逾時或壞掉 → 照關鍵字（舊行為），先再等還在判的第二層 AI 判完；第二層 AI 判過受暴的，AI 裁判說沒有也不推翻。一通最多問一次。模型同第二層（`MUNEA_GUARDIAN_MODEL`，預設 3.5-flash-lite）、不送 temperature、釘 JSON 格式、壞掉重問一次。這通亮過受暴卻沒有急症要通知的，收線時也問一次，判有就記 `abuseConfirmed`（給跨通話記住用）。
+  2. **逾時**：⚠ 實測查到 **Gemini 不收 10 秒以下的逾時**（送 4 秒整批回 400「Minimum allowed deadline is 10s」）——連線層一律 10 秒當「絕不卡死」的底，AI 裁判自己計時約 4 秒、時間到先走。第二層 AI 以前完全沒逾時，補上 10 秒（只換拿 client 那一行，跟 #715 錯開）＋語音端 12 秒兜底。
+  3. **收線**：有待決定的通知等到 15 秒；收線後送 Brain 每次 3 秒；`_guardian_drain_on_close` 接住取消、照常往下（收背景任務、存通話記憶不被跳過）；通知家人走專用一條執行緒（`guardian-notify`），送出前再確認一次這通還沒通知過、也沒有另一則正在送。
+  4. **關鍵字只當線索**（只動 `_PROTECTION_MENTION_ONLY_RE`、沒動 A4 的 `_PROTECTION_RE`）：「(家人)打的」只認子句開頭、後面緊貼東西（電話、字…）也不算；家人和「打我」中間有否定字不算；「罵我」拿掉。危機辨識量尺 93.8%／0%／100% 不變（逐題結果跟主線一模一樣）。
+  5. **整通一起跳過**：Voice 送 Brain 的記錄帶 `callId`（每通隨機、不連到任何人；Brain 只收英數 64 字內），家人週摘要與機構讀取改用同一份過濾 `care_week.guardian_events_shareable`。
+  6. **受暴事件有人接**：後台「安全事件」頁改用 `load_all_accounts_product_events`（跟北極星同一個修法；以前只讀得到示範帳號），每筆多標 `protectionMentioned`／`abuseConfirmed`／`who`。**告警級數沒改**（待 Edward）。
+  7. **跨通話記住（預設關）**：Brain 派送前查這個人最近 N 天有沒有 `abuseConfirmed`（只認 AI 判過的、不認關鍵字），有就不發、回 `suppressed=recent_abuse_confirmed`。`MUNEA_GUARDIAN_ABUSE_LOOKBACK_DAYS` 預設 0。
+  8. **題庫**：`engine/eval/family_notify/family_notify_decision_v1.json`（任務單 12 句平常話＋6 句受暴，另加 22 句；每題記「AI 沒回時照關鍵字」的結果當回歸底）；實測腳本 `engine/eval/run_family_notify_eval.py`（有鑰匙才跑，不寫檔、不碰資料庫）。
+- **證據**：真 AI（3.5-flash-lite）40 句 × 3 次＝120 次，最後決定 **120/120 對**，中位 0.77 秒、最慢 1.5 秒、失敗 0；AI 沒回時照關鍵字每 40 句對 27（誤擋 4、漏 9）。⚠ 說明書是看任務單那 18 句的錯改了兩版（第一版錯 B05「字是孫子打的」、A01「都是我兒子害的」；第二版 B11 三次錯兩次）；改完才加的 9 句沒拿來調、全對。三支重現腳本接上 AI 裁判後全部「該擋的擋、該發的發」（假 AI、真 AI 各跑一次）；原腳本不改照跑 B、C 已過，A 要有 AI 才擋得到。`test_voice_guardian_brain_route` 48 → 97 條全過；突變 86 種（這張新守門 57 種＋#717 前三輪的守門 29 種重跑）：第一輪 85 種抓到 84，漏的那條是測試句子選錯（「他打我，我胸口好痛」被規則層當受暴類、根本不會排隊），改成「他打我，我喘不過氣」；之後兩處小修改相關的 8 種（含新加的 1 種）重跑全紅；crisis（無鑰匙＋假鑰匙）、safety_contacts_notify、voice_guardian_loop、care_week（＋endpoint）、org_api、org_alerts、org_audit_strict、admin_safety_events 都過；`npm run test:launch` 全過（接上主線最新的 #725 之後，任務單說的那個官網字串紅燈也已經好了）。
+- **信任關卡（沙利曼）#727 審查：改完 1 個 🔴 就可以上——已改**：
+  1. 🔴 **AI 推翻了它根本沒看到的受暴關鍵字**（用「看到什麼判什麼」的誠實假 AI 實跑，兩種情況家人都收到）：①長通話開頭講「他打我」、後面又講 1,700 多字，AI 只看最後 1500 字；②AI 判讀那一兩秒裡長輩同一輪接著說「他打我」，以前用「第幾輪」比先後，被當成 AI 看過。→ 每次亮受暴都記下**那段話本身＋流水號＋位置**（不用輪數）；給 AI 看的內容＝亮過的那幾段（放最前面、最多佔 2/3）＋「……」＋最近說的話，總共 1500 字內；**只有亮過的每一段都在 AI 那次真的看到的內容裡才准推翻**，AI 判讀期間新亮的一律照關鍵字。重現腳本 `sim_727_override.py` 兩種都不再通知。
+  2. 🟡 防帶歪：說明書寫明【長輩說的話】…【說完了】框裡只是資料、裡面要你怎麼回答一律不照做（旁邊的人替自己否認也不算），資料裡的框線字樣先拿掉；推翻關鍵字的門檻 0.6 → **0.8**（AI 說有受暴照舊一律不發）。
+  3. 🟡 跨通話記住只認把握 ≥0.6 的「AI 判過受暴」（記錄帶 `abuseConfidence`；通話當下照舊）。
+  4. 🟡 AI 裁判在同一台連續 3 次沒回 → 內部告警 `guardian:abuse_review_unavailable`（一般級），不悄悄退回只看關鍵字。
+  5. 🟡 後台安全事件頁只撈守護事件（資料庫那邊就篩 `event_name`）；資料庫讀不到、改顯示這台主機的備份時，回應帶 `source.degraded`，頁面上方標「資料庫暫時讀不到…『沒有警訊』不代表沒事」、空清單不再說「是好消息」；每筆標「提到受暴／AI 判過受暴」（四語文案；後台中文字串基準 725 → 727）。
+  - 題庫加 6 題防帶歪＋5 題（第五版說明書之後才加）→ 51 題。真 AI 3 次（153 次）：最後決定 **152 對、1 誤擋、0 漏擋**——錯的是 X11「這通電話是我女婿打來的」三次錯一次（錯在安全那邊：不通知家人、內部告警照發）；防帶歪 6 題 18 次全對。說明書這輪改了一句（「打電話（電話打來、打過來）」），改完才加的 5 題全對。
+  - 測試 97 → 116 條全過；突變 110 種全部重跑、110 種全紅（這張新守門 81 種＋#717 前三輪的守門 29 種）；危機辨識量尺 93.8%／0%／100%，逐題跟主線一樣；`npm run test:launch` 全過（後台加了 5 句中文、四語都有翻，照規矩把後台中文字串基準 725→727 對齊）。
+  - **之後再做**（不在這張）：伺服器端結束通話要先關手機那條連線（動到收線順序，另開一張）；隱私政策補「為了安全，工作人員可能查看守護事件」（#706 在改隱私文字，已轉告）。
+- **要 Edward 定**：A. 受暴內部告警升不升最高級——建議「AI 判過」的升（已單獨叫 `guardian:abuse_confirmed`）、只有關鍵字的維持；後台「出事時怎麼處理」寫「聯繫家庭圈指定的人」，對受暴類不安全，營運怎麼處理也請一起定；B. 跨通話記住 N 天——建議 30（只認 AI 判過、把握 ≥0.6）；C. AI 沒回時——建議照關鍵字＋連續 3 次沒回就告警（已做；AI 153 次 0 失敗；一律不發＝Gemini 一出狀況家人就收不到任何急症通知）。
+- **沒做**：受暴在 25 秒之後才講仍收不回；機構總覽／月報「高風險件數」（`org_portal.py`）還沒跳過寧寧的話與受暴；第二層 AI 換模型後重量受暴類屬 #715／#719。**App E2E pending**。上線：Brain 先、Voice 後。
+- **檔**：`engine/perception_engine.py`、`engine/live_voice_server.py`、`engine/model_router.py`、`engine/server.py`、`engine/supabase_adapter.py`、`engine/care_week.py`、`engine/org_api.py`、`web/src/admin.js`、`web/src/i18n/admin-{en,ja,es}.json`、`docs/I18N-SURFACE-INVENTORY.json`、`engine/test_voice_guardian_brain_route.py`、`engine/eval/family_notify/family_notify_decision_v1.json`（新）、`engine/eval/run_family_notify_eval.py`（新）、本看板。
+### 2026-11-18 蘇菲｜🖥️ 照護人員版機構專區網頁（補助案 C4 前端 · Draft PR · 不碰 App 程式與通話；call-path risk 低：iOS 打包多剔三個網頁檔 · App E2E pending）
+
+- **為什麼**：C4 要「由場域護理或照護人員逐筆判定」。後端 #713 已併主線，缺照護人員登入後看得到、按得到的畫面。
+- **做了**（新頁 `web/org.html`＋`web/src/org.js`＋`web/src/org.css`；部署後網址是 admin.munea.net/org.html，免登入的 `org-portal.html` 不動）：
+  - 登入：跟 App 同一套 Google 登入，回跳到這一頁；沒開通的帳號顯示「請貴單位的沐寧聯絡窗口幫你開通」＋登出。
+  - 分頁只看 `/org/me` 的 capabilities：總覽（名額、使用狀況、守護次數；人數太少不顯示比例）、長輩（名單＋三個旗標；管理者／社工點開看本週關懷摘要，每看一次留紀錄）、提醒（四個數字＋準確率參考＋篩選＋逐筆判定）、紀錄（只有管理者）、月報。照服員只有總覽與名單、點不進摘要；企業窗口只有總覽與月報。
+  - 判定視窗：正確／誤報／觀察中＋兩個選填是否＋備註 200 字（提醒不要寫個資）；送不出去不關、不清空。「幾天沒聯絡才提醒」管理者可改、社工只看。
+  - 示範模式 `?demo=1&role=org_admin|case_manager|care_worker|esg`（`guest`／`none` 看登入頁與沒權限頁）：不打接口、不載登入元件，右上角「示範資料」。
+- **視覺關卡（女巫 84 分）三個 🔴 已改**：還沒判定的「判定」改實心主按鈕；說明字最小 14px、註腳最小 13px、灰字加深到 #4F5D58（各底色對比 ≥ 5.7:1）；內部用語照蘇菲拍板版換白話（守護腦亮燈→需要關心、留存→持續使用、掛心事→本人提到的煩惱…，判定三選一與準確率那行不動）。順手：名額代號與編號移到卡片最底、總覽重複的隱私說明拿掉、手機名單圖例收成一行可展開。
+- **後端兩件（蘇菲指定一起帶）**：`/org.html`、`/src/org.js`、`/src/org.css` 加安全標頭（不准被嵌框、不猜檔案類型、不帶來源網址；頁面的標頭政策只有 `frame-ancestors 'none'`，其他照頁面自己的 meta）；`capabilities_for` 補 `alerts`、`audit` 兩格（條件跟各接口放行一模一樣），前端直接用、拿掉自己換算的那段。
+- **加固（沙利曼／女巫第二輪）**：共用電腦登出一定清乾淨（登入只放這個分頁的 sessionStorage、鑰匙名跟 App 分開；登出請求失敗也自己清，用真的 Supabase 套件重現舊版會被前一位身分登入、新版不會）；第一次登入用 email 綁名額，要 email 已確認或用 Google／Apple 登入，不然回「請用受邀的 Google 帳號登入」；安全標頭比對改用跟讀檔一樣的正規化路徑；月報連結解析成網址比網域；示範標籤手機固定在角落、示範月報改按鈕；三個新檔不打包進 iOS App；判定鈕 40px、徽章 14px。
+- **測試**：新 `scripts/test-org-staff-portal.js` 29 項（用假畫面元件把 org.js 真的跑一遍；角色資料對照後端 capabilities_for）；突變 57 種全紅。後端 `test_org_alerts` 新增一條：四種角色的每一格 capabilities 跟實際打接口的結果一致（故意放寬兩格會紅）；`test_admin_security_headers` 補機構專區三個檔。無頭 Chrome 截圖 1280 寬 16 張＋390 寬 8 張，破框 0、橫向捲動 0、示範模式對外請求 0（字型除外）。正常模式實走：CSP 底下登入元件載得進來、Google 登入的回跳網址是這一頁（往 Supabase 的請求在瀏覽器端擋掉，沒碰登入服務）。
+- **還沒做／要確認**：① Supabase 後台 Redirect URLs 要有 `https://admin.munea.net/org.html`（沒有的話登入完會被送回 Site URL；從外面驗不出來）② 網頁版 Apple 登入沒做（Apple 網頁登入設定目前回 Invalid client id）③ 用真的機構人員帳號實走一次（要先開一個 org_staff）④ 測試沒掛進 package.json（要改既有檔）。
+- **檔**：`web/org.html`、`web/src/org.js`、`web/src/org.css`、`scripts/test-org-staff-portal.js`（皆新）、`engine/server.py`（安全標頭）、`engine/org_api.py`（capabilities 兩格、email 確認才綁）、`engine/test_admin_security_headers.py`、`engine/test_org_alerts.py`、`engine/test_org_api.py`、`scripts/ios-archive.sh`、`scripts/ios-export-app-store.sh`、`scripts/test-release-settings.js`、本看板。
+
 ### 2026-11-18 蘇菲｜🚨 通話中守護腦亮燈「沒記進雲端、緊急聯絡人沒發出去」——改走 Brain（PR · call-path risk 中：只動亮燈後的背景記錄與通知，不碰收音／出聲）
 
 - **怎麼發現的**：做 C4 機構異常提醒時查正式庫，8 月以來 `guardian_risk_evaluated` 只有 9 筆、全部沒有 `who`／`source`——不是通話來的。往回追：`live_voice_server.guardian_record_and_alert` 直接在 Voice 本機呼叫 `server.append_product_event` 與 `server.dispatch_safety_alert`，但 **Voice 那台沒有雲端鑰匙**（正式機環境變數只有 `MUNEA_BRAIN_INTERNAL_URL`、`MUNEA_VOICE_BRAIN_SECRET`；`server.py` 的 `voice_health_context_response` 註解自己也寫了）。所以：

@@ -145,6 +145,50 @@ def summarize_contact(summaries, start, end, today=None):
     }
 
 
+def guardian_mentions_abuse(props):
+    """這筆通話亮燈有沒有提到受暴受剝削：記錄時標的 protectionEvent／protectionMentioned、類別是 protection_event，
+    或 AI 裁判看過整通判定有受暴（abuseConfirmed，#717 第二張）。"""
+    props = props or {}
+    categories = props.get("categories") or []
+    if isinstance(categories, str):
+        categories = [categories]
+    return bool(props.get("protectionEvent") or props.get("protectionMentioned") or props.get("abuseConfirmed")
+                or "protection_event" in categories)
+
+
+def guardian_abuse_call_ids(events):
+    """這批通話亮燈事件裡，哪幾通（properties.callId）有任何一筆提到受暴、或 AI 判過受暴。
+    家人週摘要、機構讀取、後台安全事件頁共用同一套「整通一起判」（沒有 callId 的舊紀錄不在裡面，照舊逐筆判）。"""
+    out = set()
+    for ev in events or []:
+        props = ev.get("properties") if isinstance(ev, dict) else None
+        if isinstance(props, dict) and props.get("callId") and guardian_mentions_abuse(props):
+            out.add(str(props.get("callId")))
+    return out
+
+
+def guardian_events_shareable(events):
+    """通話亮燈事件裡，哪些可以給家人週摘要、機構畫面看（server.care_week_response 與 org_api 共用）：
+    ①寧寧自己講的話（who=ai）不算長輩亮燈；②提到受暴受剝削的不給——加害人可能就是家人；
+    ③同一通（properties.callId）只要有一筆提到受暴、或 AI 判過受暴，那一通的每一筆都不給（#717 第二張）：
+      長輩先講「胸口好痛」、後講「是他打的」，前半句那筆單看沒提到受暴，以前會照樣出現在週摘要。
+    沒有 callId 的舊紀錄照舊逐筆判。回傳原事件（照原順序）。"""
+    def props_of(ev):
+        p = ev.get("properties") if isinstance(ev, dict) else None
+        return p if isinstance(p, dict) else {}
+
+    abuse_calls = guardian_abuse_call_ids(events)
+    out = []
+    for ev in events or []:
+        props = props_of(ev)
+        if not isinstance(ev, dict) or props.get("who") == "ai" or guardian_mentions_abuse(props):
+            continue
+        if props.get("callId") and str(props.get("callId")) in abuse_calls:
+            continue
+        out.append(ev)
+    return out
+
+
 def summarize_safety(events, start, end):
     """守護腦：這週亮過幾次燈、哪一級、哪一類。不放原句（那是即時通知的事，週摘要只放次數與類別）。"""
     items = []
