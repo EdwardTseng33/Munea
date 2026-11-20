@@ -395,7 +395,7 @@ function localizePurchasePlanContent() {
     const facts = planCardFacts[card.dataset.t];
     if (!facts) return;
     const tag = card.querySelector('.ppk-tag');
-    if (tag) tag.textContent = muneaT('subscription.mostPopular', 'Most popular');
+    if (tag) tag.textContent = muneaT('subscription.mostPopular', 'Recommended');
     const audience = card.querySelector('.ppk-who');
     if (audience) audience.textContent = muneaT(facts.audienceKey, facts.audienceFallback);
     const features = card.querySelectorAll('.ppk-feats li');
