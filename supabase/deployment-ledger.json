@@ -263,6 +263,12 @@
           "verifiedAt": "2026-11-17T10:52:00+08:00",
           "captureMethod": "read-only-probe",
           "sourceCommit": "d598737112b7a99d08c59cb96998d66b80fbe833"
+        },
+        {
+          "filename": "034_family_shared_minutes_daily_free.sql",
+          "sha256": "c72fc095f3e91e08105ee2e8732e9cdaa909ef2bac9b50f11e0e79d12a7a5f14",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {

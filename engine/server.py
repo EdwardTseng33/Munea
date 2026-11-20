@@ -40,6 +40,7 @@ import org_alerts
 import model_router
 import notify
 import apple_store
+import credit_allowance
 import notification_service
 import apns_service
 from google.genai import types
@@ -61,6 +62,8 @@ PERSON_PROFILE_PATH = os.environ.get("MUNEA_PERSON_PROFILE_PATH") or os.path.joi
 APP_PROFILE_STORE_PATH = os.environ.get("MUNEA_APP_PROFILE_STORE_PATH") or os.path.join(HERE, "app_profile_store.json")
 BILLING_STORE_PATH = os.environ.get("MUNEA_BILLING_STORE_PATH") or os.path.join(HERE, "billing_store.json")
 CREDITS_STORE_PATH = os.environ.get("MUNEA_CREDITS_STORE_PATH") or os.path.join(HERE, "credits_store.json")
+# JSON 後備模式（沒有 Supabase）才用：其他帳號的錢包與家人圈連結，讓家人圈共用分鐘在本機也跑得到。
+FAMILY_CREDIT_SHARE_PATH = os.environ.get("MUNEA_FAMILY_CREDIT_SHARE_PATH") or os.path.join(HERE, "family_credit_share_store.json")
 FAMILY_STATE_STORE_PATH = os.environ.get("MUNEA_FAMILY_STATE_STORE_PATH") or os.path.join(HERE, "family_state_store.json")
 FAMILY_ACTIVITIES_PATH = os.environ.get("MUNEA_FAMILY_ACTIVITIES_PATH") or os.path.join(HERE, "family_activities.json")
 FAMILY_INVITATIONS_PATH = os.environ.get("MUNEA_FAMILY_INVITATIONS_PATH") or os.path.join(HERE, "family_invitations.json")
@@ -8375,7 +8378,11 @@ def default_billing_store():
             "familyDashboard": True,
             "routineReminders": True,
             "realtimeAvatar": True,
-            "signupTrialCredits": 5,
+            # 2026-11-20：一次性 5 點改成「前 7 天每天 10 分鐘、之後每週 10 分鐘」（credit_allowance.py）。
+            "signupTrialCredits": 0,
+            "freeTrialDays": credit_allowance.DEFAULT_SETTINGS["trialDays"],
+            "freeTrialDailyMinutes": credit_allowance.DEFAULT_SETTINGS["trialDailyMinutes"],
+            "freeWeeklyMinutes": credit_allowance.DEFAULT_SETTINGS["weeklyMinutes"],
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
             # Edward 2026-07-31：免費也給 1 位家人（本人＋1＝2）。原本免費＝只有自己、
@@ -8476,7 +8483,7 @@ def credit_wallet_is_available(wallet, now=None):
 def normalize_credit_wallet(data=None, wallet_type="purchased", period=None):
     data = data or {}
     wallet_type = data.get("type") or data.get("walletType") or data.get("wallet_type") or wallet_type
-    wallet_type = wallet_type if wallet_type in ("included_monthly", "purchased") else "purchased"
+    wallet_type = wallet_type if wallet_type in ("included_monthly", "purchased", credit_allowance.FREE_WALLET_TYPE) else "purchased"
     if wallet_type == "included_monthly":
         period = data.get("period") or period or time.strftime("%Y-%m")
     else:
@@ -8489,6 +8496,7 @@ def normalize_credit_wallet(data=None, wallet_type="purchased", period=None):
         "balance": normalize_credit_amount(data.get("balance")),
         "expiresAt": data.get("expiresAt") or data.get("expires_at"),
         "status": str(data.get("status") or "active"),
+        **({"metadata": data["metadata"]} if isinstance(data.get("metadata"), dict) and data.get("metadata") else {}),
     }
 
 
@@ -8563,10 +8571,12 @@ def credit_wallet_summary(store):
     wallets = store.get("wallets") or []
     included = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "included_monthly" and credit_wallet_is_available(w))
     purchased = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == "purchased" and credit_wallet_is_available(w))
+    free = sum(float(w.get("balance") or 0) for w in wallets if w.get("type") == credit_allowance.FREE_WALLET_TYPE and credit_wallet_is_available(w))
     return {
         "includedMonthly": round(included, 4),
         "purchased": round(purchased, 4),
-        "total": round(included + purchased, 4),
+        "freeAllowance": round(free, 4),
+        "total": round(included + purchased + free, 4),
         "currencyCode": store.get("currencyCode") or "MUNEA_CREDIT",
     }
 
@@ -8676,7 +8686,7 @@ def credit_idempotency_response(store, key):
     return None
 
 
-def append_credit_transaction(store, *, transaction_type, wallet, amount, source, reason, idempotency_key, feature=None, provider=None, provider_transaction_id=None):
+def append_credit_transaction(store, *, transaction_type, wallet, amount, source, reason, idempotency_key, feature=None, provider=None, provider_transaction_id=None, person_id=None):
     tx = {
         "id": f"credit_tx_{int(time.time() * 1000)}_{len(store.get('transactions', [])) + 1}",
         "type": transaction_type,
@@ -8692,6 +8702,9 @@ def append_credit_transaction(store, *, transaction_type, wallet, amount, source
         "idempotencyKey": str(idempotency_key or tx_fallback_idempotency_key(transaction_type, wallet, amount))[:160],
         "createdAt": utc_now(),
     }
+    if person_id:
+        # 誰用的分鐘：扣圈主錢包時記來電者，圈主才算得出每個人用了幾分鐘。
+        tx["personId"] = str(person_id)[:80]
     store.setdefault("transactions", []).append(tx)
     store.setdefault("ledger", []).append({
         "id": f"credit_ledger_{int(time.time() * 1000)}_{len(store.get('ledger', [])) + 1}",
@@ -8710,14 +8723,278 @@ def tx_fallback_idempotency_key(transaction_type, wallet, amount):
     return f"local-{transaction_type}-{wallet.get('id')}-{amount}-{int(time.time() * 1000)}"
 
 
+def billing_paid_plan(billing, now=None):
+    """這個帳號現在有沒有有效的付費方案（plus／pro）；沒有回 None。跟資料庫 munea_account_paid_plan 同義。"""
+    billing = normalize_billing_store(billing or {})
+    plan = str(billing.get("activePlan") or "free").lower()
+    if plan not in credit_allowance.PAID_PLANS or subscription_expiry_reason(billing, now=now):
+        return None
+    return plan
+
+
+def json_credit_share_state():
+    raw = read_json_file(FAMILY_CREDIT_SHARE_PATH, {})
+    raw = raw if isinstance(raw, dict) else {}
+    accounts = raw.get("accounts") if isinstance(raw.get("accounts"), dict) else {}
+    memberships = [m for m in raw.get("memberships") or [] if isinstance(m, dict)]
+    return {"accounts": accounts, "memberships": memberships}
+
+
+def save_json_credit_share_account(account_id, credits):
+    state = json_credit_share_state()
+    entry = dict(state["accounts"].get(account_id) or {})
+    entry["credits"] = normalize_credits_store(credits)
+    state["accounts"][account_id] = entry
+    write_json_file(FAMILY_CREDIT_SHARE_PATH, state)
+    return entry["credits"]
+
+
+def json_other_credit_stores(state, account_id):
+    return [
+        normalize_credits_store(entry.get("credits"))
+        for other_id, entry in (state.get("accounts") or {}).items()
+        if other_id != account_id and isinstance(entry, dict) and isinstance(entry.get("credits"), dict)
+    ]
+
+
+def json_family_share_context(state, *, account_id, person_id=None, paid_plan=None, family_group_id=None):
+    """JSON 後備的「誰是圈主」：跟資料庫 munea_family_share_owner 同一套判斷。
+
+    圈主＝建圈的帳號（memberships 的 ownerAccountId）；成員＝掛在別人圈裡的帳號。
+    自己有付費方案＝圈主角色（不被別人涵蓋）；掛好幾個圈取最新加入的那一個。
+    """
+    memberships = state.get("memberships") or []
+    if paid_plan:
+        group = next((m.get("familyGroupId") for m in memberships
+                      if m.get("ownerAccountId") == account_id and m.get("familyGroupId")), None)
+        return {"role": "owner", "plan": paid_plan, "ownerAccountId": account_id,
+                "familyGroupId": group or family_group_id, "personId": person_id, "ownerPersonId": person_id}
+    links = [
+        m for m in memberships
+        if m.get("memberAccountId") == account_id and m.get("ownerAccountId") and m.get("ownerAccountId") != account_id
+        and (not person_id or not m.get("personId") or m.get("personId") == person_id)
+    ]
+    links.sort(key=lambda m: str(m.get("createdAt") or ""), reverse=True)
+    for link in links[:1]:
+        owner_id = link.get("ownerAccountId")
+        owner = (state.get("accounts") or {}).get(owner_id) or {}
+        plan = billing_paid_plan(owner.get("billing") or {})
+        if plan:
+            return {"role": "member", "plan": plan, "ownerAccountId": owner_id,
+                    "familyGroupId": link.get("familyGroupId"), "personId": link.get("personId") or person_id,
+                    "ownerPersonId": owner.get("personId")}
+    return None
+
+
+def ensure_free_allowance_in_store(store, *, account_id, created_at, paid_plan=None, now=None, other_stores=()):
+    """補建這個週期的免費錢包（JSON 後備；資料庫那邊是 munea_ensure_free_allowance）。回 (window, 有沒有新建)。"""
+    if paid_plan:
+        return None, False
+    now = now or datetime.now(timezone.utc)
+    used = credit_allowance.free_used_in_month([store, *list(other_stores or [])], now)
+    window = credit_allowance.allowance_window(created_at, now, credit_allowance.settings_from_env(), used)
+    if window["amount"] <= 0 or credit_allowance.find_free_wallet(store, window["period"]):
+        return window, False
+    wallet = credit_allowance.free_wallet_for(window)
+    store.setdefault("wallets", []).append(wallet)
+    append_credit_transaction(
+        store,
+        transaction_type="grant",
+        wallet=wallet,
+        amount=window["amount"],
+        source="promo",
+        reason=f"free_allowance_{window['mode']}",
+        idempotency_key=f"free-allowance:{account_id}:{window['period']}",
+        provider="munea_free_allowance",
+    )
+    return window, True
+
+
+def included_month_info(store, now):
+    """月額度錢包現況：剩多少、這期發了多少、哪天到期、這期從哪天開始。沒有錢包全回 None。"""
+    wallets = []
+    for wallet in (store or {}).get("wallets") or []:
+        if wallet.get("type") != "included_monthly" or wallet.get("status") != "active":
+            continue
+        expires = credit_allowance.parse_time(wallet.get("expiresAt"))
+        if expires is not None and expires <= now:
+            continue
+        if expires is None and float(wallet.get("balance") or 0) <= 0:
+            continue
+        wallets.append(wallet)
+    if not wallets:
+        return {"remaining": None, "grant": None, "expiresAt": None, "periodStart": None}
+    ids = {w.get("id") for w in wallets}
+    grant = sum(float(tx.get("amount") or 0) for tx in (store or {}).get("transactions") or []
+                if tx.get("type") == "grant" and tx.get("walletId") in ids)
+    expires = [credit_allowance.parse_time(w.get("expiresAt")) for w in wallets if w.get("expiresAt")]
+    period_start = None
+    for wallet in wallets:
+        period = str(wallet.get("period") or "")
+        if "/" in period:
+            period_start = credit_allowance.parse_time(period.split("/", 1)[0])
+            if period_start:
+                break
+    return {
+        "remaining": round(sum(float(w.get("balance") or 0) for w in wallets), 4),
+        "grant": round(grant, 4) or None,
+        "expiresAt": min(expires) if expires else None,
+        "periodStart": period_start,
+    }
+
+
+def family_share_raw(ctx, owner_store, now):
+    info = included_month_info(owner_store, now)
+    since = info["periodStart"] or credit_allowance.month_start(now)
+    usage = credit_allowance.usage_rows((owner_store or {}).get("transactions"), since, owner_person_id=ctx.get("ownerPersonId"))
+    expires = info["expiresAt"]
+    return {
+        "role": ctx.get("role"),
+        "plan": ctx.get("plan"),
+        "familyGroupId": ctx.get("familyGroupId"),
+        "viewerPersonId": ctx.get("personId"),
+        "monthGrant": info["grant"] or credit_allowance.PLAN_MONTHLY_MINUTES.get(ctx.get("plan")),
+        "monthRemaining": info["remaining"],
+        "renewsAt": expires.astimezone(credit_allowance.TAIPEI).date().isoformat() if expires else None,
+        "usage": [{"personId": person, "minutes": minutes} for person, minutes in usage.items()],
+    }
+
+
+def public_family_share(raw, names=None):
+    """App 要的 familyShare（照前端約定的欄位名）。圈主看整個圈、成員只看自己那列。"""
+    if not isinstance(raw, dict) or not raw.get("role"):
+        return None
+    usage = {}
+    for row in raw.get("usage") or []:
+        if isinstance(row, dict):
+            person = str(row.get("personId") or "")
+            usage[person] = usage.get(person, 0.0) + float(row.get("minutes") or 0)
+    remaining = raw.get("monthRemaining")
+    grant = raw.get("monthGrant")
+    return {
+        "shared": True,
+        "role": "owner" if raw.get("role") == "owner" else "member",
+        "plan": raw.get("plan"),
+        "monthGrant": credit_allowance.as_number(grant) if grant is not None else None,
+        "monthRemaining": credit_allowance.as_number(remaining) if remaining is not None else None,
+        "renewsAt": raw.get("renewsAt"),
+        "usageByPerson": credit_allowance.visible_usage(
+            usage, role=raw.get("role"), viewer_person_id=raw.get("viewerPersonId"), names=names or {}
+        ),
+    }
+
+
+def json_circle_names(family_group_id):
+    if not family_group_id:
+        return {}
+    state = _family_state_json_all().get(str(family_group_id)) or {}
+    return credit_allowance.circle_names((state.get("circle") or {}).get("value"))
+
+
+def json_credit_share_status(data=None, now=None):
+    """JSON 後備的 /credits/balance 狀態；回 (自己的帳本, 狀態)。狀態格式跟 munea_credit_share_status 一樣。"""
+    data = data or {}
+    now = now or datetime.now(timezone.utc)
+    profile = load_app_profile_store()
+    account = profile.get("account") or {}
+    account_id = str(account.get("id") or "local-demo-account")
+    person_id = str(data.get("personId") or data.get("person_id") or profile.get("primaryCareRecipientId") or "") or None
+    paid = billing_paid_plan(load_billing_store(), now=now)
+    state = json_credit_share_state()
+    store = load_credits_store()
+    window, changed = ensure_free_allowance_in_store(
+        store, account_id=account_id, created_at=account.get("createdAt"), paid_plan=paid, now=now,
+        other_stores=json_other_credit_stores(state, account_id),
+    )
+    if changed:
+        store = save_credits_store(store)
+    ctx = json_family_share_context(state, account_id=account_id, person_id=person_id, paid_plan=paid,
+                                    family_group_id=(profile.get("familyGroup") or {}).get("id"))
+    raw_share, shared_spendable = None, 0
+    if ctx:
+        owner_store = store if ctx["role"] == "owner" else normalize_credits_store(
+            ((state["accounts"].get(ctx["ownerAccountId"]) or {}).get("credits")) or {}
+        )
+        raw_share = family_share_raw(ctx, owner_store, now)
+        if ctx["role"] == "member":
+            shared_spendable = credit_allowance.spendable(owner_store, now, exclude_free=True)
+    own_expires = included_month_info(store, now)["expiresAt"] if paid else None
+    return store, {
+        "allowance": credit_allowance.allowance_block(
+            window, store, now, paid_plan=paid, plan_resets_at=credit_allowance.iso_z(own_expires) if own_expires else None
+        ),
+        "familyShare": raw_share,
+        "sharedSpendable": shared_spendable,
+        "names": json_circle_names((raw_share or {}).get("familyGroupId")),
+    }
+
+
+def ensure_owner_monthly_allowance(share):
+    """成員查餘額時，圈主這期的月額度錢包若還沒建（圈主還沒開 App），先替圈主補建（冪等）。"""
+    owner_id = (share or {}).get("ownerAccountId")
+    if not owner_id:
+        return False
+    token = REQUEST_DATA_IDENTITY.set({
+        "accountId": owner_id,
+        "personId": share.get("ownerPersonId") or "",
+        "familyGroupId": share.get("familyGroupId") or "",
+    })
+    try:
+        return bool(ensure_current_monthly_allowance())
+    except Exception as e:
+        log_fallback_exception("ensure family owner monthly allowance", e)
+        return False
+    finally:
+        REQUEST_DATA_IDENTITY.reset(token)
+
+
+def supabase_credit_share_status(backend):
+    """Supabase 的 /credits/balance 狀態（munea_credit_share_status，034）。034 還沒套用時回 None。"""
+    try:
+        status = backend.load_credit_share_status()
+    except Exception as e:
+        log_fallback_exception("load credit share status from Supabase", e)
+        return None
+    if not isinstance(status, dict):
+        return None
+    share = status.get("familyShare") if isinstance(status.get("familyShare"), dict) else None
+    if share and share.get("role") == "member" and share.get("monthRemaining") is None:
+        if ensure_owner_monthly_allowance(share):
+            try:
+                status = backend.load_credit_share_status() or status
+            except Exception as e:
+                log_fallback_exception("reload credit share status from Supabase", e)
+        share = status.get("familyShare") if isinstance(status.get("familyShare"), dict) else None
+    names = {}
+    if share and share.get("familyGroupId"):
+        try:
+            names = credit_allowance.circle_names(backend.load_family_circle_unscoped(share.get("familyGroupId")))
+        except Exception as e:
+            log_fallback_exception("load family circle names for shared minutes", e)
+    return {**status, "names": names}
+
+
 def credits_balance_response(data=None):
     ensure_current_monthly_allowance()
-    store = load_credits_store()
+    backend = data_backend()
+    if backend.enabled():
+        status = supabase_credit_share_status(backend)
+        store = load_credits_store()
+    else:
+        store, status = json_credit_share_status(data)
+    status = status or {}
+    summary = credit_wallet_summary(store)
+    shared = float(status.get("sharedSpendable") or 0)
+    if shared > 0:
+        # 被家人圈共用涵蓋的成員：能用的分鐘＝自己的＋圈主的（App 用 total 判斷能不能撥）。
+        summary = {**summary, "familyShared": round(shared, 4), "total": round(summary["total"] + shared, 4)}
     return {
         "ok": True,
-        "walletSummary": credit_wallet_summary(store),
+        "walletSummary": summary,
         "wallets": store.get("wallets", []),
         "recentTransactions": list(store.get("transactions", []))[-20:],
+        "allowance": status.get("allowance") or None,
+        "familyShare": public_family_share(status.get("familyShare"), status.get("names")),
         "backend": data_backend_status(),
     }
 
@@ -8875,38 +9152,55 @@ def credits_refund_reversal_response(data):
 
 
 def ensure_free_signup_trial(account_id):
-    """Grant one account-bound Voice+Avatar trial: 5 credits = about 5 minutes.
+    """開機／註冊時補建這個週期的免費額度（2026-11-20 起取代一次性 5 點）。
 
-    The account id is part of the idempotency key, so bootstrap retries, a new
-    phone, or reinstalling the App cannot mint the trial a second time.
+    前 7 天每天 10 分鐘、之後每週 10 分鐘（credit_allowance.py；資料庫是 034 的
+    munea_ensure_free_allowance）。名字沿用，account-bootstrap 不用改。冪等：一個週期一個錢包。
+    舊的一次性 5 點錢包不動，有餘額照用。
     """
     account_id = str(account_id or "").strip()
     if not account_id:
         return {"ok": False, "error": {"code": "account_id_required"}}
     backend = data_backend()
     if backend.enabled():
-        result = backend.grant_free_signup_trial()
+        try:
+            result = backend.ensure_free_allowance() or {}
+        except Exception as e:
+            # 034 還沒套用到資料庫時退回舊的註冊送點；034 套用後同一支函式也會改成新規則。
+            log_fallback_exception("ensure free allowance via Supabase", e)
+            result = backend.grant_free_signup_trial() or {}
+        credits = float(result.get("credits") or 0)
         return {
             "ok": bool(result.get("ok")),
-            "credits": int(result.get("credits") or 5),
-            "minutesApprox": 5,
+            "mode": result.get("mode") or "free_signup_trial",
+            "period": result.get("period"),
+            "credits": credit_allowance.as_number(credits),
+            "minutesApprox": credit_allowance.as_number(credits),
             "idempotentReplay": bool(result.get("idempotentReplay")),
             "walletSummary": {"total": float(result.get("balance") or 0)},
         }
-    result = credits_grant_response({
-        "amount": 5,
-        "walletType": "purchased",
-        "source": "promo",
-        "reason": "free_signup_voice_avatar_trial",
-        "provider": "munea_signup",
-        "idempotencyKey": f"free-signup-trial:{account_id}",
-    })
+    store = load_credits_store()
+    if billing_paid_plan(load_billing_store()):
+        return {"ok": True, "mode": "plan", "period": None, "credits": 0, "minutesApprox": 0,
+                "idempotentReplay": True, "walletSummary": credit_wallet_summary(store)}
+    profile = load_app_profile_store()
+    account = profile.get("account") or {}
+    created_at = account.get("createdAt") if str(account.get("id") or "") == account_id else None
+    window, created = ensure_free_allowance_in_store(
+        store, account_id=account_id, created_at=created_at,
+        other_stores=json_other_credit_stores(json_credit_share_state(), account_id),
+    )
+    if created:
+        store = save_credits_store(store)
+    amount = credit_allowance.as_number(window["amount"]) if window else 0
     return {
-        "ok": bool(result.get("ok")),
-        "credits": 5,
-        "minutesApprox": 5,
-        "idempotentReplay": bool(result.get("idempotentReplay")),
-        "walletSummary": result.get("walletSummary"),
+        "ok": True,
+        "mode": (window or {}).get("mode"),
+        "period": (window or {}).get("period"),
+        "credits": amount,
+        "minutesApprox": amount,
+        "idempotentReplay": not created,
+        "walletSummary": credit_wallet_summary(store),
     }
 
 
@@ -8920,8 +9214,48 @@ def credits_consume_response(data):
     replay = credit_idempotency_response(store, idempotency_key)
     if replay:
         return replay
-    summary = credit_wallet_summary(store)
-    if summary["total"] < amount:
+    now = datetime.now(timezone.utc)
+    caller_account_id = str(store.get("accountId") or "self")
+    person_id = str(data.get("personId") or data.get("person_id") or "") or None
+    owner_ctx, owner_store, free_created = None, None, False
+    if not data_backend().enabled():
+        # JSON 後備：跟資料庫 munea_call_consume_credit（034）同一套順序——
+        # 自己的免費額度 → 圈主的錢包（被家人圈共用涵蓋時）→ 自己其他錢包。
+        profile = load_app_profile_store()
+        account = profile.get("account") or {}
+        caller_account_id = str(account.get("id") or caller_account_id)
+        person_id = person_id or profile.get("primaryCareRecipientId")
+        state = json_credit_share_state()
+        paid = billing_paid_plan(load_billing_store(), now=now)
+        _window, free_created = ensure_free_allowance_in_store(
+            store, account_id=caller_account_id, created_at=account.get("createdAt"), paid_plan=paid, now=now,
+            other_stores=json_other_credit_stores(state, caller_account_id),
+        )
+        owner_ctx = json_family_share_context(state, account_id=caller_account_id, person_id=person_id, paid_plan=paid,
+                                              family_group_id=(profile.get("familyGroup") or {}).get("id"))
+        if owner_ctx and owner_ctx.get("role") == "member":
+            owner_store = normalize_credits_store(((state["accounts"].get(owner_ctx["ownerAccountId"]) or {}).get("credits")) or {})
+            replay = credit_idempotency_response(owner_store, idempotency_key)
+            if replay:
+                return replay
+        else:
+            owner_ctx = None
+
+    def summary_with_share():
+        summary = credit_wallet_summary(store)
+        shared = credit_allowance.spendable(owner_store, now, exclude_free=True) if owner_store is not None else 0
+        if shared > 0:
+            summary = {**summary, "familyShared": shared, "total": round(summary["total"] + shared, 4)}
+        return summary
+
+    plan = credit_allowance.plan_spend(
+        store, amount, now, owner_store=owner_store, caller_account_id=caller_account_id,
+        owner_account_id=(owner_ctx or {}).get("ownerAccountId"),
+    )
+    if plan is None:
+        if free_created:
+            store = save_credits_store(store)
+        summary = summary_with_share()
         return {
             "ok": False,
             "error": {"code": "insufficient_credits"},
@@ -8929,23 +9263,13 @@ def credits_consume_response(data):
             "shortfall": round(amount - summary["total"], 4),
             "fallbackMode": data.get("fallbackMode") or "2d-viseme",
         }
-    remaining = amount
-    consumed = []
-    available_wallets = [w for w in store.get("wallets") or [] if credit_wallet_is_available(w)]
-    available_wallets.sort(key=lambda w: (0 if w.get("type") == "included_monthly" else 1, w.get("expiresAt") or "9999", w.get("id") or ""))
-    for wallet in available_wallets:
-        available = float(wallet.get("balance") or 0)
-        if available <= 0:
-            continue
-        take = min(available, remaining)
-        wallet["balance"] = round(available - take, 4)
-        remaining = round(remaining - take, 4)
-        consumed.append((wallet, take))
-        if remaining <= 0:
-            break
-    transactions = [
-        append_credit_transaction(
-            store,
+    transactions = []
+    owner_touched = False
+    for idx, (target, wallet, take) in enumerate(plan):
+        wallet["balance"] = round(float(wallet.get("balance") or 0) - take, 4)
+        owner_touched = owner_touched or target is owner_store
+        transactions.append(append_credit_transaction(
+            target,
             transaction_type="consume",
             wallet=wallet,
             amount=take,
@@ -8953,11 +9277,12 @@ def credits_consume_response(data):
             reason=data.get("reason") or "credit_consume",
             idempotency_key=(idempotency_key + f":{idx}") if idempotency_key else None,
             feature=data.get("feature"),
-        )
-        for idx, (wallet, take) in enumerate(consumed)
-    ]
+            person_id=person_id,
+        ))
     store = save_credits_store(store)
-    return {"ok": True, "transactions": transactions, "walletSummary": credit_wallet_summary(store), "credits": store}
+    if owner_touched and owner_ctx:
+        owner_store = save_json_credit_share_account(owner_ctx["ownerAccountId"], owner_store)
+    return {"ok": True, "transactions": transactions, "walletSummary": summary_with_share(), "credits": store}
 
 
 def normalize_billing_store(data=None):
@@ -9087,6 +9412,8 @@ def entitlements_response(data):
         "billing": store,
         "entitlements": store["entitlements"],
         "subscription": store["subscription"],
+        # 前端靠這個決定能不能寫「爸媽不用另外付費」：後端已支援家人圈共用分鐘（034）。
+        "capabilities": {"familySharedMinutes": True},
     }
 
 

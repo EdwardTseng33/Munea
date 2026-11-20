@@ -2443,6 +2443,31 @@ class SupabaseAdapter:
         )
         return result or {}
 
+    def ensure_free_allowance(self):
+        """補建這個週期的免費額度錢包（034 munea_ensure_free_allowance；冪等）。"""
+        result = self._request(
+            "POST",
+            "rpc/munea_ensure_free_allowance",
+            payload={"p_account_id": self.account_id},
+        )
+        return result or {}
+
+    def load_credit_share_status(self):
+        """免費額度＋家人圈共用分鐘的狀態（034 munea_credit_share_status）。
+
+        成員只拿得到自己那一列用量；名字不在這裡（由後端從家人圈顯示名補）。
+        """
+        if not self.enabled():
+            return None
+        return self._request(
+            "POST",
+            "rpc/munea_credit_share_status",
+            payload={
+                "p_account_id": self.account_id,
+                "p_person_id": self.person_id if self._is_uuid(self.person_id) else None,
+            },
+        )
+
     def save_credits_store(self, store):
         if not self.enabled():
             return None
@@ -4359,7 +4384,9 @@ class SupabaseAdapter:
     def credit_wallet_to_row(self, wallet):
         wallet = wallet or {}
         wallet_type = wallet.get("type") or wallet.get("walletType") or wallet.get("wallet_type") or "purchased"
-        if wallet_type not in {"included_monthly", "purchased"}:
+        # free_allowance＝免費額度錢包（034）。不認得就降成 purchased 的話，存檔時會在 purchased
+        # 底下多建一個同餘額的錢包（等於憑空多送點數），所以這裡一定要認得它。
+        if wallet_type not in {"included_monthly", "purchased", "free_allowance"}:
             wallet_type = "purchased"
         return {
             "account_id": self.account_id,
