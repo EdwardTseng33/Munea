@@ -7504,7 +7504,7 @@ function muneaServerFreeRemainSec() {
   return Math.max(0, Math.round(minutes * 60) - inCall);
 }
 window.__muneaServerFreeRemainSec = () => { try { return muneaServerFreeRemainSec(); } catch (e) { return null; } };
-// 免費分鐘用完時的說法跟著後端的 allowance 走：今天的用完／這週的用完；後端沒給才用舊的「一次性 5 分鐘」
+// 免費分鐘用完時的說法跟著後端的 allowance 走：今天的用完／這週的用完；後端沒給才用通用的「免費分鐘用完了」
 function muneaFreeUpsell() {
   const a = muneaAllowance();
   if (!window.MMPLAN) return;
@@ -7753,7 +7753,7 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   const _freeMode = (muneaAllowance() || {}).mode;
   if (_freeMode === 'free_daily') toast(muneaT('credits.freeTodayUsedUp', '今天的免費分鐘用完了。'));
   else if (_freeMode === 'free_weekly') toast(muneaT('credits.freeWeekUsedUp', '這週的免費分鐘用完了。'));
-  else toast(muneaT('credits.freeTrialEnded', '免費帳號的一次性 5 分鐘體驗已用完'));
+  else toast(muneaT('credits.freeTrialEnded', '免費分鐘用完了。'));
   try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
   muneaFreeUpsell();
 }
@@ -8769,7 +8769,7 @@ async function connectCall() {
   // 少一條路都不會漏。免費 5 分鐘綁帳號的原則不變，只是把關卡從門口移到這一刻。
   if (!requireLogin(muneaT(
     'auth.chatSignInRequired',
-    '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+    '請先使用 Google 或 Apple 登入才能使用聊聊。登入後，前 7 天每天可以聊 10 分鐘。',
   ), 'chat')) return;
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
@@ -9427,7 +9427,7 @@ function init() {
     if (!callConnected && !isLoggedIn()) {
       requireLogin(muneaT(
         'auth.chatSignInRequired',
-        '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+        '請先使用 Google 或 Apple 登入才能使用聊聊。登入後，前 7 天每天可以聊 10 分鐘。',
       ), 'chat');
       return;
     }
@@ -10991,7 +10991,7 @@ function init() {
           )
           : muneaT(
             'subscription.freePlanNote',
-            'You are on the Free plan. Link an account for one 5-minute conversation. Plus and Pro add credit-based conversations, longer history, and family invitations.',
+            'You are on the Free plan. After you sign in, you can talk for 10 minutes a day for the first 7 days, then 10 minutes a week. Plus and Pro add monthly minutes, longer history, and family invitations.',
           )));
   }
   // renderPoints 在頂層 scope、方案額度表（PLAN_POINTS）在這層，所以掛出去給它呼叫
