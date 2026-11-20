@@ -539,6 +539,8 @@ setTimeout(function () {
       <div class="set-list">
         <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main"><span data-i18n="settings.profile">個人資料</span><small data-i18n="settings.profileSubtitle">名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main"><span data-i18n="settings.careCircle">全家健康圈</span><small data-i18n="settings.careCircleSubtitle">有誰在裡面、邀請家人加入</small></span><span class="sr-arrow">›</span></div>
+        <!-- 機構照護模式（2026-11-17）：有照護機構名額的人才看得到這一列（src/org-consent.js 讀到名額才打開）；沒有名額、或名額是企業福利的人，設定頁不多東西。標題與狀態的字由程式決定，不掛 data-i18n。 -->
+        <div class="set-row" id="orgConsentRow" role="button" tabindex="0" style="cursor:pointer" hidden><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="sr-main"><span id="orgConsentRowTitle"></span><small id="orgConsentRowState"></small></span><span class="sr-on off" id="orgConsentRowDot"><span class="d"></span><span id="orgConsentRowDotLabel"></span></span></div>
         <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main"><span data-i18n="settings.interests">想聊的話題</span><small id="interestsSubtitle"></small></span><span class="sr-arrow" id="interestsNow">›</span></div>
       </div>
 
@@ -1086,6 +1088,38 @@ setTimeout(function () {
       <input class="chal-input jc-code sc-code" id="seatCodeInput" type="text" inputmode="numeric" autocomplete="off" maxlength="24" placeholder="例：1234-5678" data-i18n-placeholder="seatCode.placeholder" aria-label="開通碼" data-i18n-aria-label="seatCode.inputLabel" />
       <p class="sc-msg" id="seatCodeMsg" role="status" aria-live="polite"></p>
       <button class="modal-btn sc-btn" id="seatCodeBtn" type="button"></button>
+      <!-- 綁好的是照護機構的名額時才出現（src/org-consent.js）：帶去「看得到什麼」視窗，不會自動幫他打開開關。 -->
+      <button class="modal-btn quiet oc-from-seat" id="seatCodeConsentBtn" type="button" hidden></button>
+    </div>
+  </div>
+
+  <!-- 機構照護模式的同意開關（2026-11-17）：照護機構的人員預設看不到這一位，本人在這裡打開才看得到，隨時可關。
+       行為在 src/org-consent.js。標題、開關旁的字、結果訊息由程式依機構名稱與狀態決定，所以刻意不掛 data-i18n；
+       兩張清單是固定文案（orgConsent.sees*／never*），要跟機構端實際拿到的東西一致（engine/org_api.py）。 -->
+  <div class="modal-mask" id="orgConsentModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <button class="auth-close" id="orgConsentClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <h2 class="sc-title" id="orgConsentTitle"></h2>
+      <button class="oc-switch-row" id="orgConsentSwitch" type="button" role="switch" aria-checked="false" aria-labelledby="orgConsentSwitchLabel"><span class="oc-switch-label" id="orgConsentSwitchLabel"></span><span class="notification-switch oc-knob" id="orgConsentKnob" aria-hidden="true"><i></i></span></button>
+      <p class="sc-msg oc-msg" id="orgConsentMsg" role="status" aria-live="polite"></p>
+      <p class="oc-anytime" data-i18n="orgConsent.anytime">隨時可以關，關了之後他們就看不到。</p>
+      <h3 class="oc-list-title" data-i18n="orgConsent.seesTitle">打開後看得到</h3>
+      <ul class="oc-list oc-sees">
+        <li data-i18n="orgConsent.sees1">你的稱呼</li>
+        <li data-i18n="orgConsent.sees2">哪幾天有聊聊、聊了幾次</li>
+        <li data-i18n="orgConsent.sees3">每天的心情高低（分 5 級）</li>
+        <li data-i18n="orgConsent.sees4">身體不舒服、睡不好、吃不下、其他掛心事，各提到幾次（只有次數，沒有內容）</li>
+        <li data-i18n="orgConsent.sees5">需要留意的狀況出現幾次（只有次數）</li>
+      </ul>
+      <h3 class="oc-list-title" data-i18n="orgConsent.neverTitle">永遠看不到</h3>
+      <ul class="oc-list oc-never">
+        <li data-i18n="orgConsent.never1">你們聊天的內容</li>
+        <li data-i18n="orgConsent.never2">你說過的原話</li>
+        <li data-i18n="orgConsent.never3">你吃什麼藥</li>
+        <li data-i18n="orgConsent.never4">家人留給你的話</li>
+      </ul>
+      <button class="modal-btn oc-done" id="orgConsentDone" type="button" data-i18n="common.done">完成</button>
     </div>
   </div>
 
@@ -1416,6 +1450,7 @@ setTimeout(function () {
   <script src="src/tw-districts.js?v=20260731-regions"></script><!-- 台灣行政區＋跨國註冊表；其他國家的清單在 src/regions/，用到才載 -->
   <script src="src/companion-profile.js?v=20260730-profile2"></script>
   <script src="src/seat-code.js?v=20261120-v1072"></script><!-- 機構開通碼視窗（設定 → 機構開通碼）；需要登入證的工具由 app.js 借給它 -->
+  <script src="src/org-consent.js?v=20261120-v1072"></script><!-- 機構照護模式同意開關（設定 →「{機構} 看得到什麼」）；需要登入證的工具由 app.js 借給它 -->
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
   <script src="src/auth.js?v=20261120-v1072"></script>
   <script src="src/health.js?v=20261115-health5"></script>

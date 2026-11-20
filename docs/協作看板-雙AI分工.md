@@ -1,5 +1,18 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-17 蘇菲｜🔘 機構照護模式：App 端同意開關（Draft PR #708 · 設計書 PR-b · call-path risk 無／低 · App E2E pending · 文案待老闆看過才合併）
+
+- **為什麼**：一月要在照護據點試辦，照護人員要看得到「本人同意的那幾位」的每週關懷摘要。後端（#640 的 `/org-consent`、`/org-consent/set`）與正式資料庫（#701）都上線了，App 一直沒有畫面——沒有這個開關，機構端一個人都看不到。
+- **做了**：設定頁「帳號與家庭」那組多一列「{機構} 看得到什麼」，副標寫現在開或關；**有照護機構名額的人才看得到**，沒有名額的人設定頁不多東西。新視窗 `#orgConsentModal`：整列式開關（預設關）→ 結果訊息 →「隨時可以關」→「打開後看得到」五項 →「永遠看不到」四項 → 完成。按下去先「處理中…」不能連點，伺服器說好了開關才動；失敗（斷線、沒登入、後端錯、後端說這次不算數）開關留在原位並講原因。開通碼成功畫面多一顆次要按鈕帶去這個視窗（不會自動幫他打開）。產品事件 `org_consent_set` 只帶 `{ result }` 或 `{ error }`，不帶機構名稱與名額代號。
+- **企業類型（esg）不顯示**：設計書 2.2「企業 HR 窗口永遠沒有 L1／L2」、第 5 節「企業 HR 永遠停在 L0」；後端 `engine/org_api.py` 的 `_consented_seats` 對 esg 直接回空名單——開關對企業沒有任何作用，給了是騙人。App 用白名單（只認 `care`），不認得的類型也先不顯示。
+- **文案對照後端（已跟上 #711）**：第一版對照時發現機構端實際拿到的是掛心事短語、比後端自述的「症狀類別」寬；這個落差已由下面那一則（#711）在後端修掉——現在只給四類的次數（身體不舒服／睡不好／吃不下／心情或生活上的掛心事）。本張已併入主線，第 4 項文案改成「身體不舒服、睡不好、吃不下、其他掛心事，各提到幾次（只有次數，沒有內容）」；其餘八項對照新後端逐條核過、不用改。#711 新增的兩個失敗代碼也接上了：`consent_not_recorded` →「這次沒有開成功，開關還是關的。請稍後再試一次。」、`consent_not_applicable` →「這個機構用不到這項設定，沒有改到。」（後者與 `not_found` 會順手重讀名額，把入口收掉）。
+- **怎麼放**：行為全在新檔 `web/src/org-consent.js`；`web/src/app.js` 只加一個掛勾（`window.__muneaOrgConsentBridge`）、`web/src/seat-code.js` 多五行（綁好後通知重讀一次）。**沒碰撥號／語音任何一行**。四語文案 28 鍵（`orgConsent.*`）；日文 `seatCode.*` 七處「団体」統一成「施設」（官網 `site-src` 與 B2B 網站 `b2b-src` 的日文對照護機構都用「施設」）。
+- **call-path risk（無／低）**：動到 App／WebView 程式，但只加設定頁一列與獨立視窗。**App E2E pending**——要新版 App 裝到真 iPhone 才驗得到（登入 → 輸入照護機構的開通碼 → 設定頁出現那一列 → 打開／關掉 → 機構專區名單跟著出現／消失，另外照例撥一通）；目前只有本機瀏覽器預檢，不算已驗證。
+- **測試**：`node scripts/test-org-consent-ui.js`（入口顯示條件、預設關、開與關各打 `/org-consent/set` 且參數只有 `{ seatId, granted }`、八種失敗都留在原位、不自動打開、事件不帶機構與名額、四語 28 鍵、文案對照後端 14 行＋週摘要區塊清單＋掛心事類別清單；**64 種突變都會紅**）。`npm run test:ui-contracts`、`node scripts/test-seat-code-ui.js`、`npm run test:launch`（112 步）全過。畫面數 40→41、全畫面證據 492 張（PASS、0 失敗、0 外連請求；併入 #711 後整套重拍過一次）。手機尺寸 390×844 四語各狀態都截圖看過（另看了 375×667 與特大字級）。
+- **未做**：新測試還沒掛進 `npm run test:launch`（#694／#696 正在改 `package.json` 同一行，等它們合併後跟 `test-seat-code-ui.js` 一起補）。`web/index.html` 的快取版號沒升（改版號時一起）。真機沒驗。英日西沒有母語者看過。「已登記、機構還沒開通」的名額後端 `/org-consent` 不會列出來，所以那種情況成功畫面沒有次要按鈕，要等名額生效後從設定頁進。Q5（家人看得到「機構的誰看過」）是第 3 段。
+- **上線順序**：含這張的 App 版本上架前，後端要先帶上 #711（不然機構端還是舊行為，App 上寫的「只有次數」就不是事實）。
+- **跟開著的 PR 重疊的檔**：`web/index.html`、`web/src/app.js`、四語 json（#694／#696／#706）——都是各加各的、位置錯開；日文 `seatCode.*` 那七行是唯一改到既有行的地方。這個分支有全畫面證據，跟上 main 用 merge。
+- **檔**：`web/src/org-consent.js`（新）、`scripts/test-org-consent-ui.js`（新）、`web/index.html`、`web/src/app.js`、`web/src/seat-code.js`、`web/src/styles.css`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`web/src/i18n/app-surface-manifest.json`、`web/src/i18n/app-surface-copy-manifest.json`、`scripts/app-full-surface-i18n-browser-precheck.js`、`scripts/test-app-surface-manifest.js`、`scripts/test-i18n-visual-qa-worklist.js`、`scripts/test-i18n-visual-qa-evidence.js`、`docs/I18N-SURFACE-INVENTORY.json`、`docs/qa/i18n/local-browser-precheck/full-surface-all-profiles-2026-07-29/`（492 張＋報告）、本看板。
 ### 2026-11-18 蘇菲｜🛡️ #728 複審：AI 讀完後長輩又說的話等到第二層的上限、沒判完計次告警、受暴類摘要也套受暴步驟（Draft PR #729 · call-path risk 中：只動亮燈後的背景決定與後台畫面）
 
 - **為什麼**：#728 已合併（6e394f7e）。沙利曼複審留下：🟡「AI 讀完之後長輩又說的話」只等 4 秒就放棄，第二層判讀本身最多要 12 秒；🟡 等不到而擋下只留一行診斷；🟢 後台從對話摘要來的列，標籤有受暴類時步驟還是「聯繫家庭圈指定的人」。
@@ -146,6 +159,7 @@
 - **要老闆知道的一點**：「心情或生活上的掛心事 ×N」嚴格說超出設計書寫的「症狀類別」；心情走勢本來就核准給機構，揭露程度相近。他若想更保守，可以整類不送。
 - **接下來**：#708 的 App 文案第 4 項要跟著改成「類別與次數」（它的測試釘了後端這幾行，併入本張後會紅、提醒回去改）。本張要隨下一次後端上線帶上去，而且**要早於含 #708 的 App 版本上架**。
 - **檔**：`engine/org_api.py`、`engine/test_org_api.py`、本看板。
+
 
 ### 2026-11-17 蘇菲｜🧹 主線兩支本機紅燈修掉（只動測試與證據來源欄位，不碰 App、不碰通話路徑）
 

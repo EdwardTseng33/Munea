@@ -386,6 +386,25 @@
       ]
     },
     {
+      "state": "modal:org-consent",
+      "keyPrefixes": [
+        "orgConsent."
+      ],
+      "requiredKeys": [
+        "orgConsent.title",
+        "orgConsent.switchLabel",
+        "orgConsent.seesTitle",
+        "orgConsent.sees1",
+        "orgConsent.neverTitle",
+        "orgConsent.never1",
+        "orgConsent.anytime",
+        "orgConsent.savedOn",
+        "orgConsent.savedOff",
+        "orgConsent.errorSignIn",
+        "orgConsent.errorNetwork"
+      ]
+    },
+    {
       "state": "modal:top-up",
       "keyPrefixes": [
         "purchase.",
