@@ -41,6 +41,7 @@ from voice_echo_guard import (frame_rms, in_output_window, should_drop_uplink_fr
 load_engine_env()  # 跟 server.py 同款：自動吃 engine/.env.local 的鑰匙、環境變數優先
 from service_metadata import build_service_metadata
 import chat_engine as eng
+import gemini_models
 import health_kb
 import health_selector
 import localization
@@ -2592,7 +2593,7 @@ async def search_current_information(search_client, query, location=None, locale
     if not clean_query:
         raise ValueError("lookup query is empty")
     models = [m.strip() for m in os.environ.get(
-        "MUNEA_LOOKUP_MODEL", "gemini-2.5-flash,gemini-3.1-flash-lite").split(",") if m.strip()]
+        "MUNEA_LOOKUP_MODEL", "gemini-3.5-flash-lite,gemini-3.1-flash-lite").split(",") if m.strip()]
     per_model_s = float(os.environ.get("MUNEA_LOOKUP_PER_MODEL_SECONDS", "8"))
     last_exc = None
     for model in models:
@@ -2602,12 +2603,13 @@ async def search_current_information(search_client, query, location=None, locale
                     model=model,
                     contents=live_lookup.build_request(clean_query, location, locale),
                     config=types.GenerateContentConfig(
-                        temperature=0.2,
                         tools=[types.Tool(google_search=types.GoogleSearch())],
                         # 2026-07-25：關掉「思考」——查詢答案本來就不需要延伸推理，
                         # 思考耗時才是 gemini-2.5-flash 慢的主因（實測拿掉後 8-11s→4.3s
                         # 中位數，grounding 準確度不受影響）。
-                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                        # 2026-11-18：2.5-flash 12/1 停用，主力改 3.5-flash-lite；它帶 thinking_budget
+                        # 會回 400（實測），改用 thinking_level="minimal"（3.1-flash-lite 也吃）。
+                        thinking_config=types.ThinkingConfig(thinking_level="minimal"),
                     ),
                 ),
                 timeout=per_model_s,
@@ -2735,7 +2737,7 @@ def _gemini_tts_pcm(text, char, locale="zh-TW"):
     try:
         _, cli = _pick_client()
         r = cli.models.generate_content(
-            model=os.environ.get("MUNEA_CUE_TTS_MODEL", "gemini-2.5-flash-preview-tts"),
+            model=os.environ.get("MUNEA_CUE_TTS_MODEL", gemini_models.TTS_MODELS[0]),
             contents=text,
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
@@ -2746,14 +2748,8 @@ def _gemini_tts_pcm(text, char, locale="zh-TW"):
             ),
         )
         part = r.candidates[0].content.parts[0]
-        blob = getattr(part, "inline_data", None)
-        data = getattr(blob, "data", b"") or b""
-        mime = str(getattr(blob, "mime_type", "") or "")
-        if isinstance(data, str):
-            data = base64.b64decode(data)
-        if data and "rate=24000" in mime:
-            return bytes(data)
-        return b""
+        # 2026-11-18：3.8 TTS 回 WAV（舊預覽版回裸 PCM），兩種都轉成 24kHz 裸 PCM；格式不對回空的
+        return gemini_models.pcm24k_from_inline(getattr(part, "inline_data", None))
     except Exception:
         return b""
 

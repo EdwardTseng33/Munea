@@ -5,6 +5,8 @@
 用法：GEMINI_API_KEY="..." py chat_engine.py [角色名 角色名 ...]
 """
 import os, sys, json, time, wave, logging, re
+
+import gemini_models
 from google import genai
 from google.genai import types
 
@@ -397,11 +399,11 @@ def reply(char, user):
     )
     last = ""
     for attempt in range(4):
-        for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        for m in gemini_models.TEXT_MODELS:
             try:
                 r = client.models.generate_content(
                     model=m, contents=user,
-                    config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
+                    config=types.GenerateContentConfig(system_instruction=sys_i, tools=[types.Tool(google_search=types.GoogleSearch())]))
                 return localization.assistant_output_text(_clean_reply(r.text), "zh-TW")
             except Exception as e:
                 _log_fallback_exception(f"generate chat reply with {m}", e)
@@ -410,29 +412,22 @@ def reply(char, user):
     return f"(連不上腦 — {last})"
 
 def speak(char, text, fn):
+    # 2026-11-18：2.5／3.1 預覽 TTS 12/18 停用，改 3.8。3.8 會把接在句子前面的語氣說明照念，
+    # 語氣改放 speech_metadata（見 gemini_models.synthesize_pcm）。cmn-TW＝台灣華語腔。
     c = CHARS[char]
-    content = (c["style"] or "") + text
-    for m in ("gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"):
-        try:
-            r = client.models.generate_content(
-                model=m, contents=content,
-                config=types.GenerateContentConfig(response_modalities=["AUDIO"],
-                    speech_config=types.SpeechConfig(language_code="cmn-TW",   # 台灣華語腔（不設=通用華語/馬來腔）
-                        voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=c["voice"])))))
-            pcm = r.candidates[0].content.parts[0].inline_data.data
-            with wave.open(fn, "wb") as w:
-                w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
-            return True
-        except Exception as e:
-            _log_fallback_exception(f"generate TTS audio with {m}", e)
-    return False
+    pcm = gemini_models.synthesize_pcm(client, text, c["voice"], c.get("style") or "", "cmn-TW")
+    if not pcm:
+        _log_fallback_exception(f"generate TTS audio with {', '.join(gemini_models.TTS_MODELS)}", RuntimeError("all_tts_models_failed"))
+        return False
+    with wave.open(fn, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    return True
 
 def remember(history_text):
     """跨天記憶：聊完從對話萃取『值得長期記住的新事情』，存進 user_profile.json 的 回憶。"""
     prompt = ("從以下對話，列出『關於這位用戶、值得長期記住的新事情』"
               "（每條一句、繁體中文、只列對話裡新出現的；沒有就回空陣列）。只回 JSON 字串陣列。\n\n" + history_text)
-    for m in ("gemini-2.5-flash", "gemini-flash-latest"):
+    for m in gemini_models.TEXT_MODELS:
         try:
             r = client.models.generate_content(
                 model=m, contents=prompt,
@@ -481,11 +476,11 @@ def open_chat(char="寧寧", today=""):
             "使用自然台灣國語、像真人、簡短。"
             + localization.voice_opening_instruction(0))
     for attempt in range(4):
-        for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        for m in gemini_models.TEXT_MODELS:
             try:
                 r = client.models.generate_content(
                     model=m, contents=task,
-                    config=types.GenerateContentConfig(system_instruction=sys_i, temperature=0.9, tools=[types.Tool(google_search=types.GoogleSearch())]))
+                    config=types.GenerateContentConfig(system_instruction=sys_i, tools=[types.Tool(google_search=types.GoogleSearch())]))
                 return localization.assistant_output_text(_clean_reply(r.text), "zh-TW")
             except Exception as e:
                 _log_fallback_exception(f"generate proactive opener with {m}", e)
@@ -500,7 +495,7 @@ def consolidate():
     prompt = ("把以下『關於這個人的記憶』整理乾淨：合併重複／同類、用較新的蓋掉矛盾的舊的、"
               "濃縮成精簡自然的句子、移除跟基本資料重複的。保留所有重要的事、別漏。只回 JSON 字串陣列。\n\n"
               + json.dumps(mems, ensure_ascii=False))
-    for m in ("gemini-2.5-flash", "gemini-flash-latest"):
+    for m in gemini_models.TEXT_MODELS:
         try:
             r = client.models.generate_content(
                 model=m, contents=prompt,
@@ -521,7 +516,7 @@ def update_interests(conversation):
     prompt = ("從以下對話，找這個人對哪些『主題/活動』表達了興趣或反感。"
               "喜歡/常做＝正分（+2 很愛、+1 有興趣）；不喜歡/排斥＝負分（-2 討厭、-1 不太愛）。"
               "只回 JSON 物件 {主題: 分數}，沒有就空物件。\n\n" + conversation)
-    for m in ("gemini-2.5-flash", "gemini-flash-latest"):
+    for m in gemini_models.TEXT_MODELS:
         try:
             r = client.models.generate_content(
                 model=m, contents=prompt,

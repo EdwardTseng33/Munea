@@ -8,6 +8,8 @@ import os, sys, time
 from google import genai
 from google.genai import types
 
+import gemini_models
+
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
     sys.exit("需要 GEMINI_API_KEY")
@@ -23,11 +25,11 @@ PERSONAS = {
 
 def reply(persona, user):
     for attempt in range(4):
-        for model in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        for model in gemini_models.TEXT_MODELS:
             try:
                 r = client.models.generate_content(
                     model=model, contents=user,
-                    config=types.GenerateContentConfig(system_instruction=persona, temperature=0.9))
+                    config=types.GenerateContentConfig(system_instruction=persona))
                 return r.text.strip()
             except Exception as e:
                 last = str(e)[:60]

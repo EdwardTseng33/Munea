@@ -24,7 +24,15 @@ LINES = {
     'es': ('Habla con calidez y un poco despacio, como alguien de la familia que cuida a una persona mayor. Natural, cercano, sin tono de locutor.',
            '¡Buenos días! ¿Durmió bien anoche? Me contó que le dolía la rodilla, ¿hoy está un poco mejor? Ah, y a las diez toca la pastilla de la presión. Se lo vuelvo a recordar cuando sea la hora.'),
 }
-MODELS = ['gemini-2.5-flash-preview-tts', 'gemini-2.5-pro-preview-tts']
+MODELS = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts']  # 2.5 預覽 TTS 2026-12-18 停用；3.8 回 WAV，寫檔前要剝檔頭
+
+def _strip_wav(data):
+    """3.8 TTS 回 WAV（含 44 bytes 檔頭）；舊預覽版回裸 PCM。統一成裸 PCM。"""
+    if data[:4] == b'RIFF':
+        import io
+        with wave.open(io.BytesIO(data)) as w:
+            return w.readframes(w.getnframes())
+    return data
 
 def synth(style, text):
     last = None
@@ -40,7 +48,7 @@ def synth(style, text):
             )
             for part in r.candidates[0].content.parts:
                 if getattr(part, 'inline_data', None) and part.inline_data.data:
-                    return model, part.inline_data.data, part.inline_data.mime_type
+                    return model, _strip_wav(part.inline_data.data), part.inline_data.mime_type
             last = 'no audio part'
         except Exception as e:
             last = f'{model}: {type(e).__name__}: {str(e)[:200]}'

@@ -39,8 +39,16 @@ LINES = {
 # 適合「溫暖成年女性管家」的女聲候選（以實跑可用為準、跑壞就換名單）
 FEMALE_VOICES = ["Kore", "Aoede", "Leda", "Callirrhoe", "Autonoe"]
 
-# 模型：先試最新 3.1 TTS、失敗退 2.5 TTS
-TTS_MODELS = ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"]
+# 模型：先試 3.8 TTS、失敗退 3.8 lite TTS（2026-11-18 換代）
+TTS_MODELS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"]  # 預覽 TTS 2026-12-18 停用；3.8 回 WAV，寫檔前要剝檔頭
+
+def _strip_wav(data):
+    """3.8 TTS 回 WAV（含 44 bytes 檔頭）；舊預覽版回裸 PCM。統一成裸 PCM。"""
+    if data[:4] == b'RIFF':
+        import io
+        with wave.open(io.BytesIO(data)) as w:
+            return w.readframes(w.getnframes())
+    return data
 
 
 def save_wav(path, pcm_bytes, rate=24000, width=2, channels=1):
@@ -64,11 +72,11 @@ def synth(client, model, text, voice):
             ),
         ),
     )
-    return resp.candidates[0].content.parts[0].inline_data.data
+    return _strip_wav(resp.candidates[0].content.parts[0].inline_data.data)
 
 
 def pick_model(client):
-    """挑一個能跑的 TTS 模型（先 3.1 後 2.5）。"""
+    """挑一個能跑的 TTS 模型（先 3.8 後 3.8 lite）。"""
     for m in TTS_MODELS:
         try:
             synth(client, m, "測試", FEMALE_VOICES[0])
