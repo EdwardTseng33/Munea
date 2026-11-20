@@ -62,7 +62,30 @@ connect_webview() {
   return 1
 }
 
-js() { node scripts/android-webview-eval.mjs --port "$PORT" --timeout "${2:-60}" --expr "$1"; }
+focus_line() { adb shell dumpsys window 2>/dev/null | grep -E 'mCurrentFocus' | head -1 | tr -d '\r'; }
+
+ensure_front() {
+  # 第一輪 CI（#735 abcef7a229）App 在步驟中間被換到背景、偵錯連線跟著斷；
+  # 每次跑 JS 前確認 App 在最前面，不在就叫回來（singleTask，不會重開），並記下來。
+  local focus
+  focus="$(focus_line)"
+  if ! echo "$focus" | grep -q "$PKG"; then
+    echo "$(date -u +%H:%M:%S) App 不在前景（$focus），叫回來" | tee -a "$SHOTS_DIR/foreground-log.txt"
+    adb shell am start -n "$PKG/.MainActivity" >/dev/null 2>&1
+    sleep 4
+  fi
+}
+
+js() {
+  local out
+  ensure_front
+  if out="$(node scripts/android-webview-eval.mjs --port "$PORT" --timeout "${2:-60}" --expr "$1" 2>>"$SHOTS_DIR/js-errors.txt")"; then
+    echo "$out"; return 0
+  fi
+  # 偵錯連線斷了（App 重開 pid 變了之類）→ 重接一次再試
+  connect_webview >/dev/null 2>&1 || true
+  node scripts/android-webview-eval.mjs --port "$PORT" --timeout "${2:-60}" --expr "$1" 2>>"$SHOTS_DIR/js-errors.txt"
+}
 
 wait_for_notification() {
   # $1 = 不早於這個裝置時間（秒）才算；$2 = 最多等到這個裝置時間；$3 = 存檔前綴
@@ -115,15 +138,22 @@ else
   OVERALL_OK=0
 fi
 shot "00-launch"
+# 新裝的 App 第一次打開會先播三頁開場介紹，蓋在所有畫面上面（第一輪 CI 說明卡就是被它蓋住）。
+# 真人是看完介紹、設定好用藥之後才會遇到說明卡，這裡記成「介紹看過了」再往下。
+js "localStorage.setItem('munea.onboardingIntroSeen.v1', 'true'); const intro = document.getElementById('onboarding'); if (intro) intro.hidden = true; return true" > /dev/null
+sleep 2
+shot "00-home"
 
 echo "== 1. App 自己的說明卡（設定提醒時才問，不是一開 App 就問）=="
 js "localStorage.removeItem('munea.notification.askInContext.medication'); await MuneaNotify.askInContext('medication'); return !!document.querySelector('#pushAskModal.show')" > "$SHOTS_DIR/01-card.json" 2>&1
 sleep 2
 shot "01-ask-card"
 CARD_OK=0
-if grep -q true "$SHOTS_DIR/01-card.json" && tap_text "Yes, turn on,好，開通知" "01-tap-accept" 20; then
+# 說明卡的「好，開通知」用 JS 按（按鈕的字「Yes, turn on」有逗號，點字工具會拆錯；第一輪就點到別的東西）。
+# 按下去之後跳的系統權限視窗照樣用真的點擊。
+if grep -q true "$SHOTS_DIR/01-card.json" && js "const b = document.getElementById('pushAskAccept'); if (!b) return false; b.click(); return true" | grep -q true; then
   CARD_OK=1
-  record "App 說明卡" "跳出「要在吃藥時間提醒你，需要先打開通知」＋點「好，開通知」" "成功" "01-ask-card.png"
+  record "App 說明卡" "跳出「要在吃藥時間提醒你，需要先打開通知」＋按「好，開通知」" "成功" "01-ask-card.png"
 else
   record "App 說明卡" "跳出說明卡並點得到「好，開通知」" "沒找到，改直接請 App 要權限（MuneaNotify.requestPermission）" "01-ask-card.png"
   js "window.__ciPerm = MuneaNotify.requestPermission(); return 'asked'" >/dev/null 2>&1
@@ -259,6 +289,11 @@ grep -E "Capacitor/LocalNotification|LN|LocalNotification|FATAL EXCEPTION|Androi
   echo "|---|---|---|---|"
   for row in "${SUMMARY_ROWS[@]}"; do echo "$row"; done
   echo ""
+  if [ -s "$SHOTS_DIR/foreground-log.txt" ]; then
+    echo "App 中途不在前景、被叫回來的紀錄（測試環境狀況，照實列出）："
+    sed 's/^/- /' "$SHOTS_DIR/foreground-log.txt"
+    echo ""
+  fi
   if [ "$OVERALL_OK" -eq 1 ]; then echo "**整體：每一步都照預期。**"; else echo "**整體：至少一步沒照預期，看上表與截圖，不要當成全部通過。**"; fi
 } | tee "$SHOTS_DIR/summary.md" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
