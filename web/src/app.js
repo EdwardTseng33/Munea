@@ -7487,6 +7487,35 @@ function muneaFamilyShare() {
   if (muneaNonNegInt(f.monthGrant) === null || muneaNonNegInt(f.monthRemaining) === null) return null;
   return f;
 }
+// 免費帳號還能聊幾秒——伺服器說了算（2026-11-20，後端 #732：免費改成前 7 天每天、之後每週給分鐘；
+// 家人圈成員的 walletSummary.total 已經把圈主可用的分鐘算進去）。App 不能比伺服器先把人擋掉：
+// 有伺服器餘額（total）或 allowance 就照它算；都沒有（未登入、連不上、舊後端）回 null，交給 MMPLAN 本機判斷。
+// 通話中伺服器的數字仍是撥號前那一刻的（收線才扣），所以要減掉這通已經講的秒數。
+function muneaServerFreeRemainSec() {
+  let minutes = null;
+  if (Number.isFinite(POINTS.serverRemaining)) minutes = POINTS.serverRemaining;
+  else {
+    const a = muneaAllowance();
+    if (a && a.mode === 'free_daily') minutes = muneaNonNegInt(a.todayRemaining);
+    else if (a && a.mode === 'free_weekly') minutes = muneaNonNegInt(a.weekRemaining);
+  }
+  if (minutes === null) return null;
+  const inCall = _callTimerInt ? _callSec : 0;
+  return Math.max(0, Math.round(minutes * 60) - inCall);
+}
+window.__muneaServerFreeRemainSec = () => { try { return muneaServerFreeRemainSec(); } catch (e) { return null; } };
+// 免費分鐘用完時的說法跟著後端的 allowance 走：今天的用完／這週的用完；後端沒給才用舊的「一次性 5 分鐘」
+function muneaFreeUpsell() {
+  const a = muneaAllowance();
+  if (!window.MMPLAN) return;
+  if (a && a.mode === 'free_daily') {
+    window.MMPLAN.upsell('chat-today', { days: muneaNonNegInt(a.trialDays) || 7, minutes: muneaNonNegInt(a.todayGrant) || 10 });
+  } else if (a && a.mode === 'free_weekly') {
+    window.MMPLAN.upsell('chat-week', { minutes: muneaNonNegInt(a.weekGrant) || 10 });
+  } else {
+    window.MMPLAN.upsell('chat-daily');
+  }
+}
 // 「12/1」這種短日期：跟著語言走（英文 12/1、日文 12/1、西文 1/12）
 function muneaShortDate(value) {
   if (!value) return '';
@@ -7513,6 +7542,7 @@ window.__ptsTest = {
   setUsed: v => { POINTS.used = v; renderPoints(); },
   setRemaining: v => { POINTS.serverRemaining = Math.max(0, Number(v) || 0); renderPoints(); },
   showExhausted: () => __muneaShowPointsPopup(),
+  showFreeUsedUp: () => __muneaShowCallCreditBlocked(),
   showIdleChat: () => {
     document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
     const chat = document.getElementById('chat');
@@ -7700,7 +7730,7 @@ function __muneaShowPointsPopup(){
 }
 function __muneaShowCallCreditBlocked(){
   if (window.MMPLAN && window.MMPLAN.isFree()) {
-    window.MMPLAN.upsell('chat-daily');
+    muneaFreeUpsell();
     return;
   }
   __muneaShowPointsPopup();
@@ -7720,9 +7750,12 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { chatOpened = false; } catch (e) {}
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
-  toast(muneaT('credits.freeTrialEnded', '免費帳號的一次性 5 分鐘體驗已用完'));
+  const _freeMode = (muneaAllowance() || {}).mode;
+  if (_freeMode === 'free_daily') toast(muneaT('credits.freeTodayUsedUp', '今天的免費分鐘用完了。'));
+  else if (_freeMode === 'free_weekly') toast(muneaT('credits.freeWeekUsedUp', '這週的免費分鐘用完了。'));
+  else toast(muneaT('credits.freeTrialEnded', '免費帳號的一次性 5 分鐘體驗已用完'));
   try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
-  if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
+  muneaFreeUpsell();
 }
 function startCallTimer() {
   stopCallTimer(); _callSec = 0;
@@ -9465,7 +9498,7 @@ function init() {
     // 訪客直接進聊聊頁（Edward 2026-07-30），登入關卡留到頁內按「開始通話」那一刻。
     // 已登入的人維持原本的點數／方案把關——先擋在首頁，免得進去了才發現沒點數可撥。
     if (isLoggedIn()) {
-      if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
+      if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { muneaFreeUpsell(); return; } }
       else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
     }
     showView('chat');

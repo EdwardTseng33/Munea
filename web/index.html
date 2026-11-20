@@ -1452,16 +1452,29 @@ setTimeout(function () {
     function ck(){ return 'munea.chatTrialSec'; } // 固定 key = 一次性、用完不再回來
     function chatUsedToday(){ try{ return parseInt(localStorage.getItem(ck())||'0',10)||0; }catch(e){ return 0; } }
     function chatTick(){ try{ localStorage.setItem(ck(), String(chatUsedToday()+1)); }catch(e){} }
-    function chatRemainSec(){ return Math.max(0, CHAT_FREE_SEC - chatUsedToday()); }
-    var MSG=function(){ return {
+    // 免費還能聊幾秒：伺服器說了算（2026-11-20：免費改成前 7 天每天、之後每週給分鐘，家人圈成員還能用圈主的分鐘）。
+    // App 不能比伺服器先把人擋掉——有伺服器回來的餘額或 allowance 就照它（app.js __muneaServerFreeRemainSec）；
+    // 未登入、連不上、舊後端沒給時，才退回下面這個本機的一次性 5 分鐘。
+    function chatRemainSec(){
+      try{
+        if(typeof window.__muneaServerFreeRemainSec==='function'){
+          var s=window.__muneaServerFreeRemainSec();
+          if(typeof s==='number' && isFinite(s)) return Math.max(0, s);
+        }
+      }catch(e){}
+      return Math.max(0, CHAT_FREE_SEC - chatUsedToday());
+    }
+    var MSG=function(v){ v=v||{}; return {
+      'chat-today':{t:window.muneaUiT('paywall.chatTodayTitle','今天的免費分鐘用完了'),m:window.muneaUiT('paywall.chatTodayBody','前 {days} 天每天有 {minutes} 分鐘，明天就能再聊。想每天多聊一點，可以看看 Plus 或 Pro。',{days:v.days||7,minutes:v.minutes||10})},
+      'chat-week':{t:window.muneaUiT('paywall.chatWeekTitle','這週的免費分鐘用完了'),m:window.muneaUiT('paywall.chatWeekBody','免費方案每週有 {minutes} 分鐘，補上之後就能再聊。想每天多聊一點，可以看看 Plus 或 Pro。',{minutes:v.minutes||10})},
       'family-invite':{t:window.muneaUiT('paywall.familyInviteTitle','邀請家人，升級就解鎖'),m:window.muneaUiT('paywall.familyInviteBody','免費方案可以一起看家人的狀態；想邀請家人進全家健康圈、大家互相照應，升級 Plus 就可以囉。')},
       'status-history':{t:window.muneaUiT('paywall.statusHistoryTitle','看更久的變化，升級解鎖'),m:window.muneaUiT('paywall.statusHistoryBody','免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。')},
       'chat-daily':{t:window.muneaUiT('paywall.chatDailyTitle','免費的 5 點體驗用完了'),m:window.muneaUiT('paywall.chatDailyBody','免費帳號會收到一次性 5 點，約可聊 5 分鐘；不會每天重置。想繼續聊，升級 Plus／Pro 每月會固定送點。')},
       'join-circle':{t:window.muneaUiT('paywall.joinCircleTitle','加入家人的健康圈，升級解鎖'),m:window.muneaUiT('paywall.joinCircleBody','免費方案可以自己用沐寧、記自己的提醒；想加入家人的健康圈、大家一起看著長輩，升級 Plus 就可以囉。')}
     }; };
-    function upsell(feature){
+    function upsell(feature, values){
       try{ if(typeof trackProductEvent==='function') trackProductEvent('paywall_shown',{feature:feature||''}); }catch(e){}
-      var d=MSG()[feature]||{t:window.muneaUiT('paywall.fallbackTitle','升級解鎖更多'),m:window.muneaUiT('paywall.fallbackBody','升級方案就能使用這個功能。')};
+      var d=MSG(values)[feature]||{t:window.muneaUiT('paywall.fallbackTitle','升級解鎖更多'),m:window.muneaUiT('paywall.fallbackBody','升級方案就能使用這個功能。')};
       var old=document.getElementById('mm-upsell'); if(old) old.remove();
       var m=document.createElement('div'); m.id='mm-upsell';
       m.style.cssText='position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
