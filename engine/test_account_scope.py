@@ -153,6 +153,8 @@ class AccountScopeTests(unittest.TestCase):
         self.assertTrue(result["authUserDeleted"])
         self.assertFalse(result["cleanupRequired"])
         self.assertEqual([call[:2] for call in adapter.calls], [
+            # 刪帳號前先查本人待過哪些家人圈，好把留在別人圈裡的那幾格清掉（這裡沒有任何圈，只查不寫）。
+            ("GET", "family_memberships"),
             ("POST", "audit_events"),
             ("DELETE", "accounts"),
             ("DELETE", "auth.users"),
