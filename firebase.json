@@ -11,6 +11,11 @@
     "trailingSlash": false,
     "redirects": [
       {
+        "regex": "/solutions(\\.html)?",
+        "destination": "/for-organizations",
+        "type": 301
+      },
+      {
         "regex": "/privacy\\.html",
         "destination": "/privacy",
         "type": 301

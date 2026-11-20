@@ -41,6 +41,13 @@ assert.equal(hosting.trailingSlash, false);
 assert.ok(hosting.ignore.includes("vercel.json"));
 
 const publicPages = ["privacy", "terms", "support"];
+assert.ok(
+  hosting.redirects?.some(
+    (route) => route.regex === "/solutions(\\.html)?" && route.destination === "/for-organizations" && route.type === 301,
+  ),
+  "retired /solutions.html must 301 to /for-organizations",
+);
+
 for (const page of publicPages) {
   assert.ok(
     hosting.redirects?.some(
@@ -101,15 +108,35 @@ const sitemap = read("sitemap.xml");
 // 2026-11-05「給照護機構」短頁：四語各一個真網址（/for-organizations、/en/for-organizations…）
 const ORG_SLUG = "for-organizations";
 const orgUrl = (dir) => (dir ? `https://munea.net/${dir}/${ORG_SLUG}` : `https://munea.net/${ORG_SLUG}`);
+// 2026-11-18 指南：每個有文章的語系一個列表頁＋每篇一個網址（文章來源 site-src/guides/<語系>/*.md）
+const guideRoot = path.join(root, "site-src", "guides");
+const guideLocales = locales.filter((l) => fs.existsSync(path.join(guideRoot, l.code)));
+const guideIndexUrl = (dir) => (dir ? `https://munea.net/${dir}/guide` : "https://munea.net/guide");
+const guideSlugs = Object.fromEntries(
+  guideLocales.map((l) => [
+    l.code,
+    fs.readdirSync(path.join(guideRoot, l.code)).filter((f) => f.endsWith(".md")).map((f) => f.replace(/\.md$/, "")),
+  ]),
+);
+assert.ok(guideLocales.length >= 3, "guides should exist for zh, en and ja");
 const sitemapUrls = [
   ...locales.map((l) => localeUrl(l.dir)),
   ...locales.map((l) => orgUrl(l.dir)),
-  "https://munea.net/solutions.html",
+  ...guideLocales.map((l) => guideIndexUrl(l.dir)),
+  ...guideLocales.flatMap((l) => guideSlugs[l.code].map((slug) => `${guideIndexUrl(l.dir)}/${slug}`)),
 ];
 for (const url of sitemapUrls) {
   assert.match(sitemap, new RegExp(`<loc>${url.replaceAll(".", "\\.")}</loc>`));
 }
 assert.equal(countMatches(sitemap, /<url>/g), sitemapUrls.length);
+assert.equal(countMatches(sitemap, /<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g), sitemapUrls.length, "every sitemap URL needs a real lastmod date");
+// 舊定位頁（取藥櫃／藥師把關）已下架：網站裡不能再有這個檔、主機要把舊網址永久轉到機構頁
+assert.doesNotMatch(sitemap, /solutions/, "solutions.html was retired and must not be in the sitemap");
+assert.equal(fs.existsSync(path.join(appSite, "solutions.html")), false, "solutions.html must not be published");
+// 找不到頁面：要有沐寧自己的 404，不能回主機預設的英文開發者訊息
+const notFound = read("404.html");
+assert.match(notFound, /href="\/"/, "404 page must link back home");
+assert.doesNotMatch(notFound, /firebase/i, "404 page must not be the Firebase default");
 for (const l of locales) {
   assert.match(
     sitemap,
@@ -301,6 +328,46 @@ for (const l of locales) {
   assert.ok(home.includes(`href="${orgUrl(l.dir)}"`), `${l.code} home footer must link to the org page`);
 }
 
+// 2026-11-18 指南文章：每篇一個 H1、自己的 canonical、文章結構化資料、不准出現紅線字
+const guideRed = { zh: /追蹤|監測|監控/, ja: /監視|追跡|モニタリング/, en: /\b(track|tracking|monitor|monitoring|surveillance)\b/i };
+for (const l of guideLocales) {
+  const idx = read(l.dir ? `${l.dir}/guide/index.html` : "guide/index.html");
+  assert.match(idx, new RegExp(`<link rel="canonical" href="${guideIndexUrl(l.dir).replaceAll(".", "\\.")}">`), `${l.code} guide index canonical`);
+  assert.equal(countMatches(idx, /<h1(?:\s|>)/gi), 1, `${l.code} guide index needs exactly one h1`);
+  const home = read(l.dir ? `${l.dir}/index.html` : "index.html");
+  assert.ok(home.includes(`href="${guideIndexUrl(l.dir)}"`), `${l.code} home must link to its guides`);
+  for (const slug of guideSlugs[l.code]) {
+    const file = `${l.dir ? `${l.dir}/` : ""}guide/${slug}/index.html`;
+    const html = read(file);
+    const url = `${guideIndexUrl(l.dir)}/${slug}`;
+    assert.match(html, new RegExp(`<html lang="[^"]*${l.code}`), `${file} lang`);
+    assert.match(html, new RegExp(`<link rel="canonical" href="${url.replaceAll(".", "\\.")}">`), `${file} canonical`);
+    assert.match(html, /<meta name="description" content="[^"]{20,}"/, `${file} needs a description`);
+    assert.equal(countMatches(html, /<h1(?:\s|>)/gi), 1, `${file} needs exactly one h1`);
+    assert.doesNotMatch(html, /noindex/i, `${file} must stay indexable`);
+    assert.doesNotMatch(html, /\{\{[^}]+\}\}/, `${file} has an unresolved template key`);
+    const ld = JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+    assert.ok(ld["@graph"].some((n) => n["@type"] === "Article" && n.mainEntityOfPage === url), `${file} needs Article data`);
+    const visible = html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]+>/g, " ");
+    assert.doesNotMatch(visible, guideRed[l.code], `${file} uses a red-line word`);
+  }
+}
+
+// 2026-11-18 首頁本文也要掃紅線字（原本只掃常見問題與機構頁；西文頁曾出現 Seguimiento＝追蹤）
+const homeRed = {
+  zh: /追蹤|監測|監控/,
+  en: /\b(track|tracking|monitor|monitoring|surveillance)\b/i,
+  ja: /監視|追跡|モニタリング/,
+  es: /seguimiento|monitore|monitoriz|vigilancia|rastre/i,
+};
+for (const l of locales) {
+  for (const file of [l.dir ? `${l.dir}/index.html` : "index.html", l.dir ? `${l.dir}/${ORG_SLUG}/index.html` : `${ORG_SLUG}/index.html`]) {
+    // 只看讀者看得到的字：去掉程式、樣式、註解與標籤本身（class="pain-track" 這種版型名稱不算）
+    const visible = read(file).replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]+>/g, " ");
+    assert.doesNotMatch(visible, homeRed[l.code], `${file} uses a red-line word`);
+  }
+}
+
 const llms = read("llms.txt");
 assert.match(llms, /^# Munea/m, "llms.txt needs a title line");
 assert.match(llms, /https:\/\/apps\.apple\.com\/app\/id6788658125/, "llms.txt must link the App Store listing");
@@ -309,6 +376,21 @@ for (const l of locales) {
 }
 assert.doesNotMatch(llms, /@gmail\.com/i, "llms.txt must not publish a personal mailbox");
 
+// 官網中文字數守門（docs/I18N-SURFACE-INVENTORY.json 的 marketing-site）也在這裡驗一次：
+// 雲端 Smoke 每張 PR 只跑 test:seo，原本要到本機 test:launch 才會發現官網文案超過基準（#725）。
+{
+  const { buildReport, loadInventory } = require("./i18n-surface-inventory.js");
+  const inventory = loadInventory();
+  inventory.surfaces = inventory.surfaces.filter((surface) => surface.id === "marketing-site");
+  const [site] = buildReport(inventory).surfaces;
+  assert.equal(site.unboundHanCandidates, 0, "Every Chinese string on the homepage must bind to the four-locale catalogs");
+  assert.ok(
+    site.hanCandidates <= site.baselineHanCandidates,
+    `Homepage Chinese strings grew ${site.baselineHanCandidates} -> ${site.hanCandidates}; if all are bound, raise the marketing-site baseline in docs/I18N-SURFACE-INVENTORY.json and scripts/test-i18n-surface-inventory.js together`,
+  );
+}
+
 console.log(`[ok] munea.net SEO contract passed (${locales.length} locales)`);
 
 require("./test-app-site-legal-localizations.js");
+require("./test-marketing-site-localizations.js");

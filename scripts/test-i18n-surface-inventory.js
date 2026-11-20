@@ -148,7 +148,7 @@ assert.deepEqual(
 );
 assert.equal(
   marketingSite.baselineHanCandidates,
-  244,
+  294,
   'The public-site baseline must fail closed when new untranslated copy is added',
 );
 assert.equal(marketingSite.localizationContract.runtime, 'site-src/build.mjs');

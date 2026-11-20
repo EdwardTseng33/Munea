@@ -1264,6 +1264,17 @@ async function refreshServerPlanEntitlement() {
   return result;
 }
 
+// 機構開通碼視窗（web/src/seat-code.js，一般程式、看不到這個模組裡的東西）要用的工具借給它：
+// 組後端網址、帶登入證與通行碼、登入把關、記產品事件、綁好後重讀方案。流程本身都在那支裡。
+window.__muneaSeatCodeBridge = {
+  brainURL,
+  authHeaders: muneaAuthHeaders,
+  isLoggedIn,
+  requireLogin,
+  track: trackProductEvent,
+  refreshPlan: refreshServerPlanEntitlement,
+};
+
 function renderSubscriptionEndDate(subscription) {
   const el = $('#setPlanRenewalDate');
   if (!el) return;
@@ -12980,7 +12991,12 @@ function init() {
   window.__muneaOpenInterests = function (fromCall) {
     _intSel = loadInterests(); _intFromCall = !!fromCall;
     renderInterestPicks();
-    const skip = $('#interestsSkip'); if (skip) skip.style.display = fromCall ? '' : 'none';
+    // 2026-11-17：樣式表把這顆連結預設成不顯示，這裡以前寫空字串＝交還樣式表＝永遠看不到。
+    // 要它出現就得明講 block。（iPhone 模擬器實跑抓到：按通話跳出這頁，卻沒有「先跳過」可按。）
+    const skip = $('#interestsSkip'); if (skip) skip.style.display = fromCall ? 'block' : 'none';
+    // 「只問這一次」要在問的當下就記：按叉叉、往下拉、點旁邊關掉都不會經過 closeInterests，
+    // 以前沒記到，下一次按通話又跳出來、怎麼關都打不出去。
+    if (fromCall) { try { localStorage.setItem('munea.interestsAsked', '1'); } catch (e2) {} }
     $('#interestsModal').classList.add('show');
   };
   function closeInterests(startAfter) {

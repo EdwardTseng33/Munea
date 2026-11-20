@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- ⚠ 這是「指南文章」版型。文章本體在 site-src/guides/<語系>/<slug>.md，跑 `npm run site:build` 產生。 -->
+<html lang="{{meta.htmlLang}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{g.titleTag}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+{{meta.fonts}}
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/assets/paining-logo.png" type="image/png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="description" content="{{g.description}}">
+<link rel="canonical" href="{{g.canonical}}">
+{{g.hreflang}}
+<meta name="theme-color" content="#277A73">
+<meta name="apple-itunes-app" content="app-id=6788658125">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Munea 沐寧">
+<meta property="og:title" content="{{g.title}}">
+<meta property="og:description" content="{{g.description}}">
+<meta property="og:url" content="{{g.canonical}}">
+<meta property="og:image" content="{{meta.ogImage}}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="{{meta.ogLocale}}">
+<meta property="article:published_time" content="{{g.published}}">
+<meta property="article:modified_time" content="{{g.updated}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{g.title}}">
+<meta name="twitter:description" content="{{g.description}}">
+<meta name="twitter:image" content="{{meta.ogImage}}">
+<script type="application/ld+json">{{g.jsonLd}}</script>
+<link rel="stylesheet" href="/warm.css?v=11">
+<link rel="stylesheet" href="/guide.css?v=1">
+</head>
+<body>
+<a class="skip" href="#main">{{a11y.skip}}</a>
+<div class="progress"></div>
+
+<header>
+  <nav class="wrap">
+    <a class="logo" href="{{meta.home}}" aria-label="Munea">
+      <span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30"></span>
+      <span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span>
+    </a>
+    <div class="nav-cluster">
+      <div class="navlinks">
+        <a href="{{meta.home}}#features">{{nav.features}}</a>
+        <a href="{{meta.home}}#pricing">{{nav.pricing}}</a>
+        <a href="{{meta.home}}#faq">{{nav.faq}}</a>
+        <a href="{{meta.guideIndex}}">{{guide.navIndex}}</a>
+        <a class="nav-cta" href="{{cta.navHref}}"{{cta.navAttrs}}>{{cta.navLabel}}</a>
+      </div>
+      <div class="lang-switch" data-open="false">
+        <button class="lang-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="{{a11y.langSwitch}}">
+          <svg class="globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/></svg>
+          <span class="lang-current">{{meta.langCurrent}}</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="lang-menu" role="listbox" aria-label="{{a11y.langSwitch}}">
+          {{g.langMenu}}
+        </div>
+      </div>
+      <button class="menu-btn" type="button" aria-label="{{a11y.menu}}" aria-expanded="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33403D" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </nav>
+</header>
+
+<main id="main" class="g-main">
+  <article class="g-article">
+    <nav class="g-crumb" aria-label="{{guide.crumbLabel}}"><a href="{{meta.home}}">{{guide.crumbHome}}</a><span aria-hidden="true">›</span><a href="{{meta.guideIndex}}">{{guide.navIndex}}</a></nav>
+    <h1>{{g.title}}</h1>
+    <p class="g-meta"><span>{{guide.byline}}</span><span aria-hidden="true">·</span><span>{{guide.updatedLabel}} <time datetime="{{g.updated}}">{{g.updatedText}}</time></span><span aria-hidden="true">·</span><span>{{g.readText}}</span></p>
+    {{g.toc}}
+    <div class="g-body">
+{{g.body}}
+    </div>
+
+    <aside class="g-cta" aria-label="{{guide.ctaLabel}}">
+      <div class="g-cta-txt">
+        <b>{{guide.ctaTitle}}</b>
+        <p>{{guide.ctaP}}</p>
+      </div>
+      {{cta.tagOpen}} aria-label="{{a11y.download}}"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span class="as-t"><small>{{cta.small}}</small><b>{{cta.big}}</b></span>{{cta.tagClose}}
+    </aside>
+
+    <p class="g-disc">{{guide.disclaimer}}</p>
+  </article>
+
+  {{g.related}}
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30" loading="lazy"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
+        <p class="desc">{{foot.desc}}</p>
+      </div>
+      <div class="foot-col">
+        <h4>{{foot.meetTitle}}</h4>
+        <a href="{{meta.home}}">{{guide.navHome}}</a>
+        <a href="{{meta.guideIndex}}">{{guide.navIndex}}</a>
+        <a href="{{meta.home}}#pricing">{{nav.pricing}}</a>
+        <a href="{{meta.home}}#faq">{{foot.linkFaq}}</a>
+      </div>
+      <div class="foot-col">
+        <h4>{{foot.contactTitle}}</h4>
+        <a href="{{meta.legalSupport}}">{{foot.linkSupport}}</a>
+        <a href="{{meta.legalTerms}}">{{foot.linkTerms}}</a>
+        <a href="{{meta.legalPrivacy}}">{{foot.linkPrivacy}}</a>
+        <a href="{{meta.orgUrl}}">{{foot.linkB2B}}</a>
+      </div>
+    </div>
+    <p class="disc">{{foot.disclaimer}}</p>
+    <div class="foot-bottom"><span>© {{meta.year}} Munea 沐寧 · {{foot.tagline}}</span></div>
+  </div>
+</footer>
+<script src="/warm.js?v=11"></script>
+</body>
+</html>

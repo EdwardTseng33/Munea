@@ -25,7 +25,8 @@
         "web/src/store.js",
         "web/src/notify.js",
         "web/src/medication.js",
-        "web/src/companion-profile.js"
+        "web/src/companion-profile.js",
+        "web/src/seat-code.js"
       ],
       "requiredStates": [
         "signed-out",
@@ -88,7 +89,7 @@
         "locale-segmentation"
       ],
       "releaseGate": "Country and locale operational visibility",
-      "baselineHanCandidates": 692,
+      "baselineHanCandidates": 728,
       "localizationContract": {
         "runtime": "web/src/admin-i18n.js",
         "validation": "scripts/test-admin-localizations.js",
@@ -128,7 +129,7 @@
         "landing-desktop"
       ],
       "releaseGate": "Localized acquisition surface",
-      "baselineHanCandidates": 244,
+      "baselineHanCandidates": 294,
       "localizationContract": {
         "runtime": "site-src/build.mjs",
         "validation": "scripts/test-app-site-seo.js",

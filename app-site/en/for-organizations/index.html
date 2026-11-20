@@ -9,9 +9,11 @@
 <title>For care providers | Munea partnerships</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;600&display=optional" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;600&display=optional"></noscript>
 <link rel="icon" href="/assets/paining-logo.png" type="image/png">
-<meta name="description" content="Long-term care homes, day centers and senior living communities can bring in Munea in bulk: residents talk with an AI companion that remembers them, get medication and appointment reminders, and families see how they are doing on their own phones. Organizations receive a monthly operations report. Start with a small pilot and scale once it works.">
+<meta name="description" content="Bring Munea to your care home or day center: residents talk with an AI companion that remembers them, get medication reminders, and families see updates.">
 <link rel="canonical" href="https://munea.net/en/for-organizations">
 <link rel="alternate" hreflang="zh-Hant" href="https://munea.net/for-organizations">
 <link rel="alternate" hreflang="en" href="https://munea.net/en/for-organizations">
@@ -35,16 +37,15 @@
 <meta name="twitter:title" content="Munea for care providers: voice companionship families can see">
 <meta name="twitter:description" content="Residents just talk, get medication and appointment reminders on time, families see updates, and your organization gets a monthly operations report. Start small, scale once it works.">
 <meta name="twitter:image" content="https://munea.net/assets/og-image.jpg">
-<link rel="stylesheet" href="/warm.css?v=10">
+<link rel="stylesheet" href="/warm.css?v=11">
 <style>
   /* ── Edward 拍板：扁平化，不要陰影與漸層（跟首頁同一套覆寫）── */
   :root{--shadow:none;--shadow-sm:none;--shadow-lg:none}
   *{box-shadow:none!important}
   .blob{display:none!important}
   .cta-box .glow,.cta-box .glow2{display:none!important}
-  .cta-box{background:var(--teal-d)!important}
+  .cta-box{background:var(--teal-btn)!important}
   .progress{background:var(--teal)!important}
-  .hero h1 .hl::after{background:#F6D8BC!important}
   h2,h3{text-wrap:balance}
   p,li{text-wrap:pretty}
 
@@ -57,8 +58,8 @@
   .org-hero{padding:72px 0 64px}
   .org-hero .hero-grid{grid-template-columns:1.15fr .85fr}
   .org-hero h1{font-size:clamp(30px,4.4vw,50px)}
-  .org-hero .btn-teal{background:var(--teal-dd);color:#fff}
-  .org-hero .btn-teal:hover{background:#1D5A55;transform:translateY(-3px)}
+  .org-hero .btn-teal{background:var(--teal-btn);color:#fff}
+  .org-hero .btn-teal:hover{background:var(--teal-dd);transform:translateY(-3px)}
   .org-hero .btn svg{width:18px;height:18px}
   .org-shot{display:grid;place-items:center;background:#e9f2ed;border-radius:30px;padding:30px}
   .org-shot .dev{width:min(240px,70%);aspect-ratio:780/1688;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px #2b2b27!important}
@@ -86,19 +87,22 @@
   .org-how .sec-head{margin-bottom:28px}
   .org-steps{list-style:none;max-width:760px;margin:0 auto;display:grid;gap:12px;counter-reset:s}
   .org-steps li{counter-increment:s;display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 20px;font-size:16px;color:var(--ink);line-height:1.75}
-  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--coral-soft);color:var(--coral-d);font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
+  .org-steps li::before{content:counter(s);flex:0 0 30px;height:30px;border-radius:50%;background:var(--teal-btn);color:#fff;font-family:"Poppins";font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
 
   /* ── 收尾：去 B2B 網站 ── */
   .org-final .btn-b2b{background:#fff;color:var(--teal-dd);position:relative}
   .org-final .btn-b2b:hover{background:#f4f0e8;transform:translateY(-3px)}
-  .org-note{max-width:720px;margin:6px auto 0;text-align:center;font-size:13px;color:var(--muted);line-height:1.8;padding:0 8px}
+  .org-note{max-width:720px;margin:16px auto 0;text-align:center;font-size:13.5px;color:var(--muted);line-height:1.8;padding:0 8px}
 
   /* 頁尾 */
   .foot-disc{max-width:720px;margin:26px auto 0;font-size:12.5px;color:#8a9893;line-height:1.85}
   .foot-col a.ext::after{content:"↗";font-size:.75em;margin-left:4px;opacity:.6}
+  .skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:700}
+  .skip:focus{top:12px}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to main content</a>
 <div class="progress"></div>
 
 <header>
@@ -129,6 +133,7 @@
   </nav>
 </header>
 
+<main id="main">
 <!-- ═══ 主視覺 ═══ -->
 <section class="hero org-hero">
   <div class="wrap hero-grid">
@@ -138,7 +143,7 @@
       <p class="sub">Munea can be provided to care organizations in bulk: residents talk with an AI companion just by speaking, families see updates on their own phones, and your organization receives a monthly report on use and care. It is software only and runs on facility tablets or residents' own phones.</p>
       <div class="hero-actions">
         <a class="btn btn-teal" href="https://munea-b2b.vercel.app/en" target="_blank" rel="noopener">See partnership options<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a class="btn btn-ghost" href="https://apps.apple.com/tw/app/id6788658125" target="_blank" rel="noopener">Try the app first</a>
+        <a class="btn btn-ghost" href="https://apps.apple.com/app/id6788658125" target="_blank" rel="noopener">Try the app first</a>
       </div>
     </div>
     <div class="org-shot">
@@ -159,22 +164,22 @@
       <div class="org-card">
         <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3z"/><path d="M18 11a6 6 0 01-12 0M12 17v4"/></svg></span>
         <h3>Voice companionship that remembers</h3>
-        <p>Residents just talk, with no typing. Long-term memory lets each conversation pick up where the last one left off, and someone is there to talk to at night and in thinly staffed hours.</p>
+        <p>Residents just talk, with no typing. Long-term memory lets each conversation pick up where the last one left off, and at night or in quiet hours there is an AI companion to talk to.</p>
       </div>
       <div class="org-card">
         <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>
         <h3>Medication and appointment reminders</h3>
-        <p>Residents get a phone notification on time, and a missed dose is never scolded. Munea only reminds; it does not assess or change medication.</p>
+        <p>Residents get phone reminders right on time, with no scolding if one is missed. Munea only reminds — it never assesses or adjusts medication — and it does not replace your facility’s medication rounds or handovers.</p>
       </div>
       <div class="org-card">
         <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span>
         <h3>Families can see updates</h3>
-        <p>Families connect on their own phones and see the updates, mood and reminder status a resident chooses to share. What they can see is up to the resident.</p>
+        <p>Families join the resident’s family health circle on their own phones and see updates, mood and reminder status. Only members of that circle can see them.</p>
       </div>
       <div class="org-card">
         <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
         <h3>Monthly operations report</h3>
-        <p>Organization seats include a monthly report covering usage, care and alert summaries, so managers can see what is actually happening after rollout.</p>
+        <p>Organization plans with 10 or more seats include a monthly usage and wellbeing report: counts and categories only, no conversation content, and only for residents who agree. Details are set out on the partnership site and in the contract.</p>
       </div>
     </div>
   </div>
@@ -187,8 +192,8 @@
       <h2>How to get started</h2>
     </div>
     <ol class="org-steps">
-      <li>Pick 10–20 residents for a 2–4 week pilot, and review each week how smoothly it runs, what families say and when staff need to step in.</li>
-      <li>Seat-based, pay for what you use: each seat includes a fixed monthly allowance of call credits (Plus 100, Pro 200; 1 credit is about 1 minute), with top-ups available.</li>
+      <li>Pick 10–20 residents for a 2–4 week pilot, and review together how smoothly it runs, what families say and when staff need to step in; pilot terms are as agreed by both sides.</li>
+      <li>Billed by active seats: from NT$499 per seat per month in Taiwan, each with a fixed monthly allowance of call credits (Plus 100, Pro 200; 1 credit is about 1 minute), with top-ups available. Organization seats are priced separately from personal subscriptions.</li>
       <li>Decide to expand, adjust or stop against goals agreed up front; final pricing and responsibilities are set in the contract.</li>
     </ol>
   </div>
@@ -205,19 +210,20 @@
     <p class="org-note">Munea is a supportive care and reminder tool. It does not replace human care, medical diagnosis or emergency services. Formal quotes are governed by the contract agreed between both parties.</p>
   </div>
 </section>
+</main>
 
 <footer>
   <div class="wrap">
     <div class="foot-grid">
       <div>
         <div class="logo"><span class="logo-mark" aria-hidden="true"><img src="/assets/paining-logo.png" alt="Munea" width="30" height="30" loading="lazy"></span><span class="logo-word">Mu<b>nea</b><span class="logo-zh">沐寧</span></span></div>
-        <p class="desc">The Munea App — an AI health steward that remembers you. A face that moves, a voice that remembers, keeping you and your family close. Not a long-term care system, just senior companionship and family care that live in the everyday.</p>
+        <p class="desc">Munea — the AI health companion that remembers. A face that moves and a voice that remembers, keeping you and your family close. Not a long-term care system: everyday companionship and family care.</p>
       </div>
       <div class="foot-col">
         <h4>Meet Munea</h4>
         <a href="https://munea.net/en#personas">Who it's for</a>
         <a href="https://munea.net/en#features">Features</a>
-        <a href="https://munea.net/en#tech">The technology</a>
+        <a href="https://munea.net/en#pricing">Pricing</a>
         <a href="https://munea.net/en#faq">FAQ</a>
       </div>
       <div class="foot-col">
@@ -234,6 +240,6 @@
   </div>
 </footer>
 
-<script src="/warm.js?v=10"></script>
+<script src="/warm.js?v=11"></script>
 </body>
 </html>

@@ -368,6 +368,23 @@
       ]
     },
     {
+      "state": "modal:seat-code",
+      "keyPrefixes": [
+        "seatCode."
+      ],
+      "requiredKeys": [
+        "seatCode.entry",
+        "seatCode.title",
+        "seatCode.body",
+        "seatCode.submit",
+        "seatCode.activated",
+        "seatCode.registered",
+        "seatCode.waiting",
+        "seatCode.errorSignIn",
+        "seatCode.errorNetwork"
+      ]
+    },
+    {
       "state": "modal:top-up",
       "keyPrefixes": [
         "purchase.",

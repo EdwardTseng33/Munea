@@ -514,6 +514,8 @@ setTimeout(function () {
         <div class="plan-links">
           <button class="plan-link" id="planCancelBtn" type="button" data-i18n="purchase.manageSubscription">管理訂閱</button>
           <button class="plan-link" id="restoreBtn" type="button" data-i18n="purchase.restore">恢復購買</button>
+          <!-- 機構發的紙卡上印「點『設定』→『機構開通碼』」，這顆的字要跟卡片對得上（2026-11-17）。 -->
+          <button class="plan-link" id="seatCodeEntry" type="button" data-i18n="seatCode.entry">機構開通碼</button>
         </div>
       </div>
 
@@ -1048,6 +1050,21 @@ setTimeout(function () {
     </div>
   </div>
 
+  <!-- 機構開通碼（2026-11-17）：機構發給長輩一組 8 位數字，登入後在這裡輸入，席次就綁到他的帳號。
+       行為在 src/seat-code.js。主按鈕與結果訊息的字由程式依狀態決定（開通／開通中…／完成），
+       所以這兩個元素刻意不掛 data-i18n——掛了會被巡邏的翻譯層蓋回寫死的那一句。 -->
+  <div class="modal-mask" id="seatCodeModal">
+    <div class="modal">
+      <div class="modal-grab"></div>
+      <button class="auth-close" id="seatCodeClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <h2 class="sc-title" data-i18n="seatCode.title">輸入機構開通碼</h2>
+      <p class="modal-sub" data-i18n="seatCode.body">機構給你的 8 個數字，輸入後就能用機構提供的方案。</p>
+      <input class="chal-input jc-code sc-code" id="seatCodeInput" type="text" inputmode="numeric" autocomplete="off" maxlength="24" placeholder="例：1234-5678" data-i18n-placeholder="seatCode.placeholder" aria-label="開通碼" data-i18n-aria-label="seatCode.inputLabel" />
+      <p class="sc-msg" id="seatCodeMsg" role="status" aria-live="polite"></p>
+      <button class="modal-btn sc-btn" id="seatCodeBtn" type="button"></button>
+    </div>
+  </div>
+
   <div class="modal-mask" id="topUpModal">
     <div class="modal">
       <div class="modal-grab"></div>
@@ -1367,6 +1384,7 @@ setTimeout(function () {
   <script src="src/i18n/purchase-flow.js?v=20260730-four-locale1"></script>
   <script src="src/tw-districts.js?v=20260731-regions"></script><!-- 台灣行政區＋跨國註冊表；其他國家的清單在 src/regions/，用到才載 -->
   <script src="src/companion-profile.js?v=20260730-profile2"></script>
+  <script src="src/seat-code.js?v=20261110-v1071"></script><!-- 機構開通碼視窗（設定 → 機構開通碼）；需要登入證的工具由 app.js 借給它 -->
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
   <script src="src/auth.js?v=20261110-v1071"></script>
   <script src="src/health.js?v=20261115-health5"></script>

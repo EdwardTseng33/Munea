@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-11-17T10:52:00+08:00",
+  "targetProjectRef": "fespbkdwafueyonppzwq",
+  "migrations": [
+    "030_org_staff_consent.sql",
+    "031_fix_free_account_retention_delete.sql",
+    "032_safety_contacts_state_key.sql",
+    "033_enterprise_seat_redeem_codes.sql"
+  ],
+  "appliedBy": "蘇菲（Edward 2026-11-17 授權），經 Edward 已登入的 Chrome 在 Supabase SQL Editor 逐段貼上執行（2026-11-17 約 10:48–10:51 TST）",
+  "note": "四段各自 begin/commit，內容與 origin/main 的檔案逐字相同（貼上後以編輯器內容讀回比對開頭與結尾）。執行後另跑一支唯讀查詢（to_regclass／information_schema／pg_constraint／pg_proc）逐項確認；再由後端在正式資料庫上走端到端（建機構、產生開通碼、兌換、清理乾跑）驗證。",
+  "captureMethod": "read-only-probe",
+  "sourceCommit": "d598737112b7a99d08c59cb96998d66b80fbe833",
+  "observed": {
+    "030": {
+      "public.org_staff exists": true,
+      "public.org_care_consents exists": true,
+      "enterprise_seats.site_label exists": true,
+      "backend": "POST /admin/enterprise/consent/status 回 client_not_found（表存在、查詢成功）"
+    },
+    "031": {
+      "munea_run_free_account_retention body contains 'delete from _retention_candidates where true'": true,
+      "backend": "POST /admin/retention/run {dryRun:true} 回 ok:true（10/19 起每天失敗的乾跑恢復正常；排程內容仍是 dryRun:true）"
+    },
+    "032": {
+      "family_state_entries_state_key_check contains 'safetyContacts'": true
+    },
+    "033": {
+      "enterprise_seats.redeem_code exists": true,
+      "enterprise_seats.invite_email is_nullable": "YES",
+      "enterprise_seats_redeem_code_uidx exists": true,
+      "enterprise_seats_identity_present exists": true,
+      "backend": "在正式新版（munea-brain-00201-fod）端到端 15／15：產生 2 組開通碼、超過上限被擋、兌換、重複輸入、佔第二席被擋；測試機構與臨時帳號已刪除"
+    }
+  }
+}

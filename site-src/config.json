@@ -2,7 +2,10 @@
   "_說明": "改完這裡或 i18n/*.json 之後，跑 `npm run site:build` 重新產生四個語系的網頁。",
 
   "_appStoreUrl說明": "App 通過 App Store 審核、拿到正式網址後，把網址填進來再重跑 build，全站五個下載鍵會一起從『即將上架』翻成『免費下載』。留空＝維持即將上架，絕不會出現點了 404 的死連結。",
-  "appStoreUrl": "https://apps.apple.com/tw/app/id6788658125",
+  "appStoreUrl": "https://apps.apple.com/app/id6788658125",
+
+  "_siteUpdated說明": "網站地圖的 lastmod（首頁與機構頁的實際修改日）。改了頁面內容就把這裡換成當天日期；只改指南不用動（指南用各自檔頭的 updated）。",
+  "siteUpdated": "2026-11-18",
 
   "siteUrl": "https://munea.net",
   "contactEmail": "edwardt0303@gmail.com",

@@ -231,24 +231,42 @@
         {
           "filename": "030_org_staff_consent.sql",
           "sha256": "c578134bb237fe2739386afce0443d403b007dd940200b42fb946a7b0cdab0e7",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run_and_release_evidence"
+          "status": "verified",
+          "evidenceRef": "docs/supabase/evidence/2026-11-17-tokyo-030-033.json",
+          "verifiedAt": "2026-11-17T10:52:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "d598737112b7a99d08c59cb96998d66b80fbe833"
         },
         {
           "filename": "031_fix_free_account_retention_delete.sql",
           "sha256": "74140bb87e88908cd082313356d669dc53623cdc8bd01dcf6ca62378869772aa",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+          "status": "verified",
+          "evidenceRef": "docs/supabase/evidence/2026-11-17-tokyo-030-033.json",
+          "verifiedAt": "2026-11-17T10:52:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "d598737112b7a99d08c59cb96998d66b80fbe833"
         },
         {
           "filename": "032_safety_contacts_state_key.sql",
           "sha256": "fcf97db085719ae23000f48882b003b08f9909bf29eded0d2e45ac61fb8388aa",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+          "status": "verified",
+          "evidenceRef": "docs/supabase/evidence/2026-11-17-tokyo-030-033.json",
+          "verifiedAt": "2026-11-17T10:52:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "d598737112b7a99d08c59cb96998d66b80fbe833"
         },
         {
           "filename": "033_enterprise_seat_redeem_codes.sql",
           "sha256": "b2083c3bf94e2da8675dc2900107f927abb927cc748135e7fd39cdde5e7ac2b4",
+          "status": "verified",
+          "evidenceRef": "docs/supabase/evidence/2026-11-17-tokyo-030-033.json",
+          "verifiedAt": "2026-11-17T10:52:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "d598737112b7a99d08c59cb96998d66b80fbe833"
+        },
+        {
+          "filename": "034_family_shared_minutes_daily_free.sql",
+          "sha256": "c72fc095f3e91e08105ee2e8732e9cdaa909ef2bac9b50f11e0e79d12a7a5f14",
           "status": "unknown",
           "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }

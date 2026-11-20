@@ -17,7 +17,7 @@ _ALERT = os.environ.get("MUNEA_SLACK_ALERT_WEBHOOK") or ""
 _ENV = os.environ.get("MUNEA_ENV_NAME") or ("cloud" if os.environ.get("K_SERVICE") else "local")
 _last_alert = {}  # kind -> ts（防洪）
 
-def _post(url, text):
+def _post(url, text, wait=False):
     if not url:
         return
     def _send():
@@ -27,6 +27,10 @@ def _post(url, text):
             urllib.request.urlopen(req, timeout=6).read()
         except Exception as e:
             print(f"[notify] 送 Slack 失敗（不影響功能）: {e}", flush=True)
+    if wait:
+        # 呼叫端本來就在背景執行緒（例如通話守護腦收尾）：就地送完。Voice 收線後 CPU 會被節流，另開的小執行緒可能送不出去。
+        _send()
+        return
     threading.Thread(target=_send, daemon=True).start()  # 背景送、不擋回應
 
 def ops(event_name, summary=""):
@@ -46,7 +50,7 @@ _CRITICAL_THROTTLE_S = 300     # critical 節流短一點（5 分鐘），壞消
 _WARNING_THROTTLE_S = 600
 
 
-def alert(kind, where, detail="", critical=None):
+def alert(kind, where, detail="", critical=None, wait=False):
     """功能告警：kind=chat|voice|data|billing|engine|call_down|gpu_down…；
     where=哪個口；detail=去識別的錯誤摘要；critical 不指定時照 CRITICAL_KINDS 自動判。"""
     is_critical = (kind in CRITICAL_KINDS) if critical is None else bool(critical)
@@ -57,6 +61,6 @@ def alert(kind, where, detail="", critical=None):
     _last_alert[kind + where] = now
     if is_critical:
         _post(_ALERT, f"<!channel> 🚨 [{_ENV}] 服務中斷 · {kind} · {where}\n"
-                      f"{(detail or '')[:300]}\n（使用者現在受影響，需要立刻看）")
+                      f"{(detail or '')[:300]}\n（使用者現在受影響，需要立刻看）", wait=wait)
     else:
-        _post(_ALERT, f"🔴 [{_ENV}] 功能告警 · {kind} · {where}\n{(detail or '')[:300]}")
+        _post(_ALERT, f"🔴 [{_ENV}] 功能告警 · {kind} · {where}\n{(detail or '')[:300]}", wait=wait)
