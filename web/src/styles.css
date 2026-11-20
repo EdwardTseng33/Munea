@@ -3370,3 +3370,47 @@ html:lang(ja) {
 html:lang(en) .call-end-card .ce-next, html:lang(es) .call-end-card .ce-next { word-break: normal; }
 .call-end-card .ce-ok { width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff; cursor: pointer;
   font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+
+/* ══ 長輩看得清楚：字級與按鈕下限（2026-11-21 · 接 11/20 付費與設計體檢「其他可以優化」）══════════
+   依頂端字體規範表：按鈕字 19 粗、內文 17、副字 15；按鈕至少 48 高（11/17 全 App 標準）。
+   量測（手機尺寸、標準字級）：首頁／底部導覽／聊聊／設定有 47 段字小於 15px、4 顆按鈕 38–40px 高。
+   範圍：只管繁中、日文、英文（11/20 Edward：專注三語；西班牙文維持原樣）。
+   ⚠ 全家健康頁（#family）11/20 Edward「先不要改」——那頁共用的按鈕在最下面釘回原值。 */
+:root {
+  --fs-action-primary: 19px;
+  --btn-1-size: 19px;  --btn-1-weight: 700; --btn-1-height: 50px;
+  --btn-2-size: 17px;  --btn-2-weight: 700; --btn-2-height: 48px;
+  --btn-3-size: 15px;  --btn-3-weight: 600; --btn-3-height: 48px;
+}
+/* 按鈕字 19px 後，日文「ログイン」會撐出 72px 寬的按鈕——讓按鈕跟著字變寬 */
+.auth-primary { min-height: 48px; width: auto; padding: 0 18px; white-space: nowrap; }
+.auth-secondary { min-height: 48px; }
+.plan-link { min-height: 48px; }
+/* 底部導覽：12px → 14px（五顆並排，再大英文會擠） */
+html:lang(zh) .tab-btn > span, html:lang(ja) .tab-btn > span { font-size: 14px; }
+html:lang(en) .tab-btn > span { font-size: 13.5px; }
+/* 聊聊控制鈕的字（字幕／麥克風）：11px → 13px（60px 的圓再大「麥克風」會貼邊）；英文版本來就只顯示圖示 */
+.ctl-btn { font-size: 13px; }
+/* 首頁 */
+html:lang(zh) .home-date, html:lang(ja) .home-date, html:lang(en) .home-date { font-size: 15px; }
+html:lang(zh) .bc-msg-t, html:lang(ja) .bc-msg-t, html:lang(en) .bc-msg-t { font-size: 16px; line-height: 1.5; max-height: none; }
+html:lang(zh) .care-head, html:lang(ja) .care-head, html:lang(en) .care-head { font-size: 15px; }
+html:lang(zh) .care-txt small, html:lang(ja) .care-txt small, html:lang(en) .care-txt small { font-size: 15px; }
+html:lang(zh) .task-progress, html:lang(ja) .task-progress, html:lang(en) .task-progress { font-size: 15px; }
+html:lang(zh) .task-sub, html:lang(ja) .task-sub, html:lang(en) .task-sub { font-size: 15px; }
+html:lang(zh) .task-time, html:lang(ja) .task-time { font-size: 15px; }
+html:lang(en) .task-time { font-size: 14px; }
+/* 聊聊：在線狀態 */
+html:lang(zh) .face-name .fn-status, html:lang(ja) .face-name .fn-status, html:lang(en) .face-name .fn-status { font-size: 15px; }
+/* 設定 */
+html:lang(zh) .set-section, html:lang(ja) .set-section, html:lang(en) .set-section { font-size: 15px; }
+html:lang(zh) .set-row .sr-main small, html:lang(ja) .set-row .sr-main small, html:lang(en) .set-row .sr-main small,
+html:lang(zh) .set-row.set-info .sr-main small, html:lang(ja) .set-row.set-info .sr-main small, html:lang(en) .set-row.set-info .sr-main small { font-size: 15px; }
+html:lang(zh) .mem-badge, html:lang(ja) .mem-badge, html:lang(en) .mem-badge { font-size: 14px; }
+html:lang(zh) .plan-payer, html:lang(ja) .plan-payer, html:lang(en) .plan-payer { font-size: 15px; }
+html:lang(zh) .pts-note, html:lang(ja) .pts-note, html:lang(en) .pts-note { font-size: 15px; }
+html:lang(zh) .task-title, html:lang(ja) .task-title { font-size: 17px; }
+html:lang(en) .task-title { font-size: 16px; }
+html:lang(en) .set-row .sr-on { font-size: 15px; }
+/* 全家健康頁不動：共用的次要按鈕釘回 11/20 以前的字級 */
+#family .chal-act { font-size: 15px; }
