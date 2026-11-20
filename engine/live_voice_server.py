@@ -1805,11 +1805,18 @@ def system_instruction(char="寧寧", name=None, mood=None, topics=None, user=No
         # （所有來電者會落到同一個預設身分）。健康資料最不能認錯人——把 A 的血壓講給 B 聽，
         # 比不講嚴重得多。所以 Brain 認人、Brain 撈，Voice 只拿結果。
         # 要不到就不塞：build_reply_context 撈不到 → 空的 → 圍籬告訴她「你看不到、不准編」。
-        health_ctx = _brain_health_context(memory_scope)
-        if health_ctx:
-            data["healthContext"] = health_ctx
-        ctx = server.build_reply_context([], char, data)
-        base += server.reply_context_instruction(ctx)
+        # 2026-11-18（補助案 A4 記憶接續）：先整份向 Brain 要——長期記憶、活的側寫、身體狀況都是「這位來電者自己的」。
+        # 以前這裡在 Voice 自己的容器撈記憶，正式環境撈到的是空的，所以她只記得 12 小時內上一通的一句重點。
+        # 要不到（Brain 不通、認不出人、開關關掉）→ 退回原本的路：只向 Brain 要身體狀況、其餘在本機組。
+        brain_ctx = _brain_reply_context(memory_scope, char, data)
+        if brain_ctx:
+            base += brain_ctx
+        else:
+            health_ctx = _brain_health_context(memory_scope)
+            if health_ctx:
+                data["healthContext"] = health_ctx
+            ctx = server.build_reply_context([], char, data)
+            base += server.reply_context_instruction(ctx)
     except Exception:
         pass
     try:
@@ -2650,6 +2657,32 @@ def _brain_memory_config():
     url = os.environ.get("MUNEA_BRAIN_INTERNAL_URL", "").strip()
     secret = os.environ.get("MUNEA_VOICE_BRAIN_SECRET", "").strip()
     return (url, secret) if url and secret else (None, None)
+
+
+def _brain_reply_context(memory_scope, char, data):
+    """向 Brain 要「這位來電者自己的」整份開場素材（記憶＋側寫＋身體＋簡報，已組成說明書段落）。
+
+    跟要健康、上次聊天同一條內部通道、同一個認人規矩：只有已驗證的 `voice-<user_id>` 才去要；
+    Brain 認不出人、通道沒設、失敗、或 MUNEA_VOICE_BRAIN_REPLY_CONTEXT=0 → 回空字串，呼叫端退回原本的路。
+    """
+    if os.environ.get("MUNEA_VOICE_BRAIN_REPLY_CONTEXT", "1").strip() == "0":
+        return ""
+    brain_url, brain_secret = _brain_memory_config()
+    if not (brain_url and memory_scope and str(memory_scope).startswith("voice-")):
+        return ""
+    payload = {"userId": str(memory_scope)[len("voice-"):], "char": char}
+    for k in ("displayName", "location", "userMood", "interests", "locale"):
+        if (data or {}).get(k):
+            payload[k] = data[k]
+    try:
+        resp = post_internal(
+            brain_url, brain_secret, "/voice/reply-context", payload, timeout=3,
+            app_key=os.environ.get("MUNEA_APP_KEY", "").strip())
+    except Exception:
+        return ""
+    if not (resp or {}).get("identityResolved"):
+        return ""
+    return str((resp or {}).get("instruction") or "")
 
 
 def _brain_health_context(memory_scope):
