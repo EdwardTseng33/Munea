@@ -70,7 +70,7 @@ ensure_front() {
   local focus
   focus="$(focus_line)"
   if ! echo "$focus" | grep -q "$PKG"; then
-    echo "$(date -u +%H:%M:%S) App 不在前景（$focus），叫回來" | tee -a "$SHOTS_DIR/foreground-log.txt"
+    echo "$(date -u +%H:%M:%S) App 不在前景（$focus），叫回來" >> "$SHOTS_DIR/foreground-log.txt"
     adb shell am start -n "$PKG/.MainActivity" >/dev/null 2>&1
     sleep 4
   fi
