@@ -12,6 +12,8 @@ const muneaPreferredLanguages = () => (window.MuneaI18n ? window.MuneaI18n.prefe
 const muneaT = (key, fallback, values = null) => (
   window.MuneaI18n ? window.MuneaI18n.t(key, values, fallback) : fallback
 );
+// 分鐘資訊（後端給的 allowance／familyShare／capabilities）：放在檔頭，任何畫面函式都讀得到。說明見 resetCreditMeta 上方。
+const CREDIT_META = { allowance: null, familyShare: null, includedMonthly: null, familySharedMinutes: false, subscription: null };
 const legacyStaticTextSources = new WeakMap();
 const legacyStaticAttributeSources = new WeakMap();
 function localizeLegacyStaticCopy() {
@@ -283,14 +285,6 @@ function localizeCanonicalLegacyPanels() {
     if (body) body.textContent = muneaT(keys[2], keys[3]);
   });
   localizePurchasePlanContent();
-  $$('.tu-card').forEach((card) => {
-    const credits = Number(card.dataset.p || 0);
-    const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
-    const amount = card.querySelector('b');
-    const minutes = card.querySelector('.tu-min');
-    if (amount) amount.textContent = muneaT('purchase.creditsAmount', '{credits} credits', { credits: formatted });
-    if (minutes) minutes.textContent = muneaT('purchase.approxMinutes', 'About {minutes} minutes', { minutes: formatted });
-  });
 
   const changelog = $('#changelogList');
   if (changelog) {
@@ -377,48 +371,52 @@ function localizePurchasePlanContent() {
     if (title) title.textContent = muneaT(keys[0], keys[1]);
     if (body) body.textContent = muneaT(keys[2], keys[3]);
   });
+  // 2026-11-20 Edward 核可設計稿 P1：每張方案卡只講兩件事——每月幾分鐘（一天約幾分鐘）、家人圈幾個人。
+  // 「一起用」三個字講的是家人圈共用同一份分鐘：後端開了 familySharedMinutes 才講，沒開就只講人數上限。
   const planCardFacts = {
-    plus: {
-      audienceKey: 'subscription.plusAudience',
-      audienceFallback: 'For everyday voice companionship and essential family care',
-      credits: 100,
-      members: 4,
-    },
-    pro: {
-      audienceKey: 'subscription.proAudience',
-      audienceFallback: 'For chatting more often and using it with the whole family',
-      credits: 200,
-      members: 12,
-    },
+    plus: { minutes: 100, members: 4 },
+    pro: { minutes: 200, members: 12 },
   };
+  const sharedMinutes = muneaFamilySharedMinutesOn();
   $$('#planPick .ppk').forEach((card) => {
     const facts = planCardFacts[card.dataset.t];
     if (!facts) return;
     const tag = card.querySelector('.ppk-tag');
-    if (tag) tag.textContent = muneaT('subscription.mostPopular', 'Most popular');
-    const audience = card.querySelector('.ppk-who');
-    if (audience) audience.textContent = muneaT(facts.audienceKey, facts.audienceFallback);
-    const features = card.querySelectorAll('.ppk-feats li');
-    if (features[0]) features[0].textContent = muneaT(
-      'subscription.monthlyVoiceCredits',
-      '{credits} voice-companion credits each month. Unused monthly credits do not roll over.',
-      { credits: facts.credits },
-    );
-    if (features[1]) features[1].textContent = muneaT(
-      'subscription.healthTrendAccess',
-      'Full 7-day and 30-day health trends',
-    );
-    if (features[2]) features[2].textContent = muneaT(
-      'subscription.familyMemberLimit',
-      'Up to {members} people in the family care circle',
-      { members: facts.members },
-    );
+    if (tag) tag.textContent = muneaT('subscription.mostPopular', 'Recommended');
+    const minutesLine = card.querySelector('.ppk-min');
+    if (minutesLine) {
+      const nf = new Intl.NumberFormat(muneaLocale());
+      const daily = document.createElement('span');
+      const dailyText = muneaT('subscription.planDailyMinutes', '· about {minutes} a day', {
+        minutes: nf.format(Math.round(facts.minutes / 30)),
+      });
+      // 中日文用全形「・」直接接；英西文的「·」前面要空一格
+      daily.textContent = /^[・]/.test(dailyText) ? dailyText : ` ${dailyText}`;
+      minutesLine.replaceChildren(
+        document.createTextNode(muneaT('subscription.planMonthlyMinutes', '{minutes} minutes a month', {
+          minutes: nf.format(facts.minutes),
+        })),
+        daily,
+      );
+    }
+    const membersLine = card.querySelector('.ppk-ln');
+    if (membersLine) membersLine.textContent = sharedMinutes
+      ? muneaT('subscription.familyShareLimit', 'Up to {members} people in your family circle share them', { members: facts.members })
+      : muneaT('subscription.familyMemberLimit', 'Up to {members} people in your family circle', { members: facts.members });
   });
-  const creditIntro = document.querySelector('#subPoints > .sub-fine');
-  if (creditIntro) creditIntro.textContent = muneaT(
-    'subscription.creditsUsageIntro',
-    'Conversations use credits. Add more credits to keep talking when they run out.',
-  );
+  const sharedLede = $('#planSharedLede');
+  if (sharedLede) {
+    sharedLede.textContent = muneaT('subscription.headlineShared', 'Everyone in your family circle shares these minutes.');
+    sharedLede.hidden = !sharedMinutes;
+  }
+  const familyNote = $('#planFamilyNoteText');
+  if (familyNote) {
+    const trends = muneaT('subscription.healthTrendBoth', 'Both plans include 7-day and 30-day health trends.');
+    const noPay = muneaT('subscription.familyNoPay', "Mom and Dad don't pay separately and don't need to sign in to your account.");
+    familyNote.textContent = sharedMinutes
+      ? `${noPay}${/[。！？]$/.test(noPay) ? '' : ' '}${trends}`
+      : trends;
+  }
   const legalTerms = $('#legalTermsLink');
   const legalPrivacy = $('#legalPrivacyLink');
   const legalLine = $('#subPlans .sub-legal');
@@ -428,26 +426,27 @@ function localizePurchasePlanContent() {
       .forEach((node) => node.remove());
     legalTerms.textContent = muneaT('reader.termsTitle', 'Terms of Service');
     legalPrivacy.textContent = muneaT('reader.privacyTitle', 'Privacy Policy');
+    // 中文、日文字跟連結之間不空格（「詳見使用條款與隱私權政策」）；英西文照常空一格
+    const gap = /^(?:zh|ja)/.test(muneaLocale()) ? '' : ' ';
     legalLine.insertBefore(
       document.createTextNode(`${muneaT(
         'subscription.renewalDisclosure',
-        'Subscriptions renew automatically through your Apple Account. Manage or cancel in iPhone Settings; access continues through the current billing period. Purchased credits do not expire. See',
-      )} `),
+        'Renews automatically through your Apple Account. Cancel anytime in iPhone Settings; you keep access until the end of the current period. See',
+      )}${gap}`),
       legalTerms,
     );
     legalLine.insertBefore(
-      document.createTextNode(` ${muneaT('subscription.legalAnd', 'and')} `),
+      document.createTextNode(`${gap}${muneaT('subscription.legalAnd', 'and')}${gap}`),
       legalPrivacy,
     );
     legalLine.appendChild(document.createTextNode(muneaT('subscription.legalPeriod', '.')));
   }
+  // 1 點＝1 分鐘，畫面上一律講分鐘（2026-11-20）：每格只寫「幾分鐘」＋價格，不再另寫「約可使用幾分鐘」
   $$('.tu-card').forEach((card) => {
     const credits = Number(card.dataset.p || 0);
     const formatted = new Intl.NumberFormat(muneaLocale()).format(credits);
     const amount = card.querySelector('b');
-    const minutes = card.querySelector('.tu-min');
-    if (amount) amount.textContent = muneaT('purchase.creditsAmount', '{credits} credits', { credits: formatted });
-    if (minutes) minutes.textContent = muneaT('purchase.approxMinutes', 'About {minutes} minutes', { minutes: formatted });
+    if (amount) amount.textContent = muneaT('purchase.creditsAmount', '{credits} minutes', { credits: formatted });
   });
   const manage = $('#planCancelBtn');
   if (manage) manage.textContent = muneaT('purchase.manageSubscription', 'Manage subscription');
@@ -1248,6 +1247,11 @@ async function refreshServerPlanEntitlement() {
   // the app was closed, rather than preserving a stale local paid-plan badge.
   if (!isLoggedIn()) return null;
   const result = await brainPost('/entitlements', { action: 'load' });
+  if (result && typeof result === 'object') {
+    const caps = result.capabilities || (result.billing && result.billing.capabilities) || null;
+    CREDIT_META.familySharedMinutes = !!(caps && caps.familySharedMinutes === true);
+    CREDIT_META.subscription = (result.billing && result.billing.subscription) || null;
+  }
   renderSubscriptionEndDate(result && result.billing && result.billing.subscription);
   const plan = result && result.billing && result.billing.activePlan;
   if (!['free', 'plus', 'pro'].includes(plan)) return result;
@@ -5828,6 +5832,104 @@ async function openVoiceSession() {
   }
 }
 
+// ===== 通話結束卡（2026-11-20 Edward 核可設計稿 P6）=====
+// 正常講完、回到聊聊畫面時，在人物下半部放一張半透明白卡：「今天聊了幾分鐘」＋下次還能聊多少＋一顆「好」。
+// 只是事後告知，收線本身一行都不改（completeChatSession 只多叫一次 queueCallEndCard）。
+// 刻意不放寧寧說的話：「明天再跟我說運動會的事」這種話我們保證不了她真的會做。
+// 失敗、取消、點數用完、免費體驗用完都有自己的提示，不出這張。
+const CALL_END_NORMAL_REASONS = new Set(['ended', 'user_ended', 'idle_timeout']);
+const TALK_TODAY_KEY = 'munea.talkToday';
+let _callEndState = null;   // { callMinutes, fresh }：fresh＝通話後的新餘額已經回來了
+function muneaTodayStamp() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+// 這台裝置今天一共聊了多久（秒）：只在本機加總，跨日自動歸零
+function addTalkTodaySec(sec) {
+  let total = Math.max(0, Math.round(Number(sec) || 0));
+  try {
+    const saved = JSON.parse(localStorage.getItem(TALK_TODAY_KEY) || 'null');
+    if (saved && saved.d === muneaTodayStamp()) total += Math.max(0, Number(saved.s) || 0);
+    localStorage.setItem(TALK_TODAY_KEY, JSON.stringify({ d: muneaTodayStamp(), s: total }));
+  } catch (e) {}
+  return total;
+}
+function callEndWeeklyLine(a, minutes) {
+  const raw = a && a.resetsAt;
+  const d = raw ? new Date(raw) : null;
+  const ok = d && !Number.isNaN(d.getTime());
+  // 後端說的重置日剛好是週一（或沒說）→「下週一」；不是週一就直接講日期，不硬套「下週一」
+  if (ok && d.getDay() !== 1) {
+    return muneaT('callEnd.onDate', 'You can talk for {minutes} minutes again from {date}.', { minutes, date: muneaShortDate(raw) });
+  }
+  return muneaT('callEnd.nextMonday', 'You can talk for {minutes} minutes again next Monday.', { minutes });
+}
+// 下次還能聊多少：後端沒給的就不講（回 null＝整張卡不出現）
+function callEndHeadline(state) {
+  const used = state && !state.fresh ? state.callMinutes : 0;   // 新餘額還沒回來前，先扣掉這通的分鐘估一下
+  const nf = new Intl.NumberFormat(muneaLocale());
+  const fam = muneaFamilyShare();
+  const plan = (window.MMPLAN && typeof window.MMPLAN.get === 'function') ? window.MMPLAN.get() : 'free';
+  if (fam) {
+    return muneaT('callEnd.monthLeft', '{minutes} minutes left this month.', {
+      minutes: nf.format(Math.max(0, muneaNonNegInt(fam.monthRemaining) - used)),
+    });
+  }
+  if (plan !== 'free') {
+    const left = Math.max(0, Math.round(ptsLeft()) - (Number.isFinite(POINTS.serverRemaining) ? used : 0));
+    return muneaT('callEnd.monthLeft', '{minutes} minutes left this month.', { minutes: nf.format(left) });
+  }
+  const a = muneaAllowance();
+  if (!a) return null;
+  if (a.mode === 'free_daily') {
+    const total = muneaNonNegInt(a.trialDays) || 7;
+    const day = muneaNonNegInt(a.trialDay) || 1;
+    const todayLeft = Math.max(0, (muneaNonNegInt(a.todayRemaining) || 0) - used);
+    if (todayLeft > 0) return muneaT('callEnd.todayMore', 'You can talk for {minutes} more minutes today.', { minutes: nf.format(todayLeft) });
+    if (day < total) return muneaT('callEnd.tomorrow', 'You can talk for {minutes} minutes tomorrow.', { minutes: nf.format(muneaNonNegInt(a.todayGrant) || 10) });
+    return callEndWeeklyLine(a, nf.format(muneaNonNegInt(a.weekGrant) || 10));
+  }
+  if (a.mode === 'free_weekly') {
+    const weekLeft = Math.max(0, (muneaNonNegInt(a.weekRemaining) || 0) - used);
+    if (weekLeft > 0) return muneaT('callEnd.weekMore', 'You can talk for {minutes} more minutes this week.', { minutes: nf.format(weekLeft) });
+    return callEndWeeklyLine(a, nf.format(muneaNonNegInt(a.weekGrant) || 10));
+  }
+  return null;
+}
+function hideCallEndCard() {
+  _callEndState = null;
+  const card = document.getElementById('callEndCard');
+  if (card) card.hidden = true;
+}
+function renderCallEndCard(opts) {
+  const card = document.getElementById('callEndCard');
+  if (!card || !_callEndState) return;
+  if (opts && opts.fresh) _callEndState.fresh = true;
+  const headline = callEndHeadline(_callEndState);
+  if (!headline) { hideCallEndCard(); return; }
+  const todaySec = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TALK_TODAY_KEY) || 'null');
+      return saved && saved.d === muneaTodayStamp() ? Number(saved.s) || 0 : 0;
+    } catch (e) { return 0; }
+  })();
+  const todayMin = Math.max(_callEndState.callMinutes, Math.round(todaySec / 60));
+  const today = document.getElementById('callEndToday');
+  const next = document.getElementById('callEndNext');
+  const ok = document.getElementById('callEndOk');
+  if (today) today.textContent = muneaT('callEnd.todayTalked', 'You talked for {minutes} min today', {
+    minutes: new Intl.NumberFormat(muneaLocale()).format(todayMin),
+  });
+  if (next) next.textContent = headline;
+  if (ok) ok.textContent = muneaT('callEnd.ok', 'OK');
+  card.hidden = false;
+}
+window.__muneaRenderCallEndCard = renderCallEndCard;
+function showCallEndCard(sec) {
+  const callMinutes = Math.max(1, Math.round((Number(sec) || 0) / 60));
+  addTalkTodaySec(sec);
+  _callEndState = { callMinutes, fresh: false };
+  renderCallEndCard();
+}
+// 收線那一刻只記下來，畫面在收線動作全部跑完後才畫（不插隊、不影響收線順序）
+function queueCallEndCard(sec) { setTimeout(() => { try { showCallEndCard(sec); } catch (e) {} }, 0); }
 function completeChatSession(reason = 'ended') {
   const trackedSession = Boolean(activeChatSessionId && activeChatStartedAt);
   const serverAuthoritative = Boolean(CallControl.url());
@@ -5860,6 +5962,8 @@ function completeChatSession(reason = 'ended') {
   updateMedCount();
     toast(muneaT('voice.call.goodbye', ''));
   }
+  // 通話結束卡（P6）：只有正常講完（自己掛、對方收、太久沒聲音自動收）才排一張；收線流程照舊往下走
+  try { if (callConnected && CALL_END_NORMAL_REASONS.has(reason) && _callSec > 3) queueCallEndCard(_callSec); } catch (e) {}
   stopCallTimer();
   if (!activeChatSessionId || !activeChatStartedAt) return;
   const durationMs = Math.max(0, Date.now() - activeChatStartedAt);
@@ -7359,13 +7463,93 @@ window.__medicationI18nTest = {
   canonicalDuration: duration => canonicalMedicationDuration(duration),
 };
 
+// 分鐘資訊（2026-11-20 付費頁／設定方案卡／通話結束卡共用）。全部從後端讀、讀不到就是 null，
+// 畫面一律「有才顯示、沒有就退回舊樣子」——後端欄位還沒上線時，不可以編一個數字出來。
+//   allowance   ＝/credits/balance 的免費額度（free_daily 前 7 天每天／free_weekly 第 8 天起每週／plan）
+//   familyShare ＝/credits/balance 的家人圈共用月分鐘（誰用了多少）
+//   includedMonthly＝walletSummary 裡「方案每月給的」還剩多少（不含加買的）
+//   familySharedMinutes＝/entitlements 的 capabilities.familySharedMinutes，嚴格等於 true 才算數；
+//     沒開之前「爸媽不用另外付費」「家人圈一起用這些分鐘」都不能講（講了就是不實）。
+function resetCreditMeta() {
+  CREDIT_META.allowance = null;
+  CREDIT_META.familyShare = null;
+  CREDIT_META.includedMonthly = null;
+  CREDIT_META.familySharedMinutes = false;
+  CREDIT_META.subscription = null;
+}
+function muneaFamilySharedMinutesOn() { return CREDIT_META.familySharedMinutes === true; }
+function muneaNonNegInt(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
+}
+function muneaAllowance() {
+  const a = CREDIT_META.allowance;
+  if (!a || typeof a !== 'object') return null;
+  if (!['free_daily', 'free_weekly', 'plan'].includes(a.mode)) return null;
+  return a;
+}
+function muneaFamilyShare() {
+  const f = CREDIT_META.familyShare;
+  if (!f || typeof f !== 'object' || f.shared !== true) return null;
+  if (muneaNonNegInt(f.monthGrant) === null || muneaNonNegInt(f.monthRemaining) === null) return null;
+  return f;
+}
+// 免費帳號還能聊幾秒——伺服器說了算（2026-11-20，後端 #732：免費改成前 7 天每天、之後每週給分鐘；
+// 家人圈成員的 walletSummary.total 已經把圈主可用的分鐘算進去）。App 不能比伺服器先把人擋掉：
+// 有伺服器餘額（total）或 allowance 就照它算；都沒有（未登入、連不上、舊後端）回 null，交給 MMPLAN 本機判斷。
+// 通話中伺服器的數字仍是撥號前那一刻的（收線才扣），所以要減掉這通已經講的秒數。
+function muneaServerFreeRemainSec() {
+  let minutes = null;
+  if (Number.isFinite(POINTS.serverRemaining)) minutes = POINTS.serverRemaining;
+  else {
+    const a = muneaAllowance();
+    if (a && a.mode === 'free_daily') minutes = muneaNonNegInt(a.todayRemaining);
+    else if (a && a.mode === 'free_weekly') minutes = muneaNonNegInt(a.weekRemaining);
+  }
+  if (minutes === null) return null;
+  const inCall = _callTimerInt ? _callSec : 0;
+  return Math.max(0, Math.round(minutes * 60) - inCall);
+}
+window.__muneaServerFreeRemainSec = () => { try { return muneaServerFreeRemainSec(); } catch (e) { return null; } };
+// 免費分鐘用完時的說法跟著後端的 allowance 走：今天的用完／這週的用完；後端沒給才用通用的「免費分鐘用完了」
+function muneaFreeUpsell() {
+  const a = muneaAllowance();
+  if (!window.MMPLAN) return;
+  if (a && a.mode === 'free_daily') {
+    window.MMPLAN.upsell('chat-today', { days: muneaNonNegInt(a.trialDays) || 7, minutes: muneaNonNegInt(a.todayGrant) || 10 });
+  } else if (a && a.mode === 'free_weekly') {
+    window.MMPLAN.upsell('chat-week', { minutes: muneaNonNegInt(a.weekGrant) || 10 });
+  } else {
+    window.MMPLAN.upsell('chat-daily');
+  }
+}
+// 「12/1」這種短日期：跟著語言走（英文 12/1、日文 12/1、西文 1/12）
+function muneaShortDate(value) {
+  if (!value) return '';
+  const raw = String(value);
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(raw + 'T12:00:00') : new Date(raw);
+  if (Number.isNaN(d.getTime())) return '';
+  try { return new Intl.DateTimeFormat(muneaLocale(), { month: 'numeric', day: 'numeric' }).format(d); }
+  catch (e) { return (d.getMonth() + 1) + '/' + d.getDate(); }
+}
 const POINTS = { total: 0, used: 0, serverRemaining: null,    // 方案與雲端錢包載入後再填入，不預設舊方案額度
   get bought() { try { return +localStorage.getItem('munea.ptsBought') || 0; } catch (e) { return 0; } } };
 const LOW_PTS = 30;
 window.__ptsTest = {
+  setCreditMeta: meta => {
+    const m = meta || {};
+    if ('allowance' in m) CREDIT_META.allowance = m.allowance;
+    if ('familyShare' in m) CREDIT_META.familyShare = m.familyShare;
+    if ('includedMonthly' in m) CREDIT_META.includedMonthly = m.includedMonthly;
+    if ('familySharedMinutes' in m) CREDIT_META.familySharedMinutes = m.familySharedMinutes === true;
+    if ('subscription' in m) CREDIT_META.subscription = m.subscription;
+    try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
+  },
+  showCallEnd: sec => { _callEndState = null; showCallEndCard(sec); renderCallEndCard({ fresh: true }); },
   setUsed: v => { POINTS.used = v; renderPoints(); },
   setRemaining: v => { POINTS.serverRemaining = Math.max(0, Number(v) || 0); renderPoints(); },
   showExhausted: () => __muneaShowPointsPopup(),
+  showFreeUsedUp: () => __muneaShowCallCreditBlocked(),
   showIdleChat: () => {
     document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
     const chat = document.getElementById('chat');
@@ -7480,12 +7664,23 @@ function renderPoints() {
 async function refreshServerCredits() {
   if (!isLoggedIn()) return null;
   const result = await brainPost('/credits/balance', {});
+  if (result && typeof result === 'object') {
+    CREDIT_META.allowance = result.allowance && typeof result.allowance === 'object' ? result.allowance : null;
+    CREDIT_META.familyShare = result.familyShare && typeof result.familyShare === 'object' ? result.familyShare : null;
+    const included = result.walletSummary && result.walletSummary.includedMonthly;
+    CREDIT_META.includedMonthly = included === null || included === undefined || included === ''
+      ? null
+      : muneaNonNegInt(included);
+  }
   const rawTotal = result && result.walletSummary && result.walletSummary.total;
   const total = Number(rawTotal);
   if (rawTotal !== null && rawTotal !== undefined && rawTotal !== '' && Number.isFinite(total)) {
     POINTS.serverRemaining = Math.max(0, total);
     renderPoints();
   }
+  try { if (window.__muneaRenderPlanCard) window.__muneaRenderPlanCard(); } catch (e) {}
+  try { if (window.__muneaRenderTopUpLeft) window.__muneaRenderTopUpLeft(); } catch (e) {}
+  try { if (window.__muneaRenderCallEndCard) window.__muneaRenderCallEndCard({ fresh: true }); } catch (e) {}
   return result;
 }
 
@@ -7529,7 +7724,7 @@ function __muneaShowPointsPopup(){
   m.style.cssText='position:fixed;inset:0;z-index:10060;display:flex;align-items:center;justify-content:center;background:rgba(30,26,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
   m.innerHTML='<div style="width:min(320px,84vw);background:#F4F0E8;border-radius:24px;padding:26px 22px 18px;text-align:center;box-shadow:0 24px 60px -14px rgba(0,0,0,.5)">'
     +'<div style="width:54px;height:54px;border-radius:16px;margin:0 auto 16px;background:linear-gradient(135deg,#E0B354,#C79A3B);display:grid;place-items:center"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M9 10h4.5a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3H15"/></svg></div>'
-    +'<div data-points-copy="title" style="font-family:\'Noto Serif TC\',Georgia,serif;font-weight:900;font-size:19px;color:#3A352E;margin-bottom:10px"></div>'
+    +'<div data-points-copy="title" style="font-family:var(--sans,\'Noto Sans TC\',sans-serif);font-weight:700;font-size:20px;color:#3A352E;margin-bottom:10px"></div>'
     +'<div data-points-copy="body" style="font-size:14px;line-height:1.75;color:#5A6963;margin-bottom:20px"></div>'
     +'<button data-points-action="top-up" style="width:100%;border:none;background:#3AA8A0;color:#fff;font-weight:700;font-size:15.5px;padding:14px;border-radius:14px;cursor:pointer;margin-bottom:6px"></button>'
     +'<button data-points-action="dismiss" style="width:100%;border:none;background:none;color:#8A9691;font-weight:600;font-size:14px;padding:9px;cursor:pointer"></button>'
@@ -7542,7 +7737,7 @@ function __muneaShowPointsPopup(){
 }
 function __muneaShowCallCreditBlocked(){
   if (window.MMPLAN && window.MMPLAN.isFree()) {
-    window.MMPLAN.upsell('chat-daily');
+    muneaFreeUpsell();
     return;
   }
   __muneaShowPointsPopup();
@@ -7562,9 +7757,12 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { chatOpened = false; } catch (e) {}
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
-  toast(muneaT('credits.freeTrialEnded', '免費帳號的一次性 5 分鐘體驗已用完'));
+  const _freeMode = (muneaAllowance() || {}).mode;
+  if (_freeMode === 'free_daily') toast(muneaT('credits.freeTodayUsedUp', '今天的免費分鐘用完了。'));
+  else if (_freeMode === 'free_weekly') toast(muneaT('credits.freeWeekUsedUp', '這週的免費分鐘用完了。'));
+  else toast(muneaT('credits.freeTrialEnded', '免費分鐘用完了。'));
   try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
-  if (window.MMPLAN) window.MMPLAN.upsell('chat-daily');
+  muneaFreeUpsell();
 }
 function startCallTimer() {
   stopCallTimer(); _callSec = 0;
@@ -8578,7 +8776,7 @@ async function connectCall() {
   // 少一條路都不會漏。免費 5 分鐘綁帳號的原則不變，只是把關卡從門口移到這一刻。
   if (!requireLogin(muneaT(
     'auth.chatSignInRequired',
-    '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+    '請先使用 Google 或 Apple 登入才能使用聊聊。登入後，前 7 天每天可以聊 10 分鐘。',
   ), 'chat')) return;
   if (callPreflightPending || callDialing || callConnected) return;
   setCallPreflightPending(true);
@@ -9236,7 +9434,7 @@ function init() {
     if (!callConnected && !isLoggedIn()) {
       requireLogin(muneaT(
         'auth.chatSignInRequired',
-        '請先使用 Google 或 Apple 登入才能使用聊聊；免費帳號會收到一次性 5 點，約 5 分鐘',
+        '請先使用 Google 或 Apple 登入才能使用聊聊。登入後，前 7 天每天可以聊 10 分鐘。',
       ), 'chat');
       return;
     }
@@ -9246,6 +9444,10 @@ function init() {
     if (!callConnected) { connectCall(); }
     else { LiveVoice.stop(); FaceWave.stop(); completeChatSession('user_ended'); chatOpened = false; setCallToggle(false); if (window.__muneaStopListen) window.__muneaStopListen(); FaceIdle.start(); }
   });
+  // 通話結束卡：按「好」收起；再按通話鍵或離開聊聊也一併收起（另掛監聽，不動通話鍵本身的邏輯）
+  if ($('#callEndOk')) $('#callEndOk').addEventListener('click', () => hideCallEndCard());
+  if ($('#callToggle')) $('#callToggle').addEventListener('click', () => hideCallEndCard());
+  if ($('#chatExit')) $('#chatExit').addEventListener('click', () => hideCallEndCard());
   if ($('#captionToggle')) $('#captionToggle').addEventListener('click', () => {
     captionsOn = !captionsOn;
     try { localStorage.setItem('munea.captions', captionsOn ? '1' : '0'); } catch (e) {}
@@ -9278,7 +9480,9 @@ function init() {
         .catch(() => {});
     } else {
       POINTS.serverRemaining = null;
+      resetCreditMeta();
       renderPoints();
+      try { if (window.__muneaRenderPlanCard) window.__muneaRenderPlanCard(); } catch (e) {}
     }
     if (detail.status === 'signed-in') {
       try { if (window.MuneaHealth && typeof window.MuneaHealth.refresh === 'function') window.MuneaHealth.refresh(); } catch (e) {}
@@ -9301,7 +9505,7 @@ function init() {
     // 訪客直接進聊聊頁（Edward 2026-07-30），登入關卡留到頁內按「開始通話」那一刻。
     // 已登入的人維持原本的點數／方案把關——先擋在首頁，免得進去了才發現沒點數可撥。
     if (isLoggedIn()) {
-      if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { window.MMPLAN.upsell('chat-daily'); return; } }
+      if (window.MMPLAN && window.MMPLAN.isFree()) { if (window.MMPLAN.chatRemainSec() <= 0) { muneaFreeUpsell(); return; } }
       else if (typeof ptsLeft === 'function' && ptsLeft() <= 0) { __muneaShowPointsPopup(); return; }
     }
     showView('chat');
@@ -10328,6 +10532,7 @@ function init() {
   
   if ($('#topUpBtn')) $('#topUpBtn').addEventListener('click', () => {
     $('#topUpModal').classList.add('show');
+    try { if (window.__muneaRenderTopUpLeft) window.__muneaRenderTopUpLeft(); } catch (e) {}
     void refreshLocalizedStoreProducts();
   });
   if ($('#topUpClose')) $('#topUpClose').addEventListener('click', () => $('#topUpModal').classList.remove('show'));
@@ -10375,7 +10580,7 @@ function init() {
   // 年繳＝月費 ×12 打 8 折（省 20%）；金額暫定、待 Edward 拍板
   const SUB_PRICE = { plus: { month: 599, year: 5750 }, pro: { month: 1199, year: 11500 } };
   const PT_PRICE = { 100: 790, 300: 2190, 600: 4190, 1000: 6490 };            // 加購一律貴過訂閱 6 元/分（訂閱含功能價值、點數是純加分鐘）
-  let _subPlan = 'pro', _subCyc = 'month', _planPick = null;
+  let _subPlan = 'plus', _subCyc = 'month', _planPick = null;   // 免費帳號預設選 Plus（2026-11-20 設計稿）
   let _storeProductsPromise = null;
   let _storeProductsState = 'idle';
   function hasNativeStore() {
@@ -10388,12 +10593,8 @@ function init() {
   // 所以：只有中文版才退回台幣，其他語言一律顯示破折號——不知道就不要編一個。
   function fallbackTwdPrice(amount) {
     if (muneaLocale() !== 'zh-TW') return '—';
-    return new Intl.NumberFormat(muneaLocale(), {
-      currency: 'TWD',
-      currencyDisplay: 'code',
-      maximumFractionDigits: 0,
-      style: 'currency',
-    }).format(Number(amount) || 0);
+    // 台灣人看慣的寫法是「NT$599」（Intl 的 TWD 只會給「$599」或「TWD 599」）
+    return 'NT$' + new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 0 }).format(Number(amount) || 0);
   }
   function storeProduct(productId) {
     return window.MuneaStore && typeof window.MuneaStore.product === 'function'
@@ -10527,9 +10728,14 @@ function init() {
         cta.textContent = muneaT('purchase.storeUnavailable', 'The App Store is unavailable right now. Please try again later.');
         cta.disabled = true;
       } else {
+        const ctaPrice = fmtPrice(_subPlan, _subCyc);
         const ctaValues = {
           currentPlan: cur,
-          price: fmtPrice(_subPlan, _subCyc),
+          // 價格後面帶「／月」「／年」：按鈕上寫什麼＝等一下扣什麼（拿不到價格時不硬接單位）
+          price: ctaPrice === '—' ? ctaPrice : ctaPrice + muneaT(
+            _subCyc === 'year' ? 'subscription.perYearShort' : 'subscription.perMonthShort',
+            _subCyc === 'year' ? '/year' : '/month',
+          ),
           selectedPlan: _subPlan,
         };
         cta.textContent = rendererCopy
@@ -10539,7 +10745,7 @@ function init() {
               plan: muneaT(`subscription.plan${_subPlan === 'pro' ? 'Pro' : 'Plus'}`, circlePlanLabel(_subPlan)),
             })
             : muneaT(
-              PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? 'subscription.upgradeTo' : 'subscription.changeTo',
+              cur === 'free' ? 'subscription.subscribeTo' : (PLAN_POINTS[_subPlan] > PLAN_POINTS[cur] ? 'subscription.upgradeTo' : 'subscription.changeTo'),
               PLAN_POINTS[_subPlan] > PLAN_POINTS[cur]
                 ? 'Upgrade to {plan} · {price}'
                 : 'Switch to {plan} · {price}',
@@ -10559,9 +10765,177 @@ function init() {
     const unlock = $('#pointsUnlockNotice');
     if (unlock) unlock.style.display = cur === 'free' ? '' : 'none';
     if (cur === 'free') showSubPane('plans');
+    renderPlanTrialChip();
+    renderTopUpLeft();
     // 確認欄開著就跟著重畫，畫面寫的跟等下要扣的永遠一致
     if (typeof syncPlanConfirm === 'function') syncPlanConfirm();
   }
+  // 付費頁最上面的狀態小標：只有「免費體驗中（前 7 天）」才講「免費體驗第 N 天・今天還能聊 M 分鐘」
+  function renderPlanTrialChip() {
+    const chip = $('#planTrialChip');
+    if (!chip) return;
+    const a = muneaAllowance();
+    const day = a ? muneaNonNegInt(a.trialDay) : null;
+    const left = a ? muneaNonNegInt(a.todayRemaining) : null;
+    const show = circlePlan() === 'free' && !!a && a.mode === 'free_daily' && !!day && left !== null;
+    chip.hidden = !show;
+    chip.textContent = show
+      ? muneaT('subscription.trialChip', 'Free trial day {day} · {minutes} min left today', { day, minutes: left })
+      : '';
+  }
+  // 加買分鐘最上面那列：「這個月只剩 N 分鐘｜12/1 再給 100 分鐘」。只有真的有月額度時才出現。
+  // 數字來源：家人圈共用（familyShare）優先；否則是自己方案每月給的那份（walletSummary.includedMonthly），
+  // 再給的日期讀訂閱的到期／續訂日。缺哪個就不講哪個，不編。
+  function topUpLeftFacts() {
+    const fam = muneaFamilyShare();
+    const nf = new Intl.NumberFormat(muneaLocale());
+    if (fam) {
+      return {
+        left: nf.format(muneaNonNegInt(fam.monthRemaining)),
+        next: muneaShortDate(fam.renewsAt),
+        grant: nf.format(muneaNonNegInt(fam.monthGrant)),
+      };
+    }
+    const plan = circlePlan();
+    if (plan === 'free' || CREDIT_META.includedMonthly === null) return null;
+    const sub = CREDIT_META.subscription;
+    const renew = sub && sub.status === 'active' ? sub.expiresAt : '';
+    return {
+      left: nf.format(CREDIT_META.includedMonthly),
+      next: muneaShortDate(renew),
+      grant: nf.format(PLAN_POINTS[plan] || 0),
+    };
+  }
+  function renderTopUpLeft() {
+    const facts = topUpLeftFacts();
+    ['#topUpLeft', '#topUpLeft2'].forEach((selector) => {
+      const row = $(selector);
+      if (!row) return;
+      row.hidden = !facts;
+      if (!facts) return;
+      const now = row.querySelector('.tu-left-now');
+      const next = row.querySelector('.tu-left-next');
+      if (now) now.textContent = muneaT('purchase.monthLeft', '{minutes} min left this month', { minutes: facts.left });
+      if (next) {
+        next.textContent = facts.next
+          ? muneaT('settings.nextGrant', '{minutes} more on {date}', { date: facts.next, minutes: facts.grant })
+          : '';
+        next.hidden = !facts.next;
+      }
+    });
+  }
+  window.__muneaRenderTopUpLeft = renderTopUpLeft;
+  // ===== 設定頁方案卡（2026-11-20 Edward 核可設計稿 P3／P4）=====
+  // 四種樣子：legacy（後端還沒給新欄位＝舊排法、只是改講分鐘）／trial（免費體驗前 7 天）／
+  // weekly（第 8 天起每週）／share（家人圈一起用同一份月分鐘）。由 #planCard 的 data-mode 切換，
+  // 舊排法的元素（餘額、進度條、說明句）照舊由 renderCreditRow 管，這裡只負責新樣子的內容。
+  const PERSON_COLORS = ['p-mei', 'p-zhi', 'p-bao'];   // 跟家人頁頭像同一套顏色，依序配
+  function setBigMinutes(el, key, fallback, minutes) {
+    if (!el) return;
+    const marker = '__MUNEA_MIN__';
+    const parts = muneaT(key, fallback, { minutes: marker }).split(marker);
+    const num = new Intl.NumberFormat(muneaLocale()).format(minutes);
+    const tail = document.createElement('small');
+    tail.textContent = parts.slice(1).join(marker);
+    el.replaceChildren(document.createTextNode((parts[0] || '') + num), tail);
+  }
+  function renderPlanCard() {
+    const card = $('#planCard');
+    if (!card) return;
+    const plan = circlePlan();
+    const a = muneaAllowance();
+    const fam = muneaFamilyShare();
+    let mode = 'legacy';
+    if (fam) mode = 'share';
+    else if (plan === 'free' && a && a.mode === 'free_daily' && muneaNonNegInt(a.todayRemaining) !== null) mode = 'trial';
+    else if (plan === 'free' && a && a.mode === 'free_weekly' && muneaNonNegInt(a.weekRemaining) !== null) mode = 'weekly';
+    card.dataset.mode = mode;
+    card.dataset.role = fam && fam.role === 'member' ? 'member' : 'owner';
+    const headTitle = $('#pcHeadTitle');
+    const headMeta = $('#pcHeadMeta');
+    const big = $('#pcBig');
+    const note = $('#pcNote');
+    const nf = new Intl.NumberFormat(muneaLocale());
+    if (mode === 'trial') {
+      const total = muneaNonNegInt(a.trialDays) || 7;
+      const day = Math.min(total, Math.max(1, muneaNonNegInt(a.trialDay) || 1));
+      const daily = muneaNonNegInt(a.todayGrant) || 10;
+      const weekly = muneaNonNegInt(a.weekGrant) || daily;
+      if (headTitle) headTitle.textContent = muneaT('settings.trialTitle', 'Free trial');
+      if (headMeta) headMeta.textContent = muneaT('settings.trialDay', 'Day {day} of {total}', { day, total });
+      setBigMinutes(big, 'settings.todayLeft', '{minutes} minutes left today', muneaNonNegInt(a.todayRemaining));
+      const days = $('#pcDays');
+      if (days) {
+        days.replaceChildren(...Array.from({ length: total }, (_, i) => {
+          const dot = document.createElement('i');
+          if (i + 1 < day) dot.className = 'done';
+          else if (i + 1 === day) dot.className = 'now';
+          return dot;
+        }));
+      }
+      const first = $('#pcDayFirst'); if (first) first.textContent = muneaT('settings.trialDayFirst', 'Day 1');
+      const today = $('#pcDayToday'); if (today) today.textContent = muneaT('settings.trialDayToday', 'Today');
+      const last = $('#pcDayLast'); if (last) last.textContent = muneaT('settings.trialDayLast', 'Day {total}', { total });
+      if (note) note.textContent = muneaT(
+        'settings.trialNote',
+        'For the first {days} days you get {daily} minutes a day; from day {next}, {weekly} minutes a week. Want to talk a bit more each day? Take a look at the plans.',
+        { days: total, daily, next: total + 1, weekly },
+      );
+    } else if (mode === 'weekly') {
+      const weekly = muneaNonNegInt(a.weekGrant) || 10;
+      const reset = muneaShortDate(a.resetsAt);
+      if (headTitle) headTitle.textContent = muneaT('settings.freeWeeklyTitle', 'Free plan');
+      if (headMeta) headMeta.textContent = reset
+        ? muneaT('settings.nextGrant', '{minutes} more on {date}', { date: reset, minutes: nf.format(weekly) })
+        : '';
+      setBigMinutes(big, 'settings.weekLeft', '{minutes} minutes left this week', muneaNonNegInt(a.weekRemaining));
+      if (note) note.textContent = muneaT(
+        'settings.freeWeeklyNote',
+        '{weekly} minutes a week. Want to talk a bit more each day? Take a look at the plans.',
+        { weekly },
+      );
+    } else if (mode === 'share') {
+      const grant = muneaNonNegInt(fam.monthGrant);
+      const remaining = Math.min(grant, muneaNonNegInt(fam.monthRemaining));
+      const used = Math.max(0, grant - remaining);
+      const planKey = fam.plan === 'pro' ? 'subscription.planPro' : 'subscription.planPlus';
+      if (headTitle) headTitle.textContent = muneaT('settings.sharedPlanTitle', '{plan} · shared by your family circle', {
+        plan: muneaT(planKey, fam.plan === 'pro' ? 'Pro' : 'Plus'),
+      });
+      const renew = muneaShortDate(fam.renewsAt);
+      if (headMeta) headMeta.textContent = renew ? muneaT('settings.renewsOn', 'Renews {date}', { date: renew }) : '';
+      setBigMinutes(big, 'settings.monthLeft', '{minutes} minutes left this month', remaining);
+      const usageNote = $('#pcUsageNote');
+      if (usageNote) usageNote.textContent = muneaT('settings.sharedUsed', '{used} of {grant} minutes used. Who used them:', {
+        used: nf.format(used), grant: nf.format(grant),
+      });
+      const people = Array.isArray(fam.usageByPerson) ? fam.usageByPerson.filter(p => p && typeof p === 'object') : [];
+      const bar = $('#pcBar');
+      const who = $('#pcWho');
+      if (bar) bar.replaceChildren(...people.map((person, i) => {
+        const seg = document.createElement('i');
+        seg.className = PERSON_COLORS[i % PERSON_COLORS.length];
+        const mins = muneaNonNegInt(person.minutes) || 0;
+        seg.style.width = (grant > 0 ? Math.min(100, (mins / grant) * 100) : 0).toFixed(2) + '%';
+        return seg;
+      }));
+      // 只靠顏色分不出誰是誰：每人一列一定寫名字（自己寫「我」）
+      if (who) who.replaceChildren(...people.map((person, i) => {
+        const row = document.createElement('div');
+        const dot = document.createElement('em');
+        dot.className = PERSON_COLORS[i % PERSON_COLORS.length];
+        const name = document.createElement('b');
+        name.textContent = person.isMe === true
+          ? muneaT('settings.me', 'Me')
+          : (String(person.name || '').trim() || muneaT('home.care.familyFallback', 'Family'));
+        const mins = document.createElement('span');
+        mins.textContent = muneaT('settings.personUsed', '{minutes} min used', { minutes: nf.format(muneaNonNegInt(person.minutes) || 0) });
+        row.replaceChildren(dot, name, mins);
+        return row;
+      }));
+    }
+  }
+  window.__muneaRenderPlanCard = renderPlanCard;
   // 切換「訂閱方案 / 點數購買」：唯一入口，免費被上面擋住不會走到 points
   function showSubPane(pane) {
     document.querySelectorAll('.sseg-btn').forEach((x, i) => {
@@ -10624,7 +10998,7 @@ function init() {
           )
           : muneaT(
             'subscription.freePlanNote',
-            'You are on the Free plan. Link an account for one 5-minute conversation. Plus and Pro add credit-based conversations, longer history, and family invitations.',
+            'You are on the Free plan. After you sign in, you can talk for 10 minutes a day for the first 7 days, then 10 minutes a week. Plus and Pro add monthly minutes, longer history, and family invitations.',
           )));
   }
   // renderPoints 在頂層 scope、方案額度表（PLAN_POINTS）在這層，所以掛出去給它呼叫
@@ -10659,6 +11033,7 @@ function init() {
     const _mBtn = $('#managePlanBtn'); if (_mBtn) _mBtn.textContent = localizedPlan
       ? localizedPlan.manageLabel
       : muneaT(_isFreeP ? 'settings.upgradePlan' : 'settings.managePlan', _isFreeP ? 'Upgrade plan' : 'Manage plan');
+    renderPlanCard();
     renderSubUI();
   }
   window.__muneaRenderPlanState = renderPlanState;
@@ -10813,10 +11188,14 @@ function init() {
   });
   if ($('#managePlanBtn')) $('#managePlanBtn').addEventListener('click', () => {
     hidePlanConfirm();       // 每次進來都從乾淨狀態開始，不留上次挑到一半的確認欄
+    _subPlan = circlePlan() === 'free' ? 'plus' : 'pro';   // 免費帳號一打開預設選 Plus（推薦那張）；已訂閱的照舊停在 Pro
     renderSubUI();
     $('#planModal').classList.add('show');
     void refreshLocalizedStoreProducts();
     void refreshServerPlanEntitlement();
+  });
+  if ($('#planChangeBtn')) $('#planChangeBtn').addEventListener('click', () => {
+    const open = $('#managePlanBtn'); if (open) open.click();
   });
   if ($('#planClose')) $('#planClose').addEventListener('click', () => {
     hidePlanConfirm();       // 關頁面＝放棄這次變更，別讓它下次開頁還掛在那
@@ -13770,6 +14149,7 @@ function refreshLocalizedDynamicUi() {
   try { if (window.__muneaApplyFontScale) window.__muneaApplyFontScale(); } catch (e) {}
   try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
   try { renderPointsPopupCopy(); } catch (e) {}
+  try { renderCallEndCard(); } catch (e) {}
   try { updateAuthUI(); } catch (e) {}
   try { localizeAuthTerms(); } catch (e) {}
   try { applyTaskAccessibilityLabels(); } catch (e) {}

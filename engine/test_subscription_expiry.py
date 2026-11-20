@@ -64,7 +64,12 @@ class SubscriptionExpiryTests(unittest.TestCase):
         adapter.return_value.remove_external_family_memberships_for_account_unscoped.assert_called_once_with(store["accountId"])
         self.assertEqual(audit.call_args.args[0]["details"]["externalFamilyMembershipsRemoved"], 2)
 
-    def test_expired_member_cannot_read_another_accounts_family_state_before_cleanup(self):
+    EXTERNAL_GROUP = "33333333-3333-4333-8333-333333333333"
+
+    def external_circle_backend(self, memberships):
+        """呼叫者 1111… 讀圈主 2222… 的圈；memberships＝呼叫者目前掛著的圈。"""
+        group = self.EXTERNAL_GROUP
+
         class ExternalCircleBackend:
             account_id = "11111111-1111-4111-8111-111111111111"
 
@@ -74,11 +79,43 @@ class SubscriptionExpiryTests(unittest.TestCase):
             def family_group_account_id(self, _family_group_id):
                 return "22222222-2222-4222-8222-222222222222"
 
+            def account_in_family_group(self, family_group_id):
+                return family_group_id in memberships
+
+            def load_family_state_store(self, family_group_id=None):
+                assert family_group_id == group
+                return {"circle": {"value": [{"name": "媽媽", "personId": "p-mom"}], "updatedAt": "2026-11-20T00:00:00Z"}}
+
+        return ExternalCircleBackend()
+
+    def test_expired_member_cannot_read_another_accounts_family_state_before_cleanup(self):
+        # 過期時 reconcile_billing_expiry 刪掉外部 membership → 沒有 membership 就擋（不管方案）。
+        for billing in (server.default_billing_store(), paid_store("2099-01-01T00:00:00Z")):
+            with patch.object(server, "data_backend", return_value=self.external_circle_backend(set())), \
+                 patch.object(server, "load_billing_store", return_value=billing):
+                result = server.family_state_response({"action": "load", "familyGroupId": self.EXTERNAL_GROUP})
+            self.assertEqual(result["error"], "family_access_expired")
+
+    def test_free_invitee_with_membership_can_read_owners_circle(self):
+        # 7/31 起免費也能被邀進別人的圈：免費爸媽有 membership 就要讀得到子女的家人圈。
         free = server.default_billing_store()
-        with patch.object(server, "data_backend", return_value=ExternalCircleBackend()), \
+        with patch.object(server, "data_backend", return_value=self.external_circle_backend({self.EXTERNAL_GROUP})), \
              patch.object(server, "load_billing_store", return_value=free):
-            result = server.family_state_response({"action": "load", "familyGroupId": "33333333-3333-4333-8333-333333333333"})
-        self.assertEqual(result["error"], "family_access_expired")
+            result = server.family_state_response({"action": "load", "familyGroupId": self.EXTERNAL_GROUP})
+        self.assertTrue(result["ok"], result)
+        self.assertEqual(result["state"]["circle"][0]["name"], "媽媽")
+
+    def test_removed_invitee_is_blocked_again(self):
+        memberships = {self.EXTERNAL_GROUP}
+        backend = self.external_circle_backend(memberships)
+        free = server.default_billing_store()
+        with patch.object(server, "data_backend", return_value=backend), \
+             patch.object(server, "load_billing_store", return_value=free):
+            before = server.family_state_response({"action": "load", "familyGroupId": self.EXTERNAL_GROUP})
+            memberships.clear()  # 圈主把他移除／他自己退出
+            after = server.family_state_response({"action": "load", "familyGroupId": self.EXTERNAL_GROUP})
+        self.assertTrue(before["ok"])
+        self.assertEqual(after["error"], "family_access_expired")
 
 
 class MonthlyCreditAllowanceTests(unittest.TestCase):

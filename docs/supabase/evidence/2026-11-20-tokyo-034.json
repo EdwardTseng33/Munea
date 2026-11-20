@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-11-20T20:08:00+08:00",
+  "targetProjectRef": "fespbkdwafueyonppzwq",
+  "migrations": [
+    "034_family_shared_minutes_daily_free.sql"
+  ],
+  "appliedBy": "蘇菲（Edward 2026-11-20 19:54「上線」授權），經 Edward 已登入的 Chrome 在 Supabase SQL Editor 一次貼上執行（約 20:05 TST）；先上 brain（munea-brain-00222-mox @ c0aa2973）再套 SQL",
+  "note": "內容與 origin/main 檔案相同（905 行、sha256 c72fc095…；貼上後讀回比對開頭、結尾與 commit 數）。執行後另跑唯讀查詢逐項確認；再用 QA 測試帳號對正式 brain 呼叫 /credits/balance、/entitlements。",
+  "captureMethod": "read-only-probe",
+  "sourceCommit": "c0aa297369f22695c7ee82f70c33e98ed629a687",
+  "observed": {
+    "034": {
+      "new functions present (munea_credit_share_status, munea_ensure_free_allowance, munea_family_share_owner, munea_account_paid_plan, munea_free_allowance_window, munea_free_allowance_month_used)": 6,
+      "credit_wallets_wallet_type_check": "CHECK ((wallet_type = ANY (ARRAY['included_monthly'::text, 'purchased'::text, 'free_allowance'::text])))",
+      "public.free_allowance_settings exists": true,
+      "free_allowance_settings.monthly_cap_minutes": 1360,
+      "active entitlement policy version (munea_app_store_v1)": 5,
+      "munea_call_consume_credit body references munea_family_share_owner": true,
+      "backend": "POST /credits/balance（QA 帳號、正式 brain）回 allowance.mode=plan、familyShare.role=owner；POST /entitlements 回 capabilities.familySharedMinutes=true"
+    }
+  }
+}
