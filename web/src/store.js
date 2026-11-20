@@ -6,6 +6,8 @@ window.MuneaStore = (function () {
   var TX_KEY = 'munea.store.processedTransactions.v1';
   var BRAIN_URL = 'https://munea-brain-491603544409.asia-east1.run.app';
   var APP_KEY = 'mnk_03d3a1545a3c5215b924c162c54e83f2ecd059e5';
+  // 給其他一般程式（notify.js）借用，不要再各抄一份通行碼（2026-11-20：鑰匙外洩掃描擋下第三份）。
+  try { if (typeof window !== 'undefined') window.MuneaAppKey = APP_KEY; } catch (e) {}
   var SUB = {
     'plus|month': 'net.munea.app.plus.monthly',
     'plus|year': 'net.munea.app.plus.yearly',

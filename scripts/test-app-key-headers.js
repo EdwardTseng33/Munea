@@ -46,18 +46,20 @@ function extract(source, startMarker, stopMarker, label) {
 // ---------- C. 通行碼三份一致 ----------
 const appKeyMatch = app.match(/^const MUNEA_APP_KEY = '([^']+)';/m);
 const storeKeyMatch = store.match(/^\s*var APP_KEY = '([^']+)';/m);
-const notifyKeyMatch = notify.match(/^\s*var APP_KEY = '([^']+)';/m);
 assert(appKeyMatch, 'app.js 找不到 MUNEA_APP_KEY 常數（scripts/voice_chain_probe.py 也靠這一行讀）');
 assert(storeKeyMatch, 'store.js 找不到自己的 APP_KEY');
-assert(notifyKeyMatch, 'notify.js 必須自己帶一份 APP_KEY——它借不到 app.js（模組）裡的常數');
+assert(!/var APP_KEY = '/.test(notify), 'notify.js 不准自己再抄一份通行碼（跟 store.js 借 window.MuneaAppKey）');
+assert(/window\.MuneaAppKey = APP_KEY/.test(store), 'store.js 要掛出 window.MuneaAppKey 給 notify.js 借');
+assert(/window\.MuneaAppKey/.test(notify), 'notify.js 要跟 store.js 借 window.MuneaAppKey');
 const APP_KEY = appKeyMatch[1];
 assert.strictEqual(storeKeyMatch[1], APP_KEY, 'store.js 的通行碼跟 app.js 不同（換鑰匙時漏改）');
-assert.strictEqual(notifyKeyMatch[1], APP_KEY, 'notify.js 的通行碼跟 app.js 不同（換鑰匙時漏改）');
 
 // app.js 是模組：它最上層的 const 別支程式看不到。index.html 裡所有「一般」程式都不准再靠那個名字。
 assert(/<script type="module" src="src\/app\.js\?v=[^"]+"><\/script>/.test(html),
   'index.html 載入 app.js 的方式變了——請重新確認其他程式拿通行碼的做法還成立');
 const classicScripts = [...html.matchAll(/<script src="(src\/[^"?]+\.js)(?:\?[^"]*)?"><\/script>/g)].map(m => m[1]);
+assert(classicScripts.indexOf('src/store.js') >= 0 && classicScripts.indexOf('src/store.js') < classicScripts.indexOf('src/notify.js'),
+  'index.html 必須先載 store.js 再載 notify.js（notify.js 跟它借通行碼）');
 assert(classicScripts.includes('src/notify.js') && classicScripts.includes('src/store.js'),
   '抽不到 index.html 的程式清單');
 for (const script of classicScripts) {
@@ -131,6 +133,9 @@ async function runNotifyBoot() {
     MuneaAuth: { async getAccessToken() { return 'access-token-for-test'; } },
     addEventListener() {},
   };
+  // 照 index.html 的順序：store.js 先載入、掛出 window.MuneaAppKey（這裡只跑它掛通行碼的那一行）。
+  vm.runInNewContext(store.match(/^\s*try \{ if \(typeof window !== 'undefined'\) window\.MuneaAppKey = APP_KEY; \} catch \(e\) \{\}/m)[0],
+    { window: windowStub, APP_KEY: storeKeyMatch[1] });
   const sandbox = {
     console,
     window: windowStub,
@@ -149,7 +154,7 @@ async function runNotifyBoot() {
     },
   };
   vm.createContext(sandbox);
-  // 注意：這個沙盒裡完全沒有 app.js，也沒有任何叫 MUNEA_APP_KEY 的東西——通行碼必須是 notify.js 自己帶的。
+  // 注意：這個沙盒裡完全沒有 app.js，也沒有任何叫 MUNEA_APP_KEY 的東西——通行碼必須是從 store.js 借來的那一份。
   vm.runInContext(notify, sandbox);
   assert(windowStub.MuneaNotify, 'notify.js 沒有掛出 window.MuneaNotify');
   assert.strictEqual(calls.length, 0, 'notify.js 一載入就發請求了（應該等畫面就緒）');
