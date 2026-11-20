@@ -7334,7 +7334,9 @@ function renderMedicationReminderCopy(medication) {
     med.name,
     muneaT('medication.genericName', '藥物'),
   );
-  modal.dataset.medicationName = name;
+  // 存使用者原本的藥名（沒有就存空的），不存「藥物」這個代稱——
+  // 不然開機時用中文代稱存進去，切到英日西語後重畫，代稱還是中文。
+  modal.dataset.medicationName = String(med.name || '');
   modal.dataset.medicationSlot = canonicalSlot;
   if ($('#medDueSay')) $('#medDueSay').textContent = muneaT(
     'medicationReminder.dueSay',
@@ -7413,13 +7415,10 @@ function localizeMedicationSurfaces() {
       'aria-label',
       muneaT('common.close', '關閉'),
     );
+    // 2026-11-17：這裡原本寫死「已連續完成 6 天」——不管實際吃了幾天都是 6。
+    // 程式目前沒有真的算連續天數，沒有真數字就不顯示（畫面檔裡這一列預設藏著）。
     const streak = reminder.querySelector('.mpc-streak');
-    setElementOwnText(
-      streak,
-      muneaT('medicationReminder.streak', '已連續完成 {days} 天', {
-        days: new Intl.NumberFormat(muneaLocale()).format(6),
-      }),
-    );
+    if (streak) streak.hidden = true;
     const taken = document.getElementById('medTaken');
     setElementOwnText(taken, muneaT('medicationReminder.taken', '我吃過了'));
     const snooze = document.getElementById('medSnooze');
@@ -9829,7 +9828,7 @@ function init() {
         ? muneaT('familyCircle.limitReached', '{plan} 已達上限 · 升級可加更多', {
           plan: circlePlanLabel(plan),
         })
-        : muneaT('familyCircle.invite', '邀請家人加入');
+        : muneaT('legacyUi.familyInvite', '邀請家人加入');   // 跟畫面檔同一個翻譯鍵：沒滿的時候字不變
       inv.dataset.full = full ? '1' : '';
     }
     const note = $('#invLimitNote');
@@ -14144,8 +14143,9 @@ function refreshLocalizedDynamicUi() {
     const cnameSpan = '<span class="cname">' + muneaT('companion.nening.name', '寧寧') + '</span>';
     const sf1 = $('#sfStep1Text');
     if (sf1) sf1.innerHTML = muneaT('legacyUi.safetyStep1', '異常發生，{companion}先關心你一句、確認你還好嗎', { companion: cnameSpan });
-    const mcSubEl = $('#mcSub');
-    if (mcSubEl && !mcSubEl.textContent.trim()) mcSubEl.innerHTML = muneaT('demo.family.chatSubSample', '今天聊了 2 次 · 有一小段有點火氣', { companion: cnameSpan });
+    // 2026-11-17 拿掉：這裡原本在 #mcSub 空著時補一句示範「今天聊了 2 次 · 有一小段有點火氣」。
+    // #mcSub 是家人頁「某位家人的心情」底下那行；家人有心情標籤時 renderPersonMood() 會刻意把它清空，
+    // 這時只要重跑一次本函式，就會在真的家人名下寫出一句編出來的話。那行字只能由 renderPersonMood() 決定。
     const cnNoData = $('#cnNoDataText');
     if (cnNoData) cnNoData.innerHTML = '<b>' + muneaT('legacyUi.connectNoDataTitle', '沒有這些也沒關係。') + '</b>' + muneaT('legacyUi.connectNoDataBody', '{companion}也能從每天聊天陪你留意生活狀態，健康數據是加分，陪伴和提醒不受影響。', { companion: cnameSpan });
     const rptFootEl = $('#rptFoot');
