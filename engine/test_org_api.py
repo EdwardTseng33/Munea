@@ -22,20 +22,35 @@ from unittest.mock import patch
 TMP = tempfile.mkdtemp(prefix="munea-org-api-test-")
 os.environ.setdefault("GEMINI_API_KEY", "org-api-test-key")
 os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
-for key, name in (
-    ("MUNEA_ORG_STAFF_PATH", "org_staff.json"), ("MUNEA_ORG_CONSENTS_PATH", "org_consents.json"),
-    ("MUNEA_ENTERPRISE_CLIENTS_PATH", "clients.json"), ("MUNEA_ENTERPRISE_SEATS_PATH", "seats.json"),
-    ("MUNEA_ENTERPRISE_SEAT_EVENTS_PATH", "seat_events.json"), ("MUNEA_ENTERPRISE_LOCAL_GRANTS_PATH", "grants.json"),
-    ("MUNEA_ENTERPRISE_INVOICES_PATH", "invoices.json"), ("MUNEA_WELLBEING_PATH", "wellbeing.json"),
-    ("MUNEA_CONVERSATION_SUMMARIES_PATH", "summaries.json"), ("MUNEA_PRODUCT_EVENTS_PATH", "events.json"),
-    ("MUNEA_MEDICATION_DOSES_PATH", "doses.json"), ("MUNEA_AUDIT_EVENTS_STORE_PATH", "audit.json"),
-):
-    os.environ[key] = os.path.join(TMP, name)
+# (env var, 暫存檔名, 讀這個 env var 的「模組.常數」)
+# 這些模組在第一次 import 時就把路徑抄成模組常數；整包 pytest 一起跑時別的測試檔早 import 過，
+# 上面設的 env var 不會再被讀——所以 Base.setUp 會把模組常數直接換成這裡的暫存檔、跑完換回去。
+_STORES = (
+    ("MUNEA_ORG_STAFF_PATH", "org_staff.json", (("org_api", "STAFF_PATH"),)),
+    ("MUNEA_ORG_CONSENTS_PATH", "org_consents.json", (("org_api", "CONSENTS_PATH"),)),
+    ("MUNEA_ENTERPRISE_CLIENTS_PATH", "clients.json", (("enterprise_seats", "CLIENTS_PATH"),)),
+    ("MUNEA_ENTERPRISE_SEATS_PATH", "seats.json", (("enterprise_seats", "SEATS_PATH"),)),
+    ("MUNEA_ENTERPRISE_SEAT_EVENTS_PATH", "seat_events.json", (("enterprise_seats", "SEAT_EVENTS_PATH"),)),
+    ("MUNEA_ENTERPRISE_LOCAL_GRANTS_PATH", "grants.json", (("enterprise_seats", "LOCAL_GRANTS_PATH"),)),
+    ("MUNEA_ENTERPRISE_INVOICES_PATH", "invoices.json",
+     (("enterprise_seats", "INVOICES_PATH"), ("enterprise_billing", "INVOICES_PATH"))),
+    ("MUNEA_WELLBEING_PATH", "wellbeing.json", (("org_api", "WELLBEING_PATH"), ("server", "WELLBEING_PATH"))),
+    ("MUNEA_CONVERSATION_SUMMARIES_PATH", "summaries.json",
+     (("org_api", "CONVERSATION_SUMMARIES_PATH"), ("server", "CONVERSATION_SUMMARIES_PATH"))),
+    ("MUNEA_PRODUCT_EVENTS_PATH", "events.json", (("org_portal", "PRODUCT_EVENTS_PATH"), ("server", "PRODUCT_EVENTS_PATH"))),
+    ("MUNEA_MEDICATION_DOSES_PATH", "doses.json",
+     (("org_portal", "MEDICATION_DOSES_PATH"), ("server", "MEDICATION_DOSES_PATH"))),
+    ("MUNEA_AUDIT_EVENTS_STORE_PATH", "audit.json", (("server", "AUDIT_EVENTS_STORE_PATH"),)),
+)
+_PATHS = {key: os.path.join(TMP, name) for key, name, _ in _STORES}
+os.environ.update(_PATHS)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import care_week  # noqa: E402
 import enterprise_seats  # noqa: E402
+import org_alerts  # noqa: E402
 import org_api  # noqa: E402
+import supabase_adapter  # noqa: E402
 
 ORG_A = str(uuid.uuid4())
 ORG_B = str(uuid.uuid4())
@@ -52,7 +67,8 @@ def day(offset):
 
 
 def write(path_env, data):
-    with open(os.environ[path_env], "w", encoding="utf-8") as f:
+    # 用自己的暫存檔路徑、不讀 os.environ：整包一起跑時別的測試檔可能在收集階段把同名 env var 改掉。
+    with open(_PATHS[path_env], "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
 
 
@@ -153,8 +169,37 @@ def walk_strings(obj, out=None):
     return out
 
 
+def _isolate(case):
+    """讓每一條機構端測試都在自己的本機假世界跑，不吃前面測試檔留下的狀態（整包 pytest 一起跑時）：
+    本機 JSON 模式、路徑常數指到這裡的暫存檔、雲端斷路器與「缺表」記憶清空、沒有登入身分；
+    server 啟動時接好的稽核寫入口與提醒讀取口跑完換回原樣（子類 tearDown 設 None 也會被換回）。"""
+    env = patch.dict(os.environ, {**_PATHS, "MUNEA_DATABASE_PROVIDER": "json"})
+    env.start()
+    case.addCleanup(env.stop)
+    for _key, _name, targets in _STORES:
+        for module_name, attr in targets:
+            module = sys.modules.get(module_name)
+            if module is not None and hasattr(module, attr):
+                p = patch.object(module, attr, _PATHS[_key])
+                p.start()
+                case.addCleanup(p.stop)
+    for state in (supabase_adapter._CIRCUIT, supabase_adapter._MISSING_TABLES):
+        p = patch.dict(state)
+        p.start()
+        case.addCleanup(p.stop)
+    supabase_adapter._reset_circuit()
+    supabase_adapter._MISSING_TABLES.clear()
+    case.addCleanup(org_api.set_audit_sink, org_api.AUDIT_SINK)
+    case.addCleanup(org_alerts.set_event_loader, org_alerts.EVENT_LOADER)
+    server = sys.modules.get("server")
+    if server is not None and hasattr(server, "REQUEST_DATA_IDENTITY"):
+        token = server.REQUEST_DATA_IDENTITY.set({})
+        case.addCleanup(server.REQUEST_DATA_IDENTITY.reset, token)
+
+
 class Base(unittest.TestCase):
     def setUp(self):
+        _isolate(self)
         seed_world()
         self.audit = []
         org_api.set_audit_sink(self.audit.append)

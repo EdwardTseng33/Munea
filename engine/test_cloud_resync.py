@@ -17,6 +17,18 @@ import supabase_adapter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# 整包 pytest 一起跑時 cloud_resync 早被別的測試檔 import 過，上面的 env var 不會再被讀，
+# PENDING_PATH 會指向 engine/cloud_pending_writes.json（進版控的真檔）——所以直接把模組常數換成暫存檔。
+_PENDING_PATCH = mock.patch.object(cloud_resync, "PENDING_PATH", os.path.join(_TMP, "pending.json"))
+
+
+def setUpModule():
+    _PENDING_PATCH.start()
+
+
+def tearDownModule():
+    _PENDING_PATCH.stop()
+
 
 class FakeAdapter:
     def __init__(self, probe_rows=None, request_error=None):

@@ -6,22 +6,40 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 os.environ.setdefault("GEMINI_API_KEY", "notification-settings-test-key")
 os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
 _TMP = tempfile.mkdtemp(prefix="munea-notif-settings-")
-for _env, _name in (
-    ("MUNEA_NOTIFICATION_SETTINGS_PATH", "notification_settings.json"),
-    ("MUNEA_NOTIFICATION_EVENTS_PATH", "notification_events.json"),
-    ("MUNEA_NOTIFICATION_DELIVERIES_PATH", "notification_deliveries.json"),
-    ("MUNEA_PUSH_DEVICES_PATH", "push_devices.json"),
-):
+# (env var, server 模組常數, 檔名)
+_STORES = (
+    ("MUNEA_NOTIFICATION_SETTINGS_PATH", "NOTIFICATION_SETTINGS_PATH", "notification_settings.json"),
+    ("MUNEA_NOTIFICATION_EVENTS_PATH", "NOTIFICATION_EVENTS_PATH", "notification_events.json"),
+    ("MUNEA_NOTIFICATION_DELIVERIES_PATH", "NOTIFICATION_DELIVERIES_PATH", "notification_deliveries.json"),
+    ("MUNEA_PUSH_DEVICES_PATH", "PUSH_DEVICES_PATH", "push_devices.json"),
+)
+for _env, _attr, _name in _STORES:
     os.environ[_env] = os.path.join(_TMP, _name)
 sys.path.insert(0, os.path.dirname(__file__))
 
 import server  # noqa: E402
 import notification_service  # noqa: E402
 import apns_service  # noqa: E402
+
+# 整包 pytest 一起跑時 server 早被別的測試檔 import 過，上面的 env var 不會再被讀，
+# 路徑常數會指向 engine/notification_settings.json（進版控的真檔）或別人的暫存檔——
+# 所以直接把模組常數換成自己的暫存檔，跑完換回去。
+_PATCHES = [mock.patch.object(server, _attr, os.path.join(_TMP, _name)) for _env, _attr, _name in _STORES]
+
+
+def setUpModule():
+    for p in _PATCHES:
+        p.start()
+
+
+def tearDownModule():
+    for p in _PATCHES:
+        p.stop()
 
 
 class SettingsDefaultsAndRoundtripTest(unittest.TestCase):
