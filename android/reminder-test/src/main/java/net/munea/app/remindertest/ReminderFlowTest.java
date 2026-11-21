@@ -33,6 +33,35 @@ public class ReminderFlowTest {
         if (!ok) failures.add(name);
     }
 
+    /**
+     * 點通知。找到的文字（標題）本身常常不能點（小米 HyperOS 實測：Clicking on non-clickable object，沒反應），
+     * 所以：先往上找第一個能點的祖先點；沒用就點通知卡片中央；再沒用就收掉鎖屏再點一次。回傳用了哪一種。
+     */
+    private String tapNotification(UiObject2 note) {
+        String how = "none";
+        try {
+            UiObject2 t = note;
+            int depth = 0;
+            while (t != null && !t.isClickable() && depth < 8) { t = t.getParent(); depth++; }
+            if (t != null && t.isClickable()) { t.click(); how = "clickable-ancestor(depth=" + depth + ")"; }
+            else { note.click(); how = "text-itself"; }
+        } catch (Exception e) { how = "ancestor-error " + e; }
+        if (kit.device.wait(Until.hasObject(By.pkg(QaKit.PKG).depth(0)), 8000)) return how;
+        try {
+            android.graphics.Rect b = note.getVisibleBounds();
+            kit.device.click(kit.device.getDisplayWidth() / 2, b.centerY());
+            how += " + card-center(" + b.centerY() + ")";
+        } catch (Exception e) { how += " + center-error " + e; }
+        if (kit.device.wait(Until.hasObject(By.pkg(QaKit.PKG).depth(0)), 8000)) return how;
+        kit.sh("wm dismiss-keyguard");
+        QaKit.sleep(1500);
+        try {
+            UiObject2 again = kit.device.findObject(By.text(Pattern.compile("(?s).*(沐寧提醒|Munea reminder).*")));
+            if (again != null) { again.click(); how += " + dismiss-keyguard-retry"; }
+        } catch (Exception e) { how += " + retry-error " + e; }
+        return how;
+    }
+
     private void finish() {
         assertTrue("沒過的步驟：" + failures, failures.isEmpty());
     }
@@ -188,8 +217,11 @@ public class ReminderFlowTest {
         UiObject2 note = kit.device.wait(Until.findObject(By.text(Pattern.compile("(?s).*(沐寧提醒|Munea reminder|Munea).*"))), 8000);
         step("通知列找得到「沐寧提醒」", note != null, note != null ? note.getText() : "找不到文字");
         if (note == null) { finish(); return; }
-        note.click();
-        boolean opened = kit.device.wait(Until.hasObject(By.pkg(QaKit.PKG).depth(0)), 20000);
+        String tapHow = tapNotification(note);
+        boolean opened = kit.device.wait(Until.hasObject(By.pkg(QaKit.PKG).depth(0)), 5000);
+        String focus = kit.sh("dumpsys window").replaceAll("(?s).*?(mCurrentFocus=[^\n]*).*", "$1");
+        step("點通知→App 被叫到前景", opened, "how=" + tapHow + " " + (focus.length() > 200 ? focus.substring(0, 200) : focus));
+        if (!opened) { kit.shot("08-tap-did-not-open-app"); finish(); return; }
         boolean bridge2 = opened && kit.waitBridge(40);
         QaKit.sleep(2500);
         kit.shot("08-opened-from-notification");
