@@ -138,10 +138,17 @@ class FreeWalletTests(unittest.TestCase):
                            "createdAt": "2026-11-02T03:00:00Z"}],
         )
         store = store_with()
+        now = utc("2026-11-20T02:00:00Z")
         window, _ = server.ensure_free_allowance_in_store(
-            store, account_id="a", created_at="2026-11-20T01:00:00Z", now=utc("2026-11-20T02:00:00Z"), other_stores=[other])
+            store, account_id="a", created_at="2026-11-20T01:00:00Z", now=now, other_stores=[other])
         self.assertEqual(window["amount"], 5)
-        self.assertEqual(server.credit_wallet_summary(store)["freeAllowance"], 5)
+        # 錢包摘要用「現在時間」判斷有沒有過期；固定在發放當下看，不然 2026-11-20 當天的錢包過了那天就算過期、
+        # 這條測試從 11/21 起每天都會壞。
+        real_available = server.credit_wallet_is_available
+        fixed_now = now
+        with patch.object(server, "credit_wallet_is_available",
+                          side_effect=lambda w, now=None: real_available(w, now=now or fixed_now)):
+            self.assertEqual(server.credit_wallet_summary(store)["freeAllowance"], 5)
 
     def test_paid_account_gets_no_free_wallet(self):
         store = store_with()
