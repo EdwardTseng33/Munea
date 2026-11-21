@@ -9,23 +9,56 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 os.environ.setdefault("GEMINI_API_KEY", "safety-contacts-test-key")
 os.environ["MUNEA_DATABASE_PROVIDER"] = "json"
 _TMP = tempfile.mkdtemp(prefix="munea-safety-contacts-")
-for _env, _name in (
-    ("MUNEA_FAMILY_STATE_STORE_PATH", "family_state_store.json"),
-    ("MUNEA_APP_PROFILE_STORE_PATH", "app_profile_store.json"),
-    ("MUNEA_NOTIFICATION_EVENTS_PATH", "notification_events.json"),
-    ("MUNEA_NOTIFICATION_DELIVERIES_PATH", "notification_deliveries.json"),
-    ("MUNEA_PUSH_DEVICES_PATH", "push_devices.json"),
-    ("MUNEA_NOTIFICATION_SETTINGS_PATH", "notification_settings.json"),
-):
+# (env var, server 模組常數, 檔名)
+_STORES = (
+    ("MUNEA_FAMILY_STATE_STORE_PATH", "FAMILY_STATE_STORE_PATH", "family_state_store.json"),
+    ("MUNEA_APP_PROFILE_STORE_PATH", "APP_PROFILE_STORE_PATH", "app_profile_store.json"),
+    ("MUNEA_NOTIFICATION_EVENTS_PATH", "NOTIFICATION_EVENTS_PATH", "notification_events.json"),
+    ("MUNEA_NOTIFICATION_DELIVERIES_PATH", "NOTIFICATION_DELIVERIES_PATH", "notification_deliveries.json"),
+    ("MUNEA_PUSH_DEVICES_PATH", "PUSH_DEVICES_PATH", "push_devices.json"),
+    ("MUNEA_NOTIFICATION_SETTINGS_PATH", "NOTIFICATION_SETTINGS_PATH", "notification_settings.json"),
+)
+for _env, _attr, _name in _STORES:
     os.environ[_env] = os.path.join(_TMP, _name)
 sys.path.insert(0, os.path.dirname(__file__))
 
 import server  # noqa: E402
 import notification_service  # noqa: E402
+
+# 整包 pytest 一起跑時 server 早被別的測試檔 import 過，上面的 env var 不會再被讀，
+# 路徑常數會指向 engine/ 底下的真檔或別人的暫存檔——所以這裡直接把模組常數換成自己的暫存檔，
+# 跑完換回去。
+_ORIGINAL_PATHS = {}
+
+
+def setUpModule():
+    for _env, attr, name in _STORES:
+        _ORIGINAL_PATHS[attr] = getattr(server, attr)
+        setattr(server, attr, os.path.join(_TMP, name))
+
+
+def tearDownModule():
+    for attr, value in _ORIGINAL_PATHS.items():
+        setattr(server, attr, value)
+    _ORIGINAL_PATHS.clear()
+
+
+class _IsolatedTestCase(unittest.TestCase):
+    """每一條都在『沒有登入身分』的本機 JSON 模式下跑——前面測試檔若漏 reset
+    REQUEST_DATA_IDENTITY，不會把存推播裝置／讀通知改成別人的身分。"""
+
+    def setUp(self):
+        env = mock.patch.dict(os.environ, {"MUNEA_DATABASE_PROVIDER": "json"})
+        env.start()
+        self.addCleanup(env.stop)
+        token = server.REQUEST_DATA_IDENTITY.set({})
+        self.addCleanup(server.REQUEST_DATA_IDENTITY.reset, token)
+        super().setUp()
 
 
 def _seed_members(*ids_and_names):
@@ -33,7 +66,7 @@ def _seed_members(*ids_and_names):
         server.save_family_member({"id": pid, "displayName": name, "role": "family_contact"})
 
 
-class SelectionValidationTest(unittest.TestCase):
+class SelectionValidationTest(_IsolatedTestCase):
     def test_filters_non_members_and_self_and_caps_at_three(self):
         _seed_members(("m1", "大女兒"), ("m2", "二兒子"), ("m3", "小兒子"), ("m4", "媳婦"))
         cleaned = server.normalize_safety_contacts_selection(
@@ -47,7 +80,7 @@ class SelectionValidationTest(unittest.TestCase):
         self.assertEqual(cleaned, [])
 
 
-class SaveLoadRoundtripTest(unittest.TestCase):
+class SaveLoadRoundtripTest(_IsolatedTestCase):
     def test_save_merges_by_person_not_overwrite(self):
         _seed_members(("c1", "大女兒"), ("c2", "二兒子"))
         server.save_safety_contacts_entry("shared", "elder-x", ["c1"])
@@ -68,7 +101,7 @@ class SaveLoadRoundtripTest(unittest.TestCase):
         self.assertEqual(load_result["contactPersonIds"], ["c3"])
 
 
-class DispatchDedupeTest(unittest.TestCase):
+class DispatchDedupeTest(_IsolatedTestCase):
     def test_no_contacts_is_clean_noop(self):
         result = server.dispatch_safety_alert("elder-lonely", "vitals")
         self.assertEqual(result, {"queued": 0, "contactCount": 0})
@@ -103,7 +136,7 @@ class DispatchDedupeTest(unittest.TestCase):
         self.assertEqual(ev["eventType"], "health_alert")
 
 
-class ContactAssignmentTest(unittest.TestCase):
+class ContactAssignmentTest(_IsolatedTestCase):
     """子女端『你是 X 的緊急聯絡人』提示要用的資料來源（2026-11-09 補、#687 coordinator 提醒後補）。"""
 
     def test_contact_sees_who_picked_them(self):
@@ -124,7 +157,7 @@ class ContactAssignmentTest(unittest.TestCase):
         self.assertEqual(result, [])
 
 
-class SafetyAlertEndpointGuardTest(unittest.TestCase):
+class SafetyAlertEndpointGuardTest(_IsolatedTestCase):
     def test_guardian_category_rejected_from_public_endpoint(self):
         result = server.safety_alert_response({"category": "guardian", "personId": "elder-1"})
         self.assertEqual(result, {"ok": False, "error": "category_not_allowed"})
@@ -139,7 +172,7 @@ class SafetyAlertEndpointGuardTest(unittest.TestCase):
         self.assertEqual(result["queued"], 1)
 
 
-class ReadinessTest(unittest.TestCase):
+class ReadinessTest(_IsolatedTestCase):
     def test_readiness_reflects_push_device_state(self):
         device = notification_service.normalize_device({
             "personId": "ready-contact", "accountId": "acc-1", "authUserId": "auth-1",
@@ -151,11 +184,12 @@ class ReadinessTest(unittest.TestCase):
         self.assertEqual(readiness, {"ready-contact": True, "not-ready-contact": False})
 
 
-class GuardianHookTest(unittest.TestCase):
+class GuardianHookTest(_IsolatedTestCase):
     """守護腦 high/critical -> server.dispatch_safety_alert 的接線（2026-11-09）：
     familyNotificationCandidate 為真且有 person_id 才派送；protection_event／沒 person_id 都不派送。"""
 
     def setUp(self):
+        super().setUp()
         import live_voice_server as voice
         self.voice = voice
         self.calls = []
