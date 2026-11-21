@@ -16,6 +16,7 @@ on:
       - "android/app/src/debug/**"
       - "android/settings.gradle"
       - "scripts/android-reminder-instrument-emulator.sh"
+      - "scripts/android-login-chat-family-emulator.sh"
 
 concurrency:
   group: android-reminder-testlab-${{ github.ref }}
@@ -85,6 +86,41 @@ jobs:
         if: always()
         with:
           name: reminder-instrument-emulator
+          path: emulator-out/
+          if-no-files-found: warn
+          retention-days: 14
+
+  login-chat-family-emulator:
+    name: 免費模擬器驗登入／聊聊／家人圈骨架（沒有任何帳密）
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: testlab-apks
+          path: ./apks
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash scripts/android-login-chat-family-emulator.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: login-chat-family-emulator
           path: emulator-out/
           if-no-files-found: warn
           retention-days: 14
