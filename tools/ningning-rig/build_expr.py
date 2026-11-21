@@ -5,7 +5,7 @@
 關心的眉毛也是修圖（只改眉頭角度）；11/21 試過把底圖眉毛用程式轉角度，邊緣毛糙，不用。
 
 用法：python build_expr.py <底圖 base.png> <修圖資料夾> <輸出資料夾> rig-updo.json
-  修圖資料夾裡要有 f-m-ee / f-m-oo / f-m-oh / f-m-smile / f-e-smile / f-e-soft / f-b-concern .png
+  修圖資料夾裡要有 f-m-ee / f-m-oo3 / f-m-oh / f-m-smile / f-e-smile / f-e-soft / f-b-concern .png
 驗收：每張貼片印出「範圍外改到的像素數」（要 0）與「疊回去跟修圖差多少」。"""
 import sys, json, os
 import numpy as np
@@ -47,7 +47,7 @@ def report(name, rgb, a, zone, ref=None):
     print(msg)
 
 
-def part(src, ells, name, scale_zone=1.0, lid=False, grow=5, soft=2, only_dark=False):
+def part(src, ells, name, scale_zone=1.0, lid=False, grow=5, soft=2, only_dark=False, near_feature=False):
     v = np.asarray(Image.open(src).convert('RGB')).astype(float)
     region = ell(ells, 1.6)
     d = np.abs(v - base).sum(axis=2)
@@ -64,6 +64,14 @@ def part(src, ells, name, scale_zone=1.0, lid=False, grow=5, soft=2, only_dark=F
         # 眉毛：只收「新眉毛」與「舊眉毛要蓋掉的地方」；修圖順手多畫的淡淡皺紋（中間調）不收
         dk = (v.mean(axis=2) < 110) | (base.mean(axis=2) < 110)
         core &= ndi.binary_dilation(dk, iterations=3)
+    if near_feature:
+        # 柔和眼：修圖總會在眼睛上方多畫一條原圖沒有的眼皮摺線——只收「原本的眼睛附近」與新畫的深色眼線，
+        # 摺線（眼睛外面、中間調）不收，畫風才跟原圖一樣乾淨
+        # 規則：原圖是皮膚的地方，只收新畫的深色眼線；摺線（緊貼舊眼線上方 3～6 像素的中間調）就不會進來
+        was_skin = np.abs(base - skin).sum(axis=2) < 40
+        crease = was_skin & (v.mean(axis=2) >= 110)
+        core &= ~crease
+        v[crease] = base[crease]      # 貼片邊緣羽化會蓋到的地方也換回原圖顏色，摺線不會從邊上透出來
     mi = Image.fromarray((core * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(grow)).filter(ImageFilter.GaussianBlur(soft))
     a = np.asarray(mi).astype(float) / 255 * inner
     a = save(v, a, name)
@@ -74,11 +82,12 @@ def part(src, ells, name, scale_zone=1.0, lid=False, grow=5, soft=2, only_dark=F
 mouth = cfg['mouth']
 wide_mouth = [[cx, cy, rx * 1.04, ry * 1.1] for cx, cy, rx, ry in mouth]    # 嘴角上揚一點點；修圖多畫的酒窩不收（只收得到一邊、會不對稱）
 eyes = [[cx, cy, rx * 1.08, ry * 1.25] for cx, cy, rx, ry in cfg['eyes']]      # 柔和眼多一條眼皮線
-for k in ('ee', 'oo', 'oh'):
-    part(f'{PARTS}/f-m-{k}.png', mouth, f'mouth-{k}.webp', grow=9)
+# ㄨ 用第三版（11/21 第一版嘴唇太厚像嘟嘴）
+for k, src in (('ee', 'f-m-ee'), ('oo', 'f-m-oo3'), ('oh', 'f-m-oh')):
+    part(f'{PARTS}/{src}.png', mouth, f'mouth-{k}.webp', grow=9)
 part(f'{PARTS}/f-m-smile.png', wide_mouth, 'mouth-smile.webp', grow=9)
 part(f'{PARTS}/f-e-smile.png', eyes, 'eyes-smile.webp', lid=True, grow=9, soft=1)
-part(f'{PARTS}/f-e-soft.png', eyes, 'eyes-soft.webp', grow=7, soft=1)
+part(f'{PARTS}/f-e-soft.png', eyes, 'eyes-soft.webp', grow=7, soft=1, near_feature=True)
 
 # ---- 關心的眉毛：同一套修圖（只把眉頭抬高），範圍只到眉毛上下，不收額頭 ----
 brows = [[cx, cy - 6, rx * 1.2, ry * 1.8] for cx, cy, rx, ry in cfg['brows']]

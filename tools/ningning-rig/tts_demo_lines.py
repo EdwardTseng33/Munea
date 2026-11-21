@@ -11,7 +11,6 @@ for ln in open('E:/Claude/Munea/engine/.env.local', encoding='utf-8'):
     if m: key = m.group(1).strip().strip('"').strip("'")
 assert key, 'no GEMINI_API_KEY'
 from google import genai
-from google.genai import types
 client = genai.Client(api_key=key)
 
 LINES = {
@@ -24,42 +23,26 @@ LINES = {
     'es': ('Habla con calidez y un poco despacio, como alguien de la familia que cuida a una persona mayor. Natural, cercano, sin tono de locutor.',
            '¡Buenos días! ¿Durmió bien anoche? Me contó que le dolía la rodilla, ¿hoy está un poco mejor? Ah, y a las diez toca la pastilla de la presión. Se lo vuelvo a recordar cuando sea la hora.'),
 }
-MODELS = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts']  # 2.5 預覽 TTS 2026-12-18 停用；3.8 回 WAV，寫檔前要剝檔頭
+# 2026-11-21：以前把語氣說明接在句子前面一起送（style 加兩個換行再接 text），3.8 TTS 會把說明也念出來
+# （記憶 gemini-model-retirement：一句 3 秒變 25 秒）。改用 engine 的 synthesize_pcm：語氣放 speech_metadata.style、
+# 模型名從 gemini_models 取、回來一律是 24kHz 裸 PCM。
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'engine'))
+import gemini_models
 
-def _strip_wav(data):
-    """3.8 TTS 回 WAV（含 44 bytes 檔頭）；舊預覽版回裸 PCM。統一成裸 PCM。"""
-    if data[:4] == b'RIFF':
-        import io
-        with wave.open(io.BytesIO(data)) as w:
-            return w.readframes(w.getnframes())
-    return data
+LANG_CODE = {'zh': 'cmn-TW', 'en': 'en-US', 'ja': 'ja-JP', 'es': 'es-ES'}
 
-def synth(style, text):
-    last = None
-    for model in MODELS:
-        try:
-            r = client.models.generate_content(
-                model=model,
-                contents=f'{style}\n\n{text}',
-                config=types.GenerateContentConfig(
-                    response_modalities=['AUDIO'],
-                    speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=VOICE))),
-                ),
-            )
-            for part in r.candidates[0].content.parts:
-                if getattr(part, 'inline_data', None) and part.inline_data.data:
-                    return model, _strip_wav(part.inline_data.data), part.inline_data.mime_type
-            last = 'no audio part'
-        except Exception as e:
-            last = f'{model}: {type(e).__name__}: {str(e)[:200]}'
-    raise SystemExit(last)
+
+def synth(style, text, lang):
+    pcm = gemini_models.synthesize_pcm(client, text, VOICE, style=style, language_code=LANG_CODE.get(lang))
+    if not pcm:
+        raise SystemExit(f'{lang}: 配音失敗（所有 TTS 模型都沒回聲音）')
+    return pcm
+
 
 for lang, (style, text) in LINES.items():
-    model, pcm, mime = synth(style, text)
+    pcm = synth(style, text, lang)
     rate = 24000
-    m = re.search(r'rate=(\d+)', mime or '')
-    if m: rate = int(m.group(1))
     p = os.path.join(OUT, f'talk-{lang}.wav')
     with wave.open(p, 'wb') as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(pcm)
-    print(lang, model, mime, f'{len(pcm) / 2 / rate:.2f}s', p)
+    print(lang, f'{len(pcm) / 2 / rate:.2f}s', p)

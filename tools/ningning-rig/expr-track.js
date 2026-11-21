@@ -1,9 +1,9 @@
 // 表情草稿影片用：把一段寧寧的聲音（24kHz 單聲道 16-bit WAV）算成「每一格畫面」的嘴巴指令。
-// 嘴形用 9/29 試驗室的通用嘴型驅動器（tools/ningning-rig/lipsync-driver.js，從試驗室分支 lab/ning-lipsync-20260929 原樣搬來：音量→張口、共振峰→ㄚㄝㄧㄛㄨ），
+// 嘴形用 9/29 試驗室的通用嘴型驅動器（web/src/lipsync-driver.js，從試驗室分支 lab/ning-lipsync-20260929 原樣搬來：音量→張口、共振峰→ㄚㄝㄧㄛㄨ），
 // 另外照 App 現在的做法算「每 90 毫秒的音量」給舊版臉用，兩邊吃同一段聲音才比得公平。
 // 用法：node expr-track.js <聲音.wav> <輸出.json> [lipsync-driver.js 路徑]
 const fs = require('node:fs'); const path = require('node:path');
-const [WAV, OUT, DRIVER = path.join(__dirname, 'lipsync-driver.js')] = process.argv.slice(2);
+const [WAV, OUT, DRIVER = path.join(__dirname, '../../web/src/lipsync-driver.js')] = process.argv.slice(2);
 const FPS = 30, LEAD = 0.05;   // 嘴巴比聲音早 50 毫秒（9/29 量出來的寧寧轉接頭設定）
 
 function readWav(p) {

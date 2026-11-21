@@ -4409,6 +4409,7 @@ const LiveVoice = {
       }
     } catch (e) {}
     offset = Math.max(offset, this._playbackLeadSeconds());
+    if (FaceViseme.on && !this._turnHasScheduledAudio) FaceViseme.turnStart();
     if (!this._turnHasScheduledAudio) {
       this.playHead = now + offset;
       this._turnHasScheduledAudio = true;
@@ -4418,6 +4419,7 @@ const LiveVoice = {
       try { trackProductEvent('voice_playback_underrun', { turn: this._playbackTurn, count: this._playbackUnderruns }); } catch (e) {}
     }
     s.start(this.playHead); this.playHead += b.duration;
+    if (FaceViseme.on) FaceViseme.ensure();
     if (!this._srcs) this._srcs = [];
     this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); this._toListening(); };
     this._toListening();
@@ -5172,7 +5174,9 @@ const LiveVoice = {
                 else if (clean.length >= 24) { this._topicSaved = true; }   // 累積夠長仍不乾淨＝這通沒有適合話題、別硬塞亂碼
               }
             }
+            if (o.type === 'face_expression' && o.expr) FaceViseme.expression(String(o.expr));
             if (o.type === 'turn_complete') {
+              FaceViseme.turnDone();
               const interruptedTurn = !!this._dropAssistantAudio;
               this._dropAssistantAudio = false;
               this._resetBargeInDetector();
@@ -6020,6 +6024,7 @@ function showView(id) {
   else {
     if (typeof FaceIdle !== 'undefined') FaceIdle.stop();   // 離開聊聊頁＝待機動態停、省電
     if (window.MuneaFlatFace) window.MuneaFlatFace.stop();
+    FaceViseme.stop();
   }
 }
 
@@ -6027,12 +6032,87 @@ function showView(id) {
 // 通話聲音走雲端臉那條線時，iPhone 讀不到那條線的即時波形，但讀得到連線統計裡的播出音量。
 function flatSkinFor(avatarId = currentAvatarId) {
   const t = templateFor(avatarId);
-  const s = (t && t.flatSkin) || { dir: 'avatars/ningning-rig/', bg: '#BADDD6' };
-  return { dir: s.dir, bg: s.bg, aspect: 1536 / 2752 };
+  const s = (t && t.flatSkin) || { dir: 'avatars/ningning-rig/', bg: '#BADDD6', expressive: true };
+  return { dir: s.dir, bg: s.bg, aspect: 1536 / 2752, expressive: !!s.expressive };
 }
+
+// 寧寧多嘴型＋表情（2026-11-21 草稿，待 Edward 看過才開）：開關 localStorage munea.faceExpressive = '1'，預設關。
+// 開＝① 聊聊頁多載 7 張嘴型／表情貼片 ② 通話中把她播出的聲音接一條分支去量母音，照母音換嘴型
+//      ③ 語音主機送來的 face_expression 事件換表情（主機那邊另有開關 MUNEA_FACE_EXPRESSIONS）
+// 關＝跟以前一模一樣：不載多的圖、不量聲音、收到表情事件也不理。
+function faceExpressiveOn() {
+  try { return localStorage.getItem('munea.faceExpressive') === '1'; } catch (e) { return false; }
+}
+const FaceViseme = {
+  on: false, run: null, _loading: null,
+  // 母音嘴型驅動器用到才載（開關關的人一個位元組都不用下載）
+  _loadDriver() {
+    if (window.LipSync && window.LipSync.live) return Promise.resolve(true);
+    if (this._loading) return this._loading;
+    this._loading = new Promise(resolve => {
+      const el = document.createElement('script');
+      el.src = 'src/lipsync-driver.js?v=20261121-expr';
+      el.onload = () => resolve(!!(window.LipSync && window.LipSync.live));
+      el.onerror = () => { this._loading = null; resolve(false); };
+      document.head.appendChild(el);
+    });
+    return this._loading;
+  },
+  // 她的聲音開始播時呼叫（本機播放那條路）：同一個 AudioContext 已經在量就什麼都不做
+  ensure() {
+    if (!this.on) return;
+    const face = window.MuneaFlatFace;
+    const ctx = LiveVoice.playCtx;
+    if (!face || !face.setViseme || !face._has || !face._has.ee || !ctx || ctx.state === 'closed') return;
+    if (this.run && this.run.ctx === ctx) return;
+    if (this._pending === ctx) return;
+    this._pending = ctx;
+    this._loadDriver().then(ok => {
+      this._pending = null;
+      if (!ok || !this.on || ctx.state === 'closed' || (this.run && this.run.ctx === ctx)) return;
+      const tap = LiveVoice._ensureLocalPlaybackGain();
+      if (!tap) return;
+      this.stop();
+      try {
+        const run = window.LipSync.live(tap, {
+          set: (open, shape) => { try { face.setViseme(open, shape); } catch (e) {} },
+          idle: () => {},
+        }, { ctx });
+        run.ctx = ctx;
+        this.run = run;
+      } catch (e) { this.run = null; }
+    });
+  },
+  stats() { try { return this.run ? this.run.stats() : null; } catch (e) { return null; } },
+  stop() {
+    const run = this.run; this.run = null;
+    if (run) { try { run.stop(); } catch (e) {} }
+  },
+  // 語音主機送來的表情（每輪最多一次）
+  expression(expr) {
+    if (!this.on) return;
+    clearTimeout(this._listenTimer);
+    try { if (window.MuneaFlatFace) window.MuneaFlatFace.setExpression(expr); } catch (e) {}
+  },
+  // 她開口了：還掛著「傾聽」就收回一般表情（傾聽是給「換你講」的時候用的）
+  turnStart() {
+    if (!this.on) return;
+    clearTimeout(this._listenTimer);
+    try { const F = window.MuneaFlatFace; if (F && F._exprWant === 'listen') F.setExpression('neutral'); } catch (e) {}
+  },
+  // 她這一輪講完：1.2 秒後換回「傾聽」（換你講了）
+  turnDone() {
+    if (!this.on) return;
+    clearTimeout(this._listenTimer);
+    this._listenTimer = setTimeout(() => { try { if (window.MuneaFlatFace) window.MuneaFlatFace.setExpression('listen'); } catch (e) {} }, 1200);
+  },
+};
+window.MuneaFaceViseme = FaceViseme;   // 量效能／診斷用（stats()）
 function startFlatFace() {
   const face = window.MuneaFlatFace;
   if (!face) return;
+  face.expressive = faceExpressiveOn();
+  FaceViseme.on = face.expressive;
   face.setSkin(flatSkinFor());   // 誰在陪就換誰的圖（寧寧／沐沐）
   face.speaking = () => {
     try { return !!callConnected && speechActive(); } catch (e) { return false; }

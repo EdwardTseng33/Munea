@@ -10,7 +10,10 @@
 (function () {
   'use strict';
   var DIR = 'avatars/ningning-rig/';
-  var SKIN = { bg: '#BADDD6', aspect: 1536 / 2752, dir: DIR };
+  // expressive：這個角色有沒有多嘴型／表情貼片（目前只有寧寧）。沒有的角色不去要那 7 張圖。
+  var SKIN = { bg: '#BADDD6', aspect: 1536 / 2752, dir: DIR, expressive: true };
+  var EXTRA = { ee: 'mouth-ee', oo: 'mouth-oo', oh: 'mouth-oh', msmile: 'mouth-smile',
+    brows: 'brows-concern', esoft: 'eyes-soft', esmile: 'eyes-smile' };
   var POLL_MS = 90;          // 問一次「現在播出的聲音多大」的間隔
   var LEVEL_FRESH_MS = 350;  // 超過這麼久沒拿到音量，就改用講話節奏模擬嘴型
 
@@ -23,6 +26,8 @@
 
   var F = {
     root: null, stage: null, body: null, img: {}, raf: 0, running: false, skin: SKIN,
+    // 多嘴型＋表情的總開關（app.js 依 localStorage munea.faceExpressive 設；預設關＝跟以前一模一樣、也不載多的圖）
+    expressive: false,
     // 由 app.js 接上：現在是不是她在講話、目前播出去的音量（0～1；拿不到回 -1）
     speaking: function () { return false; },
     sampleLevel: null,
@@ -86,20 +91,19 @@
       if (!this.root) return Promise.resolve();
       this.root.style.background = skin.bg;
       this.stage.style.aspectRatio = String(skin.aspect);
-      return Promise.all([
+      var jobs = [
         this._load(this.img.body, skin.dir + 'body.webp'),
         this._load(this.img.half, skin.dir + 'mouth-half.webp'),
         this._load(this.img.open, skin.dir + 'mouth-open.webp'),
         this._load(this.img.eyes, skin.dir + 'eyes-closed.webp'),
-        // 沒有這幾張的角色：載入失敗就記成「沒有」，嘴型與表情自動退回舊行為
-        this._load(this.img.ee, skin.dir + 'mouth-ee.webp', 'ee'),
-        this._load(this.img.oo, skin.dir + 'mouth-oo.webp', 'oo'),
-        this._load(this.img.oh, skin.dir + 'mouth-oh.webp', 'oh'),
-        this._load(this.img.msmile, skin.dir + 'mouth-smile.webp', 'msmile'),
-        this._load(this.img.brows, skin.dir + 'brows-concern.webp', 'brows'),
-        this._load(this.img.esoft, skin.dir + 'eyes-soft.webp', 'esoft'),
-        this._load(this.img.esmile, skin.dir + 'eyes-smile.webp', 'esmile'),
-      ]);
+      ];
+      // 多的嘴型／表情貼片：開關開、而且這個角色有，才去載；否則一張都不要（沐沐不會多出 7 個找不到圖的請求）
+      var extras = !!(this.expressive && skin.expressive);
+      for (var k in EXTRA) {
+        if (extras) jobs.push(this._load(this.img[k], skin.dir + EXTRA[k] + '.webp', k));
+        else { this._has[k] = false; this.img[k].removeAttribute('src'); this.img[k].style.visibility = 'hidden'; }
+      }
+      return Promise.all(jobs);
     },
 
     // 外面（聲音分析）每一小段報一次：張口量 0～1、母音 a/e/i/o/u/sib/sil/closed

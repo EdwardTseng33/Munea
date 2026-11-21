@@ -289,18 +289,31 @@
   }
   function countShapes(arr) { var m = {}, i; for (i = 0; i < arr.length; i++) m[arr[i]] = (m[arr[i]] || 0) + 1; return m; }
 
-  /* ---------- 即時串流（之後接聊聊的真聲音軌）：同一套特徵，門檻改成邊聽邊估 ---------- */
+  /* ---------- 即時串流（聊聊通話中她播出的聲音）：同一套特徵，門檻改成邊聽邊估 ----------
+     2026-11-21：App 的聲音在 LiveVoice 自己的 AudioContext 裡播，分析器必須建在同一個 context，
+     所以 opts.ctx 可以傳進來；那個 context 關掉（掛斷）就自己停。input 可以是 MediaStream 或任何 AudioNode
+     （只「接一條分支」出來量，不改原本的播放路線、不出聲）。
+     回傳 { stop, stats }：stats() 給效能量測用——跑了幾格、每格平均花幾毫秒、嘴形一秒換幾次。 */
   function live(input, adapter, opts) {
     opts = opts || {};
-    var c = audioCtx(), node = input;
+    var c = opts.ctx || audioCtx(), node = input;
     if (input && typeof input.getAudioTracks === 'function') node = c.createMediaStreamSource(input);
     var an = c.createAnalyser(); an.fftSize = 2048; node.connect(an);
     var buf = new Float32Array(an.fftSize), A = makeAnalyzer(c.sampleRate);
     var floorDb = -60, topDb = -20, open = 0, state = { shape: 'sil', since: 0, prev: 'sil' }, on = true, recent = [];
+    var perf = { frames: 0, ms: 0, maxMs: 0, changes: 0, voicedFrames: 0, t0: (global.performance ? performance.now() : 0) };
+    var raf = global.requestAnimationFrame || function (f) { return setTimeout(function () { f(); }, 16); };
+    function finish() {
+      on = false;
+      try { node.disconnect(an); } catch (e) {}
+      if (adapter.idle) adapter.idle();
+    }
     (function tick() {
       if (!on) return;
+      if (c.state === 'closed') { finish(); return; }
+      var t0 = performance.now();
       an.getFloatTimeDomainData(buf);
-      var f = A.frame(buf, buf.length - A.winN), db = 20 * Math.log10(f.rms + 1e-6), now = performance.now() / 1000;
+      var f = A.frame(buf, buf.length - A.winN), db = 20 * Math.log10(f.rms + 1e-6), now = t0 / 1000;
       floorDb += (db < floorDb) ? (db - floorDb) * 0.2 : 0.02;           // 地板：跟著安靜段慢慢走
       if (db > topDb) topDb = db; else topDb -= 0.01;                   // 天花：跟著最響的慢慢退
       var r = Math.pow(clamp01((db - (floorDb + 6)) / Math.max(12, topDb - (floorDb + 6))), 0.75);
@@ -309,12 +322,25 @@
       recent.push(r); if (recent.length > 30) recent.shift();
       var closed = r < 0.12 && Math.max.apply(null, recent) > 0.3;
       if (closed) want = 'closed';
-      if (want !== state.shape && (want === state.prev || want === 'sil' || want === 'closed') && now - state.since >= 0.07) { state.shape = want; state.since = now; }
+      if (want !== state.shape && (want === state.prev || want === 'sil' || want === 'closed') && now - state.since >= 0.07) {
+        state.shape = want; state.since = now; perf.changes++;
+      }
       state.prev = want;
+      if (state.shape !== 'sil') perf.voicedFrames++;
       adapter.set(closed ? 0 : open, state.shape, { stress: false, big: false, closed: closed, t: now });
-      requestAnimationFrame(tick);
+      var dt = performance.now() - t0;
+      perf.frames++; perf.ms += dt; if (dt > perf.maxMs) perf.maxMs = dt;
+      raf(tick);
     })();
-    return { stop: function () { on = false; try { node.disconnect(an); } catch (e) {} if (adapter.idle) adapter.idle(); } };
+    return {
+      stop: finish,
+      stats: function () {
+        var secs = Math.max(0.001, (performance.now() - perf.t0) / 1000);
+        return { frames: perf.frames, fps: Math.round(perf.frames / secs), avgMs: +(perf.ms / Math.max(1, perf.frames)).toFixed(3),
+                 maxMs: +perf.maxMs.toFixed(2), shapeChangesPerSec: +(perf.changes / secs).toFixed(1),
+                 voicedShare: +(perf.voicedFrames / Math.max(1, perf.frames)).toFixed(2), seconds: +secs.toFixed(1) };
+      }
+    };
   }
 
   // QA 用：吐出逐格紀錄（時間、指令張口、實際畫出的張口、嘴形）
