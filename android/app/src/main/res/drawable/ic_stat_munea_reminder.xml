@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知列小圖示（2026-11-20 提醒流程）：沿用 App 設定頁「通知中心」那顆鈴鐺的線條（web/src/notify.js settingsIcon），
+     不是品牌標誌。Android 通知小圖示只看形狀（白色＋透明），顏色由 capacitor.config.json 的 iconColor（品牌青綠）上。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M18,8a6,6 0,0 0,-12 0c0,7 -3,7 -3,9h18c0,-2 -3,-2 -3,-9"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M10,21h4"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>

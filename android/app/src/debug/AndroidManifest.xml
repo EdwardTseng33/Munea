@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 只進 debug 包（不進正式包）：雲端真機測試用的「在 App 網頁殼跑一段 JS 並取回結果」小門。
+     只有 shell（adb／測試工具以 shell 身分送）持有 DUMP 權限能叫它，一般 App 叫不動。 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="net.munea.app.debugbridge.DebugBridgeProvider"
+            android:authorities="net.munea.app.debugbridge"
+            android:exported="false" />
+        <receiver
+            android:name="net.munea.app.debugbridge.DebugEvalReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="net.munea.app.debug.EVAL" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
