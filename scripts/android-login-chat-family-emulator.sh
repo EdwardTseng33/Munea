@@ -28,7 +28,7 @@ grep -q "缺 qaEmail" emulator-out/no-creds-logcat.txt || { echo "FAIL: A 沒有
 grep -q "FAILURES" emulator-out/no-creds-instrument.txt || { echo "FAIL: A 應該要失敗"; OVERALL=1; }
 [ "$ELAPSED" -lt 120 ] || { echo "FAIL: A 太慢 ($ELAPSED s)"; OVERALL=1; }
 echo "=== B: fake session ==="
-run fake-session -e class net.munea.app.remindertest.LoginChatFamilyTest -e fakeSession 1 -e inviteOnModel "" -e callSeconds 5
+run fake-session -e class net.munea.app.remindertest.LoginChatFamilyTest -e fakeSession 1 -e inviteOnModel none -e callSeconds 5
 grep -q "PASS 登入" emulator-out/fake-session-logcat.txt || { echo "FAIL: B 假證登入沒過"; OVERALL=1; }
 grep -q "CALL-STATE" emulator-out/fake-session-logcat.txt || { echo "FAIL: B 沒跑到撥號"; OVERALL=1; }
 grep -q "PASS 家人頁打得開" emulator-out/fake-session-logcat.txt || { echo "FAIL: B 家人頁沒開"; OVERALL=1; }
