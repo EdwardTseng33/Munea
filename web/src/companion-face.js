@@ -13,7 +13,19 @@
   // expressive：這個角色有沒有多嘴型／表情貼片（目前只有寧寧）。沒有的角色不去要那 7 張圖。
   var SKIN = { bg: '#BADDD6', aspect: 1536 / 2752, dir: DIR, expressive: true };
   var EXTRA = { ee: 'mouth-ee', oo: 'mouth-oo', oh: 'mouth-oh', msmile: 'mouth-smile',
-    brows: 'brows-concern', esoft: 'eyes-soft', esmile: 'eyes-smile' };
+    brows: 'brows-concern', esoft: 'eyes-soft', esmile: 'eyes-smile',
+    // 11/21 第三輪：手勢（身體＋手臂那一層的貼片，疊在全身圖上、臉的貼片下面）
+    gWaveMid: 'gesture-wave-mid', gWaveUp: 'gesture-wave-up', gWaveTilt: 'gesture-wave-tilt',
+    gChestMid: 'gesture-chest-mid', gChestOn: 'gesture-chest-on', gPalm: 'gesture-palm' };
+  // 手勢＝一串關鍵格：[貼片, 停多久毫秒, 換到這一格的淡入毫秒]；最後回到放下（淡出）
+  var GESTURES = {
+    wave: [['gWaveMid', 130, 120], ['gWaveUp', 260, 90], ['gWaveTilt', 200, 80], ['gWaveUp', 200, 80],
+      ['gWaveTilt', 200, 80], ['gWaveUp', 240, 80], ['gWaveMid', 130, 90], [null, 0, 220]],
+    chest: [['gChestMid', 150, 200], ['gChestOn', 1700, 120], ['gChestMid', 150, 120], [null, 0, 240]],
+    palm: [['gPalm', 1500, 260], [null, 0, 260]] };
+  var MOUTH_FADE_MS = 60;    // 相鄰兩個嘴型交叉淡化（11/21 第三輪；只在開關開時用；調研：扁平色塊過渡要短，60 毫秒內）
+  var CLOSE_FADE_MS = 35;    // ㄅㄆㄇ 閉嘴是「快閃」，換得更快
+  var MOUTH_HOLD_MS = 66;    // 每個嘴型至少停 2 格（30 格／秒）
   var POLL_MS = 90;          // 問一次「現在播出的聲音多大」的間隔
   var LEVEL_FRESH_MS = 350;  // 超過這麼久沒拿到音量，就改用講話節奏模擬嘴型
 
@@ -34,6 +46,8 @@
     _pollTimer: 0, _lvl: -1, _lvlAt: 0, _gainMax: 0.06, _open: 0, _mouth: 'closed', _mouthSince: 0,
     _blinkUntil: 0, _nextBlink: 0, _secondBlinkAt: 0, _syl: 0, _sylUntil: 0, _still: false, _eyesClosed: false,
     _has: {}, _vis: null, _visAt: -1e9, _expr: 'neutral', _exprWant: 'neutral', _eyeShown: 'none', _browsOn: false,
+    // 第三輪：嘴型來源（app.js 的時間軸；每格問一次「現在聽到的那一刻是哪個嘴」）、嘴型淡化、手勢
+    visemeProvider: null, _mouthPrev: null, _gesture: null, _gLayer: null, _gPrev: null, _gSince: 0, _gFade: 0,
 
     mount: function (host) {
       if (this.root || !host) return !!this.root;
@@ -44,6 +58,8 @@
       this.body = el('ff-part ff-body', this.stage);
       // 全身圖 → 嘴兩段 → 閉眼放最後（8/12 眨眼鬼影教訓：覆蓋貼圖一律畫在最上面）
       this.img.body = this._img('body', this.body);
+      // 手勢層：在全身圖上、所有臉的貼片下面
+      ['gWaveMid', 'gWaveUp', 'gWaveTilt', 'gChestMid', 'gChestOn', 'gPalm'].forEach(function (k) { this.img[k] = this._img(k, this.body); }, this);
       this.img.half = this._img('half', this.body);
       this.img.open = this._img('open', this.body);
       // 11/21 草稿：多的嘴型、眉毛、表情眼；閉眼仍放最上面
@@ -140,6 +156,10 @@
       clearInterval(this._pollTimer);
       this._pollTimer = 0;
       this._setMouth('closed', performance.now());
+      this._fadeMouth(performance.now() + 1000);
+      this._gesture = null; this._gPrev = null;
+      if (this._gLayer && this.img[this._gLayer]) { this.img[this._gLayer].style.visibility = 'hidden'; this.img[this._gLayer].style.opacity = ''; }
+      this._gLayer = null;
       this._expr = this._exprWant = 'neutral';
       this._setEyes(false);
     },
@@ -158,10 +178,66 @@
     // 貼片用顯示／隱藏切換、不用透明度淡入淡出：淡入淡出那一瞬間會露出兩層疊影
     _setMouth: function (m, now) {
       if (m === this._mouth) return;
+      var prev = this._mouth;
       this._mouth = m;
       this._mouthSince = now;
       var keys = ['half', 'open', 'ee', 'oo', 'oh', 'msmile'];
-      for (var i = 0; i < keys.length; i++) this.img[keys[i]].style.visibility = m === keys[i] ? 'visible' : 'hidden';
+      if (!this.expressive || !this.visemeProvider) {
+        for (var i = 0; i < keys.length; i++) { this.img[keys[i]].style.visibility = m === keys[i] ? 'visible' : 'hidden'; this.img[keys[i]].style.opacity = ''; }
+        return;
+      }
+      // 交叉淡化：新嘴從 0 淡到 1、舊嘴先留著，淡完才藏（全程不會露出底下的閉嘴，也不會兩張半透明疊在一起太久）
+      for (var j = 0; j < keys.length; j++) {
+        var k = keys[j], im = this.img[k];
+        if (k === m) { im.style.visibility = 'visible'; im.style.opacity = '0'; }
+        else if (k === prev) { im.style.visibility = 'visible'; im.style.opacity = '1'; }
+        else { im.style.visibility = 'hidden'; im.style.opacity = ''; }
+      }
+      this._mouthPrev = prev;
+    },
+
+    _fadeMouth: function (now) {
+      if (!this.expressive || !this.visemeProvider) return;
+      var p = Math.min(1, (now - this._mouthSince) / (this._mouth === 'closed' ? CLOSE_FADE_MS : MOUTH_FADE_MS));
+      var cur = this.img[this._mouth], prev = this._mouthPrev && this.img[this._mouthPrev];
+      if (cur) cur.style.opacity = p >= 1 ? '' : p.toFixed(3);
+      if (prev) {
+        if (this._mouth === 'closed') prev.style.opacity = (1 - p).toFixed(3);   // 閉嘴＝原圖：舊嘴淡出
+        if (p >= 1) { prev.style.visibility = 'hidden'; prev.style.opacity = ''; this._mouthPrev = null; }
+      }
+    },
+
+    // 手勢：開關開、角色有貼片才做；同時只做一個，做完自己放下
+    playGesture: function (name, now) {
+      var seq = GESTURES[name];
+      var need = { wave: 'gWaveUp', chest: 'gChestOn', palm: 'gPalm' }[name];
+      if (!seq || !this.expressive || !this._has[need]) return false;
+      if (this._gesture) return false;
+      this._gesture = { seq: seq, step: -1, until: 0 };
+      this._gNext(now == null ? performance.now() : now);
+      return true;
+    },
+
+    _gNext: function (now) {
+      var G = this._gesture; G.step++;
+      var kf = G.seq[G.step];
+      if (!kf) { this._gesture = null; return; }
+      this._gPrev = this._gLayer; this._gLayer = kf[0]; this._gSince = now; this._gFade = kf[2];
+      G.until = now + kf[2] + kf[1];
+      if (this._gLayer) { var im = this.img[this._gLayer]; im.style.visibility = 'visible'; im.style.opacity = '0'; }
+    },
+
+    _stepGesture: function (now) {
+      var G = this._gesture;
+      if (!G && !this._gPrev) return;
+      var p = this._gFade ? Math.min(1, (now - this._gSince) / this._gFade) : 1;
+      var cur = this._gLayer && this.img[this._gLayer], prev = this._gPrev && this.img[this._gPrev];
+      if (cur) cur.style.opacity = p >= 1 ? '' : p.toFixed(3);
+      if (prev) {
+        if (!this._gLayer) prev.style.opacity = (1 - p).toFixed(3);     // 放下：最後一格淡出
+        if (p >= 1) { prev.style.visibility = 'hidden'; prev.style.opacity = ''; this._gPrev = null; }
+      }
+      if (G && now >= G.until) this._gNext(now);
     },
 
     // 眼睛同一時間只露一種：閉眼／彎眼／柔和眼／原圖（彎眼上面再疊閉眼會露出兩層）
@@ -204,6 +280,9 @@
     _frame: function (now) {
       var t = now / 1000;
       var speaking = this.speaking();
+      // 第三輪：有時間軸就直接照它（字幕母音＋真的聽到那一刻；沒聲音＝閉嘴），不再乘亂數節奏
+      var direct = null;
+      if (this.expressive && this.visemeProvider) { try { direct = this.visemeProvider(now); } catch (e) { direct = null; } }
 
       // 嘴：只有她真的在講話才動。音量決定「張多大」，再乘上音節節奏讓嘴一開一合——
       // 通話中每 0.09 秒才讀得到一次音量，太粗；只照音量的話用寧寧真聲音模擬有 78% 時間張到最大。
@@ -228,15 +307,21 @@
       this._lastT = now;
       var tau = target > this._open ? 21 : 51;
       this._open += (target - this._open) * (1 - Math.exp(-dt / tau));
+      if (direct) this._open = direct.open;
       // 有母音資料：嘴形照母音選（那份資料的嘴形本身已經停得住，至少 70 毫秒）
-      var want = fresh ? this._mouthFor(this._vis.shape, this._open)
+      var want = direct ? (this._has[direct.mouth] === false ? (direct.mouth === 'closed' ? 'closed' : (direct.open < 0.55 ? 'half' : 'open')) : direct.mouth)
+        : fresh ? this._mouthFor(this._vis.shape, this._open)
         : (this._open < 0.16 ? 'closed' : (this._open < 0.55 ? 'half' : 'open'));
       // 關心的時候講話嘴巴收一點：大張嘴配眉頭上抬會變成「嚇到」
       if (this._expr === 'concern') want = want === 'open' ? 'half' : (want === 'oh' ? 'oo' : want);
       // 沒在講話時：微笑表情就閉嘴微笑
-      if (want === 'closed' && !speaking && this._expr === 'smile' && this._has.msmile) want = 'msmile';
-      // 嘴形至少停 60 毫秒，避免在兩段之間來回閃
-      if (want !== this._mouth && now - this._mouthSince >= 60) this._setMouth(want, now);
+      if (want === 'closed' && (direct ? direct.code === 'sil' : !speaking) && this._expr === 'smile' && this._has.msmile) want = 'msmile';
+      // 嘴形至少停 60 毫秒（有時間軸時 66 毫秒＝2 格），避免在兩段之間來回閃
+      // ㄅㄆㄇ 閉嘴不讓步：不用等上一個嘴停滿 2 格
+      var urgent = direct && direct.code === 'M';
+      if (want !== this._mouth && (urgent || now - this._mouthSince >= (direct ? MOUTH_HOLD_MS : 60))) this._setMouth(want, now);
+      this._fadeMouth(now);
+      this._stepGesture(now);
 
       // 換表情：趁眨一下的時候換（閉眼那 170 毫秒裡換掉眼睛和眉毛，看起來就不會硬跳）
       if (this._exprWant !== this._expr) {

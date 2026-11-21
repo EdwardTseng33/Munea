@@ -43,7 +43,7 @@ eval(read('web/src/companion-face.js'));
 const F = window.MuneaFlatFace;
 F.mount(fakeEl());
 
-const NEW_PARTS = /mouth-(ee|oo|oh|smile)|eyes-(smile|soft)|brows-concern/;
+const NEW_PARTS = /mouth-(ee|oo|oh|smile)|eyes-(smile|soft)|brows-concern|gesture-/;
 const NING = { dir: 'avatars/ningning-rig/', bg: '#BADDD6', aspect: 1536 / 2752, expressive: true };
 const MUMU = { dir: 'avatars/mumu-rig/', bg: '#F6EBD7', aspect: 1536 / 2752, expressive: false };
 
@@ -64,14 +64,14 @@ const MUMU = { dir: 'avatars/mumu-rig/', bg: '#F6EBD7', aspect: 1536 / 2752, exp
   F.expressive = true;
   requested.length = 0;
   await F.setSkin(MUMU);
-  assert.strictEqual(requested.filter(u => NEW_PARTS.test(u)).length, 0, '沐沐沒有貼片：不准去要那 7 張圖');
+  assert.strictEqual(requested.filter(u => NEW_PARTS.test(u)).length, 0, '沐沐沒有貼片：不准去要那 13 張圖');
   assert.ok(Object.values(F._has).every(v => v === false), '沐沐：多的嘴型都要記成沒有');
 
   // 3. 開關開＋寧寧
   requested.length = 0;
   await F.setSkin(NING);
-  assert.strictEqual(requested.filter(u => NEW_PARTS.test(u)).length, 7, '開關開＋寧寧：7 張貼片都要載');
-  assert.ok(Object.values(F._has).every(v => v === true), '寧寧的 7 張貼片都要在 web/avatars/ningning-rig/');
+  assert.strictEqual(requested.filter(u => NEW_PARTS.test(u)).length, 13, '開關開＋寧寧：7 張臉＋6 張手勢貼片都要載');
+  assert.ok(Object.values(F._has).every(v => v === true), '寧寧的 13 張貼片都要在 web/avatars/ningning-rig/');
   assert.strictEqual(F._mouthFor('i', 0.6), 'ee');
   assert.strictEqual(F._mouthFor('u', 0.6), 'oo');
   assert.strictEqual(F._mouthFor('sil', 0.9), 'closed');
@@ -80,15 +80,27 @@ const MUMU = { dir: 'avatars/mumu-rig/', bg: '#F6EBD7', aspect: 1536 / 2752, exp
   const app = read('web/src/app.js');
   assert.match(app, /localStorage\.getItem\('munea\.faceExpressive'\) === '1'/, '開關只認 munea.faceExpressive === 1');
   assert.match(app, /face\.expressive = faceExpressiveOn\(\);\s*\n\s*FaceViseme\.on = face\.expressive;\s*\n\s*face\.setSkin\(/, '進聊聊頁要先定開關再換圖');
-  assert.match(app, /if \(FaceViseme\.on\) FaceViseme\.ensure\(\);/, '量聲音那條分支要先看開關');
-  assert.match(app, /expression\(expr\) \{\s*\n\s*if \(!this\.on\) return;/, '表情事件要先看開關');
+  assert.match(app, /if \(FaceViseme\.on\) FaceViseme\.audio\(f, this\.playHead\);/, '聲音交給時間軸前要先看開關');
+  assert.match(app, /serverEvent\(o\) \{\s*\n\s*if \(!this\.on \|\| !o\) return;/, '表情事件要先看開關');
+  assert.match(app, /caption\(text\) \{\s*\n\s*if \(!this\.on \|\| !text\) return;/, '字幕交給時間軸前要先看開關');
   assert.match(app, /expressive: !!s\.expressive/, 'flatSkinFor 要把角色有沒有貼片帶給臉');
   const profile = read('web/src/companion-profile.js');
   assert.strictEqual((profile.match(/expressive: true/g) || []).length, 1, '目前只有寧寧有表情貼片');
-  assert.ok(!/lipsync-driver/.test(read('web/index.html')), '嘴型驅動器用到才載，index.html 不直接引用');
+  for (const f of ['lipsync-driver', 'zh-vowel-table', 'viseme-timeline']) assert.ok(!new RegExp(f).test(read('web/index.html')), f + ' 用到才載，index.html 不直接引用');
+  // 手勢：開關關或角色沒有貼片就不做
+  F.expressive = false; assert.strictEqual(F.playGesture('wave', 0), false, '開關關：不准揮手');
+  F.expressive = true; await F.setSkin(MUMU); assert.strictEqual(F.playGesture('wave', 0), false, '沐沐沒有手勢貼片：不准揮手');
+  await F.setSkin(NING); assert.strictEqual(F.playGesture('wave', 0), true, '寧寧開關開：可以揮手');
+  // 時間軸：字幕的字查得到嘴型、ㄅㄆㄇ 先閉
+  global.LipSync = window.LipSync; eval(read('web/src/zh-vowel-table.js')); eval(read('web/src/viseme-timeline.js'));
+  const VT = window.MuneaVisemeTimeline;
+  assert.deepStrictEqual(VT.tokenize('媽媽，我說'), ['MA', 'MA', '|', 'UO', 'UO']);
+  assert.strictEqual(VT.syllableCount('阿姨早安，昨天'), 6);
+  assert.deepStrictEqual(VT.tokenize('おはよう', {}), [], '日文不走字幕法（漢字讀音查不到）');
+  assert.match(app, /LEAD_S: 0\.0[5-8]\d*/, '嘴要比聲音早 50～80 毫秒（不能剛好對齊、更不能晚）');
   for (const f of ['mouth-ee', 'mouth-oo', 'mouth-oh', 'mouth-smile', 'eyes-smile', 'eyes-soft', 'brows-concern']) {
     assert.ok(!fs.existsSync(path.join(WEB, 'avatars/mumu-rig', f + '.webp')) || /mumu-flat-male[\s\S]*expressive: true/.test(profile),
       '沐沐補了貼片就要在 companion-profile 標 expressive');
   }
-  console.log('Face expressive gate PASS：預設關只載 4 張、沐沐不多要圖、寧寧開了才載 7 張貼片並照母音選嘴');
+  console.log('Face expressive gate PASS：預設關只載 4 張、沐沐不多要圖、寧寧開了才載 13 張貼片；手勢與字幕嘴型都在開關後面；嘴比聲音早 50～80 毫秒');
 })().catch(e => { console.error('Face expressive gate FAIL：' + e.message); process.exit(1); });

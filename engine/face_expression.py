@@ -11,6 +11,12 @@
   累積超過 NEUTRAL_AFTER_CHARS 個字都沒有關鍵字，就送一次 neutral（把上一輪的表情收回來）。
 - 優先順序：關心 > 微笑 > 傾聽（說到痛、難過時寧可關心，不要笑）。
 - 開關：環境變數 MUNEA_FACE_EXPRESSIONS=1 才會送；預設關＝正式線行為完全不變。
+
+第三輪（11/21 晚）：
+- 事件多帶 pos＝觸發的那個字在這一輪字幕的第幾個字元。聲音和字幕都比她講話快很多（測試機量到 22 秒的話
+  3～4 秒就送完），App 收到事件時那個字還沒講到；App 照 pos 等那個字真的被講出來才換表情。
+- 手勢（gesture／gpos，每輪最多一個）：這通電話她的第一句＝揮手（wave，從第一個字開始）；
+  關心＝手放胸口（chest）；沒有情緒關鍵字但在解釋事情（因為、所以、建議、記得…）＝攤開手掌（palm）。
 """
 
 from __future__ import annotations
@@ -38,6 +44,13 @@ _SMILE = re.compile(
     r"おはよう|こんにちは|こんばんは|よかった|すごい|嬉しい|うれしい|ありがとう|素敵|おめでとう",
     re.IGNORECASE,
 )
+# 解釋：沒有情緒字、但在說明事情（攤開手掌）
+_EXPLAIN = re.compile(
+    r"因為|所以|建議|可以試試|記得|首先|其實|比如|例如|也就是說|簡單說|"
+    r"\b(?:because|so you can|i suggest|i recommend|remember to|for example|first)\b|"
+    r"なぜなら|だから|おすすめ|例えば|まず",
+    re.IGNORECASE,
+)
 # 傾聽：她在接話、請對方繼續說
 _LISTEN = re.compile(
     r"嗯嗯|我在聽|你說|慢慢說|然後呢|後來呢|我在這裡|說說看|"
@@ -51,18 +64,22 @@ def enabled() -> bool:
     return os.environ.get("MUNEA_FACE_EXPRESSIONS", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def classify(text: str) -> str | None:
-    """一段她說的話 → 表情；沒有關鍵字回 None。"""
+def match(text: str) -> tuple[str, int] | None:
+    """一段她說的話 → (表情, 觸發字的位置)；沒有關鍵字回 None。"""
     t = str(text or "")
     if not t.strip():
         return None
-    if _CONCERN.search(t):
-        return "concern"
-    if _SMILE.search(t):
-        return "smile"
-    if _LISTEN.search(t):
-        return "listen"
+    for expr, rx in (("concern", _CONCERN), ("smile", _SMILE), ("listen", _LISTEN)):
+        m = rx.search(t)
+        if m:
+            return expr, m.start()
     return None
+
+
+def classify(text: str) -> str | None:
+    """一段她說的話 → 表情；沒有關鍵字回 None。"""
+    hit = match(text)
+    return hit[0] if hit else None
 
 
 def next_event(st: dict, turn_text: str, new_turn: bool) -> dict | None:
@@ -75,12 +92,26 @@ def next_event(st: dict, turn_text: str, new_turn: bool) -> dict | None:
         return None
     if new_turn:
         st["face_expr_sent"] = False
+        st["face_turns"] = int(st.get("face_turns") or 0) + 1
     if st.get("face_expr_sent"):
         return None
-    expr = classify(turn_text)
-    if expr is None and len(re.sub(r"\s+", "", str(turn_text or ""))) >= NEUTRAL_AFTER_CHARS:
-        expr = "neutral"
-    if expr is None:
+    text = str(turn_text or "")
+    hit = match(text)
+    explain = _EXPLAIN.search(text) if hit is None else None
+    if hit is None and explain is not None:
+        hit = ("neutral", explain.start())
+    if hit is None and len(re.sub(r"\s+", "", text)) >= NEUTRAL_AFTER_CHARS:
+        hit = ("neutral", len(text))
+    if hit is None:
         return None
     st["face_expr_sent"] = True
-    return {"type": "face_expression", "expr": expr}
+    expr, pos = hit
+    evt = {"type": "face_expression", "expr": expr, "pos": pos}
+    # 手勢：每輪最多一個；第一句揮手優先
+    if int(st.get("face_turns") or 0) == 1:
+        evt["gesture"], evt["gpos"] = "wave", 0
+    elif expr == "concern":
+        evt["gesture"], evt["gpos"] = "chest", pos
+    elif explain is not None:
+        evt["gesture"], evt["gpos"] = "palm", explain.start()
+    return evt

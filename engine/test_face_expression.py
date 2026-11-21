@@ -42,21 +42,36 @@ def test_concern_wins_over_smile():
 
 def test_once_per_turn(on):
     st = {}
-    assert fe.next_event(st, "早安", True) == {"type": "face_expression", "expr": "smile"}
+    # 這通電話她的第一句：表情照關鍵字，手勢一律揮手（從第一個字開始）
+    assert fe.next_event(st, "早安", True) == {"type": "face_expression", "expr": "smile", "pos": 0, "gesture": "wave", "gpos": 0}
     # 同一輪後面又出現關心字：不再送第二次
     assert fe.next_event(st, "早安，你膝蓋還痛嗎", False) is None
-    # 下一輪重新算
-    assert fe.next_event(st, "膝蓋還痛嗎", True) == {"type": "face_expression", "expr": "concern"}
+    # 下一輪重新算；關心＝手放胸口，位置＝觸發字
+    assert fe.next_event(st, "膝蓋還痛嗎", True) == {"type": "face_expression", "expr": "concern", "pos": 3, "gesture": "chest", "gpos": 3}
 
 
 def test_neutral_after_enough_text_without_keywords(on):
-    st = {}
+    st = {"face_turns": 1}
     short = "對了，十點要吃藥"
     assert fe.next_event(st, short, True) is None          # 還太短，先不判
     longer = short + "，我會在時間到的時候再提醒你一次喔"
     assert len(longer) >= fe.NEUTRAL_AFTER_CHARS
-    assert fe.next_event(st, longer, False) == {"type": "face_expression", "expr": "neutral"}
+    assert fe.next_event(st, longer, False) == {"type": "face_expression", "expr": "neutral", "pos": len(longer)}
     assert fe.next_event(st, longer + "，好不好", False) is None
+
+
+def test_explaining_opens_palm(on):
+    st = {"face_turns": 1}
+    evt = fe.next_event(st, "對了，因為血壓藥", True)
+    assert evt == {"type": "face_expression", "expr": "neutral", "pos": 3, "gesture": "palm", "gpos": 3}
+
+
+def test_pos_points_at_trigger_word(on):
+    """pos 要指到觸發的那個字：App 等那個字真的被講出來才換表情（聲音和字幕都比她講話快很多）。"""
+    st = {"face_turns": 1}
+    text = "你上次說膝蓋會痠"
+    evt = fe.next_event(st, text, True)
+    assert text[evt["pos"]] == "痠"
 
 
 def test_only_known_expressions():

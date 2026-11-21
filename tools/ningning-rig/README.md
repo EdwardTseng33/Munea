@@ -24,3 +24,11 @@
 - App：`localStorage munea.faceExpressive = '1'`——開了才載 7 張貼片、才量母音、才理表情事件；角色要在 `companion-profile.js` 的 `flatSkin` 標 `expressive: true`（目前只有寧寧）。
 - 語音主機：環境變數 `MUNEA_FACE_EXPRESSIONS=1`——開了才看她的字幕送 `{"type":"face_expression","expr":...}`，每輪最多一次（`engine/face_expression.py`）。
 - 守門：`scripts/test-face-expressive-gate.js`（在 `npm run test:ui-contracts` 裡）、`engine/test_face_expression.py`。
+
+## 第三輪（2026-11-21 晚）：手勢＋字幕排嘴型
+
+- 手勢：`lily/l2-gesture/edit-*.txt` 修圖（只動手臂與手、臉頭分毫不動，`--size 2K`）→ `python build_gesture.py <l2/base.png> <l2-gesture> ../../web/avatars/ningning-rig`（頭的範圍內改到要 0 像素）。關鍵格與淡入時間在 `companion-face.js` 的 `GESTURES`。
+- 字表：`python build_vowel_table.py <pypinyin 資料夾> ../../web/src/zh-vowel-table.js`（pypinyin MIT，只在產表時用；Big5 常用字 5401 字 → 1～3 個嘴型）。
+- 時間軸：`web/src/viseme-timeline.js`（聲音先到先算、停頓切段、對標點、段內挑音量低谷切字；對不上就只照音量）。
+- 前後對比：`node eval-lipsync.js <聲音.wav> <turns.json> <第二輪 companion-face.js> [輸出.json]`——圓嘴字、ㄅㄆㄇ 閉嘴、一秒換幾次、一閃而過。
+- 通話中對照影片：`MODE=old|new node expr-live-call-video.js ...`（送資料節奏照測試機量到的：比講話快約 5 倍）。

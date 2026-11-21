@@ -345,7 +345,7 @@
 
   // QA 用：吐出逐格紀錄（時間、指令張口、實際畫出的張口、嘴形）
   function dump() { return log ? { t: log.t, cmd: log.cmd, rendered: log.rendered, shapes: log.shapes, rms: log.rms } : null; }
-  global.LipSync = { load: load, analyze: analyze, play: play, stop: stop, freezeAt: freezeAt, live: live, stats: stats,
+  global.LipSync = { makeAnalyzer: makeAnalyzer, vowelOf: vowelOf, load: load, analyze: analyze, play: play, stop: stop, freezeAt: freezeAt, live: live, stats: stats,
                      dump: dump, HOP: HOP, makeSampler: makeSampler, lastTrack: function () { return lastTrack; } };
   global.__lip = global.LipSync;
 })(window);

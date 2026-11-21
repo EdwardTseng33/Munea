@@ -4409,7 +4409,6 @@ const LiveVoice = {
       }
     } catch (e) {}
     offset = Math.max(offset, this._playbackLeadSeconds());
-    if (FaceViseme.on && !this._turnHasScheduledAudio) FaceViseme.turnStart();
     if (!this._turnHasScheduledAudio) {
       this.playHead = now + offset;
       this._turnHasScheduledAudio = true;
@@ -4418,8 +4417,8 @@ const LiveVoice = {
       this.playHead = now + this._playbackLeadSeconds();
       try { trackProductEvent('voice_playback_underrun', { turn: this._playbackTurn, count: this._playbackUnderruns }); } catch (e) {}
     }
+    if (FaceViseme.on) FaceViseme.audio(f, this.playHead);
     s.start(this.playHead); this.playHead += b.duration;
-    if (FaceViseme.on) FaceViseme.ensure();
     if (!this._srcs) this._srcs = [];
     this._srcs.push(s); s.onended = () => { const k2 = this._srcs.indexOf(s); if (k2 >= 0) this._srcs.splice(k2, 1); this._toListening(); };
     this._toListening();
@@ -5039,6 +5038,7 @@ const LiveVoice = {
               if (this._sameLine && this._faceDirect) Avatar.beginDirectTurn(this._faceDirectTurn);
             }
             if (o.type === 'interrupted' && this.playCtx) {
+              FaceViseme.interrupted();
               this._dropAssistantAudio = true;
               this._stopAssistantPlayback();
             }
@@ -5096,6 +5096,7 @@ const LiveVoice = {
               if (!this._firstAssistantCaptionRecorded) { this._firstAssistantCaptionRecorded = true; voiceCallMark('assistant_first_caption', 'pass'); }
               this._capBuf = (this._capBuf || '') + o.text;
               if (this.onCaption) this.onCaption(this._capBuf);
+              if (FaceViseme.on) FaceViseme.caption(o.text);
             }
             if (o.type === 'uplink_ok') {
               // 伺服器親口說「你的聲音我收到了」＝上行證明。叮聲與「接通了」等這一句。
@@ -5174,9 +5175,9 @@ const LiveVoice = {
                 else if (clean.length >= 24) { this._topicSaved = true; }   // 累積夠長仍不乾淨＝這通沒有適合話題、別硬塞亂碼
               }
             }
-            if (o.type === 'face_expression' && o.expr) FaceViseme.expression(String(o.expr));
+            if (o.type === 'face_expression') FaceViseme.serverEvent(o);
             if (o.type === 'turn_complete') {
-              FaceViseme.turnDone();
+              FaceViseme.turnComplete();
               const interruptedTurn = !!this._dropAssistantAudio;
               this._dropAssistantAudio = false;
               this._resetBargeInDetector();
@@ -6044,67 +6045,137 @@ function faceExpressiveOn() {
   try { return localStorage.getItem('munea.faceExpressive') === '1'; } catch (e) { return false; }
 }
 const FaceViseme = {
-  on: false, run: null, _loading: null,
-  // 母音嘴型驅動器用到才載（開關關的人一個位元組都不用下載）
-  _loadDriver() {
-    if (window.LipSync && window.LipSync.live) return Promise.resolve(true);
+  // 第三輪（11/21 晚）：不再邊播邊聽。聲音一塊塊進來（還沒播）就先算時間軸，字幕的字對上音節，
+  // 播放時問「真的聽到的那一刻（扣掉播放延遲）」是哪個嘴；表情／手勢在那個字被講出來時才換。
+  on: false, tl: null, ctx: null, _loading: null, _pendingAudio: [], _pendingCaps: [], cues: [], _turnText: '', _turnStartPending: true,
+  _stats: { frames: 0, srcCaption: 0, srcSpectrum: 0, pushMs: 0, pushCalls: 0, providerMs: 0, providerCalls: 0 },
+  LEAD_S: 0.065,   // 嘴比聲音早 65 毫秒：畫面早 125 毫秒內看不出來、聲音早 45 毫秒就會被發現（ITU-R BT.1359），所以寧早勿晚
+  // 用到才載：母音分析器、中文字嘴型表、時間軸（開關關的人一個位元組都不用下載）
+  _loadScripts() {
+    if (window.MuneaVisemeTimeline && window.MuneaZhVowels && window.LipSync && window.LipSync.makeAnalyzer) return Promise.resolve(true);
     if (this._loading) return this._loading;
-    this._loading = new Promise(resolve => {
+    const one = src => new Promise(resolve => {
       const el = document.createElement('script');
-      el.src = 'src/lipsync-driver.js?v=20261121-expr';
-      el.onload = () => resolve(!!(window.LipSync && window.LipSync.live));
-      el.onerror = () => { this._loading = null; resolve(false); };
+      el.src = src + '?v=20261121-expr3';
+      el.onload = () => resolve(true); el.onerror = () => resolve(false);
       document.head.appendChild(el);
     });
+    this._loading = one('src/lipsync-driver.js').then(a => one('src/zh-vowel-table.js').then(b => one('src/viseme-timeline.js').then(c => {
+      const ok = a && b && c && !!window.MuneaVisemeTimeline;
+      if (!ok) this._loading = null;
+      return ok;
+    })));
     return this._loading;
   },
-  // 她的聲音開始播時呼叫（本機播放那條路）：同一個 AudioContext 已經在量就什麼都不做
-  ensure() {
-    if (!this.on) return;
-    const face = window.MuneaFlatFace;
+  _ensureTimeline() {
     const ctx = LiveVoice.playCtx;
-    if (!face || !face.setViseme || !face._has || !face._has.ee || !ctx || ctx.state === 'closed') return;
-    if (this.run && this.run.ctx === ctx) return;
-    if (this._pending === ctx) return;
-    this._pending = ctx;
-    this._loadDriver().then(ok => {
-      this._pending = null;
-      if (!ok || !this.on || ctx.state === 'closed' || (this.run && this.run.ctx === ctx)) return;
-      const tap = LiveVoice._ensureLocalPlaybackGain();
-      if (!tap) return;
-      this.stop();
+    if (!this.on || !ctx || ctx.state === 'closed') return null;
+    if (this.tl && this.ctx === ctx) return this.tl;
+    if (!(window.MuneaVisemeTimeline && window.LipSync && window.LipSync.makeAnalyzer)) {
+      this._loadScripts().then(ok => { if (ok) this._flush(); });
+      return null;
+    }
+    this.ctx = ctx;
+    this.tl = new window.MuneaVisemeTimeline.Timeline(ctx.sampleRate);
+    this.cues = [];
+    const face = window.MuneaFlatFace;
+    if (face) face.visemeProvider = now => this._provide(now);
+    return this.tl;
+  },
+  _flush() {
+    if (!this._ensureTimeline()) return;
+    const caps = this._pendingCaps.splice(0), aud = this._pendingAudio.splice(0);
+    caps.forEach(c => c.end ? this.tl.endTurn() : this.tl.pushCaption(c.text));
+    aud.forEach(a => this._push(a.f, a.t));
+  },
+  _push(f, t) {
+    const t0 = performance.now();
+    this.tl.pushAudio(f, t);
+    this._stats.pushMs += performance.now() - t0; this._stats.pushCalls++;
+  },
+  // 她的一塊聲音排進播放（t＝播放器時鐘上的開始時間）
+  audio(f, t) {
+    if (!this.on) return;
+    if (!this._ensureTimeline()) { if (this._pendingAudio.length < 400) this._pendingAudio.push({ f: f.slice(0), t }); return; }
+    if (this._turnStartPending) { this._turnStartPending = false; this.cues.push({ at: t, expr: 'neutral-if-listen' }); }
+    this._push(f, t);
+    this._audioEnd = t + f.length / this.ctx.sampleRate;
+  },
+  caption(text) {
+    if (!this.on || !text) return;
+    this._turnText += text;
+    if (this.tl) this.tl.pushCaption(text); else this._pendingCaps.push({ text });
+  },
+  // 主機說這一輪講完了（聲音大多早就送完、還在排隊播）：講完那一刻再過 1.2 秒換回「傾聽」
+  turnComplete() {
+    if (!this.on) return;
+    if (this.tl) this.tl.endTurn(); else this._pendingCaps.push({ end: true });
+    if (this._audioEnd) this.cues.push({ at: this._audioEnd + 1.2, expr: 'listen' });
+    this._turnText = ''; this._turnStartPending = true;
+  },
+  interrupted() {
+    if (!this.on || !this.tl) return;
+    const heard = this._heard();
+    this.tl.cancelAfter(heard);
+    this.cues = this.cues.filter(c => c.at != null && c.at <= heard);
+    this._audioEnd = heard;
+    this._turnText = ''; this._turnStartPending = true;
+  },
+  // 主機的表情事件：{expr, pos, gesture, gpos}（pos＝這一輪字幕的第幾個字元）→ 換成第幾個音節，等那個音節真的被講出來
+  serverEvent(o) {
+    if (!this.on || !o) return;
+    const VT = window.MuneaVisemeTimeline;
+    const turn = this.tl && this.tl.turns[this.tl.turns.length - 1];
+    const sylOf = pos => (VT && typeof pos === 'number') ? VT.syllableCount(this._turnText.slice(0, Math.max(0, pos))) : 0;
+    if (o.expr) this.cues.push({ turn, syl: sylOf(o.pos), expr: String(o.expr), born: performance.now() });
+    if (o.gesture) this.cues.push({ turn, syl: sylOf(o.gpos != null ? o.gpos : o.pos), gesture: String(o.gesture), born: performance.now() });
+  },
+  // 現在「真的聽到」的是播放器時鐘上的哪一刻：優先用瀏覽器回報的輸出時間戳，沒有就扣掉輸出延遲
+  _heard() {
+    const ctx = this.ctx; if (!ctx) return 0;
+    try {
+      const ts = ctx.getOutputTimestamp && ctx.getOutputTimestamp();
+      if (ts && ts.contextTime > 0 && ts.performanceTime > 0) return ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+    } catch (e) {}
+    return ctx.currentTime - (ctx.outputLatency || 0) - (ctx.baseLatency || 0);
+  },
+  _provide(now) {
+    if (!this.tl) return null;
+    const t0 = performance.now();
+    const heard = this._heard();
+    const face = window.MuneaFlatFace;
+    for (let i = 0; i < this.cues.length; i++) {
+      const c = this.cues[i];
+      let at = c.at;
+      if (at == null && c.turn) { const ts = this.tl.syllableTime(c.turn, c.syl); if (ts != null) at = ts - 0.25; }   // 那個字前 0.25 秒換（表情先到一點點比較自然）
+      if (at == null && performance.now() - c.born > 8000) at = heard;           // 對不上就別一直等
+      if (at == null || at > heard) continue;
+      this.cues.splice(i--, 1);
       try {
-        const run = window.LipSync.live(tap, {
-          set: (open, shape) => { try { face.setViseme(open, shape); } catch (e) {} },
-          idle: () => {},
-        }, { ctx });
-        run.ctx = ctx;
-        this.run = run;
-      } catch (e) { this.run = null; }
-    });
+        if (c.expr === 'neutral-if-listen') { if (face._exprWant === 'listen') face.setExpression('neutral'); }
+        else if (c.expr) face.setExpression(c.expr);
+        if (c.gesture) face.playGesture(c.gesture, now);
+      } catch (e) {}
+    }
+    if ((this._stats.frames & 511) === 0) this.tl.prune(heard - 10);
+    const s = this.tl.sample(heard + this.LEAD_S);
+    if (s.src === 'caption') this._stats.srcCaption++; else if (s.src === 'spectrum') this._stats.srcSpectrum++;
+    this._stats.frames++;
+    this._stats.providerMs += performance.now() - t0; this._stats.providerCalls++;
+    return s;
   },
-  stats() { try { return this.run ? this.run.stats() : null; } catch (e) { return null; } },
+  stats() {
+    const S = this._stats, ctx = this.ctx;
+    return { frames: S.frames, captionShare: +(S.srcCaption / Math.max(1, S.srcCaption + S.srcSpectrum)).toFixed(2),
+      pushAvgMs: +(S.pushMs / Math.max(1, S.pushCalls)).toFixed(3), pushCalls: S.pushCalls,
+      provideAvgMs: +(S.providerMs / Math.max(1, S.providerCalls)).toFixed(3),
+      outputLatency: ctx ? ctx.outputLatency || 0 : null, baseLatency: ctx ? ctx.baseLatency || 0 : null,
+      syllablesPlaced: this.tl ? this.tl.turns.reduce((n, T) => n + T.syl.length, 0) : 0, segments: this.tl ? Object.assign({}, this.tl.stats) : null };
+  },
   stop() {
-    const run = this.run; this.run = null;
-    if (run) { try { run.stop(); } catch (e) {} }
-  },
-  // 語音主機送來的表情（每輪最多一次）
-  expression(expr) {
-    if (!this.on) return;
-    clearTimeout(this._listenTimer);
-    try { if (window.MuneaFlatFace) window.MuneaFlatFace.setExpression(expr); } catch (e) {}
-  },
-  // 她開口了：還掛著「傾聽」就收回一般表情（傾聽是給「換你講」的時候用的）
-  turnStart() {
-    if (!this.on) return;
-    clearTimeout(this._listenTimer);
-    try { const F = window.MuneaFlatFace; if (F && F._exprWant === 'listen') F.setExpression('neutral'); } catch (e) {}
-  },
-  // 她這一輪講完：1.2 秒後換回「傾聽」（換你講了）
-  turnDone() {
-    if (!this.on) return;
-    clearTimeout(this._listenTimer);
-    this._listenTimer = setTimeout(() => { try { if (window.MuneaFlatFace) window.MuneaFlatFace.setExpression('listen'); } catch (e) {} }, 1200);
+    const face = window.MuneaFlatFace;
+    if (face) face.visemeProvider = null;
+    this.tl = null; this.ctx = null; this.cues = []; this._pendingAudio = []; this._pendingCaps = []; this._turnText = '';
   },
 };
 window.MuneaFaceViseme = FaceViseme;   // 量效能／診斷用（stats()）

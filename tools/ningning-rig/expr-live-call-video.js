@@ -1,19 +1,24 @@
 // 「通話中」即時嘴型＋表情的本機證明影片（2026-11-21）。跟 expr-demo-video.js 不同：這支不逐格算，
-// 是真的讓聲音走 App 的本機播放路線（LiveVoice._scheduleLocalPlayback），臉由 App 自己的動畫迴圈即時畫，
-// 嘴型由 lipsync-driver.js 的 live() 從播放分支即時量母音；表情事件照語音主機的規則（engine/face_expression.py）
-// 算好的結果、在字幕會到的時間點餵進 App 的同一個入口（FaceViseme.expression／turnDone）。
-// 同時錄 CPU 剖析（Profiler）與分析器自己的計時，量效能。
-// 用法：node expr-live-call-video.js <App 網址> <輸出資料夾> <聲音.wav>
+// 是真的讓聲音走 App 的本機播放路線（LiveVoice._scheduleLocalPlayback），臉由 App 自己的動畫迴圈即時畫。
+// 送資料的節奏照測試機量到的樣子：聲音和字幕都比她講話快約 5 倍送到、送完就來「這輪講完」，App 自己排隊慢慢播。
+//   MODE=old（第二輪草稿）：表情事件一到就換（FaceViseme.expression）、「講完」後 1.2 秒換傾聽（turnDone）
+//   MODE=new（第三輪）：字幕＋表情事件帶「第幾個字」＋手勢（FaceViseme.caption／serverEvent／turnComplete），
+//     事件內容照 engine/face_expression.py 的規則算好
+// 同時錄 CPU 剖析（Profiler）與 App 自己的計時，量效能。
+// 用法：MODE=new node expr-live-call-video.js <App 網址> <輸出資料夾> <聲音.wav>
 const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs'); const path = require('node:path'); const os = require('node:os');
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const [URL, OUTDIR, WAV, PORT = '9391'] = process.argv.slice(2);
 // 三輪（秒，原聲時間）＋語音主機規則算出的表情與送出時間（從該輪開頭算）；輪與輪之間留 1.4 秒＝換對方講
+// evt＝engine/face_expression.py 對這句話會送的事件（test 裡驗過同樣的規則）
 const TURNS = [
-  { from: 0.62, to: 4.62, expr: 'smile', at: 0.55, text: '阿姨早安，昨天晚上有睡好嗎？' },
-  { from: 5.25, to: 9.45, expr: 'concern', at: 1.3, text: '你上次說膝蓋會痠，今天有好一點嗎？' },
-  { from: 10.2, to: 15.4, expr: 'neutral', at: 4.9, text: '對了，十點要吃血壓的藥喔，時間到我再提醒你一次。' },
+  { from: 0.62, to: 4.62, text: '阿姨早安，昨天晚上有睡好嗎？', evt: { expr: 'smile', pos: 2, gesture: 'wave', gpos: 0 } },
+  { from: 5.25, to: 9.45, text: '你上次說膝蓋會痠，今天有好一點嗎？', evt: { expr: 'concern', pos: 7, gesture: 'chest', gpos: 7 } },
+  { from: 10.2, to: 15.4, text: '對了，十點要吃血壓的藥喔，時間到我再提醒你一次。', evt: { expr: 'neutral', pos: 24 } },
 ];
+const MODE = process.env.MODE || 'new';
+const SPEEDUP = 5;   // 送資料比講話快幾倍（測試機量到約 5～6 倍）
 const GAP = 1.4, LEAD_IN = 1.2;
 
 function readWav(p) {
@@ -74,7 +79,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await send('Profiler.enable'); await send('Profiler.setSamplingInterval', { interval: 200 }); await send('Profiler.start');
   await send('Page.startScreencast', { format: 'jpeg', quality: 88, everyNthFrame: 1 });
   const result = await evalJs(`(async function(){
-    var F = window.MuneaFlatFace, LV = window.MuneaLiveVoice, FV = window.MuneaFaceViseme, GAP=${GAP}, LEAD=${LEAD_IN};
+    var F = window.MuneaFlatFace, LV = window.MuneaLiveVoice, FV = window.MuneaFaceViseme, GAP=${GAP}, LEAD=${LEAD_IN}, MODE=${JSON.stringify(MODE)}, SPEED=${SPEEDUP};
     var ctx = new AudioContext({ sampleRate: ${sr} }); LV.playCtx = ctx; await ctx.resume();
     F.speaking = function(){ return !!(LV._srcs && LV._srcs.length); };
     var fn = document.querySelector('#chat .face-name'); if (fn) { fn.classList.remove('off'); var st = fn.querySelector('.fn-status'); if (st) st.textContent = '在線'; }
@@ -84,28 +89,34 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     var t0 = performance.now(), tm = document.getElementById('callTimer');
     var clock = setInterval(function(){ if (tm) tm.textContent = '00:' + String(5 + Math.floor((performance.now()-t0)/1000)).padStart(2,'0'); }, 200);
     var states = [], audioStarts = [];
-    var probe = setInterval(function(){ states.push({ t: +((performance.now()-t0)/1000).toFixed(2), mouth: F._mouth, eyes: F._eyeShown, brows: F._browsOn, expr: F._expr, vis: F._vis && F._vis.shape, speaking: F.speaking() }); }, 50);
+    var probe = setInterval(function(){ states.push({ t: +((performance.now()-t0)/1000).toFixed(2), mouth: F._mouth, eyes: F._eyeShown, brows: F._browsOn, expr: F._expr, gesture: F._gLayer || null, speaking: F.speaking() }); }, 33);
     F.setExpression('listen');
     await new Promise(function(r){ setTimeout(r, LEAD*1000); });
     for (var i = 0; i < __turns.length; i++) {
       var T = __turns[i], raw = atob(__segs[i]), n = raw.length / 2, f = new Float32Array(n);
       for (var k = 0; k < n; k++) { var v = raw.charCodeAt(2*k) | (raw.charCodeAt(2*k+1) << 8); if (v >= 32768) v -= 65536; f[k] = v / 32768; }
       LV._turnHasScheduledAudio = false; LV._playbackTurn = i + 2;
-      var startAt = null;
-      for (var c = 0; c < n; c += 2400) {           // 跟語音主機一樣一小塊一小塊送來（每塊 0.1 秒）
-        LV._scheduleLocalPlayback(f.subarray(c, Math.min(n, c + 2400)));
-        if (startAt === null) startAt = LV.playHead - Math.min(n, 2400) / ${sr};
+      var dur = n / ${sr}, sendMs = dur / SPEED * 1000;
+      if (MODE === 'new') FV.caption(T.text);                      // 字幕跟第一塊聲音一起到
+      var startAt = null, wallStart = 0;
+      // 聲音一塊塊（每塊 0.1 秒）照「比講話快 SPEED 倍」的節奏送到
+      for (var c = 0, j = 0; c < n; c += 2400, j++) {
+        (function(c, j){ setTimeout(function(){
+          LV._scheduleLocalPlayback(f.subarray(c, Math.min(n, c + 2400)));
+          if (j === 0) { startAt = LV.playHead - Math.min(n, 2400) / ${sr}; wallStart = Date.now() + (startAt - ctx.currentTime) * 1000; }
+        }, j * 100 / SPEED); })(c, j);
       }
-      var wallStart = Date.now() + (startAt - ctx.currentTime) * 1000;
-      audioStarts.push({ turn: i, wall: wallStart / 1000, dur: n / ${sr} });
-      var leadMs = (startAt - ctx.currentTime) * 1000;
-      setTimeout((function(T){ return function(){ FV.expression(T.expr); }; })(T), leadMs + T.at * 1000);
-      await new Promise(function(r){ setTimeout(r, leadMs + n / ${sr} * 1000 + 150); });
-      FV.turnDone();
-      await new Promise(function(r){ setTimeout(r, GAP * 1000); });
+      // 表情事件：觸發字的字幕到的時候（照字的位置估）
+      var evAt = Math.min(sendMs, (T.evt.pos / Math.max(1, T.text.length)) * sendMs);
+      setTimeout((function(T){ return function(){ if (MODE === 'new') FV.serverEvent(Object.assign({ type: 'face_expression' }, T.evt)); else FV.expression(T.evt.expr); }; })(T), evAt);
+      // 送完＝主機的「這輪講完」
+      setTimeout(function(){ if (MODE === 'new') FV.turnComplete(); else FV.turnDone(); }, sendMs + 150);
+      await new Promise(function(r){ setTimeout(r, 200); });
+      audioStarts.push({ turn: i, wall: wallStart / 1000, dur: dur });
+      await new Promise(function(r){ setTimeout(r, Math.max(0, wallStart - Date.now()) + dur * 1000 + GAP * 1000); });
     }
     clearInterval(probe); clearInterval(clock);
-    var stats = FV.stats();
+    var stats = FV.stats ? FV.stats() : null;
     return { states: states, audioStarts: audioStarts, stats: stats, ctxRate: ctx.sampleRate, has: F._has };
   })()`);
   await send('Page.stopScreencast');
