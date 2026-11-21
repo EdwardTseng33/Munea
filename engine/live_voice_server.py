@@ -49,6 +49,7 @@ import live_lookup
 import voice_turn_semantics
 import voice_turn_completion
 import voice_tool_continuity
+import face_expression
 from voice_locale_session import VoiceLocaleSession
 from call_control_client import post_internal, verify_call_token, CallControlError
 from google import genai
@@ -4524,7 +4525,13 @@ async def _run_voice_session(session, cli, ws, cid, t0, st, char, location, topi
                             if not st.get("language_block") and not st.get("client_barge_in"):
                                 await ws.send(json.dumps({"type": "caption", "who": "nening", "text": caption_text}))
                                 st["ai_buf"] = (st["ai_buf"] + caption_text)[-200:]
+                                face_new_turn = not (st.get("turn_ai_text") or "")
                                 st["turn_ai_text"] = ((st.get("turn_ai_text") or "") + caption_text)[-800:]
+                                # 表情訊號（11/21 草稿，MUNEA_FACE_EXPRESSIONS=1 才送）：看她這一輪說的話，每輪最多送一次
+                                face_evt = face_expression.next_event(st, st["turn_ai_text"], face_new_turn)
+                                if face_evt:
+                                    await ws.send(json.dumps(face_evt))
+                                    _diag(cid, "face.expression", expr=face_evt["expr"])
                                 _spawn_guardian_watch(st, guardian_watch(
                                     cid, "ai", st["ai_buf"], st, session,
                                     turn_id=st.get("guardian_real_turn_id", 0),
