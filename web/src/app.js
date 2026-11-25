@@ -377,7 +377,8 @@ function localizePurchasePlanContent() {
     plus: { minutes: 100, members: 4 },
     pro: { minutes: 200, members: 12 },
   };
-  const sharedMinutes = muneaFamilySharedMinutesOn();
+  // 2026-11-25 Edward：「沒有共享帳號這個概念」→ 付費頁不再講「家人圈一起用分鐘／爸媽不用另外付費」
+  const sharedMinutes = false;
   $$('#planPick .ppk').forEach((card) => {
     const facts = planCardFacts[card.dataset.t];
     if (!facts) return;
@@ -7524,6 +7525,8 @@ function muneaAllowance() {
 function muneaFamilyShare() {
   const f = CREDIT_META.familyShare;
   if (!f || typeof f !== 'object' || f.shared !== true) return null;
+  // 2026-11-25 Edward：「沒有共享帳號這個概念」→ 畫面上每個人只看自己的方案；被邀請的家人不顯示圈主的分鐘
+  if (f.role === 'member') return null;
   if (muneaNonNegInt(f.monthGrant) === null || muneaNonNegInt(f.monthRemaining) === null) return null;
   return f;
 }
@@ -10861,7 +10864,7 @@ function init() {
     const show = circlePlan() === 'free' && !!a && a.mode === 'free_daily' && !!day && left !== null;
     chip.hidden = !show;
     chip.textContent = show
-      ? muneaT('subscription.trialChip', 'Free trial day {day} · {minutes} min left today', { day, minutes: left })
+      ? muneaT('subscription.trialChip', 'Free · {minutes} min left today', { day, minutes: left })
       : '';
   }
   // 加買分鐘最上面那列：「這個月只剩 N 分鐘｜12/1 再給 100 分鐘」。只有真的有月額度時才出現。
@@ -10910,17 +10913,31 @@ function init() {
   // 四種樣子：legacy（後端還沒給新欄位＝舊排法、只是改講分鐘）／trial（免費體驗前 7 天）／
   // weekly（第 8 天起每週）／share（家人圈一起用同一份月分鐘）。由 #planCard 的 data-mode 切換，
   // 舊排法的元素（餘額、進度條、說明句）照舊由 renderCreditRow 管，這裡只負責新樣子的內容。
-  const PERSON_COLORS = ['p-mei', 'p-zhi', 'p-bao'];   // 跟家人頁頭像同一套顏色，依序配
   function setBigMinutes(el, key, fallback, minutes) {
     if (!el) return;
     const marker = '__MUNEA_MIN__';
     const parts = muneaT(key, fallback, { minutes: marker }).split(marker);
     const num = document.createElement('b');
     num.className = 'pc-num';
-    num.textContent = new Intl.NumberFormat(muneaLocale()).format(minutes);
+    const nf = new Intl.NumberFormat(muneaLocale());
+    const target = Math.max(0, Number(minutes) || 0);
+    num.textContent = nf.format(target);
     const tail = document.createElement('small');
     tail.textContent = parts.slice(1).join(marker);
+    // 質感：數字變了才從上一次的數字滾到新數字（約 0.5 秒）；系統設定「減少動態」就直接顯示
+    const prev = Number(el.dataset.shown);
+    el.dataset.shown = String(target);
     el.replaceChildren(document.createTextNode(parts[0] || ''), num, tail);
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !Number.isFinite(prev) || prev === target || typeof requestAnimationFrame !== 'function') return;
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / 520);
+      const ease = 1 - Math.pow(1 - k, 3);
+      num.textContent = nf.format(Math.round(prev + (target - prev) * ease));
+      if (k < 1 && num.isConnected) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }
   function renderPlanCard() {
     const card = $('#planCard');
@@ -10944,7 +10961,7 @@ function init() {
       const day = Math.min(total, Math.max(1, muneaNonNegInt(a.trialDay) || 1));
       const daily = muneaNonNegInt(a.todayGrant) || 10;
       const weekly = muneaNonNegInt(a.weekGrant) || daily;
-      if (headTitle) headTitle.textContent = muneaT('settings.trialTitle', 'Free trial');
+      if (headTitle) headTitle.textContent = muneaT('settings.trialTitle', 'Free plan');
       if (headMeta) headMeta.textContent = muneaT('settings.trialDay', 'Day {day} of {total}', { day, total });
       setBigMinutes(big, 'settings.todayLeft', '{minutes} minutes left today', muneaNonNegInt(a.todayRemaining));
       const days = $('#pcDays');
@@ -10956,12 +10973,10 @@ function init() {
           return dot;
         }));
       }
-      const first = $('#pcDayFirst'); if (first) first.textContent = muneaT('settings.trialDayFirst', 'Day 1');
-      const today = $('#pcDayToday'); if (today) today.textContent = muneaT('settings.trialDayToday', 'Today');
-      const last = $('#pcDayLast'); if (last) last.textContent = muneaT('settings.trialDayLast', 'Day {total}', { total });
+      // 2026-11-25 減法：拿掉「第 1 天／今天／第 7 天」那排小字（七格本身就看得出今天在哪），說明只留一句
       if (note) note.textContent = muneaT(
         'settings.trialNote',
-        'For the first {days} days you get {daily} minutes a day; from day {next}, {weekly} minutes a week. Want to talk a bit more each day? Take a look at the plans.',
+        'From day {next}: {weekly} minutes a week',
         { days: total, daily, next: total + 1, weekly },
       );
     } else if (mode === 'weekly') {
@@ -10972,50 +10987,26 @@ function init() {
         ? muneaT('settings.nextGrant', '{minutes} more on {date}', { date: reset, minutes: nf.format(weekly) })
         : '';
       setBigMinutes(big, 'settings.weekLeft', '{minutes} minutes left this week', muneaNonNegInt(a.weekRemaining));
-      if (note) note.textContent = muneaT(
-        'settings.freeWeeklyNote',
-        '{weekly} minutes a week. Want to talk a bit more each day? Take a look at the plans.',
-        { weekly },
-      );
+      // 2026-11-25 減法：上面已經寫「幾號再給幾分鐘」，這裡不再重講一次
+      if (note) note.textContent = '';
     } else if (mode === 'share') {
       const grant = muneaNonNegInt(fam.monthGrant);
       const remaining = Math.min(grant, muneaNonNegInt(fam.monthRemaining));
-      const used = Math.max(0, grant - remaining);
       const planKey = fam.plan === 'pro' ? 'subscription.planPro' : 'subscription.planPlus';
-      if (headTitle) headTitle.textContent = muneaT('settings.sharedPlanTitle', '{plan} · shared by your family circle', {
+      // 2026-11-25 Edward：「沒有共享帳號這個概念」「簡單一點」「減法設計」→
+      // 只講自己的方案、還剩幾分鐘、一條剩餘量的條；拿掉「家人圈一起用」與「誰用了多少」
+      if (headTitle) headTitle.textContent = muneaT('settings.planName', '{plan} plan', {
         plan: muneaT(planKey, fam.plan === 'pro' ? 'Pro' : 'Plus'),
       });
       const renew = muneaShortDate(fam.renewsAt);
       if (headMeta) headMeta.textContent = renew ? muneaT('settings.renewsOn', 'Renews {date}', { date: renew }) : '';
       setBigMinutes(big, 'settings.monthLeft', '{minutes} minutes left this month', remaining);
-      const usageNote = $('#pcUsageNote');
-      if (usageNote) usageNote.textContent = muneaT('settings.sharedUsed', '{used} of {grant} minutes used. Who used them:', {
-        used: nf.format(used), grant: nf.format(grant),
-      });
-      const people = Array.isArray(fam.usageByPerson) ? fam.usageByPerson.filter(p => p && typeof p === 'object') : [];
       const bar = $('#pcBar');
-      const who = $('#pcWho');
-      if (bar) bar.replaceChildren(...people.map((person, i) => {
-        const seg = document.createElement('i');
-        seg.className = PERSON_COLORS[i % PERSON_COLORS.length];
-        const mins = muneaNonNegInt(person.minutes) || 0;
-        seg.style.width = (grant > 0 ? Math.min(100, (mins / grant) * 100) : 0).toFixed(2) + '%';
-        return seg;
-      }));
-      // 只靠顏色分不出誰是誰：每人一列一定寫名字（自己寫「我」）
-      if (who) who.replaceChildren(...people.map((person, i) => {
-        const row = document.createElement('div');
-        const dot = document.createElement('em');
-        dot.className = PERSON_COLORS[i % PERSON_COLORS.length];
-        const name = document.createElement('b');
-        name.textContent = person.isMe === true
-          ? muneaT('settings.me', 'Me')
-          : (String(person.name || '').trim() || muneaT('home.care.familyFallback', 'Family'));
-        const mins = document.createElement('span');
-        mins.textContent = muneaT('settings.personUsed', '{minutes} min used', { minutes: nf.format(muneaNonNegInt(person.minutes) || 0) });
-        row.replaceChildren(dot, name, mins);
-        return row;
-      }));
+      if (bar) {
+        let fill = bar.querySelector('i');
+        if (!fill) { fill = document.createElement('i'); bar.replaceChildren(fill); }
+        fill.style.width = (grant > 0 ? Math.min(100, (remaining / grant) * 100) : 0).toFixed(2) + '%';
+      }
     }
   }
   window.__muneaRenderPlanCard = renderPlanCard;

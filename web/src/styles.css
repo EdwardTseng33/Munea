@@ -3335,20 +3335,18 @@ html:lang(ja) {
 #planCard .pc-big { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.3; }
 #planCard .pc-big .pc-num { font-family: var(--display); font-size: 24px; font-weight: 800; color: var(--teal-dd); margin: 0 2px; font-variant-numeric: tabular-nums; }
 #planCard .pc-big small { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink-2); }
+/* 11/25 Edward「簡單一點／減法設計／但要有質感」：七格與剩餘量條都改細（8px）、圓角收乾淨；
+   今天那格輕輕呼吸一次、剩餘量條從上次的位置滑到新位置；系統「減少動態」時全部不動 */
 #planCard .pc-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-#planCard .pc-days i { height: 12px; border-radius: 999px; background: var(--mint-2); }
+#planCard .pc-days i { height: 8px; border-radius: 999px; background: var(--mint-2); }
 #planCard .pc-days i.done { background: var(--btn-green); }
-#planCard .pc-days i.now { background: #fff; box-shadow: inset 0 0 0 2.5px var(--btn-green); }
-#planCard .pc-daylbl { display: flex; justify-content: space-between; font-size: 15px; color: var(--muted); margin-top: -4px; }
-#planCard .pc-note, #planCard .pc-usage-note { font-size: 15px; color: var(--muted); line-height: 1.6; margin: 0; }
-#planCard .pc-usage-note { margin-top: -6px; }
-#planCard .pc-bar { height: 12px; border-radius: 999px; background: var(--mint-2); overflow: hidden; display: flex; }
-#planCard .pc-bar i { display: block; height: 100%; }
-#planCard .pc-who { display: grid; gap: 8px; }
-#planCard .pc-who div { display: flex; align-items: center; gap: 10px; font-size: 17px; color: var(--ink); min-height: 28px; }
-#planCard .pc-who em { flex: none; width: 12px; height: 12px; border-radius: 50%; }
-#planCard .pc-who b { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
-#planCard .pc-who span { margin-left: auto; flex: none; font-family: var(--display); font-weight: 600; color: var(--ink-2); font-size: 16px; }
+#planCard .pc-days i.now { background: var(--btn-green); opacity: .45; animation: pcNow 2.4s ease-in-out infinite; }
+@keyframes pcNow { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
+#planCard .pc-note { font-size: 15px; color: var(--muted); line-height: 1.5; margin: 0; }
+#planCard .pc-note:empty { display: none; }
+#planCard .pc-bar { height: 8px; border-radius: 999px; background: var(--mint-2); overflow: hidden; }
+#planCard .pc-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--btn-green), var(--teal)); transition: width .6s cubic-bezier(.22,.8,.3,1); }
+@media (prefers-reduced-motion: reduce) { #planCard .pc-days i.now { animation: none; opacity: .7; } #planCard .pc-bar i { transition: none; } }
 #planCard:not([data-mode="legacy"]) .plan-actions { margin: 2px 0 0; }
 #planCard[data-mode="trial"] #managePlanBtn, #planCard[data-mode="weekly"] #managePlanBtn, #planCard[data-mode="share"] #topUpBtn {
   flex: 1 1 auto; width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff;
@@ -3521,8 +3519,6 @@ html:lang(en) #planModal .ppk-ln span, html:lang(es) #planModal .ppk-ln span { d
 #settings[data-layout="b"] .set-b-hero #planCard { border: none; box-shadow: none; border-radius: 0; margin: 0; background: transparent; padding-top: 10px; }
 #settings[data-layout="b"] .set-b-hero #planCard::before { content: ""; display: block; height: 1px; background: var(--line); margin: 0 0 6px; }
 #settings[data-layout="b"] #planCard .pc-big { font-size: 20px; }
-#settings[data-layout="b"] #planCard .pc-bar { height: 18px; }
-#settings[data-layout="b"] #planCard .pc-days i { height: 16px; }
 #settings[data-layout="b"] .set-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 0; }
 #settings[data-layout="b"] .set-tiles .set-row { position: relative; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 12px;
   min-height: 132px; padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-sm); }
