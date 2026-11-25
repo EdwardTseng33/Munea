@@ -10915,10 +10915,12 @@ function init() {
     if (!el) return;
     const marker = '__MUNEA_MIN__';
     const parts = muneaT(key, fallback, { minutes: marker }).split(marker);
-    const num = new Intl.NumberFormat(muneaLocale()).format(minutes);
+    const num = document.createElement('b');
+    num.className = 'pc-num';
+    num.textContent = new Intl.NumberFormat(muneaLocale()).format(minutes);
     const tail = document.createElement('small');
     tail.textContent = parts.slice(1).join(marker);
-    el.replaceChildren(document.createTextNode((parts[0] || '') + num), tail);
+    el.replaceChildren(document.createTextNode(parts[0] || ''), num, tail);
   }
   function renderPlanCard() {
     const card = $('#planCard');
