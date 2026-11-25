@@ -370,7 +370,10 @@
         "settings.section.healthData",
         "settings.section.accountPrivacy",
         "settings.section.experience",
-        "settings.section.about"
+        "settings.section.about",
+        "settings.moreSettings",
+        "settings.aboutMunea",
+        "settings.aboutMuneaSubtitle"
       ]
     },
     {

@@ -467,6 +467,17 @@ setTimeout(function () {
   <section class="screen" id="settings">
     <div class="pad">
       <div class="page-head"><h1 class="page-title" data-i18n="settings.title">設定</h1></div>
+      <!-- 設定頁 B 案（2026-11-25 改版提案，跟 A 案並存、供 Edward 比較）：localStorage munea.settingsLayout＝"b" 才啟用。
+           啟用時 app.js 把下面原本的各列「搬」進這幾個容器（id 與點擊行為不變），A 案的區段標題與清單整組收起。
+           ①名片＋方案合成一張 ②最常用四件做成 2×2 大方塊 ③其他收成精簡清單 ④條款／隱私／版本收成「關於沐寧」一列。 -->
+      <div class="set-b set-b-hero" hidden></div>
+      <div class="set-b set-tiles" hidden></div>
+      <h2 class="set-b set-b-label" hidden data-i18n="settings.moreSettings">更多設定</h2>
+      <div class="set-b set-list set-b-list" hidden></div>
+      <details class="set-b set-b-about" hidden>
+        <summary class="set-row"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="" style="width:38px;height:38px" /></span><span class="sr-main"><span data-i18n="settings.aboutMunea">關於沐寧</span><small data-i18n="settings.aboutMuneaSubtitle">版本、使用條款、隱私權政策</small></span><span class="sr-arrow set-b-chev">›</span></summary>
+        <div class="set-list set-b-about-list"></div>
+      </details>
       <div class="auth-card" id="authCard" data-auth-state="guest">
         <div class="auth-card-main">
           <!-- 方案標籤搬到頭像正下方（Edward 2026-07-31）：它講的是「這個人是什麼會員」，
@@ -1124,9 +1135,6 @@ setTimeout(function () {
       <span class="sub-status" id="planTrialChip" hidden></span>
     </div>
     <div class="sub-body">
-      <!-- 2026-11-25 改版提案：頁首放陪伴角色的臉（現成頭像，跟設定頁那一列同一張；換成沐沐時由 app.js 跟著換），
-           11/20 拿掉大插圖後整頁只剩表格感，Edward 不滿意——用一張熟悉的臉把「買的是有人陪」講出來。 -->
-      <div class="sub-hero-face" aria-hidden="true"><img id="subHeroAva" src="avatars/ningning-face.webp" alt=""></div>
       <h1 class="sub-h" data-i18n="subscription.headline">Someone for Mom and Dad to talk to every day</h1>
       <!-- 這句講的是「家人圈共用分鐘」，後端還沒開 familySharedMinutes 之前講了就是不實——由 app.js 決定要不要露出 -->
       <p class="sub-lede" id="planSharedLede" hidden></p>
@@ -1169,6 +1177,8 @@ setTimeout(function () {
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
           <span id="planFamilyNoteText">Both plans include 7-day and 30-day health trends.</span>
         </div>
+        <!-- 2026-11-25：自動續訂說明與條款連結搬到訂閱鈕正上方——按鈕黏在畫面下方時，這段不能被它蓋住或被擠到看不到的地方 -->
+        <p class="sub-legal">Renews automatically through your Apple Account. Cancel anytime in iPhone Settings; you keep access until the end of the current period. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
         <button class="sub-cta" id="subCta" type="button">Subscribe to Plus</button>
         <!-- 「管理訂閱／恢復購買」已搬到設定頁的「我的訂閱」卡（Edward 2026-07-31）：
              這一頁只留一條路——選方案 → 訂閱。想改或想救回舊訂閱的人會去設定找，不該在這裡分心。 -->
@@ -1190,7 +1200,6 @@ setTimeout(function () {
           </div>
         </div>
         </details>
-        <p class="sub-legal">Renews automatically through your Apple Account. Cancel anytime in iPhone Settings; you keep access until the end of the current period. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
         <span id="planHeroName" hidden></span><span id="planHeroPts" hidden></span><span id="planHeroMeta" hidden></span>
       </div>
       <!-- 付費頁裡的「加買分鐘」分頁：跟加買分鐘那張單一樣的排法（P2 一併統一） -->

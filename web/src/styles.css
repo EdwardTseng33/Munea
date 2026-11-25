@@ -3447,33 +3447,25 @@ html:lang(en) .set-row .sr-on { font-size: 15px; }
 #settings .set-row .sr-arrow { font-size: 22px; line-height: 1; color: #9AA39F; display: inline-flex; align-items: center; gap: 6px; }
 #settings .set-row .sr-arrow b { font-family: var(--display); font-size: 15px; font-weight: 600; color: var(--muted); }
 #settings .set-row:active { background: rgba(58,168,160,.06); }
-#settings .set-group-remind .sr-ico { background: var(--coral-soft); color: var(--coral-text); }
-#settings .set-group-family .sr-ico { background: var(--mint); color: var(--teal-d); }
-#settings .set-group-health .sr-ico { background: var(--gold-soft); color: #8A6410; }
-#settings .set-group-privacy .sr-ico, #settings .set-group-app .sr-ico { background: #EFEBE3; color: var(--ink-2); }
-#settings .set-group-about .sr-ico:not([style]) { background: #EFEBE3; color: var(--ink-2); }
+/* 圖示底磚全頁統一：薄荷霧底＋薄荷深色線條（女巫 11/25：不要四種顏色，金色只給成就） */
+#settings .set-row .sr-ico:not(.comp):not([style]) { background: var(--mint); color: var(--teal-d); }
 #settings .sr-ico.comp { border-radius: 50%; }
 /* 方案卡：卡本身加大一點；底下那排小連結收成一條工具列 */
 #settings #planCard { border-radius: 22px; }
 #settings #planCard:not([data-mode="legacy"]) { padding: 20px; gap: 14px; }
-#settings #planCard .plan-links { border-top: 1px solid var(--line); margin: 4px -20px -8px; padding: 4px 8px 0; justify-content: space-around; gap: 0; }
-#settings #planCard .plan-link { flex: 1 1 0; min-height: 52px; padding: 0 4px; font-size: 16px; font-weight: 700; color: var(--teal-dd); background: none; }
+#settings #planCard .plan-links { border-top: 1px solid var(--line); margin: 4px -20px -8px; padding: 4px 8px 0; justify-content: space-around; gap: 0 4px; flex-wrap: wrap; }
+#settings #planCard .plan-link { flex: 1 1 auto; min-height: 52px; padding: 0 8px; font-size: 16px; font-weight: 700; color: var(--teal-dd); background: none; white-space: nowrap; }
 #settings #planCard .plan-link[hidden], #settings #planCard .plan-link[style*="display: none"] { display: none; }
 
 /* ── 付費頁 ── */
-#planModal .sub-hero-face { width: 84px; height: 84px; margin: 0 auto -2px; border-radius: 50%; overflow: hidden; background: var(--mint);
-  border: 3px solid #fff; box-shadow: 0 12px 26px -14px rgba(31,60,52,.45); flex: none; }
-#planModal .sub-hero-face img { width: 100%; height: 100%; object-fit: cover; object-position: center 18%; display: block; }
-#planModal .sub-h { text-align: center; text-wrap: balance; }
-#planModal .sub-lede { text-align: center; color: var(--ink-2); margin-top: -6px; }
 /* 「訂閱方案／加買分鐘」是換頁，「月繳／年繳」是選項——兩個長得一樣會分不清：換頁改成底線分頁 */
 #planModal .sub-seg { background: transparent; border-radius: 0; padding: 0; border-bottom: 1px solid var(--line); }
 #planModal .sseg-thumb { top: auto; bottom: -1px; left: 0; width: 50%; height: 3px; background: var(--btn-green); border-radius: 3px; box-shadow: none; }
 #planModal .sseg-btn { min-height: 52px; font-size: 17px; color: var(--muted); }
 #planModal .sseg-btn.on { color: var(--ink); }
 #planModal .plan-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 0; align-items: stretch; }
-#planModal .ppk, #planModal .ppk.pro { align-items: center; text-align: center; gap: 2px; padding: 24px 10px 16px; border-radius: 22px; min-width: 0; }
-#planModal .ppk.sel, #planModal .ppk.sel.pro { background: #F2FAF8; padding: 23px 9px 15px; }
+#planModal .ppk, #planModal .ppk.pro { align-items: center; text-align: center; gap: 2px; padding: 52px 10px 16px; border-radius: 22px; min-width: 0; }
+#planModal .ppk.sel, #planModal .ppk.sel.pro { background: #F2FAF8; padding: 51px 9px 15px; }
 #planModal .ppk-top, #planModal .ppk.pro .ppk-top { display: contents; }
 #planModal .ppk-name { order: 1; font-size: 20px; line-height: 1.3; }
 #planModal .ppk-feats { order: 2; width: 100%; gap: 0; align-items: center; }
@@ -3481,13 +3473,16 @@ html:lang(en) .set-row .sr-on { font-size: 15px; }
 #planModal .ppk-num { font-family: var(--display); font-size: 40px; font-weight: 700; line-height: 1.05; color: var(--ink); letter-spacing: -.01em; }
 #planModal .ppk.sel .ppk-num { color: var(--teal-dd); }
 #planModal .ppk-unit { font-style: normal; font-size: 15px; font-weight: 700; color: var(--ink-2); margin-top: 2px; }
+#planModal .ppk-min .ppk-daily, #planModal .ppk-ln span { color: var(--ink-2) !important; font-size: 15px; }
+/* 英西文卡片窄，人數只留一行「Up to 4 people」；「家人圈一起用」那句上面的副標已經講了 */
+html:lang(en) #planModal .ppk-ln span, html:lang(es) #planModal .ppk-ln span { display: none; }
 #planModal .ppk-min .ppk-daily { font-size: 15px; font-weight: 500; color: var(--muted); margin-top: 6px; }
 #planModal .ppk-ln { width: 100%; font-size: 15px; line-height: 1.45; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 12px; overflow-wrap: anywhere; }
 #planModal .ppk-price, #planModal .ppk.sel .ppk-price, #planModal .ppk.sel.pro .ppk-price { order: 3; font-size: 20px; margin-top: 10px; white-space: nowrap; }
 #planModal .ppk-price small { display: inline; font-size: 15px; }
 #planModal .ppk-save { order: 4; }
 #planModal .ppk-tag { top: -15px; left: 50%; transform: translateX(-50%); background: var(--coral); color: var(--ink); font-size: 15px; padding: 3px 14px; white-space: nowrap; box-shadow: 0 4px 10px -6px rgba(176,101,27,.6); }
-#planModal .ppk-radio { top: 12px; right: 12px; width: 24px; height: 24px; }
+#planModal .ppk-radio { top: 20px; right: 20px; width: 24px; height: 24px; }
 #planModal .ppk.sel .ppk-radio, #planModal .ppk.sel.pro .ppk-radio { border-width: 7px; }
 /* 已訂閱的那張：「目前方案」取代「推薦」的位置（同一張卡上不放兩個標籤） */
 #planModal .ppk.is-cur .ppk-tag { display: none; }
@@ -3502,10 +3497,51 @@ html:lang(en) .set-row .sr-on { font-size: 15px; }
 #planModal .sub-fam .ic { stroke: var(--teal-d); }
 #planModal #subCta { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 2;
   box-shadow: 0 10px 22px -8px rgba(58,168,160,.55), 0 0 0 12px var(--cream); }
+#planModal #subCta::before { content: ""; position: absolute; left: -12px; right: -12px; bottom: calc(100% + 12px); height: 28px; pointer-events: none;
+  background: linear-gradient(to top, var(--cream), rgba(244,240,232,0)); }
 #planModal #subCta:disabled { background: #fff; color: var(--teal-dd); border: 1.5px solid var(--line); box-shadow: 0 0 0 12px var(--cream); opacity: 1; }
 #settings .auth-email { max-width: none; }
 #settings .auth-actions:not(:has(> button:not([hidden]))) { display: none; }
 #settings .set-signout { margin: 28px 0 8px; }
-#settings .set-signout .auth-secondary { width: 100%; height: auto; min-height: 52px; border-radius: 16px; background: #fff; border: 1px solid var(--line);
+#settings .set-signout .auth-secondary { width: 100%; height: auto; min-height: 52px; border-radius: 16px; background: #fff; border: 1px solid rgba(58,53,46,.2);
   color: var(--ink-2); font-family: var(--sans); font-size: 17px; font-weight: 700; }
 #settings .set-signout .auth-secondary[hidden] { display: none; }
+
+/* ── 設定頁 B 案（localStorage munea.settingsLayout＝"b"；跟上面 A 案並存給 Edward 比較，定案後刪掉沒選的那一段）──
+   ①名片＋方案合成一張大卡、進度條加粗 ②用藥／就診／全家健康圈／陪伴角色做成 2×2 大方塊（圖示 52、字 17 粗）
+   ③其他收成精簡清單（只留標題，列高 60）④條款／隱私／版本收成「關於沐寧」一列，點開才展開
+   ⑤A 案的橘色區段標題全部收起，只留一個安靜的灰色「更多設定」⑥登出照 A 案放最下面 */
+.set-b[hidden] { display: none !important; }
+#settings[data-layout="b"] .set-section,
+#settings[data-layout="b"] .set-list:not(.set-b-list):not(.set-b-about-list) { display: none; }
+#settings[data-layout="b"] .set-b-hero { background: #fff; border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); overflow: hidden; }
+#settings[data-layout="b"] .set-b-hero #authCard { border: none; box-shadow: none; border-radius: 0; background: transparent; padding: 18px 18px 6px; }
+#settings[data-layout="b"] .set-b-hero #planCard { border: none; box-shadow: none; border-radius: 0; margin: 0; background: transparent; padding-top: 10px; }
+#settings[data-layout="b"] .set-b-hero #planCard::before { content: ""; display: block; height: 1px; background: var(--line); margin: 0 0 6px; }
+#settings[data-layout="b"] #planCard .pc-big { font-size: 34px; }
+#settings[data-layout="b"] #planCard .pc-bar { height: 18px; }
+#settings[data-layout="b"] #planCard .pc-days i { height: 16px; }
+#settings[data-layout="b"] .set-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 0; }
+#settings[data-layout="b"] .set-tiles .set-row { position: relative; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 12px;
+  min-height: 132px; padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-sm); }
+#settings[data-layout="b"] .set-tiles .set-row + .set-row { border-top: 1px solid var(--line); }
+#settings[data-layout="b"] .set-tiles .sr-ico { width: 52px; height: 52px; border-radius: 16px; }
+#settings[data-layout="b"] .set-tiles .sr-ico .ic { width: 26px; height: 26px; }
+#settings[data-layout="b"] .set-tiles .sr-ico.comp { border-radius: 50%; }
+#settings[data-layout="b"] .set-tiles .sr-main { flex: none; width: 100%; min-width: 0; padding-right: 0; }
+#settings[data-layout="b"] .set-tiles .sr-main > span:first-child, #settings[data-layout="b"] .set-tiles .sr-main > b { font-size: 17px; font-weight: 700; line-height: 1.35; line-break: strict;
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important; overflow-wrap: break-word; display: block; }
+#settings[data-layout="b"] .set-tiles .sr-main small { display: none; }
+#settings[data-layout="b"] .set-tiles .sr-arrow { position: absolute; top: 16px; right: 14px; font-size: 20px; }
+#settings[data-layout="b"] .set-b-label { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--muted); margin: 28px 4px 10px; }
+#settings[data-layout="b"] .set-b-list .set-row { min-height: 60px; padding: 10px 16px; }
+#settings[data-layout="b"] .set-b-list .sr-ico { width: 38px; height: 38px; border-radius: 11px; }
+#settings[data-layout="b"] .set-b-list .sr-ico .ic { width: 20px; height: 20px; }
+#settings[data-layout="b"] .set-b-list .sr-main small { display: none; }
+#settings[data-layout="b"] .set-b-about { margin-top: 12px; }
+#settings[data-layout="b"] .set-b-about > summary { list-style: none; cursor: pointer; background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow-sm); }
+#settings[data-layout="b"] .set-b-about > summary::-webkit-details-marker { display: none; }
+#settings[data-layout="b"] .set-b-chev { transition: transform .2s; }
+#settings[data-layout="b"] .set-b-about[open] .set-b-chev { transform: rotate(90deg); }
+#settings[data-layout="b"] .set-b-about-list { margin-top: 10px; }
+#settings[data-layout="b"] .set-b-about-list .set-row { min-height: 60px; }

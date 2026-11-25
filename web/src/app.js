@@ -6090,6 +6090,27 @@ function authDisplayName(state) {
 // 帳號卡右上角「唯一」的身份標籤（Edward 2026-07-14：只留一顆、統一右上，不要兩顆）
 // 開發測試帳號 → TEST · FREE/PLUS/PRO；否則 FREE / PLUS / PRO
 let _memBadgePlan = 'free';
+// 設定頁 B 案（2026-11-25 改版提案，跟 A 案並存給 Edward 比較；定案後留一個、刪另一個）：
+// localStorage munea.settingsLayout＝'b' 才啟用。只「搬」既有的列到 B 案容器——id、點擊行為、程式填的字全都不變；
+// 通知中心那列由 notify.js 插在 safetyRow 前面，所以先搬 safetyRow，之後插進來的也會落在精簡清單裡。
+function applySettingsLayoutB() {
+  let on = false;
+  try { on = localStorage.getItem('munea.settingsLayout') === 'b'; } catch (e) {}
+  const root = $('#settings');
+  if (!root || !on || root.dataset.layout === 'b') return;
+  const hero = root.querySelector('.set-b-hero');
+  const tiles = root.querySelector('.set-tiles');
+  const list = root.querySelector('.set-b-list');
+  const aboutList = root.querySelector('.set-b-about-list');
+  if (!hero || !tiles || !list || !aboutList) return;
+  const move = (target, ids) => ids.forEach(id => { const el = document.getElementById(id); if (el) target.appendChild(el); });
+  move(hero, ['authCard', 'planCard']);
+  move(tiles, ['medEntrySettings', 'visitEntry', 'famCircleRow', 'companionRow']);
+  move(list, ['profileRow', 'privacyRow', 'setDevices', 'notificationCenterRow', 'safetyRow', 'visitSummaryRow', 'interestsRow', 'fontRow', 'feedbackRow']);
+  move(aboutList, ['versionRow', 'termsRow', 'privacyPolicyRow']);
+  root.querySelectorAll('.set-b').forEach(el => { el.hidden = false; });
+  root.dataset.layout = 'b';
+}
 function renderMemBadge(plan) {
   if (plan) _memBadgePlan = String(plan).toLowerCase();
   const mb = $('#memBadge');
@@ -9511,6 +9532,7 @@ function init() {
   $('#tabBar').addEventListener('click', e => { const b = e.target.closest('.tab-btn'); if (b) showView(b.dataset.view); });
   renderAiDiagnostics();
   if ($('#aiDevRefresh')) $('#aiDevRefresh').addEventListener('click', () => refreshAiDiagnostics());
+  applySettingsLayoutB();
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
@@ -10776,10 +10798,7 @@ function init() {
         tag.textContent = muneaT('subscription.currentPlanTag', 'Your plan');
       } else if (tag) tag.remove();
     });
-    // 頁首的臉跟著使用者選的陪伴角色（設定頁那一列已經是對的那張）
-    const heroAva = $('#subHeroAva');
-    const compImg = $('#settingsCompanionImg');
-    if (heroAva && compImg && compImg.getAttribute('src') && heroAva.getAttribute('src') !== compImg.getAttribute('src')) heroAva.setAttribute('src', compImg.getAttribute('src'));
+
     const cta = $('#subCta');
     if (cta) {
       const rendererCopy = muneaRendererCopy();
