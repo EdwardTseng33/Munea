@@ -390,19 +390,36 @@ function localizePurchasePlanContent() {
       const dailyText = muneaT('subscription.planDailyMinutes', '· about {minutes} a day', {
         minutes: nf.format(Math.round(facts.minutes / 30)),
       });
-      // 中日文用全形「・」直接接；英西文的「·」前面要空一格
-      daily.textContent = /^[・]/.test(dailyText) ? dailyText : ` ${dailyText}`;
-      minutesLine.replaceChildren(
-        document.createTextNode(muneaT('subscription.planMonthlyMinutes', '{minutes} minutes a month', {
-          minutes: nf.format(facts.minutes),
-        })),
-        daily,
-      );
+      // 2026-11-25 改版提案：兩張方案卡並排，「每月幾分鐘」是兩張卡唯一真正的差別——數字放大單獨一行，
+      // 單位「分鐘／月」接在後面，「一天約幾分鐘」另起一行（去掉開頭的「・」）。整句仍留給螢幕報讀。
+      const num = document.createElement('b');
+      num.className = 'ppk-num';
+      num.textContent = nf.format(facts.minutes);
+      const unit = document.createElement('i');
+      unit.className = 'ppk-unit';
+      unit.textContent = muneaT('subscription.planMinutesUnit', 'min / month');
+      daily.className = 'ppk-daily';
+      daily.textContent = dailyText.replace(/^[・·]\s*/, '');
+      minutesLine.setAttribute('aria-label', muneaT('subscription.planMonthlyMinutes', '{minutes} minutes a month', {
+        minutes: nf.format(facts.minutes),
+      }) + ' ' + daily.textContent);
+      minutesLine.replaceChildren(num, unit, daily);
     }
     const membersLine = card.querySelector('.ppk-ln');
-    if (membersLine) membersLine.textContent = sharedMinutes
-      ? muneaT('subscription.familyShareLimit', 'Up to {members} people in your family circle share them', { members: facts.members })
-      : muneaT('subscription.familyMemberLimit', 'Up to {members} people in your family circle', { members: facts.members });
+    if (membersLine) {
+      // 2026-11-25 改版提案：卡片並排後一行放不下整句，拆成「最多 4 人」（粗）＋「家人圈一起用」兩行；整句留給螢幕報讀
+      const full = sharedMinutes
+        ? muneaT('subscription.familyShareLimit', 'Up to {members} people in your family circle share them', { members: facts.members })
+        : muneaT('subscription.familyMemberLimit', 'Up to {members} people in your family circle', { members: facts.members });
+      const people = document.createElement('b');
+      people.textContent = muneaT('subscription.familyMembersShort', 'Up to {members} people', { members: facts.members });
+      const caption = document.createElement('span');
+      caption.textContent = sharedMinutes
+        ? muneaT('subscription.familyShareCaption', 'share in your family circle')
+        : muneaT('subscription.familyCircleCaption', 'in your family circle');
+      membersLine.setAttribute('aria-label', full);
+      membersLine.replaceChildren(people, caption);
+    }
   });
   const sharedLede = $('#planSharedLede');
   if (sharedLede) {
@@ -6080,7 +6097,9 @@ function renderMemBadge(plan) {
   let dev = false;
   try { dev = !!authState().developerMode; } catch (e) {}
   const key = dev ? 'test' : _memBadgePlan;
-  mb.textContent = dev ? ('TEST · ' + (_memBadgePlan || 'free').toUpperCase()) : key.toUpperCase();
+  // 2026-11-25：免費帳號的標籤跟著語言講（中文「免費」，不再是英文大寫 FREE）；Plus／Pro 是方案名、寫成 Plus／Pro；開發測試帳號照舊 TEST · FREE/PLUS/PRO
+  mb.textContent = dev ? ('TEST · ' + (_memBadgePlan || 'free').toUpperCase())
+    : (key === 'free' || !key ? muneaT('settings.badge.free', 'FREE') : key.charAt(0).toUpperCase() + key.slice(1));
   mb.className = 'mem-badge ' + key;
 }
 function authState() {
@@ -10749,6 +10768,18 @@ function init() {
       }
     });
     document.querySelectorAll('.ppk').forEach(c => { c.classList.toggle('sel', c.dataset.t === _subPlan); c.classList.toggle('is-cur', c.dataset.t === cur); });
+    // 2026-11-25：已訂閱的人一眼看得出哪張是「目前方案」（原本只有按鈕寫「你目前就是 Plus」）
+    document.querySelectorAll('.ppk').forEach(c => {
+      let tag = c.querySelector('.ppk-cur');
+      if (c.dataset.t === cur) {
+        if (!tag) { tag = document.createElement('span'); tag.className = 'ppk-cur'; c.appendChild(tag); }
+        tag.textContent = muneaT('subscription.currentPlanTag', 'Your plan');
+      } else if (tag) tag.remove();
+    });
+    // 頁首的臉跟著使用者選的陪伴角色（設定頁那一列已經是對的那張）
+    const heroAva = $('#subHeroAva');
+    const compImg = $('#settingsCompanionImg');
+    if (heroAva && compImg && compImg.getAttribute('src') && heroAva.getAttribute('src') !== compImg.getAttribute('src')) heroAva.setAttribute('src', compImg.getAttribute('src'));
     const cta = $('#subCta');
     if (cta) {
       const rendererCopy = muneaRendererCopy();

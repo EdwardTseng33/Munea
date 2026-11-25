@@ -467,7 +467,6 @@ setTimeout(function () {
   <section class="screen" id="settings">
     <div class="pad">
       <div class="page-head"><h1 class="page-title" data-i18n="settings.title">設定</h1></div>
-      <h2 class="set-section" data-i18n="settings.section.account">帳號</h2>
       <div class="auth-card" id="authCard" data-auth-state="guest">
         <div class="auth-card-main">
           <!-- 方案標籤搬到頭像正下方（Edward 2026-07-31）：它講的是「這個人是什麼會員」，
@@ -486,7 +485,6 @@ setTimeout(function () {
         </div>
         <div class="auth-actions">
           <button class="auth-primary" id="authSignInBtn" type="button" data-i18n="auth.signIn">登入</button>
-          <button class="auth-secondary" id="authSignOutBtn" type="button" hidden data-i18n="auth.signOut">登出</button>
         </div>
       </div>
 
@@ -535,18 +533,22 @@ setTimeout(function () {
         </div>
       </div>
 
-      <h2 class="set-section" data-i18n="settings.section.accountFamily">帳號與家庭</h2>
-      <div class="set-list">
-        <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main"><span data-i18n="settings.profile">個人資料</span><small data-i18n="settings.profileSubtitle">名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
+      <!-- 2026-11-25 設定頁改版提案（Edward：「設定頁的設計不是很滿意」）：照「多常用到」重新分組——
+           每天會用的提醒放最上面、家人與陪伴一組、健康資料一組、帳號與隱私（含整份刪除）收在下面；
+           每組圖示底色不同，長輩找東西可以先認顏色。每一列的 id 與點擊行為都沒變，只換位置。 -->
+      <h2 class="set-section" data-i18n="settings.section.reminders">每天的提醒</h2>
+      <div class="set-list set-group-remind">
+        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings"></b> ›</span></div>
+        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒您</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+      </div>
+
+      <h2 class="set-section" data-i18n="settings.section.familyCompanion">家人與陪伴</h2>
+      <div class="set-list set-group-family">
         <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main"><span data-i18n="settings.careCircle">全家健康圈</span><small data-i18n="settings.careCircleSubtitle">有誰在裡面、邀請家人加入</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="companionRow" style="cursor:pointer"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/ningning-face.webp" alt=""></span><span class="sr-main"><b id="settingsCompanionName" data-i18n="companion.nening.name">寧寧</b><small id="settingsTemplateLabel" data-i18n="companion.nening.label">溫柔型，像家人一樣照看你</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main"><span data-i18n="settings.interests">想聊的話題</span><small id="interestsSubtitle"></small></span><span class="sr-arrow" id="interestsNow">›</span></div>
       </div>
-
-      <h2 class="set-section" data-i18n="settings.section.companion">AI 陪伴角色</h2>
-      <div class="set-list" id="companionRow" style="cursor:pointer">
-        <div class="set-row"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/ningning-face.webp" alt=""></span><span class="sr-main"><b id="settingsCompanionName" data-i18n="companion.nening.name">寧寧</b><small id="settingsTemplateLabel" data-i18n="companion.nening.label">溫柔型，像家人一樣照看你</small></span><span class="sr-arrow">›</span></div>
-      </div>
-
 
       <section class="ai-dev-panel" id="aiDevPanel" hidden>
         <div class="ai-dev-head">
@@ -568,29 +570,33 @@ setTimeout(function () {
         <pre class="ai-dev-json" id="aiDevJson">{}</pre>
       </section>
 
-      <h2 class="set-section" data-i18n="settings.section.healthSafety">健康資料與安全</h2>
-      <div class="set-list">
+      <h2 class="set-section" data-i18n="settings.section.healthData">健康資料</h2>
+      <div class="set-list set-group-health">
         <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main"><span data-i18n="settings.appleHealth">Apple 健康</span><small data-i18n="settings.appleHealthSubtitle">步數・心率・睡眠</small></span><span class="sr-on" id="healthSettingsState"><span class="d"></span><span id="healthSettingsStateLabel" data-i18n="health.notConnected">未連接</span></span></div>
-        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings"></b> ›</span></div>
-        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒您</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
-
         <div class="set-row" id="visitSummaryRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="sr-main"><span data-i18n="settings.visitSummary">就診摘要</span><small data-i18n="settings.visitSummarySubtitle">帶去給醫生看的一頁整理</small></span><span class="sr-arrow"><b id="visitSummaryPeriodLabel"></b> ›</span></div>
-        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+      </div>
+
+      <h2 class="set-section" data-i18n="settings.section.accountPrivacy">帳號與隱私</h2>
+      <div class="set-list set-group-privacy">
+        <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main"><span data-i18n="settings.profile">個人資料</span><small data-i18n="settings.profileSubtitle">名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="settings.myData">我的資料</span><small data-i18n="settings.myDataSubtitle">匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進登入流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
       <h2 class="set-section" data-i18n="settings.section.experience">App 體驗</h2>
-      <div class="set-list">
+      <div class="set-list set-group-app">
         <div class="set-row" id="feedbackRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z"/><path d="M8 10h8M8 13.5h5"/></svg></span><span class="sr-main"><span data-i18n="settings.feedback">給開發者的建議</span><small data-i18n="settings.feedbackSubtitle">回報問題、許願新功能、幫沐寧打分數</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="fontRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span><span class="sr-main"><span data-i18n="settings.fontDisplay">字體與顯示</span><small data-i18n="settings.fontDisplaySubtitle">字級大小與閱讀舒適</small></span><span class="sr-arrow" id="fontNow"></span></div>
       </div>
 
       <h2 class="set-section" data-i18n="settings.section.about">關於</h2>
-      <div class="set-list">
+      <div class="set-list set-group-about">
         <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main"><span data-i18n="app.title">Munea 沐寧</span><small id="versionSubtitle"><span id="verRowNum">—</span></small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main"><span data-i18n="reader.termsTitle">使用條款</span><small data-i18n="settings.termsSubtitle">服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="reader.privacyTitle">隱私權政策</span><small data-i18n="settings.privacySubtitle">資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
+      <!-- 2026-11-25 改版提案：「登出」從帳號名片右上角搬到整頁最下面——它是會把人登出去的動作，
+           不該跟名字、信箱擠在一起（信箱還因此被切成「meiling@exampl…」）。仍是次要鍵、只在登入後出現。 -->
+      <div class="set-signout"><button class="auth-secondary" id="authSignOutBtn" type="button" hidden data-i18n="auth.signOut">登出</button></div>
     </div>
   </section>
 
@@ -1118,6 +1124,9 @@ setTimeout(function () {
       <span class="sub-status" id="planTrialChip" hidden></span>
     </div>
     <div class="sub-body">
+      <!-- 2026-11-25 改版提案：頁首放陪伴角色的臉（現成頭像，跟設定頁那一列同一張；換成沐沐時由 app.js 跟著換），
+           11/20 拿掉大插圖後整頁只剩表格感，Edward 不滿意——用一張熟悉的臉把「買的是有人陪」講出來。 -->
+      <div class="sub-hero-face" aria-hidden="true"><img id="subHeroAva" src="avatars/ningning-face.webp" alt=""></div>
       <h1 class="sub-h" data-i18n="subscription.headline">Someone for Mom and Dad to talk to every day</h1>
       <!-- 這句講的是「家人圈共用分鐘」，後端還沒開 familySharedMinutes 之前講了就是不實——由 app.js 決定要不要露出 -->
       <p class="sub-lede" id="planSharedLede" hidden></p>
