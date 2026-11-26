@@ -149,20 +149,20 @@ setTimeout(function () {
       <div class="task-card" id="taskCard">
         <div class="task-item" data-task="pill">
           <span class="task-ico pill"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span>
-          <div class="task-body"><div class="task-title" id="pillTitle" data-i18n="medication.reminderTitle">吃藥提醒</div><div class="task-sub" id="pillSub" data-i18n="medication.todayTitle">今天的藥</div></div>
+          <div class="task-body"><div class="task-title" id="pillTitle" data-i18n="medication.reminderTitle" data-i18n-live>吃藥提醒</div><div class="task-sub" id="pillSub" data-i18n="medication.todayTitle">今天的藥</div></div>
           <span class="task-time">14:00</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
         <div class="task-item" data-task="visit" id="visitTask" style="display:none">
           <span class="task-ico visit"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>
-          <div class="task-body"><div class="task-title" id="visitTaskTitle" data-i18n="visit.defaultTitle">回診</div><div class="task-sub" id="visitTaskSub" data-i18n="common.today">今天</div></div>
+          <div class="task-body"><div class="task-title" id="visitTaskTitle" data-i18n="visit.defaultTitle" data-i18n-live>回診</div><div class="task-sub" id="visitTaskSub" data-i18n="common.today">今天</div></div>
           <span class="task-time coral" id="visitTaskTime" data-i18n="common.today">今天</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
         <!-- 行程卡（7/16 Edward）：揪一攤的約會/聚餐「當天」才出現在今天一起完成 -->
         <div class="task-item" data-task="event" id="eventTask" style="display:none">
           <span class="task-ico visit"><svg class="ic" viewBox="0 0 24 24"><path d="M9 20H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M17.8 21.2c1.2-1.2 3.2-3 3.2-4.6a2 2 0 0 0-3.4-1.4l-.6.6-.6-.6a2 2 0 0 0-3.4 1.4c0 1.6 2 3.4 3.2 4.6l.8.8z"/></svg></span>
-          <div class="task-body"><div class="task-title" id="eventTaskTitle" data-i18n="schedule.title">行程</div><div class="task-sub" id="eventTaskSub" data-i18n="common.today">今天</div></div>
+          <div class="task-body"><div class="task-title" id="eventTaskTitle" data-i18n="schedule.title" data-i18n-live>行程</div><div class="task-sub" id="eventTaskSub" data-i18n="common.today">今天</div></div>
           <span class="task-time coral" id="eventTaskTime" data-i18n="common.today">今天</span>
           <span class="task-check"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
         </div>
@@ -193,7 +193,7 @@ setTimeout(function () {
   <section class="screen" id="status">
     <div class="pad">
 
-  <div class="serif h1" style="margin-bottom:14px" id="pageTitle" data-i18n="status.title">今天的狀態</div>
+  <div class="serif h1" style="margin-bottom:14px" id="pageTitle" data-i18n="status.title" data-i18n-live>今天的狀態</div>
   <div class="row st-seg" style="position:relative;background:var(--ink);border-radius:100px;padding:4px;margin-bottom:16px;box-shadow:0 10px 22px -14px rgba(0,0,0,.5)">
     <div id="segThumb" style="position:absolute;top:4px;left:4px;width:calc((100% - 8px)/3);height:calc(100% - 8px);background:var(--teal);border-radius:100px;transition:transform .32s cubic-bezier(.4,0,.2,1);z-index:0"></div>
     <span style="position:relative;z-index:1;flex:1;text-align:center;padding:8px;font-weight:700;font-size:14px;color:#fff" data-period="today" data-i18n="status.today">今天</span>
@@ -206,9 +206,9 @@ setTimeout(function () {
       <span class="obs-ava" style="flex:0 0 40px;width:40px;height:40px;border-radius:13px;overflow:hidden;flex-shrink:0;background:var(--mint2)"><img class="ava-img" src="avatars/ningning-face.webp" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"></span>
       <div style="flex:1">
         <div class="serif obs-heading" id="obsHeading"></div>
-        <div style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700" data-i18n="status.dataReviewed">剛剛幫你看過數據</span></div>
+        <div id="obsReviewed" style="display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#8FD4CC;display:inline-block"></span><span style="font-size:10.5px;color:#8FD4CC;font-weight:700" data-i18n="status.dataReviewed">剛剛幫你看過數據</span></div>
       </div>
-      <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff" data-i18n="common.today">今天</span>
+      <span class="chip" id="obsPeriod" style="background:rgba(255,255,255,.14);color:#fff"></span>
     </div>
     <div id="obsText" style="font-size:15px;line-height:1.75;color:rgba(255,255,255,.95)"><span data-i18n="status.todayDataHint">今天的數據會即時整理在這裡。 </span><span style="color:#8FD4CC;font-weight:700" data-i18n="demo.status.healthEmptyAction">接上 Apple 健康或跟我聊聊</span><span data-i18n="demo.status.healthEmptyTail">，我就開始幫你看著。</span></div>
   </div>
@@ -267,16 +267,16 @@ setTimeout(function () {
   </div>
   <div class="row" id="vitalsRow" style="gap:11px;margin-bottom:11px;align-items:stretch">
     <div class="card" style="padding:15px;flex:1">
-      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="chip" id="bpChip" style="background:var(--mint);color:var(--teal-dd)" data-i18n="health.stable">穩定</span></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--teal);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="chip" id="bpChip" style="display:none;background:var(--mint);color:var(--teal-dd)"></span></div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:3px" data-i18n="health.bloodPressure">血壓</div>
       <div><span class="mnum" id="bpNum" style="font-size:26px;color:var(--teal-dd)">—</span><span id="bpUnit" style="font-size:12.5px;color:var(--muted)"></span></div>
-      <div id="bpSub" style="font-size:11.5px;color:var(--muted);margin-top:6px" data-i18n="status.normalRange">正常範圍內</div>
+      <div id="bpSub" style="font-size:11.5px;color:var(--muted);margin-top:6px"></div>
     </div>
     <div class="card" style="padding:15px;flex:1">
-      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span><span class="chip" id="hrChip" style="background:var(--coral-soft);color:var(--ink)" data-i18n="health.normal">正常</span></div>
+      <div class="row" style="justify-content:space-between;margin-bottom:12px"><span style="width:32px;height:32px;border-radius:10px;background:var(--coral);display:grid;place-items:center;color:#fff"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 8.6c0-3.2-2.5-5.4-5.3-5.4-1.6 0-2.9.7-3.5 1.9-.6-1.2-1.9-1.9-3.5-1.9-2.8 0-5.3 2.2-5.3 5.4C3.2 14 12 20 12 20s8.8-6 8.8-11.4Z"/></svg></span><span class="chip" id="hrChip" style="display:none;background:var(--mint);color:var(--teal-dd)"></span></div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:3px" data-i18n="health.heartRate">心率</div>
       <div><span class="mnum" id="hrNum" style="font-size:26px;color:var(--ink)">—</span><span id="hrUnit" style="font-size:12.5px;color:var(--muted)"></span></div>
-      <div id="hrSub" style="font-size:11.5px;color:var(--muted);margin-top:6px" data-i18n="status.restingHeartRate">靜息心率</div>
+      <div id="hrSub" style="font-size:11.5px;color:var(--muted);margin-top:6px"></div>
     </div>
   </div>
   <div class="card" id="miniStatsCard" style="display:flex;align-items:stretch;padding:0;overflow:hidden;margin-bottom:16px">
@@ -301,7 +301,7 @@ setTimeout(function () {
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--coral-d)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 20 11a4.95 4.95 0 1 0-7-7l-9.5 9.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
         <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.medicationRecords">用藥紀錄</span>
       </div>
-      <span class="chip" id="medTrendChip" style="background:var(--coral-soft);color:var(--ink)" data-i18n="demo.status.medAdherence">7 天準時 6/7</span>
+      <span class="chip" id="medTrendChip" style="background:var(--coral-soft);color:var(--ink)"></span>
     </div>
     <div id="medTrendChart"></div>
   </div>
@@ -311,7 +311,7 @@ setTimeout(function () {
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A6410" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
         <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.sleepQuality">睡眠品質</span>
       </div>
-      <span class="chip" id="sleepTrendChip" style="background:var(--gold-soft);color:#8A6410" data-i18n="demo.status.sleepAvg">日均 7.2 時</span>
+      <span class="chip" id="sleepTrendChip" style="background:var(--gold-soft);color:#8A6410"></span>
     </div>
     <div id="sleepTrendChart"></div>
     <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-top:8px"><i style="display:inline-block;width:12px;border-top:1.5px dashed rgba(90,105,99,.55)"></i><span data-i18n="status.sleepGoal">目標 7.5 小時</span></div>
@@ -322,7 +322,7 @@ setTimeout(function () {
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dd)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/></svg>
         <span class="serif" style="font-weight:900;font-size:15px" data-i18n="status.activity">活動量</span>
       </div>
-      <span class="chip" id="actChip" style="background:var(--mint);color:var(--teal-dd)" data-i18n="demo.status.stepsAvg">日均 6,800 步</span>
+      <span class="chip" id="actChip" style="background:var(--mint);color:var(--teal-dd)"></span>
     </div>
     <div id="actChart"></div>
     <div id="actLegend" style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px">
@@ -384,7 +384,7 @@ setTimeout(function () {
         <!-- 單列頭：返回＋頭像＋名字只出現一次＋右側左右換人；頁點/重複標題移除（Edward 7/9）-->
         <div class="person-top">
           <button class="pt-nav" id="personBack" type="button" aria-label="回全家" data-i18n-aria-label="accessibility.backToFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-          <span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv" data-i18n="demo.family.gmInit">嬤</span></span><div style="flex:1;min-width:0"><div class="pt-name" id="ptName">—</div></div>
+          <span class="pt-av"><span class="init-ava init-ava-lg" id="ptAv" data-i18n="demo.family.gmInit" data-i18n-live>嬤</span></span><div style="flex:1;min-width:0"><div class="pt-name" id="ptName">—</div></div>
           <button class="pt-nav" id="ptPrev" type="button" aria-label="看上一位家人" data-i18n-aria-label="accessibility.previousFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
           <button class="pt-nav" id="ptNext" type="button" aria-label="看下一位家人" data-i18n-aria-label="accessibility.nextFamily"><svg class="ic" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
         </div>
@@ -427,7 +427,7 @@ setTimeout(function () {
       <!-- 家庭記錄簿 -->
 
       <div class="fam-view" id="viewMood">
-        <div class="nav-head"><button class="nav-back" id="moodBack" aria-label="返回" data-i18n-aria-label="accessibility.back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="moodTitle" data-i18n="mood.title">心情</span><span></span></div>
+        <div class="nav-head"><button class="nav-back" id="moodBack" aria-label="返回" data-i18n-aria-label="accessibility.back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="moodTitle" data-i18n="mood.title" data-i18n-live>心情</span><span></span></div>
         <div class="trend-tabs mood-range" id="moodRange"><button class="active" data-r="week" data-i18n="mood.rangeWeek">這一週</button><button data-r="month" data-i18n="mood.rangeMonth">這個月</button></div>
         <div class="mood-week" id="moodWeek"></div>
         <div class="mood-month" id="moodMonth" style="display:none"></div>
@@ -531,8 +531,8 @@ setTimeout(function () {
         <div class="plan-links">
           <!-- 「換方案」只在家人圈一起用（share）時出現：主按鈕變成「加買分鐘」，換方案退到連結列 -->
           <button class="plan-link" id="planChangeBtn" type="button" data-i18n="settings.changePlan">換方案</button>
-          <button class="plan-link" id="planCancelBtn" type="button" data-i18n="purchase.manageSubscription">管理訂閱</button>
-          <button class="plan-link" id="restoreBtn" type="button" data-i18n="purchase.restore">恢復購買</button>
+          <button class="plan-link" id="planCancelBtn" type="button" data-i18n="purchase.manageSubscription" data-i18n-live>管理訂閱</button>
+          <button class="plan-link" id="restoreBtn" type="button" data-i18n="purchase.restore" data-i18n-live>恢復購買</button>
           <!-- 機構發的紙卡上印「點『設定』→『機構開通碼』」，這顆的字要跟卡片對得上（2026-11-17）。 -->
           <button class="plan-link" id="seatCodeEntry" type="button" data-i18n="seatCode.entry">機構開通碼</button>
         </div>
@@ -544,7 +544,7 @@ setTimeout(function () {
       <h2 class="set-section" data-i18n="settings.section.reminders">每天的提醒</h2>
       <div class="set-list set-group-remind">
         <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings"></b> ›</span></div>
-        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒您</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
+        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒你</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
         <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
       </div>
 
@@ -649,7 +649,7 @@ setTimeout(function () {
     </div>
 
     <!-- S2S 狀態提示：不顯示逐字稿，保持像視訊聊天 -->
-    <div class="face-caption" id="chatCaption" data-i18n="voice.ready">直接說，我在這裡</div>
+    <div class="face-caption" id="chatCaption" data-i18n="voice.ready" data-i18n-live>直接說，我在這裡</div>
 
     <!-- 通話狀態卡（2026-07-23 排隊／全滿 → 2026-07-24 Edward 拍板 P0 擴成通用失敗卡 →
          2026-11-09 拿掉「先用文字聊」出口）：顯卡滿載「排隊＝第幾位或準備中＋自動接通說明」
@@ -657,7 +657,7 @@ setTimeout(function () {
          斷線重連失敗／拿不到麥克風）也共用這張卡；文案由 app.js showBusyCard()／showCallStatusCard() 依情況填入。 -->
     <div class="busy-card" id="busyCard" hidden>
       <div class="bc-ring" aria-hidden="true"></div>
-      <div class="bc-title" id="busyCardTitle" data-i18n="voice.queue.fullTitle">現在忙線中</div>
+      <div class="bc-title" id="busyCardTitle" data-i18n="voice.queue.fullTitle" data-i18n-live>現在忙線中</div>
       <div class="bc-pos" id="busyCardPos"></div>
       <div class="bc-note" id="busyCardNote"></div>
       <div class="bc-actions">
@@ -729,7 +729,7 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close" id="quizCloseX" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="activity.quiz">機智問答</h2>
-      <p class="modal-sub" id="quizProgress" data-i18n="activity.quizProgressInitial">第 1 題／共 5 題</p>
+      <p class="modal-sub" id="quizProgress" data-i18n="activity.quizProgressInitial" data-i18n-live>第 1 題／共 5 題</p>
       <div class="quiz-q" id="quizQ">—</div>
       <div class="quiz-opts" id="quizOpts"></div>
     </div>
@@ -751,9 +751,9 @@ setTimeout(function () {
       </div>
       <div id="walkFields">
         <div class="field-label" data-i18n="legacyUi.activityGoal">目標步數（大家一起累積）</div>
-        <div class="range-row"><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" aria-label="調整目標步數" data-i18n-aria-label="activity.adjustGoal" /><b id="walkGoalVal" data-i18n="activity.walkGoalDefault">84,000 步</b></div>
+        <div class="range-row"><input type="range" id="walkGoal" min="10000" max="120000" step="1000" value="84000" aria-label="調整目標步數" data-i18n-aria-label="activity.adjustGoal" /><b id="walkGoalVal"></b></div>
         <input type="range" id="walkDays" min="1" max="30" step="1" value="7" hidden aria-hidden="true" tabindex="-1" />
-        <div class="goal-hint" id="goalHint" data-i18n="activity.walkGoalHint">3 人一起走 7 天 · 平均每人每天約 4,000 步</div>
+        <div class="goal-hint" id="goalHint"></div>
         <div class="field-label" data-i18n="legacyUi.activityDeadline">挑戰截止（到期自動結算）</div>
         <div class="dt-row">
           <input class="chal-input" type="date" id="walkDue" aria-label="挑戰截止日期" data-i18n-aria-label="activity.deadlineDate" />
@@ -762,7 +762,7 @@ setTimeout(function () {
       </div>
       <div id="quizFields" style="display:none">
         <div class="field-label" data-i18n="activity.quizCountLabel">要玩幾題</div>
-        <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" aria-label="調整題目數量" data-i18n-aria-label="activity.quizQuestionCountAria" /><b id="quizNVal" data-i18n="activity.questionsChipDefault">10 題</b></div>
+        <div class="range-row"><input type="range" id="quizN" min="5" max="20" step="5" value="10" aria-label="調整題目數量" data-i18n-aria-label="activity.quizQuestionCountAria" /><b id="quizNVal" data-i18n="activity.questionsChipDefault" data-i18n-live>10 題</b></div>
         <div class="field-label" data-i18n="activity.quizDeadlineLabel">答題截止（到期自動結算排名）</div>
         <div class="dt-row">
           <input class="chal-input" type="date" id="quizDue" aria-label="答題截止日期" data-i18n-aria-label="activity.quizDeadlineDate" />
@@ -866,12 +866,12 @@ setTimeout(function () {
       <div id="fbNpsWrap" style="display:none">
         <div class="field-label" data-i18n="feedback.npsQuestion">你會想把沐寧推薦給朋友或家人嗎？拉一下打個分數</div>
         <div class="nps-bar">
-          <div class="nps-readout"><b id="npsVal">—</b><span id="npsWord" data-i18n="feedback.npsSliderHint">拉一下或點一下</span></div>
+          <div class="nps-readout"><b id="npsVal">—</b><span id="npsWord" data-i18n="feedback.npsSliderHint" data-i18n-live>拉一下或點一下</span></div>
           <input type="range" class="nps-slider" id="npsSlider" min="0" max="10" step="1" value="8" aria-label="推薦分數 0 到 10" data-i18n-aria-label="feedback.npsAria" />
           <div class="nps-hint"><span data-i18n="feedback.npsMin">0 完全不會</span><span data-i18n="feedback.npsMax">10 非常願意</span></div>
         </div>
       </div>
-      <div class="field-label" id="fbTextLabel" data-i18n="legacyUi.feedbackDetailLabel">想說的話（越具體我們修得越快）</div>
+      <div class="field-label" id="fbTextLabel" data-i18n="legacyUi.feedbackDetailLabel" data-i18n-live>想說的話（越具體我們修得越快）</div>
       <textarea class="chal-input" id="fbText" rows="4" maxlength="1000" placeholder="例：聊聊講到一半沒聲音了／希望可以幫我記血糖" data-i18n-placeholder="feedback.placeholder"></textarea>
       <div class="field-label" id="fbPhotoLabel" style="margin-top:14px"><span data-i18n="feedback.photoLabel">附上圖片（選填）</span><span style="font-weight:400;color:var(--muted)" data-i18n="legacyUi.feedbackPhotoHint">　說不清楚時，拍個畫面給我們看</span></div>
       <input type="file" id="fbPhotoInput" accept="image/*" style="display:none">
@@ -978,7 +978,7 @@ setTimeout(function () {
   </div>
 
   <div class="reader-page" id="readerPage" aria-hidden="true">
-    <div class="nav-head"><button class="nav-back" id="readerBack" aria-label="返回" data-i18n-aria-label="accessibility.back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="readerTitle" data-i18n="reader.termsTitle">使用條款</span><span></span></div>
+    <div class="nav-head"><button class="nav-back" id="readerBack" aria-label="返回" data-i18n-aria-label="accessibility.back"><svg class="ic" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><span class="nav-title" id="readerTitle" data-i18n="reader.termsTitle" data-i18n-live>使用條款</span><span></span></div>
     <div class="reader-scroll"><div class="reader-card" id="readerBody"></div></div>
   </div>
 
@@ -989,7 +989,7 @@ setTimeout(function () {
       <h2 data-i18n="data.title">我的資料</h2>
       <p class="modal-sub" data-i18n="data.description">對話摘要、提醒與紀錄都是你的：登入後可以立即建立只屬於你的 JSON 資料副本，或永久刪除帳號與雲端資料。若有 Apple 訂閱，刪除帳號不會自動取消續訂，請先到「訂閱與點數」管理。</p>
       <button class="modal-btn" id="dataExportBtn" data-i18n="report.exportButton">匯出一份給我</button>
-      <button class="modal-btn danger" id="dataDeleteBtn" style="margin-top:10px" data-i18n="data.delete">刪除我的資料</button>
+      <button class="modal-btn danger" id="dataDeleteBtn" style="margin-top:10px" data-i18n="data.delete" data-i18n-live>刪除我的資料</button>
       <p class="modal-sub" style="margin-top:12px" data-i18n="data.policyHint">詳細規則在「隱私權政策」頁（設定裡可開）。</p>
     </div>
   </div>
@@ -1038,9 +1038,9 @@ setTimeout(function () {
         <span class="fc-count" id="fcCount">—</span>
       </div>
       <div class="rl-wrap" id="fcRoster"></div>
-      <button class="modal-btn" id="fcInviteBtn" style="margin-top:14px" data-i18n="legacyUi.familyInvite">邀請家人加入</button>
+      <button class="modal-btn" id="fcInviteBtn" style="margin-top:14px" data-i18n="legacyUi.familyInvite" data-i18n-live>邀請家人加入</button>
       <button class="fc-link" id="fcJoinBtn" type="button" data-i18n="legacyUi.familyJoin">我有邀請碼 · 加入別人的健康圈</button>
-      <button class="fc-leave" id="fcLeaveBtn" type="button" data-i18n="legacyUi.familyLeave">退出這個健康圈</button>
+      <button class="fc-leave" id="fcLeaveBtn" type="button" data-i18n="legacyUi.familyLeave" data-i18n-live>退出這個健康圈</button>
       <p class="fc-privacy" data-i18n="legacyUi.familyPrivacy">互相看得到狀態與關懷摘要；對話內容不會給任何人看。</p>
     </div>
   </div>
@@ -1069,7 +1069,7 @@ setTimeout(function () {
       <p class="inv-temp-note" id="invTempNote" style="display:none"></p><!-- 建立不了時，這裡照雲端回的理由顯示人話（見 app.js INVITE_FAIL_TEXT） -->
       <button class="modal-btn" id="invShareBtn" data-i18n="legacyUi.inviteMessage">用訊息傳邀請</button>
       <button class="inv-copy" id="invCopyBtn" type="button" data-i18n="invite.copy">複製邀請碼</button>
-      <p class="inv-note" id="invLimitNote" data-i18n="legacyUi.invitePlan">目前 Plus 方案 · 全家健康圈最多 4 人</p>
+      <p class="inv-note" id="invLimitNote"></p>
       <p class="inv-note" data-i18n="legacyUi.inviteExpiry">邀請碼 72 小時內有效；誰加入了，你會在全家健康圈名單裡看到。</p>
     </div>
   </div>
@@ -1081,7 +1081,7 @@ setTimeout(function () {
       <h2 data-i18n="legacyUi.joinTitle">加入全家健康圈</h2>
       <p class="modal-sub" data-i18n="legacyUi.joinDescription">把家人給你的邀請碼打在這裡，對上就直接進圈——之後你們的動態、關懷摘要都會互相看得到。</p>
       <input class="chal-input jc-code" id="joinCodeInput" placeholder="例：MUNEA-2847" data-i18n-placeholder="join.codePlaceholder" maxlength="16" autocomplete="off" />
-      <button class="modal-btn" id="joinCircleBtn" style="margin-top:14px" data-i18n="legacyUi.joinTitle">加入全家健康圈</button>
+      <button class="modal-btn" id="joinCircleBtn" style="margin-top:14px" data-i18n="legacyUi.joinTitle" data-i18n-live>加入全家健康圈</button>
     </div>
   </div>
 
@@ -1117,7 +1117,7 @@ setTimeout(function () {
         <button class="tu-card" data-p="600" type="button"><b>600 minutes</b><span class="tu-price">—</span></button>
         <button class="tu-card" data-p="1000" type="button"><b>1,000 minutes</b><span class="tu-price">—</span></button>
       </div>
-      <button class="modal-btn tu-buy" id="tuBuyBtn" type="button">Choose a minute pack</button>
+      <button class="modal-btn tu-buy" id="tuBuyBtn" type="button" disabled></button>
     </div>
   </div>
 
@@ -1288,12 +1288,12 @@ setTimeout(function () {
       <div id="histRange" style="display:none">
         <div class="rc-head">
           <button class="rc-nav" id="rcPrev" type="button" aria-label="上個月" data-i18n-aria-label="history.previousMonth">‹</button>
-          <b id="rcTitle" data-i18n="demo.reportMonthSample">2026 年 7 月</b>
+          <b id="rcTitle" data-i18n="demo.reportMonthSample" data-i18n-live>2026 年 7 月</b>
           <button class="rc-nav" id="rcNext" type="button" aria-label="下個月" data-i18n-aria-label="history.nextMonth">›</button>
         </div>
         <div class="rc-week"><i data-i18n="visit.weekdayMon">一</i><i data-i18n="visit.weekdayTue">二</i><i data-i18n="visit.weekdayWed">三</i><i data-i18n="visit.weekdayThu">四</i><i data-i18n="visit.weekdayFri">五</i><i data-i18n="visit.weekdaySat">六</i><i data-i18n="visit.weekdaySun">日</i></div>
         <div class="rc-grid" id="rcGrid"></div>
-        <p class="rc-hint" id="rcHint" data-i18n="visit.rangePickHint">點開始那天，再點結束那天</p>
+        <p class="rc-hint" id="rcHint" data-i18n="visit.rangePickHint" data-i18n-live>點開始那天，再點結束那天</p>
         <div class="rpt-card" id="rcResult" style="display:none"></div>
       </div>
     </div>
@@ -1329,13 +1329,13 @@ setTimeout(function () {
     <div class="modal">
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <div class="mr-say"><img class="mr-face" src="avatars/ningning-face.webp" alt="" /><span id="medDueSay" data-i18n="medicationReminder.dueTitle">吃藥時間到囉</span></div>
+      <div class="mr-say"><img class="mr-face" src="avatars/ningning-face.webp" alt="" /><span id="medDueSay"></span></div>
       <div class="med-pill-card">
         <div class="mpc-row">
           <div class="mpc-photo"><svg class="ic" viewBox="0 0 24 24" style="width:28px;height:28px"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></div>
-          <div><div class="mpc-name" id="medDueName" data-i18n="demo.medDueSampleName">脈優</div><div class="mpc-desc" id="medDueDesc" data-i18n="medicationReminder.instructionHint">照你設定的提醒 · 配溫開水就可以</div></div>
+          <div><div class="mpc-name" id="medDueName"></div><div class="mpc-desc" id="medDueDesc"></div></div>
         </div>
-        <div class="mpc-streak"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div class="mpc-streak" hidden><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
       </div>
       <div class="med-actions" style="margin-top:14px">
         <button class="taken" id="medTaken"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span data-i18n="medicationReminder.taken">我吃過了</span></button>
@@ -1428,8 +1428,8 @@ setTimeout(function () {
   <script src="src/auth-config.js"></script><!-- 真帳號公開鑰匙（scripts/gen-auth-config.py 產生、不入庫）；沒有此檔=訪客模式、App 照常 -->
   <script src="src/auth.js?v=20261120-v1072"></script>
   <script src="src/health.js?v=20261115-health5"></script>
-  <script src="src/store.js?v=20260730-store3-retry"></script>
-  <script src="src/notify.js?v=20261109-askincontext"></script>
+  <script src="src/store.js?v=20261120-store4-appkey"></script>
+  <script src="src/notify.js?v=20261120-appkey2"></script>
   <script src="src/medication.js?v=20260730-med2"></script>
   <script>
   window.muneaUiT = function(key, fallback, values) {
@@ -1572,10 +1572,19 @@ setTimeout(function () {
 
   // ===== 後端帳本（點的寫進去、聊聊記的讀回來，同一本）=====
   var _logTimer=null,_logMood=null;
-  function postLog(i){ _logMood=i; if(_logTimer) clearTimeout(_logTimer); _logTimer=setTimeout(function(){ var mi=_logMood; var body={mood:MOODS[mi].k,moodKey:mi,level:LEVELS[mi],moodColor:{colorKey:'orb'+mi,bg:MOODS[mi].c,fg:'#fff'}}; try{ if(typeof window.__muneaPostMood==='function') window.__muneaPostMood(body); else fetch('/wellbeing/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).catch(function(){}); }catch(e){} },2500); }
+  // 心情的雲端讀寫一律走 app.js 那條（帶通行碼＋登入證）。這段比 app.js（模組）早執行，
+  // 以前等不到就自己裸打 /wellbeing/*：沒通行碼、沒登入證，正式環境只會被擋。改成等 app.js 就緒再送。
+  function viaApp(name,body){
+    if(typeof window[name]==='function') return Promise.resolve(window[name](body));
+    return new Promise(function(resolve){
+      var go=function(){ resolve(typeof window[name]==='function' ? window[name](body) : null); };
+      if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go,{once:true}); else setTimeout(go,0);
+    });
+  }
+  function postLog(i){ _logMood=i; if(_logTimer) clearTimeout(_logTimer); _logTimer=setTimeout(function(){ var mi=_logMood; var body={mood:MOODS[mi].k,moodKey:mi,level:LEVELS[mi],moodColor:{colorKey:'orb'+mi,bg:MOODS[mi].c,fg:'#fff'}}; try{ viaApp('__muneaPostMood',body); }catch(e){} },2500); }
   function pull(){
     var localSelf=load().filter(function(x){return x.src==='self' && Date.now()-x.t<300000;});
-    var request=(typeof window.__muneaPullMood==='function')?window.__muneaPullMood({limit:400}):fetch('/wellbeing/recent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({limit:400})}).then(function(r){return r.json();});
+    var request=viaApp('__muneaPullMood',{limit:400});
     return Promise.resolve(request).then(function(j){
         if(!j||!j.signals) return;
         var server=j.signals.map(function(sg){ var i=normMoodKey(sg.moodKey); if(i==null) i=normMoodKey(sg.mood); var t=sg.createdAt?Date.parse(sg.createdAt):Date.now(); return {t:t,i:i,src:(sg.source==='self-report')?'self':'obs'}; }).filter(function(x){return !isNaN(x.t)&&x.i!=null;});
@@ -1656,6 +1665,8 @@ window.MMDEV = function(){
   function T(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
   function hide(id){ var el=document.getElementById(id); if(el) el.style.display='none'; }
   function show(id){ var el=document.getElementById(id); if(el) el.style.display=''; }
+  // 標籤（穩定／偏高…）是對數值下的判斷：沒有字＝還沒有人依真數值判斷過，就不亮
+  function showIfJudged(id){ var el=document.getElementById(id); if(el) el.style.display = el.textContent.trim() ? '' : 'none'; }
   var H = window.MuneaHealth;
   // 真機：每一項的狀態由「真的讀到什麼」推導（health.js metricStates）。
   // 不可以用 munea.devicesOn 旗標判斷——那是我們自己在授權視窗關掉後就設的，
@@ -1672,6 +1683,10 @@ window.MMDEV = function(){
 
   // 沒有真觀察可寫的時候，這句話由狀態決定——三種情況講三種話，不可以互相沿用。
   // （只讀到一部分卻還說「讀不到資料」也是假的，一樣不行。）
+  // 「剛剛幫你看過數據」這行小字只有真的讀到健康資料才出現（2026-11-17）：
+  // 以前它寫死在畫面上，沒接裝置時上面說「剛剛幫你看過數據」、下面說「還沒接上健康裝置」，自相矛盾。
+  var reviewed=document.getElementById('obsReviewed');
+  if(reviewed) reviewed.style.display = (anyOk || window.__muneaObsReal) ? 'flex' : 'none';
   var obs=document.getElementById('obsText');
   if(obs && !window.__muneaObsReal) obs.textContent = off
     ? window.muneaUiT('status.healthDeviceEmpty','還沒接上健康裝置。接上 Apple 健康，或先記個心情、跟我聊聊，我就開始幫你看著了。')
@@ -1685,8 +1700,8 @@ window.MMDEV = function(){
   var miss = off
     ? window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入')
     : window.muneaUiT('status.healthMetricMissing','還沒讀到這一項');
-  if(st.bp !== 'ok'){ T('bpNum','—'); T('bpUnit',''); T('bpSub',miss); hide('bpChip'); } else { show('bpChip'); }
-  if(st.hr !== 'ok'){ T('hrNum','—'); T('hrUnit',''); T('hrSub',miss); hide('hrChip'); } else { show('hrChip'); }
+  if(st.bp !== 'ok'){ T('bpNum','—'); T('bpUnit',''); T('bpSub',miss); hide('bpChip'); } else { showIfJudged('bpChip'); }
+  if(st.hr !== 'ok'){ T('hrNum','—'); T('hrUnit',''); T('hrSub',miss); hide('hrChip'); } else { showIfJudged('hrChip'); }
   if(st.spo2 !== 'ok'){ T('spo2Num','—'); T('spo2Unit',''); }
   if(st.sleep !== 'ok'){ T('sleepNum','—'); T('sleepUnit',''); }
   if(st.steps !== 'ok'){ T('stepsNum','—'); T('stepsUnit',''); }
@@ -1710,13 +1725,32 @@ window.MMDEV = function(){
   var HL='color:#8FD4CC';
   function mmTodayLog(){ try{ var lg=JSON.parse(localStorage.getItem('munea.healthLog')||'{}'); return lg[mmDateKey()]||null; }catch(e){ return null; } }
   // 7/9 正式化：狀態頁不再有寫死示範數字——今天=真日記帳（沒有就 —）、觀察句由真數據改寫
+  function paintChip(id,txt,warn){
+    var el=document.getElementById(id); if(!el) return;
+    el.textContent=txt||'';
+    el.style.display=txt?'':'none';
+    el.style.background=warn?'var(--coral-soft)':'var(--mint)';
+    el.style.color=warn?'var(--ink)':'var(--teal-dd)';
+  }
   function vitalsOf(){
     var t=mmTodayLog()||{};
     function n(v,f){ return (v||v===0)?String(f?f(v):v):'—'; }
     function unit(s){ var locale=window.muneaUiLocale(); return ((locale==='en'||locale==='es')?' ':'')+s; }
+    // 2026-11-17：以前只要有血壓數字就一律寫「正常範圍內」、沒有數字時畫面預設也寫「正常範圍內」。
+    // 沒有數值＝不下任何判斷；有數值＝照數值判斷（門檻跟 app.js 的 __muneaSetHealth 同一組）。
+    var sys=+t.bpSys||0, dia=+t.bpDia||0, hrN=+t.hr||0;
+    var bpV={chip:'',warn:false,sub:window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入')};
+    if(sys>0 && dia>0){
+      var hi=sys>=140||dia>=90, lo=sys<90;
+      bpV={ warn:hi||lo,
+        chip: hi?window.muneaUiT('health.high','偏高'):lo?window.muneaUiT('health.low','偏低'):window.muneaUiT('health.stable','穩定'),
+        sub: hi?window.muneaUiT('health.bpHighRetryHint','比平常高一點，晚點再量一次'):lo?window.muneaUiT('health.bpLowHint','偏低一些，起身動作放慢'):window.muneaUiT('health.bpNormalHint','正常範圍內') };
+    } else if(sys>0){ bpV.sub=''; }   // 只有收縮壓、沒有舒張壓：數字照顯示，不下判斷
+    var hrV={chip:'',warn:false};
+    if(hrN>0){ var odd=hrN<50||hrN>100; hrV={ warn:odd, chip: odd?window.muneaUiT('health.attention','注意'):window.muneaUiT('health.normal','正常') }; }
     return {
-      bp:{num:n(t.bpSys), unit:(t.bpDia?'/'+t.bpDia+' mmHg':''), chip:'', sub:(t.bpSys?window.muneaUiT('status.normalRange','正常範圍內'):window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入'))},
-      hr:{num:n(t.hr), unit:(t.hr?' bpm':''), chip:'', sub:(t.hr?window.muneaUiT('status.restingHeartRate','靜息心率'):window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入'))},
+      bp:{num:n(t.bpSys), unit:(t.bpDia?'/'+t.bpDia+' mmHg':''), chip:bpV.chip, warn:bpV.warn, sub:bpV.sub},
+      hr:{num:n(t.hr), unit:(t.hr?' bpm':''), chip:hrV.chip, warn:hrV.warn, sub:(t.hr?window.muneaUiT('status.restingHeartRate','靜息心率'):window.muneaUiT('status.connectAppleHealth','接 Apple 健康帶入'))},
       spo2:{num:n(t.spo2), unit:(t.spo2?' %':'')}, sleep:{num:n(t.sleepHours), unit:(t.sleepHours?unit(window.muneaUiT('health.unit.hoursShort','小時')):'')},
       steps:{num:n(t.steps,function(v){return (+v).toLocaleString(window.muneaUiLocale());}), unit:(t.steps?unit(window.muneaUiT('health.unit.steps','步')):'')}
     };
@@ -1886,11 +1920,11 @@ window.MMDEV = function(){
       d=Object.assign({},d,vitalsOf());
       document.getElementById('bpNum').textContent=d.bp.num;
       document.getElementById('bpUnit').textContent=d.bp.unit;
-      if(d.bp.chip){document.getElementById('bpChip').textContent=d.bp.chip;}
+      paintChip('bpChip',d.bp.chip,d.bp.warn);
       document.getElementById('bpSub').textContent=d.bp.sub;
       document.getElementById('hrNum').textContent=d.hr.num;
       document.getElementById('hrUnit').textContent=d.hr.unit;
-      if(d.hr.chip){document.getElementById('hrChip').textContent=d.hr.chip;}
+      paintChip('hrChip',d.hr.chip,d.hr.warn);
       document.getElementById('hrSub').textContent=d.hr.sub;
       document.getElementById('spo2Num').textContent=d.spo2.num;
       document.getElementById('spo2Unit').textContent=d.spo2.unit;
@@ -1898,6 +1932,7 @@ window.MMDEV = function(){
       document.getElementById('sleepUnit').textContent=d.sleep.unit;
       document.getElementById('stepsNum').textContent=d.steps.num;
       document.getElementById('stepsUnit').textContent=d.steps.unit;
+      // 沒連／連了讀不到，各有各的說法：這個函式結尾的 MMDEV(period) 會再講一次，蓋過上面那句「接 Apple 健康帶入」
     }
     if(period==='today' && window.__muneaObsReal){ document.getElementById('obsText').innerHTML=window.__muneaObsReal; }
     else { document.getElementById('obsText').textContent=d.obs; }
@@ -1936,6 +1971,7 @@ window.MMDEV = function(){
   window.MM.renderMood('today');
   refreshMedCard('today');
   refreshTrendCards('today');
+  document.getElementById('obsPeriod').textContent=dataFor('today').obsPeriod;
   if(window.MMDEV) window.MMDEV();
   window.__muneaRefreshMedicationUi=function(){ render(currentPeriod); };
   window.addEventListener('munea:medication-change',function(){ window.__muneaRefreshMedicationUi(); });

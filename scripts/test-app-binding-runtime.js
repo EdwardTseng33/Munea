@@ -87,7 +87,7 @@ const runtime = runtimeApi.createAppBindingRuntime({
 });
 
 const first = runtime.apply(documentLike);
-assert.equal(first.configured, 20);
+assert.equal(first.configured, 17);
 assert.equal(signIn.textContent, 'ja:auth.signIn');
 assert.equal(
   stateOwned.textContent,

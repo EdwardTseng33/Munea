@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""免費額度（2026-11-20 起）：前 7 天每天 10 分鐘、之後每週 10 分鐘，取代註冊一次送 5 點。"""
+"""免費額度（2026-11-26 起）：註冊送一次 5 分鐘，用完就訂閱或加買；不會每天／每週再給。"""
 import os
 import sys
 import unittest
@@ -50,40 +50,70 @@ class FreeSignupTrialTests(unittest.TestCase):
             for p in reversed(patches):
                 p.stop()
 
-    def test_new_account_gets_ten_today_and_bootstrap_is_idempotent(self):
+    def test_new_account_gets_five_once_and_bootstrap_is_idempotent(self):
         store = server.default_credits_store()
-        now_iso = server.utc_now()
         first, replay = self.run_with(
-            json_store_patches(store, created_at=now_iso),
+            json_store_patches(store, created_at=server.utc_now()),
             lambda: (server.ensure_free_signup_trial("account-a"), server.ensure_free_signup_trial("account-a")),
         )
         self.assertTrue(first["ok"])
         self.assertFalse(first["idempotentReplay"])
-        self.assertEqual(first["mode"], "free_daily")
-        self.assertEqual(first["credits"], 10)
-        self.assertEqual(first["walletSummary"]["total"], 10)
-        self.assertEqual(first["walletSummary"]["freeAllowance"], 10)
+        self.assertEqual((first["mode"], first["period"], first["credits"]), ("free_once", "free-once", 5))
+        self.assertEqual(first["walletSummary"]["freeAllowance"], 5)
         self.assertTrue(replay["idempotentReplay"])
-        self.assertEqual(replay["walletSummary"]["total"], 10)
+        self.assertEqual(replay["walletSummary"]["total"], 5)
         grants = [tx for tx in store["transactions"] if tx["type"] == "grant"]
-        self.assertEqual(len(grants), 1)
-        self.assertTrue(grants[0]["idempotencyKey"].startswith("free-allowance:account-a:free-daily:"))
-        self.assertFalse(any(tx["reason"] == "free_signup_voice_avatar_trial" for tx in store["transactions"]),
-                         "不再發一次性 5 點")
+        self.assertEqual([g["idempotencyKey"] for g in grants], ["free-signup-trial:account-a"])
+        wallet = next(w for w in store["wallets"] if w["type"] == "free_allowance")
+        self.assertIsNone(wallet.get("expiresAt"), "一次性 5 分鐘不會到期")
 
-    def test_old_account_goes_straight_to_weekly_and_keeps_legacy_five_points(self):
+    def test_used_up_is_not_refilled_on_a_later_day(self):
+        store = server.default_credits_store()
+        self.run_with(json_store_patches(store, created_at=server.utc_now()),
+                      lambda: server.ensure_free_signup_trial("account-a"))
+        for wallet in store["wallets"]:
+            if wallet["type"] == "free_allowance":
+                wallet["balance"] = 0
+        later = self.run_with(json_store_patches(store, created_at="2026-07-01T00:00:00Z"),
+                              lambda: server.ensure_free_signup_trial("account-a"))
+        self.assertTrue(later["idempotentReplay"])
+        self.assertEqual(later["walletSummary"]["total"], 0, "用掉的不回補、也不會每天／每週再給")
+        self.assertEqual(sum(1 for tx in store["transactions"] if tx["type"] == "grant"), 1)
+
+    def test_old_account_that_got_legacy_five_points_gets_nothing_more(self):
         store = server.default_credits_store()
         store["wallets"] = [
             {"id": "wallet_purchased", "type": "purchased", "period": None, "balance": 3, "status": "active"},
+        ]
+        store["transactions"] = [
+            {"id": "tx-old", "type": "grant", "walletId": "wallet_purchased", "amount": 5,
+             "reason": "free_signup_voice_avatar_trial", "idempotencyKey": "free-signup-trial:account-a"},
         ]
         result = self.run_with(
             json_store_patches(store, created_at="2026-07-01T00:00:00Z"),
             lambda: server.ensure_free_signup_trial("account-a"),
         )
-        self.assertEqual(result["mode"], "free_weekly")
-        self.assertTrue(result["period"].startswith("free-weekly:"))
+        self.assertTrue(result["idempotentReplay"])
         self.assertEqual(result["walletSummary"]["purchased"], 3, "舊的一次性 5 點剩下的要保留")
-        self.assertEqual(result["walletSummary"]["total"], 13)
+        self.assertEqual(result["walletSummary"]["total"], 3)
+        self.assertFalse(any(w["type"] == "free_allowance" for w in store["wallets"]))
+
+    def test_account_that_only_had_daily_allowance_gets_five_once_and_daily_wallet_closes(self):
+        store = server.default_credits_store()
+        store["wallets"] = [
+            {"id": "wallet_free-daily_2099-01-01", "type": "free_allowance", "period": "free-daily:2099-01-01",
+             "balance": 7, "expiresAt": "2099-01-01T16:00:00Z", "status": "active"},
+        ]
+        store["transactions"] = [
+            {"id": "tx-daily", "type": "grant", "walletId": "wallet_free-daily_2099-01-01", "amount": 10,
+             "reason": "free_allowance_free_daily", "idempotencyKey": "free-allowance:account-a:free-daily:2099-01-01"},
+        ]
+        result = self.run_with(json_store_patches(store, created_at=server.utc_now()),
+                               lambda: server.ensure_free_signup_trial("account-a"))
+        self.assertFalse(result["idempotentReplay"])
+        self.assertEqual(result["walletSummary"]["total"], 5, "每日錢包收掉、補一次 5 分鐘")
+        daily = next(w for w in store["wallets"] if w["period"] == "free-daily:2099-01-01")
+        self.assertEqual(daily["metadata"]["closedBy"], "035_free_once")
 
     def test_paid_account_gets_no_free_allowance(self):
         store = server.default_credits_store()
@@ -96,7 +126,7 @@ class FreeSignupTrialTests(unittest.TestCase):
         self.assertEqual(result["credits"], 0)
         self.assertFalse(any(w["type"] == "free_allowance" for w in store["wallets"]))
 
-    def test_supabase_falls_back_to_old_rpc_until_034_is_applied(self):
+    def test_supabase_falls_back_to_old_rpc_when_new_one_is_missing(self):
         class Backend:
             def enabled(self):
                 return True
@@ -110,8 +140,7 @@ class FreeSignupTrialTests(unittest.TestCase):
         with patch.object(server, "data_backend", return_value=Backend()):
             result = server.ensure_free_signup_trial("11111111-1111-4111-8111-111111111111")
         self.assertTrue(result["ok"])
-        self.assertEqual(result["credits"], 5)
-        self.assertEqual(result["mode"], "free_signup_trial")
+        self.assertEqual((result["mode"], result["credits"]), ("free_once", 5))
 
     def test_supabase_uses_new_rpc(self):
         class Backend:
@@ -119,24 +148,24 @@ class FreeSignupTrialTests(unittest.TestCase):
                 return True
 
             def ensure_free_allowance(self):
-                return {"ok": True, "mode": "free_daily", "period": "free-daily:2026-11-20", "credits": 10,
-                        "balance": 10, "idempotentReplay": False}
+                return {"ok": True, "mode": "free_once", "period": "free-once", "credits": 5,
+                        "balance": 5, "idempotentReplay": False}
 
             def grant_free_signup_trial(self):
-                raise AssertionError("034 套用後不該再走舊的註冊送點")
+                raise AssertionError("新的資料庫函式在的時候不該走舊的註冊送點")
 
         with patch.object(server, "data_backend", return_value=Backend()):
             result = server.ensure_free_signup_trial("11111111-1111-4111-8111-111111111111")
-        self.assertEqual((result["mode"], result["credits"], result["walletSummary"]["total"]), ("free_daily", 10, 10))
+        self.assertEqual((result["mode"], result["credits"], result["walletSummary"]["total"]), ("free_once", 5, 5))
 
     def test_default_free_plan_bundles_voice_and_avatar(self):
         entitlements = server.default_billing_store()["entitlements"]
         self.assertTrue(entitlements["voiceCompanion"])
         self.assertTrue(entitlements["realtimeAvatar"])
-        self.assertEqual(entitlements["signupTrialCredits"], 0, "一次性 5 點已改成每日／每週免費額度")
-        self.assertEqual(entitlements["freeTrialDays"], 7)
-        self.assertEqual(entitlements["freeTrialDailyMinutes"], 10)
-        self.assertEqual(entitlements["freeWeeklyMinutes"], 10)
+        self.assertEqual(entitlements["signupTrialCredits"], 5, "2026-11-26：註冊送一次 5 分鐘")
+        self.assertEqual(entitlements["freeOnceMinutes"], 5)
+        for gone in ("freeTrialDays", "freeTrialDailyMinutes", "freeWeeklyMinutes"):
+            self.assertNotIn(gone, entitlements, "沒有天數概念")
         self.assertEqual(entitlements["creditMinutes"], 1)
         # 2026-07-31 #458：免費版開放 1 位家人（本人＋1＝2）。
         # 程式改對了、守門沒跟上，main 的出貨閘門紅著——今天第七次同一個病。
