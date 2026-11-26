@@ -7674,6 +7674,42 @@ function resetCreditMeta() {
   CREDIT_META.familyShare = null;
   CREDIT_META.includedMonthly = null;
   CREDIT_META.subscription = null;
+  _creditFromSnap = false;
+}
+// 2026-11-26 Edward：「頁面不應該剛點進去是舊設計、過幾秒才換新設計」。
+// 分鐘資訊要等 /credits/balance 回來（幾秒），這段時間方案卡以前會先露出舊排法再跳。
+// 改成：每次伺服器回來就把這幾個欄位記在手機上（記帳號 id），下次開 App 先用上次的畫，伺服器回來只更新數字。
+// 只有本人看得到自己的分鐘；登出就刪；換成別的帳號登入時 id 對不上就不用。
+const CREDIT_SNAP_KEY = 'munea.creditSnap.v1';
+const CREDIT_SNAP_DROP_EVENTS = ['SIGNED_OUT', 'SESSION_REJECTED', 'DEV_SESSION_REJECTED'];
+let _creditFromSnap = false;   // 畫面上的分鐘是不是手機上的快照（伺服器還沒回）
+function saveCreditSnap() {
+  try {
+    const uid = authState().userId;
+    if (!uid) return;
+    localStorage.setItem(CREDIT_SNAP_KEY, JSON.stringify({
+      uid, allowance: CREDIT_META.allowance, includedMonthly: CREDIT_META.includedMonthly, subscription: CREDIT_META.subscription,
+    }));
+  } catch (e) {}
+}
+function clearCreditSnap() { try { localStorage.removeItem(CREDIT_SNAP_KEY); } catch (e) {} }
+// 開 App 還在讀登入（INITIAL）時也先用：快照只有登出才刪，所以這時手機上的快照一定是上一個登入的人自己的。
+// 讀到登入結果後再比一次帳號 id，不同人就丟掉。
+function restoreCreditSnap() {
+  try {
+    const st = authState();
+    const known = st && st.status === 'signed-in' && st.userId;
+    const booting = st && st.status === 'guest' && st.event === 'INITIAL';
+    if (!known && !booting) return false;
+    const snap = JSON.parse(localStorage.getItem(CREDIT_SNAP_KEY) || 'null');
+    if (!snap || typeof snap !== 'object') return false;
+    if (known && snap.uid !== st.userId) { clearCreditSnap(); resetCreditMeta(); return false; }
+    if (CREDIT_META.allowance === null && snap.allowance && typeof snap.allowance === 'object') CREDIT_META.allowance = snap.allowance;
+    if (CREDIT_META.includedMonthly === null && snap.includedMonthly !== undefined) CREDIT_META.includedMonthly = muneaNonNegInt(snap.includedMonthly);
+    if (CREDIT_META.subscription === null && snap.subscription && typeof snap.subscription === 'object') CREDIT_META.subscription = snap.subscription;
+    _creditFromSnap = true;
+    return true;
+  } catch (e) { return false; }
 }
 function muneaNonNegInt(value) {
   const n = Number(value);
@@ -7862,6 +7898,8 @@ async function refreshServerCredits() {
     CREDIT_META.includedMonthly = included === null || included === undefined || included === ''
       ? null
       : muneaNonNegInt(included);
+    _creditFromSnap = false;
+    saveCreditSnap();
   }
   const rawTotal = result && result.walletSummary && result.walletSummary.total;
   const total = Number(rawTotal);
@@ -9672,12 +9710,16 @@ function init() {
   setupAiProviderConsentControls();
   if (window.MuneaAuth && typeof window.MuneaAuth.init === 'function') {
     const authInit = window.MuneaAuth.init();
-    if (authInit && typeof authInit.then === 'function') authInit.then(updateAuthUI).catch(updateAuthUI);
+    // 登入結果出來後方案卡也要重畫一次：開 App 時可能先用了快照，得照真正的登入結果收回或保留
+    const afterAuth = () => { updateAuthUI(); try { if (window.__muneaRenderPlanCard) window.__muneaRenderPlanCard(); } catch (e) {} };
+    if (authInit && typeof authInit.then === 'function') authInit.then(afterAuth).catch(afterAuth);
   }
   window.addEventListener('munea:auth-state', e => {
     const detail = e.detail || {};
     updateAuthUI();
     if (detail.status === 'signed-in') {
+      restoreCreditSnap();
+      try { if (window.__muneaRenderPlanCard) window.__muneaRenderPlanCard(); } catch (err) {}
       closeAuthSheet();
       syncAccountBootstrap('create', { reason: 'auth_signed_in', force: true })
         .then(result => { if (result && result.ok) refreshServerCredits(); return syncPersonProfileCloud(); })
@@ -9686,6 +9728,7 @@ function init() {
     } else {
       POINTS.serverRemaining = null;
       resetCreditMeta();
+      if (CREDIT_SNAP_DROP_EVENTS.includes(detail.event)) clearCreditSnap();
       renderPoints();
       try { if (window.__muneaRenderPlanCard) window.__muneaRenderPlanCard(); } catch (e) {}
     }
@@ -11115,34 +11158,52 @@ function init() {
   function renderPlanCard() {
     const card = $('#planCard');
     if (!card) return;
+    // 開 App 時先用了快照、結果其實沒登入（登入過期／被登出）→ 快照的數字收回，不能留在訪客畫面上
+    const authNow = authState();
+    if (_creditFromSnap && authNow.status !== 'signed-in' && authNow.event !== 'INITIAL') {
+      resetCreditMeta();
+      if (CREDIT_SNAP_DROP_EVENTS.includes(authNow.event)) clearCreditSnap();
+    }
+    if (!CREDIT_META.allowance && CREDIT_META.includedMonthly === null) restoreCreditSnap();
     const plan = circlePlan();
     const a = muneaAllowance();
     const facts = plan === 'free' ? null : planMonthFacts();
-    let mode = 'legacy';
-    if (facts) mode = 'plan';
-    else if (plan === 'free' && a && a.mode === 'free_once' && muneaNonNegInt(a.remaining) !== null) mode = 'free';
+    // 2026-11-26：拿掉「legacy 舊排法」這條退路——它就是 Edward 看到「先舊後新」的那個舊畫面。
+    // 有訂閱（本機記的方案）→ plan；其他 → free。分鐘數還沒到就只空著數字那行。
+    const mode = plan === 'free' ? 'free' : 'plan';
     card.dataset.mode = mode;
     const headTitle = $('#pcHeadTitle');
     const headMeta = $('#pcHeadMeta');
     const big = $('#pcBig');
+    const pending = () => { if (big) { big.replaceChildren(); big.classList.remove('is-note'); delete big.dataset.shown; } };
     if (mode === 'free') {
       if (headTitle) headTitle.textContent = muneaT('settings.trialTitle', 'Free plan');
       if (headMeta) headMeta.textContent = '';
-      setBigMinutes(big, 'settings.freeLeft', '{minutes} free minutes left', muneaNonNegInt(a.remaining));
-    } else if (mode === 'plan') {
-      const planKey = facts.plan === 'pro' ? 'subscription.planPro' : 'subscription.planPlus';
+      const st = authState();
+      const freeLeft = a && a.mode === 'free_once' ? muneaNonNegInt(a.remaining) : null;
+      if (freeLeft !== null) {
+        if (big) big.classList.remove('is-note');
+        setBigMinutes(big, 'settings.freeLeft', '{minutes} free minutes left', freeLeft);
+      } else if (st.status === 'guest' && st.event !== 'INITIAL') {
+        // 還沒登入：直接講登入送 5 分鐘（跟方案頁同一句）
+        if (big) { big.classList.add('is-note'); big.textContent = muneaT('subscription.freeTrial', 'Sign in and get 5 minutes to try it out.'); delete big.dataset.shown; }
+      } else pending();
+    } else {
+      const shownPlan = facts ? facts.plan : (plan === 'pro' ? 'pro' : 'plus');
+      const planKey = shownPlan === 'pro' ? 'subscription.planPro' : 'subscription.planPlus';
       if (headTitle) headTitle.textContent = muneaT('settings.planName', '{plan} plan', {
-        plan: muneaT(planKey, facts.plan === 'pro' ? 'Pro' : 'Plus'),
+        plan: muneaT(planKey, shownPlan === 'pro' ? 'Pro' : 'Plus'),
       });
-      const renew = muneaShortDate(facts.renewsAt);
+      const renew = facts ? muneaShortDate(facts.renewsAt) : '';
       if (headMeta) headMeta.textContent = renew ? muneaT('settings.renewsOn', 'Renews {date}', { date: renew }) : '';
-      setBigMinutes(big, 'settings.monthLeft', '{minutes} minutes left this month', facts.remaining);
       const bar = $('#pcBar');
-      if (bar) {
-        let fill = bar.querySelector('i');
-        if (!fill) { fill = document.createElement('i'); bar.replaceChildren(fill); }
-        fill.style.width = (facts.grant > 0 ? Math.min(100, (facts.remaining / facts.grant) * 100) : 0).toFixed(2) + '%';
-      }
+      let fill = bar && bar.querySelector('i');
+      if (bar && !fill) { fill = document.createElement('i'); fill.style.width = '0%'; bar.replaceChildren(fill); }
+      if (facts) {
+        if (big) big.classList.remove('is-note');
+        setBigMinutes(big, 'settings.monthLeft', '{minutes} minutes left this month', facts.remaining);
+        if (fill) fill.style.width = (facts.grant > 0 ? Math.min(100, (facts.remaining / facts.grant) * 100) : 0).toFixed(2) + '%';
+      } else pending();
     }
   }
   window.__muneaRenderPlanCard = renderPlanCard;

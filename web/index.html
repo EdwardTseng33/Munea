@@ -503,7 +503,7 @@ setTimeout(function () {
       <!-- 方案卡三種樣子：data-mode 由 app.js renderPlanCard() 決定。legacy＝後端還沒給新欄位的舊排法；
            free＝登入送的分鐘還剩多少；plan＝有訂閱，自己的方案這個月還剩多少（2026-11-25／26 Edward：沒有共用分鐘、沒有「免費幾天」）。
            卡上的字全由程式填，所以不掛 data-i18n。 -->
-      <div class="plan-card" id="planCard" data-mode="legacy">
+      <div class="plan-card" id="planCard" data-mode="free">
         <div class="plan-title-row pc-legacy">
           <span class="plan-name" id="setPlanName"></span>
           <span class="plan-payer" style="margin:0" data-i18n="settings.mySubscription">我的訂閱</span>
