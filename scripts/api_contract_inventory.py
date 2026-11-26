@@ -207,7 +207,7 @@ def _criticality(route: Route) -> str:
         "/auth-status", "/credits/balance", "/credits/consume", "/credits/grant",
         "/entitlements", "/privacy-export", "/subscription-event",
         "/voice/call-memory", "/voice/call-recap", "/voice/health-context",
-        "/voice/health-recommended", "/voice/guardian-event",
+        "/voice/health-recommended", "/voice/reply-context", "/voice/guardian-event",
     }
     if route.surface == "gateway" and route.path.startswith(("/v1/calls", "/v1/internal/calls", "/v1/internal/reap")):
         return "critical"
@@ -271,6 +271,9 @@ def _pii(route: Route) -> str:
         return "aggregate-only"
     if route.surface == "brain" and path in {"/org/elders", "/org/elder/care-week", "/org/alerts", "/org/alert/mark"}:
         # Consented elders only; org_api.assert_no_forbidden strips sentences, summaries and identifiers.
+        return "health"
+    if route.surface == "brain" and path == "/voice/reply-context":
+        # Voice's opening context for the verified caller: memories, living profile and their own health facts.
         return "health"
     if any(token in path for token in ("credits", "subscription", "apple/transaction", "entitlements")):
         return "billing"
@@ -347,6 +350,7 @@ def _tests(route: Route) -> list[str]:
         "/voice/health-context": ["engine/test_voice_health_context.py", "scripts/test_voice_chain_probe.py"],
         "/voice/guardian-event": ["engine/test_voice_guardian_brain_route.py", "engine/test_safety_contacts_notify.py"],
         "/voice/health-recommended": ["engine/test_health_followup.py"],
+        "/voice/reply-context": ["engine/test_voice_reply_context.py"],
     }
     return mapping.get(path, [])
 
