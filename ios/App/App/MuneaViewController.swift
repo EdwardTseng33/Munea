@@ -11,5 +11,6 @@ class MuneaViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(GoogleSignInPlugin())
         bridge?.registerPluginInstance(ExportPlugin())
         bridge?.registerPluginInstance(KeepAwakePlugin())
+        bridge?.registerPluginInstance(AudioSessionPlugin())
     }
 }
