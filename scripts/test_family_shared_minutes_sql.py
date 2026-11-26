@@ -132,5 +132,11 @@ class FamilySharedMinutesSqlTests(unittest.TestCase):
         self.assertEqual(len(pglast.parse_plpgsql(SQL)), 9)
 
 
+# 035（2026-11-26 分鐘改回各帳號各扣）的靜態守門一起跑：不動 package.json 那行很長的 test:launch，免得跟其他分支撞。
+import sys as _sys  # noqa: E402
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_per_account_minutes_sql import PerAccountMinutesSqlTests  # noqa: E402,F401
+
+
 if __name__ == "__main__":
     unittest.main()

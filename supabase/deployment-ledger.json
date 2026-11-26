@@ -272,6 +272,12 @@
           "verifiedAt": "2026-11-20T20:08:00+08:00",
           "captureMethod": "read-only-probe",
           "sourceCommit": "c0aa297369f22695c7ee82f70c33e98ed629a687"
+        },
+        {
+          "filename": "035_per_account_minutes.sql",
+          "sha256": "4515bba71c01e1b00c16ac6e76cb769db8a3f3f1fcca43b5b72a3387399b8232",
+          "status": "unknown",
+          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
         }
       ],
       "rollback": {

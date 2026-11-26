@@ -261,6 +261,13 @@
       "filename": "034_family_shared_minutes_daily_free.sql",
       "type": "schema",
       "sha256": "c72fc095f3e91e08105ee2e8732e9cdaa909ef2bac9b50f11e0e79d12a7a5f14"
+    },
+    {
+      "order": 36,
+      "identity": "035",
+      "filename": "035_per_account_minutes.sql",
+      "type": "schema",
+      "sha256": "4515bba71c01e1b00c16ac6e76cb769db8a3f3f1fcca43b5b72a3387399b8232"
     }
   ]
 }

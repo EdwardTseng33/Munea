@@ -8822,12 +8822,20 @@ def json_other_credit_stores(state, account_id):
     ]
 
 
+# 2026-11-26 Edward：「每個帳號各扣各的分鐘 當然要」——家人圈共用分鐘（034）關掉。
+# 關掉時：通話只扣自己的錢包、/credits/balance 不回 familyShare、成員的 total 不含圈主分鐘、
+# capabilities.familySharedMinutes=false。資料庫那邊由 035 讓 munea_family_share_owner 一律回 null。
+FAMILY_SHARED_MINUTES = False
+
+
 def json_family_share_context(state, *, account_id, person_id=None, paid_plan=None, family_group_id=None):
     """JSON 後備的「誰是圈主」：跟資料庫 munea_family_share_owner 同一套判斷。
 
     圈主＝建圈的帳號（memberships 的 ownerAccountId）；成員＝掛在別人圈裡的帳號。
     自己有付費方案＝圈主角色（不被別人涵蓋）；掛好幾個圈取最新加入的那一個。
     """
+    if not FAMILY_SHARED_MINUTES:
+        return None
     memberships = state.get("memberships") or []
     if paid_plan:
         group = next((m.get("familyGroupId") for m in memberships
@@ -9022,6 +9030,9 @@ def supabase_credit_share_status(backend):
         return None
     if not isinstance(status, dict):
         return None
+    if not FAMILY_SHARED_MINUTES:
+        # 035 還沒套用時資料庫仍會回 familyShare；後端先不轉給 App、也不把圈主分鐘算進 total
+        return {**status, "familyShare": None, "sharedSpendable": 0, "names": {}}
     share = status.get("familyShare") if isinstance(status.get("familyShare"), dict) else None
     if share and share.get("role") == "member" and share.get("monthRemaining") is None:
         if ensure_owner_monthly_allowance(share):
@@ -9477,8 +9488,8 @@ def entitlements_response(data):
         "billing": store,
         "entitlements": store["entitlements"],
         "subscription": store["subscription"],
-        # 前端靠這個決定能不能寫「爸媽不用另外付費」：後端已支援家人圈共用分鐘（034）。
-        "capabilities": {"familySharedMinutes": True},
+        # 前端靠這個決定能不能寫「爸媽不用另外付費」。2026-11-26 起分鐘各帳號各扣 → False。
+        "capabilities": {"familySharedMinutes": FAMILY_SHARED_MINUTES},
     }
 
 

@@ -141,7 +141,8 @@ class FreeWalletTests(unittest.TestCase):
         window, _ = server.ensure_free_allowance_in_store(
             store, account_id="a", created_at="2026-11-20T01:00:00Z", now=utc("2026-11-20T02:00:00Z"), other_stores=[other])
         self.assertEqual(window["amount"], 5)
-        self.assertEqual(server.credit_wallet_summary(store)["freeAllowance"], 5)
+        # 不用 credit_wallet_summary：它拿真實現在時間判斷到期，11/21 之後這個 11/20 的錢包就算過期了
+        self.assertEqual(sum(w["balance"] for w in store["wallets"] if w["type"] == "free_allowance"), 5)
 
     def test_paid_account_gets_no_free_wallet(self):
         store = store_with()
@@ -203,8 +204,9 @@ def share_state(owner_billing=PAID, owner_wallets=None, owner_transactions=None,
     }
 
 
+@patch.object(server, "FAMILY_SHARED_MINUTES", True)
 class JsonFamilyShareTests(unittest.TestCase):
-    """JSON 後備模式端到端：/credits/consume 與 /credits/balance。"""
+    """JSON 後備模式端到端：/credits/consume 與 /credits/balance（共用開著時的舊行為；2026-11-26 起預設關）。"""
 
     def setUp(self):
         self.own = server.default_credits_store()
@@ -372,8 +374,9 @@ class JsonFamilyShareTests(unittest.TestCase):
         self.assertEqual(result["walletSummary"]["total"], 10)
 
 
+@patch.object(server, "FAMILY_SHARED_MINUTES", True)
 class SupabaseStatusTests(unittest.TestCase):
-    """Supabase 模式：狀態來自 munea_credit_share_status，名字由後端從家人圈顯示名補。"""
+    """Supabase 模式：狀態來自 munea_credit_share_status，名字由後端從家人圈顯示名補（共用開著時）。"""
 
     class Backend:
         def __init__(self, statuses, circle=None):
@@ -452,7 +455,66 @@ class EntitlementsCapabilityTests(unittest.TestCase):
     def test_capability_flag_for_frontend(self):
         with patch.object(server, "load_billing_store", return_value=server.normalize_billing_store({})):
             response = server.entitlements_response({})
-        self.assertIs(response["capabilities"]["familySharedMinutes"], True)
+        self.assertIs(response["capabilities"]["familySharedMinutes"], False, "2026-11-26 起分鐘各帳號各扣")
+
+
+class PerAccountMinutesTests(unittest.TestCase):
+    """2026-11-26 Edward：「每個帳號各扣各的分鐘 當然要」——預設（FAMILY_SHARED_MINUTES=False）的行為。"""
+
+    def setUp(self):
+        JsonFamilyShareTests.setUp(self)
+
+    patches = JsonFamilyShareTests.patches
+    run_patched = JsonFamilyShareTests.run_patched
+    owner_credits = JsonFamilyShareTests.owner_credits
+
+    def test_switch_is_off_by_default(self):
+        self.assertIs(server.FAMILY_SHARED_MINUTES, False)
+
+    def test_member_in_paid_circle_only_spends_own_minutes(self):
+        def run():
+            return [server.credits_consume_response({"amount": 1, "idempotencyKey": f"call-1:minute:{i}"})
+                    for i in range(1, 13)]
+        results = self.run_patched(run)
+        self.assertEqual(sum(1 for r in results if r["ok"]), 10, "只有自己這週的 10 分鐘")
+        self.assertEqual(results[-1]["error"]["code"], "insufficient_credits")
+        self.assertFalse(any(tx["type"] == "consume" for tx in self.owner_credits()["transactions"]), "不扣圈主")
+        self.assertEqual(self.owner_credits()["wallets"][0]["balance"], 100)
+        self.assertEqual(self.saved_owner, {})
+
+    def test_member_balance_has_no_family_share_and_total_is_own(self):
+        result = self.run_patched(lambda: server.credits_balance_response({}))
+        self.assertIsNone(result["familyShare"])
+        self.assertNotIn("familyShared", result["walletSummary"])
+        self.assertEqual(result["walletSummary"]["total"], 10)
+        self.assertEqual(result["allowance"]["mode"], "free_weekly")
+
+    def test_new_member_keeps_daily_free_rule(self):
+        self.profile["account"]["createdAt"] = server.utc_now()
+        result = self.run_patched(lambda: server.credits_balance_response({}))
+        self.assertEqual((result["allowance"]["mode"], result["allowance"]["trialDay"]), ("free_daily", 1))
+        self.assertEqual((result["allowance"]["todayGrant"], result["allowance"]["todayRemaining"]), (10, 10))
+        self.assertIsNone(result["familyShare"])
+
+    def test_owner_spends_own_monthly_and_sees_plan_without_share(self):
+        self.profile = {"account": {"id": "acct-kid", "createdAt": "2026-07-01T00:00:00Z"},
+                        "primaryCareRecipientId": "p-kid", "familyGroup": {"id": "fg-kid"}}
+        self.billing = server.normalize_billing_store(PAID)
+        self.own["wallets"] = [monthly(100)]
+        consumed = self.run_patched(lambda: server.credits_consume_response({"amount": 1, "idempotencyKey": "k"}))
+        self.assertTrue(consumed["ok"])
+        self.assertEqual(server.credit_wallet_summary(self.own)["includedMonthly"], 99)
+        result = self.run_patched(lambda: server.credits_balance_response({}))
+        self.assertIsNone(result["familyShare"])
+        self.assertEqual(result["allowance"]["mode"], "plan")
+
+    def test_supabase_status_from_db_before_035_is_not_passed_through(self):
+        backend = SupabaseStatusTests.Backend([SupabaseStatusTests.sql_status(None, "member")])
+        result = SupabaseStatusTests.run_balance(None, backend)
+        self.assertIsNone(result["familyShare"], "035 還沒套用時，後端也不轉給 App")
+        self.assertNotIn("familyShared", result["walletSummary"])
+        self.assertEqual(result["walletSummary"]["total"], 8, "只有自己的 8 分鐘，不加圈主的 64")
+        self.assertEqual(result["allowance"]["todayRemaining"], 8)
 
 
 class AdapterWalletTypeTests(unittest.TestCase):
