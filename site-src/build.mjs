@@ -77,6 +77,9 @@ const LOCALES = [
   { code: 'es', dir: 'es', htmlLang: 'es', hreflang: 'es', ogLocale: 'es_ES', fonts: LATIN_ONLY },
 ];
 
+/** 有自己語言 App 截圖的語系（其餘用中文原圖） */
+const SHOT_LOCALES = new Set(['en', 'ja']);
+
 const SITE = config.siteUrl.replace(/\/$/, '');
 // 主機設定是 trailingSlash:false —— /en/ 會被 301 轉到 /en。
 // 對外網址（canonical / hreflang / sitemap / 語言選單）一律用不帶尾斜線的那個，
@@ -231,6 +234,9 @@ for (const l of LOCALES) {
     ...ctaVars(dict),
     // 示範影片：中文用原檔名，英日西各播自己那支（同一位夥伴、講當地語言）
     'meta.demoSuffix': l.code === 'zh' ? '' : '-' + l.code,
+    // 功能區的 App 截圖：英日版用該語言的 App 畫面（app-status.en.jpg…，由 scripts/capture-site-app-screenshots.js 產生）。
+    // 西班牙文暫停更新（2026-11-20 Edward：只專注繁中／英／日），維持原本的中文截圖。
+    'meta.shotSuffix': SHOT_LOCALES.has(l.code) ? '.' + l.code : '',
     // 條款／隱私／客服：三語版本早就做好了（app-site/legal/{en,ja,es}/），
     // 但四個語系的頁尾一直都連到中文版。這裡讓每個語系連自己那一份。
     // 中文走 /privacy 這種乾淨網址（主機有轉址規則），其他語系直接指檔案。
