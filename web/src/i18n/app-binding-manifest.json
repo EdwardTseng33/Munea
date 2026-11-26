@@ -358,13 +358,16 @@
     {
       "containerId": "settings",
       "keys": [
-        "settings.section.account",
         "settings.section.billing",
-        "settings.section.accountFamily",
-        "settings.section.companion",
-        "settings.section.healthSafety",
+        "settings.section.reminders",
+        "settings.section.familyCompanion",
+        "settings.section.healthData",
+        "settings.section.accountPrivacy",
         "settings.section.experience",
-        "settings.section.about"
+        "settings.section.about",
+        "settings.moreSettings",
+        "settings.aboutMunea",
+        "settings.aboutMuneaSubtitle"
       ]
     },
     {

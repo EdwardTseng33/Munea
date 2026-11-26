@@ -3324,41 +3324,30 @@ html:lang(ja) {
 
 /* ── P3／P4 設定頁方案卡 ── */
 #planCard:not([data-mode="legacy"]) { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
-#planCard[data-mode="legacy"] .pc-modern, #planCard[data-mode="legacy"] .pc-dayrow, #planCard[data-mode="legacy"] .pc-share, #planCard[data-mode="legacy"] .pc-free,
+#planCard[data-mode="legacy"] .pc-modern, #planCard[data-mode="legacy"] .pc-bar,
 #planCard:not([data-mode="legacy"]) .pc-legacy,
-#planCard:not([data-mode="trial"]) .pc-dayrow,
-#planCard:not([data-mode="share"]) .pc-share,
-#planCard[data-mode="share"] .pc-free { display: none !important; }
+#planCard:not([data-mode="plan"]) .pc-bar { display: none !important; }
 #planCard .pc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.4; }
 #planCard .pc-head-meta { flex: none; color: var(--muted); font-weight: 600; }
-#planCard .pc-big { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+#planCard .pc-head-meta:empty { display: none; }
+/* 11/25 Edward：這行 30–34px 比頁面大標還大、在 App 裡太突兀 → 照字體規範當卡片標題 20/700；只有數字用 Poppins 深薄荷稍大 */
+#planCard .pc-big { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+#planCard .pc-big .pc-num { font-family: var(--display); font-size: 24px; font-weight: 800; color: var(--teal-dd); margin: 0 2px; font-variant-numeric: tabular-nums; }
 #planCard .pc-big small { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink-2); }
-#planCard .pc-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-#planCard .pc-days i { height: 12px; border-radius: 999px; background: var(--mint-2); }
-#planCard .pc-days i.done { background: var(--btn-green); }
-#planCard .pc-days i.now { background: #fff; box-shadow: inset 0 0 0 2.5px var(--btn-green); }
-#planCard .pc-daylbl { display: flex; justify-content: space-between; font-size: 15px; color: var(--muted); margin-top: -4px; }
-#planCard .pc-note, #planCard .pc-usage-note { font-size: 15px; color: var(--muted); line-height: 1.6; margin: 0; }
-#planCard .pc-usage-note { margin-top: -6px; }
-#planCard .pc-bar { height: 12px; border-radius: 999px; background: var(--mint-2); overflow: hidden; display: flex; }
-#planCard .pc-bar i { display: block; height: 100%; }
-#planCard .pc-who { display: grid; gap: 8px; }
-#planCard .pc-who div { display: flex; align-items: center; gap: 10px; font-size: 17px; color: var(--ink); min-height: 28px; }
-#planCard .pc-who em { flex: none; width: 12px; height: 12px; border-radius: 50%; }
-#planCard .pc-who b { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
-#planCard .pc-who span { margin-left: auto; flex: none; font-family: var(--display); font-weight: 600; color: var(--ink-2); font-size: 16px; }
+/* 11/25–26 Edward「簡單一點／減法設計／但要有質感」：有訂閱才有一條細的剩餘量條（8px），從上次的位置滑到新位置；系統「減少動態」時不動 */
+#planCard .pc-bar { height: 8px; border-radius: 999px; background: var(--mint-2); overflow: hidden; }
+#planCard .pc-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--btn-green), var(--teal)); transition: width .6s cubic-bezier(.22,.8,.3,1); }
+@media (prefers-reduced-motion: reduce) { #planCard .pc-bar i { transition: none; } }
 #planCard:not([data-mode="legacy"]) .plan-actions { margin: 2px 0 0; }
-#planCard[data-mode="trial"] #managePlanBtn, #planCard[data-mode="weekly"] #managePlanBtn, #planCard[data-mode="share"] #topUpBtn {
+#planCard[data-mode="free"] #managePlanBtn, #planCard[data-mode="plan"] #topUpBtn {
   flex: 1 1 auto; width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff;
   font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
-#planCard[data-mode="trial"] #topUpBtn, #planCard[data-mode="weekly"] #topUpBtn, #planCard[data-mode="share"] #managePlanBtn { display: none !important; }
+#planCard[data-mode="free"] #topUpBtn, #planCard[data-mode="plan"] #managePlanBtn { display: none !important; }
 #planCard:not([data-mode="legacy"]) .plan-links { gap: 0 18px; margin-top: 0; }
 #planCard:not([data-mode="legacy"]) .plan-link { min-height: 48px; padding: 0 6px; background: none; color: var(--teal-dd); font-size: 16px; font-weight: 600; opacity: 1; }
 #planCard[data-mode="legacy"] #planChangeBtn,
-#planCard[data-mode="trial"] #planChangeBtn, #planCard[data-mode="trial"] #planCancelBtn,
-#planCard[data-mode="weekly"] #planChangeBtn, #planCard[data-mode="weekly"] #planCancelBtn,
-#planCard[data-mode="share"] #seatCodeEntry,
-#planCard[data-mode="share"][data-role="member"] #planChangeBtn, #planCard[data-mode="share"][data-role="member"] #planCancelBtn { display: none !important; }
+#planCard[data-mode="free"] #planChangeBtn, #planCard[data-mode="free"] #planCancelBtn,
+#planCard[data-mode="plan"] #seatCodeEntry { display: none !important; }
 
 /* ── P6 通話結束卡：蓋在人物下半部、通話鍵上方，不擋眼睛 ── */
 .call-end-card { position: absolute; left: 16px; right: 16px; bottom: calc(186px + env(safe-area-inset-bottom)); z-index: 9;
@@ -3370,3 +3359,204 @@ html:lang(ja) {
 html:lang(en) .call-end-card .ce-next, html:lang(es) .call-end-card .ce-next { word-break: normal; }
 .call-end-card .ce-ok { width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff; cursor: pointer;
   font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
+
+/* ══ 長輩看得清楚：字級與按鈕下限（2026-11-21 · 接 11/20 付費與設計體檢「其他可以優化」）══════════
+   依頂端字體規範表：按鈕字 19 粗、內文 17、副字 15；按鈕至少 48 高（11/17 全 App 標準）。
+   量測（手機尺寸、標準字級）：首頁／底部導覽／聊聊／設定有 47 段字小於 15px、4 顆按鈕 38–40px 高。
+   範圍：只管繁中、日文、英文（11/20 Edward：專注三語；西班牙文維持原樣）。
+   ⚠ 全家健康頁（#family）11/20 Edward「先不要改」——那頁共用的按鈕在最下面釘回原值。 */
+:root {
+  --fs-action-primary: 19px;
+  --btn-1-size: 19px;  --btn-1-weight: 700; --btn-1-height: 50px;
+  --btn-2-size: 17px;  --btn-2-weight: 700; --btn-2-height: 48px;
+  --btn-3-size: 15px;  --btn-3-weight: 600; --btn-3-height: 48px;
+}
+/* 按鈕字 19px 後，日文「ログイン」會撐出 72px 寬的按鈕——讓按鈕跟著字變寬 */
+.auth-primary { min-height: 48px; width: auto; padding: 0 18px; white-space: nowrap; }
+.auth-secondary { min-height: 48px; }
+.plan-link { min-height: 48px; }
+/* 底部導覽：12px → 14px（五顆並排，再大英文會擠） */
+html:lang(zh) .tab-btn > span, html:lang(ja) .tab-btn > span { font-size: 14px; }
+html:lang(en) .tab-btn > span { font-size: 13.5px; }
+/* 聊聊控制鈕的字（字幕／麥克風）：11px → 13px（60px 的圓再大「麥克風」會貼邊）；英文版本來就只顯示圖示 */
+.ctl-btn { font-size: 13px; }
+/* 首頁 */
+html:lang(zh) .home-date, html:lang(ja) .home-date, html:lang(en) .home-date { font-size: 15px; }
+html:lang(zh) .bc-msg-t, html:lang(ja) .bc-msg-t, html:lang(en) .bc-msg-t { font-size: 16px; line-height: 1.5; max-height: none; }
+html:lang(zh) .care-head, html:lang(ja) .care-head, html:lang(en) .care-head { font-size: 15px; }
+html:lang(zh) .care-txt small, html:lang(ja) .care-txt small, html:lang(en) .care-txt small { font-size: 15px; }
+html:lang(zh) .task-progress, html:lang(ja) .task-progress, html:lang(en) .task-progress { font-size: 15px; }
+html:lang(zh) .task-sub, html:lang(ja) .task-sub, html:lang(en) .task-sub { font-size: 15px; }
+html:lang(zh) .task-time, html:lang(ja) .task-time { font-size: 15px; }
+html:lang(en) .task-time { font-size: 14px; }
+/* 聊聊：在線狀態 */
+html:lang(zh) .face-name .fn-status, html:lang(ja) .face-name .fn-status, html:lang(en) .face-name .fn-status { font-size: 15px; }
+/* 設定 */
+html:lang(zh) .set-section, html:lang(ja) .set-section, html:lang(en) .set-section { font-size: 15px; }
+html:lang(zh) .set-row .sr-main small, html:lang(ja) .set-row .sr-main small, html:lang(en) .set-row .sr-main small,
+html:lang(zh) .set-row.set-info .sr-main small, html:lang(ja) .set-row.set-info .sr-main small, html:lang(en) .set-row.set-info .sr-main small { font-size: 15px; }
+html:lang(zh) .mem-badge, html:lang(ja) .mem-badge, html:lang(en) .mem-badge { font-size: 14px; }
+html:lang(zh) .plan-payer, html:lang(ja) .plan-payer, html:lang(en) .plan-payer { font-size: 15px; }
+html:lang(zh) .pts-note, html:lang(ja) .pts-note, html:lang(en) .pts-note { font-size: 15px; }
+html:lang(zh) .task-title, html:lang(ja) .task-title { font-size: 17px; }
+html:lang(en) .task-title { font-size: 16px; }
+html:lang(en) .set-row .sr-on { font-size: 15px; }
+/* 全家健康頁不動：共用的次要按鈕釘回 11/20 以前的字級 */
+#family .chal-act { font-size: 15px; }
+
+/* ══ 設定頁＋付費頁改版提案（2026-11-25 · Edward：「設定頁與購買會員頁的設計不是很滿意，請優化設計體驗與視覺體驗」）══
+   原則：只動這兩頁的排版與層次，不改品牌色（主按鈕 --btn-green、橘 --coral）、不改字級規範（26／20／17／15、按鈕 19）、
+   不低於 #739 的長輩下限（字 ≥15px、按鈕 ≥48px 高）、不改價格與方案規則。全部用 id 範圍限定、放檔尾蓋過舊樣式。
+
+   設定頁：①帳號卡變成「我是誰」的名片（大頭像、名字 20 粗、方案標籤講中文）②照多常用到分組，
+   每組圖示一個底色（提醒＝暖橘、家人與陪伴＝薄荷、健康資料＝淡金、帳號隱私與其他＝米灰），找東西先認顏色
+   ③每列加高、箭頭放大，整頁節奏一致 ④方案卡下面那排小連結收成一條有分隔線的工具列。
+   付費頁：①頁首一張寧寧的臉＋置中標題，把「買的是有人陪」講出來 ②兩個方案並排，每月幾分鐘的數字放最大
+   （那是兩張卡真正的差別），價格放卡片底部 ③「訂閱方案／加買分鐘」切換改成跟月繳年繳同一套淺色，不再一黑一白
+   ④訂閱鈕捲動時黏在畫面下方 ⑤目前方案有標籤，已訂閱時按鈕改成淺色不再像可以按。 */
+
+/* ── 設定頁 ── */
+#settings .page-head { margin-bottom: 14px; }
+#settings .set-section { margin: 28px 4px 10px; }
+#settings .auth-card { padding: 18px; border-radius: 22px; gap: 14px; }
+#settings .auth-card-main { gap: 14px; }
+#settings .auth-ava { flex: 0 0 60px; width: 60px; height: 60px; }
+#settings .auth-ava .auth-ava-placeholder { width: 30px; height: 30px; }
+#settings .auth-id { gap: 8px; }
+#settings .auth-title { font-family: var(--sans); font-size: 20px; font-weight: 700; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
+#settings .auth-email { font-size: 15px; font-weight: 500; color: var(--muted); max-width: 190px; margin-top: 2px; }
+#settings .mem-badge { font-family: var(--sans); font-size: 15px; font-weight: 700; letter-spacing: 0; padding: 3px 12px; line-height: 1.35; }
+#settings .mem-badge.plus, #settings .mem-badge.pro { font-family: var(--display); }
+#settings .mem-badge.pro { background: var(--gold-soft); color: #6A4F0F; }
+#settings .set-list { border-radius: 20px; border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+#settings .set-row { min-height: 70px; padding: 14px 16px; gap: 14px; }
+#settings .set-row .sr-ico { width: 44px; height: 44px; border-radius: 13px; }
+#settings .set-row .sr-ico .ic { width: 22px; height: 22px; }
+#settings .set-row .sr-main > span:first-child, #settings .set-row .sr-main > b { font-size: 17px; font-weight: 700; color: var(--ink); }
+#settings .set-row .sr-arrow { font-size: 22px; line-height: 1; color: #9AA39F; display: inline-flex; align-items: center; gap: 6px; }
+#settings .set-row .sr-arrow b { font-family: var(--display); font-size: 15px; font-weight: 600; color: var(--muted); }
+#settings .set-row:active { background: rgba(58,168,160,.06); }
+/* 圖示底磚全頁統一：薄荷霧底＋薄荷深色線條（女巫 11/25：不要四種顏色，金色只給成就） */
+#settings .set-row .sr-ico:not(.comp):not([style]) { background: var(--mint); color: var(--teal-d); }
+#settings .sr-ico.comp { border-radius: 50%; }
+/* 方案卡：卡本身加大一點；底下那排小連結收成一條工具列 */
+#settings #planCard { border-radius: 22px; }
+#settings #planCard:not([data-mode="legacy"]) { padding: 20px; gap: 14px; }
+#settings #planCard .plan-links { border-top: 1px solid var(--line); margin: 4px -20px -8px; padding: 4px 8px 0; justify-content: space-around; gap: 0 4px; flex-wrap: wrap; }
+#settings #planCard .plan-link { flex: 1 1 auto; min-height: 52px; padding: 0 8px; font-size: 16px; font-weight: 700; color: var(--teal-dd); background: none; white-space: nowrap; }
+#settings #planCard .plan-link[hidden], #settings #planCard .plan-link[style*="display: none"] { display: none; }
+
+/* ── 付費頁 ── */
+/* 「訂閱方案／加買分鐘」是換頁，「月繳／年繳」是選項——兩個長得一樣會分不清：換頁改成底線分頁 */
+#planModal .sub-seg { background: transparent; border-radius: 0; padding: 0; border-bottom: 1px solid var(--line); }
+#planModal .sseg-thumb { top: auto; bottom: -1px; left: 0; width: 50%; height: 3px; background: var(--btn-green); border-radius: 3px; box-shadow: none; }
+#planModal .sseg-btn { min-height: 52px; font-size: 17px; color: var(--muted); }
+#planModal .sseg-btn.on { color: var(--ink); }
+#planModal .plan-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 0; align-items: stretch; }
+#planModal .ppk, #planModal .ppk.pro { align-items: center; text-align: center; gap: 2px; padding: 52px 10px 16px; border-radius: 22px; min-width: 0; }
+#planModal .ppk.sel, #planModal .ppk.sel.pro { background: #F2FAF8; padding: 51px 9px 15px; }
+#planModal .ppk-top, #planModal .ppk.pro .ppk-top { display: contents; }
+#planModal .ppk-name { order: 1; font-size: 20px; line-height: 1.3; }
+#planModal .ppk-feats { order: 2; width: 100%; gap: 0; align-items: center; }
+#planModal .ppk-min { display: flex; flex-direction: column; align-items: center; color: var(--ink); line-height: 1.2; margin-top: 6px; }
+#planModal .ppk-num { font-family: var(--display); font-size: 40px; font-weight: 700; line-height: 1.05; color: var(--ink); letter-spacing: -.01em; }
+#planModal .ppk.sel .ppk-num { color: var(--teal-dd); }
+#planModal .ppk-unit { font-style: normal; font-size: 15px; font-weight: 700; color: var(--ink-2); margin-top: 2px; }
+#planModal .ppk-min .ppk-daily, #planModal .ppk-ln span { color: var(--ink-2) !important; font-size: 15px; }
+/* 英西文卡片窄，人數只留一行「Up to 4 people」；「家人圈一起用」那句上面的副標已經講了 */
+html:lang(en) #planModal .ppk-ln span, html:lang(es) #planModal .ppk-ln span { display: none; }
+#planModal .ppk-min .ppk-daily { font-size: 15px; font-weight: 500; color: var(--muted); margin-top: 6px; }
+#planModal .ppk-ln { width: 100%; font-size: 15px; line-height: 1.45; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 12px; overflow-wrap: anywhere; }
+#planModal .ppk-price, #planModal .ppk.sel .ppk-price, #planModal .ppk.sel.pro .ppk-price { order: 3; font-size: 20px; margin-top: 10px; white-space: nowrap; }
+#planModal .ppk-price small { display: inline; font-size: 15px; }
+#planModal .ppk-save { order: 4; }
+#planModal .ppk-tag { top: -15px; left: 50%; transform: translateX(-50%); background: var(--coral); color: var(--ink); font-size: 15px; padding: 3px 14px; white-space: nowrap; box-shadow: 0 4px 10px -6px rgba(176,101,27,.6); }
+#planModal .ppk-radio { top: 20px; right: 20px; width: 24px; height: 24px; }
+#planModal .ppk.sel .ppk-radio, #planModal .ppk.sel.pro .ppk-radio { border-width: 7px; }
+/* 已訂閱的那張：「目前方案」取代「推薦」的位置（同一張卡上不放兩個標籤） */
+#planModal .ppk.is-cur .ppk-tag { display: none; }
+#planModal .ppk-cur { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--teal-dd); color: #fff; font-size: 15px; font-weight: 700;
+  border-radius: 999px; padding: 3px 14px; line-height: 1.4; white-space: nowrap; }
+#planModal .ppk-ln { display: flex; flex-direction: column; align-items: center; gap: 1px; text-wrap: balance; }
+#planModal .ppk-ln b { font-size: 16px; font-weight: 700; color: var(--ink); }
+#planModal .ppk-ln span { font-size: 15px; color: var(--muted); }
+#settings #fontNow { font-size: 15px; font-weight: 600; color: var(--muted); }
+#settings #fontNow::after { content: ""; }
+#planModal .sub-fam { background: #fff; border: 1px solid var(--line); color: var(--ink-2); font-size: 15.5px; }
+#planModal .sub-fam .ic { stroke: var(--teal-d); }
+#planModal #subCta { position: sticky; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 2;
+  box-shadow: 0 10px 22px -8px rgba(58,168,160,.55), 0 0 0 12px var(--cream); }
+#planModal #subCta::before { content: ""; position: absolute; left: -12px; right: -12px; bottom: calc(100% + 12px); height: 28px; pointer-events: none;
+  background: linear-gradient(to top, var(--cream), rgba(244,240,232,0)); }
+#planModal #subCta:disabled { background: #fff; color: var(--teal-dd); border: 1.5px solid var(--line); box-shadow: 0 0 0 12px var(--cream); opacity: 1; }
+#settings .auth-email { max-width: none; }
+#settings .auth-actions:not(:has(> button:not([hidden]))) { display: none; }
+#settings .set-signout { margin: 28px 0 8px; }
+#settings .set-signout .auth-secondary { width: 100%; height: auto; min-height: 52px; border-radius: 16px; background: #fff; border: 1px solid rgba(58,53,46,.2);
+  color: var(--ink-2); font-family: var(--sans); font-size: 17px; font-weight: 700; }
+#settings .set-signout .auth-secondary[hidden] { display: none; }
+
+/* ── 設定頁 B 案（localStorage munea.settingsLayout＝"b"；跟上面 A 案並存給 Edward 比較，定案後刪掉沒選的那一段）──
+   ①名片＋方案合成一張大卡、進度條加粗 ②用藥／就診／全家健康圈／陪伴角色做成 2×2 大方塊（圖示 52、字 17 粗）
+   ③其他收成精簡清單（只留標題，列高 60）④條款／隱私／版本收成「關於沐寧」一列，點開才展開
+   ⑤A 案的橘色區段標題全部收起，只留一個安靜的灰色「更多設定」⑥登出照 A 案放最下面 */
+.set-b[hidden] { display: none !important; }
+#settings[data-layout="b"] .set-section,
+#settings[data-layout="b"] .set-list:not(.set-b-list):not(.set-b-about-list) { display: none; }
+#settings[data-layout="b"] .set-b-hero { background: #fff; border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); overflow: hidden; }
+#settings[data-layout="b"] .set-b-hero #authCard { border: none; box-shadow: none; border-radius: 0; background: transparent; padding: 18px 18px 6px; }
+#settings[data-layout="b"] .set-b-hero #planCard { border: none; box-shadow: none; border-radius: 0; margin: 0; background: transparent; padding-top: 10px; }
+#settings[data-layout="b"] .set-b-hero #planCard::before { content: ""; display: block; height: 1px; background: var(--line); margin: 0 0 6px; }
+#settings[data-layout="b"] #planCard .pc-big { font-size: 20px; }
+#settings[data-layout="b"] .set-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 0; }
+#settings[data-layout="b"] .set-tiles .set-row { position: relative; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 12px;
+  min-height: 132px; padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-sm); }
+#settings[data-layout="b"] .set-tiles .set-row + .set-row { border-top: 1px solid var(--line); }
+#settings[data-layout="b"] .set-tiles .sr-ico { width: 52px; height: 52px; border-radius: 16px; }
+#settings[data-layout="b"] .set-tiles .sr-ico .ic { width: 26px; height: 26px; }
+#settings[data-layout="b"] .set-tiles .sr-ico.comp { border-radius: 50%; }
+#settings[data-layout="b"] .set-tiles .sr-main { flex: none; width: 100%; min-width: 0; padding-right: 0; }
+#settings[data-layout="b"] .set-tiles .sr-main > span:first-child, #settings[data-layout="b"] .set-tiles .sr-main > b { font-size: 17px; font-weight: 700; line-height: 1.35; line-break: strict;
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important; overflow-wrap: break-word; display: block; }
+#settings[data-layout="b"] .set-tiles .sr-main small { display: none; }
+#settings[data-layout="b"] .set-tiles .sr-arrow { position: absolute; top: 16px; right: 14px; font-size: 20px; }
+#settings[data-layout="b"] .set-b-label { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--muted); margin: 28px 4px 10px; }
+#settings[data-layout="b"] .set-b-list .set-row { min-height: 60px; padding: 10px 16px; }
+#settings[data-layout="b"] .set-b-list .sr-ico { width: 38px; height: 38px; border-radius: 11px; }
+#settings[data-layout="b"] .set-b-list .sr-ico .ic { width: 20px; height: 20px; }
+#settings[data-layout="b"] .set-b-list .sr-main small { display: none; }
+#settings[data-layout="b"] .set-b-about { margin-top: 12px; }
+#settings[data-layout="b"] .set-b-about > summary { list-style: none; cursor: pointer; background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow-sm); }
+#settings[data-layout="b"] .set-b-about > summary::-webkit-details-marker { display: none; }
+#settings[data-layout="b"] .set-b-chev { transition: transform .2s; }
+#settings[data-layout="b"] .set-b-about[open] .set-b-chev { transform: rotate(90deg); }
+#settings[data-layout="b"] .set-b-about-list { margin-top: 10px; }
+#settings[data-layout="b"] .set-b-about-list .set-row { min-height: 60px; }
+
+/* ── 2026-11-26 質感互動（Edward：「設計感與 2026 的交互閃亮點」，同時要簡單、減法）──
+   不加新東西，只讓現有的東西「有手感」：
+   ① 進場：設定頁的大卡片和四格依序浮上來（每格差 50ms）
+   ② 按壓：按下去微微縮、放開有一點彈回，像實體按鍵
+   ③ 分鐘：數字從 0 滾到現在、剩餘量條滑到現在的位置（app.js）
+   ④ 選方案：選中的卡輕輕彈一下、圓圈像快門一樣收緊；訂閱鈕的字跟著換
+   手機設定「減少動態」時全部關掉。 */
+@keyframes mnRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mnPop { 0% { transform: scale(1); } 35% { transform: scale(1.035); } 100% { transform: scale(1); } }
+#settings.active[data-layout="b"] .set-b-hero,
+#settings.active[data-layout="b"] .set-tiles .set-row { animation: mnRise .5s cubic-bezier(.22,.9,.32,1) both; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(1) { animation-delay: .06s; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(2) { animation-delay: .11s; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(3) { animation-delay: .16s; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(4) { animation-delay: .21s; }
+#settings .set-row, .plan-btn, .plan-link, .sub-cta, #planModal .ppk {
+  transition: transform .38s cubic-bezier(.34,1.56,.64,1), background-color .15s, border-color .15s, color .15s, box-shadow .2s; }
+#settings .set-row:active, .plan-btn:active, .plan-link:active, .sub-cta:active, #planModal .ppk:active { transform: scale(.97); transition-duration: .08s; }
+#planModal .ppk-radio { transition: border-width .32s cubic-bezier(.34,1.56,.64,1), border-color .2s; }
+#planModal .ppk.mn-pop { animation: mnPop .42s cubic-bezier(.34,1.56,.64,1); }
+#subCta.mn-pop { animation: mnRise .32s cubic-bezier(.22,.9,.32,1); }
+@media (prefers-reduced-motion: reduce) {
+  #settings.active[data-layout="b"] .set-b-hero, #settings.active[data-layout="b"] .set-tiles .set-row,
+  #planModal .ppk.mn-pop, #subCta.mn-pop { animation: none; }
+  #settings .set-row, .plan-btn, .plan-link, .sub-cta, #planModal .ppk, #planModal .ppk-radio { transition: none; }
+  #settings .set-row:active, .plan-btn:active, .plan-link:active, .sub-cta:active, #planModal .ppk:active { transform: none; }
+}
