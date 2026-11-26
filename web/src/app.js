@@ -1165,7 +1165,10 @@ function syncCompanionUI() {
   $$('.obs-ava img').forEach(i => { i.src = thumbSrc; });   // 狀態頁「○○的觀察」頭像＝跟著選的角色臉（Edward 2026-07-09）
   $$('.mr-face').forEach(i => { i.src = thumbSrc; });   // 同意卡、吃藥提醒卡的小臉也跟著角色（2026-10-28 沐沐回歸後抓到）
   const obsHeading = $('#obsHeading'); if (obsHeading) obsHeading.textContent = muneaT('status.companionObservation', '{companion}的觀察', { companion: display });
-  const medSub = $('#medSub'); if (medSub) medSub.textContent = muneaT('medication.emptyHint', '還沒設定用藥，跟{companion}說一聲就好', { companion: display });
+  // 狀態頁用藥卡那行小字要看他有沒有設藥，由 MMMED（index.html）決定；這裡只是角色名可能變了，請它照現況重畫。
+  // 以前這裡直接寫「還沒設定用藥」：帳號資料從伺服器回來（會再跑一次這支）後，有設藥的人那行也被蓋成沒設藥（2026-11-26）。
+  // 卡片藏著（正在看 7／30 天）就不動，切回今天時會重畫。
+  const medCard = $('#medCard'); if (medCard && medCard.style.display !== 'none' && window.MMMED) { try { window.MMMED('today'); } catch (e) {} }
   const retentionNotice = $('#retentionNotice'); if (retentionNotice) retentionNotice.textContent = muneaT('history.retentionNotice', '保存一年；滿一年前{companion}會先問你要不要留下來。', { companion: display });
   $$('#avatarPick .avo').forEach(o => o.classList.toggle('on', o.dataset.ava === currentAvatarId));
   avatarRuntime.setCharacter(display, currentAvatarId);
@@ -6566,6 +6569,12 @@ function syncAccountScopedCaches(state) {
     try { if (typeof renderDailyTasks === 'function') renderDailyTasks(); } catch (e2) {}
     try { if (typeof renderCareCarousel === 'function') renderCareCarousel(); } catch (e2) {}
     try { if (typeof renderPoints === 'function') renderPoints(); } catch (e2) {}
+    // 狀態頁：上一個人的觀察那句話存在記憶體裡，本機清掉了它還在——一併收掉並照現在（已清空）的本機資料重畫
+    // （心情、健康數字、用藥卡都重讀，不留上一個人的字在畫面上）。
+    try { window.__muneaObsReal = ''; if (typeof window.__muneaRefreshMedicationUi === 'function') window.__muneaRefreshMedicationUi(); } catch (e2) {}
+    // 家人頁也一樣：名單、全家狀態、活動牆都照現在（已清空）的本機資料重畫，不留上一個人的家人與活動在畫面上。
+    try { if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync(); } catch (e2) {}
+    try { if (typeof window.__muneaRepaintActs === 'function') window.__muneaRepaintActs(); } catch (e2) {}
     // 原生端（iOS/Android）已排的用藥／回診／行程本機提醒也要跟著取消——否則上一個人的
     // 提醒還是會在這台裝置上跳出來（sync() 會用現在（已清空）的本機資料重新計算待排清單）。
     try { if (window.MuneaNotify && typeof window.MuneaNotify.sync === 'function') window.MuneaNotify.sync(); } catch (e2) {}
@@ -7342,7 +7351,9 @@ function myMoodToday() {
 }
 // Apple 健康的完整摘要 → 狀態頁「今天」的真數值（原生端 health.js 讀到後呼叫）
 // s = { available, steps, hr, spo2, bpSys, bpDia, sleepHours }；缺哪項就不動哪項（示範值留著、不清空）
-window.__muneaSetHealth = function (s) {
+// opts.paintOnly：只畫畫面（數字、標籤、觀察那句話），不做後面的安全通知與數據記帳——
+// 給「開 App 先照今天上次讀到的畫」用（見下方 __muneaRestoreHealthObs），同一份資料不重複通知家人、不重複上傳。
+window.__muneaSetHealth = function (s, opts) {
   if (!s || s.available === false) return;
   const num = v => (typeof v === 'number' && isFinite(v) && v > 0) ? v : null;
   const put = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
@@ -7398,6 +7409,7 @@ window.__muneaSetHealth = function (s) {
       : muneaT('health.obsAllGood', '今天{metrics}，整體狀態不錯。{cheer}，想出門走走我陪你。', { metrics: metricsLine, cheer: '<span style="color:#8FD4CC;font-weight:700">' + muneaT('health.obsKeepItUp', '保持這個節奏就很好') + '</span>' });
     window.__muneaObsReal = obs.innerHTML;   // 真觀察已寫：分頁切換不得用預設蓋掉
   }
+  if (opts && opts.paintOnly) return;
   // 安全通知（真的動）：數據掉出危險範圍 → 寫進家人動態（雲端同步、家人打開沐寧就看到）；同類 6 小時最多一次
   try {
     const danger = [];
@@ -7428,6 +7440,19 @@ window.__muneaSetHealth = function (s) {
     if (sleep) cur.sleepHours = Math.round(sleep * 10) / 10;
     if (steps) cur.steps = Math.round(steps);
     mergeHealthHistory([Object.assign({ date: day }, cur)]);
+  } catch (e) {}
+};
+// 狀態頁「○○的觀察」那句話：重開 App 時先照今天上次讀到的 Apple 健康寫（2026-11-26 Edward：
+// 「狀態頁一點進去先是舊的樣子，過幾秒才換成新的」）。原本這句只存在記憶體裡，每次重開都要等
+// 這次讀完（好幾秒）才出現，中間先露「今天讀到的都整理在這裡了」再跳。
+// 資料來源 mmTodaySummary()（index.html）：只拿今天的、要連著 Apple 健康；登出／換帳號會被帳號清理清掉。
+// 等翻譯就緒才寫：這句存成畫好的字，太早寫會把中文版留給日文／英文使用者。
+window.__muneaRestoreHealthObs = function () {
+  try {
+    if (window.__muneaObsReal) return;
+    if (!(window.MuneaI18n && window.MuneaI18n.initialized)) return;
+    const s = typeof window.mmTodaySummary === 'function' ? window.mmTodaySummary() : null;
+    if (s) window.__muneaSetHealth(s, { paintOnly: true });
   } catch (e) {}
 };
 function renderMedList() { renderMedSlots(); }
@@ -9712,7 +9737,12 @@ function init() {
     const authInit = window.MuneaAuth.init();
     // 登入結果出來後方案卡也要重畫一次：開 App 時可能先用了快照，得照真正的登入結果收回或保留
     const afterAuth = () => { updateAuthUI(); try { if (window.__muneaRenderPlanCard) window.__muneaRenderPlanCard(); } catch (e) {} };
-    if (authInit && typeof authInit.then === 'function') authInit.then(afterAuth).catch(afterAuth);
+    // 用藥卡開 App 時先照「上次登入的人」那份畫（medication.js）；登入狀態確認完其實沒登入（過期、被登出）就換回訪客那份。
+    // 有登入的那條由下面 munea:auth-state 的 configureMedicationService() 接手。
+    const settleMedicationScope = () => {
+      try { if (!isLoggedIn() && window.MuneaMedication && window.MuneaMedication.scope() !== 'guest') configureMedicationService(); } catch (e) {}
+    };
+    if (authInit && typeof authInit.then === 'function') authInit.then(afterAuth).catch(afterAuth).then(settleMedicationScope);
   }
   window.addEventListener('munea:auth-state', e => {
     const detail = e.detail || {};
@@ -13021,7 +13051,28 @@ function init() {
     updateActEmpty();
   }
   window.__muneaSweepActs = sweepActsOnView;
-  Promise.resolve(__pullPromise).finally(() => restoreActsBoot());   // syncPullAll 可能不回 Promise（頁面隱藏啟動等）；不包住整個 init 會從這裡斷頭（7/15 修）
+  // 家人頁活動牆：開 App 先照手機裡上次的活動畫（2026-11-26 Edward：「一點進去先是舊的樣子，過幾秒才換成新的」）。
+  // 以前要等開機那次跟伺服器拉完（登入確認＋來回，慢的時候好幾秒）才畫，這段時間家人頁先寫
+  // 「還沒有進行中的活動」，之後才冒出卡片。現在先畫本機那份（已過期的不畫、只畫、不收不公布不上傳），
+  // 拉完再照最新的整面重畫一次：同一批活動重畫出來一模一樣，有變才看得出差別。
+  // 換帳號／登出時本機 munea.activities 會被帳號清理清掉，牆面由 __muneaRepaintActs 跟著重畫。
+  function clearActCards() { document.querySelectorAll('#family .quest-card[data-act-id]').forEach(c => c.remove()); }
+  function repaintActsFromLocal() {
+    clearActCards();
+    loadActs().filter(a => !actExpired(a)).forEach(a => renderActCard(a));
+    updateActEmpty();
+  }
+  window.__muneaRepaintActs = repaintActsFromLocal;
+  let _actsBootDone = false;
+  function paintActsBeforePull() {
+    if (_actsBootDone) return;
+    if (!(window.MuneaI18n && window.MuneaI18n.initialized)) return;   // 翻譯還沒好就先不畫，免得日文／英文先出中文
+    _actsBootDone = true;
+    try { repaintActsFromLocal(); } catch (e) {}
+  }
+  paintActsBeforePull();
+  if (!_actsBootDone) window.addEventListener('munea:locale-ready', paintActsBeforePull, { once: true });
+  Promise.resolve(__pullPromise).finally(() => { _actsBootDone = true; clearActCards(); restoreActsBoot(); });   // syncPullAll 可能不回 Promise（頁面隱藏啟動等）；不包住整個 init 會從這裡斷頭（7/15 修）
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
   const inviteList = $('#inviteList');

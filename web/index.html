@@ -1527,6 +1527,16 @@ setTimeout(function () {
   // 讓 AI 生就得等網路。Edward 試過之後拍板：不要等。
   // 四語不是直譯——日文含蓄不打擾、英文直接肯定、西班牙文熱一點且不分性別。
   var _moodNoteLast = {};
+  // 畫面上現在這句（哪個心情、哪個語言、哪一句）。卡片重畫（例如伺服器的心情紀錄回來）不換句子——
+  // 以前每重畫一次就重抽一句，資料沒變、那行字卻在進頁幾秒後自己換掉（2026-11-26「先舊後新」）。
+  // 只有他自己點表情時才重抽（點表情那段會先把這格清掉）。
+  var _noteShown = null;
+  function stickyMoodNote(i){
+    var loc = (window.muneaUiLocale ? window.muneaUiLocale() : '');
+    if(_noteShown && _noteShown.i===i && _noteShown.loc===loc) return _noteShown.text;
+    _noteShown = { i:i, loc:loc, text:moodNote(i) };
+    return _noteShown.text;
+  }
   function moodNote(i){
     var m = MOODS[i]; if(!m) return '';
     var key = (window.MOOD_NOTE_KEYS && window.MOOD_NOTE_KEYS[i]) || '';
@@ -1620,7 +1630,7 @@ setTimeout(function () {
       var wasEmpty=(state()==='empty'); record(i); eatBall(f,i,wasEmpty);
       setTimeout(function(){ wobble(o); }, 520);               // 球進肚：橡膠氣球彈一下
       if(_tapTimes.length>=3){ setTimeout(function(){ spitBall(f,i); }, 720); }   // 連點吃太多：吐一顆出來
-      decorate(); registerBurst();
+      _noteShown=null; decorate(); registerBurst();
       if(typeof window.__muneaMoodRecorded==='function') window.__muneaMoodRecorded(MOODS[i]);
     }; });
   }
@@ -1631,7 +1641,7 @@ setTimeout(function () {
        跟同日蘋果健康那個「畫面在說假話」是同一個病：程式算出來的文字不能同時掛翻譯標籤。
        第一次進來就把標籤拔掉，之後這兩行只由這裡寫。 */
     if(label.hasAttribute('data-i18n')) label.removeAttribute('data-i18n');
-    if(note && note.hasAttribute('data-i18n')) note.removeAttribute('data-i18n'); var cur=currentEntry(), i=cur?cur.i:null, st=state(); if(i!=null&&!MOODS[i]) i=null; /* 防呆：怪編號一律當「還沒記錄」、絕不讓卡片死 */ orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent=window.muneaUiT('mood.notRecorded','還沒記錄'); label.style.color='#8A9297'; if(note) note.textContent=window.muneaUiT('mood.emptyPrompt','點下面的表情，餵情緒球第一口'); } else { label.textContent=moodLabel(i); label.style.color=MOODS[i].c; if(note) note.textContent=moodNote(i); } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent=window.muneaUiT('mood.observedFromChat','{companion}從聊天感覺到的',{companion:window.muneaUiCompanionName()}); else sub.textContent=window.muneaUiT('status.today','今天'); } markFaces((cur&&cur.src==='self')?i:null); if(chip) { /* 這顆標籤只顯示「你正在看哪一段時間」（今天／7 天／30 天），由分頁切換那段程式管。
+    if(note && note.hasAttribute('data-i18n')) note.removeAttribute('data-i18n'); var cur=currentEntry(), i=cur?cur.i:null, st=state(); if(i!=null&&!MOODS[i]) i=null; /* 防呆：怪編號一律當「還沒記錄」、絕不讓卡片死 */ orb.style.background=SH+(i==null?EMPTY:MOODS[i].c); orb.style.boxShadow=(i==null)?'0 8px 18px -8px rgba(0,0,0,.14)':'0 8px 18px -7px rgba(0,0,0,.28)'; orb.style.animation='orbJelly 5s ease-in-out infinite'; if(i==null){ label.textContent=window.muneaUiT('mood.notRecorded','還沒記錄'); label.style.color='#8A9297'; if(note) note.textContent=window.muneaUiT('mood.emptyPrompt','點下面的表情，餵情緒球第一口'); } else { label.textContent=moodLabel(i); label.style.color=MOODS[i].c; if(note) note.textContent=stickyMoodNote(i); } var sub=label.nextElementSibling; if(sub){ if(st==='empty') sub.textContent=''; else if(cur&&cur.src==='obs') sub.textContent=window.muneaUiT('mood.observedFromChat','{companion}從聊天感覺到的',{companion:window.muneaUiCompanionName()}); else sub.textContent=window.muneaUiT('status.today','今天'); } markFaces((cur&&cur.src==='self')?i:null); if(chip) { /* 這顆標籤只顯示「你正在看哪一段時間」（今天／7 天／30 天），由分頁切換那段程式管。
        原本這裡會把它改寫成「還沒記錄」或「今天」，造成兩個問題（Edward 2026-08-01 抓到）：
        ① 還沒記錄時，標籤和大字都寫「還沒記錄」——同一句話印兩次
        ② 切到「7 天」時被蓋回「今天」——看的是七天、標籤卻說今天，等於標錯
@@ -1649,6 +1659,19 @@ setTimeout(function () {
 /* 用藥卡接回真吃藥紀錄（直接共用 localStorage：munea.meds / munea.medDone，跟首頁吃藥任務同步）*/
 function mmMeds(){ try{ var raw=localStorage.getItem('munea.meds'); var m=raw?JSON.parse(raw):[]; return Array.isArray(m)?m:[]; }catch(e){ return []; } }
 function mmDateKey(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+/* 今天讀過的 Apple 健康摘要（2026-11-26 Edward：「狀態頁一點進去先是舊的樣子，過幾秒才換成新的」）。
+   health.js 每次真的讀到都存一份 munea.health.last。重開 App 時重新讀要好幾秒，
+   這幾秒先照「今天上次讀到的」畫，等這次讀完數字有變才跟著變——不先露「—」再跳成數字。
+   昨天以前讀的不拿來當今天；沒連 Apple 健康就不用。登出／換帳號時這份會被帳號清理一起清掉（app.js clearAccountScopedLocalData）。
+   數字取整跟 app.js 的 __muneaSetHealth 一致，兩條路畫出來的字才會一模一樣。 */
+function mmTodaySummary(){
+  try{
+    var H=window.MuneaHealth; if(!(H&&H.available&&H.available()&&H.connected&&H.connected())) return null;
+    var raw=JSON.parse(localStorage.getItem('munea.health.last')||'null'); if(!raw||!raw.s||!raw.t) return null;
+    var d=new Date(raw.t), iso=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+    return iso===mmDateKey() ? raw.s : null;
+  }catch(e){ return null; }
+}
 function mmSlots(meds){ var slots=[]; meds.forEach(function(m){ String(m.time).split('、').forEach(function(raw){ var slot=raw.trim(); if(slot) slots.push({slot:slot,name:m.name,key:slot+'|'+m.name}); }); }); var ord=['早餐後','午餐後','晚餐後','睡前']; slots.sort(function(a,b){return ord.indexOf(a.slot)-ord.indexOf(b.slot);}); return slots; }
 function mmDoneMap(){
   if(window.MuneaMedication){ var events=window.MuneaMedication.dayEvents(mmMeds(),mmDateKey()),out={}; events.forEach(function(e){ if(e.status==='taken') out[e.slot+'|'+e.medicationName]=true; }); return out; }
@@ -1723,7 +1746,20 @@ window.MMDEV = function(){
 
   // （7/9 正式化：示範心情週/月區塊已拆——真版在 MM.renderMood）
   var HL='color:#8FD4CC';
-  function mmTodayLog(){ try{ var lg=JSON.parse(localStorage.getItem('munea.healthLog')||'{}'); return lg[mmDateKey()]||null; }catch(e){ return null; } }
+  function mmTodayLog(){
+    var day=null; try{ var lg=JSON.parse(localStorage.getItem('munea.healthLog')||'{}'); day=lg[mmDateKey()]||null; }catch(e){}
+    // 今天讀過 Apple 健康就以那份為準（跟觀察那句話、__muneaSetHealth 畫的是同一份），帳本補沒讀到的項目。
+    // 以前只看帳本：讀到的時候登入還沒確認完，帳本就沒寫進今天，之後一重畫數字又退回「—」。
+    var s=(typeof mmTodaySummary==='function')?mmTodaySummary():null; if(!s) return day;
+    function n(v){ return (typeof v==='number'&&isFinite(v)&&v>0)?v:null; }
+    var out=Object.assign({},day||{}), sys=n(s.bpSys), dia=n(s.bpDia);
+    if(sys&&dia){ out.bpSys=Math.round(sys); out.bpDia=Math.round(dia); }
+    if(n(s.hr)) out.hr=Math.round(s.hr);
+    if(n(s.spo2)) out.spo2=Math.round(s.spo2);
+    if(n(s.sleepHours)) out.sleepHours=Math.round(s.sleepHours*10)/10;
+    if(n(s.steps)) out.steps=Math.round(s.steps);
+    return out;
+  }
   // 7/9 正式化：狀態頁不再有寫死示範數字——今天=真日記帳（沒有就 —）、觀察句由真數據改寫
   function paintChip(id,txt,warn){
     var el=document.getElementById(id); if(!el) return;
@@ -1934,6 +1970,8 @@ window.MMDEV = function(){
       document.getElementById('stepsUnit').textContent=d.steps.unit;
       // 沒連／連了讀不到，各有各的說法：這個函式結尾的 MMDEV(period) 會再講一次，蓋過上面那句「接 Apple 健康帶入」
     }
+    // 重開 App、這次 Apple 健康還沒讀完：觀察那句話先照今天上次讀到的那份寫（app.js），不先寫「讀到的都整理在這裡」再跳成真的那句
+    if(period==='today' && !window.__muneaObsReal && window.__muneaRestoreHealthObs) window.__muneaRestoreHealthObs();
     if(period==='today' && window.__muneaObsReal){ document.getElementById('obsText').innerHTML=window.__muneaObsReal; }
     else { document.getElementById('obsText').textContent=d.obs; }
     document.getElementById('obsPeriod').textContent=d.obsPeriod;
