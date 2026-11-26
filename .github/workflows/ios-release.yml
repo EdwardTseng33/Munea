@@ -22,6 +22,16 @@ name: iOS release (manual)
 #   不會被吞掉。解法二選一：① 到 App Store Connect -> Users and Access -> Integrations，
 #   把這把鑰匙的存取權加上 Certificates, Identifiers & Profiles；② 改用 signing_mode=manual
 #   （讀 Secret Manager 裡的 p12＋描述檔手動簽章——這兩個 secret 目前還沒建立，見 README）。
+#
+# Xcode 27／iOS 27 SDK（2026-11-20）：蘋果對 1.0.72 (547) 發 ITMS-90725——2027 年 4 月起上傳必須用
+#   iOS 27 SDK（Xcode 27+）打包。GitHub 一個 macOS 映像只放一個 Xcode 大版本：macos-26 只有 Xcode 26.x，
+#   Xcode 27 在獨立的 `xcode-27` 映像（macOS 27 底座，2026-11 時仍標 preview，見
+#   github.com/actions/runner-images/issues/14404）。等官方出 `macos-27` 正式標籤後改成 macos-27。
+#   下方「Check iOS SDK」步驟會在 SDK 低於 27 時直接擋下，避免又靜靜退回舊 SDK。
+#
+# 測試打包（test_build=true）：只打包＋上傳 build 到 App Store Connect（之後可在 TestFlight 看到），
+#   版號回寫只在打包機本地 commit（ios-archive.sh 要乾淨工作區），不推 release 分支、不開 PR，
+#   也不呼叫 asc-submit-version.mjs——不綁 build、不改 whatsNew、不送審，正在審的版本完全不會被動到。
 
 on:
   workflow_dispatch:
@@ -40,6 +50,12 @@ on:
         type: choice
         options: ["false", "true"]
         default: "false"
+      test_build:
+        description: "true=測試打包：只上傳 build（TestFlight 可見），不推版號分支/不開 PR/不碰 App Store 版本；false=正式發版"
+        required: false
+        type: choice
+        options: ["false", "true"]
+        default: "false"
       signing_mode:
         description: "auto=用 ASC API 鑰匙雲端自動簽章（預設）；manual=讀 Secret Manager 的 p12+描述檔"
         required: false
@@ -52,10 +68,10 @@ on:
         type: string
         default: "app-store/localizations"
       xcode_version:
-        description: "Xcode 版本（留 latest-stable 讓 runner 用目前最新穩定版；專案要 Xcode 15+/Swift tools 5.9+）"
+        description: "Xcode 版本（預設 27＝映像上最新的 Xcode 27.x 穩定版；蘋果 2027/4 起要求 iOS 27 SDK）"
         required: false
         type: string
-        default: "latest-stable"
+        default: "27"
 
 permissions:
   contents: write
@@ -74,7 +90,8 @@ env:
 jobs:
   release:
     name: Build and release iOS
-    runs-on: macos-15
+    # Xcode 27 只在 xcode-27 映像上（macos-26 只有 Xcode 26.x）；macos-27 正式標籤出來後改過去。
+    runs-on: xcode-27
     timeout-minutes: 90
 
     steps:
@@ -89,11 +106,29 @@ jobs:
         with:
           xcode-version: ${{ inputs.xcode_version }}
 
+      - name: Refuse submit together with test_build
+        if: inputs.test_build == 'true' && inputs.submit == 'true'
+        run: |
+          echo "FAIL test_build=true cannot be combined with submit=true."
+          exit 1
+
       - name: Print toolchain versions
         run: |
           xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
           swift --version
           node --version
+
+      - name: Check iOS SDK is 27 or newer (App Store requirement from April 2027)
+        run: |
+          set -euo pipefail
+          SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          SDK_MAJOR="${SDK_VERSION%%.*}"
+          if [ "$SDK_MAJOR" -lt 27 ]; then
+            echo "FAIL iOS SDK $SDK_VERSION < 27. App Store uploads need the iOS 27 SDK (Xcode 27+) from April 2027 (ITMS-90725)."
+            exit 1
+          fi
+          echo "PASS iOS SDK $SDK_VERSION"
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -146,6 +181,12 @@ jobs:
           else
             git add package.json package-lock.json web/src/version.js ios/App/App.xcodeproj/project.pbxproj
             git commit -m "chore(release): iOS v${{ inputs.version }} (Build ${{ inputs.build }})"
+            if [ "${{ inputs.test_build }}" = "true" ]; then
+              # 測試打包：只在打包機本地 commit 讓工作區乾淨，不推分支、不開 PR。
+              echo "test_build=true: version bump committed locally only (not pushed)."
+              echo "committed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             # main 有分支保護（只收 PR），不能直接推回觸發分支：改推到專用發版分支、下一步開 PR 回 main。
             RELEASE_BRANCH="release/ios-v${{ inputs.version }}-b${{ inputs.build }}"
             git push --force origin HEAD:"refs/heads/${RELEASE_BRANCH}"
@@ -220,6 +261,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
       - name: Wait for build processing and prepare App Store version
+        if: inputs.test_build != 'true'
         run: |
           node scripts/appstore/asc-submit-version.mjs \
             --version "${{ inputs.version }}" \
