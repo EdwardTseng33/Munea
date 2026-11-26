@@ -1279,6 +1279,13 @@ window.__muneaSeatCodeBridge = {
   track: trackProductEvent,
   refreshPlan: refreshServerPlanEntitlement,
 };
+// 機構照護模式同意開關（web/src/org-consent.js）要用的工具，同樣借給它；查與改的流程都在那支裡。
+window.__muneaOrgConsentBridge = {
+  brainURL,
+  authHeaders: muneaAuthHeaders,
+  isLoggedIn,
+  track: trackProductEvent,
+};
 
 function renderSubscriptionEndDate(subscription) {
   const el = $('#setPlanRenewalDate');

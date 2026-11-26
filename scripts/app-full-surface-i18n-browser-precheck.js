@@ -386,6 +386,7 @@ async function resetAndPrepareState(page, state) {
       'modal:invite-family': 'inviteFamModal',
       'modal:join-circle': 'joinCircleModal',
       'modal:seat-code': 'seatCodeModal',
+      'modal:org-consent': 'orgConsentModal',
       'modal:top-up': 'topUpModal',
       'modal:appointment': 'visitModal',
       'modal:history': 'historyModal',

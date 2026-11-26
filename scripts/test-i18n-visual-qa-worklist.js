@@ -23,8 +23,9 @@ assert.equal(worklist.entryCount, expectedPerLocale * LOCALES.length);
 // 2026-10-28：480（原 468）＝40 個畫面 × 3 種機型 × 4 語系，新增 modal:care-week（補助案 B4）。
 // 2026-11-09：468（原 480）－拿掉 chat:text-fallback（打字聊天後備整個移除，39 個畫面）。
 // 2026-11-17：480（原 468）＝40 個畫面 × 3 種機型 × 4 語系，新增 modal:seat-code（機構開通碼）。
+// 2026-11-17：492（原 480）＝41 個畫面 × 3 種機型 × 4 語系，新增 modal:org-consent（機構照護模式同意開關）。
 // 這個數字跟上一行的推導重複驗一次是刻意的：加畫面就要來這裡改，總量才不會無聲漂移。
-assert.equal(worklist.entryCount, 480);
+assert.equal(worklist.entryCount, 492);
 assert.equal(worklist.approvalPolicy.automaticPassForbidden, true);
 assert.equal(worklist.approvalPolicy.currentRunScreenshotsOnly, true);
 assert.equal(worklist.approvalPolicy.exactInstalledAppRequired, true);

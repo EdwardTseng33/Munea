@@ -266,6 +266,15 @@
       "localizationStatus": "integrated"
     },
     {
+      "state": "modal:org-consent",
+      "kind": "modal",
+      "source": "web/index.html",
+      "anchorId": "orgConsentModal",
+      "captureMode": "dom-anchor",
+      "coverageGroup": "settings",
+      "localizationStatus": "integrated"
+    },
+    {
       "state": "modal:top-up",
       "kind": "modal",
       "source": "web/index.html",
