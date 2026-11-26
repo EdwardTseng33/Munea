@@ -8443,11 +8443,9 @@ def default_billing_store():
             "familyDashboard": True,
             "routineReminders": True,
             "realtimeAvatar": True,
-            # 2026-11-20：一次性 5 點改成「前 7 天每天 10 分鐘、之後每週 10 分鐘」（credit_allowance.py）。
-            "signupTrialCredits": 0,
-            "freeTrialDays": credit_allowance.DEFAULT_SETTINGS["trialDays"],
-            "freeTrialDailyMinutes": credit_allowance.DEFAULT_SETTINGS["trialDailyMinutes"],
-            "freeWeeklyMinutes": credit_allowance.DEFAULT_SETTINGS["weeklyMinutes"],
+            # 2026-11-26 Edward：沒有天數概念——註冊送一次 5 分鐘，用完就訂閱或加買（credit_allowance.py）。
+            "signupTrialCredits": credit_allowance.DEFAULT_FREE_ONCE_MINUTES,
+            "freeOnceMinutes": credit_allowance.DEFAULT_FREE_ONCE_MINUTES,
             "creditMinutes": 1,
             "premiumAvatarMinutesMonthly": 0,
             # Edward 2026-07-31：免費也給 1 位家人（本人＋1＝2）。原本免費＝只有自己、
@@ -8859,15 +8857,19 @@ def json_family_share_context(state, *, account_id, person_id=None, paid_plan=No
     return None
 
 
-def ensure_free_allowance_in_store(store, *, account_id, created_at, paid_plan=None, now=None, other_stores=()):
-    """補建這個週期的免費錢包（JSON 後備；資料庫那邊是 munea_ensure_free_allowance）。回 (window, 有沒有新建)。"""
-    if paid_plan:
-        return None, False
+def ensure_free_allowance_in_store(store, *, account_id, created_at=None, paid_plan=None, now=None, other_stores=()):
+    """一次性免費 5 分鐘：沒拿過才發一次（JSON 後備；資料庫那邊是 035 的 munea_ensure_free_allowance）。
+
+    2026-11-26 Edward：沒有天數概念，註冊送一次 5 分鐘、用完就訂閱或加買。順手把 11/20 起發的
+    每日／每週錢包收掉。回 (window, 帳本有沒有改)。created_at／other_stores 留著只為了呼叫端不用改。
+    """
     now = now or datetime.now(timezone.utc)
-    used = credit_allowance.free_used_in_month([store, *list(other_stores or [])], now)
-    window = credit_allowance.allowance_window(created_at, now, credit_allowance.settings_from_env(), used)
-    if window["amount"] <= 0 or credit_allowance.find_free_wallet(store, window["period"]):
-        return window, False
+    closed = credit_allowance.close_periodic_free_wallets(store, now)
+    if paid_plan:
+        return None, closed > 0
+    window = credit_allowance.free_once_window()
+    if window["amount"] <= 0 or credit_allowance.free_once_received(store, account_id):
+        return window, closed > 0
     wallet = credit_allowance.free_wallet_for(window)
     store.setdefault("wallets", []).append(wallet)
     append_credit_transaction(
@@ -8876,9 +8878,9 @@ def ensure_free_allowance_in_store(store, *, account_id, created_at, paid_plan=N
         wallet=wallet,
         amount=window["amount"],
         source="promo",
-        reason=f"free_allowance_{window['mode']}",
-        idempotency_key=f"free-allowance:{account_id}:{window['period']}",
-        provider="munea_free_allowance",
+        reason="free_signup_once",
+        idempotency_key=f"{credit_allowance.SIGNUP_KEY_PREFIX}{account_id}",
+        provider="munea_signup",
     )
     return window, True
 
@@ -8994,7 +8996,8 @@ def json_credit_share_status(data=None, now=None):
     own_expires = included_month_info(store, now)["expiresAt"] if paid else None
     return store, {
         "allowance": credit_allowance.allowance_block(
-            window, store, now, paid_plan=paid, plan_resets_at=credit_allowance.iso_z(own_expires) if own_expires else None
+            store, now, paid_plan=paid, plan_resets_at=credit_allowance.iso_z(own_expires) if own_expires else None,
+            account_id=account_id,
         ),
         "familyShare": raw_share,
         "sharedSpendable": shared_spendable,
@@ -9228,11 +9231,9 @@ def credits_refund_reversal_response(data):
 
 
 def ensure_free_signup_trial(account_id):
-    """開機／註冊時補建這個週期的免費額度（2026-11-20 起取代一次性 5 點）。
+    """開機／註冊時補發一次性免費 5 分鐘（2026-11-26 起；資料庫是 035 的 munea_ensure_free_allowance）。
 
-    前 7 天每天 10 分鐘、之後每週 10 分鐘（credit_allowance.py；資料庫是 034 的
-    munea_ensure_free_allowance）。名字沿用，account-bootstrap 不用改。冪等：一個週期一個錢包。
-    舊的一次性 5 點錢包不動，有餘額照用。
+    沒拿過才發一次，用掉不回補；11/20 以前送過 5 點的帳號算拿過。名字沿用，account-bootstrap 不用改。
     """
     account_id = str(account_id or "").strip()
     if not account_id:
@@ -9248,7 +9249,7 @@ def ensure_free_signup_trial(account_id):
         credits = float(result.get("credits") or 0)
         return {
             "ok": bool(result.get("ok")),
-            "mode": result.get("mode") or "free_signup_trial",
+            "mode": result.get("mode") or "free_once",
             "period": result.get("period"),
             "credits": credit_allowance.as_number(credits),
             "minutesApprox": credit_allowance.as_number(credits),
@@ -9489,7 +9490,7 @@ def entitlements_response(data):
         "entitlements": store["entitlements"],
         "subscription": store["subscription"],
         # 前端靠這個決定能不能寫「爸媽不用另外付費」。2026-11-26 起分鐘各帳號各扣 → False。
-        "capabilities": {"familySharedMinutes": FAMILY_SHARED_MINUTES},
+        "capabilities": {"familySharedMinutes": FAMILY_SHARED_MINUTES, "freeOnce": True},
     }
 
 
