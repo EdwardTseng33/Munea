@@ -6060,8 +6060,9 @@ let _memBadgePlan = 'free';
 // localStorage munea.settingsLayout＝'b' 才啟用。只「搬」既有的列到 B 案容器——id、點擊行為、程式填的字全都不變；
 // 通知中心那列由 notify.js 插在 safetyRow 前面，所以先搬 safetyRow，之後插進來的也會落在精簡清單裡。
 function applySettingsLayoutB() {
-  let on = false;
-  try { on = localStorage.getItem('munea.settingsLayout') === 'b'; } catch (e) {}
+  // 2026-11-26 Edward「好了就推版上線」→ B 案定案、預設開；munea.settingsLayout='a' 只留給比對用
+  let on = true;
+  try { on = localStorage.getItem('munea.settingsLayout') !== 'a'; } catch (e) {}
   const root = $('#settings');
   if (!root || !on || root.dataset.layout === 'b') return;
   const hero = root.querySelector('.set-b-hero');
