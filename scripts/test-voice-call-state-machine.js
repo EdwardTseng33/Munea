@@ -82,6 +82,7 @@ function runVisibilityContract() {
   let nextTimerId = 1;
   const timers = new Map();
   let hangups = 0;
+  let fakeTaps = 0;
   let resumes = 0;
   const documentListeners = {};
   const windowListeners = {};
@@ -97,9 +98,13 @@ function runVisibilityContract() {
     callPreflightPending: false,
     LiveVoice: { _resumeAudio() { resumes += 1; } },
     trackProductEvent() {},
+    // 2026-11-16：離開畫面滿 5 秒改由 App 自己收線（原因記 background_release），
+    // 不再替使用者按通話鍵——那會被記成使用者自己掛的。
+    releaseCallForBackground() { hangups += 1; return true; },
+    showBackgroundReleaseNotice() { return false; },
     $(selector) {
       if (selector !== '#callToggle') return null;
-      return { click() { hangups += 1; } };
+      return { click() { fakeTaps += 1; } };
     },
     setTimeout(callback, delay) {
       const id = nextTimerId++;
@@ -129,6 +134,7 @@ function runVisibilityContract() {
   const timer = [...timers.values()][0];
   timer.callback();
   assert.strictEqual(hangups, 1, 'Sustained background did not release the call once');
+  assert.strictEqual(fakeTaps, 0, 'Background release must not fake a tap on the call button');
 }
 
 function runLocalPlaybackContinuityContract() {
