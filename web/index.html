@@ -467,7 +467,17 @@ setTimeout(function () {
   <section class="screen" id="settings">
     <div class="pad">
       <div class="page-head"><h1 class="page-title" data-i18n="settings.title">設定</h1></div>
-      <h2 class="set-section" data-i18n="settings.section.account">帳號</h2>
+      <!-- 設定頁 B 案（2026-11-25 改版提案，跟 A 案並存、供 Edward 比較）：localStorage munea.settingsLayout＝"b" 才啟用。
+           啟用時 app.js 把下面原本的各列「搬」進這幾個容器（id 與點擊行為不變），A 案的區段標題與清單整組收起。
+           ①名片＋方案合成一張 ②最常用四件做成 2×2 大方塊 ③其他收成精簡清單 ④條款／隱私／版本收成「關於沐寧」一列。 -->
+      <div class="set-b set-b-hero" hidden></div>
+      <div class="set-b set-tiles" hidden></div>
+      <h2 class="set-b set-b-label" hidden data-i18n="settings.moreSettings">更多設定</h2>
+      <div class="set-b set-list set-b-list" hidden></div>
+      <details class="set-b set-b-about" hidden>
+        <summary class="set-row"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="" style="width:38px;height:38px" /></span><span class="sr-main"><span data-i18n="settings.aboutMunea">關於沐寧</span><small data-i18n="settings.aboutMuneaSubtitle">版本、使用條款、隱私權政策</small></span><span class="sr-arrow set-b-chev">›</span></summary>
+        <div class="set-list set-b-about-list"></div>
+      </details>
       <div class="auth-card" id="authCard" data-auth-state="guest">
         <div class="auth-card-main">
           <!-- 方案標籤搬到頭像正下方（Edward 2026-07-31）：它講的是「這個人是什麼會員」，
@@ -486,15 +496,13 @@ setTimeout(function () {
         </div>
         <div class="auth-actions">
           <button class="auth-primary" id="authSignInBtn" type="button" data-i18n="auth.signIn">登入</button>
-          <button class="auth-secondary" id="authSignOutBtn" type="button" hidden data-i18n="auth.signOut">登出</button>
         </div>
       </div>
 
       <h2 class="set-section" data-i18n="settings.section.billing">方案與分鐘</h2>
-      <!-- 方案卡四種樣子（2026-11-20 Edward 看過設計稿說「可以」）：data-mode 由 app.js renderPlanCard() 決定。
-           legacy＝後端還沒給 allowance／familyShare 時的舊排法（只把「點數」改講「分鐘」）；
-           trial＝免費體驗前 7 天（每天的分鐘＋7 格天數）；weekly＝第 8 天起每週的分鐘；
-           share＝家人圈一起用同一份月分鐘（誰用了多少）。卡上的字全由程式填，所以不掛 data-i18n。 -->
+      <!-- 方案卡三種樣子：data-mode 由 app.js renderPlanCard() 決定。legacy＝後端還沒給新欄位的舊排法；
+           free＝登入送的分鐘還剩多少；plan＝有訂閱，自己的方案這個月還剩多少（2026-11-25／26 Edward：沒有共用分鐘、沒有「免費幾天」）。
+           卡上的字全由程式填，所以不掛 data-i18n。 -->
       <div class="plan-card" id="planCard" data-mode="legacy">
         <div class="plan-title-row pc-legacy">
           <span class="plan-name" id="setPlanName"></span>
@@ -506,12 +514,7 @@ setTimeout(function () {
         <div class="pts-bar pc-legacy"><i id="ptsBar" style="width:40%"></i></div>
         <div class="pc-head pc-modern"><span class="pc-head-title" id="pcHeadTitle"></span><span class="pc-head-meta" id="pcHeadMeta"></span></div>
         <div class="pc-big pc-modern" id="pcBig" aria-live="polite"></div>
-        <div class="pc-days pc-dayrow" id="pcDays" aria-hidden="true"></div>
-        <div class="pc-daylbl pc-dayrow" aria-hidden="true"><span id="pcDayFirst"></span><span id="pcDayToday"></span><span id="pcDayLast"></span></div>
-        <p class="pc-usage-note pc-share" id="pcUsageNote"></p>
-        <div class="pc-bar pc-share" id="pcBar" aria-hidden="true"></div>
-        <div class="pc-who pc-share" id="pcWho"></div>
-        <p class="pc-note pc-free" id="pcNote"></p>
+        <div class="pc-bar" id="pcBar" aria-hidden="true"></div>
         <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="settings.lowPtsStrip">分鐘快用完了——用完聊天會先停，到這裡加買就能繼續</span></div>
         <div class="pts-note pc-legacy" data-i18n="settings.ptsNote">分鐘用來聊天；用完會先停，加買就能繼續</div>
         <div class="plan-actions">
@@ -535,18 +538,22 @@ setTimeout(function () {
         </div>
       </div>
 
-      <h2 class="set-section" data-i18n="settings.section.accountFamily">帳號與家庭</h2>
-      <div class="set-list">
-        <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main"><span data-i18n="settings.profile">個人資料</span><small data-i18n="settings.profileSubtitle">名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
+      <!-- 2026-11-25 設定頁改版提案（Edward：「設定頁的設計不是很滿意」）：照「多常用到」重新分組——
+           每天會用的提醒放最上面、家人與陪伴一組、健康資料一組、帳號與隱私（含整份刪除）收在下面；
+           每組圖示底色不同，長輩找東西可以先認顏色。每一列的 id 與點擊行為都沒變，只換位置。 -->
+      <h2 class="set-section" data-i18n="settings.section.reminders">每天的提醒</h2>
+      <div class="set-list set-group-remind">
+        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings"></b> ›</span></div>
+        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒您</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+      </div>
+
+      <h2 class="set-section" data-i18n="settings.section.familyCompanion">家人與陪伴</h2>
+      <div class="set-list set-group-family">
         <div class="set-row" id="famCircleRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="sr-main"><span data-i18n="settings.careCircle">全家健康圈</span><small data-i18n="settings.careCircleSubtitle">有誰在裡面、邀請家人加入</small></span><span class="sr-arrow">›</span></div>
+        <div class="set-row" id="companionRow" style="cursor:pointer"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/ningning-face.webp" alt=""></span><span class="sr-main"><b id="settingsCompanionName" data-i18n="companion.nening.name">寧寧</b><small id="settingsTemplateLabel" data-i18n="companion.nening.label">溫柔型，像家人一樣照看你</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="interestsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16l-5.2 2.9 1.2-5.8-4.4-4 5.9-.7z"/></svg></span><span class="sr-main"><span data-i18n="settings.interests">想聊的話題</span><small id="interestsSubtitle"></small></span><span class="sr-arrow" id="interestsNow">›</span></div>
       </div>
-
-      <h2 class="set-section" data-i18n="settings.section.companion">AI 陪伴角色</h2>
-      <div class="set-list" id="companionRow" style="cursor:pointer">
-        <div class="set-row"><span class="sr-ico comp"><img id="settingsCompanionImg" src="avatars/ningning-face.webp" alt=""></span><span class="sr-main"><b id="settingsCompanionName" data-i18n="companion.nening.name">寧寧</b><small id="settingsTemplateLabel" data-i18n="companion.nening.label">溫柔型，像家人一樣照看你</small></span><span class="sr-arrow">›</span></div>
-      </div>
-
 
       <section class="ai-dev-panel" id="aiDevPanel" hidden>
         <div class="ai-dev-head">
@@ -568,29 +575,33 @@ setTimeout(function () {
         <pre class="ai-dev-json" id="aiDevJson">{}</pre>
       </section>
 
-      <h2 class="set-section" data-i18n="settings.section.healthSafety">健康資料與安全</h2>
-      <div class="set-list">
+      <h2 class="set-section" data-i18n="settings.section.healthData">健康資料</h2>
+      <div class="set-list set-group-health">
         <div class="set-row" id="setDevices" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></span><span class="sr-main"><span data-i18n="settings.appleHealth">Apple 健康</span><small data-i18n="settings.appleHealthSubtitle">步數・心率・睡眠</small></span><span class="sr-on" id="healthSettingsState"><span class="d"></span><span id="healthSettingsStateLabel" data-i18n="health.notConnected">未連接</span></span></div>
-        <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings"></b> ›</span></div>
-        <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒您</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
-
         <div class="set-row" id="visitSummaryRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="sr-main"><span data-i18n="settings.visitSummary">就診摘要</span><small data-i18n="settings.visitSummarySubtitle">帶去給醫生看的一頁整理</small></span><span class="sr-arrow"><b id="visitSummaryPeriodLabel"></b> ›</span></div>
-        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+      </div>
+
+      <h2 class="set-section" data-i18n="settings.section.accountPrivacy">帳號與隱私</h2>
+      <div class="set-list set-group-privacy">
+        <div class="set-row" id="profileRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></span><span class="sr-main"><span data-i18n="settings.profile">個人資料</span><small data-i18n="settings.profileSubtitle">名稱、生日、所在地</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="settings.myData">我的資料</span><small data-i18n="settings.myDataSubtitle">匯出一份、或整份刪除</small></span><span class="sr-arrow">›</span></div>
       </div>
       <!-- Edward 2026-07-03 拍板：設定頁不放「AI 境外服務同意」常駐卡；同意收進登入流程（authSheet 條款一行），設定頁只留下面這行免責＋隱私連結。請勿再加回。 -->
       <h2 class="set-section" data-i18n="settings.section.experience">App 體驗</h2>
-      <div class="set-list">
+      <div class="set-list set-group-app">
         <div class="set-row" id="feedbackRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20l1-4.9a8.4 8.4 0 1 1 17-3.6Z"/><path d="M8 10h8M8 13.5h5"/></svg></span><span class="sr-main"><span data-i18n="settings.feedback">給開發者的建議</span><small data-i18n="settings.feedbackSubtitle">回報問題、許願新功能、幫沐寧打分數</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="fontRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></span><span class="sr-main"><span data-i18n="settings.fontDisplay">字體與顯示</span><small data-i18n="settings.fontDisplaySubtitle">字級大小與閱讀舒適</small></span><span class="sr-arrow" id="fontNow"></span></div>
       </div>
 
       <h2 class="set-section" data-i18n="settings.section.about">關於</h2>
-      <div class="set-list">
+      <div class="set-list set-group-about">
         <div class="set-row" id="versionRow" style="cursor:pointer"><span class="sr-ico" style="background:transparent;padding:0"><img class="sa-icon" src="icons/munea-logo.png" alt="Munea" style="width:38px;height:38px" /></span><span class="sr-main"><span data-i18n="app.title">Munea 沐寧</span><small id="versionSubtitle"><span id="verRowNum">—</span></small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="termsRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg></span><span class="sr-main"><span data-i18n="reader.termsTitle">使用條款</span><small data-i18n="settings.termsSubtitle">服務範圍與合理使用</small></span><span class="sr-arrow">›</span></div>
         <div class="set-row" id="privacyPolicyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="sr-main"><span data-i18n="reader.privacyTitle">隱私權政策</span><small data-i18n="settings.privacySubtitle">資料怎麼用、留多久</small></span><span class="sr-arrow">›</span></div>
       </div>
+      <!-- 2026-11-25 改版提案：「登出」從帳號名片右上角搬到整頁最下面——它是會把人登出去的動作，
+           不該跟名字、信箱擠在一起（信箱還因此被切成「meiling@exampl…」）。仍是次要鍵、只在登入後出現。 -->
+      <div class="set-signout"><button class="auth-secondary" id="authSignOutBtn" type="button" hidden data-i18n="auth.signOut">登出</button></div>
     </div>
   </section>
 
@@ -1119,8 +1130,6 @@ setTimeout(function () {
     </div>
     <div class="sub-body">
       <h1 class="sub-h" data-i18n="subscription.headline">Someone for Mom and Dad to talk to every day</h1>
-      <!-- 這句講的是「家人圈共用分鐘」，後端還沒開 familySharedMinutes 之前講了就是不實——由 app.js 決定要不要露出 -->
-      <p class="sub-lede" id="planSharedLede" hidden></p>
       <!-- 分段 tab（已訂閱的人才看得到：方案／加買分鐘）-->
       <div class="sub-seg" id="subSeg">
         <div class="sseg-thumb" id="ssegThumb"></div>
@@ -1155,11 +1164,12 @@ setTimeout(function () {
             </ul>
           </button>
         </div>
-        <!-- 薄荷底這行：「爸媽不用另外付費」只在後端 capabilities.familySharedMinutes === true 時才露出（app.js） -->
         <div class="sub-fam" id="planFamilyNote">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
           <span id="planFamilyNoteText">Both plans include 7-day and 30-day health trends.</span>
         </div>
+        <!-- 2026-11-25：自動續訂說明與條款連結搬到訂閱鈕正上方——按鈕黏在畫面下方時，這段不能被它蓋住或被擠到看不到的地方 -->
+        <p class="sub-legal">Renews automatically through your Apple Account. Cancel anytime in iPhone Settings; you keep access until the end of the current period. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
         <button class="sub-cta" id="subCta" type="button">Subscribe to Plus</button>
         <!-- 「管理訂閱／恢復購買」已搬到設定頁的「我的訂閱」卡（Edward 2026-07-31）：
              這一頁只留一條路——選方案 → 訂閱。想改或想救回舊訂閱的人會去設定找，不該在這裡分心。 -->
@@ -1181,7 +1191,6 @@ setTimeout(function () {
           </div>
         </div>
         </details>
-        <p class="sub-legal">Renews automatically through your Apple Account. Cancel anytime in iPhone Settings; you keep access until the end of the current period. See <a href="#" id="legalTermsLink">Terms of Service</a> and <a href="#" id="legalPrivacyLink">Privacy Policy</a>.</p>
         <span id="planHeroName" hidden></span><span id="planHeroPts" hidden></span><span id="planHeroMeta" hidden></span>
       </div>
       <!-- 付費頁裡的「加買分鐘」分頁：跟加買分鐘那張單一樣的排法（P2 一併統一） -->
@@ -1452,7 +1461,7 @@ setTimeout(function () {
     function ck(){ return 'munea.chatTrialSec'; } // 固定 key = 一次性、用完不再回來
     function chatUsedToday(){ try{ return parseInt(localStorage.getItem(ck())||'0',10)||0; }catch(e){ return 0; } }
     function chatTick(){ try{ localStorage.setItem(ck(), String(chatUsedToday()+1)); }catch(e){} }
-    // 免費還能聊幾秒：伺服器說了算（2026-11-20：免費改成前 7 天每天、之後每週給分鐘，家人圈成員還能用圈主的分鐘）。
+    // 免費還能聊幾秒：伺服器說了算（2026-11-26 Edward：免費＝登入送一次 5 分鐘，各帳號各扣各的，沒有每天／每週）。
     // App 不能比伺服器先把人擋掉——有伺服器回來的餘額或 allowance 就照它（app.js __muneaServerFreeRemainSec）；
     // 未登入、連不上、舊後端沒給時，才退回下面這個本機的一次性 5 分鐘。
     function chatRemainSec(){
@@ -1465,11 +1474,9 @@ setTimeout(function () {
       return Math.max(0, CHAT_FREE_SEC - chatUsedToday());
     }
     var MSG=function(v){ v=v||{}; return {
-      'chat-today':{t:window.muneaUiT('paywall.chatTodayTitle','今天的免費分鐘用完了'),m:window.muneaUiT('paywall.chatTodayBody','前 {days} 天每天有 {minutes} 分鐘，明天就能再聊。想每天多聊一點，可以看看 Plus 或 Pro。',{days:v.days||7,minutes:v.minutes||10})},
-      'chat-week':{t:window.muneaUiT('paywall.chatWeekTitle','這週的免費分鐘用完了'),m:window.muneaUiT('paywall.chatWeekBody','免費方案每週有 {minutes} 分鐘，補上之後就能再聊。想每天多聊一點，可以看看 Plus 或 Pro。',{minutes:v.minutes||10})},
       'family-invite':{t:window.muneaUiT('paywall.familyInviteTitle','邀請家人，升級就解鎖'),m:window.muneaUiT('paywall.familyInviteBody','免費方案可以一起看家人的狀態；想邀請家人進全家健康圈、大家互相照應，升級 Plus 就可以囉。')},
       'status-history':{t:window.muneaUiT('paywall.statusHistoryTitle','看更久的變化，升級解鎖'),m:window.muneaUiT('paywall.statusHistoryBody','免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。')},
-      'chat-daily':{t:window.muneaUiT('paywall.chatDailyTitle','免費分鐘用完了'),m:window.muneaUiT('paywall.chatDailyBody','登入後，前 7 天每天可以聊 10 分鐘，之後每週 10 分鐘。想每天多聊一點，可以看看 Plus 或 Pro。')},
+      'chat-daily':{t:window.muneaUiT('paywall.chatDailyTitle','免費分鐘用完了'),m:window.muneaUiT('paywall.chatDailyBody','登入送的 5 分鐘用完了。訂閱 Plus 或 Pro，每個月都有分鐘可以聊。')},
       'join-circle':{t:window.muneaUiT('paywall.joinCircleTitle','加入家人的健康圈，升級解鎖'),m:window.muneaUiT('paywall.joinCircleBody','免費方案可以自己用沐寧、記自己的提醒；想加入家人的健康圈、大家一起看著長輩，升級 Plus 就可以囉。')}
     }; };
     function upsell(feature, values){
@@ -1495,6 +1502,7 @@ setTimeout(function () {
   </script>
   <script src="src/voice-turn-policy.js?v=20261120-v1072"></script>
   <script src="src/voice-call-diagnostics.js?v=20261120-v1072"></script>
+  <script src="src/voice-audio-clock.js?v=20261120-v1072"></script><!-- 撥號前量聲音引擎時鐘＋分層救援（順序與量測；實際動作在 app.js） -->
   <script src="src/visit-summary-logo.js?v=20260730-brand"></script><!-- 就診摘要 PDF 的品牌標記（base64；離屏 webview 的 baseURL 是 nil，載不到外部檔） -->
   <script src="src/companion-face.js?v=20261028-front1"></script><!-- 扁平插畫寧寧（Rive 檔做好前的過渡版） -->
   <script type="module" src="src/app.js?v=20261120-v1072"></script>
