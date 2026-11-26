@@ -1,0 +1,7 @@
+# 鑰匙外洩掃描（gitleaks）已確認不是外洩的歷史紀錄——只放「已經處理掉、但歷史上抹不掉」的那一筆，不拿來放行新的鑰匙。
+# 格式：<commit>:<檔案>:<規則>:<行號>
+#
+# 2026-11-20：b45a5ded 在 web/src/notify.js 抄了第三份 App 薄門通行碼（跟 app.js／store.js 同一把，
+# 本來就跟著 App 發到每支手機上，不是後台鑰匙）。下一筆已經拿掉這份、改跟 store.js 借 window.MuneaAppKey；
+# 這把碼寫死在 App 裡本身是資安預檢 D3 的改善項目，另案處理。
+b45a5ded5ef890e7545a6bb6db3fd1a481bab92b:web/src/notify.js:generic-api-key:11
