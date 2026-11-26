@@ -1,0 +1,30 @@
+{
+  "capturedAt": "2026-11-27T03:45:00+08:00",
+  "targetProjectRef": "fespbkdwafueyonppzwq",
+  "migrations": [
+    "035_per_account_minutes.sql"
+  ],
+  "appliedBy": "蘇菲（Edward 2026-11-26 17:23「好了就推版上線」授權；1.0.73 11/27 過審後），經已登入的 Chrome 在 Supabase SQL Editor 執行；先上 brain（munea-brain-00228-xuz @ afed406e）再套 SQL",
+  "note": "貼上的內容由 GitHub 該 commit 原檔讀取，sha256 c51395981fa2… 與 origin/main 相同、11868 字。執行回 Success。執行前後各跑唯讀查詢；再用 QA 測試帳號對正式 brain 呼叫 /credits/balance。",
+  "captureMethod": "read-only-probe",
+  "sourceCommit": "afed406e958d0f9b58cb2dfda7f47ad42819e54f",
+  "observed": {
+    "035": {
+      "active entitlement policy version (munea_app_store_v1)": 6,
+      "active policy free.freeOnceMinutes": 5,
+      "active policy familySharedMinutes": false,
+      "free_allowance_settings.signup_once_minutes": 5,
+      "munea_family_share_owner body": "select null::jsonb;",
+      "open daily/weekly free_allowance wallets after apply": 0,
+      "wallets closed by 035 (metadata.closedBy=035_free_once) equals open periodic wallets before apply": true,
+      "munea_free_allowance_window for a free account": {
+        "mode": "free_once",
+        "amount": 5,
+        "period": "free-once",
+        "expiresAt": null
+      },
+      "every free account has received the one-time grant (munea_free_once_received)": true,
+      "backend": "POST /credits/balance（QA 帳號、正式 brain 00228-xuz）HTTP 200、allowance.mode=plan、familyShare=null"
+    }
+  }
+}
