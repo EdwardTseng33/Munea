@@ -36,6 +36,7 @@ for (const dir of ['web/src', 'web/src/i18n']) {
   for (const name of fs.readdirSync(path.join(root, dir))) {
     if (!name.endsWith('.js')) continue;
     if (name === 'auth-config.js') continue;        // 產生檔、不入庫
+    if (name === 'zh-vowel-table.js') continue;     // 對嘴用的「字→韻母」對照表：是讀音資料、不是給人看的文案（裡面當然有「您」這個字）
     if (/^admin/.test(name)) continue;              // 後台主控台不是用戶畫面
     sources.push(`${dir}/${name}`);
   }

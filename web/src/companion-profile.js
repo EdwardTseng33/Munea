@@ -32,7 +32,7 @@
       thumbAsset: 'avatars/ningning-face.webp',   // 2026-10-28 新形象（純色塊向量、正視前方）：臉部特寫從原稿裁
       homeAsset: 'avatars/ningning-face.webp',
       fullAsset: 'avatars/ningning-rig/body.webp',     // 全身＝聊聊頁會動那層的同一張底圖
-      flatSkin: { dir: 'avatars/ningning-rig/', bg: '#BADDD6' },   // 聊聊頁會動的那層：圖資料夾＋背景色
+      flatSkin: { dir: 'avatars/ningning-rig/', bg: '#BADDD6', expressive: true },   // 聊聊頁會動的那層：圖資料夾＋背景色；expressive＝有多嘴型／表情貼片
     }),
     // 沐沐（2026-10-28 Edward 定名）：男生角色回歸，走跟寧寧同一套插畫引擎；韓系、細圓框眼鏡、灰藍圓領毛衣
     'mumu-flat-male': template({
