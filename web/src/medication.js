@@ -254,8 +254,24 @@
     return syncPromise;
   }
 
+  // 登入還沒確認（configure() 還沒跑）、手上讀的是「上次那個人」那份時，改紀錄的動作（吃了、稍後、略過、取消）
+  // 一律先收著，等 configure() 確認現在是誰、拉完雲端之後才寫進「現在這個人」那份。
+  // 不可以直接寫：萬一登入其實過期了，這一下就寫進上一個人的紀錄（2026-11-26）。
+  // 也不可以直接丟：從通知按「吃了」把 App 叫起來時，動作常常就落在這幾秒裡。
+  let pendingWrites = [];
+  function holdingForIdentity() { return !configured && scope !== 'guest'; }
+  function replayPendingWrites() {
+    const queued = pendingWrites;
+    pendingWrites = [];
+    queued.forEach(item => { try { setStatus(item.dose, item.status, item.source); } catch (e) {} });
+  }
+
   function setStatus(dose, status, source) {
     if (!dose || !dose.doseKey || !VALID_STATUS.has(status)) return null;
+    if (holdingForIdentity()) {
+      pendingWrites.push({ dose: { ...dose }, status, source });
+      return null;
+    }
     const store = loadStore();
     if (store[dose.doseKey] && store[dose.doseKey].status === status) return store[dose.doseKey];
     const event = normalizeEvent({
@@ -380,6 +396,7 @@
     // already marked taken on another device. The final upserts are idempotent.
     return refresh(35).catch(() => []).then(() => {
       reconcileMissed();
+      replayPendingWrites();
       const today = ensureDay(medsProvider(), dateKey());
       return Promise.all(today.map(send)).then(() => dayEvents(medsProvider(), dateKey()));
     });
@@ -401,5 +418,6 @@
     reconcileMissed,
     configured: () => configured,
     scope: () => scope,
+    pendingWrites: () => pendingWrites.length,
   };
 })(window);
