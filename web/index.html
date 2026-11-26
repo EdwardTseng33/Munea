@@ -545,7 +545,7 @@ setTimeout(function () {
       <div class="set-list set-group-remind">
         <div class="set-row" id="medEntrySettings" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7-7l7 7a5 5 0 0 1-7 7z"/><path d="M8.5 8.5l7 7"/></svg></span><span class="sr-main"><span data-i18n="settings.medicationReminders">用藥提醒</span><small data-i18n="settings.medicationRemindersSubtitle">到時間通知你，打開就能確認</small></span><span class="sr-arrow"><b id="medCountSettings"></b> ›</span></div>
         <div class="set-row" id="visitEntry" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/><path d="M9 16l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.appointmentReminders">就診提醒</span><small data-i18n="settings.appointmentRemindersSubtitle">就診當天提醒你</small></span><span class="sr-arrow"><b id="visitLabel"></b> ›</span></div>
-        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">設定緊急聯絡人</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
+        <div class="set-row" id="safetyRow" style="cursor:pointer"><span class="sr-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="sr-main"><span data-i18n="settings.safetyNotifications">安全通知</span><small data-i18n="settings.safetyNotificationsSubtitle">選好誰會收到通知</small></span><span class="sr-arrow"><b id="safetyCount"></b> ›</span></div>
       </div>
 
       <h2 class="set-section" data-i18n="settings.section.familyCompanion">家人與陪伴</h2>
@@ -720,7 +720,7 @@ setTimeout(function () {
         <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         <p id="cnNoDataText"></p>
       </div>
-      <div class="cn-privacy"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span data-i18n="legacyUi.connectPrivacyNote">健康資料只有你授權的家人看得到</span></div>
+      <div class="cn-privacy"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span data-i18n="legacyUi.connectPrivacyNote">加入你健康圈的家人，都看得到你的健康數字</span></div>
     </div>
   </section>
 
@@ -900,7 +900,7 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="legacyUi.safetyTitle">安全通知</h2>
-      <p class="modal-sub" data-i18n="legacyUi.safetyDescription">當你開啟沐寧並同步到超出留意範圍的健康數據時，事件會保留在通知中心。這不是即時或醫療用的量測。</p>
+      <p class="modal-sub" data-i18n="legacyUi.safetyDescription">數字不對勁，或聊天中聽起來讓人擔心時，會通知你選的家人。這不是即時通報，危急請直接打 119。</p>
       <div class="field-label" data-i18n="legacyUi.safetyContacts">誰來當緊急聯絡人（最多 3 位）</div>
       <div class="safety-picks" id="safetyPicks"></div>
       <div class="field-label" data-i18n="legacyUi.safetyConditions">什麼情況會通知</div>
@@ -987,7 +987,7 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close" id="dataClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="data.title">我的資料</h2>
-      <p class="modal-sub" data-i18n="data.description">對話摘要、提醒與紀錄都是你的：登入後可以立即建立只屬於你的 JSON 資料副本，或永久刪除帳號與雲端資料。若有 Apple 訂閱，刪除帳號不會自動取消續訂，請先到「訂閱與點數」管理。</p>
+      <p class="modal-sub" data-i18n="data.description">登入後可以下載一份你的資料，或刪除帳號。下載的那一份目前不含健康紀錄和吃藥清單。有 Apple 訂閱的話，刪帳號不會自動取消，要另外到蘋果取消。</p>
       <button class="modal-btn" id="dataExportBtn" data-i18n="report.exportButton">匯出一份給我</button>
       <button class="modal-btn danger" id="dataDeleteBtn" style="margin-top:10px" data-i18n="data.delete" data-i18n-live>刪除我的資料</button>
       <p class="modal-sub" style="margin-top:12px" data-i18n="data.policyHint">詳細規則在「隱私權政策」頁（設定裡可開）。</p>
@@ -1021,7 +1021,7 @@ setTimeout(function () {
           <input class="chal-input" id="pfCityFree" maxlength="40" data-i18n-placeholder="profile.locationPlaceholder" placeholder="例：台北市南港區" />
           <span class="pf-hint" id="pfLocationHint"></span></div>
       </div>
-      <p class="pf-first-run-disclosure" id="pfFirstRunDisclosure" hidden data-i18n="profile.firstRunDisclosure">你填的稱呼、出生年月、所在縣市會安全同步到雲端（主機在國外），換手機登入也找得到；隨時能在這裡修改或清空。照片只留在這支手機、不會上傳。</p>
+      <p class="pf-first-run-disclosure" id="pfFirstRunDisclosure" hidden data-i18n="profile.firstRunDisclosure">你填的名字、生日、縣市會存到日本的雲端，換手機也找得到；隨時能在這裡修改或清空。照片只留在這支手機，不會上傳。</p>
       <button class="modal-btn" id="pfSaveBtn" style="margin-top:14px" data-i18n="profile.saveButton">存好</button>
       <button class="modal-btn quiet" id="pfSkipBtn" type="button" style="margin-top:8px" hidden data-i18n="profile.skip">先跳過</button>
     </div>
@@ -1041,7 +1041,7 @@ setTimeout(function () {
       <button class="modal-btn" id="fcInviteBtn" style="margin-top:14px" data-i18n="legacyUi.familyInvite" data-i18n-live>邀請家人加入</button>
       <button class="fc-link" id="fcJoinBtn" type="button" data-i18n="legacyUi.familyJoin">我有邀請碼 · 加入別人的健康圈</button>
       <button class="fc-leave" id="fcLeaveBtn" type="button" data-i18n="legacyUi.familyLeave" data-i18n-live>退出這個健康圈</button>
-      <p class="fc-privacy" data-i18n="legacyUi.familyPrivacy">互相看得到狀態與關懷摘要；對話內容不會給任何人看。</p>
+      <p class="fc-privacy" data-i18n="legacyUi.familyPrivacy">家人看得到健康數字、心情和吃藥紀錄；聊天原文家人看不到。</p>
     </div>
   </div>
 
@@ -1064,7 +1064,7 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close" id="inviteCloseX" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="legacyUi.inviteTitle">邀請家人</h2>
-      <p class="modal-sub" data-i18n="legacyUi.inviteDescription">家人加入後，互相看得到狀態、關懷摘要與家人動態；聊天內容永遠不會公開。把你的專屬邀請碼傳給家人，他在沐寧的「家人 → 加入全家健康圈」輸入，你們就連上了。</p>
+      <p class="modal-sub" data-i18n="legacyUi.inviteDescription">家人加入後，你們互相看得到健康數字、心情和吃藥紀錄；聊天原文看不到。把你的專屬邀請碼傳給家人，他在沐寧的「家人 → 加入全家健康圈」輸入，你們就連上了。</p>
       <div class="inv-code" id="invCode">MUNEA-····</div>
       <p class="inv-temp-note" id="invTempNote" style="display:none"></p><!-- 建立不了時，這裡照雲端回的理由顯示人話（見 app.js INVITE_FAIL_TEXT） -->
       <button class="modal-btn" id="invShareBtn" data-i18n="legacyUi.inviteMessage">用訊息傳邀請</button>
@@ -1079,7 +1079,7 @@ setTimeout(function () {
       <div class="modal-grab"></div>
       <button class="auth-close" id="joinCircleClose" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <h2 data-i18n="legacyUi.joinTitle">加入全家健康圈</h2>
-      <p class="modal-sub" data-i18n="legacyUi.joinDescription">把家人給你的邀請碼打在這裡，對上就直接進圈——之後你們的動態、關懷摘要都會互相看得到。</p>
+      <p class="modal-sub" data-i18n="legacyUi.joinDescription">把家人給你的邀請碼打在這裡，對上就直接進圈——之後你們互相看得到健康數字、心情和吃藥紀錄。</p>
       <input class="chal-input jc-code" id="joinCodeInput" placeholder="例：MUNEA-2847" data-i18n-placeholder="join.codePlaceholder" maxlength="16" autocomplete="off" />
       <button class="modal-btn" id="joinCircleBtn" style="margin-top:14px" data-i18n="legacyUi.joinTitle" data-i18n-live>加入全家健康圈</button>
     </div>
@@ -1305,10 +1305,10 @@ setTimeout(function () {
       <button class="auth-close mx-close" type="button" aria-label="關閉" data-i18n-aria-label="accessibility.close" style="position:absolute;right:16px;top:16px"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <div class="mr-say"><img class="mr-face" src="avatars/ningning-face.webp" alt="" /><span data-i18n="consent.title">開始聊之前，先跟你說一聲</span></div>
       <ul class="consent-points">
-        <li><i class="cp-dot"></i><div><b data-i18n="consent.point1Title">你說的話會加密後送到國外的雲端處理</b><small data-i18n="consent.point1Body">全程加密傳輸，只用來聽懂你、記得你，你也能隨時查看——不外流、不販售、不做廣告</small></div></li>
-        <li><i class="cp-dot"></i><div><b data-i18n="consent.point2Title">只留對話重點，原始錄音不保存</b><small data-i18n="consent.point2Body">你隨時能在「我的資料」查看或刪除</small></div></li>
-        <li><i class="cp-dot"></i><div><b data-i18n="consent.point3Title">聲音只用來聽懂你在說什麼</b><small data-i18n="consent.point3Body">不做其他辨識用途，你隨時能查看這部分怎麼被使用</small></div></li>
-        <li><i class="cp-dot"></i><div><b data-i18n="consent.point4Title">你填的稱呼、出生年月、所在縣市會同步到雲端</b><small data-i18n="consent.point4Body">雲端主機在國外；換手機、換裝置登入都找得到，你隨時能查看、修改或清空，照片只留在這支手機</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point1Title">你說的話會送到 Google 的 AI（在國外）處理</b><small data-i18n="consent.point1Body">你的健康數字和心情，也會給 AI 參考。不賣你的資料，也不拿來做廣告</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point2Title">我們不存錄音，只留聊天重點</b><small data-i18n="consent.point2Body">你隨時能在「我的資料」查看或刪除</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point3Title">聲音不拿來認人</b><small data-i18n="consent.point3Body">聊天內容會用來整理重點和你的心情；健康圈裡的家人看得到心情，看不到聊天原文</small></div></li>
+        <li><i class="cp-dot"></i><div><b data-i18n="consent.point4Title">你填的名字、生日、縣市會存到網路上</b><small data-i18n="consent.point4Body">存在日本的雲端，換手機也找得到；照片只留在這支手機</small></div></li>
       </ul>
       <p class="consent-note" id="consentNote"></p>
       <button type="button" class="consent-go" id="consentAgree" data-i18n="consent.agree">我知道了，開始聊</button>

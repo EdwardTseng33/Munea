@@ -2892,7 +2892,8 @@ if missing_app:
 for token in ["provider-consent-card", "provider-consent-toggle", "provider-privacy-link"]:
     if token not in css:
         raise SystemExit("Missing AI provider consent CSS token: " + token)
-for token in ["\u96b1\u79c1\u6b0a\u653f\u7b56", "\u8a9e\u97f3", "AI", "\u5883\u5916", "119", "1925", "\u8cc7\u6599\u532f\u51fa", "\u5e33\u865f\u522a\u9664"]:
+# 2026-11-17: \u96b1\u79c1\u6b0a\u653f\u7b56\u6539\u6210\u767d\u8a71\u2014\u2014\u300c\u5883\u5916\u300d\u2192\u300c\u570b\u5916\u300d\u3001\u300c\u8cc7\u6599\u532f\u51fa\u300d\u2192\u300c\u4e0b\u8f09\u4e00\u4efd\u4f60\u7684\u8cc7\u6599\u300d\u3001\u300c\u5e33\u865f\u522a\u9664\u300d\u2192\u300c\u522a\u9664\u5e33\u865f\u300d\uff1b\u53e6\u5916\u5fc5\u9808\u9ede\u540d Google\u3002
+for token in ["\u96b1\u79c1\u6b0a\u653f\u7b56", "\u8a9e\u97f3", "AI", "Google", "\u570b\u5916", "119", "1925", "\u4e0b\u8f09\u4e00\u4efd\u4f60\u7684\u8cc7\u6599", "\u522a\u9664\u5e33\u865f"]:
     if token not in privacy:
         raise SystemExit("Privacy page missing token: " + token)
 for forbidden in ["SERVICE_ROLE", "service_role", "SUPABASE_SERVICE_ROLE_KEY"]:

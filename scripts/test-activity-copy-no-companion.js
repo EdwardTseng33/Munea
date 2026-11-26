@@ -115,3 +115,8 @@ assert.deepEqual(unusedFeedKeys, [], `文案表有 feed.* 但程式沒在用：$
 console.log(
   `PASS: 活動文案不掛 AI 名字、不宣稱外撥電話（${LOCALES.length} 語系 × ${SYSTEM_PREFIXES.join('/')}），備援文字同步，無寫死名字`,
 );
+
+// 同一類守門（不對使用者說做不到的話）：隱私文字那支掛在這裡一起跑，test:ui-contracts 就會帶到。
+// 沒直接加進 package.json 的 test:ui-contracts／test:launch 那兩行，是因為 #694、#696 正在改同兩行、會撞；
+// 等它們併了再搬過去。單獨跑：npm run test:privacy-copy。
+require('./test-privacy-copy-honest.js');
