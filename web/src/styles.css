@@ -3560,3 +3560,12 @@ html:lang(en) #planModal .ppk-ln span, html:lang(es) #planModal .ppk-ln span { d
   #settings .set-row, .plan-btn, .plan-link, .sub-cta, #planModal .ppk, #planModal .ppk-radio { transition: none; }
   #settings .set-row:active, .plan-btn:active, .plan-link:active, .sub-cta:active, #planModal .ppk:active { transform: none; }
 }
+
+/* 2026-11-26 不再「先舊後新」：方案卡一開始就是新排法；分鐘數還沒回來時數字那行留空但保留高度（不跳版），
+   回來後數字淡入＋從 0 滾上來。沒登入時那行是一句「登入後送你 5 分鐘」，字小一點。 */
+#planCard .pc-big { min-height: 1.6em; }
+#planCard .pc-big:empty { min-height: 31px; }
+#planCard .pc-big.is-note, #settings #planCard .pc-big.is-note { font-size: 17px; font-weight: 600; color: var(--ink-2); line-height: 1.5; text-wrap: pretty; }
+#planCard .pc-big:not(:empty) { animation: mnFadeIn .28s ease-out both; }
+@keyframes mnFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #planCard .pc-big:not(:empty) { animation: none; } }
