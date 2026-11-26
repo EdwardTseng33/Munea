@@ -25,7 +25,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-DIM_MODEL = os.environ.get("MUNEA_EVAL_JUDGE_MODEL", "gemini-2.5-flash")
+DIM_MODEL = os.environ.get("MUNEA_EVAL_JUDGE_MODEL", "gemini-3.5-flash-lite")
 
 DIM_SYSTEM = (
     "你是嚴格但公正的評審，負責替一個叫『寧寧』的AI健康陪伴角色的一段通話，"
@@ -98,7 +98,7 @@ def judge_dimensions(scenario, persona, turns, dimensions, api_key=None, system_
     # 2026-07-28（S09 ERROR 修）：評審偶爾會吐出被截斷的 JSON（「Expecting ',' delimiter」），
     # 整條劇本就變 ERROR、在成績單上跟「真的答壞」長得一樣，害人誤判品質退步。
     # 那是傳輸/生成的偶發抖動、不是評審判斷有問題——同一個模型先重試一次再換備援。
-    for model in (DIM_MODEL, DIM_MODEL, "gemini-flash-latest"):
+    for model in (DIM_MODEL, DIM_MODEL, "gemini-3.1-flash-lite"):
         try:
             r = client.models.generate_content(
                 model=model, contents=prompt,

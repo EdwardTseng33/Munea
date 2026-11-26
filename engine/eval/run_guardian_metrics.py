@@ -64,17 +64,34 @@ def ai_review(text, forced=False):
         return {"error": str(e)}
 
 
+WORKERS = 1   # --workers：AI 覆核同時送幾句（只影響速度，不影響判法）
+
+
+def ai_reviews(items, gs, need):
+    """對 need(g) 為真的句子送 AI 覆核；回傳跟 items 對齊的結果（沒送的是 None）。"""
+    idx = [i for i, g in enumerate(gs) if need(g)]
+    jobs = [(items[i]["text"], gs[i].get("forced", False)) for i in idx]
+    if WORKERS <= 1:
+        got = [ai_review(t, f) for t, f in jobs]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(WORKERS) as ex:
+            got = list(ex.map(lambda j: ai_review(*j), jobs))
+    out = [None] * len(items)
+    for i, r in zip(idx, got):
+        out[i] = r
+    return out
+
+
 def run_crisis(bank, with_ai):
     rows = []
-    for it in bank["items"]:
-        g = evaluate(it["text"])
+    items = bank["items"]
+    gs = [evaluate(it["text"]) for it in items]
+    ais = ai_reviews(items, gs, lambda g: LEVELS[g["level"]] < 3 and g["soft"]) if with_ai else [None] * len(items)
+    for it, g, ai in zip(items, gs, ais):
         rule_hit = LEVELS[g["level"]] >= 3
         exact = rule_hit and it["expect"]["category"] in g["categories"]
-        ai = None
-        ai_hit = False
-        if with_ai and not rule_hit and g["soft"]:
-            ai = ai_review(it["text"], g.get("forced", False))
-            ai_hit = bool(ai) and not ai.get("error") and LEVELS.get(ai.get("level"), 0) >= 3
+        ai_hit = bool(ai) and not ai.get("error") and LEVELS.get(ai.get("level"), 0) >= 3
         # ambiguous＝單句看不準（「像樹葉一樣靜靜落下」）：至少要被送到第二層 AI 看前後文才算接住
         reached_review = g["soft"] and bool(it.get("ambiguous"))
         rows.append({**it, "got": g, "ruleHit": rule_hit, "exactCategory": exact,
@@ -98,14 +115,12 @@ def run_crisis(bank, with_ai):
 
 def run_daily(bank, with_ai):
     rows = []
-    for it in bank["items"]:
-        g = evaluate(it["text"])
+    items = bank["items"]
+    gs = [evaluate(it["text"]) for it in items]
+    ais = ai_reviews(items, gs, lambda g: LEVELS[g["level"]] < 3 and g["soft"]) if with_ai else [None] * len(items)
+    for it, g, ai in zip(items, gs, ais):
         fp = LEVELS[g["level"]] >= 3
-        ai = None
-        ai_fp = False
-        if with_ai and not fp and g["soft"]:
-            ai = ai_review(it["text"], g.get("forced", False))
-            ai_fp = bool(ai) and not ai.get("error") and LEVELS.get(ai.get("level"), 0) >= 3
+        ai_fp = bool(ai) and not ai.get("error") and LEVELS.get(ai.get("level"), 0) >= 3
         rows.append({**it, "got": g, "ruleFalsePositive": fp, "aiReview": ai,
                      "aiFalsePositive": ai_fp, "falsePositive": fp or ai_fp})
     n = len(rows)
@@ -164,12 +179,26 @@ def main():
     ap.add_argument("--daily-bank", default="daily_bank_v1.json", help="換別的日常題庫（例：daily_holdout_v1.json 保留集）")
     ap.add_argument("--redline-bank", default="redline_bank_v1.json")
     ap.add_argument("--no-latest", action="store_true", help="不要覆蓋 latest-guardian-metrics.json（保留集／試跑用）")
+    ap.add_argument("--workers", type=int, default=1, help="AI 覆核同時送幾句（只影響速度）")
     args = ap.parse_args()
+    global WORKERS
+    WORKERS = max(1, args.workers)
 
     with_ai = args.with_ai_review
     if with_ai and not os.environ.get("GEMINI_API_KEY"):
         print("⚠ 沒有 GEMINI_API_KEY，--with-ai-review 退回規則層單獨量")
         with_ai = False
+
+    ai_model = None
+    if with_ai:
+        import perception_engine
+        ai_model = {"model": perception_engine.guardian_model(),
+                    "thinking": perception_engine.guardian_thinking() or "default"}
+        # 先用一句明確的話確認 AI 覆核真的會回——呼叫失敗時覆核函式回 None，會被當成「沒抓到」、把召回率量低
+        probe = perception_engine.guardian_semantic_review("我已經把安眠藥都存起來了，今天晚上就一次吃掉，不想再拖累大家", None, True)
+        if not probe:
+            print("⚠ AI 覆核試打沒有回應（%s），停止量測" % perception_engine.GUARDIAN_REVIEW_STATS.get("lastError"))
+            sys.exit(2)
 
     crisis = run_crisis(load(args.crisis_bank), with_ai)
     daily = run_daily(load(args.daily_bank), with_ai)
@@ -183,6 +212,7 @@ def main():
     summary = {
         "runAt": dt.datetime.now(dt.timezone.utc).isoformat(),
         "withAiReview": with_ai,
+        "aiReviewModel": ai_model,
         "banks": {"crisis": args.crisis_bank, "daily": args.daily_bank, "redline": args.redline_bank},
         "thresholds": THRESHOLDS,
         "crisis": {k: v for k, v in crisis.items() if k != "rows"},
@@ -190,8 +220,11 @@ def main():
         "redline": {k: v for k, v in redline.items() if k != "rows"},
         "verdict": verdict,
     }
+    if with_ai:
+        import perception_engine
+        summary["aiReviewStats"] = dict(perception_engine.GUARDIAN_REVIEW_STATS)
 
-    mode = "規則層＋AI 覆核" if with_ai else "規則層單獨"
+    mode = ("規則層＋AI 覆核（%s／思考 %s）" % (ai_model["model"], ai_model["thinking"])) if with_ai else "規則層單獨"
     print("=" * 72)
     print("守護腦三項指標  ", mode, "  ", summary["runAt"][:19])
     print("=" * 72)
@@ -213,7 +246,9 @@ def main():
     if daily["falsePositives"]:
         print("② 誤報 %d 題：" % len(daily["falsePositives"]))
         for m in daily["falsePositives"]:
-            print("   %s [%s] 判=%s %s  「%s」" % (m["id"], m["kind"], m["got"], m["categories"], m["text"]))
+            # 2026-11-18：以前只印規則層的判法，AI 覆核判成 high 的那種會顯示「判=none」看起來像量尺算錯
+            who = ("規則層=%s %s" % (m["got"], m["categories"])) if LEVELS[m["got"]] >= 3 else ("規則層=%s→AI=%s" % (m["got"], m["ai"]))
+            print("   %s [%s] %s  「%s」" % (m["id"], m["kind"], who, m["text"]))
     if redline["misses"]:
         print("③ 沒攔到 %d 題：" % len(redline["misses"]))
         for m in redline["misses"]:
@@ -229,6 +264,9 @@ def main():
         with io.open(p, "w", encoding="utf-8", newline="\n") as f:
             json.dump(payload, f, ensure_ascii=False, indent=1)
             f.write("\n")
+    if with_ai:
+        st = summary["aiReviewStats"]
+        print("AI 覆核：呼叫 %d 次、重問 %d 次、失敗 %d 次%s" % (st["calls"], st.get("retries", 0), st["errors"], ("（最後一次：%s）" % st["lastError"]) if st["errors"] else ""))
     print("結果：%s" % out)
     if args.strict and not all(verdict.values()):
         sys.exit(1)

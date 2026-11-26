@@ -1048,6 +1048,94 @@ _SOFT_SIGNAL_RE = _re.compile(
 )
 
 
+# ---- v2g（2026-11-18）：正式盲測 v7（規則 v2f 定稿三週後、另一個模型出題）量到規則層三類缺口 ----
+# 誤報 15.2%（門檻 15%）裡 7/10 是規則層直接判的、紅線只攔到 3/24。這次不再補單字，改補「一整類句型」：
+#   ①程度補語慣用語：「熱到想死」「辣到快活不下去」「無聊到想死」——不是痛、不是喘的「X到想死」一律當慣用語刷掉
+#     （刷掉＝規則層不硬判；閘全開，第二層 AI 照樣看前後文）
+#   ②主詞在前面幾個子句的轉述：「聽講是三樓的老王啦，突然間心肌梗塞」「阮那個老朋友阿惠啊，……，中風啦」
+#     ——往前看最多 3 個子句，先遇到第三人稱／親屬就算別人，先遇到「我」當主詞就算本人
+#   ③事後虛驚：「差一點以為要去了…結果是電風扇吹到臉」「腰痛到差點叫救護車，後來就好了」——急症字後面接
+#     「結果是／原來是／後來就好／虛驚一場」＝已經過去，不硬判急症、交 AI
+#   ④口語問藥（紅線）：「降血壓藥我敢用多呷一粒？」「這甘是皮蛇？」「空腹血糖 125 是不是糖尿病？」——藥＋改用法＋問句、
+#     症狀＋「甘是／是不是」＋病名、檢查數字＋「要緊無／是不是」，規則層判 medium（回答層守邊界：不給劑量、不診斷）
+_GUARDIAN_PATTERNS_V2G = True
+
+_DEATH_IDIOM_RE = _re.compile(
+    _DEATH_IDIOM_RE.pattern
+    + r"|(熱|冷|凍|累|笑|無聊|餓|飽|撐|辣|鹹|甜|苦|酸|吵|煩|忙|氣|擠|塞|臭|癢|悶|嚇|貴|醜|胖|曬|晒|操|丟臉|見笑|尷尬|緊張|好笑|好吃|難吃|塞車|排隊)"
+    + r"(到|甲|得)(我)?(都)?(快|快要|要|差點)?(想死|要死|快死|死掉|死了|半死|活不下去|活袂落去|活不了)"
+)
+
+_HARM_OTHERS_RE += [_re.compile(p) for p in (
+    r"(一定|就要|就會|我會|我要|直接|過去|去).{0,4}給(他|她|伊|恁)死",          # 「我一定過去給他死」（台灣國語：讓他死）
+)]
+
+_EMERGENCY_RESOLVED_RE = _re.compile(
+    r"結果(是|只是|原來)|原來(是|只是)|虛驚一場|還好沒事|後來(就)?(好了|沒事|攏好|都好)|現在(已經)?(好了|沒事|攏好)|起來就(攏)?好|就(攏)?好(了|啊|矣)"
+)
+
+
+def _guardian_emergency_resolved(text, match_start):
+    """急症字後面接「結果是／原來是／後來就好／虛驚一場」＝事情已經過去 → 不硬判急症（交第二層 AI 看）。"""
+    return bool(_EMERGENCY_RESOLVED_RE.search(text, match_start))
+
+
+# 「阮那個老朋友」「我那個鄰居」：第一人稱後面接所有格＋親屬／朋友＝講別人，不是「我」當主詞
+_FIRST_PERSON_POSSESSIVE_RE = _re.compile(
+    r"(我|阮|咱|我們)(的|兜的|家的|家)?(那個|那位|彼个|彼個|這個|這位)?(老|好)?"
+    r"(兒子|女兒|孫|孫子|孫女|孫仔|媳婦|女婿|老公|老婆|太太|先生|尪|某|弟弟|妹妹|哥哥|姊姊|姐姐|小妹|朋友|老朋友|同學|親戚|同事|鄰居|厝邊|隔壁|表妹|表姊|表哥|表弟|堂哥|堂姊|阿姨|姑姑|舅舅|叔叔|伯伯)"
+)
+# 往前看的子句只認「真的第三人稱」：不含「你／您／恁」——「AI 你說，……不如一了百了」是在跟她講話、主角還是自己
+_THIRD_SUBJECT_RE = _re.compile(
+    r"隔壁|鄰居|厝邊|阿伯|阿姨|阿桑|阿公|阿嬤|阿婆|朋友|同學|親戚|同事|里長|老師|那個人|新聞|電視上|聽說|他|她|伊|某某"
+    r"|聽講|聽人講|聽人家說|聽人說|樓下|樓上|對面|巷口|三樓|二樓|四樓|五樓|老王|老李|老張|老陳|老林|老黃|老吳|老劉"
+)
+
+
+def _guardian_is_about_someone_else(text, match_start):  # v2g 覆寫：主詞可能在前面好幾個子句
+    """命中的子句：①轉述句型 → 別人；②有「我」當主詞 → 本人；③沒有主詞（長輩常省略）→ 往前看最多 3 個子句：
+    先遇到「我」當主詞 → 本人；先遇到第三人稱／親屬／「阮那個老朋友」→ 別人；都沒有 → 本人（寧可多關心）。"""
+    bounds = [0] + [m.end() for m in _CLAUSE_SPLIT_RE.finditer(text)]
+    starts = [b for b in bounds if b <= match_start]
+    start = starts[-1] if starts else 0
+    end_m = _CLAUSE_SPLIT_RE.search(text, match_start)
+    clause = text[start:end_m.start() if end_m else len(text)]
+    if _REPORTED_RE.search(clause):
+        return True
+
+    def _self_subject(c):
+        return bool(_FIRST_PERSON_RE.search(_FIRST_PERSON_POSSESSIVE_RE.sub("", c)))
+
+    if _self_subject(clause):
+        return False
+    if _THIRD_PERSON_RE.search(clause) or _FIRST_PERSON_POSSESSIVE_RE.search(clause):
+        return True
+    prev_bounds = starts[:-1][-3:]
+    for i in range(len(prev_bounds) - 1, -1, -1):
+        c = text[prev_bounds[i]:starts[starts.index(prev_bounds[i]) + 1]]
+        if _REPORTED_RE.search(c) or _FIRST_PERSON_POSSESSIVE_RE.search(c) or _THIRD_SUBJECT_RE.search(_FIRST_PERSON_POSSESSIVE_RE.sub("", c)):
+            if not _self_subject(c):
+                return True
+        if _self_subject(c):
+            return False
+    return False
+
+
+_MED_NOUN = r"(藥|藥仔|藥丸|藥粒|藥粉|藥水|藥包|膠囊|糖漿|感冒液|安眠藥|睏覺的藥|止痛藥|降血壓|降血糖|降膽固醇|血壓藥|血糖藥|西藥|中藥|保健品|紅麴|維他命|魚油)"
+_MED_CHANGE = (r"(多呷|多吃|多吞|多喝|加量|加碼|加倍|加一粒|多一粒|兩粒|兩顆|三粒|半粒|半顆|一半|三分之一|減量|減半|折一半|剝一半|"
+               r"停|莫呷|免呷|毋免呷|不要呷|不呷|不吃|不要吃|放乎去|放予去|改呷|改吃|換|代替|取代|一起呷|作伙呷|一起吃|一起喝|配著|配|相沖|"
+               r"拿(她|他|伊|別人|人家)的|別人的|四頓|三頓|一次喝|一次吃|半罐|整罐|一整罐|幾包|兩包|幾粒|幾顆)")
+_MED_ASK = r"(甘|敢|會使|可以|可不可以|好不好|好無|OK無|ok無|對不對|是不是|嗎|呢|\?|？|安怎|按怎|有要緊|要緊無|有影|甘好|行不行)"
+_MEDICAL_RE += [_re.compile(p) for p in (
+    _MED_NOUN + r".{0,36}" + _MED_CHANGE + r".{0,16}" + _MED_ASK,
+    _MED_CHANGE + r".{0,12}" + _MED_NOUN + r".{0,16}" + _MED_ASK,
+    r"(甘|敢|是不是|會不會|這樣是|按呢是|安捏是|這是|這甘是|這敢是|這會不會).{0,4}(是|得到|得著|有)?.{0,8}(病|症|皮蛇|帶狀|痛風|退化|關節炎|高血壓|糖尿病|狹心症|心臟病|中風|癌|失智|巴金森|骨質疏鬆|甲狀腺)",
+    r"(是|算)(什麼|啥物|啥|甚麼)(病|症)|到底是.{0,6}(還是|抑是)",
+    r"(血糖|血壓|膽固醇|三酸甘油|尿酸|肝指數|腎功能|白血球|血紅素|報告|數字|指數|紅字).{0,20}\d{2,3}.{0,24}(是不是|甘|敢|要緊|危險|有問題|正常無|判斷|安怎|按怎|代表)",
+    r"(報告|檢查|體檢|健檢).{0,16}(紅字|星星|打星|偏高|偏低|超標).{0,20}(是不是|甘|敢|要緊|危險|有問題|判斷|安怎|按怎)",
+)]
+
+
 # 軟訊號閘全開（2026-10-28 定案）：規則層判 none／low 的每一句都送第二層 AI 看前後文。
 # 為什麼：三套新出的盲測（v5 79.5%、v6 75.6%）漏接的句子全部是「關鍵字閘沒放行」不是「AI 看錯」——
 # 閘全開後 v6（改完才出、真盲）召回 97.8%、誤報 0%；成本每句約 NT$0.013、一通 50 輪 NT$0.67（約一通的 3%）。
@@ -1181,8 +1269,9 @@ def guardian_evaluate_response(data):
         action = "interrupt_and_escalate"
     else:
         hit = _guardian_find(emergency_terms, _EMERGENCY_RE, scrubbed)
-        if hit is not None and _guardian_is_about_someone_else(scrubbed, hit):
-            about_someone_else = True
+        if hit is not None and (_guardian_is_about_someone_else(scrubbed, hit)
+                                or _guardian_emergency_resolved(scrubbed, hit)):
+            about_someone_else = True   # 講別人／事後虛驚：不硬判急症、交第二層 AI 看前後文（v2g）
             hit = None
         if hit is not None:
             categories.append("medical_emergency_signal")
@@ -1215,7 +1304,9 @@ def guardian_evaluate_response(data):
     # 第一層沒抓到硬危機、但話裡有拐彎苗頭 → 標記給第二層 AI 判語意（見 perception_engine.guardian_semantic_review）
     # 講別人的急症／想不開也走這條：不中斷通話，但讓 AI 看前後文決定要不要關心
     keyword_gated = about_someone_else or _guardian_soft_signal(scrubbed, soft_signal_terms) or _guardian_soft_signal(lowered, ())
-    soft_signal_for_review = level in {"none", "low"} and (_GUARDIAN_REVIEW_ALL or keyword_gated)
+    # v2g：medium（醫療邊界）也送——「剛吃完降血糖的藥，頭好暈、手一直抖，不知道安怎」同時是問藥和急症，
+    # 規則層判 medium 只管住回答層別給劑量，急症要靠第二層 AI 看出來（不送就會漏）
+    soft_signal_for_review = level in {"none", "low", "medium"} and (_GUARDIAN_REVIEW_ALL or keyword_gated)
     # 只因閘全開才送的句子（沒命中任何拐彎關鍵字）：第二層 AI 的 high 門檻拉高到 0.8，少打擾（見 perception_engine）
     review_forced = bool(soft_signal_for_review and not keyword_gated)
 

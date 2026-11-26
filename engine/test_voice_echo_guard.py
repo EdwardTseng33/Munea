@@ -175,7 +175,8 @@ def main():
     check("成功歸零斷路器", 'st["lookup_fail_streak"] = 0' in srv)
 
     # 契約：過場句同聲線（Phase 3 · 7/17 凌晨）
-    check("有她本人聲線的配音通道", "_gemini_tts_pcm" in srv and "gemini-2.5-flash-preview-tts" in srv)
+    # 2026-11-18：2.5 預覽 TTS 12/18 停用，改 gemini_models.TTS_MODELS（3.8）；3.8 回 WAV，要轉成裸 PCM
+    check("有她本人聲線的配音通道", "_gemini_tts_pcm" in srv and "gemini_models.TTS_MODELS[0]" in srv and "pcm24k_from_inline" in srv)
     # 2026-08-13：這條原本守的是「配音失敗自動退回舊路」（server.tts_b64 至少三處）。
     # 但 8/12 的 #576 是**刻意**把那條退路拆掉的——舊通道唸出來是另一個人的聲音，
     # 通話講到一半換人比安靜更嚇人。守門沒跟著改，於是 main 上這條一直紅、

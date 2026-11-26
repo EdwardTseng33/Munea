@@ -3201,6 +3201,41 @@ class SupabaseAdapter:
         })
         return len(rows or [])
 
+    def family_group_owner_account_unscoped(self, family_group_id):
+        """建立這個圈的帳號（family_groups.account_id）。找不到回 None。"""
+        if not self.enabled() or not self._is_uuid(family_group_id or ""):
+            return None
+        group = self._first("family_groups", {"id": f"eq.{family_group_id}", "select": "account_id"}) or {}
+        account_id = group.get("account_id")
+        return account_id if self._is_uuid(account_id or "") else None
+
+    def delete_family_membership_unscoped(self, family_group_id, person_id):
+        """刪掉「某人在某個圈」的成員關係（只刪這一對）。回刪了幾筆。
+
+        誰能刪誰由呼叫端（server.family_membership_response）判斷；這裡只做資料動作。
+        伺服器決定誰看得到誰的健康紀錄，看的就是這張表——刪掉才是真的「不再看得到」。"""
+        if not self.enabled() or not self._is_uuid(family_group_id or "") or not self._is_uuid(person_id or ""):
+            return 0
+        rows = self._request(
+            "DELETE",
+            "family_memberships",
+            query={
+                "family_group_id": f"eq.{family_group_id}",
+                "person_id": f"eq.{person_id}",
+                "select": "id",
+            },
+            prefer="return=representation",
+        )
+        return len(rows or [])
+
+    def own_family_group_id_unscoped(self):
+        """這個帳號自己建立的圈（退出別人的圈之後回到這裡）。"""
+        if not self.enabled():
+            return None
+        group = self._first("family_groups", {"account_id": f"eq.{self.account_id}", "select": "id", "limit": "1"}) or {}
+        group_id = group.get("id")
+        return group_id if self._is_uuid(group_id or "") else None
+
     def add_family_member_after_invitation_unscoped(self, family_group_id, person_id):
         """Attach the authenticated invitee to the inviter's group exactly once."""
         if not self.enabled() or not self._is_uuid(family_group_id or "") or not self._is_uuid(person_id or ""):
