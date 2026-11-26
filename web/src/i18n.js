@@ -28,7 +28,15 @@
   const scriptBase = (document.currentScript && document.currentScript.src)
     ? new URL('.', document.currentScript.src)
     : new URL('src/', document.baseURI);
-  const assetUrl = (relativePath) => new URL(relativePath, scriptBase).toString();
+  // 子檔（dom-localizer.js 等）沿用 i18n.js 自己的 ?v= 版號：換版時跟著換，iPhone 才不會拿快取的舊檔（2026-11-26 1.0.73）
+  const assetVersion = (document.currentScript && document.currentScript.src)
+    ? new URL(document.currentScript.src).search
+    : '';
+  const assetUrl = (relativePath) => {
+    const url = new URL(relativePath, scriptBase);
+    if (assetVersion && !url.search) url.search = assetVersion;
+    return url.toString();
+  };
   const INITIAL_PREVIEW_LOCALE = (() => {
     const config = window.MUNEA_DEV_CONFIG || {};
     return config.enabled === true && typeof config.i18nPreviewLocale === 'string'

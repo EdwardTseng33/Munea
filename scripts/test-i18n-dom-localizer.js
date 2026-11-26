@@ -150,6 +150,57 @@ assert.equal(
 dynamicText.setAttribute('data-i18n', 'notification.noItems');
 observerCallback([{ type: 'attributes', target: dynamicText, addedNodes: [] }]);
 assert.equal(dynamicText.textContent, catalogs.es['notification.noItems']);
+
+// 2026-11-17：加了 data-i18n-live 的元素，程式依狀態寫上去的字不可以被蓋回寫死的那一句。
+// 真實案例：「刪除我的資料」按第一下要變成「再按一次：永久刪除帳號與資料」，
+// 警告被蓋掉，使用者再按一下帳號就永久刪除了。
+const liveButton = new FakeElement({ 'data-i18n': 'data.delete', 'data-i18n-live': '' });
+observerCallback([{ type: 'childList', addedNodes: [liveButton] }]);
+assert.equal(liveButton.textContent, catalogs.es['data.delete'], 'A live element still gets its localized default');
+liveButton.textContent = catalogs.es['data.confirmDeleteAccount'];
+observerCallback([{ type: 'childList', target: liveButton, addedNodes: [] }]);
+assert.equal(
+  liveButton.textContent,
+  catalogs.es['data.confirmDeleteAccount'],
+  'State text the program wrote on a live element must not be reverted to the static sentence',
+);
+apply(liveButton, runtime, 'ja');
+assert.equal(
+  liveButton.textContent,
+  catalogs.es['data.confirmDeleteAccount'],
+  'A later full pass must still leave program-owned text to the program',
+);
+// 程式把字寫回預設那一句（還原）也照程式的
+liveButton.textContent = catalogs.es['data.delete'];
+observerCallback([{ type: 'childList', target: liveButton, addedNodes: [] }]);
+assert.equal(liveButton.textContent, catalogs.es['data.delete']);
+// 程式換了翻譯鍵＝交還給翻譯層；之後再被程式改寫，一樣歸程式
+liveButton.setAttribute('data-i18n', 'purchase.restore');
+observerCallback([{ type: 'attributes', target: liveButton, addedNodes: [] }]);
+assert.equal(liveButton.textContent, catalogs.es['purchase.restore']);
+liveButton.textContent = '…';
+observerCallback([{ type: 'childList', target: liveButton, addedNodes: [] }]);
+assert.equal(liveButton.textContent, '…');
+// 舊程式直接寫中文原句（同一個鍵的另一種語言）：仍然改回目前語言
+const liveLegacy = new FakeElement({ 'data-i18n': 'data.delete', 'data-i18n-live': '' });
+observerCallback([{ type: 'childList', addedNodes: [liveLegacy] }]);
+liveLegacy.textContent = catalogs['zh-TW']['data.delete'];
+observerCallback([{ type: 'childList', target: liveLegacy, addedNodes: [] }]);
+assert.equal(
+  liveLegacy.textContent,
+  catalogs.es['data.delete'],
+  'The same sentence written in the source language is still corrected to the current locale',
+);
+// 沒加 data-i18n-live 的元素：行為不變，照舊蓋回
+const plain = new FakeElement({ 'data-i18n': 'data.delete' });
+observerCallback([{ type: 'childList', addedNodes: [plain] }]);
+plain.textContent = catalogs.es['data.confirmDeleteAccount'];
+observerCallback([{ type: 'childList', target: plain, addedNodes: [] }]);
+assert.equal(
+  plain.textContent,
+  catalogs.es['data.delete'],
+  'Elements without data-i18n-live keep the unconditional overwrite',
+);
 assert.equal(
   observe(dynamicRoot, runtime, 'en', null, null),
   null,

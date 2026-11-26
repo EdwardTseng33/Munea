@@ -11,7 +11,8 @@ export const repo = process.env.MUNEA_REPO || path.resolve(path.dirname(fileURLT
 const only = null;
 const manifest = JSON.parse(fs.readFileSync(path.join(repo, "supabase/migration-manifest.json"), "utf8"));
 
-export async function freshDb(log = true) {
+// opts.upTo：只跑到這個 identity（含），例如 "034"——驗某一份 SQL 當時的行為、或模擬「已套到 034、再套下一份」。
+export async function freshDb(log = true, opts = {}) {
   const db = new PGlite();
   await db.exec(`
     create schema if not exists auth;
@@ -29,6 +30,7 @@ export async function freshDb(log = true) {
   const results = [];
   for (const m of manifest.migrations) {
     if (only && !only.has(m.identity)) continue;
+    if (opts.upTo && String(m.identity) > String(opts.upTo)) continue;
     let sql = fs.readFileSync(path.join(repo, "supabase/sql", m.filename), "utf8");
     sql = sql.replace(/create extension if not exists pgcrypto;/gi, "-- pgcrypto: gen_random_uuid is core");
     try {
