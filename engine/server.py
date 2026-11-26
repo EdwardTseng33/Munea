@@ -23,6 +23,7 @@ from service_metadata import build_service_metadata
 from admin_data_quality import admin_contract_response, latest_record_timestamp, record_admin_data_source
 import chat_engine as eng
 import ai_health
+import gemini_models
 import cloud_resync
 import clinic_visits
 import health_followup
@@ -629,7 +630,7 @@ def bind_request_data_identity(auth_gate, allow_missing=False):
     return REQUEST_DATA_IDENTITY.set(identity)
 
 
-SCOPE_EXEMPT_PATHS = PUBLIC_POST_PATHS | ADMIN_POST_PATHS | PRIVILEGED_BILLING_POST_PATHS | {"/family/invitations", "/family-relays"}
+SCOPE_EXEMPT_PATHS = PUBLIC_POST_PATHS | ADMIN_POST_PATHS | PRIVILEGED_BILLING_POST_PATHS | {"/family/invitations", "/family/membership", "/family-relays"}
 ACCOUNT_SCOPE_KEYS = {"accountid"}
 FAMILY_SCOPE_KEYS = {"familygroupid"}
 PERSON_SCOPE_KEYS = {
@@ -1633,6 +1634,69 @@ def _mask_account_tail(value, keep=4):
     if len(value) <= keep:
         return value
     return "*" * (len(value) - keep) + value[-keep:]
+
+
+def family_membership_response(data, actor=None):
+    """退出別人的健康圈／圈主把家人移出去——在伺服器上真的撤銷「看得到」（2026-11-18）。
+
+    以前 App 的「移除」只改自己畫面上的名單，「退出」連請求都沒送；伺服器決定誰看得到誰
+    的是 family_memberships，那張表沒動，被移除或退出的人照樣讀得到全家的健康數字、心情、
+    吃藥，下次同步還會把人加回畫面（補助案 B4 查核，11/18）。誰能做什麼一律在這裡判斷：
+      leave ：只能退出「別人建立的圈」，刪的是自己那一筆；自己建立的圈不能退（請一一移除家人）。
+      remove：只有圈主（建立這個圈的帳號）能把別人移出去；不能移除自己。
+    要動的圈一律用登入身分推出來的「目前所在的圈」，不收 App 送來的圈代號。"""
+    data = data or {}
+    action = str(data.get("action") or "").lower()
+    backend, actor_error = family_actor_backend(actor)
+    if actor_error:
+        return {"ok": False, "error": actor_error}
+    group_id = str(backend.family_group_id or "")
+    if not group_id:
+        return {"ok": False, "error": "family_group_missing"}
+    try:
+        owner_account = backend.family_group_owner_account_unscoped(group_id)
+    except Exception as e:
+        log_fallback_exception("load family group owner", e)
+        return {"ok": False, "error": "family_membership_unavailable"}
+    if not owner_account:
+        return {"ok": False, "error": "family_group_missing"}
+    is_owner = owner_account == backend.account_id
+
+    if action == "leave":
+        if is_owner:
+            return {"ok": False, "error": "owner_cannot_leave"}
+        try:
+            removed = backend.delete_family_membership_unscoped(group_id, backend.person_id)
+            own_group = backend.own_family_group_id_unscoped() if removed else None
+        except Exception as e:
+            log_fallback_exception("leave family group", e)
+            return {"ok": False, "error": "family_membership_unavailable"}
+        if not removed:
+            return {"ok": False, "error": "membership_not_found"}
+        return {"ok": True, "left": group_id, "familyGroupId": own_group or ""}
+
+    if action == "remove":
+        if not is_owner:
+            return {"ok": False, "error": "family_owner_required"}
+        target = str(data.get("targetPersonId") or data.get("target_person_id") or "")
+        try:
+            target_ok = bool(uuid.UUID(target))
+        except (ValueError, TypeError, AttributeError):
+            target_ok = False
+        if not target_ok:
+            return {"ok": False, "error": "target_required"}
+        if target == str(backend.person_id or ""):
+            return {"ok": False, "error": "cannot_remove_self"}
+        try:
+            removed = backend.delete_family_membership_unscoped(group_id, target)
+        except Exception as e:
+            log_fallback_exception("remove family member", e)
+            return {"ok": False, "error": "family_membership_unavailable"}
+        if not removed:
+            return {"ok": False, "error": "membership_not_found"}
+        return {"ok": True, "removed": target}
+
+    return {"ok": False, "error": "unsupported_action"}
 
 
 def family_invitations_response(data, client_ip=None, actor=None):
@@ -3652,7 +3716,7 @@ def _summary_tags_from_context(context, text=""):
 # 下一通就退回只知道「多久前聊過」。AI 失敗也回空字串，不影響收線。
 INTERNAL_AUDIT_SUMMARY_PREFIX = "Post-turn companion review"
 # 11/5 實測：gemini-2.5-flash-lite 對新用戶已下架（404）；3.5-flash-lite 約 1.2 秒、2.5-flash 約 3.8 秒。
-CALL_RECAP_MODELS = ("gemini-3.5-flash-lite", "gemini-2.5-flash")
+CALL_RECAP_MODELS = gemini_models.TEXT_MODELS  # 11/18：2.5-flash 12/1 停用，備援改 3.1-flash-lite
 # 中文 60 字以內；英文同樣意思要 150 字元上下，上限放 200（太長的就不收）。
 CALL_RECAP_MAX_CHARS = 200
 CALL_RECAP_BUDGET_S = float(os.environ.get("MUNEA_CALL_RECAP_BUDGET_S", "4"))
@@ -3714,7 +3778,6 @@ def ai_call_recap_summary(history):
                 model=model,
                 contents=instruction,
                 config=types.GenerateContentConfig(
-                    temperature=0.2,
                     response_mime_type="application/json",
                 ),
             )
@@ -10527,11 +10590,11 @@ def reply_conv(history, char=DEFAULT_CHAR, data=None, context=None):
     if not contents:
         return localization.opening_message(context.get("locale"))
     for _ in range(4):
-        for m in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+        for m in gemini_models.TEXT_MODELS:
             try:
                 r = eng.client.models.generate_content(
                     model=m, contents=contents,
-                    config=types.GenerateContentConfig(system_instruction=base, temperature=0.85))
+                    config=types.GenerateContentConfig(system_instruction=base))
                 # 2026-07-25（卡西法・三修③）：出口前防禦性清洗，剝掉模型偶爾漏出的
                 # <thinking>...</thinking> 內部推理標記（含殘缺情形），不等使用者真的聽到才修。
                 # has_briefing：今天到底有沒有備到天氣。沒有卻講「氣象報告說」＝
@@ -10649,13 +10712,12 @@ def quiz_questions_response(data):
     place = str(data.get("place") or "").strip()[:40]
 
     instruction = quiz_question_instruction(locale, interests, place, count)
-    for model in ("gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"):
+    for model in gemini_models.TEXT_MODELS:
         try:
             r = eng.client.models.generate_content(
                 model=model,
                 contents=instruction,
                 config=types.GenerateContentConfig(
-                    temperature=0.9,
                     response_mime_type="application/json",
                 ),
             )
@@ -11312,24 +11374,23 @@ def voice_health_context_response(data):
 
 def tts_b64(text, char=DEFAULT_CHAR, locale=None):
     """用該角色的聲音（＋動物的演技開場白）把文字唸成語音，回 base64 wav。"""
+    # 2026-11-18：2.5／3.1 預覽 TTS 12/18 停用，改 3.8。3.8 會把接在句子前面的語氣說明照念
+    # （實測一句 3 秒的話變 25 秒），語氣改放 speech_metadata（見 gemini_models.synthesize_pcm）。
     c = eng.CHARS.get(char, eng.CHARS[DEFAULT_CHAR])
-    content = (c["style"] or "") + localization.speech_text(text, locale)
-    for m in ("gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"):
-        try:
-            r = eng.client.models.generate_content(
-                model=m, contents=content,
-                config=types.GenerateContentConfig(
-                    response_modalities=["AUDIO"],
-                    speech_config=types.SpeechConfig(language_code=localization.speech_language_code(locale), voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=c["voice"])))))
-            pcm = r.candidates[0].content.parts[0].inline_data.data
-            buf = io.BytesIO()
-            with wave.open(buf, "wb") as w:
-                w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
-            return base64.b64encode(buf.getvalue()).decode()
-        except Exception as e:
-            log_fallback_exception(f"generate TTS audio with {m}", e)
-    return ""
+    pcm = gemini_models.synthesize_pcm(
+        eng.client,
+        localization.speech_text(text, locale),
+        c["voice"],
+        c.get("style") or "",
+        localization.speech_language_code(locale),
+    )
+    if not pcm:
+        log_fallback_exception(f"generate TTS audio with {', '.join(gemini_models.TTS_MODELS)}", RuntimeError("all_tts_models_failed"))
+        return ""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    return base64.b64encode(buf.getvalue()).decode()
 
 
 def decode_voice_note(data):
@@ -11629,7 +11690,7 @@ class H(BaseHTTPRequestHandler):
             # A join code is never an authentication credential.
             # 機構端專區 /org/*（2026-10-29）同理：機構人員的身分就是登入證本身（org_staff 對照），
             # 本機／示範模式也不能放行沒登入的人——沒身分＝不知道他是哪家的人。
-            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings", "/enterprise/redeem-code") or request_path.startswith("/org/"):
+            if request_path in ("/family/invitations", "/family-relays", "/push/devices", "/notifications", "/notifications/settings", "/enterprise/redeem-code", "/family/membership") or request_path.startswith("/org/"):
                 family_auth = verify_auth_context(self.headers)
                 if not family_auth.get("ok"):
                     self._json_error(401, family_auth.get("code") or "auth_required", "Verified account token is required")
@@ -11771,6 +11832,8 @@ class H(BaseHTTPRequestHandler):
                     self._json_scheduler(org_alerts.admin_alerts_refresh_all_response(data))
             elif self.path == "/family/state":
                 self._json(family_state_response(data))
+            elif self.path == "/family/membership":
+                self._json(family_membership_response(data, actor=auth_gate.get("auth")))
             elif self.path == "/family/invitations":
                 _cip = client_ip_from_headers(self.headers, self.client_address[0] if self.client_address else "")
                 self._json(family_invitations_response(data, client_ip=_cip, actor=auth_gate.get("auth")))

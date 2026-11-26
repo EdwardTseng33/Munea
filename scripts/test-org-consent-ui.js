@@ -2,7 +2,7 @@
 /* 機構照護模式同意開關（設定 →「{機構} 看得到什麼」）的守門 · 2026-11-17
  *
  * 照護機構的人員預設看不到任何一位長輩；本人在 App 把開關打開，機構端才看得到他。這支守住：
- *   A. 畫面：設定頁「帳號與家庭」那組有一列入口，預設收著（沒有名額的人看不到）；
+ *   A. 畫面：設定頁「家人與陪伴」那組有一列入口（11/25 設定頁改版後這組改名，緊接在「全家健康圈」下面），預設收著（沒有名額的人看不到）；
  *      視窗有標題、整列式開關（預設關）、結果訊息區、「隨時可以關」那句、兩張清單、完成鍵；
  *      開通碼成功畫面多一顆次要按鈕（預設收著）。
  *   B. 行為（真的把 web/src/org-consent.js 跑起來）：有照護機構名額才顯示入口、企業福利不顯示；
@@ -66,9 +66,9 @@ function block(startMarker, endMarker, label) {
 }
 
 // ---------- A. 畫面 ----------
-const accountGroup = block('data-i18n="settings.section.accountFamily"', '<h2 class="set-section"', '設定頁「帳號與家庭」那組');
-assert.ok(accountGroup.includes('id="famCircleRow"'), '「帳號與家庭」原本的「全家健康圈」不見了');
-assert.ok(accountGroup.includes('id="orgConsentRow"'), '設定頁「帳號與家庭」那組少了機構照護模式的入口（#orgConsentRow）');
+const accountGroup = block('data-i18n="settings.section.familyCompanion"', '<h2 class="set-section"', '設定頁「家人與陪伴」那組');
+assert.ok(accountGroup.includes('id="famCircleRow"'), '「家人與陪伴」原本的「全家健康圈」不見了');
+assert.ok(accountGroup.includes('id="orgConsentRow"'), '設定頁「家人與陪伴」那組少了機構照護模式的入口（#orgConsentRow）');
 const rowTag = tagWithId('orgConsentRow');
 assert.ok(/\shidden(\s|>)/.test(rowTag), '入口預設要收著（hidden）：沒有機構名額的人設定頁不可以多東西');
 assert.ok(/\brole="button"/.test(rowTag) && /\btabindex="0"/.test(rowTag), '入口要能用鍵盤與報讀軟體操作（role="button" tabindex="0"）');

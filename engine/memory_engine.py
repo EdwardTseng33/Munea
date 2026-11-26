@@ -18,7 +18,9 @@ from google.genai import types
 
 _KEY = os.environ.get("GEMINI_API_KEY")
 _client = genai.Client(api_key=_KEY) if _KEY else None
-MODEL = "gemini-2.5-flash"
+import gemini_models
+
+MODEL = gemini_models.TEXT_MODEL  # 2.5-flash 12/1 停用（見 gemini_models.py）
 
 TIERS = {"core", "long", "recent", "today"}
 TYPES = {
@@ -56,13 +58,16 @@ def extract(history):
     if not user_text.strip():
         return []
     items = None
-    for _ in range(2):  # 記憶萃取失敗＝長輩講的話沒被記住，值得重試一次再放棄
+    # 記憶萃取失敗＝長輩講的話沒被記住，值得重試一次再放棄。
+    # 2026-11-18：3.5-flash-lite 只設 JSON 回傳格式時，約 1.5% 回來的 JSON 是壞的（另一工作階段實測）——
+    # 第二次改用備援模型重問，不是同一顆再丟一次。
+    for model in (gemini_models.TEXT_MODELS * 2)[:2]:
         try:
             r = _client.models.generate_content(
-                model=MODEL,
+                model=model,
                 contents=[types.Content(role="user", parts=[types.Part(text="長輩說的話：\n" + user_text)])],
                 config=types.GenerateContentConfig(
-                    system_instruction=_SYS, temperature=0.2, response_mime_type="application/json"
+                    system_instruction=_SYS, response_mime_type="application/json"
                 ),
             )
             items = json.loads(r.text)
@@ -204,16 +209,21 @@ def reconcile(candidates, existing):
         f"- id={it.get('id')} ({it.get('type')}) {it.get('content')}" for it in relevant.values()
     )
     prompt = f"新萃取的候選事實：\n{cand_txt}\n\n既有記憶：\n{exist_txt}"
-    try:
-        r = _client.models.generate_content(
-            model=MODEL,
-            contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
-            config=types.GenerateContentConfig(
-                system_instruction=_RECONCILE_SYS, temperature=0.1, response_mime_type="application/json"
-            ),
-        )
-        decisions = (json.loads(r.text) or {}).get("decisions", [])
-    except Exception:
+    decisions = None
+    for model in gemini_models.TEXT_MODELS:  # JSON 偶爾壞掉：換備援模型再問一次
+        try:
+            r = _client.models.generate_content(
+                model=model,
+                contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
+                config=types.GenerateContentConfig(
+                    system_instruction=_RECONCILE_SYS, response_mime_type="application/json"
+                ),
+            )
+            decisions = (json.loads(r.text) or {}).get("decisions", [])
+            break
+        except Exception:
+            decisions = None
+    if decisions is None:
         return {"add": candidates, "supersede": [], "noop": []}
 
     add, supersede, noop = [], [], []
@@ -334,16 +344,21 @@ def build_living_profile(items):
     digest = "\n\n".join(lines)
     if not digest.strip():
         return {}
-    try:
-        r = _client.models.generate_content(
-            model=MODEL,
-            contents=[types.Content(role="user", parts=[types.Part(text="這位長輩的記憶：\n" + digest)])],
-            config=types.GenerateContentConfig(
-                system_instruction=_PROFILE_SYS, temperature=0.4, response_mime_type="application/json"
-            ),
-        )
-        profile = json.loads(r.text)
-    except Exception:
+    profile = None
+    for model in gemini_models.TEXT_MODELS:  # JSON 偶爾壞掉：換備援模型再問一次
+        try:
+            r = _client.models.generate_content(
+                model=model,
+                contents=[types.Content(role="user", parts=[types.Part(text="這位長輩的記憶：\n" + digest)])],
+                config=types.GenerateContentConfig(
+                    system_instruction=_PROFILE_SYS, response_mime_type="application/json"
+                ),
+            )
+            profile = json.loads(r.text)
+            break
+        except Exception:
+            profile = None
+    if profile is None:
         return {}
     if not isinstance(profile, dict):
         return {}
