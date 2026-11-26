@@ -3,6 +3,13 @@ window.MuneaNotify = (function () {
   'use strict';
 
   var BRAIN_URL_DEFAULT = 'https://munea-brain-491603544409.asia-east1.run.app';
+  // 後端薄門的 App 通行碼。2026-11-17：以前這裡用 typeof 去借 app.js 最上層的通行碼常數，
+  // 但 app.js 是 <script type="module">——模組最上層的 const 不會出現在別支程式看得到的地方，
+  // 所以這支「永遠」拿不到、每個請求都沒帶通行碼，正式環境通知匣與通知設定全部被 403 擋掉。
+  // 改成跟 store.js 借（store.js 是一般程式、先載入，會掛 window.MuneaAppKey）；全 App 只留 app.js／store.js 兩份，
+  // scripts/test-app-key-headers.js 會比對，換鑰匙時漏改任何一份就紅。
+  // 通行碼跟 store.js 借（index.html 先載 store.js）；這支不自己抄一份。
+  function appKey() { try { return (typeof window !== 'undefined' && window.MuneaAppKey) || ''; } catch (e) { return ''; } }
   var _syncTimer = null;
   var _listenersReady = false;
   var _permission = { status: 'not_determined', granted: false, canAsk: true, canOpenSettings: false };
@@ -74,8 +81,7 @@ window.MuneaNotify = (function () {
     if (!auth || typeof auth.getAccessToken !== 'function') return null;
     var token = await auth.getAccessToken();
     if (!token) return null;
-    var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
-    try { if (typeof MUNEA_APP_KEY === 'string' && MUNEA_APP_KEY) headers['X-Munea-Key'] = MUNEA_APP_KEY; } catch (e) {}
+    var headers = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'X-Munea-Key': appKey() };
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     var timeout = controller ? setTimeout(function () { controller.abort(); }, 5000) : null;
     try {

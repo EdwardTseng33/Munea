@@ -13,7 +13,7 @@ const muneaT = (key, fallback, values = null) => (
   window.MuneaI18n ? window.MuneaI18n.t(key, values, fallback) : fallback
 );
 // 分鐘資訊（後端給的 allowance／familyShare／capabilities）：放在檔頭，任何畫面函式都讀得到。說明見 resetCreditMeta 上方。
-const CREDIT_META = { allowance: null, familyShare: null, includedMonthly: null, familySharedMinutes: false, subscription: null };
+const CREDIT_META = { allowance: null, familyShare: null, includedMonthly: null, subscription: null };
 const legacyStaticTextSources = new WeakMap();
 const legacyStaticAttributeSources = new WeakMap();
 function localizeLegacyStaticCopy() {
@@ -372,12 +372,11 @@ function localizePurchasePlanContent() {
     if (body) body.textContent = muneaT(keys[2], keys[3]);
   });
   // 2026-11-20 Edward 核可設計稿 P1：每張方案卡只講兩件事——每月幾分鐘（一天約幾分鐘）、家人圈幾個人。
-  // 「一起用」三個字講的是家人圈共用同一份分鐘：後端開了 familySharedMinutes 才講，沒開就只講人數上限。
+  // 2026-11-25／26 Edward：沒有共用分鐘的概念 → 只講人數上限，不講「一起用」「爸媽不用另外付費」。
   const planCardFacts = {
     plus: { minutes: 100, members: 4 },
     pro: { minutes: 200, members: 12 },
   };
-  const sharedMinutes = muneaFamilySharedMinutesOn();
   $$('#planPick .ppk').forEach((card) => {
     const facts = planCardFacts[card.dataset.t];
     if (!facts) return;
@@ -390,32 +389,36 @@ function localizePurchasePlanContent() {
       const dailyText = muneaT('subscription.planDailyMinutes', '· about {minutes} a day', {
         minutes: nf.format(Math.round(facts.minutes / 30)),
       });
-      // 中日文用全形「・」直接接；英西文的「·」前面要空一格
-      daily.textContent = /^[・]/.test(dailyText) ? dailyText : ` ${dailyText}`;
-      minutesLine.replaceChildren(
-        document.createTextNode(muneaT('subscription.planMonthlyMinutes', '{minutes} minutes a month', {
-          minutes: nf.format(facts.minutes),
-        })),
-        daily,
-      );
+      // 2026-11-25 改版提案：兩張方案卡並排，「每月幾分鐘」是兩張卡唯一真正的差別——數字放大單獨一行，
+      // 單位「分鐘／月」接在後面，「一天約幾分鐘」另起一行（去掉開頭的「・」）。整句仍留給螢幕報讀。
+      const num = document.createElement('b');
+      num.className = 'ppk-num';
+      num.textContent = nf.format(facts.minutes);
+      const unit = document.createElement('i');
+      unit.className = 'ppk-unit';
+      unit.textContent = muneaT('subscription.planMinutesUnit', 'min / month');
+      daily.className = 'ppk-daily';
+      daily.textContent = dailyText.replace(/^[・·]\s*/, '');
+      minutesLine.setAttribute('aria-label', muneaT('subscription.planMonthlyMinutes', '{minutes} minutes a month', {
+        minutes: nf.format(facts.minutes),
+      }) + ' ' + daily.textContent);
+      minutesLine.replaceChildren(num, unit, daily);
     }
     const membersLine = card.querySelector('.ppk-ln');
-    if (membersLine) membersLine.textContent = sharedMinutes
-      ? muneaT('subscription.familyShareLimit', 'Up to {members} people in your family circle share them', { members: facts.members })
-      : muneaT('subscription.familyMemberLimit', 'Up to {members} people in your family circle', { members: facts.members });
+    if (membersLine) {
+      // 2026-11-25 改版提案：卡片並排後一行放不下整句，拆成「最多 4 人」（粗）＋「家人圈一起用」兩行；整句留給螢幕報讀
+      const full = muneaT('subscription.familyMemberLimit', 'Up to {members} people in your family circle', { members: facts.members });
+      const people = document.createElement('b');
+      people.textContent = muneaT('subscription.familyMembersShort', 'Up to {members} people', { members: facts.members });
+      const caption = document.createElement('span');
+      caption.textContent = muneaT('subscription.familyCircleCaption', 'in your family circle');
+      membersLine.setAttribute('aria-label', full);
+      membersLine.replaceChildren(people, caption);
+    }
   });
-  const sharedLede = $('#planSharedLede');
-  if (sharedLede) {
-    sharedLede.textContent = muneaT('subscription.headlineShared', 'Everyone in your family circle shares these minutes.');
-    sharedLede.hidden = !sharedMinutes;
-  }
   const familyNote = $('#planFamilyNoteText');
   if (familyNote) {
-    const trends = muneaT('subscription.healthTrendBoth', 'Both plans include 7-day and 30-day health trends.');
-    const noPay = muneaT('subscription.familyNoPay', "Mom and Dad don't pay separately and don't need to sign in to your account.");
-    familyNote.textContent = sharedMinutes
-      ? `${noPay}${/[。！？]$/.test(noPay) ? '' : ' '}${trends}`
-      : trends;
+    familyNote.textContent = muneaT('subscription.healthTrendBoth', 'Both plans include 7-day and 30-day health trends.');
   }
   const legalTerms = $('#legalTermsLink');
   const legalPrivacy = $('#legalPrivacyLink');
@@ -790,10 +793,17 @@ function setLocalizedRuntimeCaption(state) {
 // 單行字幕（#chatCaption）已退役被 CSS 藏起來，setCallHint 在聊聊頁實際上看不到——
 // 忙線／失敗都必須有自己看得懂的卡，不能只靠一句藏起來的字幕當「有講過」。
 // mode: 'queued'（payload=queue 物件 {position, eta_s}）｜ 'full'（連排隊位子都滿）
+// 2026-11-16：這張卡的標題與按鈕在 index.html 帶著預設字的標記（data-i18n＝「現在忙線中／取消排隊」）。
+// 四語自動套字只要看到內容被改，就照標記把字套回去——結果每一種卡的標題、按鈕都被改回那兩句
+//（實測：麥克風受阻卡顯示成「現在忙線中」＋「取消排隊」）。卡片的字由這兩個函式決定，先把標記拿掉。
+function releaseBusyCardDefaultCopy(...elements) {
+  elements.forEach(el => { if (el && el.hasAttribute('data-i18n')) el.removeAttribute('data-i18n'); });
+}
 function showBusyCard(mode, payload) {
   const card = $('#busyCard'); if (!card) return;
   card.dataset.mode = mode;
   const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
+  releaseBusyCardDefaultCopy(title, btn);
   const rendererCopy = muneaRendererCopy();
   if (rendererCopy) {
     const q = payload || {};
@@ -886,6 +896,7 @@ function showCallStatusCard(stateOrOptions) {
   card.dataset.mode = 'error';
   card.dataset.action = opts.action || 'dismiss';
   const title = $('#busyCardTitle'), pos = $('#busyCardPos'), note = $('#busyCardNote'), btn = $('#busyCardBtn');
+  releaseBusyCardDefaultCopy(title, btn);
   if (title) title.textContent = opts.title || muneaT('voice.call.unavailable', '');
   if (pos) pos.textContent = '';
   if (note) note.textContent = opts.note || muneaT('voice.call.retryLater', '');
@@ -1248,8 +1259,6 @@ async function refreshServerPlanEntitlement() {
   if (!isLoggedIn()) return null;
   const result = await brainPost('/entitlements', { action: 'load' });
   if (result && typeof result === 'object') {
-    const caps = result.capabilities || (result.billing && result.billing.capabilities) || null;
-    CREDIT_META.familySharedMinutes = !!(caps && caps.familySharedMinutes === true);
     CREDIT_META.subscription = (result.billing && result.billing.subscription) || null;
   }
   renderSubscriptionEndDate(result && result.billing && result.billing.subscription);
@@ -4104,6 +4113,150 @@ const LiveVoice = {
       try { if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) {}
     });
   },
+  // ── 撥號前確認聲音引擎的時鐘真的在走（2026-11-16）──────────────────────────
+  // 11/13 真機（1.0.71）：App 從背景回來後的下一通，引擎自稱 running、麥克風 live，
+  // 但時鐘停在 0、一包都送不出去，撥出去 18 秒後整通被收掉；#660 的「換一顆新引擎」
+  // 時鐘一樣不走。所以改成：向總機叫號之前先量時鐘，不走就由輕到重一層一層救，
+  // 每層做完重新量；全部沒用才請使用者把 App 關掉重開（目前唯一有真機證據的解法）。
+  // 順序與量測在 voice-audio-clock.js；這裡只提供每一層的實際動作。
+  _audioSessionPlugin() {
+    const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioSession;
+    return (p && typeof p.reactivate === 'function') ? p : null;
+  },
+  _audioClockWait(promise, ms) {
+    return Promise.race([
+      Promise.resolve(promise).catch(() => null),
+      new Promise(resolve => setTimeout(() => resolve(null), ms)),
+    ]);
+  },
+  // 第 1 層的動作：暫停再恢復。WebKit 已知「狀態 running、時鐘不走」時這招有效；
+  // resume() 在這種狀況可能永遠不回來，所以每一步都限時，不能卡住撥號。
+  async _audioClockKick() {
+    const contexts = [this.ac, this.playCtx, CallChime._ctx].filter(ctx => ctx && ctx.state !== 'closed');
+    await Promise.all(contexts.map(async ctx => {
+      try { if (ctx.state === 'running') await this._audioClockWait(ctx.suspend(), 250); } catch (e) {}
+      try { await this._audioClockWait(ctx.resume(), 250); } catch (e) {}
+    }));
+  },
+  // 第 4 層的動作：網頁這層整組重來——停掉所有軌道、關掉舊引擎，再重新要麥克風＋建新引擎。
+  async _audioClockRebuild() {
+    if (this._primeCancelled) return { primed: false };   // 使用者已取消：不可以再把麥克風打開
+    try { if (this.proc) this.proc.disconnect(); } catch (e) {}
+    try { if (this._micSrc) this._micSrc.disconnect(); } catch (e) {}
+    try { if (this.mic) this.mic.getTracks().forEach(t => t.stop()); } catch (e) {}
+    try { if (this.ac) this.ac.close(); } catch (e) {}
+    try { if (this.playCtx) this.playCtx.close(); } catch (e) {}
+    try { if (CallChime._ctx) CallChime._ctx.close(); } catch (e) {}
+    this.proc = this._micSrc = this.mic = this.ac = this.playCtx = null;
+    this._avAnalyser = null; this._playGain = null; CallChime._ctx = null;
+    this._primeMicPromise = null; this._primePipelinePromise = null;
+    CallChime.arm();
+    if (!this.prime()) return { primed: false };
+    const pipeline = await this._audioClockWait(this._primePipelinePromise, 4000);
+    return { primed: true, microphone: !!(pipeline && pipeline.ok) };
+  },
+  _audioClockLayers() {
+    return [
+      { name: 'web_suspend_resume', run: () => this._audioClockKick() },
+      {
+        // iPhone 16.4 起網頁可以指定聲音工作階段類型；切一次等於請系統重新設定收放音。
+        name: 'web_audio_session',
+        available: () => !!(navigator.audioSession && 'type' in navigator.audioSession),
+        run: async () => {
+          const session = navigator.audioSession;
+          const before = String(session.type || '');
+          try { session.type = 'auto'; } catch (e) {}
+          session.type = 'play-and-record';
+          await this._audioClockKick();
+          return { before, after: String(session.type || '') };
+        },
+      },
+      {
+        // 原生層：請 App 外殼把系統的聲音工作階段重新走一次（AudioSessionPlugin.swift）。
+        name: 'native_audio_session',
+        available: () => !!this._audioSessionPlugin(),
+        run: async () => {
+          const res = await this._audioClockWait(this._audioSessionPlugin().reactivate(), 2500);
+          await this._audioClockKick();
+          if (!res) return { answered: false };
+          return {
+            answered: true, pulsed: !!res.pulsed, failedStep: String(res.failedStep || ''), errorCode: Number(res.errorCode) || 0,
+            captureBefore: String(res.captureBefore || ''), captureAfter: String(res.captureAfter || ''), unmuted: !!res.unmuted,
+          };
+        },
+      },
+      { name: 'web_rebuild', run: () => this._audioClockRebuild() },
+    ];
+  },
+  async ensureAudioClock() {
+    const Clock = window.MuneaVoiceAudioClock;
+    if (!Clock || typeof Clock.ensure !== 'function') return { ok: true, outcome: 'no_module' };
+    // 先等麥克風接好再量：剛要到麥克風那一下系統會重設收放音，太早量會誤判。
+    // 第一次用要等使用者按「允許」，等太久就不量、照原本流程走。
+    const pipelinePromise = this._primePipelinePromise;
+    const pipeline = pipelinePromise ? await this._audioClockWait(pipelinePromise, 4000) : { ok: true };
+    if (this._primeCancelled || !this.ac) return { ok: true, outcome: 'cancelled' };
+    if (!pipeline || !pipeline.ok) {
+      voiceCallMark('audio_clock_preflight', 'skipped', { reason: pipeline ? 'microphone_unavailable' : 'microphone_pending' });
+      return { ok: true, outcome: 'skipped' };
+    }
+    const events = {
+      stalled: 'voice_audio_clock_stalled',
+      step: 'voice_audio_clock_step',
+      recovered: 'voice_audio_clock_recovered',
+      unrecovered: 'voice_audio_clock_unrecovered',
+    };
+    const report = (kind, details) => {
+      const props = Object.assign({}, details);
+      // 原生層回來的小物件攤平成一層，後台好查；只有狀態，沒有任何聲音內容
+      if (props.detail && typeof props.detail === 'object') Object.assign(props, props.detail);
+      delete props.detail;
+      if (kind === 'stalled') {
+        const track = this.mic && this.mic.getAudioTracks && this.mic.getAudioTracks()[0];
+        Object.assign(props, {
+          audioState: this.ac ? this.ac.state : null,
+          playState: this.playCtx ? this.playCtx.state : null,
+          chimeState: CallChime._ctx ? CallChime._ctx.state : null,
+          playTime: this.playCtx ? +Number(this.playCtx.currentTime || 0).toFixed(2) : null,
+          trackState: track ? track.readyState : null,
+          trackMuted: track ? !!track.muted : null,
+          sinceForegroundMs: this._foregroundAt ? Date.now() - this._foregroundAt : null,
+          nativeLayer: !!this._audioSessionPlugin(),
+          webSessionType: navigator.audioSession ? String(navigator.audioSession.type || '') : 'unsupported',
+        });
+        // 原生層看到的麥克風狀態（進背景前／回前景時／現在）一起附上；問不到就照送，不等它
+        const plugin = this._audioSessionPlugin();
+        if (plugin && typeof plugin.status === 'function') {
+          this._audioClockWait(plugin.status(), 800).then(native => {
+            if (native) Object.assign(props, {
+              capture: String(native.capture || ''), captureAtResign: String(native.captureAtResign || ''),
+              captureAtResume: String(native.captureAtResume || ''), resumeUnmuted: !!native.resumeUnmuted,
+            });
+            try { trackProductEvent(events[kind], props); } catch (e) {}
+          });
+          return;
+        }
+      }
+      try { trackProductEvent(events[kind], props); } catch (e) {}
+    };
+    const result = await Clock.ensure({
+      measure: () => Clock.measure(this.ac),
+      layers: this._audioClockLayers(),
+      report,
+      isCancelled: () => !!this._primeCancelled,
+    });
+    if (result.outcome === 'healthy') {
+      voiceCallMark('audio_clock_preflight', 'pass', { waitedMs: result.first && result.first.waitedMs });
+    } else if (result.outcome === 'recovered') {
+      voiceCallMark('audio_clock_preflight', 'pass', { recoveredBy: result.recoveredBy, trail: result.trail, totalMs: result.totalMs });
+    } else if (result.outcome === 'unrecovered') {
+      voiceCallFail('audio_clock_preflight', 'audio_clock_stuck', { trail: result.trail, totalMs: result.totalMs, audioState: this.ac && this.ac.state });
+    } else if (result.outcome === 'not_running_passthrough') {
+      // 引擎不是 running（例如還在等使用者點一下）：不擋撥號，交給既有的「點一下畫面」處理
+      voiceCallMark('audio_clock_preflight', 'fallback', { trail: result.trail, totalMs: result.totalMs, audioState: this.ac && this.ac.state });
+    }
+    return result;
+  },
   _setMicOpen(open) {
     this.micOpen = !!open;
     clearTimeout(this._micWatchT);
@@ -5661,6 +5814,23 @@ const CallKeepAwake = {
     }
     this._webLock(want);
   },
+  // 回到前景時強制再套一次（2026-11-16）：sync() 看到「想要的跟記著的一樣」就不動，
+  // 但離開畫面那段時間系統可能已經把「不睡」收回去——仍在通話就重新要一次。
+  reassert() {
+    const want = !!(callPreflightPending || callDialing || callConnected);
+    this.on = want;
+    if (!want) return false;
+    const p = this._plugin();
+    if (p) {
+      try {
+        const done = p.keepAwake();
+        if (done && typeof done.catch === 'function') done.catch(err => console.warn('[keepAwake] native', err));
+      } catch (err) { console.warn('[keepAwake] native', err); }
+      return true;
+    }
+    if (!this._web) this._webLock(true);
+    return true;
+  },
   async _webLock(want) {
     try {
       if (!want) { if (this._web) { const l = this._web; this._web = null; await l.release(); } return; }
@@ -5671,11 +5841,10 @@ const CallKeepAwake = {
     } catch (err) { console.warn('[keepAwake] web', err); }
   },
 };
-// 網頁版的喚醒鎖切到背景會被系統收走；回到前景、還在通話就再要一次
+// 回到前景、還在通話就再要一次「不睡」：網頁版的喚醒鎖切到背景會被系統收走，
+// 手機 App 也重新套用一次（reassert 不看記著的狀態，一律重設）。
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && CallKeepAwake.on && !CallKeepAwake._plugin() && !CallKeepAwake._web) {
-    CallKeepAwake._webLock(true);
-  }
+  if (document.visibilityState === 'visible') { try { CallKeepAwake.reassert(); } catch (e) { console.warn('[keepAwake]', e); } }
 });
 function setCallToggle(connected) {
   callConnected = connected;
@@ -5844,16 +6013,6 @@ function addTalkTodaySec(sec) {
   } catch (e) {}
   return total;
 }
-function callEndWeeklyLine(a, minutes) {
-  const raw = a && a.resetsAt;
-  const d = raw ? new Date(raw) : null;
-  const ok = d && !Number.isNaN(d.getTime());
-  // 後端說的重置日剛好是週一（或沒說）→「下週一」；不是週一就直接講日期，不硬套「下週一」
-  if (ok && d.getDay() !== 1) {
-    return muneaT('callEnd.onDate', 'You can talk for {minutes} minutes again from {date}.', { minutes, date: muneaShortDate(raw) });
-  }
-  return muneaT('callEnd.nextMonday', 'You can talk for {minutes} minutes again next Monday.', { minutes });
-}
 // 下次還能聊多少：後端沒給的就不講（回 null＝整張卡不出現）
 function callEndHeadline(state) {
   const used = state && !state.fresh ? state.callMinutes : 0;   // 新餘額還沒回來前，先扣掉這通的分鐘估一下
@@ -5869,22 +6028,13 @@ function callEndHeadline(state) {
     const left = Math.max(0, Math.round(ptsLeft()) - (Number.isFinite(POINTS.serverRemaining) ? used : 0));
     return muneaT('callEnd.monthLeft', '{minutes} minutes left this month.', { minutes: nf.format(left) });
   }
+  // 2026-11-26 Edward：免費＝註冊送一次分鐘（沒有每天／每週、沒有天數），用完就要訂閱或加買
   const a = muneaAllowance();
-  if (!a) return null;
-  if (a.mode === 'free_daily') {
-    const total = muneaNonNegInt(a.trialDays) || 7;
-    const day = muneaNonNegInt(a.trialDay) || 1;
-    const todayLeft = Math.max(0, (muneaNonNegInt(a.todayRemaining) || 0) - used);
-    if (todayLeft > 0) return muneaT('callEnd.todayMore', 'You can talk for {minutes} more minutes today.', { minutes: nf.format(todayLeft) });
-    if (day < total) return muneaT('callEnd.tomorrow', 'You can talk for {minutes} minutes tomorrow.', { minutes: nf.format(muneaNonNegInt(a.todayGrant) || 10) });
-    return callEndWeeklyLine(a, nf.format(muneaNonNegInt(a.weekGrant) || 10));
-  }
-  if (a.mode === 'free_weekly') {
-    const weekLeft = Math.max(0, (muneaNonNegInt(a.weekRemaining) || 0) - used);
-    if (weekLeft > 0) return muneaT('callEnd.weekMore', 'You can talk for {minutes} more minutes this week.', { minutes: nf.format(weekLeft) });
-    return callEndWeeklyLine(a, nf.format(muneaNonNegInt(a.weekGrant) || 10));
-  }
-  return null;
+  if (!a || a.mode !== 'free_once') return null;
+  const left = Math.max(0, (muneaNonNegInt(a.remaining) || 0) - used);
+  return left > 0
+    ? muneaT('callEnd.freeLeft', 'You have {minutes} free minutes left.', { minutes: nf.format(left) })
+    : muneaT('callEnd.freeUsedUp', 'Your free minutes are used up. Subscribe to keep talking.');
 }
 function hideCallEndCard() {
   _callEndState = null;
@@ -5926,8 +6076,10 @@ function queueCallEndCard(sec) { setTimeout(() => { try { showCallEndCard(sec); 
 function completeChatSession(reason = 'ended') {
   const trackedSession = Boolean(activeChatSessionId && activeChatStartedAt);
   const serverAuthoritative = Boolean(CallControl.url());
-  const completedReasons = new Set(['ended', 'user_ended', 'idle_timeout', 'out_of_points', 'free_signup_trial_exhausted']);
-  const diagnosticOutcome = reason === 'user_cancelled'
+  // background_release＝離開畫面滿 5 秒由 App 收線（不是使用者按的）。已接通的照樣算「講完」、
+  // 還在撥號的照樣算「取消」——跟改名前一樣，不會被算進失敗率；差別只在原因看得出是誰掛的。
+  const completedReasons = new Set(['ended', 'user_ended', 'background_release', 'idle_timeout', 'out_of_points', 'free_signup_trial_exhausted']);
+  const diagnosticOutcome = (reason === 'user_cancelled' || (reason === 'background_release' && !callConnected))
     ? 'cancelled'
     : (callConnected && completedReasons.has(reason) ? 'completed' : 'failed');
   voiceCallEnd(diagnosticOutcome, reason, {
@@ -5973,6 +6125,37 @@ function completeChatSession(reason = 'ended') {
   activeChatTurnCount = 0;
 }
 
+// 離開畫面滿 5 秒由 App 收線（2026-11-16）。原本的做法是「替使用者按一次通話鍵」，結束原因
+// 被記成 user_ended，跟使用者自己掛的分不出來——螢幕自動鎖造成的斷線，後台看起來像他自己掛的，
+// 回到畫面也沒有任何說明。現在改成自己收線、原因記 background_release。
+// 收線動作跟通話鍵一模一樣（席位照樣釋放、已經講的時間照樣由總機結算），只差兩件事：
+// 不走「好好聊完 → 請你評分」那條路；回到畫面時說明一次。
+let _backgroundReleaseNotice = false;
+function releaseCallForBackground(source) {
+  if (!(callConnected || callDialing || callPreflightPending)) return false;
+  const wasConnected = callConnected;
+  LiveVoice.stop(); FaceWave.stop(); completeChatSession('background_release'); chatOpened = false;
+  setCallToggle(false);
+  if (!wasConnected) {
+    stopCallTimer();
+    const chatEl = document.getElementById('chat'); if (chatEl) chatEl.dataset.state = 'idle';
+    setFaceState('idle');
+  }
+  if (window.__muneaStopListen) window.__muneaStopListen();
+  FaceIdle.start();
+  _backgroundReleaseNotice = true;
+  return true;
+}
+// 回到畫面：剛剛若是因為離開畫面被收線，用提示卡說明一次（只這一次）。
+// 不在收線當下出卡——撥號流程收尾時會把卡收掉，等使用者回來再出才看得到。
+function showBackgroundReleaseNotice() {
+  if (!_backgroundReleaseNotice) return false;
+  _backgroundReleaseNotice = false;
+  if (callConnected || callDialing || callPreflightPending) return false;   // 已經又在撥了就不打擾
+  showCallStatusCard('backgroundEnded');
+  return true;
+}
+
 function showView(id) {
   // 2026-07-30 Edward 拍板：訪客可以進聊聊頁看看（看得到誰要陪他講話、畫面長什麼樣），
   // 關卡從「門口」移到「開始通話」那一刻（見 connectCall 開頭與 #callToggle）。
@@ -6010,6 +6193,7 @@ function showView(id) {
     }
   }
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+  if (id === 'settings' && window.__muneaReplayPlanCard) window.__muneaReplayPlanCard();   // 每次進設定頁，分鐘數字從 0 滾上來
   if (window.__muneaApplyUserAvatar) window.__muneaApplyUserAvatar();
   setTimeout(refreshHscrollHints, 60); // 分頁切換後重算「右邊還有」提示
   const overlay = OVERLAYS.includes(id);
@@ -6073,6 +6257,28 @@ function authDisplayName(state) {
 // 帳號卡右上角「唯一」的身份標籤（Edward 2026-07-14：只留一顆、統一右上，不要兩顆）
 // 開發測試帳號 → TEST · FREE/PLUS/PRO；否則 FREE / PLUS / PRO
 let _memBadgePlan = 'free';
+// 設定頁 B 案（2026-11-25 改版提案，跟 A 案並存給 Edward 比較；定案後留一個、刪另一個）：
+// localStorage munea.settingsLayout＝'b' 才啟用。只「搬」既有的列到 B 案容器——id、點擊行為、程式填的字全都不變；
+// 通知中心那列由 notify.js 插在 safetyRow 前面，所以先搬 safetyRow，之後插進來的也會落在精簡清單裡。
+function applySettingsLayoutB() {
+  // 2026-11-26 Edward「好了就推版上線」→ B 案定案、預設開；munea.settingsLayout='a' 只留給比對用
+  let on = true;
+  try { on = localStorage.getItem('munea.settingsLayout') !== 'a'; } catch (e) {}
+  const root = $('#settings');
+  if (!root || !on || root.dataset.layout === 'b') return;
+  const hero = root.querySelector('.set-b-hero');
+  const tiles = root.querySelector('.set-tiles');
+  const list = root.querySelector('.set-b-list');
+  const aboutList = root.querySelector('.set-b-about-list');
+  if (!hero || !tiles || !list || !aboutList) return;
+  const move = (target, ids) => ids.forEach(id => { const el = document.getElementById(id); if (el) target.appendChild(el); });
+  move(hero, ['authCard', 'planCard']);
+  move(tiles, ['medEntrySettings', 'visitEntry', 'famCircleRow', 'companionRow']);
+  move(list, ['profileRow', 'privacyRow', 'setDevices', 'notificationCenterRow', 'safetyRow', 'visitSummaryRow', 'interestsRow', 'fontRow', 'feedbackRow']);
+  move(aboutList, ['versionRow', 'termsRow', 'privacyPolicyRow']);
+  root.querySelectorAll('.set-b').forEach(el => { el.hidden = false; });
+  root.dataset.layout = 'b';
+}
 function renderMemBadge(plan) {
   if (plan) _memBadgePlan = String(plan).toLowerCase();
   const mb = $('#memBadge');
@@ -6080,7 +6286,9 @@ function renderMemBadge(plan) {
   let dev = false;
   try { dev = !!authState().developerMode; } catch (e) {}
   const key = dev ? 'test' : _memBadgePlan;
-  mb.textContent = dev ? ('TEST · ' + (_memBadgePlan || 'free').toUpperCase()) : key.toUpperCase();
+  // 2026-11-25：免費帳號的標籤跟著語言講（中文「免費」，不再是英文大寫 FREE）；Plus／Pro 是方案名、寫成 Plus／Pro；開發測試帳號照舊 TEST · FREE/PLUS/PRO
+  mb.textContent = dev ? ('TEST · ' + (_memBadgePlan || 'free').toUpperCase())
+    : (key === 'free' || !key ? muneaT('settings.badge.free', 'FREE') : key.charAt(0).toUpperCase() + key.slice(1));
   mb.className = 'mem-badge ' + key;
 }
 function authState() {
@@ -7458,19 +7666,16 @@ window.__medicationI18nTest = {
 
 // 分鐘資訊（2026-11-20 付費頁／設定方案卡／通話結束卡共用）。全部從後端讀、讀不到就是 null，
 // 畫面一律「有才顯示、沒有就退回舊樣子」——後端欄位還沒上線時，不可以編一個數字出來。
-//   allowance   ＝/credits/balance 的免費額度（free_daily 前 7 天每天／free_weekly 第 8 天起每週／plan）
-//   familyShare ＝/credits/balance 的家人圈共用月分鐘（誰用了多少）
+//   allowance   ＝/credits/balance 的免費額度（2026-11-26 起只有 free_once＝註冊送一次；plan＝有訂閱）
+//   familyShare ＝舊後端（#732）回的家人圈共用月分鐘。2026-11-25／26 Edward：沒有共享帳號／共用分鐘這個概念，
+//     畫面只拿圈主自己的方案月額來顯示，被邀請的家人一律不看；後端 #752 關掉後就不再回。
 //   includedMonthly＝walletSummary 裡「方案每月給的」還剩多少（不含加買的）
-//   familySharedMinutes＝/entitlements 的 capabilities.familySharedMinutes，嚴格等於 true 才算數；
-//     沒開之前「爸媽不用另外付費」「家人圈一起用這些分鐘」都不能講（講了就是不實）。
 function resetCreditMeta() {
   CREDIT_META.allowance = null;
   CREDIT_META.familyShare = null;
   CREDIT_META.includedMonthly = null;
-  CREDIT_META.familySharedMinutes = false;
   CREDIT_META.subscription = null;
 }
-function muneaFamilySharedMinutesOn() { return CREDIT_META.familySharedMinutes === true; }
 function muneaNonNegInt(value) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null;
@@ -7478,17 +7683,18 @@ function muneaNonNegInt(value) {
 function muneaAllowance() {
   const a = CREDIT_META.allowance;
   if (!a || typeof a !== 'object') return null;
-  if (!['free_daily', 'free_weekly', 'plan'].includes(a.mode)) return null;
+  if (!['free_once', 'plan'].includes(a.mode)) return null;
   return a;
 }
 function muneaFamilyShare() {
   const f = CREDIT_META.familyShare;
   if (!f || typeof f !== 'object' || f.shared !== true) return null;
+  // 2026-11-25 Edward：「沒有共享帳號這個概念」→ 畫面上每個人只看自己的方案；被邀請的家人不顯示圈主的分鐘
+  if (f.role === 'member') return null;
   if (muneaNonNegInt(f.monthGrant) === null || muneaNonNegInt(f.monthRemaining) === null) return null;
   return f;
 }
-// 免費帳號還能聊幾秒——伺服器說了算（2026-11-20，後端 #732：免費改成前 7 天每天、之後每週給分鐘；
-// 家人圈成員的 walletSummary.total 已經把圈主可用的分鐘算進去）。App 不能比伺服器先把人擋掉：
+// 免費帳號還能聊幾秒——伺服器說了算（2026-11-26：免費＝註冊送一次分鐘，各帳號各扣各的）。App 不能比伺服器先把人擋掉：
 // 有伺服器餘額（total）或 allowance 就照它算；都沒有（未登入、連不上、舊後端）回 null，交給 MMPLAN 本機判斷。
 // 通話中伺服器的數字仍是撥號前那一刻的（收線才扣），所以要減掉這通已經講的秒數。
 function muneaServerFreeRemainSec() {
@@ -7496,23 +7702,17 @@ function muneaServerFreeRemainSec() {
   if (Number.isFinite(POINTS.serverRemaining)) minutes = POINTS.serverRemaining;
   else {
     const a = muneaAllowance();
-    if (a && a.mode === 'free_daily') minutes = muneaNonNegInt(a.todayRemaining);
-    else if (a && a.mode === 'free_weekly') minutes = muneaNonNegInt(a.weekRemaining);
+    if (a && a.mode === 'free_once') minutes = muneaNonNegInt(a.remaining);
   }
   if (minutes === null) return null;
   const inCall = _callTimerInt ? _callSec : 0;
   return Math.max(0, Math.round(minutes * 60) - inCall);
 }
 window.__muneaServerFreeRemainSec = () => { try { return muneaServerFreeRemainSec(); } catch (e) { return null; } };
-// 免費分鐘用完時的說法跟著後端的 allowance 走：今天的用完／這週的用完；後端沒給才用通用的「免費分鐘用完了」
+// 免費分鐘用完：只有一種說法（註冊送的用完了，訂閱或加買就能繼續）
 function muneaFreeUpsell() {
-  const a = muneaAllowance();
   if (!window.MMPLAN) return;
-  if (a && a.mode === 'free_daily') {
-    window.MMPLAN.upsell('chat-today', { days: muneaNonNegInt(a.trialDays) || 7, minutes: muneaNonNegInt(a.todayGrant) || 10 });
-  } else if (a && a.mode === 'free_weekly') {
-    window.MMPLAN.upsell('chat-week', { minutes: muneaNonNegInt(a.weekGrant) || 10 });
-  } else {
+  {
     window.MMPLAN.upsell('chat-daily');
   }
 }
@@ -7534,7 +7734,6 @@ window.__ptsTest = {
     if ('allowance' in m) CREDIT_META.allowance = m.allowance;
     if ('familyShare' in m) CREDIT_META.familyShare = m.familyShare;
     if ('includedMonthly' in m) CREDIT_META.includedMonthly = m.includedMonthly;
-    if ('familySharedMinutes' in m) CREDIT_META.familySharedMinutes = m.familySharedMinutes === true;
     if ('subscription' in m) CREDIT_META.subscription = m.subscription;
     try { if (window.__muneaRenderPlanState) window.__muneaRenderPlanState(); } catch (e) {}
   },
@@ -7750,10 +7949,7 @@ function __muneaFreeChatOut(){ __muneaFreeChatOut__setCool();
   try { chatOpened = false; } catch (e) {}
   try { setCallToggle(false); } catch (e) {}
   stopCallTimer();
-  const _freeMode = (muneaAllowance() || {}).mode;
-  if (_freeMode === 'free_daily') toast(muneaT('credits.freeTodayUsedUp', '今天的免費分鐘用完了。'));
-  else if (_freeMode === 'free_weekly') toast(muneaT('credits.freeWeekUsedUp', '這週的免費分鐘用完了。'));
-  else toast(muneaT('credits.freeTrialEnded', '免費分鐘用完了。'));
+  toast(muneaT('credits.freeTrialEnded', '免費分鐘用完了。'));
   try { FaceIdle.start(); } catch (e) {}   // 收線後回到待機輪播
   muneaFreeUpsell();
 }
@@ -8619,7 +8815,8 @@ const MOOD_ZH2KEY = {
 };
 async function loadMoodWeekReal() {
   try {
-    const r = await fetch(brainURL('/wellbeing/trend'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days: 7 }) });
+    // 2026-11-17：這支以前只帶 Content-Type、沒帶通行碼也沒帶登入證，正式環境每次都被後端薄門擋（403）。
+    const r = await fetch(brainURL('/wellbeing/trend'), { method: 'POST', headers: await muneaAuthHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ days: 7 }) });
     if (!r.ok) return null;
     const d = await r.json();
     const daily = d.daily || [];
@@ -8763,6 +8960,15 @@ function setupHscrollHints() {
   window.addEventListener('resize', refreshHscrollHints);
 }
 
+// 撥號前發現聲音引擎卡死、每一層都救不回來（2026-11-16）：這通不撥出去，
+// 明講「把 App 關掉再打開」——11/13 真機唯一確定有效的解法——不讓人空等 18 秒。
+function abortCallForStuckAudio() {
+  voiceCallEnd('failed', 'audio_clock_stuck');
+  try { LiveVoice.stop(); } catch (e) {}
+  setCallPreflightPending(false); setCallDialing(false); stopCallTimer();
+  setLocalizedCallHint('unavailable');
+  showCallStatusCard('audioRestart');
+}
 async function connectCall() {
   // 真的要撥號才要求登入（Edward 2026-07-30：訪客能進聊聊頁看，點「開始通話」才跳登入）。
   // 守門放在這裡＝所有撥號入口的共同關卡（通話鈕／同意跨境後接著撥／選完話題後接著撥），
@@ -8837,6 +9043,10 @@ async function connectCall() {
     showCallStatusCard(micHttpsOnly ? 'microphoneHttps' : 'microphonePermission');
     return;
   }
+  // 2026-11-16：向總機叫號之前，先確認聲音引擎的時鐘真的在走（App 從背景回來後會卡死，
+  // 撥出去只會空等 18 秒被收線）。跟下面的帳號／點數前置同時跑；結果在叫號前才收。
+  // 檢查本身出錯一律放行，不能因為這道檢查讓原本打得通的電話打不出去。
+  const _audioClockReady = LiveVoice.ensureAudioClock().catch(() => ({ ok: true, outcome: 'check_failed' }));
   // 前置並行（2026-07-29 接通提速）：家人傳話準備、帳號確認、點數同步原本一條龍
   // 等完才向總機叫號——行動網路一趟來回幾百毫秒、串起來破秒。改成同時跑，語意不變：
   // 傳話仍最多等 1.2 秒（從這裡就開始計時、跟其他前置重疊）、帳號沒好照樣擋在叫號前、
@@ -8849,6 +9059,7 @@ async function connectCall() {
   if (developmentDirectCall) {
     setCallDialing(true);
     setLocalizedCallHint('developerConnecting', true);
+    if ((await _audioClockReady).ok === false) { abortCallForStuckAudio(); return; }
   } else {
     // 點數是否足夠這件事只在後端靜默判斷，畫面維持一般撥號觀感，不對用戶顯示「查點數」字樣（Edward 2026-07-20拍板）。
     setLocalizedCallHint('connecting', true);
@@ -8873,6 +9084,8 @@ async function connectCall() {
         // 正式用戶（非開發者旁路）完全不受影響，0 點依然照擋。
         if (availableCredits <= 0 && !isGatewayDeveloperProfile()) throw new Error('insufficient_credits');
       }
+      // 聲音引擎每一層都救不回來 → 不叫號、不佔席位、不扣點，請使用者把 App 關掉重開
+      if ((await _audioClockReady).ok === false) { abortCallForStuckAudio(); return; }
       // 用戶可能在前置檢查途中就按了取消／離開（排隊可取消上線後，取消會把 preflight 收掉）——不再往下向總機叫號
       if (!callPreflightPending && !callDialing && !callConnected) return;
       // 撥號中就是撥號中：不把「安排通話／安排席位」這種後台調度字眼推到畫面上，
@@ -9395,12 +9608,12 @@ function init() {
       _hangupOnLeaveT = null;
       if (document.visibilityState !== 'hidden') return;
       try { trackProductEvent('voice_background_release', { source, hiddenMs: 5000 }); } catch (e) {}
-      try { if ((callConnected || callDialing || callPreflightPending) && $('#callToggle')) $('#callToggle').click(); } catch (e) {}
+      try { releaseCallForBackground(source); } catch (e) {}
     }, 5000);
   };
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') _hangupOnLeave('visibility_hidden');
-    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} }
+    else { _cancelHangupOnLeave(); try { LiveVoice._resumeAudio(); } catch (e) {} LiveVoice._foregroundAt = Date.now(); try { showBackgroundReleaseNotice(); } catch (e) {} }
   });
   window.addEventListener('pagehide', () => _hangupOnLeave('pagehide'));
   // 忙線／失敗卡按鈕：排隊＝取消排隊（走通話鍵同一條取消線）；登入失效＝重新登入；
@@ -9492,6 +9705,7 @@ function init() {
   $('#tabBar').addEventListener('click', e => { const b = e.target.closest('.tab-btn'); if (b) showView(b.dataset.view); });
   renderAiDiagnostics();
   if ($('#aiDevRefresh')) $('#aiDevRefresh').addEventListener('click', () => refreshAiDiagnostics());
+  applySettingsLayoutB();
 
   // 首頁「跟寧寧聊聊」＝ 進全屏臉「待命」；使用者自己按「開始通話」才啟動、才開始扣點（Edward 7/7：不自動通話）
   if ($('#startCall')) $('#startCall').addEventListener('click', () => {
@@ -10749,6 +10963,15 @@ function init() {
       }
     });
     document.querySelectorAll('.ppk').forEach(c => { c.classList.toggle('sel', c.dataset.t === _subPlan); c.classList.toggle('is-cur', c.dataset.t === cur); });
+    // 2026-11-25：已訂閱的人一眼看得出哪張是「目前方案」（原本只有按鈕寫「你目前就是 Plus」）
+    document.querySelectorAll('.ppk').forEach(c => {
+      let tag = c.querySelector('.ppk-cur');
+      if (c.dataset.t === cur) {
+        if (!tag) { tag = document.createElement('span'); tag.className = 'ppk-cur'; c.appendChild(tag); }
+        tag.textContent = muneaT('subscription.currentPlanTag', 'Your plan');
+      } else if (tag) tag.remove();
+    });
+
     const cta = $('#subCta');
     if (cta) {
       const rendererCopy = muneaRendererCopy();
@@ -10801,41 +11024,24 @@ function init() {
     // 確認欄開著就跟著重畫，畫面寫的跟等下要扣的永遠一致
     if (typeof syncPlanConfirm === 'function') syncPlanConfirm();
   }
-  // 付費頁最上面的狀態小標：只有「免費體驗中（前 7 天）」才講「免費體驗第 N 天・今天還能聊 M 分鐘」
+  // 付費頁最上面的狀態小標：免費的人才講「免費・還能聊 M 分鐘」（註冊送的那份還剩多少）
   function renderPlanTrialChip() {
     const chip = $('#planTrialChip');
     if (!chip) return;
     const a = muneaAllowance();
-    const day = a ? muneaNonNegInt(a.trialDay) : null;
-    const left = a ? muneaNonNegInt(a.todayRemaining) : null;
-    const show = circlePlan() === 'free' && !!a && a.mode === 'free_daily' && !!day && left !== null;
+    const left = a && a.mode === 'free_once' ? muneaNonNegInt(a.remaining) : null;
+    const show = circlePlan() === 'free' && left !== null;
     chip.hidden = !show;
     chip.textContent = show
-      ? muneaT('subscription.trialChip', 'Free trial day {day} · {minutes} min left today', { day, minutes: left })
+      ? muneaT('subscription.trialChip', 'Free · {minutes} min left', { minutes: left })
       : '';
   }
-  // 加買分鐘最上面那列：「這個月只剩 N 分鐘｜12/1 再給 100 分鐘」。只有真的有月額度時才出現。
-  // 數字來源：家人圈共用（familyShare）優先；否則是自己方案每月給的那份（walletSummary.includedMonthly），
-  // 再給的日期讀訂閱的到期／續訂日。缺哪個就不講哪個，不編。
+  // 加買分鐘最上面那列：「這個月只剩 N 分鐘｜12/1 再給 100 分鐘」。只有真的有月額度時才出現；缺哪個就不講哪個，不編。
   function topUpLeftFacts() {
-    const fam = muneaFamilyShare();
+    const f = planMonthFacts();
+    if (!f) return null;
     const nf = new Intl.NumberFormat(muneaLocale());
-    if (fam) {
-      return {
-        left: nf.format(muneaNonNegInt(fam.monthRemaining)),
-        next: muneaShortDate(fam.renewsAt),
-        grant: nf.format(muneaNonNegInt(fam.monthGrant)),
-      };
-    }
-    const plan = circlePlan();
-    if (plan === 'free' || CREDIT_META.includedMonthly === null) return null;
-    const sub = CREDIT_META.subscription;
-    const renew = sub && sub.status === 'active' ? sub.expiresAt : '';
-    return {
-      left: nf.format(CREDIT_META.includedMonthly),
-      next: muneaShortDate(renew),
-      grant: nf.format(PLAN_POINTS[plan] || 0),
-    };
+    return { left: nf.format(f.remaining), next: muneaShortDate(f.renewsAt), grant: nf.format(f.grant) };
   }
   function renderTopUpLeft() {
     const facts = topUpLeftFacts();
@@ -10857,116 +11063,98 @@ function init() {
   }
   window.__muneaRenderTopUpLeft = renderTopUpLeft;
   // ===== 設定頁方案卡（2026-11-20 Edward 核可設計稿 P3／P4）=====
-  // 四種樣子：legacy（後端還沒給新欄位＝舊排法、只是改講分鐘）／trial（免費體驗前 7 天）／
-  // weekly（第 8 天起每週）／share（家人圈一起用同一份月分鐘）。由 #planCard 的 data-mode 切換，
+  // 三種樣子：legacy（後端還沒給新欄位＝舊排法、只是改講分鐘）／free（註冊送的分鐘還剩多少）／
+  // share（＝有訂閱：自己方案這個月還剩多少；名字是歷史包袱，已經沒有共用）。由 #planCard 的 data-mode 切換，
   // 舊排法的元素（餘額、進度條、說明句）照舊由 renderCreditRow 管，這裡只負責新樣子的內容。
-  const PERSON_COLORS = ['p-mei', 'p-zhi', 'p-bao'];   // 跟家人頁頭像同一套顏色，依序配
   function setBigMinutes(el, key, fallback, minutes) {
     if (!el) return;
     const marker = '__MUNEA_MIN__';
     const parts = muneaT(key, fallback, { minutes: marker }).split(marker);
-    const num = new Intl.NumberFormat(muneaLocale()).format(minutes);
+    const num = document.createElement('b');
+    num.className = 'pc-num';
+    const nf = new Intl.NumberFormat(muneaLocale());
+    const target = Math.max(0, Number(minutes) || 0);
+    num.textContent = nf.format(target);
     const tail = document.createElement('small');
     tail.textContent = parts.slice(1).join(marker);
-    el.replaceChildren(document.createTextNode((parts[0] || '') + num), tail);
+    // 質感：數字變了才從上一次的數字滾到新數字（約 0.5 秒）；系統設定「減少動態」就直接顯示
+    const prev = Number(el.dataset.shown);
+    el.dataset.shown = String(target);
+    el.replaceChildren(document.createTextNode(parts[0] || ''), num, tail);
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !Number.isFinite(prev) || prev === target || typeof requestAnimationFrame !== 'function') return;
+    const t0 = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / 520);
+      const ease = 1 - Math.pow(1 - k, 3);
+      num.textContent = nf.format(Math.round(prev + (target - prev) * ease));
+      if (k < 1 && num.isConnected) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }
+  // 有訂閱的人這個月的方案分鐘：方案、每月給幾分、還剩幾分、哪天續訂。只算自己的（沒有共用）。
+  // 舊後端（#732）還會回 familyShare＝圈主自己的方案月額，先用它；#752 之後改讀自己錢包的 includedMonthly。
+  function planMonthFacts() {
+    const fam = muneaFamilyShare();
+    if (fam) {
+      const grant = muneaNonNegInt(fam.monthGrant);
+      return { plan: fam.plan === 'pro' ? 'pro' : 'plus', grant, remaining: Math.min(grant, muneaNonNegInt(fam.monthRemaining)), renewsAt: fam.renewsAt };
+    }
+    const plan = circlePlan();
+    if (plan === 'free' || CREDIT_META.includedMonthly === null) return null;
+    const grant = PLAN_POINTS[plan] || 0;
+    const sub = CREDIT_META.subscription;
+    return {
+      plan: plan === 'pro' ? 'pro' : 'plus',
+      grant,
+      remaining: grant ? Math.min(grant, CREDIT_META.includedMonthly) : CREDIT_META.includedMonthly,
+      renewsAt: sub && sub.status === 'active' ? sub.expiresAt : '',
+    };
+  }
+  // 三種樣子（#planCard 的 data-mode）：legacy＝後端還沒給新欄位的舊排法／free＝註冊送的分鐘還剩多少／
+  // plan＝有訂閱，這個月還剩多少。2026-11-25／26 Edward：沒有共用分鐘、沒有「免費幾天」，簡單、減法。
   function renderPlanCard() {
     const card = $('#planCard');
     if (!card) return;
     const plan = circlePlan();
     const a = muneaAllowance();
-    const fam = muneaFamilyShare();
+    const facts = plan === 'free' ? null : planMonthFacts();
     let mode = 'legacy';
-    if (fam) mode = 'share';
-    else if (plan === 'free' && a && a.mode === 'free_daily' && muneaNonNegInt(a.todayRemaining) !== null) mode = 'trial';
-    else if (plan === 'free' && a && a.mode === 'free_weekly' && muneaNonNegInt(a.weekRemaining) !== null) mode = 'weekly';
+    if (facts) mode = 'plan';
+    else if (plan === 'free' && a && a.mode === 'free_once' && muneaNonNegInt(a.remaining) !== null) mode = 'free';
     card.dataset.mode = mode;
-    card.dataset.role = fam && fam.role === 'member' ? 'member' : 'owner';
     const headTitle = $('#pcHeadTitle');
     const headMeta = $('#pcHeadMeta');
     const big = $('#pcBig');
-    const note = $('#pcNote');
-    const nf = new Intl.NumberFormat(muneaLocale());
-    if (mode === 'trial') {
-      const total = muneaNonNegInt(a.trialDays) || 7;
-      const day = Math.min(total, Math.max(1, muneaNonNegInt(a.trialDay) || 1));
-      const daily = muneaNonNegInt(a.todayGrant) || 10;
-      const weekly = muneaNonNegInt(a.weekGrant) || daily;
-      if (headTitle) headTitle.textContent = muneaT('settings.trialTitle', 'Free trial');
-      if (headMeta) headMeta.textContent = muneaT('settings.trialDay', 'Day {day} of {total}', { day, total });
-      setBigMinutes(big, 'settings.todayLeft', '{minutes} minutes left today', muneaNonNegInt(a.todayRemaining));
-      const days = $('#pcDays');
-      if (days) {
-        days.replaceChildren(...Array.from({ length: total }, (_, i) => {
-          const dot = document.createElement('i');
-          if (i + 1 < day) dot.className = 'done';
-          else if (i + 1 === day) dot.className = 'now';
-          return dot;
-        }));
-      }
-      const first = $('#pcDayFirst'); if (first) first.textContent = muneaT('settings.trialDayFirst', 'Day 1');
-      const today = $('#pcDayToday'); if (today) today.textContent = muneaT('settings.trialDayToday', 'Today');
-      const last = $('#pcDayLast'); if (last) last.textContent = muneaT('settings.trialDayLast', 'Day {total}', { total });
-      if (note) note.textContent = muneaT(
-        'settings.trialNote',
-        'For the first {days} days you get {daily} minutes a day; from day {next}, {weekly} minutes a week. Want to talk a bit more each day? Take a look at the plans.',
-        { days: total, daily, next: total + 1, weekly },
-      );
-    } else if (mode === 'weekly') {
-      const weekly = muneaNonNegInt(a.weekGrant) || 10;
-      const reset = muneaShortDate(a.resetsAt);
-      if (headTitle) headTitle.textContent = muneaT('settings.freeWeeklyTitle', 'Free plan');
-      if (headMeta) headMeta.textContent = reset
-        ? muneaT('settings.nextGrant', '{minutes} more on {date}', { date: reset, minutes: nf.format(weekly) })
-        : '';
-      setBigMinutes(big, 'settings.weekLeft', '{minutes} minutes left this week', muneaNonNegInt(a.weekRemaining));
-      if (note) note.textContent = muneaT(
-        'settings.freeWeeklyNote',
-        '{weekly} minutes a week. Want to talk a bit more each day? Take a look at the plans.',
-        { weekly },
-      );
-    } else if (mode === 'share') {
-      const grant = muneaNonNegInt(fam.monthGrant);
-      const remaining = Math.min(grant, muneaNonNegInt(fam.monthRemaining));
-      const used = Math.max(0, grant - remaining);
-      const planKey = fam.plan === 'pro' ? 'subscription.planPro' : 'subscription.planPlus';
-      if (headTitle) headTitle.textContent = muneaT('settings.sharedPlanTitle', '{plan} · shared by your family circle', {
-        plan: muneaT(planKey, fam.plan === 'pro' ? 'Pro' : 'Plus'),
+    if (mode === 'free') {
+      if (headTitle) headTitle.textContent = muneaT('settings.trialTitle', 'Free plan');
+      if (headMeta) headMeta.textContent = '';
+      setBigMinutes(big, 'settings.freeLeft', '{minutes} free minutes left', muneaNonNegInt(a.remaining));
+    } else if (mode === 'plan') {
+      const planKey = facts.plan === 'pro' ? 'subscription.planPro' : 'subscription.planPlus';
+      if (headTitle) headTitle.textContent = muneaT('settings.planName', '{plan} plan', {
+        plan: muneaT(planKey, facts.plan === 'pro' ? 'Pro' : 'Plus'),
       });
-      const renew = muneaShortDate(fam.renewsAt);
+      const renew = muneaShortDate(facts.renewsAt);
       if (headMeta) headMeta.textContent = renew ? muneaT('settings.renewsOn', 'Renews {date}', { date: renew }) : '';
-      setBigMinutes(big, 'settings.monthLeft', '{minutes} minutes left this month', remaining);
-      const usageNote = $('#pcUsageNote');
-      if (usageNote) usageNote.textContent = muneaT('settings.sharedUsed', '{used} of {grant} minutes used. Who used them:', {
-        used: nf.format(used), grant: nf.format(grant),
-      });
-      const people = Array.isArray(fam.usageByPerson) ? fam.usageByPerson.filter(p => p && typeof p === 'object') : [];
+      setBigMinutes(big, 'settings.monthLeft', '{minutes} minutes left this month', facts.remaining);
       const bar = $('#pcBar');
-      const who = $('#pcWho');
-      if (bar) bar.replaceChildren(...people.map((person, i) => {
-        const seg = document.createElement('i');
-        seg.className = PERSON_COLORS[i % PERSON_COLORS.length];
-        const mins = muneaNonNegInt(person.minutes) || 0;
-        seg.style.width = (grant > 0 ? Math.min(100, (mins / grant) * 100) : 0).toFixed(2) + '%';
-        return seg;
-      }));
-      // 只靠顏色分不出誰是誰：每人一列一定寫名字（自己寫「我」）
-      if (who) who.replaceChildren(...people.map((person, i) => {
-        const row = document.createElement('div');
-        const dot = document.createElement('em');
-        dot.className = PERSON_COLORS[i % PERSON_COLORS.length];
-        const name = document.createElement('b');
-        name.textContent = person.isMe === true
-          ? muneaT('settings.me', 'Me')
-          : (String(person.name || '').trim() || muneaT('home.care.familyFallback', 'Family'));
-        const mins = document.createElement('span');
-        mins.textContent = muneaT('settings.personUsed', '{minutes} min used', { minutes: nf.format(muneaNonNegInt(person.minutes) || 0) });
-        row.replaceChildren(dot, name, mins);
-        return row;
-      }));
+      if (bar) {
+        let fill = bar.querySelector('i');
+        if (!fill) { fill = document.createElement('i'); bar.replaceChildren(fill); }
+        fill.style.width = (facts.grant > 0 ? Math.min(100, (facts.remaining / facts.grant) * 100) : 0).toFixed(2) + '%';
+      }
     }
   }
   window.__muneaRenderPlanCard = renderPlanCard;
+  // 2026-11-26 質感互動：進設定頁時，分鐘數字從 0 滾到現在的數字、剩餘量條從 0 滑到現在的位置（減少動態時直接顯示）
+  window.__muneaReplayPlanCard = () => {
+    const big = $('#pcBig');
+    const fill = $('#pcBar i');
+    if (big) big.dataset.shown = '0';
+    if (fill) { fill.style.transition = 'none'; fill.style.width = '0%'; void fill.offsetWidth; fill.style.transition = ''; }
+    requestAnimationFrame(() => { try { renderPlanCard(); } catch (e) {} });
+  };
   // 切換「訂閱方案 / 點數購買」：唯一入口，免費被上面擋住不會走到 points
   function showSubPane(pane) {
     document.querySelectorAll('.sseg-btn').forEach((x, i) => {
@@ -11080,7 +11268,14 @@ function init() {
     _subCyc = b.dataset.cyc; renderSubUI();
   }));
   // 選方案欄
-  document.querySelectorAll('.ppk').forEach(c => c.addEventListener('click', () => { _subPlan = c.dataset.t; renderSubUI(); }));
+  document.querySelectorAll('.ppk').forEach(c => c.addEventListener('click', () => {
+    const changed = _subPlan !== c.dataset.t;
+    _subPlan = c.dataset.t;
+    renderSubUI();
+    if (!changed) return;
+    // 2026-11-26 質感互動：選中的卡輕輕彈一下、訂閱鈕上的字換一下（重新觸發動畫）
+    [c, $('#subCta')].forEach((el) => { if (!el) return; el.classList.toggle('mn-pop', false); void el.offsetWidth; el.classList.add('mn-pop'); });
+  }));
   // ===== 確認欄：畫面寫什麼＝就扣什麼（唯一真相＝_subPlan／_subCyc）=====
   // 舊寫法在開欄當下把方案抄進 _planPick 就不再更新：欄開著時改選方案或月/年繳，
   // 欄位文字與實際扣款會對不上（選 Plus 卻扣 Pro、寫月費卻扣年費）。一律重畫、不留舊值。
