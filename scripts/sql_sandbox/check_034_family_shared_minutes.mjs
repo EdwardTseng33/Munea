@@ -6,7 +6,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { freshDb, repo } from "./migrate.mjs";
 
-const { db, results } = await freshDb(false);
+// 驗的是 034 當時的共用行為：只跑到 034（035 起改回各帳號各扣，見 check_035_per_account_minutes.mjs）
+const { db, results } = await freshDb(false, { upTo: "034" });
 const bad = results.filter(([f, r]) => r !== "ok" && !/^00[459]_/.test(f));
 if (bad.length) { console.log("unexpected migration failures", bad); process.exit(1); }
 

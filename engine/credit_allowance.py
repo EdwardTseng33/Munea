@@ -1,15 +1,15 @@
-"""免費額度與家人圈共用分鐘的規則（2026-11-20 拍板）。
+"""免費額度與分鐘扣法的規則（2026-11-26 Edward 拍板）。
 
 這裡只放「怎麼算」的純函式，不碰檔案、不碰雲端；server.py 的 JSON 後備模式用它，
-Supabase 模式的同一套規則寫在 supabase/sql/034_family_shared_minutes_daily_free.sql
+Supabase 模式的同一套規則寫在 supabase/sql/035_per_account_minutes.sql
 （gateway 直接呼叫資料庫函式扣點，所以兩邊都要有；改規則兩邊一起改，測試兩邊都有）。
 
 規則：
-- 帳號建立那天（台灣時間）＝第 1 天。第 1～7 天每天一個 10 點的免費錢包，台灣時間午夜到期；
-  第 8 天起每週一（台灣時間）一個 10 點的錢包。用不完不累積。有自己付費方案的帳號不發。
-- 本月（台灣時間）全平台免費消耗 ≥ 上限（預設 1360 分鐘）→ 之後新發的「每日」額度改 5。
-- 來電者是別人家人圈的非圈主成員、圈主有有效 plus／pro：先扣自己的免費額度，
-  再扣圈主的錢包（月額度優先），最後才扣自己其他錢包；交易記來電者的 personId。
+- 免費＝註冊時送一次 5 分鐘（free_allowance 錢包、period "free-once"、不會到期），用完就要訂閱或加買，
+  不會每天／每週再給。「拿過」＝有 "free-signup-trial:<帳號>" 的發點交易、或已經有 free-once 錢包；
+  11/20 以前送的 5 點（舊的購買錢包）也算拿過。有自己付費方案的帳號這時不發。
+- 每個帳號各扣各的：自己的一次性免費 → 自己的方案月額度 → 自己的購買分鐘。
+  （家人圈共用分鐘的扣法 plan_spend(owner_store=...) 還留著，只在 server.FAMILY_SHARED_MINUTES 打開時才會用。）
 """
 
 from __future__ import annotations
@@ -22,38 +22,21 @@ TAIPEI = timezone(timedelta(hours=8))
 FREE_WALLET_TYPE = "free_allowance"
 PAID_PLANS = ("plus", "pro")
 PLAN_MONTHLY_MINUTES = {"plus": 100, "pro": 200}
-DEFAULT_SETTINGS = {
-    "trialDays": 7,
-    "trialDailyMinutes": 10,
-    "reducedDailyMinutes": 5,
-    "weeklyMinutes": 10,
-    "monthlyCapMinutes": 1360,
-}
-_ENV_KEYS = {
-    "trialDays": "MUNEA_FREE_TRIAL_DAYS",
-    "trialDailyMinutes": "MUNEA_FREE_TRIAL_DAILY_MINUTES",
-    "reducedDailyMinutes": "MUNEA_FREE_REDUCED_DAILY_MINUTES",
-    "weeklyMinutes": "MUNEA_FREE_WEEKLY_MINUTES",
-    "monthlyCapMinutes": "MUNEA_FREE_MONTHLY_CAP_MINUTES",
-}
+FREE_ONCE_PERIOD = "free-once"
+SIGNUP_KEY_PREFIX = "free-signup-trial:"
+LEGACY_SIGNUP_REASON = "free_signup_voice_avatar_trial"   # 11/20 以前一次性 5 點的交易原因
+DEFAULT_FREE_ONCE_MINUTES = 5
 
 
-def settings_from_env(env=None):
-    """JSON 後備模式的設定（Supabase 模式讀 free_allowance_settings 那一列）。"""
+def free_once_minutes(env=None):
+    """JSON 後備模式的一次性免費分鐘數（Supabase 模式讀 free_allowance_settings.signup_once_minutes）。"""
     env = os.environ if env is None else env
-    out = dict(DEFAULT_SETTINGS)
-    for key, env_key in _ENV_KEYS.items():
-        raw = str(env.get(env_key) or "").strip()
-        if not raw:
-            continue
-        try:
-            value = float(raw)
-        except ValueError:
-            continue
-        if value < 0:
-            continue
-        out[key] = int(value) if key == "trialDays" else value
-    return out
+    raw = str(env.get("MUNEA_FREE_SIGNUP_MINUTES") or "").strip()
+    try:
+        value = float(raw) if raw else DEFAULT_FREE_ONCE_MINUTES
+    except ValueError:
+        value = DEFAULT_FREE_ONCE_MINUTES
+    return value if value >= 0 else DEFAULT_FREE_ONCE_MINUTES
 
 
 def parse_time(value):
@@ -73,50 +56,18 @@ def iso_z(value):
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def taipei_midnight(day):
-    """台灣日期 → 那天 00:00（台灣時間）的 aware datetime。"""
-    return datetime(day.year, day.month, day.day, tzinfo=TAIPEI)
-
-
 def month_start(now):
     local = now.astimezone(TAIPEI)
     return datetime(local.year, local.month, 1, tzinfo=TAIPEI)
 
 
-def allowance_window(created_at, now, settings=None, month_free_used=0):
-    """現在該領哪一個免費錢包。created_at 抓不到就當舊帳號（直接走每週）。"""
-    settings = {**DEFAULT_SETTINGS, **(settings or {})}
-    now = parse_time(now) or datetime.now(timezone.utc)
-    today = now.astimezone(TAIPEI).date()
-    created = parse_time(created_at)
-    trial_days = int(settings["trialDays"])
-    if created is None:
-        day = trial_days + 1
-    else:
-        day = max(1, (today - created.astimezone(TAIPEI).date()).days + 1)
-    cap_reached = False
-    if day <= trial_days:
-        mode = "free_daily"
-        start = today
-        end = today + timedelta(days=1)
-        cap_reached = float(month_free_used or 0) >= float(settings["monthlyCapMinutes"])
-        amount = settings["reducedDailyMinutes"] if cap_reached else settings["trialDailyMinutes"]
-        period = f"free-daily:{start.isoformat()}"
-    else:
-        mode = "free_weekly"
-        start = today - timedelta(days=today.weekday())  # 週一
-        end = start + timedelta(days=7)
-        amount = settings["weeklyMinutes"]
-        period = f"free-weekly:{start.isoformat()}"
+def free_once_window(amount=None):
+    """免費額度長什麼樣子（跟資料庫 munea_free_allowance_window 同一個格式）。"""
     return {
-        "mode": mode,
-        "trialDay": day if mode == "free_daily" else None,
-        "trialDays": trial_days,
-        "period": period,
-        "amount": float(amount),
-        "startsAt": iso_z(taipei_midnight(start)),
-        "expiresAt": iso_z(taipei_midnight(end)),
-        "capReached": cap_reached,
+        "mode": "free_once",
+        "period": FREE_ONCE_PERIOD,
+        "amount": float(free_once_minutes() if amount is None else amount),
+        "expiresAt": None,
     }
 
 
@@ -127,23 +78,49 @@ def _wallet_active(wallet, now):
     return expires is None or expires > now
 
 
-def free_used_in_month(stores, now):
-    """本月（台灣時間）這些帳本裡、從免費錢包扣掉的分鐘數。"""
+def free_once_received(store, account_id=None):
+    """這個帳本拿過一次性免費沒有（035 起的 free-once 錢包、或 11/20 以前的註冊送點）。"""
+    store = store or {}
+    if find_free_wallet(store, FREE_ONCE_PERIOD):
+        return True
+    for tx in store.get("transactions") or []:
+        if tx.get("type") != "grant":
+            continue
+        key = str(tx.get("idempotencyKey") or "")
+        if key.startswith(SIGNUP_KEY_PREFIX) and (not account_id or key == SIGNUP_KEY_PREFIX + str(account_id)):
+            return True
+        if tx.get("reason") == LEGACY_SIGNUP_REASON:
+            return True
+    return False
+
+
+def free_once_remaining(store, now, account_id=None):
+    """一次性免費還剩多少。11/20 以前的帳號那 5 點放在購買錢包裡，最多算 5。"""
     now = parse_time(now) or datetime.now(timezone.utc)
-    since = month_start(now)
-    total = 0.0
-    for store in stores or []:
-        free_ids = {w.get("id") for w in (store or {}).get("wallets") or [] if w.get("type") == FREE_WALLET_TYPE}
-        for tx in (store or {}).get("transactions") or []:
-            if tx.get("type") != "consume":
-                continue
-            if tx.get("walletType") != FREE_WALLET_TYPE and tx.get("walletId") not in free_ids:
-                continue
-            created = parse_time(tx.get("createdAt"))
-            if created is not None and created < since:
-                continue
-            total += abs(float(tx.get("amount") or 0))
-    return round(total, 4)
+    wallet = find_free_wallet(store, FREE_ONCE_PERIOD)
+    if wallet:
+        return float(wallet.get("balance") or 0) if _wallet_active(wallet, now) else 0.0
+    if not free_once_received(store, account_id):
+        return 0.0
+    purchased = sum(float(w.get("balance") or 0) for w in (store or {}).get("wallets") or []
+                    if w.get("type") == "purchased" and _wallet_active(w, now))
+    return min(float(DEFAULT_FREE_ONCE_MINUTES), purchased)
+
+
+def close_periodic_free_wallets(store, now):
+    """11/20–11/26 發的每日／每週免費錢包：還沒到期的收掉（資料庫那邊是 035 的一次性 update）。回收掉幾個。"""
+    now = parse_time(now) or datetime.now(timezone.utc)
+    closed = 0
+    for wallet in (store or {}).get("wallets") or []:
+        period = str(wallet.get("period") or "")
+        if wallet.get("type") != FREE_WALLET_TYPE or not period.startswith(("free-daily:", "free-weekly:")):
+            continue
+        expires = parse_time(wallet.get("expiresAt"))
+        if expires is None or expires > now:
+            wallet["expiresAt"] = iso_z(now)
+            wallet.setdefault("metadata", {})["closedBy"] = "035_free_once"
+            closed += 1
+    return closed
 
 
 def find_free_wallet(store, period):
@@ -223,32 +200,18 @@ def spendable(store, now, *, exclude_free=False):
     ), 4)
 
 
-def allowance_block(window, store, now, *, paid_plan=None, plan_resets_at=None):
-    """/credits/balance 的 allowance。有自己付費方案＝mode plan。"""
+def allowance_block(store, now, *, paid_plan=None, plan_resets_at=None, account_id=None):
+    """/credits/balance 的 allowance：免費＝{mode: free_once, grant, remaining}；有自己付費方案＝mode plan。"""
     if paid_plan:
-        return {
-            "mode": "plan", "plan": paid_plan, "trialDay": None, "trialDays": None,
-            "todayGrant": None, "todayRemaining": None, "weekGrant": None, "weekRemaining": None,
-            "resetsAt": plan_resets_at,
-        }
-    if not window:
-        return None
+        return {"mode": "plan", "plan": paid_plan, "resetsAt": plan_resets_at}
     now = parse_time(now) or datetime.now(timezone.utc)
-    wallet = find_free_wallet(store, window["period"])
-    grant = float(((wallet or {}).get("metadata") or {}).get("grant") or 0) if wallet else 0.0
-    if wallet and grant <= 0:
-        grant = float(window["amount"])
-    remaining = float(wallet.get("balance") or 0) if wallet and _wallet_active(wallet, now) else 0.0
-    daily = window["mode"] == "free_daily"
+    received = free_once_received(store, account_id)
+    wallet = find_free_wallet(store, FREE_ONCE_PERIOD)
+    grant = float(((wallet or {}).get("metadata") or {}).get("grant") or DEFAULT_FREE_ONCE_MINUTES) if received else 0.0
     return {
-        "mode": window["mode"],
-        "trialDay": window.get("trialDay"),
-        "trialDays": window.get("trialDays"),
-        "todayGrant": as_number(grant) if daily else None,
-        "todayRemaining": as_number(remaining) if daily else None,
-        "weekGrant": None if daily else as_number(grant),
-        "weekRemaining": None if daily else as_number(remaining),
-        "resetsAt": window.get("expiresAt"),
+        "mode": "free_once",
+        "grant": as_number(grant),
+        "remaining": as_number(free_once_remaining(store, now, account_id)),
     }
 
 
