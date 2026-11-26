@@ -3532,3 +3532,31 @@ html:lang(en) #planModal .ppk-ln span, html:lang(es) #planModal .ppk-ln span { d
 #settings[data-layout="b"] .set-b-about[open] .set-b-chev { transform: rotate(90deg); }
 #settings[data-layout="b"] .set-b-about-list { margin-top: 10px; }
 #settings[data-layout="b"] .set-b-about-list .set-row { min-height: 60px; }
+
+/* ── 2026-11-26 質感互動（Edward：「設計感與 2026 的交互閃亮點」，同時要簡單、減法）──
+   不加新東西，只讓現有的東西「有手感」：
+   ① 進場：設定頁的大卡片和四格依序浮上來（每格差 50ms）
+   ② 按壓：按下去微微縮、放開有一點彈回，像實體按鍵
+   ③ 分鐘：數字從 0 滾到現在、剩餘量條滑到現在的位置（app.js）
+   ④ 選方案：選中的卡輕輕彈一下、圓圈像快門一樣收緊；訂閱鈕的字跟著換
+   手機設定「減少動態」時全部關掉。 */
+@keyframes mnRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mnPop { 0% { transform: scale(1); } 35% { transform: scale(1.035); } 100% { transform: scale(1); } }
+#settings.active[data-layout="b"] .set-b-hero,
+#settings.active[data-layout="b"] .set-tiles .set-row { animation: mnRise .5s cubic-bezier(.22,.9,.32,1) both; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(1) { animation-delay: .06s; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(2) { animation-delay: .11s; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(3) { animation-delay: .16s; }
+#settings.active[data-layout="b"] .set-tiles .set-row:nth-child(4) { animation-delay: .21s; }
+#settings .set-row, .plan-btn, .plan-link, .sub-cta, #planModal .ppk {
+  transition: transform .38s cubic-bezier(.34,1.56,.64,1), background-color .15s, border-color .15s, color .15s, box-shadow .2s; }
+#settings .set-row:active, .plan-btn:active, .plan-link:active, .sub-cta:active, #planModal .ppk:active { transform: scale(.97); transition-duration: .08s; }
+#planModal .ppk-radio { transition: border-width .32s cubic-bezier(.34,1.56,.64,1), border-color .2s; }
+#planModal .ppk.mn-pop { animation: mnPop .42s cubic-bezier(.34,1.56,.64,1); }
+#subCta.mn-pop { animation: mnRise .32s cubic-bezier(.22,.9,.32,1); }
+@media (prefers-reduced-motion: reduce) {
+  #settings.active[data-layout="b"] .set-b-hero, #settings.active[data-layout="b"] .set-tiles .set-row,
+  #planModal .ppk.mn-pop, #subCta.mn-pop { animation: none; }
+  #settings .set-row, .plan-btn, .plan-link, .sub-cta, #planModal .ppk, #planModal .ppk-radio { transition: none; }
+  #settings .set-row:active, .plan-btn:active, .plan-link:active, .sub-cta:active, #planModal .ppk:active { transform: none; }
+}

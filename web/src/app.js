@@ -5992,6 +5992,7 @@ function showView(id) {
     }
   }
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+  if (id === 'settings' && window.__muneaReplayPlanCard) window.__muneaReplayPlanCard();   // 每次進設定頁，分鐘數字從 0 滾上來
   if (window.__muneaApplyUserAvatar) window.__muneaApplyUserAvatar();
   setTimeout(refreshHscrollHints, 60); // 分頁切換後重算「右邊還有」提示
   const overlay = OVERLAYS.includes(id);
@@ -10927,6 +10928,14 @@ function init() {
     }
   }
   window.__muneaRenderPlanCard = renderPlanCard;
+  // 2026-11-26 質感互動：進設定頁時，分鐘數字從 0 滾到現在的數字、剩餘量條從 0 滑到現在的位置（減少動態時直接顯示）
+  window.__muneaReplayPlanCard = () => {
+    const big = $('#pcBig');
+    const fill = $('#pcBar i');
+    if (big) big.dataset.shown = '0';
+    if (fill) { fill.style.transition = 'none'; fill.style.width = '0%'; void fill.offsetWidth; fill.style.transition = ''; }
+    requestAnimationFrame(() => { try { renderPlanCard(); } catch (e) {} });
+  };
   // 切換「訂閱方案 / 點數購買」：唯一入口，免費被上面擋住不會走到 points
   function showSubPane(pane) {
     document.querySelectorAll('.sseg-btn').forEach((x, i) => {
@@ -11040,7 +11049,14 @@ function init() {
     _subCyc = b.dataset.cyc; renderSubUI();
   }));
   // 選方案欄
-  document.querySelectorAll('.ppk').forEach(c => c.addEventListener('click', () => { _subPlan = c.dataset.t; renderSubUI(); }));
+  document.querySelectorAll('.ppk').forEach(c => c.addEventListener('click', () => {
+    const changed = _subPlan !== c.dataset.t;
+    _subPlan = c.dataset.t;
+    renderSubUI();
+    if (!changed) return;
+    // 2026-11-26 質感互動：選中的卡輕輕彈一下、訂閱鈕上的字換一下（重新觸發動畫）
+    [c, $('#subCta')].forEach((el) => { if (!el) return; el.classList.toggle('mn-pop', false); void el.offsetWidth; el.classList.add('mn-pop'); });
+  }));
   // ===== 確認欄：畫面寫什麼＝就扣什麼（唯一真相＝_subPlan／_subCyc）=====
   // 舊寫法在開欄當下把方案抄進 _planPick 就不再更新：欄開著時改選方案或月/年繳，
   // 欄位文字與實際扣款會對不上（選 Plus 卻扣 Pro、寫月費卻扣年費）。一律重畫、不留舊值。
