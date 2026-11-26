@@ -47,101 +47,58 @@ class DisabledBackend:
         return False
 
 
-class AllowanceWindowTests(unittest.TestCase):
-    """第幾天、台灣時間跨日、每週一重置、護欄。"""
+class FreeOnceTests(unittest.TestCase):
+    """2026-11-26：免費＝註冊送一次 5 分鐘，沒有天數概念。"""
 
-    def test_day_one_and_day_seven_are_daily_day_eight_is_weekly(self):
-        created = "2026-11-10T02:00:00Z"  # 台灣 11/10 10:00 註冊＝第 1 天
-        day1 = ca.allowance_window(created, "2026-11-10T08:00:00Z")
-        self.assertEqual((day1["mode"], day1["trialDay"], day1["amount"]), ("free_daily", 1, 10))
-        self.assertEqual(day1["period"], "free-daily:2026-11-10")
-        self.assertEqual(day1["expiresAt"], "2026-11-10T16:00:00Z", "台灣時間午夜到期")
-        day7 = ca.allowance_window(created, "2026-11-16T15:59:00Z")  # 台灣 11/16 23:59
-        self.assertEqual((day7["mode"], day7["trialDay"]), ("free_daily", 7))
-        day8 = ca.allowance_window(created, "2026-11-16T16:00:00Z")  # 台灣 11/17 00:00
-        self.assertEqual(day8["mode"], "free_weekly")
-        self.assertIsNone(day8["trialDay"])
-        self.assertEqual(day8["period"], "free-weekly:2026-11-16", "11/17 那週的週一是 11/16")
-        self.assertEqual(day8["amount"], 10)
+    NOW = utc("2026-11-26T05:00:00Z")
 
-    def test_taipei_midnight_not_utc_midnight_starts_the_new_day(self):
-        created = "2026-11-20T15:59:00Z"  # 台灣 11/20 23:59
-        same_utc_date_next_taipei_day = ca.allowance_window(created, "2026-11-20T16:01:00Z")
-        self.assertEqual(same_utc_date_next_taipei_day["trialDay"], 2)
-        self.assertEqual(same_utc_date_next_taipei_day["period"], "free-daily:2026-11-21")
-        before = ca.allowance_window(created, "2026-11-20T15:59:30Z")
-        self.assertEqual((before["trialDay"], before["period"]), (1, "free-daily:2026-11-20"))
+    def test_window_is_free_once_five_never_expires(self):
+        self.assertEqual(ca.free_once_window(), {"mode": "free_once", "period": "free-once", "amount": 5.0, "expiresAt": None})
 
-    def test_weekly_resets_on_taipei_monday(self):
-        old = "2026-07-01T00:00:00Z"
-        sunday_night = ca.allowance_window(old, "2026-11-22T15:59:00Z")  # 台灣 11/22（日）23:59
-        monday = ca.allowance_window(old, "2026-11-22T16:00:00Z")        # 台灣 11/23（一）00:00
-        self.assertEqual(sunday_night["period"], "free-weekly:2026-11-16")
-        self.assertEqual(sunday_night["expiresAt"], "2026-11-22T16:00:00Z")
-        self.assertEqual(monday["period"], "free-weekly:2026-11-23")
+    def test_minutes_configurable_by_env(self):
+        self.assertEqual(ca.free_once_minutes({"MUNEA_FREE_SIGNUP_MINUTES": "3"}), 3)
+        self.assertEqual(ca.free_once_minutes({"MUNEA_FREE_SIGNUP_MINUTES": "x"}), 5)
+        self.assertEqual(ca.free_once_minutes({}), 5)
 
-    def test_unknown_created_at_counts_as_old_account(self):
-        self.assertEqual(ca.allowance_window(None, "2026-11-20T00:00:00Z")["mode"], "free_weekly")
+    def test_received_by_new_wallet_or_legacy_signup(self):
+        self.assertFalse(ca.free_once_received(store_with(), "a"))
+        self.assertTrue(ca.free_once_received(store_with(
+            {"id": "f", "type": "free_allowance", "period": "free-once", "balance": 0, "status": "active"}), "a"))
+        legacy = store_with(purchased(2), transactions=[
+            {"type": "grant", "walletId": "wallet_purchased", "amount": 5, "idempotencyKey": "free-signup-trial:a"}])
+        self.assertTrue(ca.free_once_received(legacy, "a"))
+        self.assertFalse(ca.free_once_received(legacy, "b"), "別的帳號的鍵不算")
 
-    def test_platform_cap_drops_daily_to_five_but_not_weekly(self):
-        created = "2026-11-20T00:00:00Z"
-        capped = ca.allowance_window(created, "2026-11-20T05:00:00Z", month_free_used=1360)
-        self.assertEqual((capped["amount"], capped["capReached"]), (5, True))
-        under = ca.allowance_window(created, "2026-11-20T05:00:00Z", month_free_used=1359)
-        self.assertEqual(under["amount"], 10)
-        weekly = ca.allowance_window("2026-07-01T00:00:00Z", "2026-11-20T05:00:00Z", month_free_used=99999)
-        self.assertEqual(weekly["amount"], 10)
+    def test_daily_allowance_alone_does_not_count_as_received(self):
+        daily = store_with({"id": "d", "type": "free_allowance", "period": "free-daily:2026-11-21", "balance": 0,
+                            "status": "active"}, transactions=[
+            {"type": "grant", "walletId": "d", "amount": 10, "idempotencyKey": "free-allowance:a:free-daily:2026-11-21"}])
+        self.assertFalse(ca.free_once_received(daily, "a"))
 
-    def test_cap_is_configurable_by_env(self):
-        settings = ca.settings_from_env({"MUNEA_FREE_MONTHLY_CAP_MINUTES": "100", "MUNEA_FREE_REDUCED_DAILY_MINUTES": "3"})
-        capped = ca.allowance_window("2026-11-20T00:00:00Z", "2026-11-20T05:00:00Z", settings, month_free_used=100)
-        self.assertEqual(capped["amount"], 3)
-        self.assertEqual(ca.settings_from_env({})["monthlyCapMinutes"], 1360)
+    def test_remaining_caps_legacy_purchased_at_five(self):
+        legacy = store_with(purchased(30), transactions=[
+            {"type": "grant", "walletId": "wallet_purchased", "amount": 5, "reason": "free_signup_voice_avatar_trial"}])
+        self.assertEqual(ca.free_once_remaining(legacy, self.NOW), 5)
 
-    def test_month_usage_counts_only_free_wallet_consumption_in_taipei_month(self):
+    def test_allowance_block_shapes(self):
+        once = store_with({"id": "f", "type": "free_allowance", "period": "free-once", "balance": 3, "status": "active",
+                           "metadata": {"grant": 5}})
+        self.assertEqual(ca.allowance_block(once, self.NOW), {"mode": "free_once", "grant": 5, "remaining": 3})
+        self.assertEqual(ca.allowance_block(store_with(), self.NOW), {"mode": "free_once", "grant": 0, "remaining": 0})
+        self.assertEqual(ca.allowance_block(once, self.NOW, paid_plan="plus", plan_resets_at="2026-12-20T00:00:00Z"),
+                         {"mode": "plan", "plan": "plus", "resetsAt": "2026-12-20T00:00:00Z"})
+
+    def test_close_periodic_wallets(self):
         store = store_with(
-            {"id": "free1", "type": "free_allowance", "period": "free-daily:2026-11-01", "balance": 0, "status": "active"},
-            purchased(5),
-            transactions=[
-                # 台灣 11/1 00:30＝UTC 10/31 16:30 → 算 11 月
-                {"type": "consume", "walletId": "free1", "walletType": "free_allowance", "amount": 4, "createdAt": "2026-10-31T16:30:00Z"},
-                # 台灣 10/31 23:30 → 不算
-                {"type": "consume", "walletId": "free1", "walletType": "free_allowance", "amount": 7, "createdAt": "2026-10-31T15:30:00Z"},
-                # 購買點數 → 不算
-                {"type": "consume", "walletId": "wallet_purchased", "walletType": "purchased", "amount": 9, "createdAt": "2026-11-05T00:00:00Z"},
-            ],
+            {"id": "d", "type": "free_allowance", "period": "free-daily:2026-11-26", "balance": 4,
+             "expiresAt": "2026-11-26T16:00:00Z", "status": "active"},
+            {"id": "w", "type": "free_allowance", "period": "free-weekly:2026-11-23", "balance": 10,
+             "expiresAt": "2026-11-30T16:00:00Z", "status": "active"},
+            {"id": "f", "type": "free_allowance", "period": "free-once", "balance": 5, "status": "active"},
         )
-        self.assertEqual(ca.free_used_in_month([store], "2026-11-20T00:00:00Z"), 4)
-
-
-class FreeWalletTests(unittest.TestCase):
-    def test_daily_wallet_does_not_roll_over(self):
-        store = store_with()
-        day1 = utc("2026-11-20T02:00:00Z")
-        with patch.object(server, "append_credit_transaction", wraps=server.append_credit_transaction):
-            window, created = server.ensure_free_allowance_in_store(store, account_id="a", created_at="2026-11-20T01:00:00Z", now=day1)
-        self.assertTrue(created)
-        self.assertEqual(window["period"], "free-daily:2026-11-20")
-        _, again = server.ensure_free_allowance_in_store(store, account_id="a", created_at="2026-11-20T01:00:00Z", now=day1)
-        self.assertFalse(again, "同一天不會再發")
-        day2 = utc("2026-11-21T02:00:00Z")
-        window2, created2 = server.ensure_free_allowance_in_store(store, account_id="a", created_at="2026-11-20T01:00:00Z", now=day2)
-        self.assertTrue(created2)
-        live = [w for w in store["wallets"] if w["type"] == "free_allowance" and ca.parse_time(w["expiresAt"]) > day2]
-        self.assertEqual(sum(w["balance"] for w in live), 10, "昨天沒用完的不累積")
-        self.assertEqual(window2["period"], "free-daily:2026-11-21")
-
-    def test_guardrail_uses_platform_usage_across_accounts(self):
-        other = store_with(
-            {"id": "f", "type": "free_allowance", "period": "free-daily:2026-11-02", "balance": 0, "status": "active"},
-            transactions=[{"type": "consume", "walletId": "f", "walletType": "free_allowance", "amount": 1360,
-                           "createdAt": "2026-11-02T03:00:00Z"}],
-        )
-        store = store_with()
-        window, _ = server.ensure_free_allowance_in_store(
-            store, account_id="a", created_at="2026-11-20T01:00:00Z", now=utc("2026-11-20T02:00:00Z"), other_stores=[other])
-        self.assertEqual(window["amount"], 5)
-        self.assertEqual(server.credit_wallet_summary(store)["freeAllowance"], 5)
+        self.assertEqual(ca.close_periodic_free_wallets(store, self.NOW), 2)
+        self.assertEqual(ca.close_periodic_free_wallets(store, self.NOW), 0, "重跑不再動")
+        self.assertEqual(server.credit_wallet_summary(store)["freeAllowance"], 5, "只剩一次性那 5 分鐘")
 
     def test_paid_account_gets_no_free_wallet(self):
         store = store_with()
@@ -203,8 +160,9 @@ def share_state(owner_billing=PAID, owner_wallets=None, owner_transactions=None,
     }
 
 
+@patch.object(server, "FAMILY_SHARED_MINUTES", True)
 class JsonFamilyShareTests(unittest.TestCase):
-    """JSON 後備模式端到端：/credits/consume 與 /credits/balance。"""
+    """JSON 後備模式端到端：/credits/consume 與 /credits/balance（共用開著時的舊行為；2026-11-26 起預設關）。"""
 
     def setUp(self):
         self.own = server.default_credits_store()
@@ -260,7 +218,7 @@ class JsonFamilyShareTests(unittest.TestCase):
     def owner_credits(self):
         return self.state["accounts"]["acct-kid"]["credits"]
 
-    def test_member_first_spends_own_weekly_free_then_owner(self):
+    def test_member_first_spends_own_free_then_owner(self):
         def run():
             results = [server.credits_consume_response({"amount": 1, "idempotencyKey": f"call-1:minute:{i}"})
                        for i in range(1, 13)]
@@ -268,11 +226,11 @@ class JsonFamilyShareTests(unittest.TestCase):
         results = self.run_patched(run)
         self.assertTrue(all(r["ok"] for r in results))
         own_free_spent = sum(tx["amount"] for tx in self.own["transactions"] if tx["type"] == "consume")
-        self.assertEqual(own_free_spent, 10, "這週自己的 10 分鐘免費先用完")
+        self.assertEqual(own_free_spent, 5, "自己的一次性 5 分鐘先用完")
         owner_tx = [tx for tx in self.owner_credits()["transactions"] if tx["type"] == "consume"]
-        self.assertEqual(sum(tx["amount"] for tx in owner_tx), 2, "超過的才扣圈主")
+        self.assertEqual(sum(tx["amount"] for tx in owner_tx), 7, "超過的才扣圈主")
         self.assertTrue(all(tx["personId"] == "p-mom" for tx in owner_tx), "圈主帳上記來電者是誰")
-        self.assertEqual(self.owner_credits()["wallets"][0]["balance"], 98)
+        self.assertEqual(self.owner_credits()["wallets"][0]["balance"], 93)
 
     def test_owner_without_paid_plan_member_pays_self(self):
         self.state = share_state(owner_billing=EXPIRED)
@@ -281,7 +239,7 @@ class JsonFamilyShareTests(unittest.TestCase):
         def run():
             return [server.credits_consume_response({"amount": 1, "idempotencyKey": f"c:{i}"}) for i in range(14)]
         results = self.run_patched(run)
-        self.assertEqual(sum(1 for r in results if r["ok"]), 13, "10 免費＋自己 3 點，圈主沒付費不幫付")
+        self.assertEqual(sum(1 for r in results if r["ok"]), 8, "一次性 5 免費＋自己 3 點，圈主沒付費不幫付")
         self.assertEqual(results[-1]["error"]["code"], "insufficient_credits")
         self.assertFalse(any(tx["type"] == "consume" for tx in self.owner_credits()["transactions"]))
 
@@ -314,13 +272,10 @@ class JsonFamilyShareTests(unittest.TestCase):
         ], owner_wallets=[monthly(64, expires="2026-11-30T16:00:00Z")])
         result = self.run_patched(lambda: server.credits_balance_response({}))
         summary = result["walletSummary"]
-        self.assertEqual(summary["freeAllowance"], 10)
+        self.assertEqual(summary["freeAllowance"], 5)
         self.assertEqual(summary["familyShared"], 64)
-        self.assertEqual(summary["total"], 74, "App 用 total 判斷能不能撥，要含圈主的分鐘")
-        allowance = result["allowance"]
-        self.assertEqual(allowance["mode"], "free_weekly")
-        self.assertEqual((allowance["weekGrant"], allowance["weekRemaining"]), (10, 10))
-        self.assertIsNone(allowance["todayGrant"])
+        self.assertEqual(summary["total"], 69, "App 用 total 判斷能不能撥，要含圈主的分鐘")
+        self.assertEqual(result["allowance"], {"mode": "free_once", "grant": 5, "remaining": 5})
         share = result["familyShare"]
         self.assertEqual(share["shared"], True)
         self.assertEqual(share["role"], "member")
@@ -357,23 +312,22 @@ class JsonFamilyShareTests(unittest.TestCase):
         self.assertEqual(result["allowance"]["mode"], "plan")
         self.assertNotIn("familyShared", result["walletSummary"], "圈主自己的錢包本來就在 total 裡")
 
-    def test_new_member_gets_daily_allowance_from_platform(self):
+    def test_new_member_gets_free_once_from_platform(self):
         self.profile["account"]["createdAt"] = server.utc_now()
         result = self.run_patched(lambda: server.credits_balance_response({}))
-        self.assertEqual(result["allowance"]["mode"], "free_daily")
-        self.assertEqual(result["allowance"]["trialDay"], 1)
-        self.assertEqual((result["allowance"]["todayGrant"], result["allowance"]["todayRemaining"]), (10, 10))
+        self.assertEqual(result["allowance"], {"mode": "free_once", "grant": 5, "remaining": 5})
         self.assertEqual(result["familyShare"]["role"], "member")
 
     def test_free_account_not_in_any_circle_has_no_family_share(self):
         self.state = share_state(memberships=[])
         result = self.run_patched(lambda: server.credits_balance_response({}))
         self.assertIsNone(result["familyShare"])
-        self.assertEqual(result["walletSummary"]["total"], 10)
+        self.assertEqual(result["walletSummary"]["total"], 5)
 
 
+@patch.object(server, "FAMILY_SHARED_MINUTES", True)
 class SupabaseStatusTests(unittest.TestCase):
-    """Supabase 模式：狀態來自 munea_credit_share_status，名字由後端從家人圈顯示名補。"""
+    """Supabase 模式：狀態來自 munea_credit_share_status，名字由後端從家人圈顯示名補（共用開著時）。"""
 
     class Backend:
         def __init__(self, statuses, circle=None):
@@ -452,7 +406,85 @@ class EntitlementsCapabilityTests(unittest.TestCase):
     def test_capability_flag_for_frontend(self):
         with patch.object(server, "load_billing_store", return_value=server.normalize_billing_store({})):
             response = server.entitlements_response({})
-        self.assertIs(response["capabilities"]["familySharedMinutes"], True)
+        self.assertIs(response["capabilities"]["familySharedMinutes"], False, "2026-11-26 起分鐘各帳號各扣")
+        self.assertIs(response["capabilities"]["freeOnce"], True, "App 讀 allowance.mode=free_once")
+
+
+class PerAccountMinutesTests(unittest.TestCase):
+    """2026-11-26 Edward：「每個帳號各扣各的分鐘 當然要」——預設（FAMILY_SHARED_MINUTES=False）的行為。"""
+
+    def setUp(self):
+        JsonFamilyShareTests.setUp(self)
+
+    patches = JsonFamilyShareTests.patches
+    run_patched = JsonFamilyShareTests.run_patched
+    owner_credits = JsonFamilyShareTests.owner_credits
+
+    def test_switch_is_off_by_default(self):
+        self.assertIs(server.FAMILY_SHARED_MINUTES, False)
+
+    def test_member_in_paid_circle_only_spends_own_minutes(self):
+        def run():
+            return [server.credits_consume_response({"amount": 1, "idempotencyKey": f"call-1:minute:{i}"})
+                    for i in range(1, 13)]
+        results = self.run_patched(run)
+        self.assertEqual(sum(1 for r in results if r["ok"]), 5, "只有自己那一次性 5 分鐘")
+        self.assertEqual(results[-1]["error"]["code"], "insufficient_credits")
+        self.assertFalse(any(tx["type"] == "consume" for tx in self.owner_credits()["transactions"]), "不扣圈主")
+        self.assertEqual(self.owner_credits()["wallets"][0]["balance"], 100)
+        self.assertEqual(self.saved_owner, {})
+
+    def test_member_balance_has_no_family_share_and_total_is_own(self):
+        result = self.run_patched(lambda: server.credits_balance_response({}))
+        self.assertIsNone(result["familyShare"])
+        self.assertNotIn("familyShared", result["walletSummary"])
+        self.assertEqual(result["walletSummary"]["total"], 5)
+        self.assertEqual(result["allowance"], {"mode": "free_once", "grant": 5, "remaining": 5})
+
+    def test_balance_after_free_used_up_is_zero_not_refilled(self):
+        self.run_patched(lambda: [server.credits_consume_response({"amount": 1, "idempotencyKey": f"k{i}"}) for i in range(5)])
+        result = self.run_patched(lambda: server.credits_balance_response({}))
+        self.assertEqual(result["allowance"], {"mode": "free_once", "grant": 5, "remaining": 0})
+        self.assertEqual(result["walletSummary"]["total"], 0)
+        self.assertIsNone(result["familyShare"])
+
+    def test_owner_spends_own_monthly_and_sees_plan_without_share(self):
+        self.profile = {"account": {"id": "acct-kid", "createdAt": "2026-07-01T00:00:00Z"},
+                        "primaryCareRecipientId": "p-kid", "familyGroup": {"id": "fg-kid"}}
+        self.billing = server.normalize_billing_store(PAID)
+        self.own["wallets"] = [monthly(100)]
+        consumed = self.run_patched(lambda: server.credits_consume_response({"amount": 1, "idempotencyKey": "k"}))
+        self.assertTrue(consumed["ok"])
+        self.assertEqual(server.credit_wallet_summary(self.own)["includedMonthly"], 99)
+        result = self.run_patched(lambda: server.credits_balance_response({}))
+        self.assertIsNone(result["familyShare"])
+        self.assertEqual(result["allowance"]["mode"], "plan")
+
+    def test_supabase_status_from_db_before_035_is_not_passed_through(self):
+        backend = SupabaseStatusTests.Backend([SupabaseStatusTests.sql_status(None, "member")])
+        result = SupabaseStatusTests.run_balance(None, backend)
+        self.assertIsNone(result["familyShare"], "035 還沒套用時，後端也不轉給 App")
+        self.assertNotIn("familyShared", result["walletSummary"])
+        self.assertEqual(result["walletSummary"]["total"], 8, "只有自己的 8 分鐘，不加圈主的 64")
+        self.assertEqual(result["allowance"]["todayRemaining"], 8)
+
+    def test_supabase_free_once_old_app_total_includes_one_time_minutes(self):
+        """商店上的舊 App 不認得 free_once，會用 walletSummary.total 判斷能不能撥——total 要含一次性免費的剩餘。"""
+        class Backend(SupabaseStatusTests.Backend):
+            pass
+        status = {"allowance": {"mode": "free_once", "grant": 5, "remaining": 3}, "familyShare": None, "sharedSpendable": 0}
+        own = server.normalize_credits_store({"wallets": [
+            {"id": "w-once", "type": "free_allowance", "period": "free-once", "balance": 3, "status": "active",
+             "metadata": {"grant": 5}},
+        ]})
+        with patch.object(server, "data_backend", return_value=Backend([status])),              patch.object(server, "data_backend_status", return_value={"provider": "supabase"}),              patch.object(server, "ensure_current_monthly_allowance", return_value=None),              patch.object(server, "load_credits_store", return_value=own):
+            result = server.credits_balance_response({})
+        self.assertEqual(result["allowance"], {"mode": "free_once", "grant": 5, "remaining": 3})
+        self.assertEqual((result["walletSummary"]["freeAllowance"], result["walletSummary"]["total"]), (3, 3))
+        own["wallets"][0]["balance"] = 0
+        with patch.object(server, "data_backend", return_value=Backend([{**status, "allowance": {**status["allowance"], "remaining": 0}}])),              patch.object(server, "data_backend_status", return_value={"provider": "supabase"}),              patch.object(server, "ensure_current_monthly_allowance", return_value=None),              patch.object(server, "load_credits_store", return_value=own):
+            empty = server.credits_balance_response({})
+        self.assertEqual(empty["walletSummary"]["total"], 0, "用完了舊 App 也撥不出去")
 
 
 class AdapterWalletTypeTests(unittest.TestCase):
