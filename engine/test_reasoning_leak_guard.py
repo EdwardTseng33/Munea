@@ -79,7 +79,10 @@ class ReplyConvOutputIsCleanedTests(unittest.TestCase):
     server.reply_conv() 回傳給使用者的文字已經被清乾淨。"""
 
     def setUp(self):
-        server.REQUEST_DATA_IDENTITY.set({"personId": "reasoning-guard-test-person"})
+        # 一定要 reset：沒 reset 的話這個身分會一路留到後面別的測試檔
+        # （例：test_safety_contacts_notify 存推播裝置被改成這個人、查通知被濾掉）。
+        token = server.REQUEST_DATA_IDENTITY.set({"personId": "reasoning-guard-test-person"})
+        self.addCleanup(server.REQUEST_DATA_IDENTITY.reset, token)
 
     def test_reply_conv_strips_leak_before_returning(self):
         fake_response = type(
