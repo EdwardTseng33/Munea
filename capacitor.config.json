@@ -14,6 +14,17 @@
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER",
       "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_munea_reminder",
+      "iconColor": "#3AA8A0"
     }
+  },
+  "ios": {
+    "includePlugins": [
+      "@capacitor/app",
+      "@capacitor/browser",
+      "@capacitor/splash-screen"
+    ]
   }
 }

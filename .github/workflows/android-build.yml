@@ -25,6 +25,8 @@ on:
       - "scripts/android-ui-tap-by-text.py"
       - "scripts/android-launcher-icon-check.py"
       - "scripts/android-flow-smoke.sh"
+      - "scripts/android-reminder-smoke.sh"
+      - "scripts/android-webview-eval.mjs"
       - "scripts/enable-ios-development-profile.mjs"
       - "capacitor.config.json"
       - "package.json"
@@ -273,5 +275,59 @@ jobs:
         with:
           name: munea-android-flows-${{ github.run_number }}
           path: flows-shots/
+          if-no-files-found: warn
+          retention-days: 14
+
+  # 2026-11-20 補助案 B2「提醒」流程：Android 以前沒有系統通知，App 關著提醒不會響。
+  # 這關用 build job 那顆正式設定的 debug APK（沒登入、沒有任何鑰匙），走使用者真的會走的路：
+  # App 說明卡→系統問通知權限點「允許」→ 排一個約 2 分鐘後的用藥提醒 → 回桌面結束 App 行程 →
+  # 等通知跳出來、截圖 → 點通知確認打開用藥頁 → 再排一個、重開機不開 App、等它跳出來。
+  # 細節與為什麼用 am kill 不用 force-stop 寫在 scripts/android-reminder-smoke.sh 開頭。
+  reminder-smoke:
+    name: 提醒流程（App 關著也會響、重開機後還在；B2 查核點）
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # android-webview-eval.mjs 用 Node 22 內建的 WebSocket 接 WebView 偵錯
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: munea-android-debug-${{ github.run_number }}
+          path: ./apk-download
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run reminder flow (schedule → close App → notification → tap → reboot)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash scripts/android-reminder-smoke.sh ./apk-download/app-debug.apk
+
+      - name: Upload reminder flow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: munea-android-reminder-${{ github.run_number }}
+          path: reminder-shots/
           if-no-files-found: warn
           retention-days: 14

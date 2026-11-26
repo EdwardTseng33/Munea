@@ -1,0 +1,28 @@
+// 雲端真機（Firebase Test Lab）用的測試包（2026-11-20，補助案 B2「5 款以上實機」）。
+// 為什麼獨立一個模組、不用 app/src/androidTest：一般 androidTest 跟 App 在「同一個行程」，
+// 測試要把 App 行程結束（模擬使用者滑掉 App）時，測試自己也被殺掉。這裡設成「自帶行程」
+// （self-instrumenting），測試跑在自己的行程，可以開 App、殺 App、等通知、點通知。
+// 建置：./gradlew :app:assembleDebug :reminder-test:assembleDebug
+// 測試包裡不放任何帳號密碼；之後要登入的測試，參數從 gcloud --environment-variables 傳進 getArguments()。
+plugins {
+    id 'com.android.test'
+}
+
+android {
+    namespace = "net.munea.app.remindertest"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    targetProjectPath = ":app"
+    experimentalProperties["android.experimental.self-instrumenting"] = true
+}
+
+dependencies {
+    implementation "junit:junit:$junitVersion"
+    implementation "androidx.test.ext:junit:$androidxJunitVersion"
+    implementation "androidx.test:runner:1.7.0"
+    implementation "androidx.test.uiautomator:uiautomator:2.3.0"
+}

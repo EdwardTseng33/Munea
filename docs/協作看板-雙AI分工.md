@@ -1,5 +1,14 @@
 # 沐寧 Munea · 雙 AI 協作看板
 
+### 2026-11-20 蘇菲｜🔔 Android 提醒：App 關著也會響、點開到對應畫面、重開機後還在（補助案 B2 · Draft PR #735 · call-path risk 低：不碰聊聊／語音，動 App 共用的 notify.js 與 Android 打包設定 · 真機待驗）
+
+- **為什麼**：Android 以前沒有系統通知（原生只有 KeepAwake、manifest 沒通知權限、notify.js 在 Android 上 plugin() 永遠是 null），App 關著吃藥／看診提醒不會響，B2「提醒」流程過不了。
+- **改法**：官方 `@capacitor/local-notifications` 8.3.1（對上 Capacitor 8）由新檔 `web/src/notify-android.js` 包成跟 iOS Notify 一樣的介面，notify.js 在 Android 上直接用它（排什麼、分類開關、鎖定畫面不顯示藥名都沿用）。每天固定的提醒展開成 14 天單次提醒（外掛的「每天重複」第二次起用不叫醒手機的鬧鐘）；過去時間不排；只取消自己排的；最多 120 則。權限只在「開通知」時問（說明卡或通知中心總開關）；被拒時講「手機設定」（四語），按了直接跳沐寧的通知設定頁（新 `NotificationSettingsPlugin.java`）。**不用精準鬧鐘**：manifest 移除 `SCHEDULE_EXACT_ALARM`、每則 `isExactNotification:false`——可能晚幾分鐘，但不會把長輩帶去「鬧鐘與提醒」設定頁、也不碰 Play 精準鬧鐘政策。iOS 用 `ios.includePlugins` 白名單不裝這個外掛（Package.swift 不變），`ios-capacitor-parts-check.sh` 同步改、漏列新外掛會紅。
+- **證據**：新 `scripts/test-android-local-notifications.js`（掛在 test-notification-platform.js）：假外掛跑轉接層＋notify.js 在 Android／iPhone 各真跑一遍（iPhone 送出的項目不變、絕不走新外掛）；突變 7 種全紅；`npm run test:launch` 全過。**雲端模擬器實跑（Android Build #178，run 44739202438）全綠**：App 說明卡→系統視窗點「允許」→ 排 2 分鐘後的藥（14 則）→ 回桌面、App 行程結束（pidof 查不到）→ 通知跳出（晚 85 秒）→ 點通知打開到用藥頁 → 再排一個、重開機不開 App → 照樣跳出（晚 159 秒）。截圖與紀錄存在補助案資料夾 `驗收證據/3-116年3月/B2/提醒流程-模擬器-20261120/`（不入庫）。第一輪紅燈是測試本身：新裝 App 的開場三頁蓋住說明卡、點字工具把「Yes, turn on」照逗號拆開點錯，權限從沒被問到；已修測試，功能沒改。
+- **沒做／待驗**：Android 實機（三星、小米等會殺背景的廠牌要特別看）＋ iPhone 通知回歸；遠端推播（Firebase）不在這張。
+- **會撞**：#696／#703 也改 `notify.js?v=` 那一行與 `test-notification-platform.js` 版本那一行，合併時留任一新字串。
+- **檔**：`web/src/notify-android.js`（新）、`web/src/notify.js`、`web/index.html`、`web/src/i18n/{zh-TW,en,ja,es}.json`、`android/app/src/main/AndroidManifest.xml`、`android/app/src/main/java/net/munea/app/{MainActivity,NotificationSettingsPlugin}.java`、`android/app/src/main/res/drawable/ic_stat_munea_reminder.xml`（新）、`android/capacitor.settings.gradle`、`android/app/capacitor.build.gradle`、`capacitor.config.json`、`package.json`、`package-lock.json`、`scripts/ios-capacitor-parts-check.sh`、`scripts/test-android-local-notifications.js`（新）、`scripts/test-notification-platform.js`、`scripts/test-i18n-surface-inventory.js`、`docs/I18N-SURFACE-INVENTORY.json`、`scripts/android-reminder-smoke.sh`（新）、`scripts/android-webview-eval.mjs`（新）、`.github/workflows/android-build.yml`、本看板。
+
 ### 2026-11-18 蘇菲｜🛡️ #728 複審：AI 讀完後長輩又說的話等到第二層的上限、沒判完計次告警、受暴類摘要也套受暴步驟（Draft PR #729 · call-path risk 中：只動亮燈後的背景決定與後台畫面）
 
 - **為什麼**：#728 已合併（6e394f7e）。沙利曼複審留下：🟡「AI 讀完之後長輩又說的話」只等 4 秒就放棄，第二層判讀本身最多要 12 秒；🟡 等不到而擋下只留一行診斷；🟢 後台從對話摘要來的列，標籤有受暴類時步驟還是「聯繫家庭圈指定的人」。

@@ -22,7 +22,7 @@ assert(entitlements.includes('aps-environment'), 'Push entitlement is required')
 assert(project.includes('com.apple.Push'), 'Xcode target must enable Push Notifications capability');
 assert(project.includes('APS_ENVIRONMENT = development') && project.includes('APS_ENVIRONMENT = production'), 'Debug and release APNs environments must be explicit');
 assert(web.includes("api('/push/devices'"), 'Web bridge must register device tokens with the backend');
-assert(html.includes('src/notify.js?v=20261120-appkey2'), 'Notification UI changes must invalidate the stale WebView script cache');
+assert(html.includes('src/notify.js?v=20261126-android1-v1073'), 'Notification UI changes must invalidate the stale WebView script cache');
 assert(web.includes("api('/notifications'"), 'Web bridge must mark opened notifications in the durable inbox');
 assert(web.includes('notificationInboxModal') && web.includes('openNotificationInbox'), 'App must expose a durable notification inbox');
 assert(web.includes("api('/notifications/settings'") && web.includes("action: 'set'"), 'Notification switches must persist through the backend settings API');
@@ -95,7 +95,8 @@ assert(
 // 才用一句人話問要不要開通知，不在開 App 就先問。
 assert(web.includes('async function askInContext(reasonKey)'), 'A shared ask-in-context entry point must exist so other features (e.g. emergency contacts) can trigger it');
 assert(web.includes('askInContext: askInContext'), 'askInContext must be exposed on window.MuneaNotify for other scripts to call');
-assert(web.includes("if (!plugin()) return;") && web.includes('askInContext'), 'Android/web without the native plugin must end askInContext quietly, with no card shown');
+assert(web.includes("if (!plugin()) return;") && web.includes('askInContext'), 'A browser without any native plugin must end askInContext quietly, with no card shown');
+assert(web.includes('window.MuneaAndroidNotify') && web.includes("'notification.android.deniedHint'"), 'Android must get the in-context ask too, with phone-settings (not iPhone) wording when denied');
 assert(web.includes('if (notificationMasterOn()) return;'), 'Already-enabled devices must not be asked again');
 assert(web.includes("_permission.status === 'denied'") && web.includes('notification.askInContext.deniedHint'), 'A denied iOS permission must fall back to a gentle hint instead of the explanation card');
 assert(web.includes('ASK_IN_CONTEXT_THROTTLE_MS') && web.includes('7 * 24 * 60 * 60 * 1000'), 'A declined (or hinted) reason must stay quiet for 7 days before asking again');
@@ -118,3 +119,6 @@ assert(appWeb.includes("window.MuneaNotify.askInContext('clinic')"), 'A successf
 assert(appWeb.includes('window.__muneaToast = toast;'), 'app.js must expose its toast() so notify.js (a separate, non-module script) can reuse the same gentle-hint UI');
 
 console.log('Notification platform native/web contract: ALL PASS');
+
+// 2026-11-20 補助案 B2：Android 本機提醒（官方 local-notifications 包成跟 iOS Notify 同一套介面）
+require('./test-android-local-notifications.js');

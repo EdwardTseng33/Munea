@@ -39,9 +39,26 @@ window.MuneaNotify = (function () {
       .replace(/'/g, '&#39;');
   }
 
+  // iOS＝App 自己的原生外掛 Notify；Android＝notify-android.js 把官方本機通知外掛包成同一套介面
+  // （2026-11-20 補助案 B2：以前 Android 這裡永遠是 null，App 關著提醒不會響）。
   function plugin() {
-    return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Notify) || null;
+    var ios = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Notify;
+    if (ios) return ios;
+    var android = window.MuneaAndroidNotify;
+    return android && typeof android.available === 'function' && android.available() ? android : null;
   }
+
+  function nativePlatform() {
+    try {
+      var cap = window.Capacitor;
+      var name = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : '';
+      if (name === 'android' || name === 'ios') return name;
+    } catch (e) {}
+    return isNative() ? 'ios' : 'web';
+  }
+
+  // 權限被拒時的說明要講對手機：iPhone 的字串原封不動，Android 換成「手機設定」版本。
+  function isAndroid() { return nativePlatform() === 'android'; }
 
   function isNative() {
     try { return !!(window.Capacitor && (window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : true)); }
@@ -84,7 +101,7 @@ window.MuneaNotify = (function () {
       void api('/product-event', {
         eventName: eventName,
         source: 'push-notify',
-        properties: Object.assign({ platform: isNative() ? 'ios' : 'web' }, properties || {})
+        properties: Object.assign({ platform: nativePlatform() }, properties || {})
       });
     } catch (e) {}
   }
@@ -524,10 +541,14 @@ window.MuneaNotify = (function () {
     var permissionMessage = page.querySelector('#notificationPermissionMessage');
     if (permissionMessage) {
       permissionMessage.textContent = _permission.status === 'denied'
-        ? t('notification.denied', '通知已被 iPhone 設定關閉。請開啟設定後再試一次。')
+        ? (isAndroid()
+          ? t('notification.android.denied', '這支手機的設定關掉了沐寧的通知，提醒不會跳出來。可以到手機設定打開。')
+          : t('notification.denied', '通知已被 iPhone 設定關閉。請開啟設定後再試一次。'))
         : (masterOn
           ? t('notification.pushOn', '重要提醒會送到這支手機')
-          : t('notification.permissionPrompt', '開啟時才會詢問 iPhone 通知權限'));
+          : (isAndroid()
+            ? t('notification.android.permissionPrompt', '開啟時，手機會問你要不要允許沐寧通知')
+            : t('notification.permissionPrompt', '開啟時才會詢問 iPhone 通知權限')));
     }
     var contactsState = page.querySelector('#notificationSafetyContactsState');
     if (contactsState) {
@@ -604,10 +625,12 @@ window.MuneaNotify = (function () {
           if (!_permission.granted && _permission.status !== 'denied') await requestPermission();
           if (!_permission.granted) {
             setEnableIntent();
-            if (message) message.textContent = t(
-              'notification.allowInSettings',
-              '請在 iPhone 設定中允許沐寧通知；回到沐寧會自動開啟'
-            );
+            if (message) message.textContent = isAndroid()
+              ? t('notification.android.allowInSettings', '請在手機設定裡允許沐寧通知；回到沐寧會自動開啟')
+              : t(
+                'notification.allowInSettings',
+                '請在 iPhone 設定中允許沐寧通知；回到沐寧會自動開啟'
+              );
             await window.MuneaNotify.openSettings();
             return;
           }
@@ -963,7 +986,7 @@ window.MuneaNotify = (function () {
   // 結果正式環境 0 台裝置登記，吃藥提醒推播、家人消息全都送不到。改成在「剛做完一件看得懂
   // 為什麼要開通知」的當下才問：先出一張 App 自己的說明卡（不是系統視窗），按「好」才真的去
   // 跑系統授權流程；按「先不要」同一個理由 7 天內不再問；iOS 已經 denied 就不再跳說明卡，
-  // 改成溫和提示可以去系統設定開。Android／瀏覽器沒有這支原生外掛（iOS-only），直接安靜結束。
+  // 改成溫和提示可以去系統設定開。Android 走 notify-android.js（2026-11-20 起）；瀏覽器沒有原生外掛，直接安靜結束。
   var ASK_IN_CONTEXT_THROTTLE_PREFIX = 'munea.notification.askInContext.';
   var ASK_IN_CONTEXT_THROTTLE_MS = 7 * 24 * 60 * 60 * 1000;
   function askInContextThrottled(reasonKey) {
@@ -1013,7 +1036,7 @@ window.MuneaNotify = (function () {
   // requestPermission／enablePushNow），差別只是觸發時機不同；拿不到授權就記「想開」意向，
   // 使用者之後去 iPhone 設定打開、回到沐寧會自動接上（既有 resumePermissionSync 機制）。
   async function askInContext(reasonKey) {
-    if (!plugin()) return;                  // Android／瀏覽器沒有這支原生外掛，安靜結束
+    if (!plugin()) return;                  // 瀏覽器沒有原生外掛，安靜結束
     if (notificationMasterOn()) return;      // 已經開了，什麼都不用做
     await refreshPermission();
     if (_permission.status === 'denied') {
@@ -1021,7 +1044,9 @@ window.MuneaNotify = (function () {
       setAskInContextThrottle(reasonKey);
       reportPushDiagnostic('push_ask_denied_hint_shown', { reason: reasonKey });
       if (typeof window.__muneaToast === 'function') {
-        window.__muneaToast(t('notification.askInContext.deniedHint', '通知目前是關閉的，可以到 iPhone 設定裡打開'));
+        window.__muneaToast(isAndroid()
+          ? t('notification.android.deniedHint', '通知目前是關閉的，提醒不會跳出來。可以到手機設定裡打開')
+          : t('notification.askInContext.deniedHint', '通知目前是關閉的，可以到 iPhone 設定裡打開'));
       }
       return;
     }

@@ -31,6 +31,13 @@ PACKAGE_SWIFT="ios/App/CapApp-SPM/Package.swift"
 # Platform and tooling packages that never appear as path entries in Package.swift.
 NON_PLUGIN_PARTS="core cli ios android"
 
+# Android-only plugins (2026-11-20): kept out of iOS on purpose via capacitor.config.json
+# ios.includePlugins. iOS keeps its own native NotifyPlugin for local reminders; the official
+# local-notifications plugin would compete for the iOS notification delegate.
+# Any runtime plugin that is neither here nor in ios.includePlugins fails the check, so a new
+# plugin cannot be silently left out of the iOS build by the allowlist.
+ANDROID_ONLY_PARTS="local-notifications"
+
 ALL_PARTS="$(node -p "
   const pkg = require('./package.json');
   Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
@@ -43,15 +50,36 @@ ALL_PARTS="$(node -p "
 PLUGIN_PARTS="$(node -p "
   const pkg = require('./package.json');
   const nonPlugins = new Set('$NON_PLUGIN_PARTS'.split(' '));
+  const androidOnly = new Set('$ANDROID_ONLY_PARTS'.split(' '));
   Object.keys(pkg.dependencies || {})
     .filter((name) => name.startsWith('@capacitor/'))
     .map((name) => name.slice('@capacitor/'.length))
-    .filter((name) => !nonPlugins.has(name))
+    .filter((name) => !nonPlugins.has(name) && !androidOnly.has(name))
+    .sort()
+    .join(' ')
+")"
+
+# Runtime plugins missing from ios.includePlugins (when the allowlist exists) and not Android-only.
+IOS_ALLOWLIST_GAPS="$(node -p "
+  const pkg = require('./package.json');
+  const config = require('./capacitor.config.json');
+  const allow = config.ios && Array.isArray(config.ios.includePlugins) ? new Set(config.ios.includePlugins) : null;
+  const nonPlugins = new Set('$NON_PLUGIN_PARTS'.split(' '));
+  const androidOnly = new Set('$ANDROID_ONLY_PARTS'.split(' '));
+  Object.keys(pkg.dependencies || {})
+    .filter((name) => name.startsWith('@capacitor/'))
+    .filter((name) => !nonPlugins.has(name.slice('@capacitor/'.length)))
+    .filter((name) => allow && !allow.has(name) && !androidOnly.has(name.slice('@capacitor/'.length)))
     .sort()
     .join(' ')
 ")"
 
 FAILED=0
+
+if [ -n "$IOS_ALLOWLIST_GAPS" ]; then
+  echo "FAIL capacitor.config.json ios.includePlugins is missing: $IOS_ALLOWLIST_GAPS. Add it there (or to ANDROID_ONLY_PARTS if it must stay out of iOS)."
+  FAILED=1
+fi
 
 if [ "$STAGE" = "pre-sync" ] || [ "$STAGE" = "all" ]; then
   for part in $ALL_PARTS; do
