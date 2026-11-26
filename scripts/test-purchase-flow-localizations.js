@@ -167,22 +167,22 @@ const policyPatterns = {
   'zh-TW': {
     monthly: /不會累積/,
     purchased: /不會到期/,
-    trial: /前 7 天每天可以聊 10 分鐘/,
+    trial: /登入後送你 5 分鐘/,
   },
   en: {
     monthly: /do not roll over/i,
     purchased: /do not expire/i,
-    trial: /10 minutes a day for the first 7 days/i,
+    trial: /get 5 minutes/i,
   },
   ja: {
     monthly: /繰り越されません/,
     purchased: /有効期限はありません/,
-    trial: /最初の7日間は毎日10分/,
+    trial: /5分プレゼント/,
   },
   es: {
     monthly: /no se acumulan/i,
     purchased: /no caducan/i,
-    trial: /10 minutos al día durante los primeros 7 días/i,
+    // 2026-11-26 免費改成「登入送一次 5 分鐘」；西班牙文 11/20 起 Edward 說先放著不更新，所以不檢查這句
   },
 };
 
@@ -191,7 +191,7 @@ for (const locale of LOCALES) {
   const patterns = policyPatterns[locale];
   assert.match(catalog['subscription.monthlyCreditsBody'], patterns.monthly);
   assert.match(catalog['subscription.purchasedCreditsBody'], patterns.purchased);
-  assert.match(catalog['subscription.freeTrial'], patterns.trial);
+  if (patterns.trial) assert.match(catalog['subscription.freeTrial'], patterns.trial);
 }
 
 console.log(

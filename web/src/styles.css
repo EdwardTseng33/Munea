@@ -3324,41 +3324,30 @@ html:lang(ja) {
 
 /* ── P3／P4 設定頁方案卡 ── */
 #planCard:not([data-mode="legacy"]) { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
-#planCard[data-mode="legacy"] .pc-modern, #planCard[data-mode="legacy"] .pc-dayrow, #planCard[data-mode="legacy"] .pc-share, #planCard[data-mode="legacy"] .pc-free,
+#planCard[data-mode="legacy"] .pc-modern, #planCard[data-mode="legacy"] .pc-bar,
 #planCard:not([data-mode="legacy"]) .pc-legacy,
-#planCard:not([data-mode="trial"]) .pc-dayrow,
-#planCard:not([data-mode="share"]) .pc-share,
-#planCard[data-mode="share"] .pc-free { display: none !important; }
+#planCard:not([data-mode="plan"]) .pc-bar { display: none !important; }
 #planCard .pc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.4; }
 #planCard .pc-head-meta { flex: none; color: var(--muted); font-weight: 600; }
+#planCard .pc-head-meta:empty { display: none; }
 /* 11/25 Edward：這行 30–34px 比頁面大標還大、在 App 裡太突兀 → 照字體規範當卡片標題 20/700；只有數字用 Poppins 深薄荷稍大 */
 #planCard .pc-big { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.3; }
 #planCard .pc-big .pc-num { font-family: var(--display); font-size: 24px; font-weight: 800; color: var(--teal-dd); margin: 0 2px; font-variant-numeric: tabular-nums; }
 #planCard .pc-big small { font-family: var(--sans); font-size: 17px; font-weight: 600; color: var(--ink-2); }
-/* 11/25 Edward「簡單一點／減法設計／但要有質感」：七格與剩餘量條都改細（8px）、圓角收乾淨；
-   今天那格輕輕呼吸一次、剩餘量條從上次的位置滑到新位置；系統「減少動態」時全部不動 */
-#planCard .pc-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-#planCard .pc-days i { height: 8px; border-radius: 999px; background: var(--mint-2); }
-#planCard .pc-days i.done { background: var(--btn-green); }
-#planCard .pc-days i.now { background: var(--btn-green); opacity: .45; animation: pcNow 2.4s ease-in-out infinite; }
-@keyframes pcNow { 0%, 100% { opacity: .45; } 50% { opacity: .9; } }
-#planCard .pc-note { font-size: 15px; color: var(--muted); line-height: 1.5; margin: 0; }
-#planCard .pc-note:empty { display: none; }
+/* 11/25–26 Edward「簡單一點／減法設計／但要有質感」：有訂閱才有一條細的剩餘量條（8px），從上次的位置滑到新位置；系統「減少動態」時不動 */
 #planCard .pc-bar { height: 8px; border-radius: 999px; background: var(--mint-2); overflow: hidden; }
 #planCard .pc-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--btn-green), var(--teal)); transition: width .6s cubic-bezier(.22,.8,.3,1); }
-@media (prefers-reduced-motion: reduce) { #planCard .pc-days i.now { animation: none; opacity: .7; } #planCard .pc-bar i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #planCard .pc-bar i { transition: none; } }
 #planCard:not([data-mode="legacy"]) .plan-actions { margin: 2px 0 0; }
-#planCard[data-mode="trial"] #managePlanBtn, #planCard[data-mode="weekly"] #managePlanBtn, #planCard[data-mode="share"] #topUpBtn {
+#planCard[data-mode="free"] #managePlanBtn, #planCard[data-mode="plan"] #topUpBtn {
   flex: 1 1 auto; width: 100%; min-height: 56px; border: none; border-radius: 16px; background: var(--btn-green); color: #fff;
   font-family: var(--display); font-weight: 700; font-size: 19px; box-shadow: 0 10px 22px -8px rgba(58,168,160,.55); }
-#planCard[data-mode="trial"] #topUpBtn, #planCard[data-mode="weekly"] #topUpBtn, #planCard[data-mode="share"] #managePlanBtn { display: none !important; }
+#planCard[data-mode="free"] #topUpBtn, #planCard[data-mode="plan"] #managePlanBtn { display: none !important; }
 #planCard:not([data-mode="legacy"]) .plan-links { gap: 0 18px; margin-top: 0; }
 #planCard:not([data-mode="legacy"]) .plan-link { min-height: 48px; padding: 0 6px; background: none; color: var(--teal-dd); font-size: 16px; font-weight: 600; opacity: 1; }
 #planCard[data-mode="legacy"] #planChangeBtn,
-#planCard[data-mode="trial"] #planChangeBtn, #planCard[data-mode="trial"] #planCancelBtn,
-#planCard[data-mode="weekly"] #planChangeBtn, #planCard[data-mode="weekly"] #planCancelBtn,
-#planCard[data-mode="share"] #seatCodeEntry,
-#planCard[data-mode="share"][data-role="member"] #planChangeBtn, #planCard[data-mode="share"][data-role="member"] #planCancelBtn { display: none !important; }
+#planCard[data-mode="free"] #planChangeBtn, #planCard[data-mode="free"] #planCancelBtn,
+#planCard[data-mode="plan"] #seatCodeEntry { display: none !important; }
 
 /* ── P6 通話結束卡：蓋在人物下半部、通話鍵上方，不擋眼睛 ── */
 .call-end-card { position: absolute; left: 16px; right: 16px; bottom: calc(186px + env(safe-area-inset-bottom)); z-index: 9;

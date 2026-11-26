@@ -500,10 +500,9 @@ setTimeout(function () {
       </div>
 
       <h2 class="set-section" data-i18n="settings.section.billing">方案與分鐘</h2>
-      <!-- 方案卡四種樣子（2026-11-20 Edward 看過設計稿說「可以」）：data-mode 由 app.js renderPlanCard() 決定。
-           legacy＝後端還沒給 allowance／familyShare 時的舊排法（只把「點數」改講「分鐘」）；
-           trial＝免費體驗前 7 天（每天的分鐘＋7 格天數）；weekly＝第 8 天起每週的分鐘；
-           share＝家人圈一起用同一份月分鐘（誰用了多少）。卡上的字全由程式填，所以不掛 data-i18n。 -->
+      <!-- 方案卡三種樣子：data-mode 由 app.js renderPlanCard() 決定。legacy＝後端還沒給新欄位的舊排法；
+           free＝登入送的分鐘還剩多少；plan＝有訂閱，自己的方案這個月還剩多少（2026-11-25／26 Edward：沒有共用分鐘、沒有「免費幾天」）。
+           卡上的字全由程式填，所以不掛 data-i18n。 -->
       <div class="plan-card" id="planCard" data-mode="legacy">
         <div class="plan-title-row pc-legacy">
           <span class="plan-name" id="setPlanName"></span>
@@ -515,9 +514,7 @@ setTimeout(function () {
         <div class="pts-bar pc-legacy"><i id="ptsBar" style="width:40%"></i></div>
         <div class="pc-head pc-modern"><span class="pc-head-title" id="pcHeadTitle"></span><span class="pc-head-meta" id="pcHeadMeta"></span></div>
         <div class="pc-big pc-modern" id="pcBig" aria-live="polite"></div>
-        <div class="pc-days pc-dayrow" id="pcDays" aria-hidden="true"></div>
-        <div class="pc-bar pc-share" id="pcBar" aria-hidden="true"></div>
-        <p class="pc-note pc-free" id="pcNote"></p>
+        <div class="pc-bar" id="pcBar" aria-hidden="true"></div>
         <div class="low-strip" id="lowPtsStrip" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="settings.lowPtsStrip">分鐘快用完了——用完聊天會先停，到這裡加買就能繼續</span></div>
         <div class="pts-note pc-legacy" data-i18n="settings.ptsNote">分鐘用來聊天；用完會先停，加買就能繼續</div>
         <div class="plan-actions">
@@ -1133,8 +1130,6 @@ setTimeout(function () {
     </div>
     <div class="sub-body">
       <h1 class="sub-h" data-i18n="subscription.headline">Someone for Mom and Dad to talk to every day</h1>
-      <!-- 這句講的是「家人圈共用分鐘」，後端還沒開 familySharedMinutes 之前講了就是不實——由 app.js 決定要不要露出 -->
-      <p class="sub-lede" id="planSharedLede" hidden></p>
       <!-- 分段 tab（已訂閱的人才看得到：方案／加買分鐘）-->
       <div class="sub-seg" id="subSeg">
         <div class="sseg-thumb" id="ssegThumb"></div>
@@ -1169,7 +1164,6 @@ setTimeout(function () {
             </ul>
           </button>
         </div>
-        <!-- 薄荷底這行：「爸媽不用另外付費」只在後端 capabilities.familySharedMinutes === true 時才露出（app.js） -->
         <div class="sub-fam" id="planFamilyNote">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
           <span id="planFamilyNoteText">Both plans include 7-day and 30-day health trends.</span>
@@ -1467,7 +1461,7 @@ setTimeout(function () {
     function ck(){ return 'munea.chatTrialSec'; } // 固定 key = 一次性、用完不再回來
     function chatUsedToday(){ try{ return parseInt(localStorage.getItem(ck())||'0',10)||0; }catch(e){ return 0; } }
     function chatTick(){ try{ localStorage.setItem(ck(), String(chatUsedToday()+1)); }catch(e){} }
-    // 免費還能聊幾秒：伺服器說了算（2026-11-20：免費改成前 7 天每天、之後每週給分鐘，家人圈成員還能用圈主的分鐘）。
+    // 免費還能聊幾秒：伺服器說了算（2026-11-26 Edward：免費＝登入送一次 5 分鐘，各帳號各扣各的，沒有每天／每週）。
     // App 不能比伺服器先把人擋掉——有伺服器回來的餘額或 allowance 就照它（app.js __muneaServerFreeRemainSec）；
     // 未登入、連不上、舊後端沒給時，才退回下面這個本機的一次性 5 分鐘。
     function chatRemainSec(){
@@ -1480,11 +1474,9 @@ setTimeout(function () {
       return Math.max(0, CHAT_FREE_SEC - chatUsedToday());
     }
     var MSG=function(v){ v=v||{}; return {
-      'chat-today':{t:window.muneaUiT('paywall.chatTodayTitle','今天的免費分鐘用完了'),m:window.muneaUiT('paywall.chatTodayBody','前 {days} 天每天有 {minutes} 分鐘，明天就能再聊。想每天多聊一點，可以看看 Plus 或 Pro。',{days:v.days||7,minutes:v.minutes||10})},
-      'chat-week':{t:window.muneaUiT('paywall.chatWeekTitle','這週的免費分鐘用完了'),m:window.muneaUiT('paywall.chatWeekBody','免費方案每週有 {minutes} 分鐘，補上之後就能再聊。想每天多聊一點，可以看看 Plus 或 Pro。',{minutes:v.minutes||10})},
       'family-invite':{t:window.muneaUiT('paywall.familyInviteTitle','邀請家人，升級就解鎖'),m:window.muneaUiT('paywall.familyInviteBody','免費方案可以一起看家人的狀態；想邀請家人進全家健康圈、大家互相照應，升級 Plus 就可以囉。')},
       'status-history':{t:window.muneaUiT('paywall.statusHistoryTitle','看更久的變化，升級解鎖'),m:window.muneaUiT('paywall.statusHistoryBody','免費方案可以看「今天」的狀態；想看過去 7 天、30 天的身體與心情變化，升級 Plus 解鎖。')},
-      'chat-daily':{t:window.muneaUiT('paywall.chatDailyTitle','免費分鐘用完了'),m:window.muneaUiT('paywall.chatDailyBody','登入後，前 7 天每天可以聊 10 分鐘，之後每週 10 分鐘。想每天多聊一點，可以看看 Plus 或 Pro。')},
+      'chat-daily':{t:window.muneaUiT('paywall.chatDailyTitle','免費分鐘用完了'),m:window.muneaUiT('paywall.chatDailyBody','登入送的 5 分鐘用完了。訂閱 Plus 或 Pro，每個月都有分鐘可以聊。')},
       'join-circle':{t:window.muneaUiT('paywall.joinCircleTitle','加入家人的健康圈，升級解鎖'),m:window.muneaUiT('paywall.joinCircleBody','免費方案可以自己用沐寧、記自己的提醒；想加入家人的健康圈、大家一起看著長輩，升級 Plus 就可以囉。')}
     }; };
     function upsell(feature, values){
