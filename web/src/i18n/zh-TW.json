@@ -374,6 +374,7 @@
   "mood.dayUpset": "有點火氣，抱怨完就好多了",
   "mood.weekN": "第{n}週",
   "mood.todayLooks": "今天心情看起來「{label}」",
+  "mood.yesterdayLooks": "昨天心情看起來「{label}」",
   "mood.noObservation": "還沒有觀察",
   "mood.familyObsHint": "這是{name}的沐寧從聊天觀察到的大致心情；聊了什麼只留在他自己的手機",
   "mood.familyObsEmpty": "等{name}開始記錄心情，這裡就看得到",

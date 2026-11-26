@@ -374,6 +374,7 @@
   "mood.dayUpset": "Algo de enfado; tras desahogarse, mejoró",
   "mood.weekN": "Semana {n}",
   "mood.todayLooks": "El ánimo de hoy parece “{label}”",
+  "mood.yesterdayLooks": "El ánimo de ayer parecía “{label}”",
   "mood.noObservation": "Aún sin observaciones",
   "mood.familyObsHint": "Es el ánimo general que Munea percibió al charlar con {name}; lo que hablaron queda solo en su teléfono",
   "mood.familyObsEmpty": "Cuando {name} empiece a registrar su ánimo, aparecerá aquí",
