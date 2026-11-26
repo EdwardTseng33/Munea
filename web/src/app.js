@@ -6572,6 +6572,9 @@ function syncAccountScopedCaches(state) {
     // 狀態頁：上一個人的觀察那句話存在記憶體裡，本機清掉了它還在——一併收掉並照現在（已清空）的本機資料重畫
     // （心情、健康數字、用藥卡都重讀，不留上一個人的字在畫面上）。
     try { window.__muneaObsReal = ''; if (typeof window.__muneaRefreshMedicationUi === 'function') window.__muneaRefreshMedicationUi(); } catch (e2) {}
+    // 家人頁也一樣：名單、全家狀態、活動牆都照現在（已清空）的本機資料重畫，不留上一個人的家人與活動在畫面上。
+    try { if (typeof window.__muneaAfterCircleSync === 'function') window.__muneaAfterCircleSync(); } catch (e2) {}
+    try { if (typeof window.__muneaRepaintActs === 'function') window.__muneaRepaintActs(); } catch (e2) {}
     // 原生端（iOS/Android）已排的用藥／回診／行程本機提醒也要跟著取消——否則上一個人的
     // 提醒還是會在這台裝置上跳出來（sync() 會用現在（已清空）的本機資料重新計算待排清單）。
     try { if (window.MuneaNotify && typeof window.MuneaNotify.sync === 'function') window.MuneaNotify.sync(); } catch (e2) {}
@@ -12987,7 +12990,28 @@ function init() {
     updateActEmpty();
   }
   window.__muneaSweepActs = sweepActsOnView;
-  Promise.resolve(__pullPromise).finally(() => restoreActsBoot());   // syncPullAll 可能不回 Promise（頁面隱藏啟動等）；不包住整個 init 會從這裡斷頭（7/15 修）
+  // 家人頁活動牆：開 App 先照手機裡上次的活動畫（2026-11-26 Edward：「一點進去先是舊的樣子，過幾秒才換成新的」）。
+  // 以前要等開機那次跟伺服器拉完（登入確認＋來回，慢的時候好幾秒）才畫，這段時間家人頁先寫
+  // 「還沒有進行中的活動」，之後才冒出卡片。現在先畫本機那份（已過期的不畫、只畫、不收不公布不上傳），
+  // 拉完再照最新的整面重畫一次：同一批活動重畫出來一模一樣，有變才看得出差別。
+  // 換帳號／登出時本機 munea.activities 會被帳號清理清掉，牆面由 __muneaRepaintActs 跟著重畫。
+  function clearActCards() { document.querySelectorAll('#family .quest-card[data-act-id]').forEach(c => c.remove()); }
+  function repaintActsFromLocal() {
+    clearActCards();
+    loadActs().filter(a => !actExpired(a)).forEach(a => renderActCard(a));
+    updateActEmpty();
+  }
+  window.__muneaRepaintActs = repaintActsFromLocal;
+  let _actsBootDone = false;
+  function paintActsBeforePull() {
+    if (_actsBootDone) return;
+    if (!(window.MuneaI18n && window.MuneaI18n.initialized)) return;   // 翻譯還沒好就先不畫，免得日文／英文先出中文
+    _actsBootDone = true;
+    try { repaintActsFromLocal(); } catch (e) {}
+  }
+  paintActsBeforePull();
+  if (!_actsBootDone) window.addEventListener('munea:locale-ready', paintActsBeforePull, { once: true });
+  Promise.resolve(__pullPromise).finally(() => { _actsBootDone = true; clearActCards(); restoreActsBoot(); });   // syncPullAll 可能不回 Promise（頁面隱藏啟動等）；不包住整個 init 會從這裡斷頭（7/15 修）
   if (chalModal) chalModal.addEventListener('click', e => { if (e.target === chalModal) closeChal(); });
   // 邀請勾選 → 依人數+能力動態算目標
   const inviteList = $('#inviteList');
