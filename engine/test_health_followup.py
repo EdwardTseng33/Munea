@@ -13,13 +13,26 @@ import os
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 os.environ.setdefault("GEMINI_API_KEY", "dummy-for-contract-test")
-os.environ["MUNEA_HEALTH_FOLLOWUP_PATH"] = os.path.join(
-    tempfile.mkdtemp(prefix="munea-followup-test-"), "health_followups.json")
+_STORE = os.path.join(tempfile.mkdtemp(prefix="munea-followup-test-"), "health_followups.json")
+os.environ["MUNEA_HEALTH_FOLLOWUP_PATH"] = _STORE
 
 import health_followup as hf
 import health_selector as hs
+
+# 整包 pytest 一起跑時 health_followup 早被別的測試檔 import 過，上面的 env var 不會再被讀，
+# STORE_PATH 會指向 engine/health_followups.json（進版控的真檔）——所以直接把模組常數換成暫存檔。
+_STORE_PATCH = mock.patch.object(hf, "STORE_PATH", _STORE)
+
+
+def setUpModule():
+    _STORE_PATCH.start()
+
+
+def tearDownModule():
+    _STORE_PATCH.stop()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DAY = 86400
