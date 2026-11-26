@@ -276,8 +276,11 @@
         {
           "filename": "035_per_account_minutes.sql",
           "sha256": "c51395981fa2b8347bc014e589fc47352af828b0d7a9a06fce38db9c16c82cb9",
-          "status": "unknown",
-          "blocker": "not_yet_applied_to_tokyo_pending_manual_run"
+          "status": "verified",
+          "evidenceRef": "docs/supabase/evidence/2026-11-27-tokyo-035.json",
+          "verifiedAt": "2026-11-27T03:45:00+08:00",
+          "captureMethod": "read-only-probe",
+          "sourceCommit": "afed406e958d0f9b58cb2dfda7f47ad42819e54f"
         }
       ],
       "rollback": {
