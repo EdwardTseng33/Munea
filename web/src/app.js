@@ -10518,7 +10518,8 @@ function init() {
       angry: 'mood.angry',
       upset: 'mood.upset',
     }[m.key];
-    return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label()) };
+    // 2026-11-27：家庭帳本可能帶回「昨天」的心情；以前一律寫「今天心情」，看的人會誤會。
+    return { key: m.key, label: muneaT(moodKey, MOODS[m.key].label()), yesterday: m.date !== _todayISO() };
   }
   // 真數據 → 顯示格式（門檻白話跟狀態頁同一套規則）
   function vitalsToDisplay(v) {
@@ -10580,7 +10581,11 @@ function init() {
   function renderPersonMood(p) {
     // 7/16 心情真串接：家庭帳本帶回來的「當天粗心情標籤」可以顯示；聊天觀察細節仍留在本人手機、這裡誠實不編
     const mood = famMoodFor(famVitalsFor(p));
-    if ($('#mcTitle')) $('#mcTitle').textContent = mood ? muneaT('mood.todayLooks', '今天心情看起來「{label}」', { label: mood.label }) : muneaT('mood.noObservation', '還沒有觀察');
+    if ($('#mcTitle')) $('#mcTitle').textContent = mood
+      ? (mood.yesterday
+        ? muneaT('mood.yesterdayLooks', '昨天心情看起來「{label}」', { label: mood.label })
+        : muneaT('mood.todayLooks', '今天心情看起來「{label}」', { label: mood.label }))
+      : muneaT('mood.noObservation', '還沒有觀察');
     // 有心情時不再多一句說明（Edward 2026-08-01）：上面那行「今天心情看起來『焦慮』」
     // 本身就講完了，底下再解釋一次「這是從聊天觀察到的、聊什麼留在他手機」只是變長。
     // 沒有心情的空狀態仍要留一句——不然畫面空白，看的人不知道是壞了還是還沒開始用。

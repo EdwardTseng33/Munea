@@ -374,6 +374,7 @@
   "mood.dayUpset": "A little cross — felt better after venting",
   "mood.weekN": "Week {n}",
   "mood.todayLooks": "Today’s mood looks “{label}”",
+  "mood.yesterdayLooks": "Yesterday’s mood looked “{label}”",
   "mood.noObservation": "No observations yet",
   "mood.familyObsHint": "This is the general mood {name}’s Munea picked up from chats. What was said stays on their own phone.",
   "mood.familyObsEmpty": "Once {name} starts logging moods, it will show up here",

@@ -374,6 +374,7 @@
   "mood.dayUpset": "少しイライラ。話したらすっきりしました",
   "mood.weekN": "{n}週目",
   "mood.todayLooks": "今日の気分は「{label}」のようです",
+  "mood.yesterdayLooks": "昨日の気分は「{label}」だったようです",
   "mood.noObservation": "まだ観察はありません",
   "mood.familyObsHint": "{name}さんのMuneaがおしゃべりから感じ取ったおおまかな気分です。話の内容はご本人の端末にだけ残ります",
   "mood.familyObsEmpty": "{name}さんが気分を記録し始めると、ここに出てきます",
